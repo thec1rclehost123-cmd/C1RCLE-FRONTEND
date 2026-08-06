@@ -1,20 +1,12 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import React from 'react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 import { loginFixture } from '../../features/auth/fixtures/login.fixture';
 
 import { LoginPageClient } from './login-page-client';
 
 describe('LoginPage', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
   it('renders headline typography from fixture', () => {
     render(<LoginPageClient />);
     expect(screen.getByText(/GET IN/i)).toBeInTheDocument();
@@ -30,6 +22,7 @@ describe('LoginPage', () => {
   });
 
   it('validates email and password input submission when values are provided', () => {
+    vi.useFakeTimers();
     render(<LoginPageClient />);
     const emailInput = screen.getByPlaceholderText('NAME@EMAIL.COM');
     const passwordInput = screen.getByPlaceholderText('••••••••');
@@ -44,6 +37,7 @@ describe('LoginPage', () => {
     });
 
     expect(screen.getByText(/Signed in successfully!/i)).toBeInTheDocument();
+    vi.useRealTimers();
   });
 
   it('toggles mode between login and signup', () => {

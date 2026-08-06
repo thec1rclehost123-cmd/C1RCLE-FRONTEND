@@ -4,31 +4,50 @@ import { describe, expect, it } from 'vitest';
 
 import TicketsPage from './page';
 
-describe('TicketsPage (Logged-Out State)', () => {
-  it('renders tickets header, hero copy, and login CTA buttons', () => {
+describe('TicketsPage (Logged-In & Guest State)', () => {
+  it('renders logged-in tickets wallet view by default', () => {
     render(<TicketsPage />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'TICKETS' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 2, name: /YOUR PASS TO THE CIRCLE/i })).toBeInTheDocument();
+    expect(screen.getByText('YOUR COLLECTION')).toBeInTheDocument();
+    expect(screen.getByText('AFTER HOURS: TECHNO RITUAL')).toBeInTheDocument();
+    expect(screen.getByText('NEON RITUAL VOL. 3')).toBeInTheDocument();
 
-    const loginBtn = screen.getByRole('link', { name: /LOGIN TO ACCESS/i });
-    expect(loginBtn).toBeInTheDocument();
-    expect(loginBtn).toHaveAttribute('href', '/login');
-
-    const signupBtn = screen.getByRole('link', { name: /SIGN UP/i });
-    expect(signupBtn).toBeInTheDocument();
-    expect(signupBtn).toHaveAttribute('href', '/login?mode=register');
+    expect(screen.getByRole('button', { name: 'CURRENT PASSES' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'HISTORY' })).toBeInTheDocument();
   });
 
-  it('renders ticket tier cards and allows navigating carousel', () => {
+  it('switches to history tab and displays past tickets', () => {
     render(<TicketsPage />);
 
-    expect(screen.getByText('VIP')).toBeInTheDocument();
-    expect(screen.getByText('GENERAL')).toBeInTheDocument();
-    expect(screen.getByText('STAG')).toBeInTheDocument();
+    const historyTab = screen.getByRole('button', { name: 'HISTORY' });
+    fireEvent.click(historyTab);
 
-    const nextButton = screen.getByRole('button', { name: /Next ticket/i });
-    expect(nextButton).toBeInTheDocument();
-    fireEvent.click(nextButton);
+    expect(screen.getByText('KINETIC NIGHTS VOL. 4')).toBeInTheDocument();
+  });
+
+  it('opens and closes ticket detail QR modal', () => {
+    render(<TicketsPage />);
+
+    const viewQrButtons = screen.getAllByRole('button', { name: 'VIEW TICKET QR' });
+    const firstBtn = viewQrButtons[0];
+    expect(firstBtn).toBeDefined();
+    if (firstBtn) {
+      fireEvent.click(firstBtn);
+    }
+
+    expect(screen.getByText(/ENTRY PASS/i)).toBeInTheDocument();
+
+    const closeBtn = screen.getByRole('button', { name: 'Close ticket view' });
+    fireEvent.click(closeBtn);
+  });
+
+  it('allows toggling to guest showcase view', () => {
+    render(<TicketsPage />);
+
+    const guestToggleBtn = screen.getByRole('button', { name: 'GUEST SHOWCASE' });
+    fireEvent.click(guestToggleBtn);
+
+    expect(screen.getByRole('link', { name: /LOGIN TO ACCESS/i })).toBeInTheDocument();
   });
 });

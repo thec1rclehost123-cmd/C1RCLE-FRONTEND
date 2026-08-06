@@ -1,12 +1,13 @@
 // FIXTURE_ONLY: Temporary UI development ticket data fixture.
 // Must not be used as a production API fallback.
 
-import type { TicketShowcaseItem } from '../types/tickets.types';
+import type { TicketShowcaseItem, TicketWalletData } from '../types/tickets.types';
 
 export const ticketsFixture: {
   headline: string;
   tagline: string;
   items: TicketShowcaseItem[];
+  userWallet: TicketWalletData;
 } = {
   headline: 'YOUR PASS TO THE CIRCLE',
   tagline:
@@ -44,4 +45,61 @@ export const ticketsFixture: {
       type: 'Group Entry',
     },
   ],
+  userWallet: {
+    pendingReservation: {
+      id: 'res_99812',
+      eventId: 'evt_solar_01',
+      eventTitle: 'SOLARIS: ROOFTOP SESSIONS',
+      expiresInMinutes: 8,
+    },
+    upcomingTickets: [
+      {
+        id: 'tkt_88192',
+        orderId: 'ord_10281',
+        eventTitle: 'AFTER HOURS: TECHNO RITUAL',
+        date: 'Saturday, Aug 16, 2026',
+        time: '10:00 PM IST',
+        venueName: 'BAYVIEW CLUB',
+        city: 'MUMBAI',
+        posterUrl: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600&auto=format&fit=crop',
+        tierName: 'VIP ACCESS',
+        isVip: true,
+        ticketCount: 2,
+        qrPayload: 'C1RCLE_TKT_88192_VIP_VERIFIED',
+        status: 'active',
+      },
+      {
+        id: 'tkt_88193',
+        orderId: 'ord_10282',
+        eventTitle: 'NEON RITUAL VOL. 3',
+        date: 'Friday, Aug 22, 2026',
+        time: '09:00 PM IST',
+        venueName: 'THE WAREHOUSE',
+        city: 'PUNE',
+        posterUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&auto=format&fit=crop',
+        tierName: 'GENERAL ADMISSION',
+        isVip: false,
+        ticketCount: 1,
+        qrPayload: 'C1RCLE_TKT_88193_GEN_VERIFIED',
+        status: 'active',
+      },
+    ],
+    pastTickets: [
+      {
+        id: 'tkt_77102',
+        orderId: 'ord_09912',
+        eventTitle: 'KINETIC NIGHTS VOL. 4',
+        date: 'Friday, Jul 11, 2026',
+        time: '10:00 PM IST',
+        venueName: 'CLUB HYPNOTIC',
+        city: 'BENGALURU',
+        posterUrl: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600&auto=format&fit=crop',
+        tierName: 'COUPLE PASS',
+        isVip: false,
+        ticketCount: 2,
+        qrPayload: 'C1RCLE_TKT_77102_PAST',
+        status: 'used',
+      },
+    ],
+  },
 };
