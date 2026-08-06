@@ -132,14 +132,12 @@ export function EventDetailView({ event }: { event: EventDetailFixture }) {
                   Fixture community preview
                 </p>
               </div>
-              <button
-                type="button"
-                disabled
-                title="RSVP integration is not connected"
-                className="min-h-11 cursor-not-allowed rounded-full bg-white px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-black opacity-75"
+              <Link
+                href={`/checkout/${event.slug}`}
+                className="flex min-h-11 items-center justify-center rounded-full bg-white px-6 py-3 text-center text-[10px] font-black uppercase tracking-[0.2em] text-black transition-transform hover:scale-[1.02] active:scale-[0.98] motion-reduce:transition-none"
               >
-                RSVP unavailable
-              </button>
+                Get tickets
+              </Link>
             </div>
           </div>
         </section>
@@ -236,14 +234,12 @@ export function EventDetailView({ event }: { event: EventDetailFixture }) {
               {timeFormatter.format(new Date(event.startsAt))}
             </p>
           </div>
-          <button
-            type="button"
-            disabled
-            title="Checkout integration is not connected"
-            className="min-h-11 cursor-not-allowed rounded-full bg-white px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-black opacity-75"
+          <Link
+            href={`/checkout/${event.slug}`}
+            className="flex min-h-11 items-center justify-center rounded-full bg-white px-6 py-3 text-center text-[10px] font-black uppercase tracking-[0.2em] text-black transition-transform hover:scale-[1.02] active:scale-[0.98] motion-reduce:transition-none"
           >
-            Checkout unavailable · UI preview
-          </button>
+            Continue to checkout
+          </Link>
         </div>
       </div>
     </main>

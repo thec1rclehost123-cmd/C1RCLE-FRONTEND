@@ -39,6 +39,14 @@ describe('EventDetailView', () => {
     expect(screen.getByText('About the event')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: "Who's going" })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Sector 9' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Get tickets' })).toHaveAttribute(
+      'href',
+      '/checkout/techno-bunker',
+    );
+    expect(screen.getByRole('link', { name: 'Continue to checkout' })).toHaveAttribute(
+      'href',
+      '/checkout/techno-bunker',
+    );
   });
 
   it('allows local tier highlighting and links into fixture checkout', () => {
