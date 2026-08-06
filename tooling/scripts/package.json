@@ -1,0 +1,22 @@
+{
+  "name": "@c1rcle/scripts",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b tsconfig.build.json",
+    "typecheck": "tsc -b tsconfig.build.json && tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "check-boundaries": "node dist/check-boundaries.js",
+    "clean": "rm -rf dist .turbo *.tsbuildinfo"
+  },
+  "devDependencies": {
+    "@c1rcle/eslint-config": "workspace:*",
+    "@c1rcle/tsconfig": "workspace:*",
+    "@types/node": "26.1.2",
+    "eslint": "9.39.5",
+    "jiti": "2.7.0",
+    "typescript": "5.9.3"
+  }
+}

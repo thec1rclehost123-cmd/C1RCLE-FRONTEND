@@ -1,0 +1,50 @@
+{
+  "name": "@c1rcle/eslint-config",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "description": "Shared ESLint flat configuration. Encodes and enforces C1RCLE architectural boundaries.",
+  "exports": {
+    ".": "./dist/index.js",
+    "./base": "./dist/base.js",
+    "./library": "./dist/library.js",
+    "./react": "./dist/react.js",
+    "./next": "./dist/next.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b tsconfig.build.json",
+    "dev": "tsc -b tsconfig.build.json --watch",
+    "typecheck": "tsc -b tsconfig.build.json && tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "clean": "rm -rf dist .turbo *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@eslint/js": "9.39.1",
+    "@next/eslint-plugin-next": "16.3.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-import-resolver-node": "0.3.9",
+    "eslint-import-resolver-typescript": "4.4.5",
+    "eslint-plugin-import-x": "4.17.1",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-turbo": "2.10.8",
+    "eslint-plugin-unused-imports": "4.4.1",
+    "globals": "17.9.0",
+    "typescript-eslint": "8.66.0"
+  },
+  "devDependencies": {
+    "@c1rcle/tsconfig": "workspace:*",
+    "@types/node": "26.1.2",
+    "eslint": "9.39.5",
+    "jiti": "2.7.0",
+    "typescript": "5.9.3"
+  },
+  "peerDependencies": {
+    "eslint": "^9.39.0",
+    "typescript": "^5.9.0"
+  }
+}

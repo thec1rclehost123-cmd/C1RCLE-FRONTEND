@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "//": "Solution-style root config. It compiles nothing itself; it wires the project graph so `tsc -b` and editors understand cross-package references. Add a reference for every new workspace member.",
+  "files": [],
+  "references": [
+    {
+      "path": "packages/types/tsconfig.build.json"
+    },
+    {
+      "path": "packages/utils/tsconfig.build.json"
+    },
+    {
+      "path": "packages/config/tsconfig.build.json"
+    },
+    {
+      "path": "packages/api-client/tsconfig.build.json"
+    },
+    {
+      "path": "packages/design-system/tsconfig.build.json"
+    },
+    {
+      "path": "packages/icons/tsconfig.build.json"
+    },
+    {
+      "path": "packages/ui/tsconfig.build.json"
+    },
+    {
+      "path": "packages/hooks/tsconfig.build.json"
+    },
+    {
+      "path": "packages/auth/tsconfig.build.json"
+    },
+    {
+      "path": "packages/providers/tsconfig.build.json"
+    },
+    {
+      "path": "packages/eslint-config/tsconfig.build.json"
+    },
+    {
+      "path": "tooling/scripts/tsconfig.build.json"
+    }
+  ]
+}

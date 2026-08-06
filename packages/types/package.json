@@ -1,0 +1,29 @@
+{
+  "name": "@c1rcle/types",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -b tsconfig.build.json",
+    "dev": "tsc -b tsconfig.build.json --watch",
+    "typecheck": "tsc -b tsconfig.build.json && tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "clean": "rm -rf dist .turbo coverage *.tsbuildinfo"
+  },
+  "devDependencies": {
+    "@c1rcle/eslint-config": "workspace:*",
+    "@c1rcle/tsconfig": "workspace:*",
+    "eslint": "9.39.5",
+    "jiti": "2.7.0",
+    "typescript": "5.9.3"
+  }
+}

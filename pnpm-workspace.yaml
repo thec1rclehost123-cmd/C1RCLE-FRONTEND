@@ -1,0 +1,18 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "tooling/*"
+
+# Packages allowed to execute install-time build scripts.
+# pnpm 10 blocks all postinstall scripts by default; this is the explicit allowlist.
+peerDependencyRules:
+  # eslint-import-resolver-typescript peers on BOTH eslint-plugin-import and
+  # eslint-plugin-import-x. We deliberately use only import-x (see ADR-0002).
+  ignoreMissing:
+    - eslint-plugin-import
+
+onlyBuiltDependencies:
+  - "@tailwindcss/oxide"
+  - esbuild
+  - sharp
+  - unrs-resolver

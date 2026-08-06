@@ -1,0 +1,173 @@
+/*
+ * C1RCLE Design Tokens — the single theme source for the entire platform.
+ *
+ * Every colour, radius, font and spacing value used anywhere in any application
+ * originates here. Applications MUST NOT define their own palette, and MUST NOT
+ * hard-code hex values. If a value is missing, add it here.
+ *
+ * Tokens are declared as CSS custom properties so they can be re-themed at
+ * runtime (dark mode, future white-labelling) without a rebuild.
+ */
+
+@theme {
+  /* ---------------------------------------------------------------
+   * Palette primitives — raw ramps. Never referenced by components
+   * directly; components use the semantic tokens below.
+   * ------------------------------------------------------------ */
+  --color-brand-50: oklch(0.97 0.014 264);
+  --color-brand-100: oklch(0.93 0.032 264);
+  --color-brand-200: oklch(0.87 0.06 264);
+  --color-brand-300: oklch(0.78 0.098 264);
+  --color-brand-400: oklch(0.68 0.14 264);
+  --color-brand-500: oklch(0.59 0.176 264);
+  --color-brand-600: oklch(0.51 0.178 264);
+  --color-brand-700: oklch(0.43 0.152 264);
+  --color-brand-800: oklch(0.36 0.12 264);
+  --color-brand-900: oklch(0.3 0.094 264);
+  --color-brand-950: oklch(0.21 0.068 264);
+
+  --color-neutral-0: oklch(1 0 0);
+  --color-neutral-50: oklch(0.985 0 0);
+  --color-neutral-100: oklch(0.967 0.001 286);
+  --color-neutral-200: oklch(0.92 0.004 286);
+  --color-neutral-300: oklch(0.871 0.006 286);
+  --color-neutral-400: oklch(0.705 0.015 286);
+  --color-neutral-500: oklch(0.552 0.016 286);
+  --color-neutral-600: oklch(0.442 0.017 286);
+  --color-neutral-700: oklch(0.37 0.013 286);
+  --color-neutral-800: oklch(0.274 0.006 286);
+  --color-neutral-900: oklch(0.21 0.006 286);
+  --color-neutral-950: oklch(0.141 0.005 286);
+
+  --color-success-500: oklch(0.62 0.17 149);
+  --color-success-600: oklch(0.53 0.15 149);
+  --color-warning-500: oklch(0.75 0.16 78);
+  --color-warning-600: oklch(0.65 0.16 63);
+  --color-danger-500: oklch(0.59 0.22 27);
+  --color-danger-600: oklch(0.51 0.21 27);
+
+  /* ---------------------------------------------------------------
+   * Typography
+   * ------------------------------------------------------------ */
+  --font-sans:
+    var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* ---------------------------------------------------------------
+   * Radii & elevation
+   * ------------------------------------------------------------ */
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+
+  --shadow-card: 0 1px 2px 0 oklch(0 0 0 / 0.05), 0 1px 3px 0 oklch(0 0 0 / 0.08);
+  --shadow-popover: 0 4px 6px -1px oklch(0 0 0 / 0.08), 0 10px 24px -4px oklch(0 0 0 / 0.12);
+
+  /* ---------------------------------------------------------------
+   * Motion — respected globally, overridden by prefers-reduced-motion.
+   * ------------------------------------------------------------ */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 120ms;
+  --duration-normal: 200ms;
+}
+
+/*
+ * Semantic tokens. Components reference ONLY these — never the raw ramps —
+ * which is what makes dark mode a token swap rather than a component rewrite.
+ */
+@theme inline {
+  --color-background: var(--c1-background);
+  --color-foreground: var(--c1-foreground);
+  --color-muted: var(--c1-muted);
+  --color-muted-foreground: var(--c1-muted-foreground);
+  --color-card: var(--c1-card);
+  --color-card-foreground: var(--c1-card-foreground);
+  --color-border: var(--c1-border);
+  --color-input: var(--c1-input);
+  --color-ring: var(--c1-ring);
+  --color-primary: var(--c1-primary);
+  --color-primary-foreground: var(--c1-primary-foreground);
+  --color-secondary: var(--c1-secondary);
+  --color-secondary-foreground: var(--c1-secondary-foreground);
+  --color-destructive: var(--c1-destructive);
+  --color-destructive-foreground: var(--c1-destructive-foreground);
+  --color-success: var(--c1-success);
+  --color-warning: var(--c1-warning);
+}
+
+/* Light theme — the default. */
+:root {
+  --c1-background: var(--color-neutral-0);
+  --c1-foreground: var(--color-neutral-900);
+  --c1-muted: var(--color-neutral-100);
+  --c1-muted-foreground: var(--color-neutral-600);
+  --c1-card: var(--color-neutral-0);
+  --c1-card-foreground: var(--color-neutral-900);
+  --c1-border: var(--color-neutral-200);
+  --c1-input: var(--color-neutral-300);
+  --c1-ring: var(--color-brand-500);
+  --c1-primary: var(--color-brand-600);
+  --c1-primary-foreground: var(--color-neutral-0);
+  --c1-secondary: var(--color-neutral-100);
+  --c1-secondary-foreground: var(--color-neutral-900);
+  --c1-destructive: var(--color-danger-600);
+  --c1-destructive-foreground: var(--color-neutral-0);
+  --c1-success: var(--color-success-600);
+  --c1-warning: var(--color-warning-600);
+
+  color-scheme: light;
+}
+
+/*
+ * Dark theme. Applied by an explicit `data-theme="dark"` attribute (set by
+ * @c1rcle/providers before paint) and by system preference when the user has
+ * not chosen. The explicit attribute always wins, in both directions.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --c1-background: var(--color-neutral-950);
+    --c1-foreground: var(--color-neutral-50);
+    --c1-muted: var(--color-neutral-900);
+    --c1-muted-foreground: var(--color-neutral-400);
+    --c1-card: var(--color-neutral-900);
+    --c1-card-foreground: var(--color-neutral-50);
+    --c1-border: var(--color-neutral-800);
+    --c1-input: var(--color-neutral-700);
+    --c1-ring: var(--color-brand-400);
+    --c1-primary: var(--color-brand-400);
+    --c1-primary-foreground: var(--color-neutral-950);
+    --c1-secondary: var(--color-neutral-800);
+    --c1-secondary-foreground: var(--color-neutral-50);
+    --c1-destructive: var(--color-danger-500);
+    --c1-destructive-foreground: var(--color-neutral-950);
+    --c1-success: var(--color-success-500);
+    --c1-warning: var(--color-warning-500);
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --c1-background: var(--color-neutral-950);
+  --c1-foreground: var(--color-neutral-50);
+  --c1-muted: var(--color-neutral-900);
+  --c1-muted-foreground: var(--color-neutral-400);
+  --c1-card: var(--color-neutral-900);
+  --c1-card-foreground: var(--color-neutral-50);
+  --c1-border: var(--color-neutral-800);
+  --c1-input: var(--color-neutral-700);
+  --c1-ring: var(--color-brand-400);
+  --c1-primary: var(--color-brand-400);
+  --c1-primary-foreground: var(--color-neutral-950);
+  --c1-secondary: var(--color-neutral-800);
+  --c1-secondary-foreground: var(--color-neutral-50);
+  --c1-destructive: var(--color-danger-500);
+  --c1-destructive-foreground: var(--color-neutral-950);
+  --c1-success: var(--color-success-500);
+  --c1-warning: var(--color-warning-500);
+
+  color-scheme: dark;
+}

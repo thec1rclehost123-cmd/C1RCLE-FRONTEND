@@ -1,0 +1,67 @@
+/*
+ * The single stylesheet every C1RCLE application imports.
+ *
+ *   @import '@c1rcle/tailwind-config/base.css';
+ *
+ * It pulls in Tailwind, the shared theme, and tells Tailwind to scan the
+ * shared UI packages so classes used inside @c1rcle/ui are not tree-shaken
+ * out of the application's bundle.
+ */
+
+@import 'tailwindcss';
+@import './theme.css';
+
+@source '../ui/src';
+@source '../icons/src';
+@source '../providers/src';
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /*
+   * Accessibility: a visible, high-contrast focus ring on keyboard navigation.
+   * Never remove this — WCAG 2.4.7 is a hard requirement for this platform.
+   */
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@utility sr-only-focusable {
+  &:not(:focus):not(:focus-within) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "@c1rcle/tailwind-config",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "description": "The single Tailwind v4 theme source for every C1RCLE application.",
+  "exports": {
+    "./theme.css": "./theme.css",
+    "./base.css": "./base.css"
+  },
+  "files": [
+    "theme.css",
+    "base.css"
+  ],
+  "scripts": {
+    "clean": "rm -rf .turbo"
+  },
+  "dependencies": {
+    "tailwindcss": "4.3.3"
+  }
+}

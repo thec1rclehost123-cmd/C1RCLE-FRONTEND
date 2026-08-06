@@ -1,0 +1,21 @@
+{
+  "name": "@c1rcle/tsconfig",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "description": "Shared TypeScript configurations. The single source of truth for compiler strictness.",
+  "files": [
+    "base.json",
+    "react-library.json",
+    "browser-library.json",
+    "node-library.json",
+    "nextjs.json"
+  ],
+  "exports": {
+    "./base.json": "./base.json",
+    "./react-library.json": "./react-library.json",
+    "./browser-library.json": "./browser-library.json",
+    "./node-library.json": "./node-library.json",
+    "./nextjs.json": "./nextjs.json"
+  }
+}
