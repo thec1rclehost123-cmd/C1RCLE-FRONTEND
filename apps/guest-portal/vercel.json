@@ -1,10 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "buildCommand": "cd ../.. && pnpm turbo run build --filter=@c1rcle/app-guest-portal",
-  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
-  "outputDirectory": ".next",
-  "github": {
-    "silent": true
-  }
+  "installCommand": "pnpm install",
+  "buildCommand": "next build"
 }
