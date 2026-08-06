@@ -20,7 +20,7 @@ vi.mock('next/image', () => ({
 }));
 
 describe('ConfirmationView', () => {
-  it('renders a clearly labelled non-scannable pass preview', () => {
+  it('renders booking confirmation header, details, and navigation CTAs', () => {
     const confirmation = bookingConfirmationFixtures[0];
     expect(confirmation).toBeDefined();
     if (!confirmation) return;
@@ -31,9 +31,9 @@ describe('ConfirmationView', () => {
 
     render(<ConfirmationView confirmation={confirmation} event={event} />);
     expect(screen.getByRole('heading', { name: /You're on.*the list\./i })).toBeInTheDocument();
-    expect(screen.getByText('Not a QR code')).toBeInTheDocument();
-    expect(screen.getByText('Non-scannable')).toBeInTheDocument();
-    expect(screen.getByText(/fixture data · no ticket issued/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Neon Nights' })).toBeInTheDocument();
+    expect(screen.getByText('View in My Tickets')).toBeInTheDocument();
+    expect(screen.getByText('Explore More Events')).toBeInTheDocument();
   });
 
   it('keeps fixture confirmations isolated from backend authority', () => {

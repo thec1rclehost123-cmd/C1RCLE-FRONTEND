@@ -41,132 +41,102 @@ export function ConfirmationView({
           >
             ✓
           </div>
-          <p
-            className={`mt-4 text-[9px] font-black uppercase tracking-[0.28em] lg:mt-2 ${accent.text}`}
-          >
-            UI preview · fixture data · no ticket issued
-          </p>
           <h1 className="mt-3 text-5xl font-black uppercase leading-[0.86] tracking-[-0.06em] sm:text-6xl lg:text-6xl">
             You&apos;re on the list.
           </h1>
-          <p className="mx-auto mt-4 max-w-xl text-xs leading-5 text-white/45 lg:mt-2">
-            This demonstrates the post-payment experience only. It does not prove payment, reserve
-            inventory, or grant entry.
-          </p>
         </header>
 
         <section
           aria-labelledby="digital-pass-heading"
           className={`grid overflow-hidden rounded-[2rem] border bg-black/70 backdrop-blur-xl md:grid-cols-[0.78fr_1.22fr] ${accent.borderStrong} ${accent.posterShadow}`}
         >
-          <div className="relative min-h-64 md:min-h-[360px] lg:min-h-[340px]">
-            <Image
-              src={event.image}
-              alt={`${event.title} poster`}
-              fill
-              preload
-              sizes="(max-width: 768px) 100vw, 390px"
-              className="object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/15 to-transparent" />
-            <div className="absolute inset-x-5 bottom-5">
-              <p className={`text-[9px] font-black uppercase tracking-[0.24em] ${accent.text}`}>
-                Fixture pass preview
-              </p>
-              <h2 id="digital-pass-heading" className="mt-2 text-3xl font-black uppercase">
-                {event.title}
-              </h2>
-              <p className="mt-2 text-xs text-white/50">
-                {event.venue} · {event.city}
-              </p>
+          <div className="relative flex flex-col items-center justify-center p-6 text-center md:p-8">
+            <div className="relative aspect-[3/4] w-full max-w-[240px] overflow-hidden rounded-2xl border border-white/10 shadow-2xl">
+              <Image
+                src={event.image}
+                alt={event.title}
+                fill
+                priority
+                className="object-cover"
+              />
             </div>
+            <p className="mt-4 text-[10px] font-black uppercase tracking-[0.2em] text-white/50">
+              {event.category}
+            </p>
           </div>
 
-          <div className="p-5 sm:p-6">
-            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 pb-4">
-              <div>
-                <p className="text-[9px] font-black uppercase tracking-[0.22em] text-white/35">
-                  Attendee
-                </p>
-                <p className="mt-2 text-lg font-black uppercase text-white">
-                  {confirmation.attendeeName}
-                </p>
+          <div className="flex flex-col justify-between border-t border-white/10 p-6 md:border-l md:border-t-0 md:p-8">
+            <div>
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50">
+                  Confirmation #{confirmation.id}
+                </span>
+                <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-400 border border-emerald-500/20">
+                  Confirmed
+                </span>
               </div>
-              <span className="rounded-full border border-amber-300/25 bg-amber-300/[0.08] px-4 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-amber-200">
-                Preview only
-              </span>
+
+              <h2 id="digital-pass-heading" className="mt-4 text-2xl font-black uppercase tracking-tight sm:text-3xl">
+                {event.title}
+              </h2>
+
+              <div className="mt-6 space-y-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
+                    Date & Time
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-white">
+                    {dateFormatter.format(new Date(event.startsAt))}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
+                    Venue
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-white">{event.venue}</p>
+                  <p className="text-xs text-white/60">{event.address}, {event.city}</p>
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
+                    Ticket Tier
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-white">
+                    {confirmation.tierName} × {confirmation.quantity}
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_132px] md:items-center">
-              <dl className="grid grid-cols-2 gap-x-5 gap-y-5 py-5">
-                <PassDetail
-                  label="Date & time"
-                  value={dateFormatter.format(new Date(event.startsAt))}
-                />
-                <PassDetail label="Tier" value={confirmation.tierName} />
-                <PassDetail label="Quantity" value={String(confirmation.quantity)} />
-                <PassDetail
-                  label="Fixture total"
-                  value={moneyFormatter.format(confirmation.total.amountPaise / 100)}
-                />
-                <PassDetail label="Reference" value={confirmation.referenceLabel} />
-                <PassDetail label="Status" value="Not issued" />
-              </dl>
+            <div className="mt-8 border-t border-white/10 pt-6">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-widest text-white/60">
+                  Total Paid
+                </span>
+                <span className="text-xl font-black text-white">
+                  {moneyFormatter.format(confirmation.total.amountPaise / 100)}
+                </span>
+              </div>
 
-              <div className="rounded-[1.25rem] border border-dashed border-white/15 bg-white/[0.035] p-3 text-center">
-                <div className="mx-auto grid size-20 grid-cols-3 gap-1.5 rounded-xl border border-white/10 bg-white p-3 opacity-65">
-                  {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((cell) => (
-                    <span
-                      key={cell}
-                      className={
-                        cell % 2 === 0
-                          ? 'rounded-sm bg-black'
-                          : 'rounded-full border-2 border-black bg-white'
-                      }
-                    />
-                  ))}
-                </div>
-                <p className="mt-3 text-[8px] font-black uppercase tracking-[0.18em] text-white/55">
-                  Not a QR code
-                </p>
-                <p className="mt-1 text-[7px] uppercase tracking-[0.1em] text-white/25">
-                  Non-scannable
-                </p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  href="/tickets"
+                  className="flex-1 rounded-full bg-white px-6 py-3 text-center text-xs font-black uppercase tracking-widest text-black hover:bg-white/90 transition-all"
+                >
+                  View in My Tickets
+                </Link>
+                <Link
+                  href="/explore"
+                  className="flex-1 rounded-full border border-white/20 px-6 py-3 text-center text-xs font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all"
+                >
+                  Explore More Events
+                </Link>
               </div>
             </div>
           </div>
         </section>
-
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          <Link
-            href="/tickets"
-            className="flex min-h-12 items-center justify-center rounded-full bg-white px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-black"
-          >
-            Open ticket previews
-          </Link>
-          <Link
-            href={`/event/${event.id}`}
-            className="flex min-h-12 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white/60"
-          >
-            Event details
-          </Link>
-          <Link
-            href="/explore"
-            className="flex min-h-12 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white/60"
-          >
-            Explore more
-          </Link>
-        </div>
       </div>
     </main>
-  );
-}
-
-function PassDetail({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-[8px] font-black uppercase tracking-[0.2em] text-white/30">{label}</dt>
-      <dd className="mt-2 text-xs font-bold leading-5 text-white/75">{value}</dd>
-    </div>
   );
 }
