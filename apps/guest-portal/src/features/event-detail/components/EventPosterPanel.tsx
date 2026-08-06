@@ -43,15 +43,6 @@ export function EventPosterPanel({ event }: { event: EventDetailFixture }) {
         <span className="h-1.5 w-1.5 rounded-full bg-white/25" />
         <span className="h-1.5 w-1.5 rounded-full bg-white/25" />
       </div>
-
-      <button
-        type="button"
-        disabled
-        title="Checkout integration is not connected"
-        className="min-h-11 w-full cursor-not-allowed rounded-full bg-white px-6 py-3 text-[10px] font-black uppercase tracking-[0.22em] text-black opacity-75"
-      >
-        Checkout unavailable · UI preview
-      </button>
     </section>
   );
 }

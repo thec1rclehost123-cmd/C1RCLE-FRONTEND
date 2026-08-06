@@ -37,7 +37,18 @@ describe('EventDetailView', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Techno Bunker' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Event poster' })).toBeInTheDocument();
     expect(screen.getByText('About the event')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: "Who's going" })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Riya and 155 others going' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Guest list preview' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'View all guests' }));
+    expect(
+      screen.getByRole('dialog', { name: 'Get the app to view the guestlist and more' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Get THE C1RCLE app' })).toHaveAttribute(
+      'href',
+      '/app',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Close guest list preview' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Sector 9' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Get tickets' })).toHaveAttribute(
       'href',
@@ -63,7 +74,7 @@ describe('EventDetailView', () => {
       'href',
       '/checkout/neon-nights?tier=gallery-pass',
     );
-    expect(screen.getAllByRole('button', { name: /Checkout unavailable/i })[0]).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /Checkout unavailable/i })).not.toBeInTheDocument();
   });
 
   it.each([

@@ -11,6 +11,11 @@ const guests: EventDetailGuest[] = [
   { id: 'riya', name: 'Riya', initials: 'RI', tone: 'yellow' },
   { id: 'ishika', name: 'Ishika', initials: 'IS', tone: 'red' },
   { id: 'ajay', name: 'Ajay', initials: 'AJ', tone: 'purple' },
+  { id: 'maya', name: 'Maya', initials: 'M', tone: 'yellow' },
+  { id: 'dev', name: 'Dev', initials: 'D', tone: 'purple' },
+  { id: 'harsh', name: 'Harsh', initials: 'H', tone: 'red' },
+  { id: 'nia', name: 'Nia', initials: 'N', tone: 'yellow' },
+  { id: 'kabir', name: 'Kabir', initials: 'K', tone: 'purple' },
 ];
 
 const ticketTiers: EventDetailTicketTier[] = [

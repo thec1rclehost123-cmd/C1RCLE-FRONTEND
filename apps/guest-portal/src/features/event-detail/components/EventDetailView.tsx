@@ -4,6 +4,7 @@ import { getEventAccentClasses, getGuestToneClass } from '../eventDetailPalette'
 
 import { EventPosterPanel } from './EventPosterPanel';
 import { EventTicketSelectorClient } from './EventTicketSelectorClient';
+import { GuestlistPreviewClient } from './GuestlistPreviewClient';
 
 import type {
   EventAccentTone,
@@ -72,33 +73,8 @@ export function EventDetailView({ event }: { event: EventDetailFixture }) {
       <EventBackdrop accentTone={event.accentTone} />
 
       <div className="relative mx-auto max-w-[1180px] px-4 sm:px-6 lg:px-8">
-        <div
-          className={`flex flex-wrap items-center justify-between gap-4 border-y py-3 ${accent.border}`}
-        >
-          <p className="text-[9px] font-black uppercase tracking-[0.28em] text-white/45">
-            UI preview · fixture data · {event.city}
-          </p>
-          <div
-            className="flex items-center gap-2"
-            aria-label="Event actions unavailable in preview"
-          >
-            {['Save', 'Share', 'Follow'].map((label) => (
-              <button
-                key={label}
-                type="button"
-                disabled
-                aria-label={`${label} unavailable in UI preview`}
-                className="size-9 cursor-not-allowed rounded-full border border-white/10 bg-white/[0.04] text-[8px] font-black uppercase text-white/30"
-                title={`${label} integration is not connected`}
-              >
-                {label.slice(0, 1)}
-              </button>
-            ))}
-          </div>
-        </div>
-
         <section
-          className={`mt-3 rounded-[1.75rem] border px-5 py-7 backdrop-blur-xl sm:px-8 sm:py-9 ${accent.borderStrong} ${accent.panel}`}
+          className={`rounded-[1.75rem] border px-5 py-7 backdrop-blur-xl sm:px-8 sm:py-9 ${accent.borderStrong} ${accent.panel}`}
         >
           <div className="flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
             <div>
@@ -158,33 +134,11 @@ export function EventDetailView({ event }: { event: EventDetailFixture }) {
               </div>
             </EventPanel>
 
-            <EventPanel accentTone={event.accentTone} label="Guestlist" title="Who's going">
-              <div className="space-y-2.5">
-                {event.guests.map((guest) => (
-                  <div
-                    key={guest.id}
-                    className="flex min-h-14 items-center justify-between rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-3"
-                  >
-                    <span className="flex items-center gap-3">
-                      <span
-                        className={`flex size-8 items-center justify-center rounded-full text-[9px] font-black text-black ${getGuestToneClass(guest.tone)}`}
-                      >
-                        {guest.initials}
-                      </span>
-                      <span>
-                        <span className="block text-sm font-semibold text-white">{guest.name}</span>
-                        <span className="block text-[9px] uppercase tracking-[0.16em] text-white/30">
-                          Fixture profile
-                        </span>
-                      </span>
-                    </span>
-                    <span className="rounded-full border border-white/10 px-3 py-1 text-[8px] font-black uppercase tracking-[0.16em] text-white/30">
-                      Preview
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </EventPanel>
+            <GuestlistPreviewClient
+              accentTone={event.accentTone}
+              guests={event.guests}
+              interestedCount={event.interestedCount}
+            />
 
             <EventPanel accentTone={event.accentTone} label="Location" title={event.venue}>
               <p className="text-sm text-white/50">{event.address}</p>
