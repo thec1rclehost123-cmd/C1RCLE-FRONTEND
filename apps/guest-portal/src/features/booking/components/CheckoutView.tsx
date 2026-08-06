@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { Suspense } from 'react';
 
 import { getEventAccentClasses } from '@/features/event-detail/eventDetailPalette';
@@ -24,20 +23,6 @@ export function CheckoutView({
       </div>
 
       <div className="relative mx-auto max-w-[1180px] px-4 sm:px-6 lg:px-8">
-        <div
-          className={`flex flex-wrap items-center justify-between gap-4 border-y py-3 ${accent.border}`}
-        >
-          <p className="text-[9px] font-black uppercase tracking-[0.28em] text-white/45">
-            UI preview · fixture data · no payment will be processed
-          </p>
-          <Link
-            href={`/event/${event.id}`}
-            className={`text-[9px] font-black uppercase tracking-[0.2em] ${accent.text}`}
-          >
-            Back to event
-          </Link>
-        </div>
-
         <Suspense fallback={<CheckoutFlowSkeleton />}>
           <CheckoutFlowClient event={event} initialTierId={initialTierId} />
         </Suspense>
@@ -48,7 +33,7 @@ export function CheckoutView({
 
 function CheckoutFlowSkeleton() {
   return (
-    <div className="mt-3 grid animate-pulse gap-3 lg:grid-cols-[minmax(0,1fr)_390px] motion-reduce:animate-none">
+    <div className="grid animate-pulse gap-3 lg:grid-cols-[minmax(0,1fr)_390px] motion-reduce:animate-none">
       <div className="min-h-[620px] rounded-[1.75rem] border border-white/10 bg-white/[0.035]" />
       <div className="min-h-[520px] rounded-[1.75rem] border border-white/10 bg-white/[0.035]" />
     </div>

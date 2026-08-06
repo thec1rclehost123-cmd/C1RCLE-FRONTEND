@@ -28,7 +28,7 @@ export function EventTicketSelectorClient({
   return (
     <section
       aria-labelledby="ticket-options-heading"
-      className={`rounded-[1.75rem] border bg-black/65 p-5 backdrop-blur-xl ${accent.border} ${accent.panelShadow}`}
+      className={`rounded-[1.75rem] border bg-black/65 p-5 backdrop-blur-xl ${accent.border} ${accent.eventGlow}`}
     >
       <p className="text-[9px] font-black uppercase tracking-[0.28em] text-white/40">Admission</p>
       <div className="mt-2 flex items-end justify-between gap-4">

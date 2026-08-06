@@ -16,7 +16,7 @@ export function EventPosterPanel({ event }: { event: EventDetailFixture }) {
   return (
     <section
       aria-label="Event poster"
-      className={`rounded-[1.75rem] border bg-black/65 p-3 backdrop-blur-xl ${accent.borderStrong} ${accent.posterShadow}`}
+      className={`rounded-[1.75rem] border bg-black/65 p-3 backdrop-blur-xl ${accent.borderStrong} ${accent.eventGlow}`}
     >
       <div className="relative aspect-[3/4] overflow-hidden rounded-[1.35rem] border border-white/10 bg-black">
         <Image

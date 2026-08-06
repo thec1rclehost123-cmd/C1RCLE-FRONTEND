@@ -23,7 +23,7 @@ export function GuestlistPreviewClient({
     <>
       <section
         aria-label="Guest list preview"
-        className={`rounded-[1.75rem] border bg-black/65 p-5 backdrop-blur-xl sm:p-6 ${accent.border} ${accent.panelShadow}`}
+        className={`rounded-[1.75rem] border bg-black/65 p-5 backdrop-blur-xl sm:p-6 ${accent.border} ${accent.eventGlow}`}
       >
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-lg font-bold tracking-tight text-white sm:text-xl">

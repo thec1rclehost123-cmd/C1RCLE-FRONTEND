@@ -5,6 +5,10 @@ const accentClasses = {
     backdrop: 'bg-[radial-gradient(circle_at_50%_12%,rgb(211_91_151/0.42),transparent_48%)]',
     border: 'border-[#d35b97]/30',
     borderStrong: 'border-[#d35b97]/45',
+    eventGlow:
+      'shadow-[0_20px_70px_rgb(0_0_0/0.5),inset_0_0_54px_rgb(211_91_151/0.14),0_0_46px_rgb(211_91_151/0.16)]',
+    eventHero:
+      'bg-[#d35b97]/20 shadow-[inset_0_0_70px_rgb(211_91_151/0.18),0_0_60px_rgb(211_91_151/0.18)]',
     panel: 'bg-[#d35b97]/15 shadow-[inset_0_0_34px_rgb(211_91_151/0.08)]',
     panelShadow: 'shadow-[inset_0_0_34px_rgb(211_91_151/0.08)]',
     posterShadow: 'shadow-[0_24px_80px_rgb(0_0_0/0.55),inset_0_0_36px_rgb(211_91_151/0.1)]',
@@ -17,6 +21,10 @@ const accentClasses = {
     backdrop: 'bg-[radial-gradient(circle_at_50%_12%,rgb(158_118_186/0.42),transparent_48%)]',
     border: 'border-[#9e76ba]/30',
     borderStrong: 'border-[#9e76ba]/45',
+    eventGlow:
+      'shadow-[0_20px_70px_rgb(0_0_0/0.5),inset_0_0_54px_rgb(158_118_186/0.14),0_0_46px_rgb(158_118_186/0.16)]',
+    eventHero:
+      'bg-[#9e76ba]/20 shadow-[inset_0_0_70px_rgb(158_118_186/0.18),0_0_60px_rgb(158_118_186/0.18)]',
     panel: 'bg-[#9e76ba]/15 shadow-[inset_0_0_34px_rgb(158_118_186/0.08)]',
     panelShadow: 'shadow-[inset_0_0_34px_rgb(158_118_186/0.08)]',
     posterShadow: 'shadow-[0_24px_80px_rgb(0_0_0/0.55),inset_0_0_36px_rgb(158_118_186/0.1)]',
@@ -29,6 +37,10 @@ const accentClasses = {
     backdrop: 'bg-[radial-gradient(circle_at_50%_12%,rgb(232_25_28/0.42),transparent_48%)]',
     border: 'border-[#e8191c]/30',
     borderStrong: 'border-[#e8191c]/45',
+    eventGlow:
+      'shadow-[0_20px_70px_rgb(0_0_0/0.5),inset_0_0_54px_rgb(232_25_28/0.14),0_0_46px_rgb(232_25_28/0.16)]',
+    eventHero:
+      'bg-[#e8191c]/20 shadow-[inset_0_0_70px_rgb(232_25_28/0.18),0_0_60px_rgb(232_25_28/0.18)]',
     panel: 'bg-[#e8191c]/15 shadow-[inset_0_0_34px_rgb(232_25_28/0.08)]',
     panelShadow: 'shadow-[inset_0_0_34px_rgb(232_25_28/0.08)]',
     posterShadow: 'shadow-[0_24px_80px_rgb(0_0_0/0.55),inset_0_0_36px_rgb(232_25_28/0.1)]',
@@ -41,6 +53,10 @@ const accentClasses = {
     backdrop: 'bg-[radial-gradient(circle_at_50%_12%,rgb(239_77_28/0.42),transparent_48%)]',
     border: 'border-[#ef4d1c]/30',
     borderStrong: 'border-[#ef4d1c]/45',
+    eventGlow:
+      'shadow-[0_20px_70px_rgb(0_0_0/0.5),inset_0_0_54px_rgb(239_77_28/0.14),0_0_46px_rgb(239_77_28/0.16)]',
+    eventHero:
+      'bg-[#ef4d1c]/20 shadow-[inset_0_0_70px_rgb(239_77_28/0.18),0_0_60px_rgb(239_77_28/0.18)]',
     panel: 'bg-[#ef4d1c]/15 shadow-[inset_0_0_34px_rgb(239_77_28/0.08)]',
     panelShadow: 'shadow-[inset_0_0_34px_rgb(239_77_28/0.08)]',
     posterShadow: 'shadow-[0_24px_80px_rgb(0_0_0/0.55),inset_0_0_36px_rgb(239_77_28/0.1)]',

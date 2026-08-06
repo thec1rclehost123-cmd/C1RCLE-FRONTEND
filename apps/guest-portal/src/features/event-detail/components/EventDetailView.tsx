@@ -12,14 +12,15 @@ import type {
   EventLifecycle,
 } from '../types/event-detail.types';
 
-const fullDateFormatter = new Intl.DateTimeFormat('en-IN', {
-  dateStyle: 'full',
-  timeZone: 'Asia/Kolkata',
+const moneyFormatter = new Intl.NumberFormat('en-IN', {
+  currency: 'INR',
+  maximumFractionDigits: 0,
+  style: 'currency',
 });
 
-const timeFormatter = new Intl.DateTimeFormat('en-IN', {
-  hour: 'numeric',
-  minute: '2-digit',
+const eventDateFormatter = new Intl.DateTimeFormat('en-IN', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
   timeZone: 'Asia/Kolkata',
 });
 
@@ -41,6 +42,9 @@ const lifecycleCopy: Partial<Record<EventLifecycle, { title: string; detail: str
 export function EventDetailView({ event }: { event: EventDetailFixture }) {
   const lifecycle = lifecycleCopy[event.lifecycle];
   const accent = getEventAccentClasses(event.accentTone);
+  const startingPricePaise = Math.min(
+    ...event.ticketTiers.map((tier) => tier.price?.amountPaise ?? 0),
+  );
   const mapHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
     `${event.venue}, ${event.address}`,
   )}`;
@@ -69,44 +73,65 @@ export function EventDetailView({ event }: { event: EventDetailFixture }) {
   }
 
   return (
-    <main className="relative z-10 min-h-screen overflow-hidden pb-36 pt-24 text-white sm:pt-28">
+    <main className="relative z-10 min-h-screen overflow-x-clip pb-36 pt-24 text-white sm:pt-28">
       <EventBackdrop accentTone={event.accentTone} />
 
-      <div className="relative mx-auto max-w-[1180px] px-4 sm:px-6 lg:px-8">
-        <section
-          className={`rounded-[1.75rem] border px-5 py-7 backdrop-blur-xl sm:px-8 sm:py-9 ${accent.borderStrong} ${accent.panel}`}
-        >
-          <div className="flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/45">
-                {event.category} · {event.city}
-              </p>
-              <h1 className="mt-4 text-4xl font-black uppercase leading-[0.9] tracking-[-0.05em] sm:text-6xl lg:text-7xl">
-                {event.title}
-              </h1>
-              <p className="mt-3 text-sm font-semibold text-white/60">Hosted by {event.host}</p>
+      <div className="relative mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-3 lg:grid-cols-[minmax(0,1fr)_380px]">
+          <section
+            className={`order-1 min-w-0 rounded-[1.75rem] border px-5 py-7 backdrop-blur-xl sm:px-7 sm:py-7 lg:col-start-1 lg:row-start-1 ${accent.borderStrong} ${accent.eventHero}`}
+          >
+            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/45">
+              {event.category} · {event.city}
+            </p>
+            <h1 className="mt-4 text-4xl font-black uppercase leading-[0.9] tracking-[-0.05em] sm:text-6xl lg:text-6xl">
+              {event.title}
+            </h1>
+
+            <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 border-t border-white/10 pt-4 text-xs font-semibold text-white/55">
+              <span>
+                {event.venue} · {event.city}
+              </span>
+              <span>{eventDateFormatter.format(new Date(event.startsAt))}</span>
             </div>
 
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div
-                className="flex -space-x-2"
-                aria-label={`${String(event.interestedCount)} interested`}
+            <Link
+              href="/hosts"
+              aria-label={`View host ${event.host}`}
+              className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full border border-white/10 bg-black/25 px-4 py-2 text-xs text-white/55 transition-colors hover:border-white/20 hover:text-white"
+            >
+              <span>Hosted by</span>
+              <span className="font-bold text-white">{event.host}</span>
+              <span
+                aria-label="Verified host"
+                className="flex size-5 items-center justify-center rounded-full bg-orange-500 text-[11px] font-black text-white"
               >
-                {event.guests.map((guest) => (
-                  <span
-                    key={guest.id}
-                    title={guest.name}
-                    className={`flex size-9 items-center justify-center rounded-full border-2 border-black text-[9px] font-black text-black ${getGuestToneClass(guest.tone)}`}
-                  >
-                    {guest.initials}
-                  </span>
-                ))}
-              </div>
-              <div>
-                <p className="text-sm font-bold text-white">{event.interestedCount} interested</p>
-                <p className="text-[9px] uppercase tracking-[0.18em] text-white/35">
-                  Fixture community preview
-                </p>
+                ✓
+              </span>
+            </Link>
+
+            <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-center gap-3">
+                <div
+                  className="flex shrink-0 -space-x-2"
+                  aria-label={`${String(event.interestedCount)} interested`}
+                >
+                  {event.guests.slice(0, 5).map((guest) => (
+                    <span
+                      key={guest.id}
+                      title={guest.name}
+                      className={`flex size-9 items-center justify-center rounded-full border-2 border-black text-[9px] font-black text-black ${getGuestToneClass(guest.tone)}`}
+                    >
+                      {guest.initials}
+                    </span>
+                  ))}
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white">{event.interestedCount} interested</p>
+                  <p className="text-[9px] uppercase tracking-[0.18em] text-white/35">
+                    Guestlist preview
+                  </p>
+                </div>
               </div>
               <Link
                 href={`/checkout/${event.slug}`}
@@ -115,11 +140,9 @@ export function EventDetailView({ event }: { event: EventDetailFixture }) {
                 Get tickets
               </Link>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <div className="mt-3 grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_390px]">
-          <div className="order-2 space-y-3 lg:order-1">
+          <div className="order-3 min-w-0 space-y-3 lg:col-start-1 lg:row-start-2">
             <EventPanel accentTone={event.accentTone} label="About the event" title={event.summary}>
               <div className="space-y-3 text-sm leading-7 text-white/55">
                 {event.description.map((paragraph) => (
@@ -164,7 +187,7 @@ export function EventDetailView({ event }: { event: EventDetailFixture }) {
             </EventPanel>
           </div>
 
-          <aside className="order-1 space-y-3 lg:order-2">
+          <aside className="order-2 min-w-0 space-y-3 lg:sticky lg:top-24 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:max-h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden">
             <EventPosterPanel event={event} />
             <EventTicketSelectorClient
               accentTone={event.accentTone}
@@ -176,25 +199,12 @@ export function EventDetailView({ event }: { event: EventDetailFixture }) {
       </div>
 
       <div className="fixed inset-x-0 bottom-4 z-40 px-4">
-        <div
-          className={`mx-auto flex max-w-3xl flex-col gap-3 rounded-[1.4rem] border bg-black/90 p-3 backdrop-blur-2xl sm:flex-row sm:items-center sm:justify-between sm:rounded-full sm:pl-6 ${accent.borderStrong} ${accent.stickyShadow}`}
+        <Link
+          href={`/checkout/${event.slug}`}
+          className={`mx-auto flex min-h-14 max-w-xl items-center justify-center rounded-full px-7 py-3 text-center text-sm font-black text-white transition-transform hover:scale-[1.015] active:scale-[0.985] motion-reduce:transition-none ${accent.solid} ${accent.stickyShadow}`}
         >
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-white/35">
-              Get on the list
-            </p>
-            <p className="mt-1 text-xs font-semibold text-white/70">
-              {fullDateFormatter.format(new Date(event.startsAt))} ·{' '}
-              {timeFormatter.format(new Date(event.startsAt))}
-            </p>
-          </div>
-          <Link
-            href={`/checkout/${event.slug}`}
-            className="flex min-h-11 items-center justify-center rounded-full bg-white px-6 py-3 text-center text-[10px] font-black uppercase tracking-[0.2em] text-black transition-transform hover:scale-[1.02] active:scale-[0.98] motion-reduce:transition-none"
-          >
-            Continue to checkout
-          </Link>
-        </div>
+          Buy tickets from {moneyFormatter.format(startingPricePaise / 100)}
+        </Link>
       </div>
     </main>
   );
@@ -227,7 +237,7 @@ function EventPanel({
 
   return (
     <section
-      className={`rounded-[1.75rem] border bg-black/65 p-5 backdrop-blur-xl sm:p-6 ${accent.border} ${accent.panelShadow}`}
+      className={`rounded-[1.75rem] border bg-black/65 p-5 backdrop-blur-xl sm:p-6 ${accent.border} ${accent.eventGlow}`}
     >
       <p className="text-[9px] font-black uppercase tracking-[0.28em] text-white/40">{label}</p>
       <h2 className="mt-3 text-2xl font-black tracking-[-0.03em] text-white">{title}</h2>

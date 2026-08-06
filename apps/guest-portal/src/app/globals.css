@@ -1,1 +1,24 @@
 @import '@c1rcle/tailwind-config/base.css';
+
+@keyframes checkout-number-roll-up {
+  from {
+    opacity: 0;
+    transform: translateY(65%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.checkout-number-roll {
+  animation: checkout-number-roll-up 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checkout-number-roll {
+    animation: none;
+  }
+}

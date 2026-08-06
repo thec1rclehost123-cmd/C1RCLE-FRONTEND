@@ -66,7 +66,7 @@ export function CheckoutFlowClient({
   }
 
   return (
-    <div className="mt-3 grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_390px]">
+    <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_390px]">
       <section
         aria-labelledby="checkout-heading"
         className={`rounded-[1.75rem] border bg-black/65 p-5 backdrop-blur-xl sm:p-7 ${accent.borderStrong} ${accent.panelShadow}`}
@@ -134,9 +134,9 @@ export function CheckoutFlowClient({
                     </button>
                     <output
                       aria-label={`${tier.name} quantity`}
-                      className="w-8 text-center text-base font-black"
+                      className="w-8 overflow-hidden text-center text-base font-black"
                     >
-                      {quantity}
+                      <AnimatedValue value={String(quantity)} />
                     </output>
                     <button
                       type="button"
@@ -162,7 +162,8 @@ export function CheckoutFlowClient({
               }}
               className="mt-4 min-h-12 w-full rounded-full bg-white px-6 py-3 text-[10px] font-black uppercase tracking-[0.22em] text-black disabled:cursor-not-allowed disabled:opacity-30"
             >
-              Continue · {moneyFormatter.format(subtotalPaise / 100)}
+              <span>Continue · </span>
+              <AnimatedValue value={moneyFormatter.format(subtotalPaise / 100)} />
             </button>
           </div>
         )}
@@ -322,7 +323,11 @@ export function CheckoutFlowClient({
                     {ticket.name} × {ticket.quantity}
                   </span>
                   <span className="font-bold text-white">
-                    {moneyFormatter.format((ticket.price.amountPaise * ticket.quantity) / 100)}
+                    <AnimatedValue
+                      value={moneyFormatter.format(
+                        (ticket.price.amountPaise * ticket.quantity) / 100,
+                      )}
+                    />
                   </span>
                 </div>
               ))
@@ -336,18 +341,22 @@ export function CheckoutFlowClient({
           <dl className="mt-5 space-y-3 text-sm">
             <div className="flex justify-between gap-4 text-white/45">
               <dt>Subtotal</dt>
-              <dd>{moneyFormatter.format(subtotalPaise / 100)}</dd>
+              <dd>
+                <AnimatedValue value={moneyFormatter.format(subtotalPaise / 100)} />
+              </dd>
             </div>
             <div className="flex justify-between gap-4 text-white/45">
               <dt>Illustrative fees · not authoritative</dt>
-              <dd>{moneyFormatter.format(previewFeesPaise / 100)}</dd>
+              <dd>
+                <AnimatedValue value={moneyFormatter.format(previewFeesPaise / 100)} />
+              </dd>
             </div>
             <div className="flex items-end justify-between gap-4 border-t border-white/10 pt-4">
               <dt className="text-[9px] font-black uppercase tracking-[0.22em] text-white/35">
                 Preview total
               </dt>
               <dd className="text-3xl font-black text-white">
-                {moneyFormatter.format(previewTotalPaise / 100)}
+                <AnimatedValue value={moneyFormatter.format(previewTotalPaise / 100)} />
               </dd>
             </div>
           </dl>
@@ -358,6 +367,14 @@ export function CheckoutFlowClient({
         </div>
       </aside>
     </div>
+  );
+}
+
+function AnimatedValue({ value }: { value: string }) {
+  return (
+    <span key={value} className="checkout-number-roll inline-block">
+      {value}
+    </span>
   );
 }
 

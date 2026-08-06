@@ -37,6 +37,11 @@ describe('EventDetailView', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Techno Bunker' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Event poster' })).toBeInTheDocument();
     expect(screen.getByText('About the event')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'View host High Spirits Collective' })).toHaveAttribute(
+      'href',
+      '/hosts',
+    );
+    expect(screen.getByLabelText('Verified host')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Riya and 155 others going' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Guest list preview' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'View all guests' }));
@@ -54,7 +59,7 @@ describe('EventDetailView', () => {
       'href',
       '/checkout/techno-bunker',
     );
-    expect(screen.getByRole('link', { name: 'Continue to checkout' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Buy tickets from ₹800' })).toHaveAttribute(
       'href',
       '/checkout/techno-bunker',
     );

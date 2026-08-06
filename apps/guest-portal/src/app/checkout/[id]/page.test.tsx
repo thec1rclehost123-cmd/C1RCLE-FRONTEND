@@ -29,6 +29,12 @@ describe('CheckoutView', () => {
 
     render(<CheckoutView event={event} initialTierId="gallery-pass" />);
     expect(screen.getByRole('heading', { name: 'Select tickets' })).toBeInTheDocument();
+    expect(screen.queryByText(/UI preview · fixture data/i)).not.toBeInTheDocument();
+
+    const quantity = screen.getByLabelText('Gallery Pass quantity');
+    fireEvent.click(screen.getByRole('button', { name: 'Add one Gallery Pass' }));
+    expect(quantity).toHaveTextContent('2');
+    expect(quantity.querySelector('.checkout-number-roll')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Continue/ }));
     fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Preview Guest' } });
@@ -58,6 +64,6 @@ describe('CheckoutView', () => {
 
     render(<CheckoutView event={event} initialTierId="gallery-pass" />);
     expect(screen.getByText('Illustrative fees · not authoritative')).toBeInTheDocument();
-    expect(screen.getByText(/no payment will be processed/i)).toBeInTheDocument();
+    expect(screen.queryByText(/no payment will be processed/i)).not.toBeInTheDocument();
   });
 });
