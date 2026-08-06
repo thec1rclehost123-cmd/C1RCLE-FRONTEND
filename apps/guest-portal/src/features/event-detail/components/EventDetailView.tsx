@@ -214,7 +214,11 @@ export function EventDetailView({ event }: { event: EventDetailFixture }) {
 
           <aside className="order-1 space-y-3 lg:order-2">
             <EventPosterPanel event={event} />
-            <EventTicketSelectorClient accentTone={event.accentTone} tiers={event.ticketTiers} />
+            <EventTicketSelectorClient
+              accentTone={event.accentTone}
+              eventId={event.slug}
+              tiers={event.ticketTiers}
+            />
           </aside>
         </div>
       </div>

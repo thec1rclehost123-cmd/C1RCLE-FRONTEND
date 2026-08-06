@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 
 import { getEventAccentClasses } from '../eventDetailPalette';
@@ -14,9 +15,11 @@ const moneyFormatter = new Intl.NumberFormat('en-IN', {
 
 export function EventTicketSelectorClient({
   accentTone,
+  eventId,
   tiers,
 }: {
   accentTone: EventAccentTone;
+  eventId: string;
   tiers: readonly EventDetailTicketTier[];
 }) {
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
@@ -73,14 +76,22 @@ export function EventTicketSelectorClient({
         })}
       </div>
 
-      <button
-        type="button"
-        disabled
-        title="Checkout integration is not connected"
-        className="mt-5 min-h-11 w-full cursor-not-allowed rounded-full border border-white/10 bg-white/[0.06] px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white/40"
-      >
-        {selectedTier ? 'Selection saved locally · checkout unavailable' : 'Select a preview tier'}
-      </button>
+      {selectedTier ? (
+        <Link
+          href={`/checkout/${eventId}?tier=${encodeURIComponent(selectedTier)}`}
+          className="mt-5 flex min-h-11 w-full items-center justify-center rounded-full bg-white px-5 py-3 text-center text-[10px] font-black uppercase tracking-[0.2em] text-black"
+        >
+          Continue to checkout preview
+        </Link>
+      ) : (
+        <button
+          type="button"
+          disabled
+          className="mt-5 min-h-11 w-full cursor-not-allowed rounded-full border border-white/10 bg-white/[0.06] px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white/40"
+        >
+          Select a preview tier
+        </button>
+      )}
     </section>
   );
 }

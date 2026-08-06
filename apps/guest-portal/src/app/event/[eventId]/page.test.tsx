@@ -41,7 +41,7 @@ describe('EventDetailView', () => {
     expect(screen.getByRole('heading', { name: 'Sector 9' })).toBeInTheDocument();
   });
 
-  it('allows local tier highlighting but keeps checkout disabled', () => {
+  it('allows local tier highlighting and links into fixture checkout', () => {
     const event = eventDetailFixtures[0];
     expect(event).toBeDefined();
     if (!event) return;
@@ -51,9 +51,10 @@ describe('EventDetailView', () => {
     fireEvent.click(tier);
 
     expect(tier).toHaveAttribute('aria-pressed', 'true');
-    expect(
-      screen.getByRole('button', { name: 'Selection saved locally · checkout unavailable' }),
-    ).toBeDisabled();
+    expect(screen.getByRole('link', { name: 'Continue to checkout preview' })).toHaveAttribute(
+      'href',
+      '/checkout/neon-nights?tier=gallery-pass',
+    );
     expect(screen.getAllByRole('button', { name: /Checkout unavailable/i })[0]).toBeDisabled();
   });
 
