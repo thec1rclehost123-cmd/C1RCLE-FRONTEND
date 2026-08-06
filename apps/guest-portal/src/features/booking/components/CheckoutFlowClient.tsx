@@ -205,7 +205,7 @@ export function CheckoutFlowClient({
               </button>
               <button
                 type="button"
-                disabled={!attendee.name.trim() || !attendee.email.includes('@')}
+                disabled={!attendee.name.trim() || !attendee.email.trim()}
                 onClick={() => {
                   setStep(3);
                 }}

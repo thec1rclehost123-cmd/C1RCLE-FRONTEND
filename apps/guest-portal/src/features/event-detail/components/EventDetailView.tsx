@@ -221,7 +221,7 @@ export function EventDetailView({ event }: { event: EventDetailFixture }) {
         </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-24 z-40 px-4 md:bottom-4">
+      <div className="fixed inset-x-0 bottom-4 z-40 px-4">
         <div
           className={`mx-auto flex max-w-3xl flex-col gap-3 rounded-[1.4rem] border bg-black/90 p-3 backdrop-blur-2xl sm:flex-row sm:items-center sm:justify-between sm:rounded-full sm:pl-6 ${accent.borderStrong} ${accent.stickyShadow}`}
         >

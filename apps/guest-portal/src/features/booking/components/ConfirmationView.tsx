@@ -27,35 +27,29 @@ export function ConfirmationView({
   const accent = getEventAccentClasses(event.accentTone);
 
   return (
-    <main className="relative z-10 min-h-screen overflow-hidden pb-32 pt-24 text-white sm:pt-28">
+    <main className="relative z-10 min-h-screen overflow-hidden pb-28 pt-20 text-white sm:pt-24 lg:pb-8 lg:pt-20">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[#080808]">
         <div className={`absolute inset-0 ${accent.backdrop}`} />
         <div className="absolute inset-x-0 bottom-0 h-[34rem] bg-gradient-to-t from-black to-transparent" />
       </div>
 
       <div className="relative mx-auto max-w-[980px] px-4 sm:px-6 lg:px-8">
-        <div className={`border-y py-3 text-center ${accent.border}`}>
-          <p className="text-[9px] font-black uppercase tracking-[0.28em] text-amber-200">
-            UI preview · fixture data · no payment processed · no ticket issued
-          </p>
-        </div>
-
-        <header className="mx-auto max-w-3xl py-12 text-center sm:py-16">
+        <header className="mx-auto max-w-3xl py-7 text-center lg:py-3">
           <div
             aria-hidden="true"
-            className={`mx-auto flex size-20 items-center justify-center rounded-full border text-3xl font-black ${accent.borderStrong} ${accent.panel}`}
+            className={`mx-auto flex size-14 items-center justify-center rounded-full border text-2xl font-black lg:size-12 lg:text-xl ${accent.borderStrong} ${accent.panel}`}
           >
             ✓
           </div>
-          <p className={`mt-7 text-[10px] font-black uppercase tracking-[0.32em] ${accent.text}`}>
-            Confirmation presentation
+          <p
+            className={`mt-4 text-[9px] font-black uppercase tracking-[0.28em] lg:mt-2 ${accent.text}`}
+          >
+            UI preview · fixture data · no ticket issued
           </p>
-          <h1 className="mt-4 text-5xl font-black uppercase leading-[0.82] tracking-[-0.06em] sm:text-7xl lg:text-8xl">
-            You&apos;re on
-            <br />
-            the list.
+          <h1 className="mt-3 text-5xl font-black uppercase leading-[0.86] tracking-[-0.06em] sm:text-6xl lg:text-6xl">
+            You&apos;re on the list.
           </h1>
-          <p className="mx-auto mt-6 max-w-xl text-sm leading-6 text-white/50">
+          <p className="mx-auto mt-4 max-w-xl text-xs leading-5 text-white/45 lg:mt-2">
             This demonstrates the post-payment experience only. It does not prove payment, reserve
             inventory, or grant entry.
           </p>
@@ -63,9 +57,9 @@ export function ConfirmationView({
 
         <section
           aria-labelledby="digital-pass-heading"
-          className={`grid overflow-hidden rounded-[2rem] border bg-black/70 backdrop-blur-xl md:grid-cols-[0.82fr_1.18fr] ${accent.borderStrong} ${accent.posterShadow}`}
+          className={`grid overflow-hidden rounded-[2rem] border bg-black/70 backdrop-blur-xl md:grid-cols-[0.78fr_1.22fr] ${accent.borderStrong} ${accent.posterShadow}`}
         >
-          <div className="relative min-h-72 md:min-h-[520px]">
+          <div className="relative min-h-64 md:min-h-[360px] lg:min-h-[340px]">
             <Image
               src={event.image}
               alt={`${event.title} poster`}
@@ -88,8 +82,8 @@ export function ConfirmationView({
             </div>
           </div>
 
-          <div className="p-5 sm:p-8">
-            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 pb-6">
+          <div className="p-5 sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 pb-4">
               <div>
                 <p className="text-[9px] font-black uppercase tracking-[0.22em] text-white/35">
                   Attendee
@@ -103,45 +97,47 @@ export function ConfirmationView({
               </span>
             </div>
 
-            <dl className="grid grid-cols-2 gap-x-5 gap-y-6 py-6">
-              <PassDetail
-                label="Date & time"
-                value={dateFormatter.format(new Date(event.startsAt))}
-              />
-              <PassDetail label="Tier" value={confirmation.tierName} />
-              <PassDetail label="Quantity" value={String(confirmation.quantity)} />
-              <PassDetail
-                label="Fixture total"
-                value={moneyFormatter.format(confirmation.total.amountPaise / 100)}
-              />
-              <PassDetail label="Reference" value={confirmation.referenceLabel} />
-              <PassDetail label="Status" value="Not issued" />
-            </dl>
+            <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_132px] md:items-center">
+              <dl className="grid grid-cols-2 gap-x-5 gap-y-5 py-5">
+                <PassDetail
+                  label="Date & time"
+                  value={dateFormatter.format(new Date(event.startsAt))}
+                />
+                <PassDetail label="Tier" value={confirmation.tierName} />
+                <PassDetail label="Quantity" value={String(confirmation.quantity)} />
+                <PassDetail
+                  label="Fixture total"
+                  value={moneyFormatter.format(confirmation.total.amountPaise / 100)}
+                />
+                <PassDetail label="Reference" value={confirmation.referenceLabel} />
+                <PassDetail label="Status" value="Not issued" />
+              </dl>
 
-            <div className="rounded-[1.5rem] border border-dashed border-white/15 bg-white/[0.035] p-5 text-center">
-              <div className="mx-auto grid size-28 grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white p-4 opacity-65">
-                {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((cell) => (
-                  <span
-                    key={cell}
-                    className={
-                      cell % 2 === 0
-                        ? 'rounded-sm bg-black'
-                        : 'rounded-full border-2 border-black bg-white'
-                    }
-                  />
-                ))}
+              <div className="rounded-[1.25rem] border border-dashed border-white/15 bg-white/[0.035] p-3 text-center">
+                <div className="mx-auto grid size-20 grid-cols-3 gap-1.5 rounded-xl border border-white/10 bg-white p-3 opacity-65">
+                  {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((cell) => (
+                    <span
+                      key={cell}
+                      className={
+                        cell % 2 === 0
+                          ? 'rounded-sm bg-black'
+                          : 'rounded-full border-2 border-black bg-white'
+                      }
+                    />
+                  ))}
+                </div>
+                <p className="mt-3 text-[8px] font-black uppercase tracking-[0.18em] text-white/55">
+                  Not a QR code
+                </p>
+                <p className="mt-1 text-[7px] uppercase tracking-[0.1em] text-white/25">
+                  Non-scannable
+                </p>
               </div>
-              <p className="mt-4 text-[10px] font-black uppercase tracking-[0.26em] text-white/55">
-                Not a QR code
-              </p>
-              <p className="mt-2 text-[9px] uppercase tracking-[0.16em] text-white/25">
-                Non-scannable visual placeholder
-              </p>
             </div>
           </div>
         </section>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
           <Link
             href="/tickets"
             className="flex min-h-12 items-center justify-center rounded-full bg-white px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-black"

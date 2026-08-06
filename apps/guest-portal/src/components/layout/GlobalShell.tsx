@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import React from 'react';
 
 import { Footer } from './Footer';
-import { MobileBottomNav } from './MobileBottomNav';
 import { Navbar } from './Navbar';
 import { RitualBackground } from './RitualBackground';
 
@@ -31,9 +30,6 @@ export function GlobalShell({ children }: GlobalShellProps) {
 
       {/* Global Footer (hidden on login page for full-height split view) */}
       {!isLoginPage && <Footer />}
-
-      {/* Mobile Floating Bottom Bar */}
-      <MobileBottomNav />
     </div>
   );
 }

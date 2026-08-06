@@ -33,9 +33,11 @@ describe('CheckoutView', () => {
     fireEvent.click(screen.getByRole('button', { name: /Continue/ }));
     fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Preview Guest' } });
     fireEvent.change(screen.getByLabelText('Email address'), {
-      target: { value: 'preview@example.com' },
+      target: { value: 'fixture email' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Review payment UI' }));
+    const reviewButton = screen.getByRole('button', { name: 'Review payment UI' });
+    expect(reviewButton).toBeEnabled();
+    fireEvent.click(reviewButton);
     fireEvent.click(screen.getByRole('button', { name: 'UPI' }));
 
     expect(

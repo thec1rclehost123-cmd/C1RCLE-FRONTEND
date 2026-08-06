@@ -20,7 +20,9 @@ export function Navbar() {
         <Link href="/" className="group flex items-center gap-3">
           <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#FF4400]/40 bg-black text-white transition-all duration-500 group-hover:rotate-180 group-hover:border-[#FF4400]">
             <span className="text-[9px] font-black tracking-tighter leading-none text-center">
-              THE<br />C1RCLE
+              THE
+              <br />
+              C1RCLE
             </span>
           </div>
           <span className="text-sm font-black tracking-widest uppercase text-white group-hover:text-[#FF4400] transition-colors">
@@ -62,9 +64,15 @@ export function Navbar() {
             }}
             className="flex h-10 w-10 flex-col items-center justify-center gap-1.5 rounded-full bg-white/10 border border-white/20 lg:hidden text-white"
           >
-            <span className={`h-0.5 w-5 bg-white transition-transform ${mobileMenuOpen ? 'rotate-45 translate-y-[5px]' : ''}`} />
-            <span className={`h-0.5 w-5 bg-white transition-opacity ${mobileMenuOpen ? 'opacity-0' : ''}`} />
-            <span className={`h-0.5 w-5 bg-white transition-transform ${mobileMenuOpen ? '-rotate-45 -translate-y-[5px]' : ''}`} />
+            <span
+              className={`h-0.5 w-5 bg-white transition-transform ${mobileMenuOpen ? 'rotate-45 translate-y-[5px]' : ''}`}
+            />
+            <span
+              className={`h-0.5 w-5 bg-white transition-opacity ${mobileMenuOpen ? 'opacity-0' : ''}`}
+            />
+            <span
+              className={`h-0.5 w-5 bg-white transition-transform ${mobileMenuOpen ? '-rotate-45 -translate-y-[5px]' : ''}`}
+            />
           </button>
         </div>
       </nav>
@@ -80,7 +88,12 @@ export function Navbar() {
                 onClick={() => {
                   setMobileMenuOpen(false);
                 }}
-                className="text-3xl font-black uppercase text-white hover:text-[#FF4400] transition-colors tracking-tight"
+                aria-current={pathname.startsWith(link.href) ? 'page' : undefined}
+                className={`text-3xl font-black uppercase transition-colors tracking-tight ${
+                  pathname.startsWith(link.href)
+                    ? 'text-[#FF4400]'
+                    : 'text-white hover:text-[#FF4400]'
+                }`}
               >
                 {link.label}
               </Link>

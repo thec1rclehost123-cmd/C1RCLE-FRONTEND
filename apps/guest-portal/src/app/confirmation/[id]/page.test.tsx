@@ -32,8 +32,8 @@ describe('ConfirmationView', () => {
     render(<ConfirmationView confirmation={confirmation} event={event} />);
     expect(screen.getByRole('heading', { name: /You're on.*the list\./i })).toBeInTheDocument();
     expect(screen.getByText('Not a QR code')).toBeInTheDocument();
-    expect(screen.getByText('Non-scannable visual placeholder')).toBeInTheDocument();
-    expect(screen.getByText(/no payment processed · no ticket issued/i)).toBeInTheDocument();
+    expect(screen.getByText('Non-scannable')).toBeInTheDocument();
+    expect(screen.getByText(/fixture data · no ticket issued/i)).toBeInTheDocument();
   });
 
   it('keeps fixture confirmations isolated from backend authority', () => {
