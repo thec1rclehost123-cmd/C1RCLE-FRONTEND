@@ -6,7 +6,6 @@
 import React, { useState } from 'react';
 
 import { LoginFormCard } from '../../features/auth/components/LoginFormCard';
-import { LoginHeaderNav } from '../../features/auth/components/LoginHeaderNav';
 import { LoginHeroPanel } from '../../features/auth/components/LoginHeroPanel';
 import { loginFixture } from '../../features/auth/fixtures/login.fixture';
 
@@ -166,12 +165,6 @@ export function LoginPageClient() {
 
   return (
     <div className="relative min-h-screen w-full bg-black text-white selection:bg-[#FF4400]/30 selection:text-white">
-      {/* Header Navigation */}
-      <LoginHeaderNav
-        onBack={handleBack}
-        showBackButton={step !== 'credentials'}
-      />
-
       {/* Main Responsive Grid Layout */}
       <main className="flex min-h-screen w-full flex-col md:flex-row">
         {/* Left Orange Branding Panel */}
@@ -181,7 +174,21 @@ export function LoginPageClient() {
         />
 
         {/* Right Dark Form Panel */}
-        <section className="flex flex-1 items-center justify-center bg-black px-6 py-28 md:px-12 md:py-20">
+        <section className="flex flex-1 items-center justify-center bg-black px-6 py-28 md:px-12 md:py-20 relative">
+          {/* Step Back Button */}
+          {step !== 'credentials' && (
+            <button
+              type="button"
+              onClick={handleBack}
+              aria-label="Go back"
+              className="absolute top-8 left-6 md:left-12 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/5 backdrop-blur-2xl hover:border-[#FF4400] hover:bg-white/10 transition-all text-white hover:text-[#FF4400]"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </button>
+          )}
+
           <LoginFormCard
             mode={mode}
             step={step}
