@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "buildCommand": "pnpm --filter @c1rcle/app-guest-portal build",
+  "outputDirectory": "apps/guest-portal/.next"
+}
