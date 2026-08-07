@@ -58,7 +58,7 @@ export function HomeHero({ hero }: { hero: HomeHeroContent }) {
       </div>
 
       <a
-        href="#featured-events"
+        href="#featured-drops"
         className="absolute bottom-7 left-1/2 flex min-h-11 -translate-x-1/2 flex-col items-center justify-center gap-2 text-[8px] font-black uppercase tracking-[0.3em] text-white/45 transition-colors hover:text-white"
       >
         Scroll to discover

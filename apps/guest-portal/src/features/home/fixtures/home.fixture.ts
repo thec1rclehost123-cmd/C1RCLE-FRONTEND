@@ -16,6 +16,13 @@ export const homeFixture: HomeFixture = {
     desktopPosterSrc: '/home/hero-poster-desktop.jpg',
     mobilePosterSrc: '/home/hero-poster-mobile.jpg',
   },
+  drops: {
+    eyebrow: 'CURATED BY THE C1RCLE',
+    title: 'Featured Drops',
+    description:
+      'The experiences defining what happens next—selected releases, limited rooms, and essential nights.',
+    eventCtaLabel: 'View event',
+  },
   featured: {
     eyebrow: 'HAPPENING AROUND YOU',
     title: 'Discover',

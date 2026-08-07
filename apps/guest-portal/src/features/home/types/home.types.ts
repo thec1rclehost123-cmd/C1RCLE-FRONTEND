@@ -19,7 +19,15 @@ export interface HomeFeaturedContent {
   ctaHref: string;
 }
 
+export interface HomeFeaturedDropsContent {
+  eyebrow: string;
+  title: string;
+  description: string;
+  eventCtaLabel: string;
+}
+
 export interface HomeFixture {
   hero: HomeHeroContent;
+  drops: HomeFeaturedDropsContent;
   featured: HomeFeaturedContent;
 }

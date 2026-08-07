@@ -1,4 +1,5 @@
 import { exploreFixture } from '@/features/explore/fixtures/explore.fixture';
+import { HomeFeaturedDropsClient } from '@/features/home/components/HomeFeaturedDropsClient';
 import { HomeFeaturedEvents } from '@/features/home/components/HomeFeaturedEvents';
 import { HomeHero } from '@/features/home/components/HomeHero';
 import { homeFixture } from '@/features/home/fixtures/home.fixture';
@@ -24,6 +25,10 @@ export default function HomePage() {
   return (
     <div className="relative z-10 bg-black text-white">
       <HomeHero hero={homeFixture.hero} />
+      <HomeFeaturedDropsClient
+        content={homeFixture.drops}
+        events={exploreFixture.featuredEvents}
+      />
       <HomeFeaturedEvents content={homeFixture.featured} events={exploreFixture.featuredEvents} />
     </div>
   );
