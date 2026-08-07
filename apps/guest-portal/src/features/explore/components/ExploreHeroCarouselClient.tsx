@@ -65,22 +65,27 @@ export function ExploreHeroCarouselClient({ events }: { events: readonly Explore
       aria-roledescription="carousel"
       className="relative mx-auto min-h-[36rem] max-w-[1680px] overflow-hidden rounded-[2rem] border border-white/10 bg-[#090909] shadow-2xl sm:min-h-[40rem] sm:rounded-[3rem] lg:min-h-[44rem]"
     >
-      <Image
-        key={event.image}
-        src={event.image}
-        alt=""
-        fill
-        preload={activeIndex === 0}
-        sizes="(max-width: 1024px) 100vw, 1680px"
-        className="object-cover object-top brightness-125 saturate-110 transition-opacity duration-500 motion-reduce:transition-none"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent lg:bg-gradient-to-r lg:from-black/90 lg:via-black/30 lg:to-transparent" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_45%,rgba(255,68,0,0.12),transparent_36%),linear-gradient(135deg,#111111_0%,#050505_68%)]" />
+      <div className="absolute inset-y-0 right-0 w-full p-4 sm:p-7 lg:w-[58%] lg:p-9">
+        <div className="relative h-full w-full">
+          <Image
+            key={event.image}
+            src={event.image}
+            alt={`${event.title} event poster`}
+            fill
+            preload
+            sizes="(max-width: 1024px) 100vw, 58vw"
+            className="object-contain object-center brightness-110 saturate-110 drop-shadow-[0_24px_60px_rgba(0,0,0,0.55)] transition-opacity duration-500 motion-reduce:transition-none"
+          />
+        </div>
+      </div>
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent lg:bg-[linear-gradient(90deg,#000_0%,rgba(0,0,0,0.9)_35%,rgba(0,0,0,0.2)_58%,transparent_78%)]" />
 
-      <div className="relative flex min-h-[36rem] flex-col justify-end px-6 pb-24 pt-20 sm:min-h-[40rem] sm:px-10 lg:min-h-[44rem] lg:max-w-[64%] lg:px-16 lg:pb-28">
+      <div className="relative flex min-h-[36rem] flex-col justify-end px-6 pb-24 pt-20 sm:min-h-[40rem] sm:px-10 lg:min-h-[44rem] lg:max-w-[48%] lg:px-16 lg:pb-28">
         <p className="text-xs font-black uppercase tracking-[0.3em] text-[#FF6B4A]">
           Featured experience
         </p>
-        <h1 className="mt-4 text-5xl font-black uppercase leading-[0.88] tracking-[-0.06em] text-white sm:text-7xl lg:text-8xl">
+        <h1 className="mt-4 text-5xl font-black uppercase leading-[0.88] tracking-[-0.06em] text-white sm:text-7xl lg:text-7xl 2xl:text-8xl">
           {event.title}
         </h1>
         <p className="mt-6 max-w-xl text-sm font-semibold text-white/75 sm:text-base">

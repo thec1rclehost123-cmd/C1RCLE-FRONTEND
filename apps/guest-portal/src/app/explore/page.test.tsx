@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { exploreFixture } from '@/features/explore/fixtures/explore.fixture';
@@ -22,6 +22,10 @@ describe('ExplorePage', () => {
     render(<ExplorePage />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'Neon Nights' })).toBeInTheDocument();
+    const featuredCarousel = screen.getByRole('region', { name: 'Featured event carousel' });
+    expect(
+      within(featuredCarousel).getByRole('img', { name: 'Neon Nights event poster' }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { level: 2, name: /What's on in All Cities/i }),
     ).toBeInTheDocument();
