@@ -1,15 +1,16 @@
-// FIXTURE_ONLY: Temporary UI presentation types for Login page.
+// FIXTURE_ONLY: Temporary UI presentation types for the Login page.
 
-export type AuthMode = 'login' | 'signup';
+export type AuthProviderPreview = 'apple' | 'google' | 'phone' | null;
 
 export type AuthStep =
-  | 'credentials'
+  | 'methods'
   | 'phone'
-  | 'name'
-  | 'age'
-  | 'gender'
+  | 'verify_otp'
+  | 'identity'
   | 'city'
-  | 'verify_otp';
+  | 'tastes'
+  | 'intent'
+  | 'complete';
 
 export interface CountryOption {
   code: string;
@@ -19,15 +20,14 @@ export interface CountryOption {
 }
 
 export interface LoginFormState {
-  email: string;
-  password: string;
   phone: string;
   country: string;
-  name: string;
-  age: string;
-  gender: string;
-  city: string;
   otp: string;
+  name: string;
+  dateOfBirth: string;
+  city: string;
+  tastes: string[];
+  intents: string[];
 }
 
 export interface LoginFixtureData {
@@ -36,19 +36,13 @@ export interface LoginFixtureData {
     tagline: string;
   };
   availableCities: string[];
-  demoUser: {
-    email: string;
-    name: string;
-    phone: string;
-    age: number;
-    gender: string;
-    city: string;
-  };
+  tasteOptions: string[];
+  intentOptions: string[];
   supportedCountries: CountryOption[];
   defaultOtp: string;
 }
 
 export interface LoginStatusState {
-  type: 'idle' | 'loading' | 'success' | 'error';
+  type: 'idle' | 'info' | 'error';
   message?: string;
 }

@@ -19,16 +19,23 @@ const heroTimeFormatter = new Intl.DateTimeFormat('en-IN', {
   timeZone: 'Asia/Kolkata',
 });
 
+const interestedAvatars = [
+  { initials: 'RI', colorClass: 'bg-[#FFD400]' },
+  { initials: 'IS', colorClass: 'bg-[#FF315D]' },
+  { initials: 'AJ', colorClass: 'bg-[#9B43F5]' },
+  { initials: 'MK', colorClass: 'bg-[#55D6A7]' },
+  { initials: 'DV', colorClass: 'bg-[#FFB86B]' },
+] as const;
+
 export function ExploreHeroCarouselClient({ events }: { events: readonly ExploreEvent[] }) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
     const reducedMotion =
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    if (paused || events.length < 2 || reducedMotion) {
+    if (events.length < 2 || reducedMotion) {
       return;
     }
 
@@ -39,7 +46,7 @@ export function ExploreHeroCarouselClient({ events }: { events: readonly Explore
     return () => {
       window.clearTimeout(timer);
     };
-  }, [activeIndex, events.length, paused]);
+  }, [activeIndex, events.length]);
 
   const event = events[activeIndex];
   if (!event) return null;
@@ -56,7 +63,7 @@ export function ExploreHeroCarouselClient({ events }: { events: readonly Explore
       role="region"
       aria-label="Featured event carousel"
       aria-roledescription="carousel"
-      className="relative mx-auto min-h-[34rem] max-w-[1500px] overflow-hidden rounded-[2rem] border border-white/10 bg-[#090909] shadow-2xl sm:min-h-[38rem] sm:rounded-[3rem] lg:min-h-[42rem]"
+      className="relative mx-auto min-h-[36rem] max-w-[1680px] overflow-hidden rounded-[2rem] border border-white/10 bg-[#090909] shadow-2xl sm:min-h-[40rem] sm:rounded-[3rem] lg:min-h-[44rem]"
     >
       <Image
         key={event.image}
@@ -64,12 +71,12 @@ export function ExploreHeroCarouselClient({ events }: { events: readonly Explore
         alt=""
         fill
         preload={activeIndex === 0}
-        sizes="(max-width: 1024px) 100vw, 1500px"
-        className="object-cover opacity-55 transition-opacity duration-500 motion-reduce:transition-none"
+        sizes="(max-width: 1024px) 100vw, 1680px"
+        className="object-cover object-top brightness-125 saturate-110 transition-opacity duration-500 motion-reduce:transition-none"
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/15 lg:bg-gradient-to-r lg:from-black lg:via-black/55 lg:to-black/10" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent lg:bg-gradient-to-r lg:from-black/90 lg:via-black/30 lg:to-transparent" />
 
-      <div className="relative flex min-h-[34rem] flex-col justify-end px-6 pb-24 pt-20 sm:min-h-[38rem] sm:px-10 lg:min-h-[42rem] lg:max-w-[62%] lg:px-16 lg:pb-28">
+      <div className="relative flex min-h-[36rem] flex-col justify-end px-6 pb-24 pt-20 sm:min-h-[40rem] sm:px-10 lg:min-h-[44rem] lg:max-w-[64%] lg:px-16 lg:pb-28">
         <p className="text-xs font-black uppercase tracking-[0.3em] text-[#FF6B4A]">
           Featured experience
         </p>
@@ -80,13 +87,28 @@ export function ExploreHeroCarouselClient({ events }: { events: readonly Explore
           {heroDateFormatter.format(new Date(event.startsAt))} ·{' '}
           {heroTimeFormatter.format(new Date(event.startsAt))} · {event.venue}, {event.city}
         </p>
-        <div className="mt-8">
+        <div className="mt-8 flex flex-wrap items-center gap-5">
           <Link
             href={`/event/${event.slug}`}
             className="inline-flex min-h-11 items-center rounded-full bg-white px-7 py-3 text-xs font-black uppercase tracking-[0.2em] text-black transition-transform hover:scale-[1.03] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white motion-reduce:transition-none"
           >
             Get tickets
           </Link>
+          <div className="flex items-center gap-3" aria-label="184 people interested">
+            <div className="flex -space-x-2.5" aria-hidden="true">
+              {interestedAvatars.map(({ initials, colorClass }) => (
+                <span
+                  key={initials}
+                  className={`flex size-9 items-center justify-center rounded-full border-2 border-black text-[9px] font-black text-black shadow-lg sm:size-10 ${colorClass}`}
+                >
+                  {initials}
+                </span>
+              ))}
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-[0.16em] text-white/75">
+              184 interested
+            </span>
+          </div>
         </div>
       </div>
 
@@ -109,17 +131,6 @@ export function ExploreHeroCarouselClient({ events }: { events: readonly Explore
         </div>
 
         <div className="flex gap-2">
-          <button
-            type="button"
-            aria-label={paused ? 'Play featured events' : 'Pause featured events'}
-            aria-pressed={paused}
-            onClick={() => {
-              setPaused((current) => !current);
-            }}
-            className="flex min-h-11 items-center justify-center rounded-full border border-white/20 bg-black/35 px-4 text-[10px] font-black uppercase tracking-[0.16em] text-white backdrop-blur-md transition-colors hover:bg-white hover:text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-          >
-            {paused ? 'Play' : 'Pause'}
-          </button>
           <button
             type="button"
             aria-label="Previous featured event"

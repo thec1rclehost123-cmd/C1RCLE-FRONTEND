@@ -63,9 +63,9 @@ export function ExploreDiscoveryClient({
   return (
     <section
       aria-labelledby="explore-results-heading"
-      className="mx-auto max-w-[1500px] px-4 pb-12 sm:px-6 lg:px-8"
+      className="mx-auto max-w-[1680px] px-4 pb-12 sm:px-6 lg:px-8"
     >
-      <div className="relative z-20 -mt-7 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="relative z-20 mt-6 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mt-8">
         <div className="mx-auto flex w-max min-w-full items-end gap-2 rounded-[1.5rem] border border-white/10 bg-[#0A0A0A]/95 p-2 shadow-2xl backdrop-blur-2xl sm:rounded-full">
           <label className="flex min-w-48 flex-1 flex-col gap-1 px-4 py-2">
             <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">

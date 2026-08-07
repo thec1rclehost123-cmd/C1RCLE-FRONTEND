@@ -10,7 +10,7 @@ import { LoginHeroPanel } from '../../features/auth/components/LoginHeroPanel';
 import { loginFixture } from '../../features/auth/fixtures/login.fixture';
 
 import type {
-  AuthMode,
+  AuthProviderPreview,
   AuthStep,
   LoginFormState,
   LoginStatusState,
@@ -20,194 +20,187 @@ export function isValidFixtureOtp(otp: string) {
   return otp.length === 6 && otp === loginFixture.defaultOtp;
 }
 
+function isAdult(dateOfBirth: string) {
+  if (!dateOfBirth) return false;
+  const birthDate = new Date(`${dateOfBirth}T00:00:00`);
+  if (Number.isNaN(birthDate.getTime())) return false;
+
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const birthdayHasPassed =
+    today.getMonth() > birthDate.getMonth() ||
+    (today.getMonth() === birthDate.getMonth() && today.getDate() >= birthDate.getDate());
+  if (!birthdayHasPassed) age -= 1;
+  return age >= 18;
+}
+
+const initialForm: LoginFormState = {
+  phone: '',
+  country: 'IN',
+  otp: '',
+  name: '',
+  dateOfBirth: '',
+  city: 'Pune',
+  tastes: [],
+  intents: [],
+};
+
 export function LoginPageClient() {
-  const [mode, setMode] = useState<AuthMode>('login');
-  const [step, setStep] = useState<AuthStep>('credentials');
+  const [provider, setProvider] = useState<AuthProviderPreview>(null);
+  const [step, setStep] = useState<AuthStep>('methods');
   const [status, setStatus] = useState<LoginStatusState>({ type: 'idle' });
+  const [form, setForm] = useState<LoginFormState>(initialForm);
 
-  const [form, setForm] = useState<LoginFormState>({
-    email: '',
-    password: '',
-    phone: '',
-    country: 'IN',
-    name: '',
-    age: '',
-    gender: 'Male',
-    city: 'Mumbai',
-    otp: '',
-  });
-
-  const handleFormChange = (field: keyof LoginFormState, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-    if (status.type === 'error') {
-      setStatus({ type: 'idle' });
-    }
+  const handleFormChange = (field: keyof LoginFormState, value: string | string[]) => {
+    setForm((previous) => ({ ...previous, [field]: value }));
+    if (status.type === 'error') setStatus({ type: 'idle' });
   };
 
-  const handleToggleMode = () => {
-    const nextMode = mode === 'login' ? 'signup' : 'login';
-    setMode(nextMode);
-    setStep('credentials');
+  const handleProvider = (nextProvider: Exclude<AuthProviderPreview, null>) => {
+    setProvider(nextProvider);
+    if (nextProvider === 'phone') {
+      setStep('phone');
+      setStatus({ type: 'idle' });
+      return;
+    }
+
+    setStep('identity');
     setStatus({ type: 'idle' });
   };
 
   const handleBack = () => {
+    const previousStep: Partial<Record<AuthStep, AuthStep>> = {
+      phone: 'methods',
+      verify_otp: 'phone',
+      identity: provider === 'phone' ? 'verify_otp' : 'methods',
+      city: 'identity',
+      tastes: 'city',
+      intent: 'tastes',
+      complete: 'intent',
+    };
+    setStep(previousStep[step] ?? 'methods');
+    setStatus({ type: 'idle' });
+  };
+
+  const handleSubmit = (event: React.SyntheticEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
     if (step === 'phone') {
-      setStep('credentials');
-    } else if (step === 'name') {
-      setStep('phone');
-    } else if (step === 'age') {
-      setStep('name');
-    } else if (step === 'gender') {
-      setStep('age');
-    } else if (step === 'city') {
-      setStep('gender');
-    } else if (step === 'verify_otp') {
-      setStep('phone');
-    } else {
+      const digits = form.phone.replace(/\D/g, '');
+      if (digits.length < 8) {
+        setStatus({ type: 'error', message: 'Enter a valid mobile number.' });
+        return;
+      }
+      setStep('verify_otp');
       setStatus({ type: 'idle' });
-    }
-  };
-
-  const handleGoogleLogin = () => {
-    setStatus({ type: 'loading' });
-    setTimeout(() => {
-      setForm((prev) => ({
-        ...prev,
-        email: loginFixture.demoUser.email,
-        name: loginFixture.demoUser.name,
-      }));
-      setStatus({
-        type: 'success',
-        message: 'Google UI preview complete · No authentication occurred',
-      });
-    }, 600);
-  };
-
-  const handleNext = (e: React.SyntheticEvent) => {
-    e.preventDefault();
-
-    if (step === 'credentials') {
-      if (!form.email || !form.password) {
-        setStatus({ type: 'error', message: 'Please enter your email and password.' });
-        return;
-      }
-      if (mode === 'login') {
-        setStatus({ type: 'loading' });
-        setTimeout(() => {
-          setStatus({
-            type: 'success',
-            message: 'Login UI preview complete · No session created',
-          });
-        }, 800);
-      } else {
-        setStep('phone');
-      }
       return;
     }
 
-    if (step === 'phone') {
-      if (!form.phone || form.phone.length < 8) {
-        setStatus({ type: 'error', message: 'Please enter a valid phone number.' });
+    if (step === 'verify_otp') {
+      if (!isValidFixtureOtp(form.otp)) {
+        setStatus({
+          type: 'error',
+          message: 'Invalid verification code.',
+        });
         return;
       }
-      setStep('name');
+      setStep('identity');
+      setStatus({ type: 'idle' });
       return;
     }
 
-    if (step === 'name') {
-      if (!form.name.trim()) {
-        setStatus({ type: 'error', message: 'Please enter your name.' });
+    if (step === 'identity') {
+      if (form.name.trim().length < 2) {
+        setStatus({ type: 'error', message: 'Tell us what we should call you.' });
         return;
       }
-      setStep('age');
-      return;
-    }
-
-    if (step === 'age') {
-      const ageNum = parseInt(form.age, 10);
-      if (isNaN(ageNum) || ageNum < 18) {
-        setStatus({ type: 'error', message: 'Must be 18 or older to join.' });
+      if (!isAdult(form.dateOfBirth)) {
+        setStatus({ type: 'error', message: 'You must be at least 18 years old.' });
         return;
       }
-      setStep('gender');
-      return;
-    }
-
-    if (step === 'gender') {
       setStep('city');
+      setStatus({ type: 'idle' });
       return;
     }
 
     if (step === 'city') {
-      setStep('verify_otp');
+      setStep('tastes');
+      setStatus({ type: 'idle' });
       return;
     }
 
-    if (!isValidFixtureOtp(form.otp)) {
-      setStatus({ type: 'error', message: 'Invalid OTP code. Use 123456 for demo.' });
+    if (step === 'tastes') {
+      if (form.tastes.length < 3) {
+        setStatus({ type: 'error', message: 'Pick at least three kinds of nights.' });
+        return;
+      }
+      setStep('intent');
+      setStatus({ type: 'idle' });
       return;
     }
-    setStatus({ type: 'loading' });
-    setTimeout(() => {
-      setStatus({
-        type: 'success',
-        message: 'Signup UI preview complete · No account created',
-      });
-    }, 800);
+
+    if (step === 'intent') {
+      if (form.intents.length < 1) {
+        setStatus({ type: 'error', message: 'Choose at least one reason.' });
+        return;
+      }
+      setStep('complete');
+      setStatus({ type: 'idle' });
+    }
   };
 
-  const handleResendOtp = () => {
-    setStatus({ type: 'loading' });
-    setTimeout(() => {
-      setStatus({
-        type: 'idle',
-        message: `New code sent! Demo OTP is ${loginFixture.defaultOtp}`,
-      });
-    }, 400);
+  const toggleChoice = (field: 'tastes' | 'intents', value: string) => {
+    const current = form[field];
+    handleFormChange(
+      field,
+      current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
+    );
+  };
+
+  const restartPreview = () => {
+    setProvider(null);
+    setStep('methods');
+    setStatus({ type: 'idle' });
+    setForm(initialForm);
   };
 
   return (
     <div className="relative min-h-screen w-full bg-black text-white selection:bg-[#FF4400]/30 selection:text-white">
-      {/* Main Responsive Grid Layout */}
       <div className="flex min-h-screen w-full flex-col md:flex-row">
-        {/* Left Orange Branding Panel */}
         <LoginHeroPanel
           headline={loginFixture.hero.headline}
           tagline={loginFixture.hero.tagline}
         />
 
-        {/* Right Dark Form Panel */}
-        <section className="flex flex-1 items-center justify-center bg-black px-6 py-28 md:px-12 md:py-20 relative">
-          {/* Step Back Button */}
-          {step !== 'credentials' && (
+        <section className="relative flex flex-1 items-center justify-center bg-black px-6 py-24 md:px-12 md:py-16">
+          {step !== 'methods' && step !== 'complete' && (
             <button
               type="button"
               onClick={handleBack}
               aria-label="Go back"
-              className="absolute top-8 left-6 md:left-12 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/5 backdrop-blur-2xl hover:border-[#FF4400] hover:bg-white/10 transition-all text-white hover:text-[#FF4400]"
+              className="absolute left-6 top-7 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white transition-colors hover:border-[#FF4400] hover:text-[#FF4400] md:left-12"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0 7-7m-7 7h18" />
               </svg>
             </button>
           )}
 
           <LoginFormCard
-            mode={mode}
             step={step}
             form={form}
             status={status}
-            cities={loginFixture.availableCities}
-            countries={loginFixture.supportedCountries}
+            fixture={loginFixture}
+            onProvider={handleProvider}
             onFormChange={handleFormChange}
-            onNext={handleNext}
-            onGoogleLogin={handleGoogleLogin}
-            onToggleMode={handleToggleMode}
-            onSetStep={(st) => {
-              setStep(st);
+            onSubmit={handleSubmit}
+            onToggleChoice={toggleChoice}
+            onEditPhone={() => { setStep('phone'); }}
+            onResendOtp={() => {
+              handleFormChange('otp', '');
+              setStatus({ type: 'idle' });
             }}
-            onResendOtp={handleResendOtp}
+            onRestart={restartPreview}
           />
         </section>
       </div>

@@ -12,7 +12,7 @@ export const LoginHeroPanel: React.FC<LoginHeroPanelProps> = ({
   tagline = 'DISCOVER LIFE OFFLINE',
 }) => {
   return (
-    <div className="relative flex w-full flex-col items-center justify-center bg-[#FF4400] px-8 py-16 md:w-1/2 md:min-h-screen lg:w-3/5 lg:p-16">
+    <div className="relative flex w-full flex-col items-center justify-center bg-[#FF4400] px-8 pb-16 pt-28 md:min-h-screen md:w-1/2 md:p-16 lg:w-3/5">
       {/* Main Bold Typography */}
       <div className="relative z-10 w-full text-center">
         <h1 className="text-[14vw] font-black uppercase tracking-tighter leading-[0.8] text-black md:text-[10vw] lg:text-[9vw]">

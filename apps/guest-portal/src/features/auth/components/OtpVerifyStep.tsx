@@ -28,7 +28,7 @@ export const OtpVerifyStep: React.FC<OtpVerifyStepProps> = ({
           ENTER VERIFICATION CODE
         </label>
         <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">
-          Code sent to <span className="text-white">{phone || '+91 9876543210'}</span>
+          Verification for <span className="text-white">{phone || '+91 9876543210'}</span>
           <button
             type="button"
             onClick={onEditPhone}
@@ -48,7 +48,7 @@ export const OtpVerifyStep: React.FC<OtpVerifyStepProps> = ({
         onChange={(e) => {
           onOtpChange(e.target.value.replace(/\D/g, ''));
         }}
-        placeholder="123456"
+        placeholder="••••••"
         className="w-full bg-white/[0.04] border border-white/10 rounded-2xl px-5 py-4 text-center text-xl font-mono font-black tracking-[0.5em] text-white placeholder:text-white/20 focus:outline-none focus:border-[#FF4400]/50"
       />
 
@@ -59,14 +59,14 @@ export const OtpVerifyStep: React.FC<OtpVerifyStepProps> = ({
       )}
 
       <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
-        <span className="text-white/40">Didn&apos;t receive code?</span>
+        <span className="text-white/40">Need to enter it again?</span>
         <button
           type="button"
           onClick={onResend}
           disabled={disabled}
           className="text-[#FF4400] hover:underline hover:text-[#FF4400]/80 disabled:opacity-50"
         >
-          Resend OTP
+          Clear code
         </button>
       </div>
     </div>
