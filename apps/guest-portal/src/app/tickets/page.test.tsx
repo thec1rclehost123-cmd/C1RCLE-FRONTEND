@@ -15,7 +15,8 @@ describe('TicketsPage fixture wallet', () => {
 
     expect(screen.getByRole('button', { name: 'CURRENT PASSES' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'HISTORY' })).toBeInTheDocument();
-    expect(screen.getByText(/No valid tickets issued/i)).toBeInTheDocument();
+    expect(screen.queryByText(/No valid tickets issued/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Checkout UI preview/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'LOGGED IN' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'GUEST SHOWCASE' })).not.toBeInTheDocument();
   });
