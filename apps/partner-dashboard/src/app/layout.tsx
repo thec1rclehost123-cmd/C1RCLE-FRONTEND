@@ -1,6 +1,5 @@
 import { AppProviders, themeInitScript } from '@c1rcle/providers';
-
-import { AppShell } from '@/components/app-shell';
+import { DashboardAuthProvider } from '@/components/providers/DashboardAuthProvider';
 
 import './globals.css';
 
@@ -27,7 +26,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { readonly children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
         {/*
           Applies the stored theme before first paint so the page never
@@ -36,16 +35,9 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
         */}
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className="min-h-dvh bg-background text-foreground antialiased">
-        <a
-          href="#main"
-          className="sr-only-focusable absolute left-4 top-4 z-50 rounded-md bg-primary px-4 py-2 text-primary-foreground"
-        >
-          Skip to content
-        </a>
-
+      <body className="antialiased bg-[#0A0A0B] text-white">
         <AppProviders>
-          <AppShell>{children}</AppShell>
+          <DashboardAuthProvider>{children}</DashboardAuthProvider>
         </AppProviders>
       </body>
     </html>

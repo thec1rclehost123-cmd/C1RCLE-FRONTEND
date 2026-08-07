@@ -8,12 +8,6 @@
   "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/*.test.tsx"],
   "references": [
     {
-      "path": "../api-client/tsconfig.build.json"
-    },
-    {
-      "path": "../auth/tsconfig.build.json"
-    },
-    {
       "path": "../config/tsconfig.build.json"
     },
     {

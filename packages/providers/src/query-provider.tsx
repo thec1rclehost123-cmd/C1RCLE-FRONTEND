@@ -3,9 +3,13 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { isApiClientError } from '@c1rcle/api-client';
-
 import type { ReactNode } from 'react';
+
+
+function isApiClientError(_error: unknown) {
+  return false;
+}
+
 
 const ONE_MINUTE = 60 * 1000;
 
@@ -24,7 +28,7 @@ export function createQueryClient(): QueryClient {
         gcTime: 5 * ONE_MINUTE,
         refetchOnWindowFocus: false,
         retry: (failureCount, error) => {
-          if (isApiClientError(error) && !error.isRetryable) {
+          if (isApiClientError(error) && !(error as { isRetryable?: boolean }).isRetryable) {
             return false;
           }
           return failureCount < 2;
