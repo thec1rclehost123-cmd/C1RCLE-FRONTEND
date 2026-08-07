@@ -76,7 +76,20 @@ export function ExploreHeroCarouselClient({ events }: { events: readonly Explore
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent lg:bg-gradient-to-r lg:from-black/90 lg:via-black/30 lg:to-transparent" />
 
-      <div className="relative flex min-h-[36rem] flex-col justify-end px-6 pb-24 pt-20 sm:min-h-[40rem] sm:px-10 lg:min-h-[44rem] lg:max-w-[64%] lg:px-16 lg:pb-28">
+      <div className="absolute right-[6%] top-1/2 z-10 hidden h-[72%] w-[31%] -translate-y-1/2 overflow-hidden rounded-[1.5rem] border border-white/15 bg-black/75 p-2 shadow-[0_30px_90px_rgba(0,0,0,0.7)] md:block lg:right-[8%] lg:h-[76%] lg:w-[29%] lg:rounded-[2rem] lg:p-3">
+        <div className="relative h-full w-full overflow-hidden rounded-[1rem] lg:rounded-[1.35rem]">
+          <Image
+            key={`${event.image}-foreground`}
+            src={event.image}
+            alt={`${event.title} featured poster`}
+            fill
+            sizes="(max-width: 1024px) 31vw, 29vw"
+            className="object-contain object-center brightness-105 saturate-110"
+          />
+        </div>
+      </div>
+
+      <div className="relative z-20 flex min-h-[36rem] flex-col justify-end px-6 pb-24 pt-20 sm:min-h-[40rem] sm:px-10 md:max-w-[58%] lg:min-h-[44rem] lg:max-w-[56%] lg:px-16 lg:pb-28">
         <p className="text-xs font-black uppercase tracking-[0.3em] text-[#FF6B4A]">
           Featured experience
         </p>

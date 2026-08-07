@@ -22,6 +22,7 @@ describe('ExplorePage', () => {
     render(<ExplorePage />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'Neon Nights' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Neon Nights featured poster' })).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { level: 2, name: /What's on in All Cities/i }),
     ).toBeInTheDocument();
