@@ -57,6 +57,7 @@ export function ExploreHeroCarouselClient({ events }: { events: readonly Explore
   const event = events[activeIndex];
   if (!event) return null;
   const posterPosition = heroPosterPosition[event.id] ?? 'object-center';
+  const nextEvent = events[(activeIndex + 1) % events.length];
 
   const showPrevious = () => {
     setActiveIndex((current) => (current - 1 + events.length) % events.length);
@@ -118,6 +119,41 @@ export function ExploreHeroCarouselClient({ events }: { events: readonly Explore
           </div>
         </div>
       </div>
+
+      {nextEvent && events.length > 1 && (
+        <button
+          type="button"
+          aria-label={`Preview next event: ${nextEvent.title}`}
+          onClick={showNext}
+          className="group absolute right-[-4.5rem] top-[48%] z-10 hidden h-64 w-44 -translate-y-1/2 rotate-[3deg] rounded-[1.25rem] border border-white/25 bg-[#0A0A0A] p-2 shadow-[0_24px_70px_rgba(0,0,0,0.65)] transition-transform duration-300 hover:right-[-2rem] hover:rotate-0 focus-visible:right-[-2rem] focus-visible:rotate-0 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white motion-reduce:transition-none md:block lg:h-72 lg:w-48"
+        >
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 -z-20 translate-x-4 translate-y-3 rotate-[4deg] rounded-[1.25rem] border border-white/10 bg-black/75"
+          />
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 -z-10 translate-x-2 translate-y-1.5 rotate-[2deg] rounded-[1.25rem] border border-white/15 bg-[#151515]"
+          />
+          <span className="relative block h-full overflow-hidden rounded-[0.9rem]">
+            <Image
+              src={nextEvent.image}
+              alt=""
+              fill
+              sizes="192px"
+              className="object-cover object-center brightness-90 transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transition-none"
+            />
+            <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/70 to-transparent px-4 pb-4 pt-12 text-left">
+              <span className="block text-[8px] font-black uppercase tracking-[0.22em] text-[#FF6B4A]">
+                Up next
+              </span>
+              <span className="mt-1 block text-xs font-black uppercase tracking-[-0.02em] text-white">
+                {nextEvent.title}
+              </span>
+            </span>
+          </span>
+        </button>
+      )}
 
       <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between gap-4 sm:bottom-8 sm:left-10 sm:right-10 lg:left-16">
         <div className="flex gap-2" aria-label="Choose featured event">

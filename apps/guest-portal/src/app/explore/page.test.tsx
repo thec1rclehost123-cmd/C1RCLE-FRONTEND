@@ -32,6 +32,9 @@ describe('ExplorePage', () => {
     expect(screen.getByText('6 events found')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View Sunday Soul' })).toBeInTheDocument();
     expect(screen.getByLabelText('184 people interested')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Preview next event: Rooftop Jazz' }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /pause featured events/i })).not.toBeInTheDocument();
   });
 
@@ -68,6 +71,16 @@ describe('ExplorePage', () => {
       'aria-current',
       'true',
     );
+  });
+
+  it('advances the carousel from the layered next-poster preview', () => {
+    render(<ExplorePage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preview next event: Rooftop Jazz' }));
+    expect(screen.getByRole('heading', { level: 1, name: 'Rooftop Jazz' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Preview next event: Techno Bunker' }),
+    ).toBeInTheDocument();
   });
 
   it('does not auto-rotate when reduced motion is requested', () => {
