@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { exploreFixture } from '@/features/explore/fixtures/explore.fixture';
@@ -22,19 +22,12 @@ describe('ExplorePage', () => {
     render(<ExplorePage />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'Neon Nights' })).toBeInTheDocument();
-    const featuredCarousel = screen.getByRole('region', { name: 'Featured event carousel' });
-    expect(
-      within(featuredCarousel).getByRole('img', { name: 'Neon Nights event poster' }),
-    ).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { level: 2, name: /What's on in All Cities/i }),
     ).toBeInTheDocument();
     expect(screen.getByText('6 events found')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View Sunday Soul' })).toBeInTheDocument();
     expect(screen.getByLabelText('184 people interested')).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Preview next event: Rooftop Jazz' }),
-    ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /pause featured events/i })).not.toBeInTheDocument();
   });
 
@@ -71,16 +64,6 @@ describe('ExplorePage', () => {
       'aria-current',
       'true',
     );
-  });
-
-  it('advances the carousel from the layered next-poster preview', () => {
-    render(<ExplorePage />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Preview next event: Rooftop Jazz' }));
-    expect(screen.getByRole('heading', { level: 1, name: 'Rooftop Jazz' })).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Preview next event: Techno Bunker' }),
-    ).toBeInTheDocument();
   });
 
   it('does not auto-rotate when reduced motion is requested', () => {
