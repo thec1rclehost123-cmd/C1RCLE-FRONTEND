@@ -77,7 +77,7 @@ export function UserTicketCard({ ticket, onSelect, isPast = false }: UserTicketC
                 : 'bg-white text-black hover:bg-white/90 hover:scale-105 shadow-md'
             }`}
           >
-            {isPast ? 'VIEW RECEIPT' : 'VIEW TICKET QR'}
+            {isPast ? 'VIEW PREVIEW RECEIPT' : 'VIEW PASS PREVIEW'}
           </button>
 
           {!isPast && (

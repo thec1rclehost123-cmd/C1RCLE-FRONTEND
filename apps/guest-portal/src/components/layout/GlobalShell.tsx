@@ -26,7 +26,9 @@ export function GlobalShell({ children }: GlobalShellProps) {
       <Navbar />
 
       {/* Main Content Viewport */}
-      <main className="flex-1 w-full relative">{children}</main>
+      <main id="main" tabIndex={-1} className="flex-1 w-full relative">
+        {children}
+      </main>
 
       {/* Global Footer (hidden on login page for full-height split view) */}
       {!isLoginPage && <Footer />}

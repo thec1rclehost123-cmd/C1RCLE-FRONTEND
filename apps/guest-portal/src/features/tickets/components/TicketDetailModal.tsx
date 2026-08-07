@@ -29,7 +29,7 @@ export function TicketDetailModal({ ticket, onClose }: TicketDetailModalProps) {
 
         {/* Brand Tagline */}
         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#FF4400] mb-2">
-          THE C1RCLE • ENTRY PASS
+          THE C1RCLE • DECORATIVE PASS PREVIEW
         </span>
 
         <h3 className="text-xl font-black uppercase tracking-tight text-center mb-1">
@@ -40,25 +40,22 @@ export function TicketDetailModal({ ticket, onClose }: TicketDetailModalProps) {
           {ticket.tierName} • {ticket.ticketCount} {ticket.ticketCount > 1 ? 'Guests' : 'Guest'}
         </p>
 
-        {/* QR Code Container */}
-        <div className="relative p-5 rounded-2xl bg-white flex flex-col items-center justify-center shadow-lg mb-6 w-56 h-56">
-          {/* Simulated QR Code Graphic */}
-          <div className="w-full h-full bg-black/90 p-4 rounded-xl flex flex-col justify-between items-center relative overflow-hidden">
-            <div className="grid grid-cols-5 gap-1.5 w-full h-full">
-              {Array.from({ length: 25 }).map((_, i) => (
-                <div
-                  key={i}
-                  className={`rounded-xs ${
-                    i % 2 === 0 || i % 3 === 0 ? 'bg-white' : 'bg-[#FF4400]'
-                  }`}
-                />
-              ))}
-            </div>
+        {/* Deliberately non-scannable fixture marker */}
+        <div className="relative mb-6 flex h-56 w-56 items-center justify-center overflow-hidden rounded-2xl border border-[#FF4400]/35 bg-[repeating-linear-gradient(135deg,#171717_0,#171717_14px,#20100a_14px,#20100a_28px)] p-6 text-center shadow-lg">
+          <div>
+            <p className="text-3xl font-black uppercase leading-[0.9] tracking-[-0.04em] text-white">
+              Not valid
+              <br />
+              for entry
+            </p>
+            <p className="mt-4 text-[9px] font-black uppercase tracking-[0.28em] text-[#FF4400]">
+              Fixture UI only
+            </p>
           </div>
         </div>
 
         <p className="text-[10px] font-mono font-bold text-white/40 tracking-widest mb-6">
-          {ticket.qrPayload}
+          {ticket.qrPayload.replaceAll('_', ' ')}
         </p>
 
         <div className="w-full pt-4 border-t border-white/10 text-center">

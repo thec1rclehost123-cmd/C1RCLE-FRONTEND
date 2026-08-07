@@ -30,10 +30,13 @@ describe('ConfirmationView', () => {
     if (!event) return;
 
     render(<ConfirmationView confirmation={confirmation} event={event} />);
-    expect(screen.getByRole('heading', { name: /You're on.*the list\./i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Confirmation preview\./i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Neon Nights' })).toBeInTheDocument();
-    expect(screen.getByText('View in My Tickets')).toBeInTheDocument();
+    expect(screen.getByText(/UI preview.*Fixture data.*No order created/i)).toBeInTheDocument();
+    expect(screen.getByText('View ticket UI preview')).toBeInTheDocument();
     expect(screen.getByText('Explore More Events')).toBeInTheDocument();
+    expect(screen.queryByText('Confirmed')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total Paid')).not.toBeInTheDocument();
   });
 
   it('keeps fixture confirmations isolated from backend authority', () => {

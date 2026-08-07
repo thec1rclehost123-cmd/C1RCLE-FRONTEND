@@ -4,7 +4,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { loginFixture } from '../../features/auth/fixtures/login.fixture';
 
-import { LoginPageClient } from './login-page-client';
+import { isValidFixtureOtp, LoginPageClient } from './login-page-client';
 
 describe('LoginPage', () => {
   it('renders headline typography from fixture', () => {
@@ -16,6 +16,7 @@ describe('LoginPage', () => {
 
   it('renders initial credentials step with email and password inputs', () => {
     render(<LoginPageClient />);
+    expect(screen.getByText(/No authentication/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText('NAME@EMAIL.COM')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('••••••••')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /CONTINUE WITH GOOGLE/i })).toBeInTheDocument();
@@ -36,7 +37,7 @@ describe('LoginPage', () => {
       vi.advanceTimersByTime(1000);
     });
 
-    expect(screen.getByText(/Signed in successfully!/i)).toBeInTheDocument();
+    expect(screen.getByText(/No session created/i)).toBeInTheDocument();
     vi.useRealTimers();
   });
 
@@ -52,5 +53,12 @@ describe('LoginPage', () => {
     expect(loginFixture).toBeDefined();
     expect(loginFixture.defaultOtp).toBe('123456');
     expect(loginFixture.availableCities).toContain('Mumbai');
+  });
+
+  it('rejects every OTP except the exact six-digit fixture OTP', () => {
+    expect(isValidFixtureOtp('123456')).toBe(true);
+    expect(isValidFixtureOtp('654321')).toBe(false);
+    expect(isValidFixtureOtp('12345')).toBe(false);
+    expect(isValidFixtureOtp('1234567')).toBe(false);
   });
 });

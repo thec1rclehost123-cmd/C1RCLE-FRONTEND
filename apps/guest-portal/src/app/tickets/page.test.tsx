@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest';
 
 import TicketsPage from './page';
 
-describe('TicketsPage (Logged-In & Guest State)', () => {
-  it('renders logged-in tickets wallet view by default', () => {
+describe('TicketsPage fixture wallet', () => {
+  it('renders the fixture wallet without a fake authentication switch', () => {
     render(<TicketsPage />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'TICKETS' })).toBeInTheDocument();
@@ -15,6 +15,9 @@ describe('TicketsPage (Logged-In & Guest State)', () => {
 
     expect(screen.getByRole('button', { name: 'CURRENT PASSES' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'HISTORY' })).toBeInTheDocument();
+    expect(screen.getByText(/No valid tickets issued/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'LOGGED IN' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'GUEST SHOWCASE' })).not.toBeInTheDocument();
   });
 
   it('switches to history tab and displays past tickets', () => {
@@ -26,28 +29,21 @@ describe('TicketsPage (Logged-In & Guest State)', () => {
     expect(screen.getByText('KINETIC NIGHTS VOL. 4')).toBeInTheDocument();
   });
 
-  it('opens and closes ticket detail QR modal', () => {
+  it('opens a deliberately non-scannable ticket preview', () => {
     render(<TicketsPage />);
 
-    const viewQrButtons = screen.getAllByRole('button', { name: 'VIEW TICKET QR' });
-    const firstBtn = viewQrButtons[0];
+    const viewPassButtons = screen.getAllByRole('button', { name: 'VIEW PASS PREVIEW' });
+    const firstBtn = viewPassButtons[0];
     expect(firstBtn).toBeDefined();
     if (firstBtn) {
       fireEvent.click(firstBtn);
     }
 
-    expect(screen.getByText(/ENTRY PASS/i)).toBeInTheDocument();
+    expect(screen.getByText(/DECORATIVE PASS PREVIEW/i)).toBeInTheDocument();
+    expect(screen.getByText(/NOT VALID FOR ENTRY/i)).toBeInTheDocument();
 
     const closeBtn = screen.getByRole('button', { name: 'Close ticket view' });
     fireEvent.click(closeBtn);
   });
 
-  it('allows toggling to guest showcase view', () => {
-    render(<TicketsPage />);
-
-    const guestToggleBtn = screen.getByRole('button', { name: 'GUEST SHOWCASE' });
-    fireEvent.click(guestToggleBtn);
-
-    expect(screen.getByRole('link', { name: /LOGIN TO ACCESS/i })).toBeInTheDocument();
-  });
 });

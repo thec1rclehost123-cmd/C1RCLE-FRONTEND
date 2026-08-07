@@ -151,6 +151,10 @@ export const LoginFormCard: React.FC<LoginFormCardProps> = ({
 
   return (
     <div className="w-full max-w-[420px] space-y-6">
+      <p className="rounded-full border border-amber-300/25 bg-amber-300/10 px-4 py-2.5 text-center text-[9px] font-black uppercase tracking-[0.2em] text-amber-200 sm:text-[10px]">
+        UI preview · Fixture data · No authentication
+      </p>
+
       {/* Dynamic Heading */}
       <div className="text-left">{getHeading()}</div>
 

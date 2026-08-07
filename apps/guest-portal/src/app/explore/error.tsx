@@ -2,7 +2,7 @@
 
 export default function ExploreError({ reset }: { reset: () => void }) {
   return (
-    <main className="relative z-10 flex min-h-[70vh] items-center justify-center px-6 pb-24 pt-32 text-center text-white">
+    <div className="relative z-10 flex min-h-[70vh] items-center justify-center px-6 pb-24 pt-32 text-center text-white">
       <div className="max-w-lg rounded-[2rem] border border-red-400/20 bg-red-500/10 p-10 backdrop-blur-xl">
         <p className="text-xs font-black uppercase tracking-[0.3em] text-[#FF6B4A]">Explore</p>
         <h1 className="mt-4 text-3xl font-black uppercase tracking-tight">Something glitched</h1>
@@ -17,6 +17,6 @@ export default function ExploreError({ reset }: { reset: () => void }) {
           Try again
         </button>
       </div>
-    </main>
+    </div>
   );
 }

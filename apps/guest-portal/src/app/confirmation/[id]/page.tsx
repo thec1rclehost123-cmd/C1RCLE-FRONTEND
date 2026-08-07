@@ -13,6 +13,8 @@ interface ConfirmationPageProps {
   params: Promise<{ id: string }>;
 }
 
+export const dynamicParams = false;
+
 export function generateStaticParams() {
   return bookingConfirmationFixtures.map((confirmation) => ({ id: confirmation.id }));
 }

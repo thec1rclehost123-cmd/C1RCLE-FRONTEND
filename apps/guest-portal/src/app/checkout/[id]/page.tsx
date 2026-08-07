@@ -12,6 +12,8 @@ interface CheckoutPageProps {
   params: Promise<{ id: string }>;
 }
 
+export const dynamicParams = false;
+
 export function generateStaticParams() {
   return bookingEventFixtures.map((event) => ({ id: event.id }));
 }

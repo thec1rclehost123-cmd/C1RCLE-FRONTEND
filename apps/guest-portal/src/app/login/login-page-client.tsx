@@ -16,6 +16,10 @@ import type {
   LoginStatusState,
 } from '../../features/auth/types/login.types';
 
+export function isValidFixtureOtp(otp: string) {
+  return otp.length === 6 && otp === loginFixture.defaultOtp;
+}
+
 export function LoginPageClient() {
   const [mode, setMode] = useState<AuthMode>('login');
   const [step, setStep] = useState<AuthStep>('credentials');
@@ -75,7 +79,7 @@ export function LoginPageClient() {
       }));
       setStatus({
         type: 'success',
-        message: 'Google auth preview complete (FIXTURE_ONLY)',
+        message: 'Google UI preview complete · No authentication occurred',
       });
     }, 600);
   };
@@ -93,7 +97,7 @@ export function LoginPageClient() {
         setTimeout(() => {
           setStatus({
             type: 'success',
-            message: 'Signed in successfully! (FIXTURE_ONLY)',
+            message: 'Login UI preview complete · No session created',
           });
         }, 800);
       } else {
@@ -140,7 +144,7 @@ export function LoginPageClient() {
       return;
     }
 
-    if (form.otp !== loginFixture.defaultOtp && form.otp.length < 6) {
+    if (!isValidFixtureOtp(form.otp)) {
       setStatus({ type: 'error', message: 'Invalid OTP code. Use 123456 for demo.' });
       return;
     }
@@ -148,7 +152,7 @@ export function LoginPageClient() {
     setTimeout(() => {
       setStatus({
         type: 'success',
-        message: 'Account created & verified! (FIXTURE_ONLY)',
+        message: 'Signup UI preview complete · No account created',
       });
     }, 800);
   };
@@ -166,7 +170,7 @@ export function LoginPageClient() {
   return (
     <div className="relative min-h-screen w-full bg-black text-white selection:bg-[#FF4400]/30 selection:text-white">
       {/* Main Responsive Grid Layout */}
-      <main className="flex min-h-screen w-full flex-col md:flex-row">
+      <div className="flex min-h-screen w-full flex-col md:flex-row">
         {/* Left Orange Branding Panel */}
         <LoginHeroPanel
           headline={loginFixture.hero.headline}
@@ -206,7 +210,7 @@ export function LoginPageClient() {
             onResendOtp={handleResendOtp}
           />
         </section>
-      </main>
+      </div>
     </div>
   );
 }

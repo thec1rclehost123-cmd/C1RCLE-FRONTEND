@@ -51,7 +51,7 @@ export function EventDetailView({ event }: { event: EventDetailFixture }) {
 
   if (lifecycle) {
     return (
-      <main className="relative z-10 flex min-h-[75vh] items-center justify-center overflow-hidden px-6 pb-24 pt-32 text-center text-white">
+      <div className="relative z-10 flex min-h-[75vh] items-center justify-center overflow-hidden px-6 pb-24 pt-32 text-center text-white">
         <EventBackdrop accentTone={event.accentTone} />
         <div
           className={`relative max-w-xl rounded-[2rem] border bg-black/70 p-10 backdrop-blur-xl ${accent.border} ${accent.posterShadow}`}
@@ -68,12 +68,12 @@ export function EventDetailView({ event }: { event: EventDetailFixture }) {
             Explore events
           </Link>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="relative z-10 min-h-screen overflow-x-clip pb-36 pt-24 text-white sm:pt-28">
+    <div className="relative z-10 min-h-screen overflow-x-clip pb-36 pt-24 text-white sm:pt-28">
       <EventBackdrop accentTone={event.accentTone} />
 
       <div className="relative mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8">
@@ -206,7 +206,7 @@ export function EventDetailView({ event }: { event: EventDetailFixture }) {
           Buy tickets from {moneyFormatter.format(startingPricePaise / 100)}
         </Link>
       </div>
-    </main>
+    </div>
   );
 }
 

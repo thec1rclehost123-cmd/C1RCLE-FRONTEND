@@ -67,6 +67,10 @@ export function UserTicketsView({ wallet }: UserTicketsViewProps) {
         </div>
       </div>
 
+      <p className="mb-8 rounded-full border border-amber-300/25 bg-amber-300/10 px-5 py-3 text-center text-[9px] font-black uppercase tracking-[0.24em] text-amber-200 sm:text-[10px]">
+        UI preview · Fixture data · No valid tickets issued
+      </p>
+
       {/* Pending Incomplete Payment Alert */}
       {wallet.pendingReservation && activeTab === 'upcoming' && (
         <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-3xl border border-[#FF4400]/30 bg-[#FF4400]/10 px-6 py-4 backdrop-blur-xl">
@@ -74,7 +78,7 @@ export function UserTicketsView({ wallet }: UserTicketsViewProps) {
             <span className="h-2.5 w-2.5 rounded-full bg-[#FF4400] animate-ping" />
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-[#FF4400]">
-                INCOMPLETE PAYMENT
+                CHECKOUT UI PREVIEW
               </p>
               <p className="text-sm font-bold text-white mt-0.5">
                 {wallet.pendingReservation.eventTitle}
@@ -85,7 +89,7 @@ export function UserTicketsView({ wallet }: UserTicketsViewProps) {
             href={`/checkout/${wallet.pendingReservation.eventId}`}
             className="px-5 py-2 rounded-full bg-[#FF4400] text-white text-xs font-black uppercase tracking-widest hover:bg-[#FF4400]/90 transition-all shadow-md self-end sm:self-auto"
           >
-            RESUME PAYMENT →
+            OPEN CHECKOUT PREVIEW →
           </Link>
         </div>
       )}

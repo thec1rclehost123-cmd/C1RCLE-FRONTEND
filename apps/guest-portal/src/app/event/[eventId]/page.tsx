@@ -12,6 +12,8 @@ interface EventDetailPageProps {
   params: Promise<{ eventId: string }>;
 }
 
+export const dynamicParams = false;
+
 export function generateStaticParams() {
   return eventDetailFixtures.map((event) => ({ eventId: event.slug }));
 }

@@ -16,7 +16,7 @@ export function CheckoutView({
   const accent = getEventAccentClasses(event.accentTone);
 
   return (
-    <main className="relative z-10 min-h-screen overflow-hidden pb-32 pt-24 text-white sm:pt-28">
+    <div className="relative z-10 min-h-screen overflow-hidden pb-32 pt-24 text-white sm:pt-28">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[#080808]">
         <div className={`absolute inset-0 ${accent.backdrop}`} />
         <div className="absolute inset-x-0 bottom-0 h-[32rem] bg-gradient-to-t from-black to-transparent" />
@@ -27,7 +27,7 @@ export function CheckoutView({
           <CheckoutFlowClient event={event} initialTierId={initialTierId} />
         </Suspense>
       </div>
-    </main>
+    </div>
   );
 }
 

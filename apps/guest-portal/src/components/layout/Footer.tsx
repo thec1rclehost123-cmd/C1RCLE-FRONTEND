@@ -13,8 +13,6 @@ export interface FooterLinkItem {
 export const footerLinks: FooterLinkItem[] = [
   { label: 'Download App', href: '/app' },
   { label: 'Explore', href: '/explore' },
-  { label: 'University', href: '/about#university' },
-  { label: 'Careers', href: '/about#careers' },
   { label: 'Privacy', href: '/privacy' },
   { label: 'Terms', href: '/terms' },
 ];
@@ -35,7 +33,7 @@ export function Footer() {
         {/* Bottom Navigation Links & Copyright */}
         <div className="w-full flex flex-col md:flex-row justify-between items-center gap-8 pt-8 border-t border-white/10">
           <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/40">
-            © 2025 THE C1RCLE — DISCOVER LIFE OFFLINE
+            © 2026 THE C1RCLE — DISCOVER LIFE OFFLINE
           </p>
 
           <div className="flex flex-wrap justify-center gap-x-8 gap-y-3">

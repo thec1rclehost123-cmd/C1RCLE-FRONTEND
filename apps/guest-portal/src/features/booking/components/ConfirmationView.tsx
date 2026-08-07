@@ -27,13 +27,17 @@ export function ConfirmationView({
   const accent = getEventAccentClasses(event.accentTone);
 
   return (
-    <main className="relative z-10 min-h-screen overflow-hidden pb-28 pt-20 text-white sm:pt-24 lg:pb-8 lg:pt-20">
+    <div className="relative z-10 min-h-screen overflow-hidden pb-28 pt-20 text-white sm:pt-24 lg:pb-8 lg:pt-20">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[#080808]">
         <div className={`absolute inset-0 ${accent.backdrop}`} />
         <div className="absolute inset-x-0 bottom-0 h-[34rem] bg-gradient-to-t from-black to-transparent" />
       </div>
 
       <div className="relative mx-auto max-w-[980px] px-4 sm:px-6 lg:px-8">
+        <p className="mx-auto mt-3 max-w-3xl rounded-full border border-amber-300/25 bg-amber-300/10 px-5 py-3 text-center text-[9px] font-black uppercase tracking-[0.24em] text-amber-200 sm:text-[10px]">
+          UI preview · Fixture data · No order created
+        </p>
+
         <header className="mx-auto max-w-3xl py-7 text-center lg:py-3">
           <div
             aria-hidden="true"
@@ -42,7 +46,7 @@ export function ConfirmationView({
             ✓
           </div>
           <h1 className="mt-3 text-5xl font-black uppercase leading-[0.86] tracking-[-0.06em] sm:text-6xl lg:text-6xl">
-            You&apos;re on the list.
+            Confirmation preview.
           </h1>
         </header>
 
@@ -72,7 +76,7 @@ export function ConfirmationView({
                   Confirmation #{confirmation.id}
                 </span>
                 <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-400 border border-emerald-500/20">
-                  Confirmed
+                  Preview only
                 </span>
               </div>
 
@@ -112,7 +116,7 @@ export function ConfirmationView({
             <div className="mt-8 border-t border-white/10 pt-6">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-widest text-white/60">
-                  Total Paid
+                  Illustrative total
                 </span>
                 <span className="text-xl font-black text-white">
                   {moneyFormatter.format(confirmation.total.amountPaise / 100)}
@@ -124,7 +128,7 @@ export function ConfirmationView({
                   href="/tickets"
                   className="flex-1 rounded-full bg-white px-6 py-3 text-center text-xs font-black uppercase tracking-widest text-black hover:bg-white/90 transition-all"
                 >
-                  View in My Tickets
+                  View ticket UI preview
                 </Link>
                 <Link
                   href="/explore"
@@ -137,6 +141,6 @@ export function ConfirmationView({
           </div>
         </section>
       </div>
-    </main>
+    </div>
   );
 }

@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 export default function EventDetailNotFound() {
   return (
-    <main className="relative z-10 flex min-h-[75vh] items-center justify-center px-6 pb-24 pt-32 text-center text-white">
+    <div className="relative z-10 flex min-h-[75vh] items-center justify-center px-6 pb-24 pt-32 text-center text-white">
       <div className="max-w-lg rounded-[2rem] border border-white/10 bg-white/[0.04] p-10 backdrop-blur-xl">
         <p className="text-xs font-black uppercase tracking-[0.3em] text-[#FF6B4A]">
           Event unavailable
@@ -20,6 +20,6 @@ export default function EventDetailNotFound() {
           Explore events
         </Link>
       </div>
-    </main>
+    </div>
   );
 }
