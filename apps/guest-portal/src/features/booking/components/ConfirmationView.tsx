@@ -34,10 +34,6 @@ export function ConfirmationView({
       </div>
 
       <div className="relative mx-auto max-w-[980px] px-4 sm:px-6 lg:px-8">
-        <p className="mx-auto mt-3 max-w-3xl rounded-full border border-amber-300/25 bg-amber-300/10 px-5 py-3 text-center text-[9px] font-black uppercase tracking-[0.24em] text-amber-200 sm:text-[10px]">
-          UI preview · Fixture data · No order created
-        </p>
-
         <header className="mx-auto max-w-3xl py-7 text-center lg:py-3">
           <div
             aria-hidden="true"
@@ -46,7 +42,7 @@ export function ConfirmationView({
             ✓
           </div>
           <h1 className="mt-3 text-5xl font-black uppercase leading-[0.86] tracking-[-0.06em] sm:text-6xl lg:text-6xl">
-            Confirmation preview.
+            You&apos;re on the list.
           </h1>
         </header>
 
@@ -76,7 +72,7 @@ export function ConfirmationView({
                   Confirmation #{confirmation.id}
                 </span>
                 <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-400 border border-emerald-500/20">
-                  Preview only
+                  Confirmed
                 </span>
               </div>
 
@@ -116,7 +112,7 @@ export function ConfirmationView({
             <div className="mt-8 border-t border-white/10 pt-6">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-widest text-white/60">
-                  Illustrative total
+                  Total Paid
                 </span>
                 <span className="text-xl font-black text-white">
                   {moneyFormatter.format(confirmation.total.amountPaise / 100)}
@@ -128,7 +124,7 @@ export function ConfirmationView({
                   href="/tickets"
                   className="flex-1 rounded-full bg-white px-6 py-3 text-center text-xs font-black uppercase tracking-widest text-black hover:bg-white/90 transition-all"
                 >
-                  View ticket UI preview
+                  View in My Tickets
                 </Link>
                 <Link
                   href="/explore"

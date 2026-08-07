@@ -74,7 +74,7 @@ export function CheckoutFlowClient({
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div>
             <p className={`text-[9px] font-black uppercase tracking-[0.28em] ${accent.text}`}>
-              Booking preview · Step {String(step).padStart(2, '0')}
+              Step {String(step).padStart(2, '0')} of 03
             </p>
             <h1
               id="checkout-heading"
@@ -82,7 +82,7 @@ export function CheckoutFlowClient({
             >
               {step === 1 && 'Select tickets'}
               {step === 2 && 'Your details'}
-              {step === 3 && 'Review only'}
+              {step === 3 && 'Payment options'}
             </h1>
           </div>
           <ol aria-label="Checkout progress" className="flex items-center gap-2">
@@ -120,58 +120,74 @@ export function CheckoutFlowClient({
                       {moneyFormatter.format(tier.price.amountPaise / 100)}
                     </p>
                   </div>
-                  <div className="flex items-center justify-between gap-4 sm:justify-end">
-                    <button
-                      type="button"
-                      disabled={quantity === 0}
-                      aria-label={`Remove one ${tier.name}`}
-                      onClick={() => {
-                        changeQuantity(tier.id, -1, tier.maximumQuantity);
-                      }}
-                      className="flex size-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-lg font-bold disabled:cursor-not-allowed disabled:opacity-25"
-                    >
-                      −
-                    </button>
-                    <output
-                      aria-label={`${tier.name} quantity`}
-                      className="w-8 overflow-hidden text-center text-base font-black"
-                    >
-                      <AnimatedValue value={String(quantity)} />
-                    </output>
-                    <button
-                      type="button"
-                      disabled={quantity >= tier.maximumQuantity}
-                      aria-label={`Add one ${tier.name}`}
-                      onClick={() => {
-                        changeQuantity(tier.id, 1, tier.maximumQuantity);
-                      }}
-                      className="flex size-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-lg font-bold disabled:cursor-not-allowed disabled:opacity-25"
-                    >
-                      +
-                    </button>
+
+                  <div className="flex items-center justify-between gap-3 sm:justify-end">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/30 sm:hidden">
+                      Quantity
+                    </span>
+                    <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/40 p-1">
+                      <button
+                        type="button"
+                        aria-label={`Decrease ${tier.name} count`}
+                        disabled={quantity === 0}
+                        onClick={() => {
+                          changeQuantity(tier.id, -1, tier.maximumQuantity);
+                        }}
+                        className="flex size-8 items-center justify-center rounded-full text-sm font-bold text-white transition-colors hover:bg-white/10 disabled:opacity-20"
+                      >
+                        -
+                      </button>
+                      <span className="w-6 text-center text-xs font-black text-white">
+                        {quantity}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label={`Increase ${tier.name} count`}
+                        disabled={quantity >= tier.maximumQuantity}
+                        onClick={() => {
+                          changeQuantity(tier.id, 1, tier.maximumQuantity);
+                        }}
+                        className="flex size-8 items-center justify-center rounded-full text-sm font-bold text-white transition-colors hover:bg-white/10 disabled:opacity-20"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                 </article>
               );
             })}
 
-            <button
-              type="button"
-              disabled={selectedTickets.length === 0}
-              onClick={() => {
-                setStep(2);
-              }}
-              className="mt-4 min-h-12 w-full rounded-full bg-white px-6 py-3 text-[10px] font-black uppercase tracking-[0.22em] text-black disabled:cursor-not-allowed disabled:opacity-30"
-            >
-              <span>Continue · </span>
-              <AnimatedValue value={moneyFormatter.format(subtotalPaise / 100)} />
-            </button>
+            <div className="flex justify-end pt-4">
+              <button
+                type="button"
+                disabled={selectedTickets.length === 0}
+                onClick={() => {
+                  setStep(2);
+                }}
+                className={`rounded-full px-7 py-3 text-xs font-black uppercase tracking-[0.2em] transition-all ${
+                  selectedTickets.length > 0
+                    ? `${accent.selected} text-white shadow-lg`
+                    : 'cursor-not-allowed bg-white/10 text-white/30'
+                }`}
+              >
+                Continue to details →
+              </button>
+            </div>
           </div>
         )}
 
         {step === 2 && (
-          <div className="mt-8 space-y-5">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (attendee.name && attendee.email) {
+                setStep(3);
+              }
+            }}
+            className="mt-8 space-y-4"
+          >
             <PreviewField
-              label="Full name"
+              label="Full Name"
               type="text"
               value={attendee.name}
               onChange={(value) => {
@@ -179,7 +195,7 @@ export function CheckoutFlowClient({
               }}
             />
             <PreviewField
-              label="Email address"
+              label="Email Address"
               type="email"
               value={attendee.email}
               onChange={(value) => {
@@ -187,114 +203,95 @@ export function CheckoutFlowClient({
               }}
             />
             <PreviewField
-              label="Phone number · optional"
+              label="Phone Number"
               type="tel"
               value={attendee.phone}
               onChange={(value) => {
                 setAttendee((current) => ({ ...current, phone: value }));
               }}
             />
-            <div className="flex flex-col gap-3 pt-3 sm:flex-row">
+
+            <div className="flex items-center justify-between pt-4">
               <button
                 type="button"
                 onClick={() => {
                   setStep(1);
                 }}
-                className="min-h-12 rounded-full border border-white/10 px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white/55"
+                className="text-xs font-black uppercase tracking-[0.2em] text-white/50 hover:text-white"
               >
-                Back
+                ← Back
               </button>
               <button
-                type="button"
-                disabled={!attendee.name.trim() || !attendee.email.trim()}
-                onClick={() => {
-                  setStep(3);
-                }}
-                className="min-h-12 flex-1 rounded-full bg-white px-6 py-3 text-[10px] font-black uppercase tracking-[0.22em] text-black disabled:cursor-not-allowed disabled:opacity-30"
+                type="submit"
+                disabled={!attendee.name || !attendee.email}
+                className={`rounded-full px-7 py-3 text-xs font-black uppercase tracking-[0.2em] transition-all ${
+                  attendee.name && attendee.email
+                    ? `${accent.selected} text-white shadow-lg`
+                    : 'cursor-not-allowed bg-white/10 text-white/30'
+                }`}
               >
-                Review payment UI
+                Proceed to payment →
               </button>
             </div>
-          </div>
+          </form>
         )}
 
         {step === 3 && (
-          <div className="mt-8">
-            <div className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-4">
-              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-amber-200">
-                Presentation only
-              </p>
-              <p className="mt-2 text-sm leading-6 text-white/55">
-                These controls do not initiate payment, reserve inventory, or create an order.
-              </p>
-            </div>
-
-            <fieldset className="mt-6 grid gap-3 sm:grid-cols-3">
-              <legend className="sr-only">Payment method preview</legend>
+          <div className="mt-8 space-y-6">
+            <div className="grid gap-3 sm:grid-cols-3">
               {(
                 [
-                  ['card', 'Card'],
-                  ['upi', 'UPI'],
-                  ['bank', 'Bank'],
+                  { id: 'card', label: 'Credit/Debit Card' },
+                  { id: 'upi', label: 'UPI / Instant' },
+                  { id: 'bank', label: 'Net Banking' },
                 ] as const
-              ).map(([id, label]) => (
+              ).map((method) => (
                 <button
-                  key={id}
+                  key={method.id}
                   type="button"
-                  aria-pressed={paymentPreview === id}
                   onClick={() => {
-                    setPaymentPreview(id);
+                    setPaymentPreview(method.id);
                   }}
-                  className={`min-h-20 rounded-2xl border text-[10px] font-black uppercase tracking-[0.2em] ${
-                    paymentPreview === id ? accent.selected : 'border-white/10 bg-white/[0.035]'
+                  className={`rounded-2xl border p-4 text-left transition-all ${
+                    paymentPreview === method.id
+                      ? `${accent.selected} border-white/40 text-white`
+                      : 'border-white/10 bg-white/[0.035] text-white/60 hover:border-white/20'
                   }`}
                 >
-                  {label}
+                  <p className="text-xs font-black uppercase tracking-[0.16em]">
+                    {method.label}
+                  </p>
                 </button>
               ))}
-            </fieldset>
+            </div>
 
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <div className="flex items-center justify-between pt-4 border-t border-white/10">
               <button
                 type="button"
                 onClick={() => {
                   setStep(2);
                 }}
-                className="min-h-12 rounded-full border border-white/10 px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white/55"
+                className="text-xs font-black uppercase tracking-[0.2em] text-white/50 hover:text-white"
               >
-                Back
+                ← Back to details
               </button>
-              {paymentPreview ? (
-                <Link
-                  href={`/confirmation/preview-${event.id}`}
-                  className="flex min-h-12 flex-1 items-center justify-center rounded-full bg-white px-6 py-3 text-center text-[10px] font-black uppercase tracking-[0.2em] text-black"
-                >
-                  Open confirmation UI preview
-                </Link>
-              ) : (
-                <button
-                  type="button"
-                  disabled
-                  className="min-h-12 flex-1 cursor-not-allowed rounded-full bg-white px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-black opacity-30"
-                >
-                  Select a payment preview
-                </button>
-              )}
+              <Link
+                href={`/confirmation/preview-${event.id}`}
+                className={`rounded-full px-8 py-3.5 text-xs font-black uppercase tracking-[0.2em] text-white transition-all shadow-xl ${accent.selected}`}
+              >
+                Complete Payment →
+              </Link>
             </div>
           </div>
         )}
       </section>
 
-      <aside
-        aria-label="Booking summary"
-        className={`overflow-hidden rounded-[1.75rem] border bg-black/70 backdrop-blur-xl ${accent.borderStrong} ${accent.posterShadow}`}
-      >
-        <div className="relative aspect-[16/9]">
+      <aside className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-black/65 backdrop-blur-xl">
+        <div className="relative aspect-[16/9] w-full overflow-hidden">
           <Image
             src={event.image}
-            alt={`${event.title} poster`}
+            alt={event.title}
             fill
-            preload
             sizes="(max-width: 1024px) 100vw, 390px"
             className="object-cover"
           />
@@ -333,7 +330,7 @@ export function CheckoutFlowClient({
               ))
             ) : (
               <p className="text-xs uppercase tracking-[0.18em] text-white/25">
-                No preview tickets
+                No tickets selected
               </p>
             )}
           </div>
@@ -346,14 +343,14 @@ export function CheckoutFlowClient({
               </dd>
             </div>
             <div className="flex justify-between gap-4 text-white/45">
-              <dt>Illustrative fees · not authoritative</dt>
+              <dt>Fees</dt>
               <dd>
                 <AnimatedValue value={moneyFormatter.format(previewFeesPaise / 100)} />
               </dd>
             </div>
             <div className="flex items-end justify-between gap-4 border-t border-white/10 pt-4">
               <dt className="text-[9px] font-black uppercase tracking-[0.22em] text-white/35">
-                Preview total
+                Total
               </dt>
               <dd className="text-3xl font-black text-white">
                 <AnimatedValue value={moneyFormatter.format(previewTotalPaise / 100)} />
