@@ -112,13 +112,15 @@ export function GuestlistPreviewClient({
 
 function GuestAvatar({ guest, size }: { guest: EventDetailGuest; size: 'large' | 'modal' }) {
   return (
-    <span
+    <Link
+      href={`/profile/${encodeURIComponent(guest.id)}`}
+      aria-label={`View ${guest.name} profile`}
       title={guest.name}
       className={`flex shrink-0 items-center justify-center rounded-full border-2 border-black font-black text-black ${
         size === 'large' ? 'size-16 text-sm sm:size-[4.5rem]' : 'size-16 text-sm sm:size-20'
       } ${getGuestToneClass(guest.tone)}`}
     >
       {guest.initials}
-    </span>
+    </Link>
   );
 }

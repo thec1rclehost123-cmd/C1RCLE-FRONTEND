@@ -20,11 +20,11 @@ const heroTimeFormatter = new Intl.DateTimeFormat('en-IN', {
 });
 
 const interestedAvatars = [
-  { initials: 'RI', colorClass: 'bg-[#FFD400]' },
-  { initials: 'IS', colorClass: 'bg-[#FF315D]' },
-  { initials: 'AJ', colorClass: 'bg-[#9B43F5]' },
-  { initials: 'MK', colorClass: 'bg-[#55D6A7]' },
-  { initials: 'DV', colorClass: 'bg-[#FFB86B]' },
+  'from-[#ff754d] to-[#ff3d1f]',
+  'from-[#ff8a60] to-[#ff4b2b]',
+  'from-[#ff9d73] to-[#ff5d35]',
+  'from-[#ffb08a] to-[#ff714b]',
+  'from-[#ffc0a3] to-[#ff845d]',
 ] as const;
 
 export function ExploreHeroCarouselClient({ events }: { events: readonly ExploreEvent[] }) {
@@ -35,13 +35,11 @@ export function ExploreHeroCarouselClient({ events }: { events: readonly Explore
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    if (events.length < 2 || reducedMotion) {
-      return;
-    }
+    if (events.length < 2 || reducedMotion) return;
 
     const timer = window.setTimeout(() => {
       setActiveIndex((current) => (current + 1) % events.length);
-    }, 6000);
+    }, 7200);
 
     return () => {
       window.clearTimeout(timer);
@@ -63,80 +61,116 @@ export function ExploreHeroCarouselClient({ events }: { events: readonly Explore
       role="region"
       aria-label="Featured event carousel"
       aria-roledescription="carousel"
-      className="relative mx-auto min-h-[36rem] max-w-[1540px] overflow-hidden rounded-[2rem] border border-white/10 bg-[#090909] shadow-2xl sm:min-h-[40rem] sm:rounded-[3rem] lg:min-h-[44rem]"
+      className="relative min-h-[760px] w-full overflow-hidden bg-black lg:min-h-[min(940px,100svh)]"
     >
-      <div key={`${event.id}-background`} className="explore-hero-background-reveal absolute inset-0">
+      <div
+        key={`${event.id}-background`}
+        className="explore-hero-background-reveal absolute inset-0"
+      >
         <Image
           src={event.image}
           alt=""
           fill
           preload={activeIndex === 0}
-          sizes="(max-width: 1024px) 100vw, 1540px"
-          className="object-cover object-top brightness-110 saturate-110 md:scale-[1.04] md:object-center md:opacity-75 md:blur-[3px] md:brightness-105 md:saturate-125"
+          sizes="100vw"
+          className="scale-[1.06] object-cover object-center brightness-[0.8] saturate-[1.18] blur-[1.5px]"
         />
       </div>
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent md:bg-[linear-gradient(90deg,rgba(0,0,0,0.92)_0%,rgba(0,0,0,0.55)_46%,rgba(0,0,0,0.18)_100%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_73%_42%,transparent_0%,rgba(0,0,0,0.12)_25%,rgba(0,0,0,0.72)_78%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.94)_0%,rgba(0,0,0,0.57)_48%,rgba(0,0,0,0.18)_78%,rgba(0,0,0,0.5)_100%)]" />
+      <div className="absolute inset-x-0 bottom-0 h-[48%] bg-gradient-to-t from-black via-black/72 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-black/55 to-transparent" />
 
-      {/* Ambient Orange Glow Behind Expanded Poster */}
-      <div className="pointer-events-none absolute right-[4%] top-1/2 z-0 hidden h-[82%] w-[35%] -translate-y-1/2 rounded-[3rem] bg-[radial-gradient(circle_at_center,rgba(255,68,0,0.6)_0%,rgba(255,68,0,0.25)_45%,transparent_75%)] blur-3xl md:block" />
-
-      {/* Expanded Poster Container */}
-      <div className="absolute right-[6%] top-1/2 z-10 hidden h-[72%] w-[31%] -translate-y-1/2 overflow-hidden rounded-[1.5rem] border border-[#FF4400]/40 bg-black/80 p-2 shadow-[0_0_50px_rgba(255,68,0,0.35),0_30px_90px_rgba(0,0,0,0.8)] transition-all duration-500 hover:border-[#FF4400]/70 hover:shadow-[0_0_70px_rgba(255,68,0,0.5),0_30px_90px_rgba(0,0,0,0.9)] md:block lg:right-[8%] lg:h-[76%] lg:w-[29%] lg:rounded-[2rem] lg:p-3">
-        <div
-          key={`${event.id}-poster`}
-          className="explore-hero-poster-reveal relative h-full w-full overflow-hidden rounded-[1rem] lg:rounded-[1.35rem]"
-        >
+      <div
+        key={`${event.id}-poster`}
+        className="explore-hero-poster-reveal absolute right-4 top-[17%] z-10 w-[57%] max-w-[265px] overflow-hidden rounded-[1.55rem] border border-white/24 bg-black/40 p-1.5 shadow-[0_34px_110px_rgba(0,0,0,0.58),0_0_55px_rgba(255,68,0,0.12)] sm:right-[7%] sm:top-[18%] sm:max-w-[340px] lg:right-[7%] lg:top-[18%] lg:w-[34%] lg:max-w-[540px] lg:rounded-[2rem] lg:p-2"
+      >
+        <div className="relative aspect-[0.78] overflow-hidden rounded-[1.2rem] lg:rounded-[1.8rem]">
           <Image
             src={event.image}
             alt={`${event.title} featured poster`}
             fill
-            sizes="(max-width: 1024px) 31vw, 29vw"
-            className="object-contain object-center brightness-105 saturate-110"
+            sizes="(max-width: 640px) 55vw, (max-width: 1024px) 330px, 31vw"
+            className="object-cover object-center brightness-[1.18] contrast-[1.05] saturate-[1.24]"
           />
+          <div className="absolute inset-0 ring-1 ring-inset ring-white/10" />
         </div>
       </div>
 
       <div
         key={`${event.id}-copy`}
-        className="relative z-20 flex min-h-[36rem] flex-col justify-center px-6 pb-24 pt-10 sm:min-h-[40rem] sm:px-10 md:max-w-[58%] lg:min-h-[44rem] lg:max-w-[56%] lg:px-16"
+        className="relative z-20 mx-auto flex min-h-[760px] w-full max-w-[1720px] flex-col justify-end px-5 pb-28 pt-32 sm:px-10 sm:pb-32 lg:min-h-[min(940px,100svh)] lg:justify-center lg:px-[6%] lg:pb-16 lg:pt-36"
       >
-        <p className="explore-hero-copy-reveal explore-hero-delay-1 text-xs font-black uppercase tracking-[0.3em] text-[#FF6B4A]">
-          Featured experience
-        </p>
-        <h1 className="explore-hero-copy-reveal explore-hero-delay-2 mt-4 text-5xl font-black uppercase leading-[0.88] tracking-[-0.06em] text-white sm:text-7xl lg:text-8xl">
-          {event.title}
-        </h1>
-        <p className="explore-hero-copy-reveal explore-hero-delay-3 mt-6 max-w-xl text-sm font-semibold text-white/75 sm:text-base">
-          {heroDateFormatter.format(new Date(event.startsAt))} ·{' '}
-          {heroTimeFormatter.format(new Date(event.startsAt))} · {event.venue}, {event.city}
-        </p>
-        <div className="explore-hero-copy-reveal explore-hero-delay-4 mt-8 flex flex-wrap items-center gap-5">
-          <Link
-            href={`/event/${event.slug}`}
-            className="inline-flex min-h-11 items-center rounded-full bg-white px-7 py-3 text-xs font-black uppercase tracking-[0.2em] text-black transition-transform hover:scale-[1.03] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white motion-reduce:transition-none"
-          >
-            Get tickets
-          </Link>
-          <div className="flex items-center gap-4" aria-label="184 people interested">
-            <div className="flex -space-x-3.5" aria-hidden="true">
-              {interestedAvatars.map(({ initials, colorClass }) => (
-                <span
-                  key={initials}
-                  className={`flex size-12 items-center justify-center rounded-full border-2 border-black text-xs font-black text-black shadow-xl sm:size-14 sm:text-sm ${colorClass}`}
-                >
-                  {initials}
-                </span>
-              ))}
+        <div className="max-w-[34rem] lg:max-w-[56%] lg:translate-x-[3vw]">
+          <p className="explore-hero-copy-reveal explore-hero-delay-1 inline-flex rounded-full border border-[#ff5a2b]/50 bg-[#ff4400]/15 px-5 py-2.5 text-[9px] font-black uppercase tracking-[0.3em] text-[#ff7857] backdrop-blur-xl sm:text-[10px]">
+            {event.badge ?? event.category}
+          </p>
+
+          <h1 className="explore-hero-copy-reveal explore-hero-delay-2 mt-5 text-[clamp(2.6rem,4.25vw,4.8rem)] font-black uppercase leading-[0.9] tracking-[-0.055em] text-white drop-shadow-[0_16px_45px_rgba(0,0,0,0.55)]">
+            {event.title}
+          </h1>
+
+          <div className="explore-hero-copy-reveal explore-hero-delay-3 mt-7 flex flex-col gap-3 text-base font-bold text-white/82 sm:text-lg lg:text-xl">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+              <span className="inline-flex items-center gap-2.5">
+                <CalendarIcon />
+                {heroDateFormatter.format(new Date(event.startsAt))}
+              </span>
+              <span aria-hidden="true" className="hidden text-white/35 sm:inline">
+                •
+              </span>
+              <span className="inline-flex items-center gap-2.5">
+                <ClockIcon />
+                {heroTimeFormatter.format(new Date(event.startsAt))}
+              </span>
             </div>
-            <span className="text-xs font-black uppercase tracking-[0.16em] text-white/80">
-              184 interested
+            <span className="inline-flex items-center gap-3 text-white/68">
+              <LocationIcon />
+              {event.venue}, {event.city}
             </span>
+          </div>
+
+          <div className="explore-hero-copy-reveal explore-hero-delay-4 mt-9 flex flex-wrap items-center gap-4">
+            <Link
+              href={`/event/${event.slug}`}
+              className="inline-flex min-h-[4.25rem] items-center justify-center rounded-full bg-white px-10 py-4 text-[13px] font-black uppercase tracking-[0.2em] text-black shadow-[0_12px_35px_rgba(255,255,255,0.14)] transition-transform hover:scale-[1.03] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white motion-reduce:transition-none sm:min-h-[4.5rem] sm:px-12 sm:text-sm"
+            >
+              Get tickets
+            </Link>
+            <div
+              className="flex min-h-[4.25rem] items-center gap-4 rounded-full border border-white/20 bg-white/[0.1] px-5 py-2.5 backdrop-blur-2xl sm:min-h-[4.5rem] sm:px-6"
+              aria-label="184 people interested"
+            >
+              <span className="flex -space-x-3" aria-hidden="true">
+                {interestedAvatars.map((gradient) => (
+                  <span
+                    key={gradient}
+                    className={`size-10 rounded-full border-2 border-[#37221e] bg-gradient-to-br sm:size-11 ${gradient}`}
+                  />
+                ))}
+              </span>
+              <span className="whitespace-nowrap text-xs font-black uppercase tracking-[0.12em] text-white/88 sm:text-[13px]">
+                +184 Interested
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between gap-4 sm:bottom-8 sm:left-10 sm:right-10 lg:left-16">
-        <div className="flex gap-2" aria-label="Choose featured event">
+      <div className="absolute inset-x-0 bottom-7 z-30 flex items-center justify-center gap-3 sm:bottom-9">
+        <button
+          type="button"
+          aria-label="Previous featured event"
+          onClick={showPrevious}
+          className="flex size-11 items-center justify-center rounded-full border border-white/20 bg-black/45 text-xl text-white backdrop-blur-xl transition-colors hover:bg-white hover:text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        >
+          <span aria-hidden="true">←</span>
+        </button>
+
+        <div
+          className="flex min-h-11 items-center gap-2 rounded-full border border-white/15 bg-black/45 px-5 backdrop-blur-xl"
+          aria-label="Choose featured event"
+        >
           {events.map((slide, index) => (
             <button
               key={slide.id}
@@ -146,32 +180,60 @@ export function ExploreHeroCarouselClient({ events }: { events: readonly Explore
               onClick={() => {
                 setActiveIndex(index);
               }}
-              className={`h-2 rounded-full transition-[width,background-color] motion-reduce:transition-none ${
-                index === activeIndex ? 'w-10 bg-[#FF4400]' : 'w-2 bg-white/35 hover:bg-white/70'
+              className={`h-1.5 rounded-full transition-[width,background-color] motion-reduce:transition-none ${
+                index === activeIndex ? 'w-9 bg-white' : 'w-1.5 bg-white/35 hover:bg-white/70'
               }`}
             />
           ))}
         </div>
 
-        <div className="flex gap-2">
-          <button
-            type="button"
-            aria-label="Previous featured event"
-            onClick={showPrevious}
-            className="flex size-11 items-center justify-center rounded-full border border-white/20 bg-black/35 text-xl text-white backdrop-blur-md transition-colors hover:bg-white hover:text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-          >
-            <span aria-hidden="true">←</span>
-          </button>
-          <button
-            type="button"
-            aria-label="Next featured event"
-            onClick={showNext}
-            className="flex size-11 items-center justify-center rounded-full border border-white/20 bg-black/35 text-xl text-white backdrop-blur-md transition-colors hover:bg-white hover:text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-          >
-            <span aria-hidden="true">→</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          aria-label="Next featured event"
+          onClick={showNext}
+          className="flex size-11 items-center justify-center rounded-full border border-white/20 bg-black/45 text-xl text-white backdrop-blur-xl transition-colors hover:bg-white hover:text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        >
+          <span aria-hidden="true">→</span>
+        </button>
       </div>
     </div>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-6 shrink-0 fill-none stroke-[#ff5a2b] stroke-2 sm:size-7"
+    >
+      <path d="M5 4v3M19 4v3M4 9h16M5 6h14a1 1 0 0 1 1 1v13H4V7a1 1 0 0 1 1-1Z" />
+    </svg>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-6 shrink-0 fill-none stroke-[#ff5a2b] stroke-2 sm:size-7"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  );
+}
+
+function LocationIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-6 shrink-0 fill-none stroke-[#ff5a2b] stroke-2 sm:size-7"
+    >
+      <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </svg>
   );
 }

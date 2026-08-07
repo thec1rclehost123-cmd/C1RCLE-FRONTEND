@@ -7,8 +7,9 @@ import type { HomeHeroContent } from '../types/home.types';
 export function HomeHero({ hero }: { hero: HomeHeroContent }) {
   return (
     <section
+      id="tonight"
       aria-labelledby="home-hero-heading"
-      className="relative isolate flex min-h-[100svh] items-center justify-center overflow-hidden bg-black px-4 pb-24 pt-28 text-center sm:px-6 sm:pt-32"
+      className="relative isolate flex h-[100svh] min-h-[560px] items-center justify-center overflow-hidden bg-black px-4 pt-16 text-center md:pt-28"
     >
       <picture className="absolute inset-0 -z-30">
         <source media="(max-width: 639px)" srcSet={hero.mobilePosterSrc} />
@@ -16,8 +17,8 @@ export function HomeHero({ hero }: { hero: HomeHeroContent }) {
         <img
           src={hero.desktopPosterSrc}
           alt=""
-          width={1024}
-          height={576}
+          width={1280}
+          height={720}
           fetchPriority="high"
           className="size-full object-cover"
         />
@@ -29,47 +30,40 @@ export function HomeHero({ hero }: { hero: HomeHeroContent }) {
           mobileSrc={hero.mobileVideoSrc}
         />
       </div>
-      <div className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(0,0,0,0.72)_0%,rgba(0,0,0,0.24)_42%,rgba(0,0,0,0.92)_100%)]" />
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_48%,transparent_0%,rgba(0,0,0,0.18)_42%,rgba(0,0,0,0.62)_100%)]" />
-      <div className="absolute left-[12%] top-[28%] -z-10 size-64 rounded-full bg-[#ff4400]/15 blur-[110px] sm:size-96" />
-      <div className="absolute bottom-[18%] right-[12%] -z-10 size-64 rounded-full bg-purple-500/15 blur-[110px] sm:size-96" />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-black/70 via-black/25 to-black" />
+      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-black/50 via-transparent to-black/40" />
+      <div className="nightlife-grain pointer-events-none absolute inset-0 -z-10 opacity-10 mix-blend-overlay" />
+      <div className="pointer-events-none absolute left-1/4 top-1/4 -z-10 size-64 rounded-full bg-[#f44a22]/15 blur-[100px] md:size-96 md:blur-[120px]" />
+      <div className="pointer-events-none absolute bottom-1/4 right-1/4 -z-10 size-64 rounded-full bg-[#9b3cff]/10 blur-[100px] md:size-96 md:blur-[120px]" />
 
-      <div className="mx-auto flex w-full max-w-6xl flex-col items-center">
-        <p className="text-[9px] font-black uppercase tracking-[0.38em] text-white/55 sm:text-[10px]">
-          {hero.eyebrow}
-        </p>
+      <div className="mx-auto w-full max-w-7xl space-y-5 md:space-y-7">
         <h1
           id="home-hero-heading"
-          className="mt-5 text-[clamp(3.8rem,13vw,10rem)] font-black uppercase leading-[0.78] tracking-[-0.075em] text-white drop-shadow-[0_18px_50px_rgba(0,0,0,0.55)]"
+          className="home-hero-title animate-home-scale-in text-[3.2rem] font-black uppercase leading-[0.9] tracking-tighter sm:text-6xl md:text-7xl lg:text-8xl xl:text-[8.25rem]"
         >
           {hero.title}
         </h1>
-
-        <p className="mt-9 rounded-full border border-white/20 bg-black/25 px-5 py-3 text-[10px] font-black uppercase tracking-[0.3em] text-white backdrop-blur-xl sm:px-8 sm:text-xs">
-          {hero.tagline}
-        </p>
-        <p className="mt-5 max-w-xl text-sm font-medium leading-6 text-white/65 sm:text-base sm:leading-7">
+        <div className="animate-home-line-reveal mx-auto h-1 w-24 bg-gradient-to-r from-transparent via-[#f44a22] to-transparent shadow-[0_0_20px_rgba(244,74,34,0.8)] md:w-36" />
+        <p className="animate-home-fade-in mx-auto max-w-[320px] px-2 text-sm font-medium leading-relaxed text-white/75 md:max-w-3xl md:text-lg">
           {hero.description}
         </p>
-
-        <Link
-          href={hero.ctaHref}
-          className="mt-8 inline-flex min-h-12 items-center justify-center rounded-full bg-white px-8 py-3 text-[10px] font-black uppercase tracking-[0.22em] text-black transition-transform duration-200 hover:scale-[1.03] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white active:scale-[0.98] motion-reduce:transition-none"
-        >
-          {hero.ctaLabel}
-        </Link>
+        <div className="animate-home-fade-up flex flex-col items-center justify-center gap-4 pt-3 sm:flex-row">
+          <Link
+            href={hero.ctaHref}
+            className="group relative w-full overflow-hidden rounded-full bg-white px-8 py-4 text-center text-xs font-black uppercase tracking-[0.2em] text-black transition-all duration-300 hover:scale-105 hover:shadow-[0_0_40px_rgba(255,255,255,0.45)] sm:w-auto md:px-10 md:py-5 md:text-sm motion-reduce:transition-none"
+          >
+            <span className="relative z-10">{hero.ctaLabel}</span>
+          </Link>
+          <Link
+            href="#story"
+            className="w-full rounded-full border border-white/[0.18] bg-white/[0.07] px-8 py-4 text-center text-xs font-black uppercase tracking-[0.2em] text-white backdrop-blur-xl transition-all duration-300 hover:border-[#f44a22]/60 hover:bg-[#f44a22]/15 sm:w-auto md:px-10 md:py-5 md:text-sm motion-reduce:transition-none"
+          >
+            See the app
+          </Link>
+        </div>
       </div>
 
-      <a
-        href="#featured-drops"
-        className="absolute bottom-7 left-1/2 flex min-h-11 -translate-x-1/2 flex-col items-center justify-center gap-2 text-[8px] font-black uppercase tracking-[0.3em] text-white/45 transition-colors hover:text-white"
-      >
-        Scroll to discover
-        <span
-          aria-hidden="true"
-          className="h-5 w-px origin-top animate-pulse bg-gradient-to-b from-white to-transparent motion-reduce:animate-none"
-        />
-      </a>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-24 bg-gradient-to-t from-black via-black/60 to-transparent md:h-32" />
     </section>
   );
 }

@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { ThemeProvider } from '@c1rcle/providers';
+
 import { GlobalShell } from './GlobalShell';
 import { RitualBackground } from './RitualBackground';
 
@@ -9,23 +11,27 @@ vi.mock('next/navigation', () => ({
 }));
 
 describe('GlobalShell', () => {
-  it('provides one labelled skip-link target and no dead theme control', () => {
+  it('provides one labelled skip-link target and a working theme control', () => {
     const { container } = render(
-      <GlobalShell>
-        <h1>Fixture page</h1>
-      </GlobalShell>,
+      <ThemeProvider>
+        <GlobalShell>
+          <h1>Fixture page</h1>
+        </GlobalShell>
+      </ThemeProvider>,
     );
 
     expect(container.querySelectorAll('main')).toHaveLength(1);
     expect(container.querySelector('main#main')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Toggle theme' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Toggle theme' })).toBeInTheDocument();
   });
 
   it('does not expose footer links to missing anchors', () => {
     render(
-      <GlobalShell>
-        <h1>Fixture page</h1>
-      </GlobalShell>,
+      <ThemeProvider>
+        <GlobalShell>
+          <h1>Fixture page</h1>
+        </GlobalShell>
+      </ThemeProvider>,
     );
 
     expect(screen.queryByRole('link', { name: 'University' })).not.toBeInTheDocument();

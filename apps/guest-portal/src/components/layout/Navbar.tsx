@@ -2,30 +2,66 @@
 
 // FIXTURE_ONLY: Temporary UI development navbar.
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+
+import { useSession } from '@c1rcle/auth';
+import { useTheme } from '@c1rcle/providers';
 
 import { DesktopNavLinks, navLinks } from './DesktopNavLinks';
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
   const isLoginPage = pathname === '/login';
+  const { isAuthenticated } = useSession();
+  const { setTheme, theme } = useTheme();
+  const accountHref = isAuthenticated ? '/profile' : '/login';
+  const accountLabel = isAuthenticated ? 'PROFILE' : 'LOGIN';
+
+  useEffect(() => {
+    let frame = 0;
+    const updateScrollState = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        setScrolled(window.scrollY > 32);
+      });
+    };
+
+    updateScrollState();
+    window.addEventListener('scroll', updateScrollState, { passive: true });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', updateScrollState);
+    };
+  }, []);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 flex justify-center pt-4 pointer-events-none">
-      <nav className="pointer-events-auto flex items-center justify-between px-4 py-2.5 sm:px-6 border border-white/10 rounded-full max-w-5xl mx-auto w-[92%] bg-black/60 backdrop-blur-2xl shadow-lg">
+    <header
+      className={`pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-3 transition-[padding] duration-500 motion-reduce:transition-none sm:px-5 ${
+        scrolled ? 'pt-2.5' : 'pt-3 sm:pt-4'
+      }`}
+    >
+      <nav
+        className={`pointer-events-auto mx-auto grid w-full grid-cols-[minmax(0,1fr)_auto] items-center px-3 py-2 transition-[max-width,border-color,background-color,border-radius,box-shadow,backdrop-filter] duration-500 motion-reduce:transition-none sm:px-4 lg:grid-cols-[minmax(190px,1fr)_minmax(460px,500px)_minmax(190px,1fr)] lg:gap-4 ${
+          scrolled
+            ? 'max-w-[1240px] rounded-full border border-white/[0.15] bg-black/72 shadow-[0_14px_55px_rgba(0,0,0,0.48)] backdrop-blur-2xl'
+            : 'max-w-[1240px] rounded-none border border-transparent bg-transparent shadow-none backdrop-blur-none'
+        }`}
+      >
         {/* Brand Logo & Name */}
-        <Link href="/" className="group flex items-center gap-3">
-          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#FF4400]/40 bg-black text-white transition-all duration-500 group-hover:rotate-180 group-hover:border-[#FF4400]">
-            <span className="text-[9px] font-black tracking-tighter leading-none text-center">
-              THE
-              <br />
-              C1RCLE
-            </span>
-          </div>
-          <span className="text-sm font-black tracking-widest uppercase text-white group-hover:text-[#FF4400] transition-colors">
+        <Link
+          href="/"
+          className="group flex min-w-0 items-center gap-3 sm:gap-3.5 lg:justify-self-start"
+        >
+          <span className="relative size-11 shrink-0 overflow-hidden rounded-full border border-[#FF5A2B]/40 bg-black shadow-[0_0_24px_rgba(255,68,0,0.14)] sm:size-12">
+            <Image src="/c1rcle-logo.webp" alt="" fill sizes="48px" className="object-cover" />
+          </span>
+          <span className="hidden text-[16px] font-black uppercase tracking-[-0.045em] text-white transition-colors group-hover:text-[#FF6842] min-[390px]:inline sm:text-lg">
             THE C1RCLE
           </span>
         </Link>
@@ -34,15 +70,39 @@ export function Navbar() {
         <DesktopNavLinks />
 
         {/* Right Controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-self-end gap-2 lg:justify-self-stretch lg:pl-8 xl:pl-12">
           {!isLoginPage && (
             <Link
-              href="/login"
-              className="hidden lg:inline-flex items-center justify-center px-6 py-2 rounded-full bg-white text-black text-xs font-black uppercase tracking-widest hover:bg-white/90 hover:scale-105 transition-all shadow-md"
+              href={accountHref}
+              className="hidden min-h-11 items-center justify-center rounded-full bg-white px-8 py-2.5 text-[11px] font-black uppercase tracking-[0.18em] text-black shadow-[0_5px_22px_rgba(255,255,255,0.13)] transition-transform hover:scale-[1.03] lg:inline-flex motion-reduce:transition-none"
             >
-              LOGIN
+              {accountLabel}
             </Link>
           )}
+
+          <button
+            type="button"
+            aria-label="Toggle theme"
+            onClick={() => {
+              setTheme(theme === 'light' ? 'dark' : 'light');
+            }}
+            className="hidden size-11 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition-colors hover:bg-white hover:text-black lg:flex"
+          >
+            {theme === 'light' ? (
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                className="size-4 fill-none stroke-current stroke-[2]"
+              >
+                <circle cx="12" cy="12" r="3.5" />
+                <path d="M12 2v2.2M12 19.8V22M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6M2 12h2.2M19.8 12H22M4.9 19.1l1.6-1.6M17.5 6.5l1.6-1.6" />
+              </svg>
+            ) : (
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4 fill-current">
+                <path d="M20.2 15.1A8.2 8.2 0 0 1 8.9 3.8 8.3 8.3 0 1 0 20.2 15Z" />
+              </svg>
+            )}
+          </button>
 
           {/* Mobile Hamburger Trigger */}
           <button
@@ -51,7 +111,7 @@ export function Navbar() {
             onClick={() => {
               setMobileMenuOpen((prev) => !prev);
             }}
-            className="flex h-10 w-10 flex-col items-center justify-center gap-1.5 rounded-full bg-white/10 border border-white/20 lg:hidden text-white"
+            className="flex size-9 flex-col items-center justify-center gap-1.5 rounded-full border border-white/20 bg-white/10 text-white backdrop-blur-xl lg:hidden"
           >
             <span
               className={`h-0.5 w-5 bg-white transition-transform ${mobileMenuOpen ? 'rotate-45 translate-y-[5px]' : ''}`}
@@ -91,13 +151,13 @@ export function Navbar() {
             <div className="w-full h-px bg-white/10 my-4" />
 
             <Link
-              href="/login"
+              href={accountHref}
               onClick={() => {
                 setMobileMenuOpen(false);
               }}
               className="w-full py-4 text-center rounded-2xl bg-white text-black text-xs font-black uppercase tracking-widest"
             >
-              LOGIN / SIGN UP
+              {isAuthenticated ? 'PROFILE' : 'LOGIN / SIGN UP'}
             </Link>
 
             <button

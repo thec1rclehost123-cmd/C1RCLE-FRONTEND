@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import HomePage from '@/app/page';
@@ -23,43 +23,43 @@ afterEach(() => {
 });
 
 describe('Home Page', () => {
-  it('renders the cinematic hero and fixture-backed featured events', () => {
+  it('renders the source homepage sequence and stops before Run the Room', () => {
     render(<HomePage />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'THE C1RCLE' })).toBeInTheDocument();
-    expect(screen.getByText('Discover Life Offline')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Explore events' })).toHaveAttribute(
+    expect(
+      screen.getByText(/Discover the right nights, book entry, run guestlists/i),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Enter the C1RCLE' })).toHaveAttribute(
       'href',
       '/explore',
     );
-    expect(screen.getByRole('heading', { name: 'Discover Offline' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Featured Drops' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Featured drops carousel' })).toBeInTheDocument();
-    expect(screen.getAllByRole('article')).toHaveLength(3);
+    expect(screen.getAllByRole('heading', { name: 'Discover new events' }).length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.getByRole('link', { name: 'Explore the app for Apple devices' })).toHaveAttribute(
+      'href',
+      '/app',
+    );
+    expect(
+      screen.getByRole('link', { name: 'Explore the app for Android devices' }),
+    ).toHaveAttribute('href', '/app');
+    expect(screen.queryByText(/Run the Room/i)).not.toBeInTheDocument();
   });
 
-  it('moves through featured drops with the carousel controls', () => {
+  it('renders the curved featured-drop rail with linked event posters', () => {
     render(<HomePage />);
 
     const carousel = screen.getByRole('region', { name: 'Featured drops carousel' });
-    expect(
-      within(carousel).getByRole('heading', { level: 3, name: 'Neon Nights' }),
-    ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Next featured drop' }));
-    expect(
-      within(carousel).getByRole('heading', { level: 3, name: 'Rooftop Jazz' }),
-    ).toBeInTheDocument();
+    const velvetDrop = within(carousel).getByRole('link', { name: 'Open Velvet Nights' });
+    const eclipseDrop = within(carousel).getByRole('link', { name: 'Open Eclipse' });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Previous featured drop' }));
-    expect(
-      within(carousel).getByRole('heading', { level: 3, name: 'Neon Nights' }),
-    ).toBeInTheDocument();
-
-    fireEvent.pointerDown(carousel, { clientX: 200 });
-    fireEvent.pointerUp(carousel, { clientX: 100 });
-    expect(
-      within(carousel).getByRole('heading', { level: 3, name: 'Rooftop Jazz' }),
-    ).toBeInTheDocument();
+    expect(velvetDrop).toHaveAttribute('href', '/explore');
+    expect(eclipseDrop).toHaveAttribute('href', '/explore');
+    expect(velvetDrop.style.transform).toContain('rotateY');
+    expect(screen.queryByRole('button', { name: /featured drop/i })).not.toBeInTheDocument();
   });
 
   it('does not auto-advance featured drops when reduced motion is requested', () => {
@@ -79,9 +79,7 @@ describe('Home Page', () => {
     });
 
     const carousel = screen.getByRole('region', { name: 'Featured drops carousel' });
-    expect(
-      within(carousel).getByRole('heading', { level: 3, name: 'Neon Nights' }),
-    ).toBeInTheDocument();
+    expect(within(carousel).getByRole('link', { name: 'Open Velvet Nights' })).toBeInTheDocument();
   });
 
   it('keeps the background static when reduced motion is requested', () => {

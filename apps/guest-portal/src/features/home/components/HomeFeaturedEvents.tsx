@@ -18,11 +18,10 @@ export function HomeFeaturedEvents({
     <section
       id="featured-events"
       aria-labelledby="featured-events-heading"
-      className="relative py-20 sm:py-28"
+      className="relative pb-20 pt-4 sm:pb-28 sm:pt-8"
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(circle_at_50%_0%,rgba(140,87,182,0.2),transparent_68%)]" />
       <div className="relative mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8">
-        <div className="mb-10 flex flex-col gap-7 border-b border-white/10 pb-8 md:flex-row md:items-end md:justify-between">
+        <div className="mb-10 flex flex-col gap-7 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-[9px] font-black uppercase tracking-[0.32em] text-[#ff6b4a]">
               {content.eyebrow}

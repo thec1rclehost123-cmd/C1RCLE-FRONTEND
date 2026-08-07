@@ -24,26 +24,21 @@ export function DesktopNavLinks() {
 
   return (
     <div
-      className={`relative hidden items-center gap-1 lg:flex rounded-full p-1 border backdrop-blur-md transition-all duration-500 ${
-        isLoginPage
-          ? 'bg-black/40 border-white/10 backdrop-blur-xl shadow-sm'
-          : 'bg-white/5 border-white/10'
+      className={`relative hidden w-full items-center justify-center gap-1 rounded-full border p-1.5 backdrop-blur-2xl transition-colors duration-500 lg:flex ${
+        isLoginPage ? 'border-white/10 bg-black/35' : 'border-white/10 bg-white/[0.055]'
       }`}
     >
       {navLinks.map((link) => {
-        const isActive =
-          link.href === '/'
-            ? pathname === '/'
-            : pathname.startsWith(link.href);
+        const isActive = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
 
         return (
           <Link
             key={link.href}
             href={link.href}
-            className={`relative px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 ${
+            className={`relative min-w-[108px] flex-1 rounded-full px-5 py-3 text-center text-[11px] font-black uppercase tracking-[0.15em] transition-all duration-300 ${
               isActive
-                ? 'bg-[#FF4400] text-white shadow-md shadow-[#FF4400]/20'
-                : 'text-white/70 hover:text-white hover:bg-white/10'
+                ? 'bg-white text-black shadow-[0_0_24px_rgba(255,255,255,0.24)]'
+                : 'text-white/62 hover:bg-white/[0.08] hover:text-white'
             }`}
           >
             <span>{link.label}</span>

@@ -14,7 +14,6 @@ vi.mock('next/image', () => ({
     fill: _fill,
     ...props
   }: React.ComponentProps<'img'> & { preload?: boolean; fill?: boolean }) => (
-    // eslint-disable-next-line @next/next/no-img-element
     <img alt={alt} {...props} />
   ),
 }));
@@ -39,11 +38,19 @@ describe('EventDetailView', () => {
     expect(screen.getByText('About the event')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View host High Spirits Collective' })).toHaveAttribute(
       'href',
-      '/hosts',
+      '/host/high-spirits-collective',
+    );
+    expect(screen.getByRole('link', { name: 'Sector 9 · Bengaluru' })).toHaveAttribute(
+      'href',
+      '/venue/sector-9',
     );
     expect(screen.getByLabelText('Verified host')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Riya and 155 others going' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Guest list preview' })).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'View Riya profile' })[0]).toHaveAttribute(
+      'href',
+      '/profile/riya',
+    );
     fireEvent.click(screen.getByRole('button', { name: 'View all guests' }));
     expect(
       screen.getByRole('dialog', { name: 'Get the app to view the guestlist and more' }),

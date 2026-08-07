@@ -76,10 +76,20 @@ export function EventDetailView({ event }: { event: EventDetailFixture }) {
     <div className="relative z-10 min-h-screen overflow-x-clip pb-36 pt-24 text-white sm:pt-28">
       <EventBackdrop accentTone={event.accentTone} />
 
-      <div className="relative mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-3 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="relative mx-auto max-w-[1380px] px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-3 lg:grid-cols-[410px_minmax(0,1fr)] xl:grid-cols-[440px_minmax(0,1fr)]">
+          <aside className="order-1 min-w-0 space-y-3 lg:sticky lg:top-24 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:self-start">
+            <EventPosterPanel event={event} />
+            <EventTicketSelectorClient
+              accentTone={event.accentTone}
+              eventId={event.slug}
+              tiers={event.ticketTiers}
+              initialVisibleCount={3}
+            />
+          </aside>
+
           <section
-            className={`order-1 min-w-0 rounded-[1.75rem] border px-5 py-7 backdrop-blur-xl sm:px-7 sm:py-7 lg:col-start-1 lg:row-start-1 ${accent.borderStrong} ${accent.eventHero}`}
+            className={`order-2 min-w-0 rounded-[1.75rem] border px-5 py-7 backdrop-blur-xl sm:px-7 sm:py-8 lg:col-start-2 lg:row-start-1 ${accent.borderStrong} ${accent.eventHero}`}
           >
             <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/45">
               {event.category} · {event.city}
@@ -89,14 +99,17 @@ export function EventDetailView({ event }: { event: EventDetailFixture }) {
             </h1>
 
             <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 border-t border-white/10 pt-4 text-xs font-semibold text-white/55">
-              <span>
+              <Link
+                href={`/venue/${encodeURIComponent(event.venueId)}`}
+                className="transition-colors hover:text-white"
+              >
                 {event.venue} · {event.city}
-              </span>
+              </Link>
               <span>{eventDateFormatter.format(new Date(event.startsAt))}</span>
             </div>
 
             <Link
-              href="/hosts"
+              href={`/host/${encodeURIComponent(event.hostId)}`}
               aria-label={`View host ${event.host}`}
               className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full border border-white/10 bg-black/25 px-4 py-2 text-xs text-white/55 transition-colors hover:border-white/20 hover:text-white"
             >
@@ -117,13 +130,15 @@ export function EventDetailView({ event }: { event: EventDetailFixture }) {
                   aria-label={`${String(event.interestedCount)} interested`}
                 >
                   {event.guests.slice(0, 5).map((guest) => (
-                    <span
+                    <Link
                       key={guest.id}
+                      href={`/profile/${encodeURIComponent(guest.id)}`}
+                      aria-label={`View ${guest.name} profile`}
                       title={guest.name}
                       className={`flex size-9 items-center justify-center rounded-full border-2 border-black text-[9px] font-black text-black ${getGuestToneClass(guest.tone)}`}
                     >
                       {guest.initials}
-                    </span>
+                    </Link>
                   ))}
                 </div>
                 <div>
@@ -142,7 +157,7 @@ export function EventDetailView({ event }: { event: EventDetailFixture }) {
             </div>
           </section>
 
-          <div className="order-3 min-w-0 space-y-3 lg:col-start-1 lg:row-start-2">
+          <div className="order-3 min-w-0 space-y-3 lg:col-start-2 lg:row-start-2">
             <EventPanel accentTone={event.accentTone} label="About the event" title={event.summary}>
               <div className="space-y-3 text-sm leading-7 text-white/55">
                 {event.description.map((paragraph) => (
@@ -186,15 +201,6 @@ export function EventDetailView({ event }: { event: EventDetailFixture }) {
               </div>
             </EventPanel>
           </div>
-
-          <aside className="order-2 min-w-0 space-y-3 lg:sticky lg:top-24 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:max-h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden">
-            <EventPosterPanel event={event} />
-            <EventTicketSelectorClient
-              accentTone={event.accentTone}
-              eventId={event.slug}
-              tiers={event.ticketTiers}
-            />
-          </aside>
         </div>
       </div>
 

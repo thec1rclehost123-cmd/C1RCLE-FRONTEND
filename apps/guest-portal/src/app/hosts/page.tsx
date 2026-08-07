@@ -1,19 +1,18 @@
+import { DirectoryLanding } from '@/features/directory/components/DirectoryLanding';
+import {
+  hostDirectoryFixtures,
+  venueDirectoryFixtures,
+} from '@/features/directory/fixtures/directory.fixture';
+
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Hosts',
-  description: 'Meet premier hosts and venues on THE C1RCLE.',
+  title: 'Hosts & Venues | THE C1RCLE',
+  description: 'Meet the hosts shaping the calendar and the venues powering the C1RCLE circuit.',
+  alternates: { canonical: 'https://thec1rcle.com/hosts' },
+  robots: { follow: false, index: false },
 };
 
 export default function HostsPage() {
-  return (
-    <div className="relative z-10 mx-auto max-w-6xl px-6 pt-32 pb-20 text-center">
-      <h1 className="text-4xl sm:text-6xl font-black uppercase tracking-tighter text-white mb-4">
-        HOSTS
-      </h1>
-      <p className="text-sm font-medium text-white/50 uppercase tracking-widest">
-        Coming Soon · THE C1RCLE Premier Hosts & Venues
-      </p>
-    </div>
-  );
+  return <DirectoryLanding hosts={hostDirectoryFixtures} venues={venueDirectoryFixtures} />;
 }

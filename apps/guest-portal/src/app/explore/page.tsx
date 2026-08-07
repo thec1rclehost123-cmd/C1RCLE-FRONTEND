@@ -22,8 +22,8 @@ export const metadata: Metadata = {
 
 export default function ExplorePage() {
   return (
-    <div className="relative z-10 min-h-screen overflow-x-clip pb-24 pt-24 text-white md:pb-0 md:pt-28">
-      <section aria-label="Featured events" className="px-4 sm:px-6 lg:px-8">
+    <div className="relative z-10 min-h-screen overflow-x-clip pb-24 text-white md:pb-0">
+      <section aria-label="Featured events">
         <ExploreHeroCarouselClient events={exploreFixture.featuredEvents} />
       </section>
 

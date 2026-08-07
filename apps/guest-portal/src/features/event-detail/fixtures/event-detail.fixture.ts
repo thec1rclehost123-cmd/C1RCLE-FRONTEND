@@ -36,6 +36,7 @@ const ticketTiers: EventDetailTicketTier[] = [
 ];
 
 const sharedDetail = {
+  hostId: 'high-spirits-collective',
   host: 'High Spirits Collective',
   summary:
     'A one-night gathering built around sound, art, and the people who keep the city moving.',
@@ -62,6 +63,7 @@ export const eventDetailFixtures: readonly EventDetailFixture[] = [
     startsAt: '2026-09-12T21:00:00+05:30',
     endsAt: '2026-09-13T01:00:00+05:30',
     venue: 'The Glass House',
+    venueId: 'the-glass-house-mumbai',
     address: 'Lower Parel, Mumbai',
     city: 'Mumbai',
   },
@@ -76,6 +78,7 @@ export const eventDetailFixtures: readonly EventDetailFixture[] = [
     startsAt: '2026-09-18T19:30:00+05:30',
     endsAt: '2026-09-18T23:30:00+05:30',
     venue: 'Skyline Social',
+    venueId: 'skyline-social',
     address: 'Koregaon Park, Pune',
     city: 'Pune',
   },
@@ -90,6 +93,7 @@ export const eventDetailFixtures: readonly EventDetailFixture[] = [
     startsAt: '2026-09-25T23:00:00+05:30',
     endsAt: '2026-09-26T04:00:00+05:30',
     venue: 'Sector 9',
+    venueId: 'sector-9',
     address: 'Indiranagar, Bengaluru',
     city: 'Bengaluru',
   },
@@ -104,6 +108,7 @@ export const eventDetailFixtures: readonly EventDetailFixture[] = [
     startsAt: '2026-10-03T16:00:00+05:30',
     endsAt: '2026-10-03T22:00:00+05:30',
     venue: 'The Mill',
+    venueId: 'the-mill-mumbai',
     address: 'Colaba, Mumbai',
     city: 'Mumbai',
   },
@@ -118,6 +123,7 @@ export const eventDetailFixtures: readonly EventDetailFixture[] = [
     startsAt: '2026-10-10T20:00:00+05:30',
     endsAt: '2026-10-10T23:59:00+05:30',
     venue: 'The Courtyard',
+    venueId: 'the-courtyard-pune',
     address: 'Kalyani Nagar, Pune',
     city: 'Pune',
   },
@@ -132,6 +138,7 @@ export const eventDetailFixtures: readonly EventDetailFixture[] = [
     startsAt: '2026-10-18T11:00:00+05:30',
     endsAt: '2026-10-18T18:00:00+05:30',
     venue: 'Garden City Club',
+    venueId: 'garden-city-club',
     address: 'Lavelle Road, Bengaluru',
     city: 'Bengaluru',
   },

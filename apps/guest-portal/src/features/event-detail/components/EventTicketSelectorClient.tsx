@@ -16,14 +16,19 @@ const moneyFormatter = new Intl.NumberFormat('en-IN', {
 export function EventTicketSelectorClient({
   accentTone,
   eventId,
+  initialVisibleCount = 3,
   tiers,
 }: {
   accentTone: EventAccentTone;
   eventId: string;
+  initialVisibleCount?: number;
   tiers: readonly EventDetailTicketTier[];
 }) {
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
   const accent = getEventAccentClasses(accentTone);
+  const hasHiddenTiers = tiers.length > initialVisibleCount;
+  const visibleTiers = expanded ? tiers : tiers.slice(0, initialVisibleCount);
 
   return (
     <section
@@ -41,7 +46,7 @@ export function EventTicketSelectorClient({
       </div>
 
       <div className="mt-5 space-y-2.5">
-        {tiers.map((tier) => {
+        {visibleTiers.map((tier) => {
           const selected = selectedTier === tier.id;
           const price = tier.price ? moneyFormatter.format(tier.price.amountPaise / 100) : 'Free';
 
@@ -75,6 +80,21 @@ export function EventTicketSelectorClient({
           );
         })}
       </div>
+
+      {hasHiddenTiers && (
+        <button
+          type="button"
+          aria-expanded={expanded}
+          onClick={() => {
+            setExpanded((current) => !current);
+          }}
+          className={`mt-3 flex min-h-11 w-full items-center justify-center rounded-full border px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] transition-colors motion-reduce:transition-none ${accent.border} ${accent.text} hover:bg-white/[0.07]`}
+        >
+          {expanded
+            ? 'Show fewer tiers'
+            : `View ${String(tiers.length - initialVisibleCount)} more`}
+        </button>
+      )}
 
       {selectedTier ? (
         <Link

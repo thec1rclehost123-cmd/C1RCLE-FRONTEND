@@ -25,7 +25,7 @@ export function EventPosterPanel({ event }: { event: EventDetailFixture }) {
           fill
           preload
           sizes="(max-width: 1024px) 100vw, 420px"
-          className="object-cover"
+          className="object-cover brightness-[1.08] contrast-[1.03] saturate-[1.1]"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-black/15" />
         <div className="absolute left-4 right-4 top-4 flex items-center justify-between gap-3">
