@@ -1,9 +1,6 @@
-'use client';
-
 // FIXTURE_ONLY: Temporary UI development footer.
 
 import Link from 'next/link';
-import React from 'react';
 
 export interface FooterLinkItem {
   label: string;

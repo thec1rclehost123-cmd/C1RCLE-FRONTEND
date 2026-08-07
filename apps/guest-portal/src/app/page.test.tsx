@@ -94,9 +94,44 @@ describe('Home Page', () => {
       }),
     );
 
-    render(<HomeBackgroundVideoClient src={homeFixture.hero.videoSrc} />);
+    render(
+      <HomeBackgroundVideoClient
+        desktopSrc={homeFixture.hero.desktopVideoSrc}
+        mobileSrc={homeFixture.hero.mobileVideoSrc}
+      />,
+    );
 
     expect(screen.queryByTestId('home-background-video')).not.toBeInTheDocument();
+  });
+
+  it('loads the responsive background video after the initial poster paint', () => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
+    );
+
+    render(
+      <HomeBackgroundVideoClient
+        desktopSrc={homeFixture.hero.desktopVideoSrc}
+        mobileSrc={homeFixture.hero.mobileVideoSrc}
+      />,
+    );
+
+    expect(screen.queryByTestId('home-background-video')).not.toBeInTheDocument();
+    act(() => {
+      vi.advanceTimersByTime(800);
+    });
+
+    const video = screen.getByTestId('home-background-video');
+    const sources = video.querySelectorAll('source');
+    expect(video).toHaveAttribute('preload', 'none');
+    expect(sources[0]).toHaveAttribute('src', homeFixture.hero.mobileVideoSrc);
+    expect(sources[1]).toHaveAttribute('src', homeFixture.hero.desktopVideoSrc);
   });
 
   it('keeps fixture content isolated from backend authority', () => {

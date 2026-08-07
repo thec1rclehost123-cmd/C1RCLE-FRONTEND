@@ -1,4 +1,4 @@
-import { AppProviders, themeInitScript } from '@c1rcle/providers';
+import { ThemeProvider, themeInitScript } from '@c1rcle/providers';
 
 import { AppShell } from '@/components/app-shell';
 
@@ -44,9 +44,9 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
           Skip to content
         </a>
 
-        <AppProviders>
+        <ThemeProvider>
           <AppShell>{children}</AppShell>
-        </AppProviders>
+        </ThemeProvider>
       </body>
     </html>
   );

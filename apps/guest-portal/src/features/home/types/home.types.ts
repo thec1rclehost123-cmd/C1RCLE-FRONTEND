@@ -5,7 +5,8 @@ export interface HomeHeroContent {
   description: string;
   ctaLabel: string;
   ctaHref: string;
-  videoSrc: string;
+  desktopVideoSrc: string;
+  mobileVideoSrc: string;
   desktopPosterSrc: string;
   mobilePosterSrc: string;
 }

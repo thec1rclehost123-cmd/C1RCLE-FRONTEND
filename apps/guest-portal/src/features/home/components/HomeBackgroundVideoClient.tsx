@@ -1,6 +1,6 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 
 const reducedMotionQuery = '(prefers-reduced-motion: reduce)';
 
@@ -23,14 +23,33 @@ function getServerMotionPreference() {
   return false;
 }
 
-export function HomeBackgroundVideoClient({ src }: { src: string }) {
+export function HomeBackgroundVideoClient({
+  desktopSrc,
+  mobileSrc,
+}: {
+  desktopSrc: string;
+  mobileSrc: string;
+}) {
   const motionAllowed = useSyncExternalStore(
     subscribeToMotionPreference,
     getMotionPreference,
     getServerMotionPreference,
   );
+  const [videoReady, setVideoReady] = useState(false);
 
-  if (!motionAllowed) return null;
+  useEffect(() => {
+    if (!motionAllowed) return;
+
+    const timer = window.setTimeout(() => {
+      setVideoReady(true);
+    }, 800);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [motionAllowed]);
+
+  if (!motionAllowed || !videoReady) return null;
 
   return (
     <video
@@ -40,10 +59,11 @@ export function HomeBackgroundVideoClient({ src }: { src: string }) {
       loop
       muted
       playsInline
-      preload="metadata"
+      preload="none"
       className="absolute inset-0 size-full scale-[1.02] object-cover"
     >
-      <source src={src} type="video/mp4" />
+      <source media="(max-width: 639px)" src={mobileSrc} type="video/mp4" />
+      <source src={desktopSrc} type="video/mp4" />
     </video>
   );
 }

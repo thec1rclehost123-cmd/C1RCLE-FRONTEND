@@ -24,7 +24,10 @@ const nextConfig: NextConfig = {
   /* A type error must never reach a deploy. */
   typescript: { ignoreBuildErrors: false },
 
-  images: { formats: ['image/avif', 'image/webp'] },
+  images: {
+    formats: ['image/webp'],
+    minimumCacheTTL: 31_536_000,
+  },
 
   headers() {
     return Promise.resolve([

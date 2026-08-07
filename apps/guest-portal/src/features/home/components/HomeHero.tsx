@@ -24,7 +24,10 @@ export function HomeHero({ hero }: { hero: HomeHeroContent }) {
       </picture>
 
       <div aria-hidden="true" className="absolute inset-0 -z-20">
-        <HomeBackgroundVideoClient src={hero.videoSrc} />
+        <HomeBackgroundVideoClient
+          desktopSrc={hero.desktopVideoSrc}
+          mobileSrc={hero.mobileVideoSrc}
+        />
       </div>
       <div className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(0,0,0,0.72)_0%,rgba(0,0,0,0.24)_42%,rgba(0,0,0,0.92)_100%)]" />
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_48%,transparent_0%,rgba(0,0,0,0.18)_42%,rgba(0,0,0,0.62)_100%)]" />
