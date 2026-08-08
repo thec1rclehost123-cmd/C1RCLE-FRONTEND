@@ -1,0 +1,172 @@
+/*
+ * Venue Studio — scoped styles.
+ *
+ * The screens are ported from a mockup that expressed everything as inline
+ * styles plus a `style-hover` attribute. Inline styles can't express :hover,
+ * so each hover treatment from the mockup lives here as a utility class.
+ */
+
+.venue-studio {
+  background: #000;
+  color: #f5f5f3;
+  font-family: var(--font-archivo), 'Archivo', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.venue-studio * {
+  box-sizing: border-box;
+}
+
+.venue-studio a {
+  color: #ff5a1f;
+  text-decoration: none;
+}
+
+.venue-studio a:hover {
+  color: #ff7a45;
+}
+
+.venue-studio ::selection {
+  background: rgb(255 90 31 / 30%);
+}
+
+.venue-studio input,
+.venue-studio button,
+.venue-studio select,
+.venue-studio textarea {
+  font-family: inherit;
+}
+
+.venue-studio input:focus-visible,
+.venue-studio button:focus-visible,
+.venue-studio textarea:focus-visible {
+  outline: 2px solid #ff5a1f;
+  outline-offset: 2px;
+}
+
+.venue-studio ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.venue-studio ::-webkit-scrollbar-thumb {
+  background: #262626;
+  border-radius: 6px;
+}
+
+.venue-studio ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ── hover treatments ───────────────────────────────────────────────────── */
+
+.vh-w03:hover {
+  background: rgb(255 255 255 / 3%) !important;
+}
+.vh-w04:hover {
+  background: rgb(255 255 255 / 4%) !important;
+}
+.vh-w06:hover {
+  background: rgb(255 255 255 / 6%) !important;
+}
+.vh-w08:hover {
+  background: rgb(255 255 255 / 8%) !important;
+}
+.vh-w10:hover {
+  background: rgb(255 255 255 / 10%) !important;
+}
+.vh-w14:hover {
+  background: rgb(255 255 255 / 14%) !important;
+}
+.vh-w16:hover {
+  background: rgb(255 255 255 / 16%) !important;
+}
+.vh-1a:hover {
+  background: #1a1a1a !important;
+}
+.vh-1c:hover {
+  background: #1c1c1c !important;
+}
+.vh-19:hover {
+  background: #191919 !important;
+}
+.vh-accent:hover {
+  background: #ff6f38 !important;
+}
+.vh-white:hover {
+  background: #fff !important;
+}
+.vh-accent-18:hover {
+  background: rgb(255 90 31 / 18%) !important;
+}
+.vh-accent-20:hover {
+  background: rgb(255 90 31 / 20%) !important;
+}
+.vh-red-18:hover {
+  background: rgb(240 133 122 / 18%) !important;
+}
+.vh-red-20:hover {
+  background: rgb(240 133 122 / 20%) !important;
+}
+.vh-black-60:hover {
+  background: rgb(0 0 0 / 60%) !important;
+}
+.vh-text:hover {
+  color: #f5f5f3 !important;
+}
+.vh-border-accent:hover {
+  border-color: rgb(255 90 31 / 35%) !important;
+}
+.vh-dashed:hover {
+  border-color: rgb(255 90 31 / 50%) !important;
+}
+
+.vh-lift:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 30px 60px rgb(0 0 0 / 55%);
+}
+
+.vh-lift-sm:hover {
+  transform: translateY(-4px);
+}
+
+/* ── floating calendar day tooltip ──────────────────────────────────────── */
+
+.venue-studio .calFloatDay:hover .calFloatTip {
+  opacity: 1 !important;
+  transform: translateX(-50%) translateY(0) !important;
+  pointer-events: auto !important;
+}
+
+/* ── event-detail poster reveal ─────────────────────────────────────────── */
+
+@keyframes ticketRoll {
+  0% {
+    transform: translateY(-120px) rotateX(70deg) scaleY(0.25);
+    opacity: 0;
+  }
+
+  45% {
+    transform: translateY(4px) rotateX(-8deg) scaleY(1.04);
+    opacity: 1;
+  }
+
+  72% {
+    transform: translateY(-2px) rotateX(4deg) scaleY(0.99);
+  }
+
+  100% {
+    transform: translateY(0) rotateX(0deg) scaleY(1);
+    opacity: 1;
+  }
+}
+
+.venue-ticket-roll {
+  animation: ticketRoll 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: top center;
+}
+
+/* Hide the default disclosure marker on the Advanced setup panel. */
+.venue-studio summary::-webkit-details-marker {
+  display: none;
+}

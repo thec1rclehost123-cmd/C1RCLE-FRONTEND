@@ -1,6 +1,8 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "stream",
+  "//": "3 apps + 9 package watchers = 12 persistent dev tasks; the default cap of 10 rejects the graph.",
+  "concurrency": "15",
   "globalDependencies": [
     "pnpm-lock.yaml",
     "pnpm-workspace.yaml",

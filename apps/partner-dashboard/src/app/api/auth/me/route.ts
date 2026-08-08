@@ -1,14 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
-export async function GET(req: NextRequest) {
+import type { NextRequest } from 'next/server';
+
+export function GET(req: NextRequest) {
   const headerType = req.headers.get('x-user-type');
   const queryType = req.nextUrl.searchParams.get('type');
-  const referer = req.headers.get('referer') || '';
+  const referer = req.headers.get('referer') ?? '';
 
   let validUserType = 'venue';
   if (headerType === 'host' || queryType === 'host' || referer.includes('/host')) {
     validUserType = 'host';
-  } else if (headerType === 'promoter' || queryType === 'promoter' || referer.includes('/promoter')) {
+  } else if (
+    headerType === 'promoter' ||
+    queryType === 'promoter' ||
+    referer.includes('/promoter')
+  ) {
     validUserType = 'promoter';
   } else if (headerType === 'venue' || queryType === 'venue' || referer.includes('/venue')) {
     validUserType = 'venue';
@@ -28,6 +34,13 @@ export async function GET(req: NextRequest) {
       email: 'partner@c1rcle.com',
       displayName: `Demo ${validUserType.toUpperCase()} Partner`,
       role: validUserType,
+      // Required by DashboardAuthProvider: without it `isApproved` stays false
+      // and the login screen signs the user back out as "no partner access".
+      isApproved: true,
+      isBanned: false,
+      kycStatus: 'verified',
+      onboardingEntityType: validUserType,
+      subscriptionPlan: 'pro',
       venueId: validUserType === 'venue' ? 'venue_demo_001' : undefined,
       activeMembership: {
         partnerId: `partner_${validUserType}_001`,
