@@ -287,8 +287,8 @@ function LoginForm() {
 
         // Priority 1: JWT custom claims set by admin approval — available immediately
         // after admin sets them, no Firestore membership query needed.
-        if (claims.partnerType) {
-          const pt = String(claims.partnerType);
+        if (claims['partnerType']) {
+          const pt = String(claims['partnerType']);
           assignedType = pt === 'venue' || pt === 'club' ? 'venue' : pt;
         }
 
@@ -407,8 +407,8 @@ function LoginForm() {
 
         let assignedType: string | null = null;
 
-        if (claims.partnerType) {
-          const pt = String(claims.partnerType);
+        if (claims['partnerType']) {
+          const pt = String(claims['partnerType']);
           assignedType = pt === 'venue' || pt === 'club' ? 'venue' : pt;
         }
 

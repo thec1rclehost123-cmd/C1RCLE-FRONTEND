@@ -61,3 +61,36 @@ half-working page. See `.env.example`.
 Deployed independently of the other two applications. `vercel.json` pins the
 build to this directory; `Dockerfile` is the portable equivalent. A failure in
 this application cannot affect the others.
+
+### Vercel
+
+Create the project against the repository root, then set:
+
+| Setting                    | Value                                               |
+| -------------------------- | --------------------------------------------------- |
+| Root Directory             | `apps/partner-dashboard`                            |
+| Include files outside root | **enabled** — the build reaches up to the workspace |
+| Framework Preset           | Next.js                                             |
+| Build / Install Command    | leave blank — `vercel.json` supplies both           |
+| Node.js Version            | 22.x or later (see root `engines`)                  |
+
+Everything else comes from `vercel.json`, which runs the build through Turbo
+from the workspace root so the shared packages are built first.
+
+No environment variables are required to build or boot today: nothing in
+`src/` reads `process.env`. Set the `.env.example` values anyway so the
+contract is in place before the app starts calling a real API.
+
+Two things worth knowing:
+
+- `output: 'standalone'` is applied **only off Vercel**. The Dockerfile copies
+  `.next/standalone`, but Vercel builds its own serverless output and does not
+  consume it.
+- `turbo.json` enables signed remote caching. It degrades to local-only when
+  `TURBO_TOKEN` / `TURBO_TEAM` are absent, so the build does not depend on it.
+
+### Before this is a real deployment
+
+`src/lib/firebase/client.ts` is a **mock** that accepts any password, and the
+routes under `src/app/api/` return fixtures. Both must be replaced with the
+real Firebase client and gateway before this is exposed to anyone.

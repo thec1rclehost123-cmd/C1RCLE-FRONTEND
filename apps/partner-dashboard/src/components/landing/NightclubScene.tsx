@@ -6,61 +6,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
-// ── Cloth simulation constants ─────────────────────────────────────
-const SEG_W = 8;
-const SEG_H = 14;
-const CLOTH_W = 1.8;
-const CLOTH_H = 3.8;
-const PCOUNT = (SEG_W + 1) * (SEG_H + 1);
-const GRAVITY = -14;
-const DAMPING = 0.985;
-const ITERATIONS = 10;
 const COIN_COUNT = 22; // reduced for perf
-
-// ── Verlet cloth factory ───────────────────────────────────────────
-function makeCloth() {
-  const pos = new Float32Array(PCOUNT * 3);
-  const prev = new Float32Array(PCOUNT * 3);
-  const pinned = new Uint8Array(PCOUNT);
-  const restX = new Float32Array(PCOUNT);
-  const restY = new Float32Array(PCOUNT);
-
-  for (let j = 0; j <= SEG_H; j++) {
-    for (let i = 0; i <= SEG_W; i++) {
-      const idx = j * (SEG_W + 1) + i;
-      const rx = (i / SEG_W - 0.5) * CLOTH_W;
-      const ry = CLOTH_H / 2 - (j / SEG_H) * CLOTH_H;
-      restX[idx] = rx;
-      restY[idx] = ry;
-      // Start collapsed at top — gravity unfurls naturally
-      pos[idx * 3] = rx;
-      pos[idx * 3 + 1] = CLOTH_H / 2;
-      pos[idx * 3 + 2] = 0;
-      prev[idx * 3] = rx;
-      prev[idx * 3 + 1] = CLOTH_H / 2;
-      prev[idx * 3 + 2] = 0;
-      if (j === 0) pinned[idx] = 1;
-    }
-  }
-
-  // Constraints from REST positions so cloth wants to hang correctly
-  const constraints: [number, number, number][] = [];
-  const addC = (a: number, b: number) => {
-    const dx = restX[a] - restX[b];
-    const dy = restY[a] - restY[b];
-    constraints.push([a, b, Math.sqrt(dx * dx + dy * dy)]);
-  };
-  for (let j = 0; j <= SEG_H; j++) {
-    for (let i = 0; i <= SEG_W; i++) {
-      const idx = j * (SEG_W + 1) + i;
-      if (i < SEG_W) addC(idx, idx + 1);
-      if (j < SEG_H) addC(idx, idx + (SEG_W + 1));
-      if (i < SEG_W && j < SEG_H) addC(idx, idx + SEG_W + 2);
-      if (i > 0 && j < SEG_H) addC(idx, idx + SEG_W);
-    }
-  }
-  return { pos, prev, pinned, constraints };
-}
 
 // ── Component ──────────────────────────────────────────────────────
 export default function NightclubScene() {
@@ -734,7 +680,7 @@ export default function NightclubScene() {
     const FLOOR_Y = -2;
 
     // Visible crowd colors — warm mid-tones so spotlight hits them clearly
-    const crowdMats = [
+    const crowdMats: [THREE.MeshPhongMaterial, ...THREE.MeshPhongMaterial[]] = [
       new THREE.MeshPhongMaterial({ color: '#A0607A', shininess: 20 }),
       new THREE.MeshPhongMaterial({ color: '#7A4A90', shininess: 18 }),
       new THREE.MeshPhongMaterial({ color: '#905060', shininess: 22 }),
@@ -773,7 +719,9 @@ export default function NightclubScene() {
     ) => {
       const h = FLOOR_Y;
       const s = scale;
-      const mat = crowdMats[Math.floor(rng() * crowdMats.length)];
+      // Non-null: the tuple type above guarantees at least one element and
+      // rng() is in [0, 1), so the index is always within bounds.
+      const mat = crowdMats[Math.floor(rng() * crowdMats.length)] ?? crowdMats[0];
       const yaw = (rng() - 0.5) * 1.2; // random facing direction
 
       // Legs

@@ -32,7 +32,8 @@ export function buildPaths(values: readonly number[]): ChartPaths {
   const n = values.length;
 
   const pts: [number, number][] = values.map((v, i) => {
-    const x = (i / (n - 1)) * W;
+    // A single-point series would make this 0/0; pin that lone point to x=0.
+    const x = n > 1 ? (i / (n - 1)) * W : 0;
     const y = H - pad - ((v - min) / span) * (H - pad * 2 - 20);
     return [x, y];
   });
