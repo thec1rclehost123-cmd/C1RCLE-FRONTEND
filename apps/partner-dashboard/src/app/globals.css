@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-
 /* Prevent scrollbar-induced layout shift on every page */
 html {
   overflow-x: hidden;
@@ -2549,5 +2548,3 @@ html:not(.dark) .venue-shell > div {
   font-size: 11px;
   font-weight: 600;
 }
-
-@tailwind utilities;
