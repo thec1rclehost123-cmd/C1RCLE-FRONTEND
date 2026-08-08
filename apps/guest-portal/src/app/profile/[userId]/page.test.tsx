@@ -7,6 +7,7 @@ import PublicProfilePage, { generateMetadata, generateStaticParams } from './pag
 
 vi.mock('next/image', () => ({
   default: ({ alt, fill: _fill, ...props }: React.ComponentProps<'img'> & { fill?: boolean }) => (
+    // eslint-disable-next-line @next/next/no-img-element
     <img alt={alt} {...props} />
   ),
 }));

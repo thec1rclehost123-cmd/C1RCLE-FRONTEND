@@ -78,7 +78,6 @@
 
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -180,6 +179,316 @@
   animation: checkout-number-roll-up 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* ═══════════════════════════════════════════
+   Photo String Gallery — Disposable Camera
+   ═══════════════════════════════════════════ */
+
+.photo-string-section {
+  position: relative;
+  overflow: hidden;
+  padding: 5rem 0 6rem;
+}
+
+.photo-string-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 40%, rgba(244, 74, 34, 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 30% 60%, rgba(255, 180, 120, 0.04), transparent);
+}
+
+/* ── Header ── */
+.photo-string-header {
+  text-align: center;
+  margin-bottom: 3.5rem;
+  position: relative;
+  z-index: 2;
+}
+
+.photo-string-label {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgba(244, 74, 34, 0.7);
+  margin-bottom: 0.75rem;
+}
+
+.photo-string-title {
+  font-family: var(--font-heading);
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  font-weight: 900;
+  text-transform: uppercase;
+  color: #fff;
+  letter-spacing: -0.04em;
+}
+
+/* ── Rows container ── */
+.photo-string-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 780px;
+}
+
+/* ── Individual row ── */
+.string-row-wrapper {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  padding-top: 1.2rem;
+}
+
+/* The string / wire */
+.light-string {
+  position: absolute;
+  top: 1rem;
+  left: -2%;
+  right: -2%;
+  height: 2px;
+  z-index: 3;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 10%,
+    rgba(255, 255, 255, 0.5) 30%,
+    rgba(255, 255, 255, 0.7) 50%,
+    rgba(255, 255, 255, 0.5) 70%,
+    rgba(255, 255, 255, 0.3) 90%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 8px rgba(255, 220, 180, 0.4),
+    0 0 25px rgba(255, 200, 150, 0.2);
+}
+
+.light-string::before {
+  content: "";
+  position: absolute;
+  inset: -2px 0;
+  background-image: radial-gradient(circle 2.5px, rgba(255, 240, 200, 1) 40%, rgba(255, 240, 200, 0) 60%);
+  background-size: 60px 8px;
+  background-position: 20px center;
+  background-repeat: repeat-x;
+  animation: string-twinkle 3s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 4px rgba(255, 230, 180, 0.8));
+}
+
+@keyframes string-twinkle {
+  0% { opacity: 0.6; }
+  100% { opacity: 1; filter: drop-shadow(0 0 6px rgba(255, 230, 180, 1)); }
+}
+
+/* ── Scrolling track ── */
+.string-row-track {
+  display: flex;
+  gap: 2rem;
+  width: max-content;
+}
+
+.photo-string-rows[data-active="true"] .string-row-track {
+  will-change: transform;
+}
+
+.photo-string-rows[data-active="false"] .string-row-track,
+.photo-string-rows[data-active="false"] .light-string::before {
+  animation-play-state: paused;
+}
+
+.photo-speed-38 { --scroll-speed: 38s; }
+.photo-speed-40 { --scroll-speed: 40s; }
+.photo-speed-45 { --scroll-speed: 45s; }
+
+.scroll-left {
+  animation: marquee-left var(--scroll-speed, 35s) linear infinite;
+}
+
+.scroll-right {
+  animation: marquee-left var(--scroll-speed, 35s) linear reverse infinite;
+}
+
+@keyframes marquee-left {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ── Photo on string ── */
+.photo-on-string {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: rotate(var(--rot, 0deg));
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.photo-rotate-none { --rot: 0deg; }
+.photo-rotate-n1 { --rot: -1deg; }
+.photo-rotate-n2 { --rot: -2deg; }
+.photo-rotate-n3 { --rot: -3deg; }
+.photo-rotate-n4 { --rot: -4deg; }
+.photo-rotate-p1 { --rot: 1deg; }
+.photo-rotate-p2 { --rot: 2deg; }
+.photo-rotate-p3 { --rot: 3deg; }
+.photo-rotate-p4 { --rot: 4deg; }
+
+/* ── Clip / Pin ── */
+.photo-clip {
+  position: relative;
+  z-index: 4;
+  width: 12px;
+  height: 22px;
+  display: flex;
+  justify-content: center;
+}
+
+.clip-body {
+  width: 3px;
+  height: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.15));
+  border-radius: 0 0 1px 1px;
+  position: relative;
+}
+
+.clip-body::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #e8d5c0, #b89a7a);
+  box-shadow:
+    0 0 4px rgba(200, 170, 130, 0.3),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* ── Disposable camera frame ── */
+.disposable-frame {
+  width: 200px;
+  background: #f5f0e8;
+  border-radius: 4px;
+  padding: 10px 10px 0 10px;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.45),
+    0 1px 3px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  position: relative;
+  cursor: pointer;
+}
+
+.disposable-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  opacity: 0.04;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.disposable-inner {
+  width: 100%;
+  aspect-ratio: 4/5;
+  overflow: hidden;
+  border-radius: 2px;
+  position: relative;
+  background: #1a1a1a;
+}
+
+.disposable-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: saturate(0.9) contrast(1.05);
+  transition: filter 0.3s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .photo-on-string:hover {
+    transform: rotate(0deg) scale(1.06);
+    z-index: 10;
+  }
+
+  .photo-on-string:hover .disposable-img {
+    filter: saturate(1.1) contrast(1.08) brightness(1.05);
+  }
+
+  .string-row-wrapper:hover .string-row-track {
+    animation-play-state: paused;
+  }
+}
+
+/* ── Film strip on the bottom ── */
+.disposable-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 4px 8px;
+}
+
+.disposable-date {
+  font-family: "Courier New", monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #c4a87a;
+  letter-spacing: 0.1em;
+  opacity: 0.7;
+}
+
+.disposable-counter {
+  font-family: "Courier New", monospace;
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: #d4a574;
+  opacity: 0.5;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .photo-string-section {
+    padding: 3rem 0 4rem;
+  }
+
+  .photo-string-rows {
+    gap: 1.5rem;
+  }
+
+  .disposable-frame {
+    width: 135px;
+    padding: 6px 6px 0 6px;
+  }
+
+  .string-row-track {
+    gap: 1.25rem;
+  }
+
+  .photo-string-header {
+    margin-bottom: 2.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .disposable-frame {
+    width: 110px;
+    padding: 4px 4px 0 4px;
+  }
+
+  .string-row-track {
+    gap: 1rem;
+  }
+
+  .disposable-strip {
+    padding: 4px 3px 6px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .checkout-number-roll {
     animation: none;
@@ -196,5 +505,10 @@
     animation: none;
     opacity: 1;
     transform: none;
+  }
+
+  .scroll-left,
+  .scroll-right {
+    animation: none;
   }
 }

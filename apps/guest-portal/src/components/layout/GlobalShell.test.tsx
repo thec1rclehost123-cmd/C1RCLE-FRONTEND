@@ -11,7 +11,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 describe('GlobalShell', () => {
-  it('provides one labelled skip-link target and a working theme control', () => {
+  it('provides one labelled skip-link target without a theme control', () => {
     const { container } = render(
       <ThemeProvider>
         <GlobalShell>
@@ -22,7 +22,7 @@ describe('GlobalShell', () => {
 
     expect(container.querySelectorAll('main')).toHaveLength(1);
     expect(container.querySelector('main#main')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Toggle theme' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Toggle theme' })).not.toBeInTheDocument();
   });
 
   it('does not expose footer links to missing anchors', () => {
@@ -40,13 +40,10 @@ describe('GlobalShell', () => {
 });
 
 describe('RitualBackground', () => {
-  it('disables every infinite animation when reduced motion is requested', () => {
+  it('does not run persistent global animations behind every route', () => {
     const { container } = render(<RitualBackground />);
     const animatedElements = container.querySelectorAll('[class*="animate-"]');
 
-    expect(animatedElements.length).toBeGreaterThan(0);
-    animatedElements.forEach((element) => {
-      expect(element.className).toContain('motion-reduce:animate-none');
-    });
+    expect(animatedElements).toHaveLength(0);
   });
 });

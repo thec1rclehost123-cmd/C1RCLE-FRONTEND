@@ -74,6 +74,7 @@ export function PersonalProfileFormClient({ identity }: { identity: ProfileIdent
         <div className="relative flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#FF4400]/40 bg-[#FF4400] text-2xl font-black text-white">
           {avatarPreview ? (
             // A local blob preview cannot be handled by the Next image optimizer.
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={avatarPreview}
               alt="Selected profile preview"

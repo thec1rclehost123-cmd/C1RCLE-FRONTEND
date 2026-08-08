@@ -22,11 +22,14 @@ const nextConfig: NextConfig = {
   },
 
   /* A type error must never reach a deploy. */
-  typescript: { ignoreBuildErrors: false },
+  typescript: {
+    ignoreBuildErrors: false,
+    tsconfigPath: 'tsconfig.build.json',
+  },
 
   images: {
-    formats: ['image/webp'],
-    minimumCacheTTL: 31_536_000,
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 86_400,
   },
 
   headers() {
@@ -38,6 +41,24 @@ const nextConfig: NextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+        ],
+      },
+      {
+        source: '/home/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, stale-while-revalidate=604800',
+          },
+        ],
+      },
+      {
+        source: '/events/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, stale-while-revalidate=604800',
+          },
         ],
       },
     ]);

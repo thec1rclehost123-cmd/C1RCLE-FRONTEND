@@ -1,10 +1,9 @@
 'use client';
 
-// FIXTURE_ONLY: Temporary UI development navigation links.
+// FIXTURE_ONLY: Dedicated glassmorphism container pill for navigation links.
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import React from 'react';
 
 export interface NavLinkItem {
   label: string;
@@ -20,28 +19,28 @@ export const navLinks: NavLinkItem[] = [
 
 export function DesktopNavLinks() {
   const pathname = usePathname();
-  const isLoginPage = pathname === '/login';
 
   return (
-    <div
-      className={`relative hidden w-full items-center justify-center gap-1 rounded-full border p-1.5 backdrop-blur-2xl transition-colors duration-500 lg:flex ${
-        isLoginPage ? 'border-white/10 bg-black/35' : 'border-white/10 bg-white/[0.055]'
-      }`}
-    >
+    <div className="relative hidden grid-cols-4 items-center rounded-full border border-white/15 bg-black/65 p-1.5 shadow-[0_10px_35px_rgba(0,0,0,0.5)] backdrop-blur-xl lg:grid">
       {navLinks.map((link) => {
-        const isActive = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
+        const isActive =
+          link.href === '/'
+            ? pathname === '/'
+            : pathname.startsWith(link.href) ||
+              (link.label === 'Hosts' && pathname.startsWith('/venue/'));
 
         return (
           <Link
             key={link.href}
             href={link.href}
-            className={`relative min-w-[108px] flex-1 rounded-full px-5 py-3 text-center text-[11px] font-black uppercase tracking-[0.15em] transition-all duration-300 ${
+            aria-current={isActive ? 'page' : undefined}
+            className={`relative min-w-[112px] rounded-full px-6 py-2.5 text-center text-xs font-black uppercase tracking-widest transition-[color,background-color,box-shadow,transform] duration-200 motion-reduce:transition-none ${
               isActive
-                ? 'bg-white text-black shadow-[0_0_24px_rgba(255,255,255,0.24)]'
-                : 'text-white/62 hover:bg-white/[0.08] hover:text-white'
+                ? 'z-10 bg-white text-black shadow-[0_0_24px_rgba(255,255,255,0.22)]'
+                : 'font-bold text-white/70 hover:bg-white/[0.07] hover:text-white'
             }`}
           >
-            <span>{link.label}</span>
+            {link.label}
           </Link>
         );
       })}

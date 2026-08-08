@@ -1,7 +1,8 @@
-import { HomeAppReview } from '@/features/home/components/HomeAppReview';
+import { exploreFixture } from '@/features/explore/fixtures/explore.fixture';
 import { HomeFeaturedDropsClient } from '@/features/home/components/HomeFeaturedDropsClient';
+import { HomeFeaturedEvents } from '@/features/home/components/HomeFeaturedEvents';
 import { HomeHero } from '@/features/home/components/HomeHero';
-import { HomePhoneStoryClient } from '@/features/home/components/HomePhoneStoryClient';
+import { PhotoStringGallery } from '@/features/home/components/PhotoStringGallery';
 import { homeFixture } from '@/features/home/fixtures/home.fixture';
 
 import type { Metadata } from 'next';
@@ -26,8 +27,8 @@ export default function HomePage() {
     <div className="relative z-10 bg-black text-white">
       <HomeHero hero={homeFixture.hero} />
       <HomeFeaturedDropsClient content={homeFixture.drops} />
-      <HomePhoneStoryClient />
-      <HomeAppReview />
+      <HomeFeaturedEvents content={homeFixture.featured} events={exploreFixture.events} />
+      <PhotoStringGallery />
     </div>
   );
 }

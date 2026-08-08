@@ -23,8 +23,15 @@ export function TicketCarousel({ items }: TicketCarouselProps) {
 
   return (
     <div className="relative w-full h-[460px] sm:h-[520px] flex flex-col items-center justify-center">
-      {/* Central Ambient Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] h-[480px] bg-[#FF4400]/15 rounded-full blur-[140px] pointer-events-none" />
+      {/* Subtle Ambient Radial Orange Glow Backdrop */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[560px] w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle_at_center,rgba(255,68,0,0.48)_0%,rgba(255,68,0,0.22)_45%,transparent_75%)] blur-3xl"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[380px] w-[380px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#FF4400]/35 blur-2xl"
+      />
 
       {/* 3D Stack Viewport */}
       <div className="relative h-[400px] w-full flex justify-center items-center">
@@ -56,13 +63,16 @@ export function TicketCarousel({ items }: TicketCarouselProps) {
               aria-label={`Select ${ticket.title} ticket tier`}
               className={`absolute w-[250px] sm:w-[270px] h-[380px] sm:h-[410px] rounded-[32px] cursor-pointer flex flex-col justify-between p-6 overflow-hidden transition-all duration-500 border backdrop-blur-xl text-left ${transformClasses} ${
                 isActive
-                  ? 'border-white/30 bg-gradient-to-br from-[#1a1a1a] via-[#111111] to-[#0a0a0a] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)]'
+                  ? 'border-[#FF4400]/40 bg-gradient-to-br from-[#1a1a1a] via-[#111111] to-[#0a0a0a] shadow-[0_0_50px_rgba(255,68,0,0.35),0_25px_60px_-15px_rgba(0,0,0,0.9)]'
                   : 'border-white/10 bg-zinc-950/90 shadow-2xl hover:border-white/20'
               }`}
             >
-              {/* VIP Special Glow Effect */}
-              {isActive && ticket.isPopular && (
-                <div className="absolute inset-0 rounded-[32px] border-2 border-[#FF4400]/50 pointer-events-none animate-pulse" />
+              {/* Active Ticket Card Orange Glow Ring */}
+              {isActive && (
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -inset-1 rounded-[32px] border border-[#FF4400]/50 shadow-[0_0_30px_rgba(255,68,0,0.3)]"
+                />
               )}
 
               {/* Card Header Tag */}

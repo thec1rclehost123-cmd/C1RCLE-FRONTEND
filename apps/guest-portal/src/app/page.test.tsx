@@ -10,8 +10,13 @@ vi.mock('next/image', () => ({
     alt,
     fill: _fill,
     preload: _preload,
+    unoptimized: _unoptimized,
     ...props
-  }: React.ComponentProps<'img'> & { fill?: boolean; preload?: boolean }) => (
+  }: React.ComponentProps<'img'> & {
+    fill?: boolean;
+    preload?: boolean;
+    unoptimized?: boolean;
+  }) => (
     // eslint-disable-next-line @next/next/no-img-element
     <img alt={alt} {...props} />
   ),
@@ -23,7 +28,7 @@ afterEach(() => {
 });
 
 describe('Home Page', () => {
-  it('renders the source homepage sequence and stops before Run the Room', () => {
+  it('renders the hero section and featured drops section', () => {
     render(<HomePage />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'THE C1RCLE' })).toBeInTheDocument();
@@ -36,16 +41,11 @@ describe('Home Page', () => {
     );
     expect(screen.getByRole('heading', { name: 'Featured Drops' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Featured drops carousel' })).toBeInTheDocument();
-    expect(screen.getAllByRole('heading', { name: 'Discover new events' }).length).toBeGreaterThan(
-      0,
-    );
-    expect(screen.getByRole('link', { name: 'Explore the app for Apple devices' })).toHaveAttribute(
+    expect(screen.getByRole('heading', { name: 'Discover Offline' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'View Neon Nights' })).toHaveAttribute(
       'href',
-      '/app',
+      '/event/neon-nights',
     );
-    expect(
-      screen.getByRole('link', { name: 'Explore the app for Android devices' }),
-    ).toHaveAttribute('href', '/app');
     expect(screen.queryByText(/Run the Room/i)).not.toBeInTheDocument();
   });
 
@@ -122,7 +122,7 @@ describe('Home Page', () => {
 
     expect(screen.queryByTestId('home-background-video')).not.toBeInTheDocument();
     act(() => {
-      vi.advanceTimersByTime(800);
+      vi.advanceTimersByTime(1200);
     });
 
     const video = screen.getByTestId('home-background-video');

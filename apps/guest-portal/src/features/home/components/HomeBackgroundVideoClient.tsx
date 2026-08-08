@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 const reducedMotionQuery = '(prefers-reduced-motion: reduce)';
 
@@ -35,24 +35,65 @@ export function HomeBackgroundVideoClient({
     getMotionPreference,
     getServerMotionPreference,
   );
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [videoReady, setVideoReady] = useState(false);
 
   useEffect(() => {
     if (!motionAllowed) return;
 
-    const timer = window.setTimeout(() => {
-      setVideoReady(true);
-    }, 800);
+    const connection = (
+      navigator as Navigator & { connection?: { readonly saveData?: boolean } }
+    ).connection;
+    if (connection?.saveData) return;
+
+    let idleCallback = 0;
+    let timer: ReturnType<typeof globalThis.setTimeout> | null = null;
+    const scheduleVideo = () => {
+      if ('requestIdleCallback' in window) {
+        idleCallback = window.requestIdleCallback(
+          () => {
+            setVideoReady(true);
+          },
+          { timeout: 2500 },
+        );
+        return;
+      }
+
+      timer = globalThis.setTimeout(() => {
+        setVideoReady(true);
+      }, 1200);
+    };
+
+    if (document.readyState === 'complete') scheduleVideo();
+    else window.addEventListener('load', scheduleVideo, { once: true });
 
     return () => {
-      window.clearTimeout(timer);
+      window.removeEventListener('load', scheduleVideo);
+      if (idleCallback !== 0) window.cancelIdleCallback(idleCallback);
+      if (timer !== null) globalThis.clearTimeout(timer);
     };
   }, [motionAllowed]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const updatePlayback = () => {
+      if (document.hidden) video.pause();
+      else void video.play().catch(() => undefined);
+    };
+
+    document.addEventListener('visibilitychange', updatePlayback);
+    return () => {
+      document.removeEventListener('visibilitychange', updatePlayback);
+    };
+  }, [videoReady]);
 
   if (!motionAllowed || !videoReady) return null;
 
   return (
     <video
+      ref={videoRef}
       data-testid="home-background-video"
       aria-hidden="true"
       autoPlay

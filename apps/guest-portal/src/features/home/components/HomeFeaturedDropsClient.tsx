@@ -63,7 +63,7 @@ const featuredDrops = [
   },
 ] as const;
 
-const autoScrollPixelsPerSecond = 42;
+const autoAdvanceInterval = 5200;
 
 function wrapOffset(value: number, length: number) {
   return ((((value + length / 2) % length) + length) % length) - length / 2;
@@ -102,13 +102,12 @@ export function HomeFeaturedDropsClient({ content }: { content: HomeFeaturedDrop
         : null;
     let reducedMotion = reducedMotionQuery?.matches ?? false;
     let stageVisible = true;
-    let animationFrame = 0;
-    let animationRunning = false;
-    let previousTime = 0;
     let progress = 0;
+    let timer = 0;
+    let metrics = getCardMetrics(stage.clientWidth);
 
     const positionCards = () => {
-      const { cardHeight, cardWidth, radius } = getCardMetrics(stage.clientWidth);
+      const { cardHeight, radius } = metrics;
       const angleStep = stage.clientWidth < 640 ? 0.52 : stage.clientWidth < 1024 ? 0.4 : 0.285;
 
       cards.forEach((card, index) => {
@@ -125,8 +124,6 @@ export function HomeFeaturedDropsClient({ content }: { content: HomeFeaturedDrop
         const scale = 1 - distance * 0.1;
         const opacity = Math.max(0.2, 1 - distance * 0.7);
 
-        card.style.width = String(cardWidth) + 'px';
-        card.style.height = String(cardHeight) + 'px';
         card.style.opacity = String(opacity);
         card.style.zIndex = String(Math.round(300 - distance * 180));
         card.style.pointerEvents = distance > 0.98 ? 'none' : 'auto';
@@ -148,77 +145,71 @@ export function HomeFeaturedDropsClient({ content }: { content: HomeFeaturedDrop
       });
     };
 
-    const animate = (time: number) => {
-      if (reducedMotion || !stageVisible) {
-        animationRunning = false;
-        return;
-      }
-
-      if (previousTime === 0) previousTime = time;
-      const delta = Math.min(time - previousTime, 64);
-      previousTime = time;
-
-      const { cardWidth } = getCardMetrics(stage.clientWidth);
-      progress =
-        (progress + (delta / 1000) * (autoScrollPixelsPerSecond / cardWidth)) % rail.length;
+    const measureCards = () => {
+      metrics = getCardMetrics(stage.clientWidth);
+      cards.forEach((card) => {
+        if (!card) return;
+        card.style.width = `${String(metrics.cardWidth)}px`;
+        card.style.height = `${String(metrics.cardHeight)}px`;
+      });
       positionCards();
-
-      animationFrame = window.requestAnimationFrame(animate);
     };
 
-    const startAnimation = () => {
-      if (animationRunning || reducedMotion || !stageVisible) return;
-      animationRunning = true;
-      previousTime = 0;
-      animationFrame = window.requestAnimationFrame(animate);
+    const stopAutoplay = () => {
+      if (timer === 0) return;
+      window.clearInterval(timer);
+      timer = 0;
+    };
+
+    const startAutoplay = () => {
+      if (timer !== 0 || reducedMotion || !stageVisible || document.hidden) return;
+      timer = window.setInterval(() => {
+        progress = (progress + 1) % rail.length;
+        positionCards();
+      }, autoAdvanceInterval);
     };
 
     const handleMotionPreference = (event: MediaQueryListEvent) => {
       reducedMotion = event.matches;
       positionCards();
-      if (reducedMotion) {
-        window.cancelAnimationFrame(animationFrame);
-        animationRunning = false;
-      } else {
-        startAnimation();
-      }
+      if (reducedMotion) stopAutoplay();
+      else startAutoplay();
+    };
+
+    const handleDocumentVisibility = () => {
+      if (document.hidden) stopAutoplay();
+      else startAutoplay();
     };
 
     const resizeObserver =
-      typeof ResizeObserver === 'function' ? new ResizeObserver(positionCards) : null;
+      typeof ResizeObserver === 'function' ? new ResizeObserver(measureCards) : null;
     const visibilityObserver =
       typeof IntersectionObserver === 'function'
         ? new IntersectionObserver(
             ([entry]) => {
               stageVisible = entry?.isIntersecting ?? false;
-              previousTime = 0;
-              if (stageVisible) {
-                startAnimation();
-              } else {
-                window.cancelAnimationFrame(animationFrame);
-                animationRunning = false;
-              }
+              if (stageVisible) startAutoplay();
+              else stopAutoplay();
             },
             { rootMargin: '120px 0px' },
           )
         : null;
 
-    positionCards();
+    measureCards();
     resizeObserver?.observe(stage);
     visibilityObserver?.observe(stage);
-    if (!resizeObserver) window.addEventListener('resize', positionCards);
+    if (!resizeObserver) window.addEventListener('resize', measureCards);
     reducedMotionQuery?.addEventListener('change', handleMotionPreference);
-    startAnimation();
+    document.addEventListener('visibilitychange', handleDocumentVisibility);
+    startAutoplay();
 
     return () => {
-      window.cancelAnimationFrame(animationFrame);
+      stopAutoplay();
       resizeObserver?.disconnect();
       visibilityObserver?.disconnect();
-      if (!resizeObserver) window.removeEventListener('resize', positionCards);
+      if (!resizeObserver) window.removeEventListener('resize', measureCards);
       reducedMotionQuery?.removeEventListener('change', handleMotionPreference);
-      cards.forEach((card) => {
-        card?.style.removeProperty('will-change');
-      });
+      document.removeEventListener('visibilitychange', handleDocumentVisibility);
     };
   }, [rail]);
 
@@ -261,12 +252,13 @@ export function HomeFeaturedDropsClient({ content }: { content: HomeFeaturedDrop
             }}
             href="/explore"
             aria-label={`Open ${event.title}`}
-            className="group absolute left-1/2 top-[43%] overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#0b0807] text-left shadow-[0_28px_75px_rgba(0,0,0,0.62)] outline-none [transform-style:preserve-3d] transition-[border-color,box-shadow] duration-300 hover:border-[#ff6b4a]/45 hover:shadow-[0_34px_90px_rgba(255,68,0,0.16)] focus-visible:ring-2 focus-visible:ring-[#ff6b4a] motion-reduce:transition-none"
+            className="group absolute left-1/2 top-[43%] overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#0b0807] text-left shadow-[0_28px_75px_rgba(0,0,0,0.62)] outline-none [transform-style:preserve-3d] transition-[transform,opacity,border-color,box-shadow] duration-[1100ms] ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-[#ff6b4a]/45 hover:shadow-[0_34px_90px_rgba(255,68,0,0.16)] focus-visible:ring-2 focus-visible:ring-[#ff6b4a] motion-reduce:transition-none"
           >
             <Image
               src={event.image}
               alt=""
               fill
+              unoptimized
               sizes="(max-width: 640px) 200px, (max-width: 1024px) 258px, 310px"
               className="object-cover transition-transform duration-700 group-hover:scale-[1.035] motion-reduce:transition-none"
             />

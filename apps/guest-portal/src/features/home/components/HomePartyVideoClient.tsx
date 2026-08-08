@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 const motionQuery = '(prefers-reduced-motion: reduce)';
@@ -31,6 +32,7 @@ export function HomePartyVideoClient({
   posterSrc: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const motionAllowed = useSyncExternalStore(
     subscribeToMotionPreference,
     getMotionAllowed,
@@ -52,7 +54,7 @@ export function HomePartyVideoClient({
         setShouldLoadVideo(true);
         observer.disconnect();
       },
-      { rootMargin: '500px 0px' },
+      { rootMargin: '200px 0px' },
     );
 
     observer.observe(container);
@@ -61,10 +63,26 @@ export function HomePartyVideoClient({
     };
   }, [motionAllowed, shouldLoadVideo]);
 
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const updatePlayback = () => {
+      if (document.hidden) video.pause();
+      else void video.play().catch(() => undefined);
+    };
+
+    document.addEventListener('visibilitychange', updatePlayback);
+    return () => {
+      document.removeEventListener('visibilitychange', updatePlayback);
+    };
+  }, [shouldLoadVideo]);
+
   return (
     <div ref={containerRef} className="absolute inset-0">
       {shouldLoadVideo ? (
         <video
+          ref={videoRef}
           data-testid="home-party-video"
           aria-hidden="true"
           autoPlay
@@ -79,9 +97,13 @@ export function HomePartyVideoClient({
           <source src={desktopSrc} type="video/mp4" />
         </video>
       ) : (
-        // The poster is visible immediately while the below-fold video remains network-idle.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={posterSrc} alt="" className="size-full object-cover" />
+        <Image
+          src={posterSrc}
+          alt=""
+          fill
+          sizes="100vw"
+          className="object-cover"
+        />
       )}
     </div>
   );

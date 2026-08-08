@@ -10,8 +10,13 @@ vi.mock('next/image', () => ({
     alt,
     preload: _preload,
     fill: _fill,
+    unoptimized: _unoptimized,
     ...props
-  }: React.ComponentProps<'img'> & { preload?: boolean; fill?: boolean }) => (
+  }: React.ComponentProps<'img'> & {
+    preload?: boolean;
+    fill?: boolean;
+    unoptimized?: boolean;
+  }) => (
     // eslint-disable-next-line @next/next/no-img-element
     <img alt={alt} {...props} />
   ),
@@ -35,7 +40,7 @@ describe('ExplorePage', () => {
   it('searches and filters fixtures without backend behavior', () => {
     render(<ExplorePage />);
 
-    fireEvent.change(screen.getByPlaceholderText('Events, venues, cities'), {
+    fireEvent.change(screen.getByPlaceholderText('Events, venues, artists, cities'), {
       target: { value: 'jazz' },
     });
 
@@ -47,7 +52,7 @@ describe('ExplorePage', () => {
   it('shows an honest empty state and restores fixtures', () => {
     render(<ExplorePage />);
 
-    fireEvent.change(screen.getByPlaceholderText('Events, venues, cities'), {
+    fireEvent.change(screen.getByPlaceholderText('Events, venues, artists, cities'), {
       target: { value: 'not-a-real-fixture' },
     });
 
@@ -71,7 +76,11 @@ describe('ExplorePage', () => {
     vi.useFakeTimers();
     vi.stubGlobal(
       'matchMedia',
-      vi.fn(() => ({ matches: true })),
+      vi.fn(() => ({
+        matches: true,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
     );
 
     render(<ExplorePage />);

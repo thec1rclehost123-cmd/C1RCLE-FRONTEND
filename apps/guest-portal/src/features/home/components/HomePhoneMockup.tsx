@@ -17,6 +17,7 @@ export function HomePhoneMockup({
   screen4Ref,
   screen5Ref,
   screen6Ref,
+  activeScreen,
 }: {
   phoneRef: RefObject<HTMLDivElement | null>;
   screen1Ref: RefObject<HTMLDivElement | null>;
@@ -25,7 +26,11 @@ export function HomePhoneMockup({
   screen4Ref: RefObject<HTMLDivElement | null>;
   screen5Ref: RefObject<HTMLDivElement | null>;
   screen6Ref: RefObject<HTMLDivElement | null>;
+  activeScreen: number;
 }) {
+  const shouldMountScreen = (screenIndex: number) =>
+    Math.abs(screenIndex - activeScreen) <= 1;
+
   return (
     <div aria-hidden="true" inert className="relative [perspective:1200px]">
       <div
@@ -38,7 +43,7 @@ export function HomePhoneMockup({
       />
       <div
         ref={phoneRef}
-        className="relative aspect-[393/852] h-[64vh] min-h-[430px] max-h-[700px] rounded-[50px] border border-white/[0.18] bg-[linear-gradient(115deg,#1a1a1a_0%,#030303_28%,#121212_50%,#000_76%,#2a211d_100%)] p-[9px] shadow-[0_54px_130px_rgba(0,0,0,0.95),-22px_30px_70px_rgba(244,74,34,0.16),18px_-18px_56px_rgba(255,255,255,0.08),inset_0_1px_0_rgba(255,255,255,0.28),inset_12px_0_22px_rgba(255,255,255,0.05),inset_-14px_0_24px_rgba(0,0,0,0.88)] md:h-[68vh] xl:h-[72vh] max-[460px]:h-[62vh] max-[460px]:min-h-[420px]"
+        className="relative aspect-[393/852] h-[62vh] min-h-[405px] max-h-[680px] rounded-[50px] border border-white/[0.18] bg-[linear-gradient(115deg,#1a1a1a_0%,#030303_28%,#121212_50%,#000_76%,#2a211d_100%)] p-[9px] shadow-[0_54px_130px_rgba(0,0,0,0.95),-22px_30px_70px_rgba(244,74,34,0.16),18px_-18px_56px_rgba(255,255,255,0.08),inset_0_1px_0_rgba(255,255,255,0.28),inset_12px_0_22px_rgba(255,255,255,0.05),inset_-14px_0_24px_rgba(0,0,0,0.88)] md:h-[66vh] xl:h-[69vh] max-[460px]:h-[60vh] max-[460px]:min-h-[395px]"
       >
         <div
           aria-hidden="true"
@@ -68,49 +73,49 @@ export function HomePhoneMockup({
           {/* Screen 1: Discover New Events */}
           <div
             ref={screen1Ref}
-            className="absolute inset-0 translate-x-0 transition-transform duration-500 ease-out motion-reduce:transition-none"
+            className="absolute inset-0 translate-x-0"
           >
-            <DiscoveryFeedScreen />
+            {shouldMountScreen(0) ? <DiscoveryFeedScreen /> : null}
           </div>
 
           {/* Screen 2: Interested People */}
           <div
             ref={screen2Ref}
-            className="absolute inset-0 translate-x-full transition-transform duration-500 ease-out motion-reduce:transition-none"
+            className="absolute inset-0 translate-x-full"
           >
-            <InterestedPeopleScreen />
+            {shouldMountScreen(1) ? <InterestedPeopleScreen /> : null}
           </div>
 
           {/* Screen 3: Ask Outs */}
           <div
             ref={screen3Ref}
-            className="absolute inset-0 translate-x-full transition-transform duration-500 ease-out motion-reduce:transition-none"
+            className="absolute inset-0 translate-x-full"
           >
-            <AskOutScreen />
+            {shouldMountScreen(2) ? <AskOutScreen /> : null}
           </div>
 
           {/* Screen 4: Buy, Share, Transfer Tickets */}
           <div
             ref={screen4Ref}
-            className="absolute inset-0 translate-x-full transition-transform duration-500 ease-out motion-reduce:transition-none"
+            className="absolute inset-0 translate-x-full"
           >
-            <TicketActionsScreen />
+            {shouldMountScreen(3) ? <TicketActionsScreen /> : null}
           </div>
 
           {/* Screen 5: Event Only Group Chat */}
           <div
             ref={screen5Ref}
-            className="absolute inset-0 translate-x-full transition-transform duration-500 ease-out motion-reduce:transition-none"
+            className="absolute inset-0 translate-x-full"
           >
-            <GroupChatScreen />
+            {shouldMountScreen(4) ? <GroupChatScreen /> : null}
           </div>
 
           {/* Screen 6: Priority Passes */}
           <div
             ref={screen6Ref}
-            className="absolute inset-0 translate-x-full transition-transform duration-500 ease-out motion-reduce:transition-none"
+            className="absolute inset-0 translate-x-full"
           >
-            <PriorityPassScreen />
+            {shouldMountScreen(5) ? <PriorityPassScreen /> : null}
           </div>
         </div>
       </div>
