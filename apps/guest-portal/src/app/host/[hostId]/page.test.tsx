@@ -48,7 +48,9 @@ describe('HostProfilePage', () => {
       'href',
       '/venue/the-glass-house-mumbai',
     );
-    expect(screen.queryByRole('button', { name: /follow/i })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Follow soon' })[0]).toBeDisabled();
+    expect(screen.getByText('The room we always want to create…')).toBeInTheDocument();
+    expect(screen.getByText('After Dark')).toBeInTheDocument();
   });
 
   it('renders an honest empty calendar for a host without announced events', async () => {

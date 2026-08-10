@@ -2,9 +2,9 @@ import { notFound } from 'next/navigation';
 
 import { HostProfileView } from '@/features/directory/components/HostProfileView';
 import {
-  findHostDirectoryFixture,
-  hostDirectoryFixtures,
-} from '@/features/directory/fixtures/directory.fixture';
+  findHostPublicProfileFixture,
+  hostPublicProfileFixtures,
+} from '@/features/directory/fixtures/public-profile.fixture';
 
 import type { Metadata } from 'next';
 
@@ -15,12 +15,12 @@ interface HostProfilePageProps {
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return hostDirectoryFixtures.map((host) => ({ hostId: host.id }));
+  return hostPublicProfileFixtures.map((host) => ({ hostId: host.id }));
 }
 
 export async function generateMetadata({ params }: HostProfilePageProps): Promise<Metadata> {
   const { hostId } = await params;
-  const host = findHostDirectoryFixture(decodeURIComponent(hostId));
+  const host = findHostPublicProfileFixture(decodeURIComponent(hostId));
 
   if (!host) {
     return {
@@ -31,21 +31,21 @@ export async function generateMetadata({ params }: HostProfilePageProps): Promis
   }
 
   return {
-    title: `${host.name} | THE C1RCLE`,
+    title: `${host.hero.title} | THE C1RCLE`,
     description: host.bio,
     alternates: { canonical: `https://thec1rcle.com/host/${encodeURIComponent(host.id)}` },
     robots: { follow: false, index: false },
     openGraph: {
-      title: host.name,
+      title: host.hero.title,
       description: host.bio,
-      images: [{ url: host.coverImage, alt: host.name }],
+      images: [{ url: host.hero.cover.src, alt: host.hero.cover.alt }],
     },
   };
 }
 
 export default async function HostProfilePage({ params }: HostProfilePageProps) {
   const { hostId } = await params;
-  const host = findHostDirectoryFixture(decodeURIComponent(hostId));
+  const host = findHostPublicProfileFixture(decodeURIComponent(hostId));
 
   if (!host) notFound();
 

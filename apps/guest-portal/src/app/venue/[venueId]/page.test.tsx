@@ -37,13 +37,31 @@ describe('VenueProfilePage', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: 'Skyline Social' })).toBeInTheDocument();
     expect(screen.getAllByText('Koregaon Park, Pune')).toHaveLength(2);
-    expect(screen.getByRole('link', { name: 'Maps ↗' })).toHaveAttribute(
+    expect(screen.getAllByRole('link', { name: 'Directions' })[0]).toHaveAttribute(
       'href',
       expect.stringContaining('google.com/maps/search'),
     );
+    expect(screen.getAllByRole('link', { name: 'View menu' })[0]).toHaveAttribute('href', '#menu');
+    expect(screen.getByRole('heading', { name: 'A menu made for sharing' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View Rooftop Jazz' })).toHaveAttribute(
       'href',
       '/event/rooftop-jazz',
+    );
+  });
+
+  it('renders the experience-venue template for a non-restaurant venue', async () => {
+    render(
+      await VenueProfilePage({
+        params: Promise.resolve({ venueId: 'the-glass-house-mumbai' }),
+      }),
+    );
+
+    expect(screen.getByRole('heading', { level: 1, name: 'The Glass House' })).toBeInTheDocument();
+    expect(screen.getByText('250 standing · 140 seated')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Spaces and formats' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /High Spirits Collective/i })).toHaveAttribute(
+      'href',
+      '/host/high-spirits-collective',
     );
   });
 

@@ -2,9 +2,9 @@ import { notFound } from 'next/navigation';
 
 import { VenueProfileView } from '@/features/directory/components/VenueProfileView';
 import {
-  findVenueDirectoryFixture,
-  venueDirectoryFixtures,
-} from '@/features/directory/fixtures/directory.fixture';
+  findVenuePublicProfileFixture,
+  venuePublicProfileFixtures,
+} from '@/features/directory/fixtures/public-profile.fixture';
 
 import type { Metadata } from 'next';
 
@@ -15,12 +15,12 @@ interface VenueProfilePageProps {
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return venueDirectoryFixtures.map((venue) => ({ venueId: venue.id }));
+  return venuePublicProfileFixtures.map((venue) => ({ venueId: venue.id }));
 }
 
 export async function generateMetadata({ params }: VenueProfilePageProps): Promise<Metadata> {
   const { venueId } = await params;
-  const venue = findVenueDirectoryFixture(decodeURIComponent(venueId));
+  const venue = findVenuePublicProfileFixture(decodeURIComponent(venueId));
 
   if (!venue) {
     return {
@@ -31,21 +31,21 @@ export async function generateMetadata({ params }: VenueProfilePageProps): Promi
   }
 
   return {
-    title: `${venue.name} | THE C1RCLE`,
-    description: venue.summary,
+    title: `${venue.hero.title} | THE C1RCLE`,
+    description: venue.hero.subtitle,
     alternates: { canonical: `https://thec1rcle.com/venue/${encodeURIComponent(venue.id)}` },
     robots: { follow: false, index: false },
     openGraph: {
-      title: venue.name,
-      description: venue.summary,
-      images: [{ url: venue.coverImage, alt: venue.name }],
+      title: venue.hero.title,
+      description: venue.hero.subtitle,
+      images: [{ url: venue.hero.cover.src, alt: venue.hero.cover.alt }],
     },
   };
 }
 
 export default async function VenueProfilePage({ params }: VenueProfilePageProps) {
   const { venueId } = await params;
-  const venue = findVenueDirectoryFixture(decodeURIComponent(venueId));
+  const venue = findVenuePublicProfileFixture(decodeURIComponent(venueId));
 
   if (!venue) notFound();
 

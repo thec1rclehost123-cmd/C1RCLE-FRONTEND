@@ -5,12 +5,12 @@ import { useEffect, useRef, useState } from 'react';
 import { HomePhoneMockup } from './HomePhoneMockup';
 
 const sideLabels = [
-  { tag: 'Explore', text: 'Discover new events', side: 'left' },
-  { tag: 'Social', text: 'Interested people', side: 'right' },
-  { tag: 'Connect', text: 'Ask outs', side: 'left' },
-  { tag: 'Tickets', text: 'Your ticket wallet', side: 'right' },
-  { tag: 'Chat', text: 'Event only group chat', side: 'left' },
-  { tag: 'VIP', text: 'Priority passes', side: 'right' },
+  { tag: 'Explore', text: 'Find live events', side: 'left' },
+  { tag: 'Events', text: 'See every detail', side: 'right' },
+  { tag: 'Venues', text: 'Discover your city', side: 'left' },
+  { tag: 'Tickets', text: 'Choose your entry', side: 'right' },
+  { tag: 'Chat', text: 'Meet your people', side: 'left' },
+  { tag: 'Wallet', text: 'Keep tickets private', side: 'right' },
 ] as const;
 
 function clamp(value: number, minimum = 0, maximum = 1) {

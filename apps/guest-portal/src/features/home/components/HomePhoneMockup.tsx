@@ -1,13 +1,15 @@
-import {
-  DiscoveryFeedScreen,
-  InterestedPeopleScreen,
-  AskOutScreen,
-  TicketActionsScreen,
-  GroupChatScreen,
-  PriorityPassScreen,
-} from './HomePhoneScreens';
+import Image from 'next/image';
 
 import type { RefObject } from 'react';
+
+const screenAssets = [
+  { src: '/app/screens/explore.webp', alt: 'THE C1RCLE mobile Explore screen with live events' },
+  { src: '/app/screens/event.webp', alt: 'THE C1RCLE mobile event detail screen' },
+  { src: '/app/screens/venues.webp', alt: 'THE C1RCLE mobile venue discovery screen' },
+  { src: '/app/screens/checkout.webp', alt: 'THE C1RCLE mobile ticket selection screen' },
+  { src: '/app/screens/chat.webp', alt: 'THE C1RCLE mobile Chat screen' },
+  { src: '/app/screens/tickets.webp', alt: 'THE C1RCLE mobile Tickets screen' },
+] as const;
 
 export function HomePhoneMockup({
   phoneRef,
@@ -30,6 +32,23 @@ export function HomePhoneMockup({
 }) {
   const shouldMountScreen = (screenIndex: number) =>
     Math.abs(screenIndex - activeScreen) <= 1;
+
+  const renderScreen = (screenIndex: number) => {
+    if (!shouldMountScreen(screenIndex)) return null;
+    const screen = screenAssets[screenIndex];
+    if (!screen) return null;
+
+    return (
+      <Image
+        src={screen.src}
+        alt={screen.alt}
+        fill
+        sizes="(max-width: 768px) 52vw, 330px"
+        className="object-cover"
+        priority={screenIndex === 0}
+      />
+    );
+  };
 
   return (
     <div aria-hidden="true" inert className="relative [perspective:1200px]">
@@ -57,7 +76,6 @@ export function HomePhoneMockup({
           aria-hidden="true"
           className="pointer-events-none absolute inset-y-12 right-0 w-4 rounded-r-[46px] bg-gradient-to-l from-black/90 to-transparent"
         />
-        <div className="absolute left-1/2 top-3 z-30 h-6 w-28 -translate-x-1/2 rounded-full bg-black shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_1px_10px_rgba(0,0,0,0.8)]" />
         <div className="absolute -left-1 top-32 h-16 w-1 rounded-full bg-gradient-to-b from-white/[0.32] via-white/[0.10] to-black/50 shadow-[0_0_10px_rgba(255,255,255,0.14)]" />
         <div className="absolute -right-1 top-44 h-24 w-1 rounded-full bg-gradient-to-b from-white/[0.20] via-white/[0.08] to-black/60" />
         <div className="relative h-full overflow-hidden rounded-[40px] border border-white/[0.12] bg-black shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05),inset_0_18px_30px_rgba(255,255,255,0.04),inset_0_-28px_42px_rgba(0,0,0,0.82)]">
@@ -75,7 +93,7 @@ export function HomePhoneMockup({
             ref={screen1Ref}
             className="absolute inset-0 translate-x-0"
           >
-            {shouldMountScreen(0) ? <DiscoveryFeedScreen /> : null}
+            {renderScreen(0)}
           </div>
 
           {/* Screen 2: Interested People */}
@@ -83,7 +101,7 @@ export function HomePhoneMockup({
             ref={screen2Ref}
             className="absolute inset-0 translate-x-full"
           >
-            {shouldMountScreen(1) ? <InterestedPeopleScreen /> : null}
+            {renderScreen(1)}
           </div>
 
           {/* Screen 3: Ask Outs */}
@@ -91,7 +109,7 @@ export function HomePhoneMockup({
             ref={screen3Ref}
             className="absolute inset-0 translate-x-full"
           >
-            {shouldMountScreen(2) ? <AskOutScreen /> : null}
+            {renderScreen(2)}
           </div>
 
           {/* Screen 4: Buy, Share, Transfer Tickets */}
@@ -99,7 +117,7 @@ export function HomePhoneMockup({
             ref={screen4Ref}
             className="absolute inset-0 translate-x-full"
           >
-            {shouldMountScreen(3) ? <TicketActionsScreen /> : null}
+            {renderScreen(3)}
           </div>
 
           {/* Screen 5: Event Only Group Chat */}
@@ -107,7 +125,7 @@ export function HomePhoneMockup({
             ref={screen5Ref}
             className="absolute inset-0 translate-x-full"
           >
-            {shouldMountScreen(4) ? <GroupChatScreen /> : null}
+            {renderScreen(4)}
           </div>
 
           {/* Screen 6: Priority Passes */}
@@ -115,7 +133,7 @@ export function HomePhoneMockup({
             ref={screen6Ref}
             className="absolute inset-0 translate-x-full"
           >
-            {shouldMountScreen(5) ? <PriorityPassScreen /> : null}
+            {renderScreen(5)}
           </div>
         </div>
       </div>
