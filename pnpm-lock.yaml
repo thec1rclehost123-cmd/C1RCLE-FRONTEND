@@ -389,7 +389,18 @@ importers:
 
   packages/api-client: {}
 
-  packages/auth: {}
+  packages/auth:
+    dependencies:
+      react:
+        specifier: 19.2.8
+        version: 19.2.8
+    devDependencies:
+      '@types/react':
+        specifier: 19.2.18
+        version: 19.2.18
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
 
   packages/config:
     dependencies:
@@ -5215,7 +5226,7 @@ snapshots:
       obug: 2.1.4
       std-env: 4.2.0
       tinyrainbow: 3.1.1
-      vitest: 4.1.10(@types/node@22.20.1)(@vitest/coverage-v8@4.1.10)(jiti@2.7.0)(jsdom@29.1.1)
+      vitest: 4.1.10(@types/node@26.1.2)(@vitest/coverage-v8@4.1.10)(jiti@2.7.0)(jsdom@29.1.1)
 
   '@vitest/expect@4.1.10':
     dependencies:
