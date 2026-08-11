@@ -15,9 +15,7 @@ export function VenueDashboardLayout({ children }: { readonly children: ReactNod
   const pathname = usePathname();
 
   const needsLegacyVenueState =
-    pathname === '/venue/door' ||
-    pathname === '/venue/slot-requests' ||
-    (/^\/venue\/events\/[^/]+/.test(pathname) && pathname !== '/venue/events/create');
+    /^\/venue\/events\/[^/]+(?:\/(?:guests|finance|marketing|promoters|sales))?$/.test(pathname);
 
   if (!needsLegacyVenueState) {
     return (

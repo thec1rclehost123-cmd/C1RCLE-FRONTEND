@@ -8,6 +8,9 @@ export interface CreateEventTicket {
   readonly name: string;
   readonly pricePaise: number;
   readonly capacity: number;
+  readonly benefits?: string;
+  readonly saleStart?: string;
+  readonly saleEnd?: string;
 }
 
 export interface CreateEventDraft {
@@ -24,8 +27,20 @@ export interface CreateEventDraft {
   readonly genre: string;
   readonly description: string;
   readonly ageLimit: string;
+  readonly artists?: string;
+  readonly dressCode?: string;
+  readonly bookingLimit?: string;
+  readonly salesCloseTime?: string;
+  readonly refundPolicy?: string;
   readonly guestFeesPaise: number;
   readonly tickets: readonly CreateEventTicket[];
+}
+
+export interface EditEventReviewRow {
+  readonly id: 'details' | 'schedule' | 'tickets' | 'policies' | 'poster';
+  readonly label: string;
+  readonly summary: string;
+  readonly step: 1 | 2;
 }
 
 export interface TicketValidationResult {
@@ -65,6 +80,36 @@ export const initialCreateEventDraft: CreateEventDraft = {
     { id: 'couple-pass', name: 'Couple Pass', pricePaise: 199_900, capacity: 150 },
   ],
 };
+
+export const createEditEventReviewRows = (
+  draft: CreateEventDraft,
+): readonly EditEventReviewRow[] => [
+  {
+    id: 'details',
+    label: 'Event details',
+    summary: `${draft.name} · ${draft.dateLabel}`,
+    step: 1,
+  },
+  {
+    id: 'schedule',
+    label: 'Schedule and venue',
+    summary: `${draft.venueName} · ${draft.startTime} – ${draft.endTime}`,
+    step: 1,
+  },
+  {
+    id: 'tickets',
+    label: 'Tickets',
+    summary: `${String(draft.tickets.length)} tiers`,
+    step: 2,
+  },
+  {
+    id: 'policies',
+    label: 'Guest policies',
+    summary: `${draft.ageLimit} only${draft.dressCode ? ` · ${draft.dressCode}` : ''}`,
+    step: 1,
+  },
+  { id: 'poster', label: 'Poster', summary: 'Ready', step: 1 },
+];
 
 export const formatTicketPrice = (paise: number): string =>
   new Intl.NumberFormat('en-IN', {

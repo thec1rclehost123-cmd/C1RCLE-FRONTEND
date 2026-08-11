@@ -2,8 +2,8 @@ import Image from 'next/image';
 
 import { CalendarIcon, LocationIcon } from '@c1rcle/icons';
 
-import styles from './EventDetailLayout.module.css';
 import { EventDetailActions } from './EventDetailActions';
+import styles from './EventDetailLayout.module.css';
 import { EventDetailTabs } from './EventDetailTabs';
 
 import type { VenueEventDetailHeaderModel } from '../event-detail-model';
@@ -38,7 +38,7 @@ export function EventDetailLayout({
             {event.dateTimeLabel}
           </p>
         </div>
-        <EventDetailActions eventName={event.name} />
+        <EventDetailActions eventId={event.id} eventName={event.name} />
       </header>
 
       <EventDetailTabs eventId={event.id} />

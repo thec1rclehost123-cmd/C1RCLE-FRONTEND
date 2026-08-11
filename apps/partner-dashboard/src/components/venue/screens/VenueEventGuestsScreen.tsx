@@ -7,9 +7,8 @@ import { CloseIcon, ExportIcon, FilterIcon, SearchIcon, SendIcon } from '@c1rcle
 
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 
-import { useVenueStudio } from '../store';
-
 import styles from '../event-detail/VenueEventDetail.module.css';
+import { useVenueStudio } from '../store';
 
 import type { VenueEventGuestsModel } from '../event-detail-model';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
@@ -26,10 +25,10 @@ export function VenueEventGuestsScreen({
   const [query, setQuery] = useState('');
   const [ticket, setTicket] = useState<'all' | 'VIP Table' | 'GA'>('all');
   const [selectedGuestId, setSelectedGuestId] = useState<string | null>(null);
-  const drawerRef = useRef<HTMLElement>(null);
+  const drawerRef = useRef<HTMLDialogElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const viewActionRefs = useRef(new Map<string, HTMLButtonElement>());
-  const guests = model?.guests ?? [];
+  const guests = useMemo(() => model?.guests ?? [], [model]);
 
   const visibleGuests = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -244,56 +243,60 @@ export function VenueEventGuestsScreen({
         </div>
 
         {selectedGuest ? (
-          <aside
-            ref={drawerRef}
-            className={styles['guestDrawer']}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="guest-drawer-title"
-            onKeyDown={onDrawerKeyDown}
-          >
-            <button
-              ref={closeRef}
-              className={styles['drawerClose']}
-              type="button"
-              aria-label="Close guest details"
-              onClick={closeDrawer}
+          <>
+            {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- dialog handles its own keyboard focus trap */}
+            <dialog
+              open
+              ref={drawerRef}
+              className={styles['guestDrawer']}
+              aria-modal="true"
+              aria-labelledby="guest-drawer-title"
+              tabIndex={-1}
+              onKeyDown={onDrawerKeyDown}
             >
-              <CloseIcon size={22} aria-hidden="true" />
-            </button>
-            <span className={styles['drawerAvatar']} aria-hidden="true">
-              {selectedGuest.initials}
-            </span>
-            <h2 id="guest-drawer-title">{selectedGuest.name}</h2>
-            <p>{selectedGuest.ticketType}</p>
-            <dl>
-              <div>
-                <dt>Phone</dt>
-                <dd>{selectedGuest.maskedPhone}</dd>
-              </div>
-              <div>
-                <dt>Check-in</dt>
-                <dd>
-                  <span data-checked-in={selectedGuest.checkInTime ? 'true' : 'false'}>
-                    {selectedGuest.checkInStatus}
-                  </span>
-                  {selectedGuest.checkInDateTime ? (
-                    <small>{selectedGuest.checkInDateTime}</small>
-                  ) : null}
-                </dd>
-              </div>
-              <div>
-                <dt>Added by</dt>
-                <dd>{selectedGuest.addedBy}</dd>
-              </div>
-            </dl>
-            {auth.canDo('canSendTicket') ? (
-              <button className={styles['sendTicket']} type="button">
-                <SendIcon size={18} aria-hidden="true" />
-                Send ticket
+              <button
+                ref={closeRef}
+                className={styles['drawerClose']}
+                type="button"
+                aria-label="Close guest details"
+                onClick={closeDrawer}
+              >
+                <CloseIcon size={22} aria-hidden="true" />
               </button>
-            ) : null}
-          </aside>
+              <span className={styles['drawerAvatar']} aria-hidden="true">
+                {selectedGuest.initials}
+              </span>
+              <h2 id="guest-drawer-title">{selectedGuest.name}</h2>
+              <p>{selectedGuest.ticketType}</p>
+              <dl>
+                <div>
+                  <dt>Phone</dt>
+                  <dd>{selectedGuest.maskedPhone}</dd>
+                </div>
+                <div>
+                  <dt>Check-in</dt>
+                  <dd>
+                    <span data-checked-in={selectedGuest.checkInTime ? 'true' : 'false'}>
+                      {selectedGuest.checkInStatus}
+                    </span>
+                    {selectedGuest.checkInDateTime ? (
+                      <small>{selectedGuest.checkInDateTime}</small>
+                    ) : null}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Added by</dt>
+                  <dd>{selectedGuest.addedBy}</dd>
+                </div>
+              </dl>
+              {auth.canDo('canSendTicket') ? (
+                <button className={styles['sendTicket']} type="button">
+                  <SendIcon size={18} aria-hidden="true" />
+                  Send ticket
+                </button>
+              ) : null}
+            </dialog>
+          </>
         ) : null}
       </div>
     </div>

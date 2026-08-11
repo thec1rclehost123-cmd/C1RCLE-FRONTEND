@@ -713,6 +713,49 @@ body {
   border-color: var(--border-strong);
 }
 
+/* Login actions keep a stable, high-contrast shape during authentication. */
+.btn-primary.btn-xl.w-full,
+.btn-secondary.w-full.mt-4 {
+  min-height: 56px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.btn-primary.btn-xl.w-full:disabled {
+  border: 1px solid #d63f1d;
+  background: #d63f1d;
+  color: #fff;
+  cursor: wait;
+  opacity: 1;
+}
+
+.btn-secondary.w-full.mt-4 {
+  border-color: rgb(255 255 255 / 14%);
+  background: #111315;
+  color: #f5f5f7;
+}
+
+.btn-secondary.w-full.mt-4:disabled {
+  border-color: rgb(255 255 255 / 10%);
+  background: #111315;
+  color: #92969d;
+  opacity: 0.72;
+}
+
+.btn-secondary.w-full.mt-4 svg path:nth-child(1) {
+  fill: #4285f4;
+}
+.btn-secondary.w-full.mt-4 svg path:nth-child(2) {
+  fill: #34a853;
+}
+.btn-secondary.w-full.mt-4 svg path:nth-child(3) {
+  fill: #fbbc05;
+}
+.btn-secondary.w-full.mt-4 svg path:nth-child(4) {
+  fill: #ea4335;
+}
+
 /* Ghost */
 .btn-ghost {
   background: transparent;

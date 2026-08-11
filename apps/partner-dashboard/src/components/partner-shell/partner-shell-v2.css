@@ -208,6 +208,11 @@
   gap: 16px;
   color: #bcc0c5;
 }
+.partner-breadcrumb-home {
+  color: #d9dbde;
+  font-size: 19px;
+  line-height: 1;
+}
 .partner-breadcrumb > span {
   color: #5d6168;
 }
@@ -408,6 +413,108 @@
 .partner-dashboard-shell-v2 .partner-account-identity > span {
   border-radius: 50%;
   background: #25282c;
+}
+.partner-notification-drawer {
+  position: absolute;
+  z-index: 170;
+  top: 64px;
+  right: 190px;
+  width: min(360px, calc(100vw - 32px));
+  overflow: hidden;
+  border: 1px solid var(--partner-border-strong);
+  border-radius: 12px;
+  background: #111315;
+}
+.partner-notification-drawer > header {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--partner-border);
+  padding: 0 14px;
+}
+.partner-notification-drawer button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  color: var(--partner-text);
+  background: transparent;
+}
+.partner-notification-drawer > div {
+  display: grid;
+}
+.partner-notification-drawer > div > a {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 10px;
+  border-bottom: 1px solid var(--partner-border);
+  color: var(--partner-text);
+  padding: 13px 14px;
+  text-decoration: none;
+}
+.partner-notification-drawer > div > a > svg {
+  color: var(--partner-accent);
+}
+.partner-notification-drawer span {
+  display: grid;
+  gap: 4px;
+}
+.partner-notification-drawer small,
+.partner-notification-drawer time {
+  color: var(--partner-muted);
+  font-size: 11px;
+}
+.partner-notification-all {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--partner-text);
+  padding: 0 14px;
+  text-decoration: none;
+}
+.partner-dialog-backdrop {
+  position: fixed;
+  z-index: 300;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 70%);
+}
+.partner-signout-dialog {
+  display: grid;
+  width: min(420px, calc(100vw - 32px));
+  gap: 12px;
+  border: 1px solid var(--partner-border-strong);
+  border-radius: 12px;
+  background: #111315;
+  padding: 24px;
+  text-align: center;
+}
+.partner-signout-dialog > svg {
+  margin: 0 auto;
+  color: var(--partner-accent);
+}
+.partner-signout-dialog h2,
+.partner-signout-dialog p {
+  margin: 0;
+}
+.partner-signout-dialog p {
+  margin-bottom: 8px;
+  color: var(--partner-muted);
+}
+.partner-signout-dialog button {
+  min-height: 44px;
+  border: 1px solid var(--partner-border);
+  border-radius: 8px;
+  color: var(--partner-text);
+  background: transparent;
+}
+.partner-signout-dialog button.is-danger {
+  border-color: var(--partner-accent);
+  background: var(--partner-accent);
 }
 
 @media (max-width: 1120px) {

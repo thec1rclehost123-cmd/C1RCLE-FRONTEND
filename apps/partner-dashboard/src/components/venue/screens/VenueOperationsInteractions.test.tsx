@@ -48,6 +48,7 @@ vi.mock('@/components/providers/DashboardAuthProvider', () => ({
     canDo: (action: string) => mocks.actions.get(action) ?? true,
   }),
 }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 describe('Venue operations interactions', () => {
   it('populates the existing composer from a selected template', () => {

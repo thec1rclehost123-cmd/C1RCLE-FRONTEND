@@ -1,15 +1,23 @@
+import { notFound } from 'next/navigation';
+
 import { VenueEventAnalyticsScreen } from '@/components/venue/screens/VenueEventAnalyticsScreen';
+import { getVenueEventAnalyticsModel } from '@/components/venue/venue-event-analytics-model';
 
-import type { AnalyticsTab } from '@/components/venue/screens/VenueEventAnalyticsScreen';
+import type { EventAnalyticsRange } from '@/components/venue/venue-event-analytics-model';
 
-const validTabs: readonly AnalyticsTab[] = ['overview', 'sales', 'audience', 'attribution', 'entry', 'finance'];
-
-export default async function VenueEventAnalyticsPage({ params, searchParams }: { readonly params: Promise<{ eventId: string }>; readonly searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function VenueEventAnalyticsPage({
+  params,
+  searchParams,
+}: {
+  readonly params: Promise<{ eventId: string }>;
+  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { eventId } = await params;
   const resolvedSearchParams = await searchParams;
-  const requested = resolvedSearchParams['tab'];
   const requestedRange = resolvedSearchParams['range'];
-  const tab = typeof requested === 'string' && validTabs.includes(requested as AnalyticsTab) ? requested as AnalyticsTab : 'overview';
-  const range = requestedRange === '7d' || requestedRange === '90d' ? requestedRange : '30d';
-  return <VenueEventAnalyticsScreen activeTab={tab} eventId={eventId} range={range} />;
+  const range: EventAnalyticsRange =
+    requestedRange === '30d' || requestedRange === '90d' ? requestedRange : '7d';
+  const model = getVenueEventAnalyticsModel(eventId);
+  if (!model) notFound();
+  return <VenueEventAnalyticsScreen model={model} range={range} />;
 }

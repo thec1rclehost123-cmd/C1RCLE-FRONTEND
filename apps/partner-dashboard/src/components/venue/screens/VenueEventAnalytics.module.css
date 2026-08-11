@@ -1,0 +1,439 @@
+.page {
+  color: #f5f5f7;
+}
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+.identity > a {
+  display: inline-block;
+  margin-bottom: 14px;
+  color: #92969d;
+}
+.identity > span {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.identity img {
+  width: 128px;
+  height: 64px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+.identity h1 {
+  margin: 0 0 6px;
+  font-size: 26px;
+}
+.identity p {
+  margin: 0;
+  color: #92969d;
+}
+.headerActions {
+  display: flex;
+  gap: 10px;
+}
+.headerActions > div {
+  position: relative;
+}
+.headerActions button {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  color: #f5f5f7;
+  background: #111315;
+  padding: 0 16px;
+}
+.headerActions nav,
+.exportMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: grid;
+  width: 190px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: #16181b;
+  padding: 6px;
+}
+.headerActions nav a,
+.exportMenu button {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  padding: 0 11px;
+}
+.headerActions nav a:hover {
+  background: #222529;
+}
+.exportMenu button:disabled {
+  color: #686b70;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 22px 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  background: #111315;
+}
+.metrics article {
+  min-height: 106px;
+  padding: 22px 28px;
+}
+.metrics article + article {
+  border-left: 1px solid rgba(255, 255, 255, 0.09);
+}
+.metrics small {
+  display: block;
+  color: #c0c2c5;
+}
+.metrics strong {
+  display: block;
+  margin-top: 12px;
+  font-size: 29px;
+  font-weight: 500;
+}
+.analyticsGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(330px, 1fr);
+  gap: 12px;
+}
+.salesCard,
+.demoCard,
+.tickets {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  background: #111315;
+  padding: 22px;
+}
+.tickets progress,
+.ageRow progress {
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: #272a2e;
+  color: var(--partner-accent);
+}
+.tickets progress::-webkit-progress-bar,
+.ageRow progress::-webkit-progress-bar {
+  background: #272a2e;
+}
+.tickets progress::-webkit-progress-value,
+.ageRow progress::-webkit-progress-value {
+  background: var(--partner-accent);
+}
+.tickets progress::-moz-progress-bar,
+.ageRow progress::-moz-progress-bar {
+  background: var(--partner-accent);
+}
+.genderDonut {
+  background: conic-gradient(#f44a22 0 44%, #34d399 44% 97%, #8b5cf6 97% 100%);
+}
+.women {
+  background: #f44a22;
+}
+.men {
+  background: #34d399;
+}
+.other {
+  background: #8b5cf6;
+}
+.salesCard h2,
+.demoCard h2,
+.tickets h2 {
+  margin: 0 0 16px;
+  font-size: 18px;
+}
+.legend {
+  display: flex;
+  gap: 24px;
+  color: #92969d;
+  font-size: 12px;
+}
+.legend span::before {
+  display: inline-block;
+  width: 20px;
+  height: 3px;
+  margin-right: 8px;
+  background: #f44a22;
+  content: '';
+}
+.legend span + span::before {
+  height: 0;
+  border-top: 2px dashed #686b70;
+  background: transparent;
+}
+.chart {
+  margin-top: 12px;
+}
+.chart svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.grid line {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1;
+}
+.previousLine {
+  fill: none;
+  stroke: #686b70;
+  stroke-width: 2;
+  stroke-dasharray: 7 5;
+}
+.currentLine {
+  fill: none;
+  stroke: #f44a22;
+  stroke-width: 2.5;
+}
+.chart circle {
+  fill: #f44a22;
+  stroke: #111315;
+  stroke-width: 4;
+  cursor: pointer;
+}
+.chart circle:focus {
+  outline: none;
+  stroke: #3b82f6;
+  stroke-width: 5;
+}
+.tooltip rect {
+  fill: #0b0b0c;
+  stroke: rgba(255, 255, 255, 0.2);
+}
+.tooltip text {
+  fill: #f5f5f7;
+  font-size: 10px;
+}
+.salesCard details {
+  margin-top: 8px;
+  color: #60a5fa;
+}
+.salesCard table {
+  width: 100%;
+  margin-top: 12px;
+  border-collapse: collapse;
+  color: #f5f5f7;
+}
+.salesCard th,
+.salesCard td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 8px;
+  text-align: left;
+  font-size: 12px;
+}
+.demographics {
+  display: grid;
+  gap: 12px;
+}
+.ageRow {
+  display: grid;
+  grid-template-columns: 55px 1fr 42px;
+  align-items: center;
+  gap: 10px;
+  margin: 13px 0;
+  color: #92969d;
+}
+.ageRow i,
+.tickets i {
+  height: 16px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #26292d;
+}
+.ageRow b,
+.tickets i b {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: #f44a22;
+}
+.ageRow strong {
+  color: #c6c8cb;
+  font-weight: 400;
+}
+.gender {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+.gender > i {
+  width: 112px;
+  height: 112px;
+  flex: none;
+  border-radius: 50%;
+  mask: radial-gradient(circle at center, transparent 0 48%, #000 50%);
+  -webkit-mask: radial-gradient(circle at center, transparent 0 48%, #000 50%);
+}
+.gender ul {
+  display: grid;
+  width: 100%;
+  gap: 11px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gender li {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  color: #b7b9bd;
+}
+.gender li span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.gender li b {
+  font-weight: 400;
+}
+.demoUnavailable {
+  display: grid;
+  min-height: 240px;
+  place-content: center;
+  justify-items: center;
+  text-align: center;
+}
+.demoUnavailable p {
+  max-width: 260px;
+  color: #92969d;
+}
+.tickets {
+  margin-top: 12px;
+}
+.tickets > div {
+  display: grid;
+  grid-template-columns: 100px 1fr 90px 45px;
+  align-items: center;
+  gap: 18px;
+  margin: 15px 0;
+}
+.tickets i {
+  height: 8px;
+}
+.tickets strong,
+.tickets em {
+  font-style: normal;
+  font-weight: 500;
+}
+.consent {
+  color: #92969d;
+  font-size: 12px;
+}
+.loading {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.loading span,
+.loading div {
+  min-height: 110px;
+  border-radius: 12px;
+  background: #16181b;
+}
+.loading div {
+  grid-column: 1/-1;
+  min-height: 420px;
+}
+.state {
+  display: grid;
+  min-height: 480px;
+  place-content: center;
+  justify-items: center;
+  text-align: center;
+}
+.state p {
+  color: #92969d;
+}
+.state a,
+.state button {
+  min-height: 44px;
+  border: 1px solid #f44a22;
+  border-radius: 8px;
+  color: #fff;
+  background: #f44a22;
+  padding: 0 22px;
+}
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+@media (max-width: 950px) {
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .analyticsGrid {
+    grid-template-columns: 1fr;
+  }
+  .demographics {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 620px) {
+  .identity img {
+    width: 86px;
+    height: 64px;
+  }
+  .identity h1 {
+    font-size: 20px;
+  }
+  .headerActions {
+    width: 100%;
+    flex-direction: column;
+  }
+  .headerActions > div,
+  .headerActions button {
+    width: 100%;
+  }
+  .metrics {
+    grid-template-columns: 1fr;
+  }
+  .metrics article {
+    min-height: 76px;
+  }
+  .metrics article + article {
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+    border-left: 0;
+  }
+  .demographics {
+    grid-template-columns: 1fr;
+  }
+  .tickets > div {
+    grid-template-columns: 80px 1fr;
+  }
+  .tickets strong,
+  .tickets em {
+    grid-column: 2;
+  }
+  .gender {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .salesCard {
+    overflow-x: auto;
+  }
+  .chart {
+    min-width: 520px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

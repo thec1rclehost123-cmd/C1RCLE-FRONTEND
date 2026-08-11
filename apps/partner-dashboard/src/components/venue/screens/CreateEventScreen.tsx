@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 
 import {
   AddIcon,
@@ -21,6 +22,7 @@ import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 
 import {
   createEventReviewRows,
+  createEditEventReviewRows,
   formatTicketPrice,
   initialCreateEventDraft,
   validateEventDraft,
@@ -36,17 +38,29 @@ export interface CreateEventMutations {
   readonly publish: (draft: CreateEventDraft) => Promise<void>;
 }
 
-export function CreateEventScreen({ mutations }: { readonly mutations?: CreateEventMutations }) {
+export function CreateEventScreen({
+  mutations,
+  initialDraft = initialCreateEventDraft,
+  mode = 'create',
+}: {
+  readonly mutations?: CreateEventMutations;
+  readonly initialDraft?: CreateEventDraft;
+  readonly mode?: 'create' | 'edit';
+}) {
   const auth = useDashboardAuth();
+  const router = useRouter();
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [draft, setDraft] = useState<CreateEventDraft>(initialCreateEventDraft);
+  const [draft, setDraft] = useState<CreateEventDraft>(initialDraft);
+  const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(initialDraft));
   const [preview, setPreview] = useState<'web' | 'phone'>('web');
   const [errors, setErrors] = useState<readonly string[]>([]);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
   const [posterObjectUrl, setPosterObjectUrl] = useState<string | null>(null);
   const canEdit = auth.canDo('canEditEvent');
   const canPublish = auth.canDo('canPublishEvent');
+  const dirty = useMemo(() => JSON.stringify(draft) !== savedSnapshot, [draft, savedSnapshot]);
 
   useEffect(
     () => () => {
@@ -55,6 +69,7 @@ export function CreateEventScreen({ mutations }: { readonly mutations?: CreateEv
     [posterObjectUrl],
   );
   useEffect(() => {
+    if (!dirty) return;
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
     };
@@ -62,7 +77,7 @@ export function CreateEventScreen({ mutations }: { readonly mutations?: CreateEv
     return () => {
       window.removeEventListener('beforeunload', onBeforeUnload);
     };
-  }, []);
+  }, [dirty]);
 
   const updateDraft = <K extends keyof CreateEventDraft>(key: K, value: CreateEventDraft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -109,10 +124,21 @@ export function CreateEventScreen({ mutations }: { readonly mutations?: CreateEv
     setStatus(null);
     try {
       await mutations[kind](draft);
-      setStatus(kind === 'publish' ? 'Event published.' : 'Draft saved.');
+      setSavedSnapshot(JSON.stringify(draft));
+      setStatus(
+        kind === 'publish'
+          ? mode === 'edit'
+            ? 'Event updated.'
+            : 'Event published.'
+          : 'Draft saved.',
+      );
     } catch {
       setErrors([
-        kind === 'publish' ? 'The event could not be published.' : 'The draft could not be saved.',
+        kind === 'publish'
+          ? mode === 'edit'
+            ? 'The event could not be updated.'
+            : 'The event could not be published.'
+          : 'The draft could not be saved.',
       ]);
     } finally {
       setBusy(false);
@@ -123,7 +149,7 @@ export function CreateEventScreen({ mutations }: { readonly mutations?: CreateEv
     <section className={styles['page']}>
       <header className={styles['wizardHeader']}>
         <span>
-          Events <b>/</b> Create event
+          Events <b>/</b> {mode === 'edit' ? 'Edit event' : 'Create event'}
         </span>
         <nav aria-label="Create event progress">
           {([1, 2, 3] as const).map((item) => (
@@ -149,12 +175,13 @@ export function CreateEventScreen({ mutations }: { readonly mutations?: CreateEv
           canEdit={canEdit}
           posterObjectUrl={posterObjectUrl}
           setPosterObjectUrl={setPosterObjectUrl}
+          mode={mode}
         />
       ) : null}
       {step === 2 ? (
-        <TicketsStep draft={draft} updateDraft={updateDraft} canEdit={canEdit} />
+        <TicketsStep draft={draft} updateDraft={updateDraft} canEdit={canEdit} mode={mode} />
       ) : null}
-      {step === 3 ? <ReviewStep draft={draft} onEdit={goTo} /> : null}
+      {step === 3 ? <ReviewStep draft={draft} onEdit={goTo} mode={mode} /> : null}
       {errors.length ? (
         <div className={styles['errors']} role="alert">
           <strong>Review this step</strong>
@@ -182,6 +209,16 @@ export function CreateEventScreen({ mutations }: { readonly mutations?: CreateEv
             }}
           >
             <BackIcon size={18} aria-hidden="true" /> Back
+          </button>
+        ) : mode === 'edit' ? (
+          <button
+            type="button"
+            onClick={() => {
+              if (dirty) setLeaveOpen(true);
+              else router.push(`/venue/events/${initialDraft.name ? 'neon-nights-afrobeats' : ''}`);
+            }}
+          >
+            Cancel
           </button>
         ) : (
           <span />
@@ -217,12 +254,45 @@ export function CreateEventScreen({ mutations }: { readonly mutations?: CreateEv
                 void runMutation('publish');
               }}
             >
-              <PublishIcon size={18} aria-hidden="true" /> Publish event
+              <PublishIcon size={18} aria-hidden="true" />{' '}
+              {mode === 'edit' ? 'Publish changes' : 'Publish event'}
               {!mutations ? ' unavailable' : ''}
             </button>
           ) : null}
         </div>
       </footer>
+      {leaveOpen ? (
+        <div className={styles['dialogBackdrop']} role="presentation">
+          <section
+            className={styles['dialog']}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Unsaved changes"
+          >
+            <h2>Unsaved changes</h2>
+            <p>You have unsaved changes. What would you like to do?</p>
+            <div>
+              <button
+                type="button"
+                onClick={() => {
+                  setLeaveOpen(false);
+                }}
+              >
+                Stay
+              </button>
+              <button
+                type="button"
+                className={styles['primary']}
+                onClick={() => {
+                  router.push('/venue/events/neon-nights-afrobeats');
+                }}
+              >
+                Discard changes
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -233,6 +303,7 @@ function DetailsStep({
   canEdit,
   posterObjectUrl,
   setPosterObjectUrl,
+  mode,
 }: {
   readonly draft: CreateEventDraft;
   readonly updateDraft: <K extends keyof CreateEventDraft>(
@@ -242,6 +313,7 @@ function DetailsStep({
   readonly canEdit: boolean;
   readonly posterObjectUrl: string | null;
   readonly setPosterObjectUrl: (value: string | null) => void;
+  readonly mode: 'create' | 'edit';
 }) {
   return (
     <div className={styles['stepGrid']}>
@@ -295,7 +367,7 @@ function DetailsStep({
         <Field label="Venue">
           <select
             value={draft.venueId}
-            disabled={!canEdit}
+            disabled={!canEdit || mode === 'edit'}
             onChange={(event) => {
               updateDraft('venueId', event.target.value);
             }}
@@ -357,6 +429,17 @@ function DetailsStep({
             }}
           />
         </Field>
+        {mode === 'edit' ? (
+          <Field label="Artists">
+            <input
+              value={draft.artists ?? ''}
+              disabled={!canEdit}
+              onChange={(event) => {
+                updateDraft('artists', event.target.value);
+              }}
+            />
+          </Field>
+        ) : null}
         <Field label="Short description">
           <textarea
             maxLength={200}
@@ -381,6 +464,17 @@ function DetailsStep({
             <option>All ages</option>
           </select>
         </Field>
+        {mode === 'edit' ? (
+          <Field label="Dress code">
+            <input
+              value={draft.dressCode ?? ''}
+              disabled={!canEdit}
+              onChange={(event) => {
+                updateDraft('dressCode', event.target.value);
+              }}
+            />
+          </Field>
+        ) : null}
         <details className={styles['more']}>
           <summary>
             More details <ChevronDownIcon size={18} aria-hidden="true" />
@@ -399,6 +493,7 @@ function TicketsStep({
   draft,
   updateDraft,
   canEdit,
+  mode,
 }: {
   readonly draft: CreateEventDraft;
   readonly updateDraft: <K extends keyof CreateEventDraft>(
@@ -406,9 +501,17 @@ function TicketsStep({
     value: CreateEventDraft[K],
   ) => void;
   readonly canEdit: boolean;
+  readonly mode: 'create' | 'edit';
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editor, setEditor] = useState({ name: '', price: '', capacity: '' });
+  const [editor, setEditor] = useState({
+    name: '',
+    price: '',
+    capacity: '',
+    benefits: '',
+    saleStart: '',
+    saleEnd: '',
+  });
   const validation = validateTicketTypes(draft.tickets, draft.venueCapacity);
   const beginEdit = (ticket?: CreateEventTicket) => {
     setEditingId(ticket?.id ?? 'new');
@@ -416,6 +519,9 @@ function TicketsStep({
       name: ticket?.name ?? '',
       price: ticket ? String(ticket.pricePaise / 100) : '',
       capacity: ticket ? String(ticket.capacity) : '',
+      benefits: ticket?.benefits ?? '',
+      saleStart: ticket?.saleStart ?? '',
+      saleEnd: ticket?.saleEnd ?? '',
     });
   };
   const saveTicket = () => {
@@ -424,6 +530,9 @@ function TicketsStep({
       name: editor.name.trim(),
       pricePaise: Math.round(Number(editor.price) * 100),
       capacity: Number(editor.capacity),
+      benefits: editor.benefits.trim(),
+      saleStart: editor.saleStart,
+      saleEnd: editor.saleEnd,
     };
     const nextTickets =
       editingId === 'new'
@@ -453,6 +562,7 @@ function TicketsStep({
                 <strong>{ticket.capacity} tickets</strong>
                 <small>capacity</small>
               </span>
+              {mode === 'edit' ? <small>{ticket.benefits ?? 'Standard entry'}</small> : null}
               <div>
                 <button
                   type="button"
@@ -512,6 +622,36 @@ function TicketsStep({
                 }}
               />
             </Field>
+            {mode === 'edit' ? (
+              <>
+                <Field label="Benefits">
+                  <input
+                    value={editor.benefits}
+                    onChange={(event) => {
+                      setEditor((value) => ({ ...value, benefits: event.target.value }));
+                    }}
+                  />
+                </Field>
+                <Field label="Sale start">
+                  <input
+                    type="datetime-local"
+                    value={editor.saleStart}
+                    onChange={(event) => {
+                      setEditor((value) => ({ ...value, saleStart: event.target.value }));
+                    }}
+                  />
+                </Field>
+                <Field label="Sale end">
+                  <input
+                    type="datetime-local"
+                    value={editor.saleEnd}
+                    onChange={(event) => {
+                      setEditor((value) => ({ ...value, saleEnd: event.target.value }));
+                    }}
+                  />
+                </Field>
+              </>
+            ) : null}
             <div>
               <button
                 type="button"
@@ -550,6 +690,43 @@ function TicketsStep({
             </strong>
           </div>
         </div>
+        {mode === 'edit' ? (
+          <div className={styles['editPolicies']}>
+            <Field label="Booking limit per guest">
+              <select
+                value={draft.bookingLimit ?? '4 tickets'}
+                onChange={(event) => {
+                  updateDraft('bookingLimit', event.target.value);
+                }}
+              >
+                <option>4 tickets</option>
+                <option>6 tickets</option>
+              </select>
+            </Field>
+            <Field label="Sales close time">
+              <select
+                value={draft.salesCloseTime ?? '1 hour before event'}
+                onChange={(event) => {
+                  updateDraft('salesCloseTime', event.target.value);
+                }}
+              >
+                <option>1 hour before event</option>
+                <option>At event start</option>
+              </select>
+            </Field>
+            <Field label="Refund policy">
+              <select
+                value={draft.refundPolicy ?? 'No refunds'}
+                onChange={(event) => {
+                  updateDraft('refundPolicy', event.target.value);
+                }}
+              >
+                <option>No refunds</option>
+                <option>Refundable</option>
+              </select>
+            </Field>
+          </div>
+        ) : null}
       </section>
       <div className={styles['previewDesktop']}>
         <GuestPreview draft={draft} mode="web" setMode={() => undefined} step={2} />
@@ -561,18 +738,23 @@ function TicketsStep({
 function ReviewStep({
   draft,
   onEdit,
+  mode,
 }: {
   readonly draft: CreateEventDraft;
   readonly onEdit: (step: 1 | 2 | 3) => void;
+  readonly mode: 'create' | 'edit';
 }) {
-  const rows = createEventReviewRows(draft);
+  const rows = mode === 'edit' ? createEditEventReviewRows(draft) : createEventReviewRows(draft);
   return (
     <div className={styles['stepGrid']}>
       <section className={styles['review']}>
         <header>
-          <h1>Ready to publish</h1>
+          <h1>{mode === 'edit' ? 'Review and update' : 'Ready to publish'}</h1>
           <p>
-            <CheckIcon size={19} aria-hidden="true" /> Everything guests need is complete.
+            <CheckIcon size={19} aria-hidden="true" />{' '}
+            {mode === 'edit'
+              ? 'Confirm your event details before publishing.'
+              : 'Everything guests need is complete.'}
           </p>
         </header>
         <div>
@@ -594,6 +776,14 @@ function ReviewStep({
             </article>
           ))}
         </div>
+        {mode === 'edit' ? (
+          <details className={styles['readiness']}>
+            <summary>
+              Readiness checklist <span>Ready to update</span>
+            </summary>
+            <p>All required event information is complete.</p>
+          </details>
+        ) : null}
       </section>
       <div className={styles['previewDesktop']}>
         <GuestPreview draft={draft} mode="web" setMode={() => undefined} step={3} />

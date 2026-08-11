@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -9,11 +10,9 @@ import {
   BackIcon,
   BankIcon,
   CalendarIcon,
-  ChevronDownIcon,
   CloseIcon,
   DashboardIcon,
   ForwardIcon,
-  HomeIcon,
   LinkIcon,
   MenuIcon,
   NotificationIcon,
@@ -39,6 +38,13 @@ const ICONS: Readonly<Record<string, ComponentType<IconProps>>> = {
   users: UsersIcon,
   'wallet-cards': BankIcon,
 };
+
+const VenueNotificationDrawer = dynamic(() =>
+  import('./VenueNotificationDrawer').then((module) => module.VenueNotificationDrawer),
+);
+const ShellSignOutDialog = dynamic(() =>
+  import('./ShellSignOutDialog').then((module) => module.ShellSignOutDialog),
+);
 
 const initialsFrom = (name: string): string =>
   name
@@ -71,10 +77,13 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [signOutOpen, setSignOutOpen] = useState(false);
   const [query, setQuery] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLButtonElement>(null);
+  const notificationButtonRef = useRef<HTMLButtonElement>(null);
+  const accountButtonRef = useRef<HTMLButtonElement>(null);
   const mobileOpenRef = useRef(false);
 
   const closeTransientUi = () => {
@@ -83,6 +92,7 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
     setSearchOpen(false);
     setNotificationsOpen(false);
     setAccountOpen(false);
+    setSignOutOpen(false);
   };
 
   const closeMobileNavigation = () => {
@@ -259,7 +269,9 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
           type="button"
           className="partner-sidebar-collapse"
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          onClick={() => { setCollapsed((value) => !value); }}
+          onClick={() => {
+            setCollapsed((value) => !value);
+          }}
         >
           {collapsed ? (
             <ForwardIcon size={19} aria-hidden="true" />
@@ -286,7 +298,9 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
             >
               <MenuIcon size={21} aria-hidden="true" />
             </button>
-            <HomeIcon size={18} strokeWidth={1.7} aria-hidden="true" />
+            <span className="partner-breadcrumb-home" aria-hidden="true">
+              ⌂
+            </span>
             <span aria-hidden="true">/</span>
             <strong>{pageIdentity}</strong>
           </div>
@@ -296,8 +310,12 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
             <input
               ref={searchRef}
               value={query}
-              onChange={(event) => { setQuery(event.target.value); }}
-              onFocus={() => { setSearchOpen(true); }}
+              onChange={(event) => {
+                setQuery(event.target.value);
+              }}
+              onFocus={() => {
+                setSearchOpen(true);
+              }}
               placeholder="Search events, partners, invoices..."
               aria-label="Search dashboard"
             />
@@ -329,6 +347,7 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
               <SearchIcon size={19} aria-hidden="true" />
             </button>
             <button
+              ref={notificationButtonRef}
               type="button"
               className="partner-notification-button"
               aria-label="Notifications, 3 unread"
@@ -343,9 +362,9 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
             </button>
             <Link href={config.primaryAction.href} className="partner-primary-action">
               {config.primaryAction.label}
-              <ChevronDownIcon size={16} aria-hidden="true" />
             </Link>
             <button
+              ref={accountButtonRef}
               type="button"
               className="partner-account-button"
               title={displayName}
@@ -358,47 +377,18 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
             >
               {avatarInitials}
             </button>
-            <ChevronDownIcon className="partner-account-chevron" size={17} aria-hidden="true" />
+            <span className="partner-account-chevron" aria-hidden="true">
+              ⌄
+            </span>
           </div>
 
-          {notificationsOpen ? (
-            <div
-              className="partner-popover partner-notifications"
-              role="dialog"
-              aria-label="Notifications"
-            >
-              <div className="partner-popover-heading">
-                <strong>Notifications</strong>
-                <button type="button" onClick={() => { setNotificationsOpen(false); }}>
-                  Close
-                </button>
-              </div>
-              <article>
-                <span className="partner-notification-icon">₹</span>
-                <div>
-                  <strong>Payout update</strong>
-                  <p>Your latest settlement is ready to review.</p>
-                  <time>12m ago</time>
-                </div>
-              </article>
-              <article>
-                <span className="partner-notification-icon">✓</span>
-                <div>
-                  <strong>Partnership accepted</strong>
-                  <p>A new partner has joined your network.</p>
-                  <time>1h ago</time>
-                </div>
-              </article>
-              <article>
-                <span className="partner-notification-icon">↗</span>
-                <div>
-                  <strong>Event momentum</strong>
-                  <p>Your next event is converting above its weekly average.</p>
-                  <time>3h ago</time>
-                </div>
-              </article>
-            </div>
-          ) : null}
+          <VenueNotificationDrawer
+            open={notificationsOpen}
+            onClose={() => {
+              setNotificationsOpen(false);
+            }}
+            trigger={notificationButtonRef}
+          />
 
           {accountOpen ? (
             <div
@@ -423,10 +413,28 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
                   Switch organization
                 </Link>
               ) : null}
-              <button type="button" onClick={() => void auth.signOut()}>
+              <button
+                type="button"
+                onClick={() => {
+                  setAccountOpen(false);
+                  setSignOutOpen(true);
+                }}
+              >
                 Sign out
               </button>
             </div>
+          ) : null}
+          {signOutOpen ? (
+            <ShellSignOutDialog
+              label={config.eyebrow}
+              trigger={accountButtonRef}
+              onClose={() => {
+                setSignOutOpen(false);
+              }}
+              onConfirm={() => {
+                void auth.signOut();
+              }}
+            />
           ) : null}
         </header>
 

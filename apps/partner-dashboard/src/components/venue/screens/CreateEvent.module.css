@@ -176,6 +176,64 @@
   grid-template-columns: 1.2fr 1fr 1fr;
   gap: 10px;
 }
+.editPolicies {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+  border-top: 1px solid var(--partner-border);
+  padding-top: 4px;
+}
+.readiness {
+  margin-top: 14px;
+  border: 1px solid var(--partner-border);
+  border-radius: 8px;
+  padding: 0 14px;
+}
+.readiness summary {
+  display: flex;
+  min-height: 50px;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+.readiness summary span {
+  color: var(--partner-green);
+}
+.dialogBackdrop {
+  position: fixed;
+  z-index: 90;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 68%);
+}
+.dialog {
+  width: min(440px, calc(100vw - 32px));
+  border: 1px solid var(--partner-border);
+  border-radius: 12px;
+  background: #111315;
+  padding: 24px;
+}
+.dialog h2 {
+  margin: 0;
+}
+.dialog p {
+  color: var(--partner-muted);
+}
+.dialog > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.dialog button {
+  min-height: 44px;
+  border: 1px solid var(--partner-border);
+  border-radius: 8px;
+  color: var(--partner-text);
+  background: transparent;
+  padding: 0 16px;
+}
 .more {
   margin-top: 14px;
   border-top: 1px solid var(--partner-border);

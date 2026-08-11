@@ -5,8 +5,6 @@ import { EventDetailActions } from './EventDetailActions';
 
 const mocks = vi.hoisted(() => ({
   canDo: vi.fn<(action: string) => boolean>(),
-  go: vi.fn(),
-  openEdit: vi.fn(),
 }));
 
 vi.mock('@c1rcle/icons', () => {
@@ -16,10 +14,6 @@ vi.mock('@c1rcle/icons', () => {
 vi.mock('@/components/providers/DashboardAuthProvider', () => ({
   useDashboardAuth: () => ({ canDo: mocks.canDo }),
 }));
-vi.mock('../store', () => ({
-  useVenueStudio: () => ({ go: mocks.go, openEdit: mocks.openEdit }),
-}));
-
 describe('EventDetailActions', () => {
   beforeEach(() => {
     mocks.canDo.mockReset();
@@ -27,16 +21,26 @@ describe('EventDetailActions', () => {
 
   it('omits actions that the current membership cannot perform', () => {
     mocks.canDo.mockReturnValue(false);
-    render(<EventDetailActions eventName="Neon Nights: Afrobeats" />);
+    render(
+      <EventDetailActions eventId="neon-nights-afrobeats" eventName="Neon Nights: Afrobeats" />,
+    );
 
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 
   it('renders both approved event actions for an authorized membership', () => {
     mocks.canDo.mockReturnValue(true);
-    render(<EventDetailActions eventName="Neon Nights: Afrobeats" />);
+    render(
+      <EventDetailActions eventId="neon-nights-afrobeats" eventName="Neon Nights: Afrobeats" />,
+    );
 
-    expect(screen.getByRole('button', { name: 'Edit event' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open door mode' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Edit event' })).toHaveAttribute(
+      'href',
+      '/venue/events/neon-nights-afrobeats/edit',
+    );
+    expect(screen.getByRole('link', { name: 'Open door mode' })).toHaveAttribute(
+      'href',
+      '/venue/door?eventId=neon-nights-afrobeats',
+    );
   });
 });

@@ -1,317 +1,1004 @@
 'use client';
 
-import { useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { css } from '../charts';
-import {
-  DOOR_GUESTS,
-  DOOR_LOG,
-  GRADS,
-  PAY_TYPES,
-  gAvatar,
-  initialsOf,
-  inputStyle,
-  payChip,
-  pick,
-} from '../data';
+import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
+
 import { Icon } from '../Icon';
-import { useVenueStudio } from '../store';
+import { useOverlayFocus } from '../useOverlayFocus';
+import { doorModeModel, filterDoorGuests, formatDoorCurrency } from '../venue-door-model';
 
-const GLASS =
-  'position:relative;border-radius:24px;overflow:hidden;background:rgba(20,20,20,0.55);' +
-  'backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.08);' +
-  'box-shadow:inset 0 1px 0 rgba(255,255,255,0.05),0 20px 50px rgba(0,0,0,0.35);padding:24px;';
+import styles from './DoorMode.module.css';
 
-export function DoorModeScreen() {
-  const s = useVenueStudio();
-  const [payType, setPayType] = useState<string>('Cash');
-  const [checkedIn, setCheckedIn] = useState<Record<string, boolean>>(
-    Object.fromEntries(DOOR_GUESTS.map((g) => [g.name, g.done])),
-  );
-  const [connection, setConnection] = useState<'online' | 'offline' | 'reconnecting'>('online');
-  const [scanState, setScanState] = useState<'idle' | 'ready' | 'valid' | 'invalid' | 'duplicate'>('idle');
+import type {
+  DoorGuest,
+  DoorGuestFilter,
+  DoorModeAdapters,
+  DoorScanState,
+  DoorTab,
+  DoorWalkInResult,
+} from '../venue-door-model';
+
+const tabItems: readonly { readonly id: DoorTab; readonly label: string }[] = [
+  { id: 'scanner', label: 'Scanner' },
+  { id: 'guests', label: 'Guest list' },
+  { id: 'walk-ins', label: 'Walk-ins' },
+];
+
+export function DoorModeScreen({
+  tab = 'scanner',
+  adapters,
+}: {
+  readonly tab?: DoorTab;
+  readonly adapters?: DoorModeAdapters;
+}) {
+  const auth = useDashboardAuth();
+  const canView =
+    auth.grantedPermissions.length === 0 ||
+    auth.grantedPermissions.includes('*') ||
+    auth.hasPermission('VIEW_GUESTS');
+  const canManage = auth.canDo('canManageDoorMode');
+  const [online, setOnline] = useState(true);
+  const [reconnecting, setReconnecting] = useState(false);
+
+  useEffect(() => {
+    let reconnectTimer: number | undefined;
+    const update = () => {
+      const nextOnline = navigator.onLine;
+      setOnline(nextOnline);
+      if (nextOnline) {
+        setReconnecting(true);
+        reconnectTimer = window.setTimeout(() => {
+          setReconnecting(false);
+        }, 900);
+      } else {
+        setReconnecting(false);
+      }
+    };
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    return () => {
+      window.removeEventListener('online', update);
+      window.removeEventListener('offline', update);
+      if (reconnectTimer) window.clearTimeout(reconnectTimer);
+    };
+  }, []);
+
+  if (!canView) {
+    return <RouteState title="Access denied" detail="Your venue role cannot open Door Mode." />;
+  }
 
   return (
-    <div>
-      <div
-        style={css(
-          'display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;',
-        )}
-      >
-        <div style={css('display:flex;align-items:center;gap:14px;')}>
-          <button
-            type="button"
-            aria-label="Back to overview"
-            onClick={() => {
-              s.go('overview');
-            }}
-            style={css(
-              'width:40px;height:40px;border-radius:12px;background:#141414;border:1px solid rgba(255,255,255,0.08);color:#8a8a86;cursor:pointer;display:flex;align-items:center;justify-content:center;',
-            )}
+    <section className={styles['page']}>
+      <header className={styles['eventHeader']}>
+        <Image
+          src={doorModeModel.event.posterSrc}
+          alt=""
+          width={148}
+          height={148}
+          sizes="148px"
+          priority
+        />
+        <div>
+          <span className={styles['live']}>Live</span>
+          <h1>{doorModeModel.event.name}</h1>
+          <p>{doorModeModel.event.venue}</p>
+          <p>
+            <Icon name="calendar" size={17} /> {doorModeModel.event.dateTime}
+          </p>
+        </div>
+      </header>
+
+      <nav className={styles['tabs']} aria-label="Door Mode sections">
+        {tabItems.map((item) => (
+          <Link
+            key={item.id}
+            href={`/venue/door?tab=${item.id}`}
+            aria-current={tab === item.id ? 'page' : undefined}
           >
-            <Icon name="arrow-left" size={18} />
-          </button>
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+
+      {!online || reconnecting ? (
+        <div className={styles['network']} role="status" aria-live="polite">
+          <Icon name={online ? 'refresh-cw' : 'cloud-off'} size={18} />
           <div>
-            <div style={css('display:flex;align-items:center;gap:9px;')}>
-              <span
-                style={css(
-                  'width:9px;height:9px;border-radius:50%;background:#6ee79b;box-shadow:0 0 10px #6ee79b;',
-                )}
-              />
-              <h1 style={css('margin:0;font-size:26px;font-weight:800;letter-spacing:-0.02em;')}>
-                Door Mode
-              </h1>
-            </div>
-            <div style={css('font-size:13px;color:#8a8a86;font-weight:500;margin-top:3px;')}>
-              Neon Nights: Afrobeats Edition · Skyline Rooftop
-            </div>
+            <strong>{online ? 'Reconnecting…' : 'Offline'}</strong>
+            <span>
+              {online
+                ? 'Restoring the scanner connection.'
+                : 'Scanning and check-in are unavailable until the connection returns.'}
+            </span>
           </div>
         </div>
-        <div style={css('display:flex;gap:10px;')}>
-          <button
-            type="button"
-            onClick={() => { setScanState('ready'); }}
-            className="vh-w10"
-            style={css(
-              'display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#c9c9c6;padding:11px 18px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;',
-            )}
-          >
-            <Icon name="scan-line" size={15} /> Quick scan
-          </button>
-          <button
-            type="button"
-            onClick={() => { setScanState('invalid'); }}
-            className="vh-w10"
-            style={css(
-              'display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#c9c9c6;padding:11px 18px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;',
-            )}
-          >
-            <Icon name="triangle-alert" size={15} /> Issues{' '}
-            <span
-              style={css(
-                'background:#ff5a1f;color:#0a0a0a;font-size:11px;font-weight:800;padding:1px 7px;border-radius:999px;',
-              )}
+      ) : null}
+
+      {tab === 'scanner' ? (
+        <ScannerPanel
+          {...(adapters ? { adapters } : {})}
+          enabled={canManage && online && !reconnecting}
+        />
+      ) : null}
+      {tab === 'guests' ? (
+        <GuestList {...(adapters ? { adapters } : {})} canManage={canManage && online} />
+      ) : null}
+      {tab === 'walk-ins' ? (
+        <WalkIns {...(adapters ? { adapters } : {})} canManage={canManage && online} />
+      ) : null}
+    </section>
+  );
+}
+
+function SummaryStrip() {
+  const items = [
+    ['check-circle-2', 'Checked in', doorModeModel.totals.checkedIn, 'success'],
+    ['clock', 'Remaining', doorModeModel.totals.remaining, 'warning'],
+    [
+      'users',
+      'Capacity',
+      `${String(doorModeModel.totals.issued)} / ${String(doorModeModel.totals.capacity)}`,
+      'neutral',
+    ],
+  ] as const;
+  return (
+    <div className={styles['summary']} aria-label="Door summary">
+      {items.map(([icon, label, value, tone]) => (
+        <article key={label} data-tone={tone}>
+          <span>
+            <Icon name={icon} size={23} />
+          </span>
+          <div>
+            <small>{label}</small>
+            <strong>{value}</strong>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function ScannerPanel({
+  adapters,
+  enabled,
+}: {
+  readonly adapters?: DoorModeAdapters;
+  readonly enabled: boolean;
+}) {
+  const [scanState, setScanState] = useState<DoorScanState | null>(null);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [scannerError, setScannerError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!enabled || !adapters?.startScanner) return;
+    let disposed = false;
+    let stop: (() => void) | undefined;
+    void adapters
+      .startScanner((result) => {
+        if (!disposed) setScanState(result);
+      })
+      .then((cleanup) => {
+        if (disposed) cleanup?.();
+        else stop = cleanup;
+      })
+      .catch(() => {
+        if (!disposed) setScanState({ type: 'permission' });
+      });
+    return () => {
+      disposed = true;
+      stop?.();
+    };
+  }, [adapters, enabled]);
+
+  const recent = doorModeModel.guests.filter((guest) => guest.checkedIn).slice(0, 5);
+  return (
+    <>
+      <SummaryStrip />
+      <div className={styles['scannerGrid']}>
+        <section className={styles['scanner']} aria-label="QR scanner">
+          <i className={styles['corner']} aria-hidden="true" />
+          <div>
+            <Icon name="scan-line" size={62} />
+            <h2>Scan guest QR code</h2>
+            {!adapters?.startScanner ? (
+              <p>Camera scanning requires the verified scanner adapter.</p>
+            ) : null}
+          </div>
+          <footer>
+            <button type="button" disabled title="Flash control is unavailable on this scanner.">
+              <Icon name="zap" size={18} /> Flash
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setManualOpen(true);
+              }}
             >
-              2
-            </span>
-          </button>
+              <Icon name="keyboard" size={18} /> Manual code
+            </button>
+          </footer>
+        </section>
+        <aside className={styles['scanSide']}>
+          <article className={styles['latest']}>
+            <header>
+              <span>Latest check-in</span>
+              <strong>Checked in now</strong>
+            </header>
+            {recent[0] ? <GuestIdentity guest={recent[0]} /> : <p>No guests checked in yet.</p>}
+          </article>
+          <article className={styles['recent']}>
+            <header>
+              <span>Recent scans</span>
+            </header>
+            {recent.map((guest, index) => (
+              <div key={guest.id}>
+                <GuestIdentity guest={guest} compact />
+                <b>{index === 0 ? 'Now' : `${String(index)}m ago`}</b>
+              </div>
+            ))}
+          </article>
           <button
+            className={styles['primaryWide']}
             type="button"
             onClick={() => {
-              setConnection((current) => (current === 'online' ? 'offline' : 'reconnecting'));
+              setManualOpen(true);
             }}
-            className="vh-red-20"
-            style={css(
-              'display:flex;align-items:center;gap:8px;background:rgba(240,133,122,0.12);border:1px solid rgba(240,133,122,0.3);color:#f0857a;padding:11px 18px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;',
-            )}
           >
-            <Icon name="power" size={15} /> {connection === 'online' ? 'Disconnect' : 'Reconnect'}
+            <Icon name="keyboard" size={18} /> Enter code manually
           </button>
+        </aside>
+      </div>
+      {scannerError ? (
+        <p className={styles['error']} role="alert">
+          {scannerError}
+        </p>
+      ) : null}
+      <ManualCodeDialog
+        open={manualOpen}
+        onClose={() => {
+          setManualOpen(false);
+        }}
+        verify={adapters?.verifyManualCode}
+        onResult={(result) => {
+          setScanState(result);
+          setManualOpen(false);
+        }}
+        onError={setScannerError}
+      />
+      <ScanResult
+        state={scanState}
+        onClose={() => {
+          setScanState(null);
+        }}
+      />
+    </>
+  );
+}
+
+function GuestList({
+  adapters,
+  canManage,
+}: {
+  readonly adapters?: DoorModeAdapters;
+  readonly canManage: boolean;
+}) {
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<DoorGuestFilter>('all');
+  const [selected, setSelected] = useState<DoorGuest | null>(null);
+  const [confirm, setConfirm] = useState<{
+    readonly guest: DoorGuest;
+    readonly action: 'check-in' | 'undo';
+  } | null>(null);
+  const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const rows = useMemo(
+    () =>
+      filterDoorGuests(
+        doorModeModel.guests.map((guest) => ({
+          ...guest,
+          checkedIn: overrides[guest.id] ?? guest.checkedIn,
+        })),
+        query,
+        filter,
+      ),
+    [filter, overrides, query],
+  );
+
+  const perform = async () => {
+    if (!confirm) return;
+    const mutation = confirm.action === 'check-in' ? adapters?.checkIn : adapters?.undoCheckIn;
+    if (!mutation) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      await mutation(confirm.guest.id);
+      setOverrides((current) => ({
+        ...current,
+        [confirm.guest.id]: confirm.action === 'check-in',
+      }));
+      setMessage(confirm.action === 'check-in' ? 'Guest checked in.' : 'Check-in undone.');
+      setConfirm(null);
+      setSelected(null);
+    } catch {
+      setMessage(
+        confirm.action === 'check-in' ? 'Check-in failed. Try again.' : 'Undo failed. Try again.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <SummaryStrip />
+      <div className={styles['guestToolbar']}>
+        <label>
+          <Icon name="search" size={18} />
+          <span className="sr-only">Search guests</span>
+          <input
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+            }}
+            placeholder="Search name, phone or order"
+          />
+        </label>
+        <div role="group" aria-label="Guest filters">
+          {(
+            [
+              ['all', 'All'],
+              ['pending', 'Not checked in'],
+              ['checked-in', 'Checked in'],
+              ['vip', 'VIP'],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={filter === id}
+              onClick={() => {
+                setFilter(id);
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
+      {message ? (
+        <p className={styles['status']} role="status" aria-live="polite">
+          {message}
+        </p>
+      ) : null}
+      <div className={styles['guestTable']} role="table" aria-label="Guest list">
+        <div className={styles['tableHead']} role="row">
+          <span>Guest</span>
+          <span>Ticket type</span>
+          <span>Qty</span>
+          <span>Status</span>
+          <span>Action</span>
+        </div>
+        {rows.map((guest) => (
+          <div className={styles['guestRow']} role="row" key={guest.id}>
+            <button
+              type="button"
+              className={styles['guestButton']}
+              onClick={() => {
+                setSelected(guest);
+              }}
+            >
+              <GuestIdentity guest={guest} compact />
+            </button>
+            <span data-label="Ticket type">{guest.ticketType}</span>
+            <span data-label="Quantity">{guest.quantity}</span>
+            <span
+              data-label="Status"
+              className={guest.checkedIn ? styles['checked'] : styles['pending']}
+            >
+              {guest.checkedIn ? 'Checked in' : 'Not checked in'}
+            </span>
+            <button
+              type="button"
+              className={styles['rowAction']}
+              disabled={
+                !canManage || (guest.checkedIn ? !adapters?.undoCheckIn : !adapters?.checkIn)
+              }
+              title={!adapters ? 'The check-in mutation adapter is unavailable.' : undefined}
+              onClick={() => {
+                setConfirm({ guest, action: guest.checkedIn ? 'undo' : 'check-in' });
+              }}
+            >
+              {guest.checkedIn ? 'Undo' : 'Check in'}
+            </button>
+          </div>
+        ))}
+      </div>
+      <GuestDrawer
+        guest={selected}
+        onClose={() => {
+          setSelected(null);
+        }}
+        onAction={(guest) => {
+          setConfirm({ guest, action: guest.checkedIn ? 'undo' : 'check-in' });
+        }}
+        canAct={canManage && Boolean(adapters?.checkIn ?? adapters?.undoCheckIn)}
+      />
+      <ConfirmGuestDialog
+        value={confirm}
+        busy={busy}
+        onClose={() => {
+          setConfirm(null);
+        }}
+        onConfirm={() => void perform()}
+      />
+    </>
+  );
+}
 
-      <section className={`venue-door-status venue-door-status--${connection}`} aria-live="polite"><div><span /> <strong>{connection === 'online' ? 'Door devices connected' : connection === 'offline' ? 'Offline mode' : 'Reconnecting'}</strong><small>{connection === 'online' ? 'Last sync just now' : connection === 'offline' ? 'Check-ins stay on this device until the network returns.' : 'Attempting to restore the secure scanner session.'}</small></div><button type="button" onClick={() => { setConnection('online'); }}>Retry connection</button></section>
+function WalkIns({
+  adapters,
+  canManage,
+}: {
+  readonly adapters?: DoorModeAdapters;
+  readonly canManage: boolean;
+}) {
+  const firstTicket = doorModeModel.ticketTypes[0];
+  const [ticketId, setTicketId] = useState(firstTicket?.id ?? '');
+  const [quantity, setQuantity] = useState(1);
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [payment, setPayment] = useState<'UPI' | 'Card' | 'Cash'>('UPI');
+  const [state, setState] = useState<'idle' | 'pending' | 'failure' | 'success'>('idle');
+  const [result, setResult] = useState<DoorWalkInResult | null>(null);
+  const selectedTicket =
+    doorModeModel.ticketTypes.find((ticket) => ticket.id === ticketId) ?? firstTicket;
+  const totalPaise = (selectedTicket?.pricePaise ?? 0) * quantity;
+  const valid = name.trim().length > 1 && /^\+?[0-9 ]{10,15}$/.test(phone.trim()) && quantity > 0;
+  const totalCollected = doorModeModel.walkIns.reduce((sum, item) => sum + item.amountPaise, 0);
 
-      {scanState !== 'idle' ? <section className={`venue-scan-feedback venue-scan-feedback--${scanState}`} role="status"><div><span>{scanState === 'ready' ? 'Camera ready' : scanState === 'valid' ? 'Entry approved' : scanState === 'duplicate' ? 'Already checked in' : 'Ticket not valid'}</span><strong>{scanState === 'ready' ? 'Point the camera at a C1RCLE ticket.' : scanState === 'valid' ? 'Guest checked in successfully.' : scanState === 'duplicate' ? 'This ticket was scanned at 10:42 PM.' : 'Ask the guest to open the latest ticket in their wallet.'}</strong></div><div>{scanState === 'ready' ? <><button type="button" onClick={() => { setScanState('valid'); }}>Simulate valid scan</button><button type="button" onClick={() => { setScanState('duplicate'); }}>Simulate duplicate</button></> : <button type="button" onClick={() => { setScanState('ready'); }}>Scan another</button>}<button type="button" onClick={() => { setScanState('idle'); }}>Close</button></div></section> : null}
+  const submit = async () => {
+    if (!valid || !selectedTicket || !adapters?.createWalkIn) return;
+    setState('pending');
+    try {
+      const next = await adapters.createWalkIn({
+        ticketTypeId: selectedTicket.id,
+        quantity,
+        name: name.trim(),
+        phone: phone.trim(),
+        paymentMethod: payment,
+      });
+      setResult(next);
+      setState('success');
+    } catch {
+      setState('failure');
+    }
+  };
 
-      <div style={css('display:grid;grid-template-columns:1.4fr 1fr;gap:20px;align-items:start;')}>
-        {/* left */}
-        <div style={css('display:flex;flex-direction:column;gap:20px;')}>
-          <div
-            style={css(
-              'position:relative;border-radius:28px;overflow:hidden;background:rgba(22,17,14,0.72);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.09);box-shadow:inset 0 1px 0 rgba(255,255,255,0.08),0 26px 60px rgba(0,0,0,0.45);padding:28px 30px;',
-            )}
-          >
-            <div style={css('display:flex;align-items:center;gap:10px;margin-bottom:16px;')}>
-              <span style={css('font-size:13px;color:#d8c4b8;font-weight:600;')}>
-                How full we are
-              </span>
-              <span
-                style={css(
-                  'display:inline-flex;align-items:center;gap:6px;background:rgba(110,231,155,0.14);color:#6ee79b;padding:4px 11px;border-radius:999px;font-size:12px;font-weight:700;',
-                )}
-              >
-                <span
-                  style={css(
-                    'width:6px;height:6px;border-radius:50%;background:#6ee79b;box-shadow:0 0 8px #6ee79b;',
-                  )}
+  if (state === 'success' && result) {
+    return (
+      <WalkInSuccess
+        result={result}
+        sendTicket={adapters?.sendTicket}
+        onDone={() => {
+          setState('idle');
+          setResult(null);
+          setName('');
+          setPhone('');
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className={styles['walkInGrid']}>
+      <form
+        className={styles['walkInForm']}
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submit();
+        }}
+      >
+        <h1>Add walk-in</h1>
+        <fieldset>
+          <legend>
+            <b>1</b> Ticket type
+          </legend>
+          <div className={styles['ticketChoices']}>
+            {doorModeModel.ticketTypes.slice(0, 2).map((ticket) => (
+              <label key={ticket.id} data-selected={ticketId === ticket.id}>
+                <input
+                  type="radio"
+                  name="ticket"
+                  value={ticket.id}
+                  checked={ticketId === ticket.id}
+                  onChange={() => {
+                    setTicketId(ticket.id);
+                  }}
                 />
-                Live
-              </span>
-            </div>
-            <div style={css('display:flex;align-items:baseline;gap:14px;margin-bottom:20px;')}>
-              <span
-                style={css(
-                  'font-size:64px;font-weight:800;letter-spacing:-0.03em;line-height:1;font-variant-numeric:tabular-nums;',
-                )}
-              >
-                247
-              </span>
-              <span style={css('font-size:18px;color:#d8c4b8;font-weight:600;')}>
-                of 400 inside
-              </span>
-            </div>
-            <div
-              style={css(
-                'height:14px;border-radius:999px;background:rgba(255,255,255,0.12);overflow:hidden;margin-bottom:12px;',
-              )}
-            >
-              <div
-                style={css(
-                  'width:62%;height:100%;background:linear-gradient(90deg,#ff5a1f,#ffb078);border-radius:999px;',
-                )}
-              />
-            </div>
-            <div style={css('font-size:13px;color:#c9b7ac;font-weight:500;')}>
-              62% full · 93 guests still expected · 34 walk-ins tonight
-            </div>
+                <span>
+                  {ticket.name}
+                  <small>{formatDoorCurrency(ticket.pricePaise)}</small>
+                </span>
+              </label>
+            ))}
           </div>
-
-          <div style={css(GLASS)}>
-            <h3 style={css('margin:0 0 16px;font-size:16px;font-weight:700;')}>Check-in list</h3>
-            <div
-              style={css(
-                'display:flex;align-items:center;gap:10px;background:#0d0d0d;border:1px solid rgba(255,255,255,0.08);padding:12px 14px;border-radius:14px;color:#8a8a86;margin-bottom:16px;',
-              )}
+        </fieldset>
+        <fieldset>
+          <legend>
+            <b>2</b> Quantity
+          </legend>
+          <div className={styles['quantity']}>
+            <button
+              type="button"
+              onClick={() => {
+                setQuantity((value) => Math.max(1, value - 1));
+              }}
             >
-              <Icon name="search" size={16} />
-              <span style={css('font-size:14px;')}>Search name or scan ticket to check in</span>
-            </div>
-            <div style={css('display:flex;flex-direction:column;gap:8px;')}>
-              {DOOR_GUESTS.map((g, i) => {
-                const done = checkedIn[g.name] ?? g.done;
-                return (
-                  <div
-                    key={g.name}
-                    className="vh-w08"
-                    style={css(
-                      'display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);',
-                    )}
-                  >
-                    <div style={css(gAvatar(pick(GRADS, i)))}>{initialsOf(g.name)}</div>
-                    <div style={css('flex:1;')}>
-                      <div style={css('font-size:14px;font-weight:600;')}>{g.name}</div>
-                      <div style={css('font-size:12px;color:#8a8a86;')}>{g.tier}</div>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={done}
-                      onClick={() => {
-                        setCheckedIn((prev) => ({ ...prev, [g.name]: true }));
-                      }}
-                      style={css(
-                        done
-                          ? 'display:inline-flex;align-items:center;gap:6px;background:rgba(110,231,155,0.12);border:1px solid rgba(110,231,155,0.3);color:#6ee79b;padding:8px 15px;border-radius:999px;font-size:13px;font-weight:700;cursor:default;'
-                          : 'background:#ff5a1f;border:none;color:#0a0a0a;padding:8px 18px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;',
-                      )}
-                    >
-                      {done ? 'Checked in' : 'Check in'}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+              −
+            </button>
+            <output>{quantity}</output>
+            <button
+              type="button"
+              onClick={() => {
+                setQuantity((value) => Math.min(10, value + 1));
+              }}
+            >
+              +
+            </button>
           </div>
-        </div>
-
-        {/* right */}
-        <div style={css('display:flex;flex-direction:column;gap:20px;')}>
-          <div style={css(GLASS)}>
-            <div style={css('display:flex;align-items:center;gap:9px;margin-bottom:18px;')}>
-              <div
-                style={css(
-                  'width:34px;height:34px;border-radius:11px;background:rgba(255,90,31,0.14);color:#ff8a55;display:flex;align-items:center;justify-content:center;',
-                )}
-              >
-                <Icon name="user-plus" size={17} />
-              </div>
-              <h3 style={css('margin:0;font-size:16px;font-weight:700;')}>Add a walk-in</h3>
-            </div>
-            <div style={css('display:flex;flex-direction:column;gap:14px;')}>
-              <input aria-label="Guest name" placeholder="Guest name" style={css(inputStyle)} />
-              <input aria-label="Phone number" placeholder="Phone number" style={css(inputStyle)} />
-              <div style={css('display:flex;gap:8px;')}>
-                {PAY_TYPES.map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => {
-                      setPayType(p);
-                    }}
-                    style={css(payChip(payType === p))}
-                  >
-                    {p}
-                  </button>
-                ))}
-              </div>
+        </fieldset>
+        <fieldset>
+          <legend>
+            <b>3</b> Guest details
+          </legend>
+          <div className={styles['fields']}>
+            <label>
+              Full name
               <input
-                aria-label="Amount collected"
-                placeholder="Amount collected (₹)"
-                style={css(inputStyle)}
+                value={name}
+                onChange={(event) => {
+                  setName(event.target.value);
+                }}
+                required
               />
-              <button
-                type="button"
-                className="vh-accent"
-                style={css(
-                  'display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#ff5a1f;color:#0a0a0a;border:none;padding:15px;border-radius:999px;font-size:15px;font-weight:800;cursor:pointer;margin-top:2px;',
-                )}
-              >
-                <Icon name="check" size={16} /> Check in walk-in
-              </button>
-            </div>
+            </label>
+            <label>
+              Phone number
+              <input
+                value={phone}
+                onChange={(event) => {
+                  setPhone(event.target.value);
+                }}
+                inputMode="tel"
+                required
+                aria-describedby="walkin-phone-help"
+              />
+            </label>
           </div>
-
-          <div style={css(GLASS)}>
-            <h3 style={css('margin:0 0 16px;font-size:16px;font-weight:700;')}>
-              Tonight&apos;s log
-            </h3>
-            <div style={css('display:flex;gap:10px;margin-bottom:16px;')}>
+          {phone && !/^\+?[0-9 ]{10,15}$/.test(phone.trim()) ? (
+            <p id="walkin-phone-help" className={styles['error']}>
+              Enter a valid phone number.
+            </p>
+          ) : null}
+        </fieldset>
+        <div className={styles['total']}>
+          <span>Total</span>
+          <strong>{formatDoorCurrency(totalPaise)}</strong>
+        </div>
+        <div>
+          <span className={styles['fieldLabel']}>Payment method</span>
+          <div className={styles['paymentChoices']}>
+            {(['UPI', 'Card', 'Cash'] as const).map((method) => (
               <button
                 type="button"
-                className="vh-w08"
-                style={css(
-                  'flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:#f5f5f3;padding:12px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;',
-                )}
+                key={method}
+                aria-pressed={payment === method}
+                onClick={() => {
+                  setPayment(method);
+                }}
               >
-                <Icon name="clipboard-list" size={15} /> Incident
+                {method}
               </button>
-              <button
-                type="button"
-                className="vh-w08"
-                style={css(
-                  'flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:#f5f5f3;padding:12px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;',
-                )}
-              >
-                <Icon name="sticky-note" size={15} /> Note
-              </button>
-            </div>
-            <div style={css('display:flex;flex-direction:column;gap:10px;')}>
-              {DOOR_LOG.map((l) => (
-                <div
-                  key={l.text}
-                  style={css(
-                    'display:flex;gap:12px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);',
-                  )}
-                >
-                  <div
-                    style={css(
-                      l.type === 'incident'
-                        ? 'width:28px;height:28px;border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center;background:rgba(240,133,122,0.14);color:#f0857a;'
-                        : 'width:28px;height:28px;border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.07);color:#b5b5b0;',
-                    )}
-                  >
-                    <Icon name={l.icon} size={14} />
-                  </div>
-                  <div style={css('flex:1;')}>
-                    <div style={css('font-size:13px;font-weight:600;')}>{l.text}</div>
-                    <div style={css('font-size:11px;color:#6a6a66;margin-top:2px;')}>{l.time}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            ))}
           </div>
         </div>
+        {state === 'failure' ? (
+          <p className={styles['error']} role="alert">
+            Payment or ticket creation failed. Try again.
+          </p>
+        ) : null}
+        {!adapters?.createWalkIn ? (
+          <p className={styles['unavailable']}>
+            Walk-in checkout requires the order, payment, and ticket adapter.
+          </p>
+        ) : null}
+        <button
+          className={styles['primaryWide']}
+          type="submit"
+          disabled={!canManage || !valid || !adapters?.createWalkIn || state === 'pending'}
+          aria-busy={state === 'pending'}
+        >
+          {state === 'pending'
+            ? 'Waiting for payment…'
+            : state === 'failure'
+              ? 'Retry'
+              : 'Create ticket'}
+        </button>
+      </form>
+      <aside className={styles['walkInSide']}>
+        <article className={styles['walkInSummary']}>
+          <h2>Tonight&apos;s walk-ins</h2>
+          <div>
+            <strong>{doorModeModel.walkIns.reduce((sum, item) => sum + item.quantity, 0)}</strong>
+            <span>Guests</span>
+          </div>
+          <div>
+            <strong>{formatDoorCurrency(totalCollected)}</strong>
+            <span>Collected</span>
+          </div>
+        </article>
+        <article className={styles['walkInRecent']}>
+          <h2>Recent walk-ins</h2>
+          {doorModeModel.walkIns.map((item) => (
+            <div key={item.id}>
+              <span>
+                {item.name}
+                <small>
+                  {String(item.quantity)} × {item.ticketType}
+                </small>
+              </span>
+              <b>{formatDoorCurrency(item.amountPaise)}</b>
+              <time>{item.time}</time>
+            </div>
+          ))}
+        </article>
+      </aside>
+    </div>
+  );
+}
+
+function GuestIdentity({
+  guest,
+  compact = false,
+}: {
+  readonly guest: DoorGuest;
+  readonly compact?: boolean;
+}) {
+  return (
+    <span className={styles['identity']} data-compact={compact}>
+      <i>{guest.initials}</i>
+      <span>
+        <strong>{guest.name}</strong>
+        <small>
+          {guest.quantity} × {guest.ticketType}
+          {!compact ? ` · ${guest.orderId}` : ''}
+        </small>
+      </span>
+    </span>
+  );
+}
+
+function GuestDrawer({
+  guest,
+  onClose,
+  onAction,
+  canAct,
+}: {
+  readonly guest: DoorGuest | null;
+  readonly onClose: () => void;
+  readonly onAction: (guest: DoorGuest) => void;
+  readonly canAct: boolean;
+}) {
+  const ref = useRef<HTMLElement>(null);
+  const close = useCallback(() => {
+    onClose();
+  }, [onClose]);
+  useOverlayFocus({ containerRef: ref, open: Boolean(guest), onClose: close, lockScroll: true });
+  if (!guest) return null;
+  return (
+    <div className={styles['drawerBackdrop']}>
+      <aside
+        ref={ref}
+        className={styles['drawer']}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Guest details for ${guest.name}`}
+        tabIndex={-1}
+      >
+        <button
+          type="button"
+          className={styles['close']}
+          aria-label="Close guest details"
+          onClick={onClose}
+        >
+          ×
+        </button>
+        <GuestIdentity guest={guest} />
+        <dl>
+          <div>
+            <dt>Ticket type</dt>
+            <dd>{guest.ticketType}</dd>
+          </div>
+          <div>
+            <dt>Quantity</dt>
+            <dd>{guest.quantity} guests</dd>
+          </div>
+          <div>
+            <dt>Order ID</dt>
+            <dd>{guest.orderId}</dd>
+          </div>
+          <div>
+            <dt>Phone</dt>
+            <dd>{guest.phone}</dd>
+          </div>
+          <div>
+            <dt>Status</dt>
+            <dd>{guest.checkedIn ? 'Checked in' : 'Not checked in'}</dd>
+          </div>
+        </dl>
+        <button
+          type="button"
+          className={styles['primaryWide']}
+          disabled={!canAct}
+          onClick={() => {
+            onAction(guest);
+          }}
+        >
+          {guest.checkedIn
+            ? 'Undo check-in'
+            : `Check in ${String(guest.quantity)} guest${guest.quantity === 1 ? '' : 's'}`}
+        </button>
+      </aside>
+    </div>
+  );
+}
+
+function ConfirmGuestDialog({
+  value,
+  busy,
+  onClose,
+  onConfirm,
+}: {
+  readonly value: { readonly guest: DoorGuest; readonly action: 'check-in' | 'undo' } | null;
+  readonly busy: boolean;
+  readonly onClose: () => void;
+  readonly onConfirm: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const close = useCallback(() => {
+    onClose();
+  }, [onClose]);
+  useOverlayFocus({ containerRef: ref, open: Boolean(value), onClose: close, lockScroll: true });
+  if (!value) return null;
+  return (
+    <div className={styles['modalBackdrop']}>
+      <div
+        ref={ref}
+        className={styles['modal']}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="guest-confirm-title"
+        tabIndex={-1}
+      >
+        <Icon name={value.action === 'undo' ? 'undo-2' : 'users'} size={34} />
+        <h2 id="guest-confirm-title">
+          {value.action === 'undo'
+            ? 'Undo check-in?'
+            : `Check in ${String(value.guest.quantity)} guest${value.guest.quantity === 1 ? '' : 's'}?`}
+        </h2>
+        <p>{value.guest.name}</p>
+        <footer>
+          <button type="button" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className={styles['primaryWide']}
+            disabled={busy}
+            onClick={onConfirm}
+          >
+            {busy ? 'Working…' : value.action === 'undo' ? 'Undo' : 'Confirm'}
+          </button>
+        </footer>
       </div>
     </div>
+  );
+}
+
+function ManualCodeDialog({
+  open,
+  onClose,
+  verify,
+  onResult,
+  onError,
+}: {
+  readonly open: boolean;
+  readonly onClose: () => void;
+  readonly verify?: DoorModeAdapters['verifyManualCode'];
+  readonly onResult: (result: DoorScanState) => void;
+  readonly onError: (message: string) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const close = useCallback(() => {
+    onClose();
+  }, [onClose]);
+  useOverlayFocus({ containerRef: ref, open, onClose: close, lockScroll: true });
+  if (!open) return null;
+  const submit = async () => {
+    if (!verify || code.length !== 6) return;
+    setBusy(true);
+    try {
+      onResult(await verify(code));
+    } catch {
+      onError('Ticket verification failed. Try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className={styles['modalBackdrop']}>
+      <div
+        ref={ref}
+        className={styles['modal']}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="manual-code-title"
+        tabIndex={-1}
+      >
+        <button
+          type="button"
+          className={styles['close']}
+          aria-label="Close manual code"
+          onClick={onClose}
+        >
+          ×
+        </button>
+        <h2 id="manual-code-title">Enter ticket code</h2>
+        <p>Ask the guest for their six-character code.</p>
+        <label>
+          Ticket code
+          <input
+            value={code}
+            onChange={(event) => {
+              setCode(
+                event.target.value
+                  .toUpperCase()
+                  .replace(/[^A-Z0-9]/g, '')
+                  .slice(0, 6),
+              );
+            }}
+            maxLength={6}
+            autoComplete="off"
+          />
+        </label>
+        {!verify ? (
+          <p className={styles['unavailable']}>Manual verification requires the scanner adapter.</p>
+        ) : null}
+        <footer>
+          <button type="button" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className={styles['primaryWide']}
+            disabled={!verify || code.length !== 6 || busy}
+            onClick={() => void submit()}
+          >
+            {busy ? 'Checking…' : 'Check ticket'}
+          </button>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+function ScanResult({
+  state,
+  onClose,
+}: {
+  readonly state: DoorScanState | null;
+  readonly onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const close = useCallback(() => {
+    onClose();
+  }, [onClose]);
+  useOverlayFocus({ containerRef: ref, open: Boolean(state), onClose: close, lockScroll: true });
+  if (!state) return null;
+  const content =
+    state.type === 'success'
+      ? ['Check-in complete', `${state.guest} · ${String(state.quantity)} × ${state.ticket}`]
+      : state.type === 'duplicate'
+        ? ['Already checked in', `Originally checked in at ${state.checkedInAt}.`]
+        : state.type === 'permission'
+          ? ['Camera access needed', 'Enable camera access to scan QR codes at the door.']
+          : state.type === 'offline'
+            ? ['Scanner unavailable offline', 'Reconnect before checking in this ticket.']
+            : ['Ticket not found', 'This QR code is invalid or no longer exists.'];
+  return (
+    <div className={styles['modalBackdrop']}>
+      <div
+        ref={ref}
+        className={styles['modal']}
+        data-result={state.type}
+        role="dialog"
+        aria-modal="true"
+        aria-live="assertive"
+        tabIndex={-1}
+      >
+        <h2>{content[0]}</h2>
+        <p>{content[1]}</p>
+        <button type="button" className={styles['primaryWide']} onClick={onClose}>
+          {state.type === 'invalid' ? 'Try again' : 'Done'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function WalkInSuccess({
+  result,
+  sendTicket,
+  onDone,
+}: {
+  readonly result: DoorWalkInResult;
+  readonly sendTicket?: DoorModeAdapters['sendTicket'];
+  readonly onDone: () => void;
+}) {
+  const [message, setMessage] = useState<string | null>(null);
+  return (
+    <section className={styles['successState']} aria-live="polite">
+      <Icon name="check-circle-2" size={52} />
+      <h1>Walk-in ticket created</h1>
+      <p>Ticket number</p>
+      <strong>{result.ticketNumber}</strong>
+      <dl>
+        <div>
+          <dt>Amount</dt>
+          <dd>{formatDoorCurrency(result.amountPaise)}</dd>
+        </div>
+        <div>
+          <dt>Payment</dt>
+          <dd>{result.paymentMethod}</dd>
+        </div>
+      </dl>
+      <button
+        type="button"
+        disabled={!sendTicket}
+        onClick={() => {
+          if (!sendTicket) return;
+          void sendTicket(result.ticketNumber)
+            .then(() => {
+              setMessage('Ticket sent.');
+            })
+            .catch(() => {
+              setMessage('Ticket delivery failed.');
+            });
+        }}
+      >
+        Send ticket{!sendTicket ? ' unavailable' : ''}
+      </button>
+      <button type="button" className={styles['primaryWide']} onClick={onDone}>
+        Done
+      </button>
+      {message ? <p role="status">{message}</p> : null}
+    </section>
+  );
+}
+
+function RouteState({ title, detail }: { readonly title: string; readonly detail: string }) {
+  return (
+    <section className={styles['routeState']} role="alert">
+      <Icon name="lock" size={42} />
+      <h1>{title}</h1>
+      <p>{detail}</p>
+      <Link href="/venue/events">Go back</Link>
+    </section>
   );
 }

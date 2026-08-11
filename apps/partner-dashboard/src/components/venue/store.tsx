@@ -3,10 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 
-import type { ReqStatus, Screen } from './data';
+import type { Screen } from './data';
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
-
-export type RequestsView = 'pending' | 'all';
 
 interface VenueStudioValue {
   readonly go: (screen: Screen) => void;
@@ -19,12 +17,7 @@ interface VenueStudioValue {
   readonly calFloatX: number;
   readonly calFloatY: number;
   readonly setCalFloatPos: (position: { readonly x: number; readonly y: number }) => void;
-  readonly requestsView: RequestsView;
-  readonly setRequestsView: Dispatch<SetStateAction<RequestsView>>;
-  readonly requestOverrides: Readonly<Record<number, ReqStatus>>;
-  readonly setRequestStatus: (id: number, status: ReqStatus) => void;
   readonly startCreate: () => void;
-  readonly openEdit: () => void;
   readonly goBank: () => void;
 }
 
@@ -36,8 +29,6 @@ export function VenueStudioProvider({ children }: { readonly children: ReactNode
   const [calSel, setCalSel] = useState(16);
   const [calFloatOpen, setCalFloatOpen] = useState(false);
   const [calFloat, setCalFloat] = useState({ x: 420, y: 120 });
-  const [requestsView, setRequestsView] = useState<RequestsView>('pending');
-  const [requestOverrides, setRequestOverrides] = useState<Record<number, ReqStatus>>({});
 
   const go = useCallback(
     (screen: Screen) => {
@@ -60,14 +51,8 @@ export function VenueStudioProvider({ children }: { readonly children: ReactNode
     [router],
   );
 
-  const setRequestStatus = useCallback((id: number, status: ReqStatus) => {
-    setRequestOverrides((current) => ({ ...current, [id]: status }));
-  }, []);
   const startCreate = useCallback(() => {
     router.push('/venue/events/create');
-  }, [router]);
-  const openEdit = useCallback(() => {
-    router.push('/venue/events/create?mode=edit');
   }, [router]);
   const goBank = useCallback(() => {
     router.push('/venue/settings?tab=payout');
@@ -88,12 +73,7 @@ export function VenueStudioProvider({ children }: { readonly children: ReactNode
       calFloatX: calFloat.x,
       calFloatY: calFloat.y,
       setCalFloatPos,
-      requestsView,
-      setRequestsView,
-      requestOverrides,
-      setRequestStatus,
       startCreate,
-      openEdit,
       goBank,
     }),
     [
@@ -104,11 +84,7 @@ export function VenueStudioProvider({ children }: { readonly children: ReactNode
       calendarOpen,
       go,
       goBank,
-      openEdit,
-      requestOverrides,
-      requestsView,
       setCalFloatPos,
-      setRequestStatus,
       startCreate,
     ],
   );
