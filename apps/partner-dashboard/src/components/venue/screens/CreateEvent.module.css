@@ -4,18 +4,10 @@
 }
 .wizardHeader {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 1fr;
   align-items: center;
   gap: 28px;
   margin-bottom: 22px;
-}
-.wizardHeader > span {
-  color: #c8cacf;
-  font-size: 13px;
-}
-.wizardHeader > span b {
-  margin: 0 8px;
-  color: #55595f;
 }
 .wizardHeader nav {
   display: grid;
@@ -251,7 +243,7 @@
 }
 .previewDesktop {
   position: sticky;
-  top: 88px;
+  top: 0;
 }
 .previewMobile {
   display: none;
@@ -544,6 +536,9 @@
   background: rgb(52 211 153 / 8%);
 }
 .actions {
+  position: sticky;
+  z-index: 8;
+  bottom: 0;
   display: flex;
   min-height: 74px;
   align-items: center;
@@ -552,7 +547,7 @@
   margin-top: 16px;
   border: 1px solid var(--partner-border);
   border-radius: 10px;
-  background: #111315;
+  background: rgb(17 19 21 / 98%);
   padding: 12px 16px;
 }
 .actions > div {

@@ -31,6 +31,20 @@
   transition: grid-template-columns 180ms ease;
 }
 
+html:has(.partner-dashboard-shell-v2[data-partner-role='venue']),
+body:has(.partner-dashboard-shell-v2[data-partner-role='venue']) {
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.partner-dashboard-shell-v2[data-partner-role='venue'] {
+  --partner-topbar-height: 64px;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .partner-dashboard-shell-v2[data-sidebar-collapsed='true'] {
   grid-template-columns: var(--partner-sidebar-collapsed) minmax(0, 1fr);
 }
@@ -186,6 +200,19 @@
   min-width: 0;
 }
 
+.partner-dashboard-shell-v2[data-partner-role='venue'] .partner-sidebar {
+  height: 100dvh;
+  min-height: 0;
+}
+
+.partner-dashboard-shell-v2[data-partner-role='venue'] .partner-workspace {
+  display: grid;
+  height: 100dvh;
+  min-height: 0;
+  grid-template-rows: var(--partner-topbar-height) minmax(0, 1fr);
+  overflow: hidden;
+}
+
 .partner-dashboard-shell-v2 .partner-topbar {
   position: sticky;
   top: 0;
@@ -199,6 +226,11 @@
   padding: 0 28px;
   background: rgb(11 11 12 / 96%);
   backdrop-filter: none;
+}
+
+.partner-dashboard-shell-v2[data-partner-role='venue'] .partner-topbar {
+  height: var(--partner-topbar-height);
+  min-height: var(--partner-topbar-height);
 }
 
 .partner-breadcrumb {
@@ -390,6 +422,25 @@
   animation: none;
 }
 
+.partner-dashboard-shell-v2[data-partner-role='venue'] .partner-dashboard-content {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  margin: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 24px;
+  scrollbar-gutter: stable;
+}
+
+.partner-dashboard-shell-v2[data-partner-role='venue'] .venue-route {
+  width: min(var(--partner-content-width), 100%);
+  min-width: 0;
+  min-height: 100%;
+  margin: 0 auto;
+}
+
 .partner-dashboard-shell-v2 .partner-popover {
   position: absolute;
   top: calc(100% + 8px);
@@ -547,6 +598,9 @@
     gap: 16px;
     padding-inline: 20px;
   }
+  .partner-dashboard-shell-v2[data-partner-role='venue'] .partner-dashboard-content {
+    padding: 20px;
+  }
 }
 
 @media (max-width: 820px) {
@@ -651,6 +705,14 @@
   .partner-dashboard-shell-v2 .partner-dashboard-content {
     min-height: calc(100vh - 64px);
     padding: 20px 12px 40px;
+  }
+  .partner-dashboard-shell-v2[data-partner-role='venue'] .partner-workspace {
+    height: 100dvh;
+  }
+  .partner-dashboard-shell-v2[data-partner-role='venue'] .partner-dashboard-content {
+    min-height: 0;
+    padding: 16px;
+    scrollbar-gutter: auto;
   }
   .partner-dashboard-shell-v2 .partner-notifications {
     right: 12px;

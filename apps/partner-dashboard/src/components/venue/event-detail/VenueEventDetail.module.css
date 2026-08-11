@@ -633,7 +633,10 @@
 }
 
 .guestTable {
-  overflow: hidden;
+  min-height: 0;
+  max-height: max(320px, calc(100dvh - 390px));
+  overflow: auto;
+  overscroll-behavior: contain;
   padding: 0 20px;
 }
 
@@ -961,10 +964,17 @@
     bottom: 0;
     z-index: 100;
     width: min(360px, 100vw);
-    min-height: 100vh;
+    min-height: 0;
+    max-height: 100dvh;
     overflow-y: auto;
+    overscroll-behavior: contain;
     border-radius: 0;
     box-shadow: -20px 0 60px rgb(0 0 0 / 48%);
+  }
+
+  .guestTable {
+    max-height: none;
+    overflow: visible;
   }
 
   .guestTable th:nth-child(4),

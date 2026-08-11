@@ -17,6 +17,7 @@
 }
 .layout {
   display: grid;
+  height: max(560px, calc(100dvh - 200px));
   min-height: 560px;
   grid-template-columns: 230px minmax(0, 1fr);
   border: 1px solid var(--partner-border);
@@ -54,6 +55,9 @@
 }
 .content {
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 20px 24px;
 }
 .profileForm {
@@ -379,6 +383,8 @@
   }
   .layout {
     display: block;
+    height: auto;
+    min-height: 0;
     border: 0;
     background: transparent;
   }
@@ -404,6 +410,7 @@
     height: 2px;
   }
   .content {
+    overflow: visible;
     padding: 14px 0 0;
   }
   .identityGrid {

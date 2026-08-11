@@ -138,7 +138,10 @@
 }
 .partnerTable,
 .staffTable {
-  overflow: hidden;
+  min-height: 0;
+  max-height: max(320px, calc(100dvh - 340px));
+  overflow: auto;
+  overscroll-behavior: contain;
   border: 1px solid var(--partner-border);
   border-radius: 12px;
   background: #101214;
@@ -349,8 +352,10 @@
   top: 0;
   right: 0;
   bottom: 0;
+  min-height: 0;
   width: min(410px, 100vw);
   overflow-y: auto;
+  overscroll-behavior: contain;
   border-left: 1px solid var(--partner-border);
   background: #111315;
   padding: 26px 24px;
@@ -499,6 +504,12 @@
   }
 }
 @media (max-width: 640px) {
+  .partnerTable,
+  .staffTable {
+    max-height: none;
+    overflow: visible;
+  }
+
   .header {
     min-height: 0;
     flex-direction: column;

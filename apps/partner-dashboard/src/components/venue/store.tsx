@@ -46,7 +46,7 @@ export function VenueStudioProvider({ children }: { readonly children: ReactNode
       };
       setCalendarOpen(false);
       router.push(routeByScreen[screen]);
-      window.scrollTo(0, 0);
+      document.getElementById('partner-dashboard-content')?.scrollTo(0, 0);
     },
     [router],
   );

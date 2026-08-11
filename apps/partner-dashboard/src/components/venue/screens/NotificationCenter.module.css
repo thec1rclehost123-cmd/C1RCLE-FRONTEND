@@ -58,8 +58,13 @@
 }
 .groups {
   display: grid;
+  min-height: 0;
+  max-height: max(360px, calc(100dvh - 250px));
   gap: 24px;
   margin-top: 26px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
 }
 .groups section > h2 {
   margin: 0 0 10px 4px;
@@ -131,6 +136,12 @@
   color: var(--partner-text);
 }
 @media (max-width: 640px) {
+  .groups {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
   .page > header {
     align-items: stretch;
     flex-direction: column;

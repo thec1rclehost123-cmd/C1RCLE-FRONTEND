@@ -7,7 +7,10 @@
  */
 
 .venue-studio {
+  width: 100%;
   min-width: 0;
+  max-width: 100%;
+  min-height: 0;
   background: transparent;
   color: #f5f5f3;
   font-family:
@@ -17,6 +20,23 @@
 
 .venue-studio * {
   box-sizing: border-box;
+}
+
+.venue-route :is(table, [role='table']) {
+  min-width: 0;
+}
+
+.venue-route table thead th,
+.venue-route [class*='tableHead'] {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #111315;
+}
+
+.venue-route :is([class*='Table'], [class*='table'], [class*='List'], [class*='list']) {
+  min-height: 0;
+  overscroll-behavior: contain;
 }
 
 .venue-studio a {
@@ -332,7 +352,9 @@
   .venue-route {
     width: 100%;
     min-width: 0;
-    overflow: hidden;
+    max-width: 100%;
+    overflow-x: clip;
+    overflow-y: visible;
   }
 
   .venue-route h1 {

@@ -203,6 +203,7 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
     <div
       ref={shellRef}
       className="partner-dashboard partner-dashboard-shell-v2"
+      data-partner-role={partnerRole}
       data-sidebar-collapsed={collapsed ? 'true' : 'false'}
     >
       <a className="partner-skip-link" href="#partner-dashboard-content">

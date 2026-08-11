@@ -278,7 +278,9 @@
 
 .eventTable {
   min-width: 0;
-  overflow: hidden;
+  max-height: max(320px, calc(100dvh - 330px));
+  overflow: auto;
+  overscroll-behavior: contain;
   border: 1px solid rgb(255 255 255 / 9%);
   border-radius: 12px;
   background: #111315;
@@ -739,6 +741,11 @@
 }
 
 @media (max-width: 640px) {
+  .eventTable {
+    max-height: none;
+    overflow: visible;
+  }
+
   .pageHeader h1 {
     font-size: 32px;
   }

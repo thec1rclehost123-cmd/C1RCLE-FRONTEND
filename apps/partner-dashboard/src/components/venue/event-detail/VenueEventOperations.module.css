@@ -144,7 +144,9 @@
 }
 
 .tableWrap {
-  overflow: hidden;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .tableWrap table {

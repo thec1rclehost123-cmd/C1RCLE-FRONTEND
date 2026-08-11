@@ -165,15 +165,22 @@
   color: var(--partner-muted);
 }
 .history {
-  overflow: hidden;
+  min-height: 0;
+  max-height: max(300px, calc(100dvh - 475px));
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 .history > header {
+  position: sticky;
+  top: 0;
+  z-index: 4;
   display: flex;
   min-height: 66px;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   padding: 0 18px;
+  background: #111315;
 }
 .history h2 {
   margin: 0;
@@ -286,6 +293,11 @@
   }
 }
 @media (max-width: 640px) {
+  .history {
+    max-height: none;
+    overflow: visible;
+  }
+
   .header {
     flex-direction: column;
   }

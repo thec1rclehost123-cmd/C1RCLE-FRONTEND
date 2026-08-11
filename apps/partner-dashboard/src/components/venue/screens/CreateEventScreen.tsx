@@ -89,7 +89,7 @@ export function CreateEventScreen({
     setErrors([]);
     setStatus(null);
     setStep(next);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.getElementById('partner-dashboard-content')?.scrollTo({ top: 0, behavior: 'smooth' });
   };
   const continueFromDetails = () => {
     const detailErrors = validateEventDraft(draft).filter(
@@ -148,9 +148,6 @@ export function CreateEventScreen({
   return (
     <section className={styles['page']}>
       <header className={styles['wizardHeader']}>
-        <span>
-          Events <b>/</b> {mode === 'edit' ? 'Edit event' : 'Create event'}
-        </span>
         <nav aria-label="Create event progress">
           {([1, 2, 3] as const).map((item) => (
             <button

@@ -328,6 +328,10 @@
   color: #f5f5f7;
 }
 .guestTable {
+  min-height: 0;
+  max-height: max(320px, calc(100dvh - 355px));
+  overflow: auto;
+  overscroll-behavior: contain;
   border-top: 1px solid rgba(255, 255, 255, 0.09);
 }
 .tableHead,
@@ -400,8 +404,10 @@
 }
 .drawer {
   position: relative;
+  min-height: 0;
   width: min(380px, 100%);
   overflow-y: auto;
+  overscroll-behavior: contain;
   border-left: 1px solid rgba(255, 255, 255, 0.1);
   background: #111315;
   padding: 50px 28px 28px;
@@ -744,6 +750,11 @@ input:focus-visible {
   }
 }
 @media (max-width: 600px) {
+  .guestTable {
+    max-height: none;
+    overflow: visible;
+  }
+
   .eventHeader {
     gap: 14px;
   }

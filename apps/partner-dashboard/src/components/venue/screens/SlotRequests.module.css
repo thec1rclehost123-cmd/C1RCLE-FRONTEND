@@ -67,7 +67,12 @@
 }
 .list {
   display: grid;
+  min-height: 0;
+  max-height: max(360px, calc(100dvh - 245px));
   gap: 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
 }
 .requestRow {
   display: grid;
@@ -155,8 +160,10 @@
 }
 .drawer {
   position: relative;
+  min-height: 0;
   width: min(500px, 100%);
   overflow-y: auto;
+  overscroll-behavior: contain;
   border-left: 1px solid rgba(255, 255, 255, 0.1);
   background: #111315;
   padding: 26px 22px 110px;
@@ -394,6 +401,12 @@ textarea:focus-visible {
   }
 }
 @media (max-width: 650px) {
+  .list {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
   .toolbar {
     flex-direction: column;
   }
