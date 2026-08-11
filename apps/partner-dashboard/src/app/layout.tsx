@@ -1,6 +1,7 @@
 import './globals.css';
 import '@/components/partner-shell/partner-shell.css';
 import '@/components/partner-shell/dashboard-ui.css';
+import '@/components/partner-shell/partner-shell-v2.css';
 
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
@@ -26,9 +27,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { readonly children: ReactNode }) {
   return (
     <html lang="en" className="dark" data-scroll-behavior="smooth">
-      <body className="antialiased bg-[#0A0A0B] text-white">
-        {children}
-      </body>
+      <body className="antialiased bg-[#0A0A0B] text-white">{children}</body>
     </html>
   );
 }

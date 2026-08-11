@@ -1,9 +1,26 @@
 export default function VenueLoading() {
   return (
-    <div className="venue-route-loading" aria-label="Loading Venue Studio" role="status">
-      <div className="venue-loading-heading" />
-      <div className="venue-loading-metrics">{Array.from({ length: 4 }, (_, index) => <div key={index} />)}</div>
-      <div className="venue-loading-panel" />
+    <div className="venue-overview-loading" aria-label="Loading Venue Overview" role="status">
+      <header>
+        <span />
+        <i />
+      </header>
+      <div className="venue-overview-loading-top">
+        <section />
+        <section />
+      </div>
+      <div className="venue-overview-loading-metrics">
+        <span />
+        <span />
+        <span />
+      </div>
+      <div className="venue-overview-loading-bottom">
+        <section />
+        <aside>
+          <span />
+          <span />
+        </aside>
+      </div>
     </div>
   );
 }

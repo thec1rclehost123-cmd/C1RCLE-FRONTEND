@@ -1,5 +1,7 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
+
 import { PartnerDashboardLayout } from '@/components/partner-shell/PartnerDashboardLayout';
 
 import { CalendarModal } from './modals/CalendarModal';
@@ -10,6 +12,16 @@ import { VenueStudioProvider } from './store';
 import type { ReactNode } from 'react';
 
 export function VenueDashboardLayout({ children }: { readonly children: ReactNode }) {
+  const pathname = usePathname();
+
+  if (pathname === '/venue/overview') {
+    return (
+      <PartnerDashboardLayout partnerRole="venue">
+        <div className="venue-studio venue-route">{children}</div>
+      </PartnerDashboardLayout>
+    );
+  }
+
   return (
     <VenueStudioProvider>
       <PartnerDashboardLayout partnerRole="venue">
