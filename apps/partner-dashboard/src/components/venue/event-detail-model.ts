@@ -5,6 +5,8 @@ import { venueEventSource } from './venue-events-model';
 export type EventOrderStatus = 'Paid' | 'Refunded' | 'Pending';
 export type EventGuestCheckInStatus = 'Checked in' | 'Not arrived';
 export type EventGuestSource = 'Ticket sale' | 'Guest list';
+export type EventPromoterStatus = 'Active' | 'Invite pending';
+export type EventFinanceTransactionStatus = 'Paid' | 'Refunded';
 
 export interface VenueEventDetailHeaderModel {
   readonly id: string;
@@ -97,11 +99,75 @@ export interface VenueEventGuestsModel {
   }[];
 }
 
+export interface VenueEventPromotersModel {
+  readonly activePromoters: number;
+  readonly ticketsSold: number;
+  readonly promoters: readonly {
+    readonly id: string;
+    readonly name: string;
+    readonly initials: string;
+    readonly phone: string;
+    readonly instagram: string | null;
+    readonly link: string;
+    readonly ticketsSold: number;
+    readonly earningsPaise: number;
+    readonly earnings: string;
+    readonly status: EventPromoterStatus;
+  }[];
+}
+
+export interface VenueEventMarketingModel {
+  readonly activeCampaign: {
+    readonly name: string;
+    readonly channel: 'SMS' | 'Email' | 'Instagram' | 'Push';
+    readonly scheduledFor: string;
+    readonly audienceSize: string;
+    readonly status: 'Ready' | 'Scheduled';
+  } | null;
+  readonly recentMessages: readonly {
+    readonly id: string;
+    readonly message: string;
+    readonly channel: 'SMS' | 'Email' | 'Instagram' | 'Push';
+    readonly sentAt: string;
+    readonly result: string;
+  }[];
+  readonly eventUrl: string;
+}
+
+export interface VenueEventFinanceModel {
+  readonly summary: {
+    readonly grossSales: string;
+    readonly deductions: string;
+    readonly expectedPayout: string;
+    readonly payoutDate: string;
+  };
+  readonly breakdown: readonly {
+    readonly label: 'Ticket sales' | 'Refunds' | 'Platform fees' | 'Taxes' | 'Expected payout';
+    readonly amount: string;
+    readonly amountPaise: number;
+  }[];
+  readonly payoutAccount: {
+    readonly bankName: string;
+    readonly maskedAccount: string;
+  };
+  readonly transactions: readonly {
+    readonly id: string;
+    readonly date: string;
+    readonly description: string;
+    readonly status: EventFinanceTransactionStatus;
+    readonly amountPaise: number;
+    readonly amount: string;
+  }[];
+}
+
 export interface VenueEventDetailRecord {
   readonly header: VenueEventDetailHeaderModel;
   readonly summary: VenueEventSummaryModel | null;
   readonly sales: VenueEventSalesModel | null;
   readonly guests: VenueEventGuestsModel | null;
+  readonly promoters: VenueEventPromotersModel | null;
+  readonly marketing: VenueEventMarketingModel | null;
+  readonly finance: VenueEventFinanceModel | null;
 }
 
 export interface VenueEventDetailFixtureSource {
@@ -129,6 +195,35 @@ export interface VenueEventDetailFixtureSource {
   readonly orders: readonly Omit<VenueEventSalesModel['orders'][number], 'amount'>[];
   readonly guests: VenueEventGuestsModel['guests'];
   readonly information: VenueEventSummaryModel['information'];
+  readonly promoters: readonly {
+    readonly id: string;
+    readonly name: string;
+    readonly initials: string;
+    readonly phone: string;
+    readonly instagram: string | null;
+    readonly link: string;
+    readonly ticketsSold: number;
+    /** Contracted event commission earned per attributed ticket, in paise. */
+    readonly commissionPerTicketPaise: number;
+    readonly status: EventPromoterStatus;
+  }[];
+  readonly activeCampaign: VenueEventMarketingModel['activeCampaign'];
+  readonly recentMessages: readonly (Omit<
+    VenueEventMarketingModel['recentMessages'][number],
+    'result'
+  > & { readonly providerResult: string | null })[];
+  readonly eventUrl: string;
+  /** Authoritative event-level platform fee total, in paise. */
+  readonly platformFeePaise: number;
+  /** Authoritative event-level tax total, in paise. */
+  readonly taxPaise: number;
+  readonly payoutDate: string;
+  readonly payoutAccount: VenueEventFinanceModel['payoutAccount'];
+  readonly completedPaidTransactions: readonly {
+    readonly id: string;
+    readonly date: string;
+    readonly amountPaise: number;
+  }[];
 }
 
 const formatInr = (paise: number): string =>
@@ -342,6 +437,110 @@ export const venueEventDetailFixture: VenueEventDetailFixtureSource = {
     entryMethod: 'QR ticket at the main entrance',
     contact: '+91 80 5550 0148',
   },
+  promoters: [
+    {
+      id: 'promoter-karan',
+      name: 'Karan Shah',
+      initials: 'KS',
+      phone: '+91 98765 43210',
+      instagram: '@karan.shah.live',
+      link: 'https://thec1rcle.com/p/karan-shah',
+      ticketsSold: 62,
+      commissionPerTicketPaise: 18_000,
+      status: 'Active',
+    },
+    {
+      id: 'promoter-aisha',
+      name: 'Aisha Khan',
+      initials: 'AK',
+      phone: '+91 98765 28714',
+      instagram: '@aisha.afterdark',
+      link: 'https://thec1rcle.com/p/aisha-khan',
+      ticketsSold: 38,
+      commissionPerTicketPaise: 18_000,
+      status: 'Active',
+    },
+    {
+      id: 'promoter-rohit',
+      name: 'Rohit Verma',
+      initials: 'RV',
+      phone: '+91 98765 18306',
+      instagram: null,
+      link: 'https://thec1rcle.com/p/rohit-verma',
+      ticketsSold: 31,
+      commissionPerTicketPaise: 18_000,
+      status: 'Active',
+    },
+    {
+      id: 'promoter-sneha',
+      name: 'Sneha Iyer',
+      initials: 'SI',
+      phone: '+91 98765 62418',
+      instagram: '@sneha.nights',
+      link: 'https://thec1rcle.com/p/sneha-iyer',
+      ticketsSold: 25,
+      commissionPerTicketPaise: 18_000,
+      status: 'Active',
+    },
+    {
+      id: 'promoter-vikram',
+      name: 'Vikram Singh',
+      initials: 'VS',
+      phone: '+91 98765 91270',
+      instagram: null,
+      link: 'https://thec1rcle.com/p/vikram-singh',
+      ticketsSold: 18,
+      commissionPerTicketPaise: 18_000,
+      status: 'Invite pending',
+    },
+  ],
+  activeCampaign: {
+    name: 'Final ticket reminder',
+    channel: 'SMS',
+    scheduledFor: 'Scheduled today at 6:00 PM',
+    audienceSize: '2,140 guests',
+    status: 'Ready',
+  },
+  recentMessages: [
+    {
+      id: 'message-selling-fast',
+      message: 'Selling fast 🔥',
+      channel: 'SMS',
+      sentAt: 'Wed 15 Jul, 3:00 PM',
+      providerResult: null,
+    },
+    {
+      id: 'message-early-bird',
+      message: 'Early bird ends soon',
+      channel: 'Email',
+      sentAt: 'Tue 14 Jul, 11:00 AM',
+      providerResult: '842 opened',
+    },
+    {
+      id: 'message-lineup',
+      message: 'Lineup announcement',
+      channel: 'Instagram',
+      sentAt: 'Mon 13 Jul, 6:00 PM',
+      providerResult: null,
+    },
+    {
+      id: 'message-update',
+      message: 'Event update',
+      channel: 'Push',
+      sentAt: 'Sun 12 Jul, 8:00 PM',
+      providerResult: 'Delivered',
+    },
+  ],
+  eventUrl: 'https://thec1rcle.com/e/neon-nights',
+  platformFeePaise: 2_345_000,
+  taxPaise: 895_000,
+  payoutDate: 'Payout Fri, 18 Jul',
+  payoutAccount: { bankName: 'HDFC Bank', maskedAccount: '••4412' },
+  completedPaidTransactions: [
+    { id: 'transaction-sale-1', date: '16 Jul 2025, 10:15 PM', amountPaise: 23_840_000 },
+    { id: 'transaction-sale-2', date: '16 Jul 2025, 10:20 PM', amountPaise: 18_260_000 },
+    { id: 'transaction-sale-3', date: '16 Jul 2025, 10:28 PM', amountPaise: 19_100_000 },
+  ],
 };
 
 export const buildVenueEventDetailRecord = (
@@ -358,6 +557,49 @@ export const buildVenueEventDetailRecord = (
     price: formatInr(ticketType.pricePaise),
     soldPercent: percentage(ticketType.sold, ticketType.capacity),
   }));
+  const promoters = source.promoters.map((promoter) => {
+    const earningsPaise = promoter.ticketsSold * promoter.commissionPerTicketPaise;
+    return { ...promoter, earningsPaise, earnings: formatInr(earningsPaise) };
+  });
+  const promoterTicketsSold = promoters.reduce(
+    (total, promoter) => total + promoter.ticketsSold,
+    0,
+  );
+  const deductionsPaise =
+    source.completedRefundAmountPaise + source.platformFeePaise + source.taxPaise;
+  const expectedPayoutPaise = Math.max(0, source.completedPaidOrderValuePaise - deductionsPaise);
+  const financeTransactions: VenueEventFinanceModel['transactions'] = [
+    ...source.completedPaidTransactions.map((transaction) => ({
+      ...transaction,
+      description: 'Ticket sales',
+      status: 'Paid' as const,
+      amount: formatInr(transaction.amountPaise),
+    })),
+    {
+      id: 'transaction-refund',
+      date: '16 Jul 2025, 10:35 PM',
+      description: 'Refund',
+      status: 'Refunded',
+      amountPaise: -source.completedRefundAmountPaise,
+      amount: formatInr(-source.completedRefundAmountPaise),
+    },
+    {
+      id: 'transaction-fees',
+      date: '16 Jul 2025, 11:05 PM',
+      description: 'Platform fees',
+      status: 'Paid',
+      amountPaise: -source.platformFeePaise,
+      amount: formatInr(-source.platformFeePaise),
+    },
+    {
+      id: 'transaction-taxes',
+      date: '16 Jul 2025, 11:05 PM',
+      description: 'Taxes',
+      status: 'Paid',
+      amountPaise: -source.taxPaise,
+      amount: formatInr(-source.taxPaise),
+    },
+  ];
   const sales: VenueEventSalesModel = {
     metrics: [
       {
@@ -412,6 +654,58 @@ export const buildVenueEventDetailRecord = (
       checkedInPercent: percentage(source.checkedInGuests, source.issuedGuests),
       guests: source.guests,
     },
+    promoters: {
+      activePromoters: promoters.filter((promoter) => promoter.status === 'Active').length,
+      ticketsSold: promoterTicketsSold,
+      promoters,
+    },
+    marketing: {
+      activeCampaign: source.activeCampaign,
+      recentMessages: source.recentMessages.map(({ providerResult, ...message }) => ({
+        ...message,
+        // Results are copied only from the channel provider; absent attribution is never inferred.
+        result: providerResult ?? 'Result unavailable',
+      })),
+      eventUrl: source.eventUrl,
+    },
+    finance: {
+      summary: {
+        // Gross sales are completed paid ticket orders before fees.
+        grossSales: formatInr(source.completedPaidOrderValuePaise),
+        deductions: formatInr(deductionsPaise),
+        expectedPayout: formatInr(expectedPayoutPaise),
+        payoutDate: source.payoutDate,
+      },
+      breakdown: [
+        {
+          label: 'Ticket sales',
+          amountPaise: source.completedPaidOrderValuePaise,
+          amount: formatInr(source.completedPaidOrderValuePaise),
+        },
+        {
+          label: 'Refunds',
+          amountPaise: -source.completedRefundAmountPaise,
+          amount: formatInr(-source.completedRefundAmountPaise),
+        },
+        {
+          label: 'Platform fees',
+          amountPaise: -source.platformFeePaise,
+          amount: formatInr(-source.platformFeePaise),
+        },
+        {
+          label: 'Taxes',
+          amountPaise: -source.taxPaise,
+          amount: formatInr(-source.taxPaise),
+        },
+        {
+          label: 'Expected payout',
+          amountPaise: expectedPayoutPaise,
+          amount: formatInr(expectedPayoutPaise),
+        },
+      ],
+      payoutAccount: source.payoutAccount,
+      transactions: financeTransactions,
+    },
   };
 };
 
@@ -433,5 +727,8 @@ export const getVenueEventDetailRecord = cache((eventId: string): VenueEventDeta
     summary: null,
     sales: null,
     guests: null,
+    promoters: null,
+    marketing: null,
+    finance: null,
   };
 });

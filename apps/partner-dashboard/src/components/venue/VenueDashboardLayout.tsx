@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import { PartnerDashboardLayout } from '@/components/partner-shell/PartnerDashboardLayout';
 
 import { CalendarModal } from './modals/CalendarModal';
-import { ComposerModal } from './modals/ComposerModal';
 import { FloatingCalendar } from './modals/FloatingCalendar';
 import { VenueStudioProvider } from './store';
 
@@ -32,7 +31,6 @@ export function VenueDashboardLayout({ children }: { readonly children: ReactNod
         <div className="venue-studio venue-route">{children}</div>
       </PartnerDashboardLayout>
       <CalendarModal />
-      <ComposerModal />
       <FloatingCalendar />
     </VenueStudioProvider>
   );

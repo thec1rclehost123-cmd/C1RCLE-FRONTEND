@@ -1,0 +1,876 @@
+.operationsPage {
+  display: grid;
+  gap: 20px;
+  color: #f5f5f7;
+}
+
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.pageHeader h2,
+.panel h2,
+.panel h3,
+.restrictedState h2,
+.emptyState h2,
+.emptyState h3 {
+  margin: 0;
+  color: #f5f5f7;
+}
+
+.pageHeader h2 {
+  font-size: clamp(25px, 2.3vw, 32px);
+  letter-spacing: -0.025em;
+}
+
+.pageHeader p,
+.emptyState p,
+.restrictedState p {
+  margin: 6px 0 0;
+  color: #92969d;
+  font-size: 15px;
+}
+
+.primaryButton,
+.secondaryButton,
+.copyEventLink,
+.messageAction,
+.copyAction {
+  min-height: 44px;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 650;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.primaryButton,
+.messageAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #f44a22;
+  background: #f44a22;
+  color: #fff;
+  padding: 0 20px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.secondaryButton,
+.copyEventLink,
+.copyAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: transparent;
+  color: #f5f5f7;
+  padding: 0 16px;
+  cursor: pointer;
+}
+
+.primaryButton:hover,
+.messageAction:hover {
+  background: #ff5830;
+}
+
+.secondaryButton:hover,
+.copyEventLink:hover,
+.copyAction:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.primaryButton:active,
+.secondaryButton:active,
+.copyEventLink:active,
+.copyAction:active,
+.messageAction:active {
+  transform: translateY(1px);
+}
+
+.promoterSummary,
+.financeSummary,
+.panel,
+.activeCampaign,
+.tableWrap,
+.emptyState,
+.restrictedState {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  background: #111315;
+}
+
+.promoterSummary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 24px 28px;
+}
+
+.promoterSummary article {
+  display: grid;
+  grid-template-columns: 48px auto 1fr;
+  align-items: center;
+  gap: 2px 16px;
+  min-height: 56px;
+}
+
+.promoterSummary article + article {
+  border-left: 1px solid rgba(255, 255, 255, 0.09);
+  padding-left: 48px;
+}
+
+.promoterSummary svg {
+  grid-row: 1 / span 2;
+}
+
+.promoterSummary strong {
+  font-size: 23px;
+  font-variant-numeric: tabular-nums;
+}
+
+.promoterSummary span {
+  align-self: start;
+  color: #92969d;
+  font-size: 14px;
+}
+
+.tableWrap {
+  overflow: hidden;
+}
+
+.tableWrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.tableWrap th,
+.tableWrap td {
+  height: 64px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0 20px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.tableWrap th {
+  height: 48px;
+  color: #92969d;
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.tableWrap tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.promoterIdentity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  border: 0;
+  background: transparent;
+  color: #f5f5f7;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.promoterIdentity:hover strong {
+  text-decoration: underline;
+}
+
+.avatar,
+.drawerAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  background: #24272b;
+  color: #f5f5f7;
+  font-weight: 700;
+}
+
+.avatar {
+  width: 42px;
+  height: 42px;
+  font-size: 13px;
+}
+
+.promoterTable td:last-child {
+  text-align: right;
+}
+
+.promoterTable td:last-child button,
+.payoutAccount button {
+  min-height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: transparent;
+  color: #f5f5f7;
+  padding: 0 16px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  width: fit-content;
+  border: 1px solid rgba(52, 211, 153, 0.36);
+  border-radius: 6px;
+  color: #34d399;
+  padding: 3px 10px;
+  font-size: 13px;
+}
+
+.status[data-status='invite pending'] {
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #f59e0b;
+}
+
+.status[data-status='refunded'] {
+  border-color: rgba(255, 255, 255, 0.13);
+  color: #c5c7cb;
+}
+
+.drawerBackdrop,
+.dialogBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  border: 0;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.promoterDrawer {
+  position: fixed;
+  z-index: 71;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(390px, 100vw);
+  overflow-y: auto;
+  border-left: 1px solid rgba(255, 255, 255, 0.09);
+  background: #111315;
+  padding: 42px 40px 32px;
+}
+
+.drawerClose,
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  color: #f5f5f7;
+  cursor: pointer;
+}
+
+.drawerClose {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+.drawerAvatar {
+  width: 84px;
+  height: 84px;
+  margin-bottom: 16px;
+  font-size: 24px;
+}
+
+.promoterDrawer h2 {
+  margin: 0 0 10px;
+  font-size: 25px;
+}
+
+.promoterDrawer dl {
+  display: grid;
+  gap: 0;
+  margin: 32px 0 28px;
+}
+
+.promoterDrawer dl div {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 15px 0;
+}
+
+.promoterDrawer dt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #92969d;
+}
+
+.promoterDrawer dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.promoterDrawer .messageAction,
+.promoterDrawer .copyAction {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.inviteDialog {
+  position: fixed;
+  z-index: 72;
+  top: 50%;
+  left: 50%;
+  width: min(480px, calc(100vw - 32px));
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background: #16181b;
+  padding: 28px;
+}
+
+.inviteDialog .iconButton {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+.inviteDialog h2 {
+  margin: 0;
+  font-size: 23px;
+}
+
+.inviteDialog > p {
+  margin: 6px 0 22px;
+  color: #92969d;
+}
+
+.inviteDialog form,
+.inviteDialog label {
+  display: grid;
+  gap: 8px;
+}
+
+.inviteDialog form {
+  gap: 16px;
+}
+
+.inviteDialog label {
+  color: #c8cbd0;
+  font-size: 13px;
+}
+
+.inviteDialog input {
+  min-height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: #0b0b0c;
+  color: #f5f5f7;
+  padding: 0 12px;
+  font: inherit;
+}
+
+.inviteDialog form p {
+  margin: 0;
+  color: #f59e0b;
+  font-size: 13px;
+}
+
+.inviteDialog form button {
+  min-height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  background: #24272b;
+  color: #92969d;
+}
+
+.activeCampaign {
+  padding: 20px 24px;
+}
+
+.activeCampaign > span {
+  color: #c7c9cd;
+  font-size: 13px;
+}
+
+.campaignBody {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 20px;
+  margin-top: 14px;
+}
+
+.campaignIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  height: 62px;
+  border: 1px solid rgba(244, 74, 34, 0.45);
+  border-radius: 50%;
+  color: #f44a22;
+}
+
+.campaignDetails h3 {
+  margin: 0 0 10px;
+  font-size: 21px;
+}
+
+.campaignDetails > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  color: #92969d;
+  font-size: 14px;
+}
+
+.campaignDetails span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.marketingGrid,
+.financeGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 0.8fr);
+  gap: 20px;
+}
+
+.panel {
+  min-width: 0;
+  padding: 22px 24px;
+}
+
+.panel h2,
+.panel h3 {
+  margin-bottom: 16px;
+  font-size: 18px;
+}
+
+.panel .tableWrap {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.panel .tableWrap th,
+.panel .tableWrap td {
+  padding-right: 10px;
+  padding-left: 0;
+}
+
+.messageTable th,
+.messageTable td {
+  height: 56px;
+}
+
+.eventLinkPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.eventLinkPanel > a {
+  min-height: 48px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: #f5f5f7;
+  padding: 13px 14px;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copyEventLink {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.qrUnavailable {
+  display: grid;
+  place-items: center;
+  min-height: 150px;
+  margin-top: 16px;
+  border: 1px dashed rgba(255, 255, 255, 0.13);
+  border-radius: 8px;
+  color: #92969d;
+  font-size: 14px;
+}
+
+.financePage {
+  gap: 12px;
+}
+
+.financeSummary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: center;
+  padding: 18px 24px;
+}
+
+.financeSummary article {
+  display: grid;
+  gap: 8px;
+  min-height: 64px;
+  padding: 2px 32px;
+  border-right: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.financeSummary article:first-child {
+  padding-left: 0;
+}
+
+.financeSummary span {
+  color: #c2c5ca;
+  font-size: 14px;
+}
+
+.financeSummary strong {
+  font-size: clamp(23px, 2.1vw, 29px);
+  font-variant-numeric: tabular-nums;
+}
+
+.financeSummary p {
+  margin: 0 0 0 24px;
+  color: #c2c5ca;
+  white-space: nowrap;
+}
+
+.payoutBreakdown {
+  margin: 0;
+}
+
+.payoutBreakdown div {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px 0;
+}
+
+.payoutBreakdown div[data-total='true'] {
+  border-bottom: 0;
+  color: #f5f5f7;
+  font-weight: 700;
+}
+
+.payoutBreakdown dt,
+.payoutBreakdown dd {
+  margin: 0;
+}
+
+.payoutBreakdown dd {
+  font-variant-numeric: tabular-nums;
+}
+
+.payoutBreakdown [data-negative='true'],
+.transactionTable [data-negative='true'] {
+  color: #f87171;
+}
+
+.payoutAccount {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 66px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.payoutAccount > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 6px;
+  background: #f44a22;
+}
+
+.payoutAccount strong {
+  flex: 1;
+}
+
+.payoutAccount button {
+  border: 0;
+  color: #f44a22;
+  text-decoration: underline;
+}
+
+.transactionsPanel {
+  padding-bottom: 8px;
+}
+
+.transactionTable td:last-child,
+.transactionTable th:last-child {
+  text-align: right;
+}
+
+.emptyState,
+.restrictedState {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  min-height: 260px;
+  align-content: center;
+  padding: 32px;
+}
+
+.emptyState a {
+  color: #f44a22;
+}
+
+.restrictedState svg {
+  color: #92969d;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible,
+.copyEventLink:focus-visible,
+.copyAction:focus-visible,
+.messageAction:focus-visible,
+.promoterTable button:focus-visible,
+.promoterIdentity:focus-visible,
+.payoutAccount button:focus-visible,
+.drawerClose:focus-visible,
+.iconButton:focus-visible,
+.inviteDialog input:focus-visible,
+.eventLinkPanel a:focus-visible {
+  outline: 2px solid #f5f5f7;
+  outline-offset: 3px;
+}
+
+@media (max-width: 900px) {
+  .marketingGrid,
+  .financeGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .financeSummary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .financeSummary p {
+    grid-column: 1 / -1;
+    margin: 14px 0 0;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .campaignBody {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .campaignBody .secondaryButton {
+    grid-column: 2 / -1;
+    justify-self: end;
+  }
+}
+
+@media (max-width: 680px) {
+  .operationsPage {
+    gap: 16px;
+  }
+
+  .pageHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pageHeader .primaryButton {
+    width: 100%;
+  }
+
+  .promoterSummary,
+  .financeSummary {
+    grid-template-columns: 1fr;
+    padding: 8px 18px;
+  }
+
+  .promoterSummary article,
+  .financeSummary article {
+    min-height: 82px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    padding: 14px 0;
+  }
+
+  .promoterSummary article + article {
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .financeSummary article:last-of-type {
+    border-bottom: 0;
+  }
+
+  .financeSummary p {
+    grid-column: auto;
+    margin: 0;
+    padding: 14px 0;
+  }
+
+  .campaignBody {
+    grid-template-columns: auto 1fr;
+    align-items: start;
+  }
+
+  .campaignBody > .status {
+    grid-column: 2;
+  }
+
+  .campaignBody .secondaryButton {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .campaignDetails > div {
+    display: grid;
+  }
+
+  .tableWrap {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .tableWrap table,
+  .tableWrap thead,
+  .tableWrap tbody,
+  .tableWrap tr,
+  .tableWrap td {
+    display: block;
+    width: 100%;
+  }
+
+  .tableWrap thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .tableWrap tr {
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 12px;
+    background: #111315;
+  }
+
+  .tableWrap tr + tr {
+    margin-top: 12px;
+  }
+
+  .tableWrap td,
+  .panel .tableWrap td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 48px;
+    height: auto;
+    padding: 10px 14px;
+    text-align: right;
+  }
+
+  .tableWrap td::before {
+    flex: none;
+    color: #92969d;
+    content: attr(data-label);
+    font-size: 12px;
+  }
+
+  .promoterTable td:first-child {
+    justify-content: flex-start;
+    min-height: 68px;
+  }
+
+  .promoterTable td:first-child::before {
+    display: none;
+  }
+
+  .promoterTable td:last-child {
+    text-align: right;
+  }
+
+  .promoterTable td:last-child button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .panel {
+    padding: 18px;
+  }
+
+  .panel .tableWrap tr {
+    background: #16181b;
+  }
+
+  .transactionTable td:last-child,
+  .transactionTable th:last-child {
+    text-align: right;
+  }
+
+  .promoterDrawer {
+    width: 100%;
+    padding: 72px 24px 24px;
+  }
+
+  .promoterDrawer dl div {
+    grid-template-columns: 1fr;
+  }
+
+  .promoterDrawer dd {
+    text-align: left;
+  }
+
+  .payoutAccount {
+    flex-wrap: wrap;
+  }
+
+  .payoutAccount button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primaryButton,
+  .secondaryButton,
+  .copyEventLink,
+  .messageAction,
+  .copyAction {
+    transition: none;
+  }
+}
