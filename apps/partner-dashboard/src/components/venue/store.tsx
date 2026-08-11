@@ -16,7 +16,6 @@ import type { Audience, Channel, Metric, Range, ReqStatus, Screen } from './data
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
 
 export type EventsView = 'list' | 'analytics';
-export type DetailTab = 'sales' | 'guests' | 'tonight' | 'promoters';
 export type AudienceSeg = 'venues' | 'promoters' | 'staff';
 export type MarketingView = 'compose' | 'history' | 'templates';
 export type FinanceView = 'payouts' | 'orders' | 'bank';
@@ -68,8 +67,6 @@ interface VenueStudioValue {
   selectedEventIdx: number;
   setSelectedEventIdx: Dispatch<SetStateAction<number>>;
   openEvent: (index: number) => void;
-  detailTab: DetailTab;
-  setDetailTab: Dispatch<SetStateAction<DetailTab>>;
 
   // slot requests
   requestsView: RequestsView;
@@ -167,7 +164,6 @@ export function VenueStudioProvider({ children }: { readonly children: ReactNode
 
   const [eventsView, setEventsView] = useState<EventsView>('list');
   const [selectedEventIdx, setSelectedEventIdx] = useState(0);
-  const [detailTab, setDetailTab] = useState<DetailTab>('sales');
 
   const [requestsView, setRequestsView] = useState<RequestsView>('pending');
   const [requestOverrides, setRequestOverrides] = useState<Record<number, ReqStatus>>({});
@@ -206,26 +202,29 @@ export function VenueStudioProvider({ children }: { readonly children: ReactNode
 
   const [settingsView, setSettingsView] = useState<SettingsView>('public');
 
-  const go = useCallback((next: Screen) => {
-    setScreen(next);
-    setComposerOpen(false);
-    setCalendarOpen(false);
-    setNotifOpen(false);
-    window.scrollTo(0, 0);
-    const routeByScreen: Record<Screen, string> = {
-      overview: '/venue/overview',
-      events: '/venue/events',
-      eventDetail: '/venue/events/selected',
-      slotRequests: '/venue/slot-requests',
-      audience: '/venue/partners',
-      create: '/venue/events/create',
-      marketing: '/venue/marketing',
-      finance: '/venue/finance',
-      door: '/venue/door',
-      settings: '/venue/settings',
-    };
-    router.push(routeByScreen[next]);
-  }, [router]);
+  const go = useCallback(
+    (next: Screen) => {
+      setScreen(next);
+      setComposerOpen(false);
+      setCalendarOpen(false);
+      setNotifOpen(false);
+      window.scrollTo(0, 0);
+      const routeByScreen: Record<Screen, string> = {
+        overview: '/venue/overview',
+        events: '/venue/events',
+        eventDetail: '/venue/events/selected',
+        slotRequests: '/venue/slot-requests',
+        audience: '/venue/partners',
+        create: '/venue/events/create',
+        marketing: '/venue/marketing',
+        finance: '/venue/finance',
+        door: '/venue/door',
+        settings: '/venue/settings',
+      };
+      router.push(routeByScreen[next]);
+    },
+    [router],
+  );
 
   const setRequestStatus = useCallback((id: number, status: ReqStatus) => {
     setRequestOverrides((prev) => ({ ...prev, [id]: status }));
@@ -254,14 +253,20 @@ export function VenueStudioProvider({ children }: { readonly children: ReactNode
     go('create');
   }, [go]);
 
-  const openEvent = useCallback((index: number) => {
-    const event = EVENTS[index];
-    if (!event) return;
-    setSelectedEventIdx(index);
-    const slug = event.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    router.push(`/venue/events/${slug}`);
-    window.scrollTo(0, 0);
-  }, [router]);
+  const openEvent = useCallback(
+    (index: number) => {
+      const event = EVENTS[index];
+      if (!event) return;
+      setSelectedEventIdx(index);
+      const slug = event.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+      router.push(`/venue/events/${slug}`);
+      window.scrollTo(0, 0);
+    },
+    [router],
+  );
 
   const goOrders = useCallback(() => {
     setFinanceView('orders');
@@ -307,8 +312,6 @@ export function VenueStudioProvider({ children }: { readonly children: ReactNode
       selectedEventIdx,
       setSelectedEventIdx,
       openEvent,
-      detailTab,
-      setDetailTab,
       requestsView,
       setRequestsView,
       requestOverrides,
@@ -389,7 +392,6 @@ export function VenueStudioProvider({ children }: { readonly children: ReactNode
       eventsView,
       selectedEventIdx,
       openEvent,
-      detailTab,
       requestsView,
       requestOverrides,
       setRequestStatus,

@@ -451,29 +451,6 @@ export const NETWORK = [
   },
 ] as const;
 
-// Retained for Event Detail until that route receives its own approved milestone.
-export const TIER_BARS = [
-  {
-    name: 'VIP Table',
-    count: '48',
-    money: '₹2,40,000',
-    bar: bar(40, 'linear-gradient(90deg,#8b5cf6,#c4a5ff)'),
-  },
-  {
-    name: 'VIP Entry',
-    count: '92',
-    money: '₹1,84,000',
-    bar: bar(70, 'linear-gradient(90deg,#00c2a8,#6ee7d4)'),
-  },
-  {
-    name: 'General Admission',
-    count: '200',
-    money: '₹1,88,000',
-    bar: bar(100, 'linear-gradient(90deg,#ff5a1f,#ffb078)'),
-  },
-] as const;
-
-export const DETAIL_SPARK_SERIES = [120, 145, 132, 168, 190, 175, 210, 196, 238, 224, 268, 300];
 export const FINANCE_SPARK_SERIES = [30, 42, 38, 55, 48, 62, 58, 72, 66, 80, 74, 92];
 
 // ── slot requests ───────────────────────────────────────────────────────────
@@ -699,37 +676,6 @@ export const glassPillBtn =
   'width:100%;text-align:center;background:rgba(255,255,255,0.14);backdrop-filter:blur(12px);' +
   'border:1px solid rgba(255,255,255,0.22);color:#fff;padding:12px;border-radius:999px;' +
   'font-size:13px;font-weight:700;cursor:pointer;';
-
-// ── event detail ────────────────────────────────────────────────────────────
-
-export const EVENT_GUESTS = [
-  { name: 'Aisha Menon', tier: '2× VIP Entry', tag: 'VIP', check: 'Checked in' },
-  { name: 'Karan Shah', tier: '1× General Admission', tag: 'Repeat', check: 'Checked in' },
-  { name: 'Devansh Iyer', tier: '4× General Admission', tag: 'New', check: 'Not yet' },
-  { name: 'Priya Kapoor', tier: '1× VIP Table', tag: 'VIP', check: 'Checked in' },
-  { name: 'Nikhil Verma', tier: '2× General Admission', tag: 'Repeat', check: 'Not yet' },
-  { name: 'Sara D’Souza', tier: '1× VIP Entry', tag: 'New', check: 'Not yet' },
-] as const;
-
-export const GUEST_TAG_COLORS: Record<string, readonly [string, string]> = {
-  VIP: ['rgba(255,90,31,0.14)', '#ff8a55'],
-  Repeat: ['rgba(110,231,155,0.14)', '#6ee79b'],
-  New: ['rgba(255,255,255,0.08)', '#c9c9c6'],
-};
-
-export const WALKINS = [
-  { name: 'Rohan Das', meta: 'GA · Paid ₹1,200 cash', time: '9:42 PM' },
-  { name: 'Tanya Bhat', meta: 'GA · Paid ₹1,200 card', time: '9:38 PM' },
-  { name: 'Vikram S.', meta: 'VIP · Paid ₹4,000 UPI', time: '9:31 PM' },
-  { name: 'Neha Pillai', meta: 'GA · Paid ₹1,200 UPI', time: '9:25 PM' },
-] as const;
-
-export const PROMOTERS = [
-  { rank: '1', name: 'Arjun (Pulse Collective)', tickets: '124', owed: '₹18,600' },
-  { rank: '2', name: 'Zoya (Nightowl)', tickets: '88', owed: '₹13,200' },
-  { rank: '3', name: 'Kabir M.', tickets: '56', owed: '₹8,400' },
-  { rank: '4', name: 'Riya (House parties)', tickets: '31', owed: '₹4,650' },
-] as const;
 
 // ── create event ────────────────────────────────────────────────────────────
 
