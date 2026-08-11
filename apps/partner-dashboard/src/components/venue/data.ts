@@ -8,12 +8,13 @@
 
 import type { DayStatus } from './charts';
 
+export { EVENTS, EV_STATUS_DOT, eventCardBg } from './venue-events-model';
+export type { EventStatus, VenueEvent } from './venue-events-model';
+
 export const ACCENT = '#ff5a1f';
 export const GREEN = '#6ee79b';
 export const RED = '#f0857a';
 export const AMBER = '#ffb020';
-
-export const POSTER_SRC = '/venue/neon-nights-poster.webp';
 
 // ── shared style helpers ────────────────────────────────────────────────────
 
@@ -60,6 +61,11 @@ export const iconWrapMk = (bg: string, col: string): string =>
 
 export const tagStyle = (bg: string, col: string): string =>
   `font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:${bg};color:${col};`;
+
+export const outlinePill =
+  'display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,0.35);' +
+  'border:1px solid rgba(255,255,255,0.28);color:#fff;padding:5px 12px 5px 9px;border-radius:999px;' +
+  'font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;';
 
 export const inputStyle =
   'width:100%;background:#0d0d0d;border:1px solid rgba(255,255,255,0.1);border-radius:12px;' +
@@ -445,159 +451,7 @@ export const NETWORK = [
   },
 ] as const;
 
-// ── events ──────────────────────────────────────────────────────────────────
-
-export type EventStatus = 'Live' | 'Draft' | 'Past' | 'Cancelled';
-
-export interface VenueEvent {
-  name: string;
-  status: EventStatus;
-  meta: string;
-  metaShort: string;
-  pct: string;
-  pctN: number;
-  revenue: string;
-  price: string;
-  tint: string;
-  card: string;
-  venue: string;
-  day: string;
-  month: string;
-  time: string;
-  host: string;
-}
-
-export const EVENTS: readonly VenueEvent[] = [
-  {
-    name: 'Neon Nights: Afrobeats',
-    status: 'Live',
-    meta: 'Skyline Rooftop · Thu, Jul 16 · 9:00 PM',
-    metaShort: 'Skyline Rooftop · Jul 16',
-    pct: '85%',
-    pctN: 85,
-    revenue: '₹6,12,000',
-    price: '₹1,800',
-    tint: 'linear-gradient(135deg,#ff5a1f,#7a1f00)',
-    card: 'linear-gradient(158deg,#d1490c,#7a1f00 52%,#2a0f04)',
-    venue: 'Skyline Rooftop',
-    day: '16',
-    month: 'JUL',
-    time: '9:00 pm',
-    host: 'Rhea Kapoor',
-  },
-  {
-    name: 'Sunset Sessions Vol. 4',
-    status: 'Live',
-    meta: 'Skyline Rooftop · Sat, Aug 2 · 5:00 PM',
-    metaShort: 'Skyline Rooftop · Aug 2',
-    pct: '62%',
-    pctN: 62,
-    revenue: '₹3,88,000',
-    price: '₹1,200',
-    tint: 'linear-gradient(135deg,#ffb020,#7a3a00)',
-    card: 'linear-gradient(158deg,#b8860b,#6b4e0a 52%,#241a04)',
-    venue: 'Skyline Rooftop',
-    day: '02',
-    month: 'AUG',
-    time: '5:00 pm',
-    host: 'Rhea Kapoor',
-  },
-  {
-    name: 'Warehouse Rave',
-    status: 'Draft',
-    meta: 'The Docks · Sat, Aug 9 · 11:00 PM',
-    metaShort: 'The Docks · Aug 9',
-    pct: '41%',
-    pctN: 41,
-    revenue: '₹1,64,000',
-    price: '₹999',
-    tint: 'linear-gradient(135deg,#3b2fff,#0a0a3a)',
-    card: 'linear-gradient(158deg,#4b5563,#1f2937 52%,#0c1013)',
-    venue: 'The Docks',
-    day: '09',
-    month: 'AUG',
-    time: '11:00 pm',
-    host: 'Pulse Collective',
-  },
-  {
-    name: 'Bollywood Brunch',
-    status: 'Live',
-    meta: 'Garden Terrace · Sat, Aug 15 · 12:00 PM',
-    metaShort: 'Garden Terrace · Aug 15',
-    pct: '78%',
-    pctN: 78,
-    revenue: '₹2,34,000',
-    price: '₹1,500',
-    tint: 'linear-gradient(135deg,#ff2f8f,#3a0020)',
-    card: 'linear-gradient(158deg,#be185d,#6d1a3a 52%,#240612)',
-    venue: 'Garden Terrace',
-    day: '15',
-    month: 'AUG',
-    time: '12:00 pm',
-    host: 'Rhea Kapoor',
-  },
-  {
-    name: 'Monsoon Sessions',
-    status: 'Past',
-    meta: 'Skyline Rooftop · Sat, Jun 28 · 8:00 PM',
-    metaShort: 'Skyline Rooftop · Jun 28',
-    pct: '96%',
-    pctN: 96,
-    revenue: '₹7,05,000',
-    price: '₹2,200',
-    tint: 'linear-gradient(135deg,#00c2a8,#003a33)',
-    card: 'linear-gradient(158deg,#0d7a6e,#064a42 52%,#03231f)',
-    venue: 'Skyline Rooftop',
-    day: '28',
-    month: 'JUN',
-    time: '8:00 pm',
-    host: 'Rhea Kapoor',
-  },
-];
-
-export const EV_STATUS_DOT: Record<EventStatus, string> = {
-  Live: '#6ee79b',
-  Draft: '#ffb020',
-  Past: '#8a8a86',
-  Cancelled: '#f0857a',
-};
-
-export const outlinePill =
-  'display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,0.35);' +
-  'border:1px solid rgba(255,255,255,0.28);color:#fff;padding:5px 12px 5px 9px;border-radius:999px;' +
-  'font-size:10.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;';
-
-/** Poster backdrop for an event card — index 0 uses the real photo. */
-export const eventCardBg = (idx: number, card: string): string =>
-  idx === 0
-    ? `position:absolute;inset:0;background-image:url(${POSTER_SRC});background-size:cover;background-position:center 30%;`
-    : `position:absolute;inset:0;background:${card};`;
-
-export const EVENT_FILTERS = ['All statuses', 'All venues', 'This month'] as const;
-
-// ── events: analytics ───────────────────────────────────────────────────────
-
-const deltaUp = 'font-size:12px;font-weight:700;color:#6ee79b;margin-top:6px;';
-
-export const ANALYTICS_CARDS = [
-  { label: 'Tickets sold', value: '12,480', delta: '+18% vs last month', deltaStyle: deltaUp },
-  { label: 'Money made', value: '₹42.6L', delta: '+24% vs last month', deltaStyle: deltaUp },
-  {
-    label: 'Average ticket price',
-    value: '₹1,940',
-    delta: '+6% vs last month',
-    deltaStyle: deltaUp,
-  },
-  {
-    label: "Who's coming back",
-    value: '34%',
-    delta: 'Repeat guests',
-    deltaStyle: 'font-size:12px;font-weight:600;color:#8a8a86;margin-top:6px;',
-  },
-] as const;
-
-export const ANALYTICS_SERIES = [40, 80, 120, 90, 160, 200, 180, 240, 300, 280, 360, 420];
-
+// Retained for Event Detail until that route receives its own approved milestone.
 export const TIER_BARS = [
   {
     name: 'VIP Table',
@@ -618,35 +472,6 @@ export const TIER_BARS = [
     bar: bar(100, 'linear-gradient(90deg,#ff5a1f,#ffb078)'),
   },
 ] as const;
-
-export const GENDER_RAW = [
-  { label: 'Female', pct: 54, color: '#ff8a55' },
-  { label: 'Male', pct: 42, color: '#8b5cf6' },
-  { label: 'Other', pct: 4, color: '#6ee79b' },
-] as const;
-
-export const AGE_RAW: readonly (readonly [string, number])[] = [
-  ['18–24', 38],
-  ['25–34', 44],
-  ['35–44', 14],
-  ['45+', 4],
-];
-
-export const CHANNEL_RAW: readonly (readonly [string, number, boolean])[] = [
-  ['Direct', 52, true],
-  ['Promoters', 33, false],
-  ['Social', 15, false],
-];
-
-export const PEAK_RAW: readonly (readonly [string, number])[] = [
-  ['Mon', 20],
-  ['Tue', 26],
-  ['Wed', 34],
-  ['Thu', 58],
-  ['Fri', 82],
-  ['Sat', 100],
-  ['Sun', 46],
-];
 
 export const DETAIL_SPARK_SERIES = [120, 145, 132, 168, 190, 175, 210, 196, 238, 224, 268, 300];
 export const FINANCE_SPARK_SERIES = [30, 42, 38, 55, 48, 62, 58, 72, 66, 80, 74, 92];

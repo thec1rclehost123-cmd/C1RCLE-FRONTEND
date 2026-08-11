@@ -14,7 +14,11 @@ import type { ReactNode } from 'react';
 export function VenueDashboardLayout({ children }: { readonly children: ReactNode }) {
   const pathname = usePathname();
 
-  if (pathname === '/venue/overview') {
+  if (
+    pathname === '/venue/overview' ||
+    pathname === '/venue/events' ||
+    pathname === '/venue/events/analytics'
+  ) {
     return (
       <PartnerDashboardLayout partnerRole="venue">
         <div className="venue-studio venue-route">{children}</div>
