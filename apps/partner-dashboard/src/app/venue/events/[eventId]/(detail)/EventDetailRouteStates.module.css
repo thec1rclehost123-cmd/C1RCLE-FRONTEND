@@ -6,9 +6,10 @@
 .loading section,
 .loading > div,
 .loading article {
-  border: 1px solid rgb(255 255 255 / 9%);
-  border-radius: 12px;
-  background: #111315;
+  border: 1px solid var(--dashboard-border);
+  border-radius: var(--dashboard-radius-panel);
+  background: var(--dashboard-surface);
+  box-shadow: var(--dashboard-shadow-card);
 }
 
 .loading section {
@@ -21,8 +22,8 @@
 
 .loading section span {
   height: 70px;
-  border-left: 1px solid rgb(255 255 255 / 8%);
-  background: #16181b;
+  border-left: 1px solid var(--dashboard-border);
+  background: var(--dashboard-surface-elevated);
 }
 
 .loading section span:first-child {
@@ -39,9 +40,9 @@
 
 .loading > div i {
   min-height: 310px;
-  border: 1px solid rgb(255 255 255 / 9%);
-  border-radius: 12px;
-  background: #111315;
+  border: 1px solid var(--dashboard-border);
+  border-radius: var(--dashboard-radius-panel);
+  background: var(--dashboard-surface);
 }
 
 .loading article {
@@ -53,10 +54,10 @@
   min-height: 430px;
   place-items: center;
   align-content: center;
-  border: 1px solid rgb(255 255 255 / 9%);
-  border-radius: 12px;
+  border: 1px solid var(--dashboard-border);
+  border-radius: var(--dashboard-radius-primary);
   padding: 32px;
-  background: #111315;
+  background: var(--dashboard-surface);
   text-align: center;
 }
 
@@ -65,8 +66,8 @@
   width: 48px;
   height: 48px;
   place-items: center;
-  border-radius: 12px;
-  color: #f87171;
+  border-radius: var(--dashboard-radius-icon);
+  color: var(--dashboard-danger);
   background: rgb(248 113 113 / 10%);
   font-size: 22px;
 }
@@ -79,7 +80,7 @@
 
 .error p {
   margin: 0;
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
 }
 
 .error button {
@@ -89,9 +90,9 @@
   gap: 8px;
   margin-top: 22px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-button);
   color: #fff;
-  background: #f44a22;
+  background: var(--dashboard-accent);
   padding: 0 18px;
   font: inherit;
   cursor: pointer;
@@ -105,7 +106,7 @@
 
   .loading section span {
     height: 48px;
-    border-top: 1px solid rgb(255 255 255 / 8%);
+    border-top: 1px solid var(--dashboard-border);
     border-left: 0;
   }
 

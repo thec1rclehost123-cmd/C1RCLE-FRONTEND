@@ -68,8 +68,9 @@
 .review,
 .preview {
   border: 1px solid var(--partner-border);
-  border-radius: 12px;
-  background: #111315;
+  border-radius: var(--dashboard-radius-card);
+  background: var(--dashboard-surface);
+  box-shadow: var(--dashboard-shadow-panel);
 }
 .formPanel,
 .ticketsPanel,
@@ -103,7 +104,8 @@
   align-items: center;
   gap: 18px;
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-row);
+  background: var(--dashboard-surface-elevated);
   padding: 10px;
   cursor: pointer;
 }
@@ -148,9 +150,9 @@
   width: 100%;
   min-height: 44px;
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-control);
   color: var(--partner-text);
-  background: #0d0f11;
+  background: var(--dashboard-control);
   padding: 10px 12px;
   color-scheme: dark;
 }
@@ -179,7 +181,8 @@
 .readiness {
   margin-top: 14px;
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-row);
+  background: var(--dashboard-surface-elevated);
   padding: 0 14px;
 }
 .readiness summary {
@@ -203,8 +206,9 @@
 .dialog {
   width: min(440px, calc(100vw - 32px));
   border: 1px solid var(--partner-border);
-  border-radius: 12px;
-  background: #111315;
+  border-radius: var(--dashboard-radius-overlay);
+  background: var(--dashboard-surface-elevated);
+  box-shadow: var(--dashboard-shadow-floating);
   padding: 24px;
 }
 .dialog h2 {
@@ -221,7 +225,7 @@
 .dialog button {
   min-height: 44px;
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-button);
   color: var(--partner-text);
   background: transparent;
   padding: 0 16px;
@@ -263,7 +267,7 @@
 .preview header div {
   display: flex;
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-control);
   padding: 2px;
 }
 .preview header button {
@@ -282,8 +286,8 @@
   overflow: hidden;
   margin-top: 16px;
   border: 1px solid var(--partner-border);
-  border-radius: 10px;
-  background: #0d0f11;
+  border-radius: var(--dashboard-radius-card);
+  background: var(--dashboard-control);
 }
 .preview > article > img {
   width: 100%;
@@ -338,7 +342,7 @@
   min-height: 44px;
   margin-top: 16px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-button);
   color: #fff;
   background: var(--partner-accent);
 }
@@ -354,7 +358,8 @@
 .ticketList {
   overflow: hidden;
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-card);
+  background: var(--dashboard-surface-elevated);
 }
 .ticketList article {
   display: grid;
@@ -370,7 +375,7 @@
 }
 .ticketList article > svg {
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-control);
   padding: 12px;
   box-sizing: content-box;
 }
@@ -393,11 +398,11 @@
 .addTicket,
 .ticketEditor button {
   display: inline-flex;
-  min-height: 40px;
+  min-height: 44px;
   align-items: center;
   gap: 6px;
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-button);
   color: var(--partner-text);
   background: transparent;
   padding: 0 12px;
@@ -417,8 +422,8 @@
   gap: 10px;
   margin-top: 12px;
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
-  background: #0d0f11;
+  border-radius: var(--dashboard-radius-row);
+  background: var(--dashboard-control);
   padding: 14px;
 }
 .ticketEditor .field {
@@ -440,7 +445,8 @@
   overflow: hidden;
   margin-top: 12px;
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-card);
+  background: var(--dashboard-surface-elevated);
 }
 .ticketSummary div {
   display: grid;
@@ -465,7 +471,8 @@
   align-items: center;
   justify-content: space-between;
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-row);
+  background: var(--dashboard-surface-elevated);
   margin-top: 8px;
   padding: 0 12px;
 }
@@ -495,7 +502,8 @@
   align-items: center;
   gap: 16px;
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-row);
+  background: var(--dashboard-surface-elevated);
   padding: 14px 16px;
 }
 .review article > svg {
@@ -521,7 +529,7 @@
 .status {
   margin: 14px 0 0;
   border: 1px solid rgb(248 113 113 / 30%);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-control);
   color: #fecaca;
   background: rgb(248 113 113 / 8%);
   padding: 12px 16px;
@@ -561,7 +569,7 @@
   justify-content: center;
   gap: 8px;
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-button);
   color: var(--partner-text);
   background: transparent;
   padding: 0 18px;

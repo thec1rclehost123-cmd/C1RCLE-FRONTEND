@@ -1,7 +1,7 @@
 .operationsPage {
   display: grid;
   gap: 20px;
-  color: #f5f5f7;
+  color: var(--dashboard-text);
 }
 
 .pageHeader {
@@ -18,7 +18,7 @@
 .emptyState h2,
 .emptyState h3 {
   margin: 0;
-  color: #f5f5f7;
+  color: var(--dashboard-text);
 }
 
 .pageHeader h2 {
@@ -30,7 +30,7 @@
 .emptyState p,
 .restrictedState p {
   margin: 6px 0 0;
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
   font-size: 15px;
 }
 
@@ -40,7 +40,7 @@
 .messageAction,
 .copyAction {
   min-height: 44px;
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-button);
   font: inherit;
   font-weight: 650;
   transition:
@@ -56,8 +56,8 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 1px solid #f44a22;
-  background: #f44a22;
+  border: 1px solid var(--dashboard-accent);
+  background: var(--dashboard-accent);
   color: #fff;
   padding: 0 20px;
   text-decoration: none;
@@ -73,14 +73,14 @@
   gap: 8px;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: transparent;
-  color: #f5f5f7;
+  color: var(--dashboard-text);
   padding: 0 16px;
   cursor: pointer;
 }
 
 .primaryButton:hover,
 .messageAction:hover {
-  background: #ff5830;
+  background: var(--dashboard-accent-hover);
 }
 
 .promoterDrawer .messageAction {
@@ -90,7 +90,7 @@
 .secondaryButton:hover,
 .copyEventLink:hover,
 .copyAction:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--dashboard-hover);
 }
 
 .primaryButton:active,
@@ -108,9 +108,10 @@
 .tableWrap,
 .emptyState,
 .restrictedState {
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 12px;
-  background: #111315;
+  border: 1px solid var(--dashboard-border);
+  border-radius: var(--dashboard-radius-panel);
+  background: var(--dashboard-surface);
+  box-shadow: var(--dashboard-shadow-card);
 }
 
 .promoterSummary {
@@ -128,7 +129,7 @@
 }
 
 .promoterSummary article + article {
-  border-left: 1px solid rgba(255, 255, 255, 0.09);
+  border-left: 1px solid var(--dashboard-border);
   padding-left: 48px;
 }
 
@@ -143,7 +144,7 @@
 
 .promoterSummary span {
   align-self: start;
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
   font-size: 14px;
 }
 
@@ -162,15 +163,19 @@
 .tableWrap th,
 .tableWrap td {
   height: 64px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--dashboard-border);
   padding: 0 20px;
   text-align: left;
   vertical-align: middle;
 }
 
 .tableWrap th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
   height: 48px;
-  color: #92969d;
+  background: var(--dashboard-surface-elevated);
+  color: var(--dashboard-text-secondary);
   font-size: 13px;
   font-weight: 550;
 }
@@ -186,7 +191,7 @@
   min-height: 48px;
   border: 0;
   background: transparent;
-  color: #f5f5f7;
+  color: var(--dashboard-text);
   padding: 0;
   font: inherit;
   cursor: pointer;
@@ -205,7 +210,7 @@
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 50%;
   background: #24272b;
-  color: #f5f5f7;
+  color: var(--dashboard-text);
   font-weight: 700;
 }
 
@@ -221,11 +226,11 @@
 
 .promoterTable td:last-child button,
 .payoutAccount button {
-  min-height: 40px;
+  min-height: 44px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-control);
   background: transparent;
-  color: #f5f5f7;
+  color: var(--dashboard-text);
   padding: 0 16px;
   font: inherit;
   cursor: pointer;
@@ -238,14 +243,14 @@
   width: fit-content;
   border: 1px solid rgba(52, 211, 153, 0.36);
   border-radius: 6px;
-  color: #34d399;
+  color: var(--dashboard-success);
   padding: 3px 10px;
   font-size: 13px;
 }
 
 .status[data-status='invite pending'] {
   border-color: rgba(245, 158, 11, 0.4);
-  color: #f59e0b;
+  color: var(--dashboard-warning);
 }
 
 .status[data-status='refunded'] {
@@ -270,8 +275,10 @@
   bottom: 0;
   width: min(390px, 100vw);
   overflow-y: auto;
-  border-left: 1px solid rgba(255, 255, 255, 0.09);
-  background: #111315;
+  border-left: 1px solid var(--dashboard-border);
+  border-radius: var(--dashboard-radius-overlay) 0 0 var(--dashboard-radius-overlay);
+  background: var(--dashboard-surface-elevated);
+  box-shadow: var(--dashboard-shadow-floating);
   padding: 42px 40px 32px;
 }
 
@@ -284,7 +291,7 @@
   height: 44px;
   border: 0;
   background: transparent;
-  color: #f5f5f7;
+  color: var(--dashboard-text);
   cursor: pointer;
 }
 
@@ -316,7 +323,7 @@
   display: grid;
   grid-template-columns: 130px minmax(0, 1fr);
   gap: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--dashboard-border);
   padding: 15px 0;
 }
 
@@ -324,7 +331,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
 }
 
 .promoterDrawer dd {
@@ -346,9 +353,10 @@
   left: 50%;
   width: min(480px, calc(100vw - 32px));
   transform: translate(-50%, -50%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
-  background: #16181b;
+  border: 1px solid var(--dashboard-border-strong);
+  border-radius: var(--dashboard-radius-overlay);
+  background: var(--dashboard-surface-elevated);
+  box-shadow: var(--dashboard-shadow-floating);
   padding: 28px;
 }
 
@@ -365,7 +373,7 @@
 
 .inviteDialog > p {
   margin: 6px 0 22px;
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
 }
 
 .inviteDialog form,
@@ -385,26 +393,26 @@
 
 .inviteDialog input {
   min-height: 44px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  background: #0b0b0c;
-  color: #f5f5f7;
+  border: 1px solid var(--dashboard-border-strong);
+  border-radius: var(--dashboard-radius-control);
+  background: var(--dashboard-page);
+  color: var(--dashboard-text);
   padding: 0 12px;
   font: inherit;
 }
 
 .inviteDialog form p {
   margin: 0;
-  color: #f59e0b;
+  color: var(--dashboard-warning);
   font-size: 13px;
 }
 
 .inviteDialog form button {
   min-height: 44px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 8px;
+  border: 1px solid var(--dashboard-border);
+  border-radius: var(--dashboard-radius-control);
   background: #24272b;
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
 }
 
 .activeCampaign {
@@ -432,7 +440,7 @@
   height: 62px;
   border: 1px solid rgba(244, 74, 34, 0.45);
   border-radius: 50%;
-  color: #f44a22;
+  color: var(--dashboard-accent);
 }
 
 .campaignDetails h3 {
@@ -444,7 +452,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px 24px;
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
   font-size: 14px;
 }
 
@@ -498,9 +506,9 @@
 .eventLinkPanel > a {
   min-height: 48px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  color: #f5f5f7;
+  border: 1px solid var(--dashboard-border-strong);
+  border-radius: var(--dashboard-radius-control);
+  color: var(--dashboard-text);
   padding: 13px 14px;
   text-decoration: none;
   text-overflow: ellipsis;
@@ -518,8 +526,8 @@
   min-height: 150px;
   margin-top: 16px;
   border: 1px dashed rgba(255, 255, 255, 0.13);
-  border-radius: 8px;
-  color: #92969d;
+  border-radius: var(--dashboard-radius-control);
+  color: var(--dashboard-text-secondary);
   font-size: 14px;
 }
 
@@ -539,7 +547,7 @@
   gap: 8px;
   min-height: 64px;
   padding: 2px 32px;
-  border-right: 1px solid rgba(255, 255, 255, 0.09);
+  border-right: 1px solid var(--dashboard-border);
 }
 
 .financeSummary article:first-child {
@@ -570,13 +578,13 @@
   display: flex;
   justify-content: space-between;
   gap: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--dashboard-border);
   padding: 12px 0;
 }
 
 .payoutBreakdown div[data-total='true'] {
   border-bottom: 0;
-  color: #f5f5f7;
+  color: var(--dashboard-text);
   font-weight: 700;
 }
 
@@ -591,7 +599,7 @@
 
 .payoutBreakdown [data-negative='true'],
 .transactionTable [data-negative='true'] {
-  color: #f87171;
+  color: var(--dashboard-danger);
 }
 
 .payoutAccount {
@@ -599,8 +607,8 @@
   align-items: center;
   gap: 14px;
   min-height: 66px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
+  border: 1px solid var(--dashboard-border-strong);
+  border-radius: var(--dashboard-radius-control);
   padding: 10px 14px;
 }
 
@@ -611,7 +619,7 @@
   width: 42px;
   height: 42px;
   border-radius: 6px;
-  background: #f44a22;
+  background: var(--dashboard-accent);
 }
 
 .payoutAccount strong {
@@ -620,7 +628,7 @@
 
 .payoutAccount button {
   border: 0;
-  color: #f44a22;
+  color: var(--dashboard-accent);
   text-decoration: underline;
 }
 
@@ -641,14 +649,15 @@
   min-height: 260px;
   align-content: center;
   padding: 32px;
+  border-radius: var(--dashboard-radius-primary);
 }
 
 .emptyState a {
-  color: #f44a22;
+  color: var(--dashboard-accent);
 }
 
 .restrictedState svg {
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
 }
 
 .srOnly {
@@ -673,7 +682,7 @@
 .iconButton:focus-visible,
 .inviteDialog input:focus-visible,
 .eventLinkPanel a:focus-visible {
-  outline: 2px solid #f5f5f7;
+  outline: 2px solid var(--dashboard-text);
   outline-offset: 3px;
 }
 
@@ -691,7 +700,7 @@
     grid-column: 1 / -1;
     margin: 14px 0 0;
     padding-top: 14px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid var(--dashboard-border);
   }
 
   .campaignBody {
@@ -728,7 +737,7 @@
   .financeSummary article {
     min-height: 82px;
     border-right: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    border-bottom: 1px solid var(--dashboard-border);
     padding: 14px 0;
   }
 
@@ -790,9 +799,9 @@
 
   .tableWrap tr {
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    border-radius: 12px;
-    background: #111315;
+    border: 1px solid var(--dashboard-border);
+    border-radius: var(--dashboard-radius-row);
+    background: var(--dashboard-surface-elevated);
   }
 
   .tableWrap tr + tr {
@@ -813,7 +822,7 @@
 
   .tableWrap td::before {
     flex: none;
-    color: #92969d;
+    color: var(--dashboard-text-secondary);
     content: attr(data-label);
     font-size: 12px;
   }
@@ -841,7 +850,7 @@
   }
 
   .panel .tableWrap tr {
-    background: #16181b;
+    background: var(--dashboard-surface-elevated);
   }
 
   .transactionTable td:last-child,

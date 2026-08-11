@@ -11,6 +11,8 @@
 .page h1 {
   margin: 0;
   font-size: 32px;
+  font-weight: 650;
+  line-height: 1.15;
 }
 .page p {
   margin: 6px 0 0;
@@ -25,7 +27,7 @@
 .page a {
   min-height: 44px;
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-button);
   color: var(--partner-text);
   background: transparent;
   padding: 0 14px;
@@ -54,7 +56,7 @@
 }
 .page > nav button[aria-current='page'] {
   border-bottom: 2px solid var(--partner-accent);
-  color: var(--partner-accent);
+  color: var(--partner-text);
 }
 .groups {
   display: grid;
@@ -73,10 +75,8 @@
   font-weight: 500;
 }
 .list {
-  overflow: hidden;
-  border: 1px solid var(--partner-border);
-  border-radius: 12px;
-  background: #111315;
+  display: grid;
+  gap: 8px;
 }
 .list article {
   display: grid;
@@ -84,15 +84,14 @@
   min-height: 92px;
   align-items: center;
   gap: 12px;
-  border-bottom: 1px solid var(--partner-border);
+  border: 1px solid var(--partner-border);
+  border-radius: var(--dashboard-radius-row);
+  background: var(--dashboard-surface-elevated);
   padding: 12px 14px;
 }
-.list article:last-child {
-  border-bottom: 0;
-}
 .list article[data-unread='true'] {
-  border-left: 2px solid var(--partner-accent);
-  background: #15181a;
+  border-color: rgb(244 74 34 / 26%);
+  background: var(--dashboard-selected);
 }
 .list article > svg {
   color: var(--partner-accent);
@@ -126,7 +125,8 @@
   align-content: center;
   gap: 8px;
   border: 1px solid var(--partner-border);
-  border-radius: 12px;
+  border-radius: var(--dashboard-radius-panel);
+  background: var(--dashboard-surface);
   margin-top: 24px;
   color: var(--partner-muted);
   text-align: center;

@@ -17,8 +17,8 @@
 .loading > div i,
 .loading section i {
   display: block;
-  border-radius: 8px;
-  background: #16181b;
+  border-radius: var(--dashboard-radius-control);
+  background: var(--dashboard-surface-elevated);
 }
 
 .loading header span {
@@ -34,7 +34,7 @@
 .loading nav {
   display: flex;
   gap: 28px;
-  border-bottom: 1px solid rgb(255 255 255 / 9%);
+  border-bottom: 1px solid var(--dashboard-border);
 }
 
 .loading nav span {
@@ -57,9 +57,10 @@
 .loading section {
   display: grid;
   overflow: hidden;
-  border: 1px solid rgb(255 255 255 / 9%);
-  border-radius: 12px;
-  background: #111315;
+  border: 1px solid var(--dashboard-border);
+  border-radius: var(--dashboard-radius-panel);
+  background: var(--dashboard-surface);
+  box-shadow: var(--dashboard-shadow-card);
 }
 
 .loading section i {
@@ -77,10 +78,10 @@
   min-height: 520px;
   place-items: center;
   align-content: center;
-  border: 1px solid rgb(255 255 255 / 9%);
-  border-radius: 12px;
+  border: 1px solid var(--dashboard-border);
+  border-radius: var(--dashboard-radius-primary);
   padding: 32px;
-  background: #111315;
+  background: var(--dashboard-surface);
   text-align: center;
 }
 
@@ -89,8 +90,8 @@
   width: 48px;
   height: 48px;
   place-items: center;
-  border-radius: 12px;
-  color: #f87171;
+  border-radius: var(--dashboard-radius-icon);
+  color: var(--dashboard-danger);
   background: rgb(248 113 113 / 10%);
   font-size: 22px;
 }
@@ -104,7 +105,7 @@
 .error p {
   max-width: 520px;
   margin: 0;
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
   line-height: 1.6;
 }
 
@@ -115,9 +116,9 @@
   gap: 8px;
   margin-top: 22px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-button);
   color: #fff;
-  background: #f44a22;
+  background: var(--dashboard-accent);
   padding: 0 18px;
   cursor: pointer;
 }

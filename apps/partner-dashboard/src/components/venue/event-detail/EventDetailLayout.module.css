@@ -1,7 +1,7 @@
 .eventDetail {
   display: grid;
   min-width: 0;
-  color: #f5f5f7;
+  color: var(--dashboard-text);
 }
 
 .eventHeader {
@@ -17,8 +17,8 @@
   display: block;
   width: 158px;
   height: 148px;
-  border: 1px solid rgb(255 255 255 / 9%);
-  border-radius: 8px;
+  border: 1px solid var(--dashboard-border);
+  border-radius: var(--dashboard-radius-row);
   object-fit: cover;
 }
 
@@ -30,10 +30,10 @@
 
 .eventIdentity h1 {
   margin: 0 0 4px;
-  font-size: clamp(28px, 3vw, 36px);
-  font-weight: 620;
+  font-size: clamp(28px, 3vw, 32px);
+  font-weight: 650;
   letter-spacing: -0.035em;
-  line-height: 1.1;
+  line-height: 1.15;
 }
 
 .eventIdentity p {
@@ -62,10 +62,10 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  border: 1px solid rgb(255 255 255 / 12%);
-  border-radius: 8px;
-  color: #f5f5f7;
-  background: #111315;
+  border: 1px solid var(--dashboard-border-strong);
+  border-radius: var(--dashboard-radius-button);
+  color: var(--dashboard-text);
+  background: var(--dashboard-surface);
   padding: 0 22px;
   font: inherit;
   font-size: 15px;
@@ -77,19 +77,19 @@
 
 .eventActions :is(a, button):hover {
   border-color: rgb(255 255 255 / 20%);
-  background: #16181b;
+  background: var(--dashboard-surface-elevated);
 }
 
 .eventActions .primaryAction {
-  border-color: #f44a22;
+  border-color: var(--dashboard-accent);
   color: #fff;
-  background: #f44a22;
+  background: var(--dashboard-accent);
 }
 
 .eventActions .primaryAction:hover {
-  border-color: #ff5a34;
+  border-color: var(--dashboard-accent-hover);
   color: #fff;
-  background: #ff5a34;
+  background: var(--dashboard-accent-hover);
 }
 
 .eventTabs {
@@ -97,7 +97,7 @@
   min-width: 0;
   gap: 12px;
   overflow-x: auto;
-  border-bottom: 1px solid rgb(255 255 255 / 9%);
+  border-bottom: 1px solid var(--dashboard-border);
   scrollbar-width: none;
 }
 
@@ -132,20 +132,20 @@
 }
 
 .eventTabs a:hover {
-  color: #f5f5f7 !important;
+  color: var(--dashboard-text) !important;
 }
 
 .eventTabs a[aria-current='page'] {
-  color: #f44a22 !important;
+  color: var(--dashboard-text) !important;
 }
 
 .eventTabs a[aria-current='page']::after {
-  background: #f44a22;
+  background: var(--dashboard-accent);
 }
 
 .eventActions :is(a, button):focus-visible,
 .eventTabs a:focus-visible {
-  outline: 2px solid #f44a22;
+  outline: 2px solid var(--dashboard-accent);
   outline-offset: 2px;
 }
 

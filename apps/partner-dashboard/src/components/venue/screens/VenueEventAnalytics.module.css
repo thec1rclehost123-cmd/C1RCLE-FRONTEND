@@ -1,5 +1,5 @@
 .page {
-  color: #f5f5f7;
+  color: var(--dashboard-text);
 }
 .header {
   display: flex;
@@ -10,7 +10,7 @@
 .identity > a {
   display: inline-block;
   margin-bottom: 14px;
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
 }
 .identity > span {
   display: flex;
@@ -29,7 +29,7 @@
 }
 .identity p {
   margin: 0;
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
 }
 .headerActions {
   display: flex;
@@ -44,9 +44,9 @@
   align-items: center;
   gap: 9px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 8px;
-  color: #f5f5f7;
-  background: #111315;
+  border-radius: var(--dashboard-radius-control);
+  color: var(--dashboard-text);
+  background: var(--dashboard-surface);
   padding: 0 16px;
 }
 .headerActions nav,
@@ -58,14 +58,14 @@
   display: grid;
   width: 190px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 8px;
-  background: #16181b;
+  border-radius: var(--dashboard-radius-control);
+  background: var(--dashboard-surface-elevated);
   padding: 6px;
 }
 .headerActions nav a,
 .exportMenu button {
   display: flex;
-  min-height: 42px;
+  min-height: 44px;
   align-items: center;
   border: 0;
   background: transparent;
@@ -81,16 +81,17 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   margin: 22px 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 12px;
-  background: #111315;
+  border: 1px solid var(--dashboard-border);
+  border-radius: var(--dashboard-radius-card);
+  background: var(--dashboard-surface);
+  box-shadow: var(--dashboard-shadow-panel);
 }
 .metrics article {
   min-height: 106px;
   padding: 22px 28px;
 }
 .metrics article + article {
-  border-left: 1px solid rgba(255, 255, 255, 0.09);
+  border-left: 1px solid var(--dashboard-border);
 }
 .metrics small {
   display: block;
@@ -100,7 +101,7 @@
   display: block;
   margin-top: 12px;
   font-size: 29px;
-  font-weight: 500;
+  font-weight: 650;
 }
 .analyticsGrid {
   display: grid;
@@ -110,9 +111,9 @@
 .salesCard,
 .demoCard,
 .tickets {
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 12px;
-  background: #111315;
+  border: 1px solid var(--dashboard-border);
+  border-radius: var(--dashboard-radius-button);
+  background: var(--dashboard-surface);
   padding: 22px;
 }
 .tickets progress,
@@ -138,13 +139,17 @@
   background: var(--partner-accent);
 }
 .genderDonut {
-  background: conic-gradient(#f44a22 0 44%, #34d399 44% 97%, #8b5cf6 97% 100%);
+  background: conic-gradient(
+    var(--dashboard-accent) 0 44%,
+    var(--dashboard-success) 44% 97%,
+    #8b5cf6 97% 100%
+  );
 }
 .women {
-  background: #f44a22;
+  background: var(--dashboard-accent);
 }
 .men {
-  background: #34d399;
+  background: var(--dashboard-success);
 }
 .other {
   background: #8b5cf6;
@@ -158,7 +163,7 @@
 .legend {
   display: flex;
   gap: 24px;
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
   font-size: 12px;
 }
 .legend span::before {
@@ -166,7 +171,7 @@
   width: 20px;
   height: 3px;
   margin-right: 8px;
-  background: #f44a22;
+  background: var(--dashboard-accent);
   content: '';
 }
 .legend span + span::before {
@@ -183,7 +188,7 @@
   overflow: visible;
 }
 .grid line {
-  stroke: rgba(255, 255, 255, 0.08);
+  stroke: var(--dashboard-border);
   stroke-width: 1;
 }
 .previousLine {
@@ -194,12 +199,12 @@
 }
 .currentLine {
   fill: none;
-  stroke: #f44a22;
+  stroke: var(--dashboard-accent);
   stroke-width: 2.5;
 }
 .chart circle {
-  fill: #f44a22;
-  stroke: #111315;
+  fill: var(--dashboard-accent);
+  stroke: var(--dashboard-surface);
   stroke-width: 4;
   cursor: pointer;
 }
@@ -209,26 +214,26 @@
   stroke-width: 5;
 }
 .tooltip rect {
-  fill: #0b0b0c;
+  fill: var(--dashboard-page);
   stroke: rgba(255, 255, 255, 0.2);
 }
 .tooltip text {
-  fill: #f5f5f7;
+  fill: var(--dashboard-text);
   font-size: 10px;
 }
 .salesCard details {
   margin-top: 8px;
-  color: #60a5fa;
+  color: var(--dashboard-info);
 }
 .salesCard table {
   width: 100%;
   margin-top: 12px;
   border-collapse: collapse;
-  color: #f5f5f7;
+  color: var(--dashboard-text);
 }
 .salesCard th,
 .salesCard td {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--dashboard-border);
   padding: 8px;
   text-align: left;
   font-size: 12px;
@@ -243,7 +248,7 @@
   align-items: center;
   gap: 10px;
   margin: 13px 0;
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
 }
 .ageRow i,
 .tickets i {
@@ -257,7 +262,7 @@
   display: block;
   height: 100%;
   border-radius: 4px;
-  background: #f44a22;
+  background: var(--dashboard-accent);
 }
 .ageRow strong {
   color: #c6c8cb;
@@ -308,7 +313,7 @@
 }
 .demoUnavailable p {
   max-width: 260px;
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
 }
 .tickets {
   margin-top: 12px;
@@ -329,7 +334,7 @@
   font-weight: 500;
 }
 .consent {
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
   font-size: 12px;
 }
 .loading {
@@ -340,8 +345,8 @@
 .loading span,
 .loading div {
   min-height: 110px;
-  border-radius: 12px;
-  background: #16181b;
+  border-radius: var(--dashboard-radius-button);
+  background: var(--dashboard-surface-elevated);
 }
 .loading div {
   grid-column: 1/-1;
@@ -355,15 +360,15 @@
   text-align: center;
 }
 .state p {
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
 }
 .state a,
 .state button {
   min-height: 44px;
-  border: 1px solid #f44a22;
-  border-radius: 8px;
+  border: 1px solid var(--dashboard-accent);
+  border-radius: var(--dashboard-radius-button);
   color: #fff;
-  background: #f44a22;
+  background: var(--dashboard-accent);
   padding: 0 22px;
 }
 button:focus-visible,
@@ -407,7 +412,7 @@ summary:focus-visible {
     min-height: 76px;
   }
   .metrics article + article {
-    border-top: 1px solid rgba(255, 255, 255, 0.09);
+    border-top: 1px solid var(--dashboard-border);
     border-left: 0;
   }
   .demographics {

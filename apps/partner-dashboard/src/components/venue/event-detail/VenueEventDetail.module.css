@@ -4,7 +4,7 @@
   display: grid;
   min-width: 0;
   gap: 16px;
-  color: #f5f5f7;
+  color: var(--dashboard-text);
 }
 
 .panel,
@@ -14,9 +14,10 @@
 .guestTable,
 .guestDrawer {
   min-width: 0;
-  border: 1px solid rgb(255 255 255 / 9%);
-  border-radius: 12px;
-  background: #111315;
+  border: 1px solid var(--dashboard-border);
+  border-radius: var(--dashboard-radius-panel);
+  background: var(--dashboard-surface);
+  box-shadow: var(--dashboard-shadow-card);
 }
 
 .metricStrip {
@@ -30,7 +31,7 @@
   display: grid;
   align-content: center;
   gap: 14px;
-  border-left: 1px solid rgb(255 255 255 / 9%);
+  border-left: 1px solid var(--dashboard-border);
   padding: 0 68px;
 }
 
@@ -50,7 +51,7 @@
 
 .metricStrip strong {
   font-size: clamp(28px, 3vw, 34px);
-  font-weight: 520;
+  font-weight: 650;
   letter-spacing: -0.03em;
   line-height: 1;
 }
@@ -71,7 +72,7 @@
 .ordersPanel h2 {
   margin: 0;
   font-size: 19px;
-  font-weight: 560;
+  font-weight: 600;
   letter-spacing: -0.018em;
 }
 
@@ -87,7 +88,7 @@
   min-height: 44px;
   align-items: center;
   gap: 8px;
-  color: #f44a22 !important;
+  color: var(--dashboard-accent) !important;
   font-size: 14px;
   text-decoration: none;
 }
@@ -111,14 +112,14 @@
 }
 
 .gridLines line {
-  stroke: rgb(255 255 255 / 9%);
+  stroke: var(--dashboard-border);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
 
 .chartLine {
   fill: none;
-  stroke: #f44a22;
+  stroke: var(--dashboard-accent);
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2.2;
@@ -126,7 +127,7 @@
 }
 
 .chart circle {
-  fill: #f44a22;
+  fill: var(--dashboard-accent);
 }
 
 .yLabels {
@@ -160,7 +161,7 @@
   grid-template-columns: 24px minmax(130px, 1.1fr) minmax(100px, 1fr) auto auto;
   align-items: center;
   gap: 14px;
-  border-top: 1px solid rgb(255 255 255 / 8%);
+  border-top: 1px solid var(--dashboard-border);
 }
 
 .summaryOrders article:first-child {
@@ -179,7 +180,7 @@
 
 .summaryOrders span,
 .summaryOrders time {
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
   font-size: 13px;
 }
 
@@ -212,7 +213,7 @@
 }
 
 .summaryTicketTypes b {
-  color: #f44a22;
+  color: var(--dashboard-accent);
   text-align: right;
 }
 
@@ -224,7 +225,7 @@
   appearance: none;
   overflow: hidden;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-control);
   background: #303338;
 }
 
@@ -235,14 +236,14 @@
 
 .summaryTicketTypes progress::-webkit-progress-value,
 .salesTicketTypes progress::-webkit-progress-value {
-  border-radius: 8px;
-  background: #f44a22;
+  border-radius: var(--dashboard-radius-control);
+  background: var(--dashboard-accent);
 }
 
 .summaryTicketTypes progress::-moz-progress-bar,
 .salesTicketTypes progress::-moz-progress-bar {
-  border-radius: 8px;
-  background: #f44a22;
+  border-radius: var(--dashboard-radius-control);
+  background: var(--dashboard-accent);
 }
 
 .informationPanel {
@@ -257,7 +258,7 @@
   justify-content: space-between;
   gap: 20px;
   border: 0;
-  color: #f5f5f7;
+  color: var(--dashboard-text);
   background: transparent;
   padding: 18px 22px;
   font: inherit;
@@ -276,7 +277,7 @@
 }
 
 .informationPanel > button small {
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
   font-size: 14px;
 }
 
@@ -294,7 +295,7 @@
   grid-template-columns: 1fr 1fr;
   gap: 18px 24px;
   margin: 0;
-  border-top: 1px solid rgb(255 255 255 / 8%);
+  border-top: 1px solid var(--dashboard-border);
   padding: 20px 22px 24px;
 }
 
@@ -304,13 +305,13 @@
 }
 
 .informationPanel dt {
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
   font-size: 12px;
 }
 
 .informationPanel dd {
   margin: 0;
-  color: #f5f5f7;
+  color: var(--dashboard-text);
   font-size: 14px;
   line-height: 1.45;
 }
@@ -329,15 +330,15 @@
 .chartToggle {
   display: flex;
   overflow: hidden;
-  border: 1px solid rgb(255 255 255 / 10%);
-  border-radius: 8px;
+  border: 1px solid var(--dashboard-border-strong);
+  border-radius: var(--dashboard-radius-control);
 }
 
 .chartToggle button {
   min-width: 74px;
-  min-height: 36px;
+  min-height: 44px;
   border: 0;
-  border-left: 1px solid rgb(255 255 255 / 9%);
+  border-left: 1px solid var(--dashboard-border);
   color: #c5c7cb;
   background: transparent;
   padding: 0 14px;
@@ -350,8 +351,8 @@
 }
 
 .chartToggle button[aria-pressed='true'] {
-  color: #fff;
-  background: #f44a22;
+  color: var(--dashboard-text);
+  background: var(--dashboard-selected);
 }
 
 .salesTicketTypes > div {
@@ -365,7 +366,7 @@
   grid-template-columns: minmax(0, 1fr) minmax(120px, 0.9fr);
   align-items: center;
   gap: 18px;
-  border-top: 1px solid rgb(255 255 255 / 8%);
+  border-top: 1px solid var(--dashboard-border);
 }
 
 .salesTicketTypes article:first-child {
@@ -418,13 +419,13 @@
 .ticketFilter,
 .guestToolbar > button {
   display: flex;
-  min-height: 42px;
+  min-height: 44px;
   align-items: center;
   gap: 10px;
-  border: 1px solid rgb(255 255 255 / 10%);
-  border-radius: 8px;
-  color: #f5f5f7;
-  background: #111315;
+  border: 1px solid var(--dashboard-border-strong);
+  border-radius: var(--dashboard-radius-control);
+  color: var(--dashboard-text);
+  background: var(--dashboard-surface);
   padding: 0 14px;
 }
 
@@ -439,7 +440,7 @@
   min-width: 0;
   border: 0;
   outline: 0;
-  color: #f5f5f7;
+  color: var(--dashboard-text);
   background: transparent;
   font: inherit;
   font-size: 14px;
@@ -447,7 +448,7 @@
 
 .ordersHeading input::placeholder,
 .guestSearch input::placeholder {
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
 }
 
 .ordersHeading button,
@@ -468,7 +469,7 @@
 .guestTable th,
 .guestTable td {
   height: 44px;
-  border-top: 1px solid rgb(255 255 255 / 8%);
+  border-top: 1px solid var(--dashboard-border);
   padding: 0 4px;
   font-size: 14px;
   text-align: left;
@@ -480,6 +481,7 @@
   border-top: 0;
   color: #c5c7cb;
   font-weight: 450;
+  background: var(--dashboard-surface-elevated);
 }
 
 .ordersTable th:nth-child(1) {
@@ -508,19 +510,19 @@
   align-items: center;
   border: 1px solid rgb(52 211 153 / 35%);
   border-radius: 6px;
-  color: #34d399;
+  color: var(--dashboard-success);
   padding: 0 9px;
   font-size: 12px;
 }
 
 .orderStatus[data-status='refunded'] {
   border-color: rgb(248 113 113 / 35%);
-  color: #f87171;
+  color: var(--dashboard-danger);
 }
 
 .orderStatus[data-status='pending'] {
   border-color: rgb(245 158 11 / 35%);
-  color: #f59e0b;
+  color: var(--dashboard-warning);
 }
 
 .checkInStrip {
@@ -552,10 +554,10 @@
 .checkInStrip > button {
   justify-self: end;
   min-height: 44px;
-  border: 1px solid #f44a22;
-  border-radius: 8px;
+  border: 1px solid var(--dashboard-accent);
+  border-radius: var(--dashboard-radius-control);
   color: #fff;
-  background: #f44a22;
+  background: var(--dashboard-accent);
   padding: 0 20px;
   font: inherit;
   cursor: pointer;
@@ -569,7 +571,7 @@
   appearance: none;
   overflow: hidden;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-control);
   background: #303338;
 }
 
@@ -578,13 +580,13 @@
 }
 
 .checkInStrip progress::-webkit-progress-value {
-  border-radius: 8px;
-  background: #f44a22;
+  border-radius: var(--dashboard-radius-control);
+  background: var(--dashboard-accent);
 }
 
 .checkInStrip progress::-moz-progress-bar {
-  border-radius: 8px;
-  background: #f44a22;
+  border-radius: var(--dashboard-radius-control);
+  background: var(--dashboard-accent);
 }
 
 .checkInStrip > b {
@@ -681,7 +683,7 @@
   border: 1px solid rgb(255 255 255 / 14%);
   border-radius: 50%;
   color: #fff;
-  background: linear-gradient(145deg, #853321, #252b32);
+  background: var(--dashboard-selected);
   font-size: 12px;
   font-weight: 650;
 }
@@ -701,17 +703,17 @@
 
 .guestIdentity small,
 .guestTable td:nth-child(3) small {
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
   font-size: 12px;
 }
 
 .checkInState {
   display: block;
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
 }
 
 .checkInState[data-checked-in='true'] {
-  color: #34d399;
+  color: var(--dashboard-success);
 }
 
 .guestTable td:nth-child(3) {
@@ -722,7 +724,7 @@
   min-width: 54px;
   min-height: 44px;
   border: 0;
-  color: #f44a22;
+  color: var(--dashboard-accent);
   background: transparent;
   padding: 0;
   font: inherit;
@@ -742,8 +744,9 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   margin: 0;
-  border-radius: 12px 0 0;
-  box-shadow: -20px 0 60px rgb(0 0 0 / 38%);
+  border-radius: var(--dashboard-radius-overlay) 0 0 var(--dashboard-radius-overlay);
+  background: var(--dashboard-surface-elevated);
+  box-shadow: var(--dashboard-shadow-floating);
   padding: 28px 24px;
 }
 
@@ -787,7 +790,7 @@
 .guestDrawer dl > div {
   display: grid;
   gap: 8px;
-  border-top: 1px solid rgb(255 255 255 / 8%);
+  border-top: 1px solid var(--dashboard-border);
   padding: 20px 0;
 }
 
@@ -804,12 +807,12 @@
   display: grid;
   gap: 7px;
   margin: 0;
-  color: #f5f5f7;
+  color: var(--dashboard-text);
   font-size: 14px;
 }
 
 .guestDrawer dd span[data-checked-in='true'] {
-  color: #34d399;
+  color: var(--dashboard-success);
 }
 
 .guestDrawer dd small {
@@ -825,9 +828,9 @@
   justify-content: center;
   gap: 10px;
   margin-top: 18px;
-  border: 1px solid #f44a22;
-  border-radius: 8px;
-  color: #f44a22;
+  border: 1px solid var(--dashboard-accent);
+  border-radius: var(--dashboard-radius-button);
+  color: var(--dashboard-accent);
   background: transparent;
   font: inherit;
   cursor: pointer;
@@ -839,10 +842,10 @@
   display: grid;
   place-items: center;
   align-content: center;
-  border: 1px solid rgb(255 255 255 / 9%);
-  border-radius: 12px;
+  border: 1px solid var(--dashboard-border);
+  border-radius: var(--dashboard-radius-primary);
   padding: 32px;
-  background: #111315;
+  background: var(--dashboard-surface);
   text-align: center;
 }
 
@@ -871,7 +874,7 @@
 .inlineEmpty span,
 .emptyState p {
   margin: 10px 0 0;
-  color: #92969d;
+  color: var(--dashboard-text-secondary);
 }
 
 .guestEmpty button,
@@ -882,9 +885,9 @@
   align-items: center;
   margin-top: 20px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-control);
   color: #fff !important;
-  background: #f44a22;
+  background: var(--dashboard-accent);
   padding: 0 18px;
   font: inherit;
   text-decoration: none;
@@ -893,7 +896,7 @@
 
 .emptyState > span {
   margin-bottom: 12px;
-  color: #f44a22;
+  color: var(--dashboard-accent);
   font-size: 12px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -914,7 +917,7 @@
 .guestEmpty button:focus-visible,
 .guestEmpty a:focus-visible,
 .emptyState a:focus-visible {
-  outline: 2px solid #f44a22;
+  outline: 2px solid var(--dashboard-accent);
   outline-offset: 2px;
 }
 
@@ -981,7 +984,7 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     border-radius: 0;
-    box-shadow: -20px 0 60px rgb(0 0 0 / 48%);
+    box-shadow: var(--dashboard-shadow-floating);
   }
 
   .guestTable {
@@ -1021,7 +1024,7 @@
   .metricStrip article:first-child,
   .metricStrip article:last-child {
     min-height: 98px;
-    border-top: 1px solid rgb(255 255 255 / 9%);
+    border-top: 1px solid var(--dashboard-border);
     border-left: 0;
     padding: 18px 0;
   }
@@ -1106,8 +1109,8 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 14px;
-    border: 1px solid rgb(255 255 255 / 8%);
-    border-radius: 8px;
+    border: 1px solid var(--dashboard-border);
+    border-radius: var(--dashboard-radius-control);
     padding: 14px;
   }
 
@@ -1123,7 +1126,7 @@
 
   .ordersTable td::before,
   .guestTable td::before {
-    color: #92969d;
+    color: var(--dashboard-text-secondary);
     font-size: 11px;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -1149,7 +1152,7 @@
   .guestTable td:last-child button {
     width: 100%;
     border: 1px solid rgb(244 74 34 / 45%);
-    border-radius: 8px;
+    border-radius: var(--dashboard-radius-control);
   }
 
   .guestToolbar {

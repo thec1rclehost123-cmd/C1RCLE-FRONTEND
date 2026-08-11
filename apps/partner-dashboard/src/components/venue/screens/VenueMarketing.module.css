@@ -4,8 +4,9 @@
 }
 .page > header h1 {
   margin: 0;
-  font-size: 34px;
-  font-weight: 600;
+  font-size: 32px;
+  font-weight: 650;
+  line-height: 1.15;
   letter-spacing: -0.035em;
 }
 .page > header p {
@@ -57,8 +58,14 @@
 .history,
 .templates article {
   border: 1px solid var(--partner-border);
-  border-radius: 12px;
-  background: #111315;
+  border-radius: var(--dashboard-radius-card);
+  background: var(--dashboard-surface);
+}
+.composerSection,
+.preview,
+.history,
+.templates article {
+  box-shadow: var(--dashboard-shadow-panel);
 }
 .composerSection {
   padding: 14px;
@@ -88,9 +95,9 @@
   align-items: center;
   gap: 12px;
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-control);
   padding: 8px;
-  background: #0d0f11;
+  background: var(--dashboard-control);
 }
 .selectedEvent img {
   width: 88px;
@@ -133,7 +140,7 @@
   justify-content: center;
   gap: 8px;
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-control);
   color: #c7c9cc;
   cursor: pointer;
 }
@@ -160,9 +167,9 @@
   width: 100%;
   min-height: 44px;
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-control);
   color: var(--partner-text);
-  background: #0d0f11;
+  background: var(--dashboard-control);
   padding: 11px 12px;
   color-scheme: dark;
 }
@@ -195,9 +202,9 @@
   justify-content: center;
   gap: 8px;
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-button);
   color: var(--partner-text);
-  background: #111315;
+  background: var(--dashboard-surface);
   padding: 0 16px;
 }
 .composerSection footer .primary {
@@ -228,7 +235,7 @@
 .preview header div {
   display: flex;
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-control);
   padding: 2px;
 }
 .preview header button {
@@ -240,8 +247,8 @@
   padding: 0 14px;
 }
 .preview header button.active {
-  color: #fff;
-  background: var(--partner-accent);
+  color: var(--partner-text);
+  background: var(--dashboard-surface-elevated);
 }
 .phone,
 .web {
@@ -251,7 +258,7 @@
   gap: 18px;
   margin-top: 16px;
   border: 1px solid var(--partner-border);
-  border-radius: 12px;
+  border-radius: var(--dashboard-radius-button);
   background: #f3f3f5;
   padding: 42px 24px;
   color: #171719;
@@ -377,6 +384,9 @@
   border-top: 1px solid var(--partner-border);
   font-size: 13px;
 }
+.campaignRow:hover {
+  background: var(--dashboard-hover);
+}
 .campaignRow > span:first-child {
   display: grid;
   min-width: 0;
@@ -406,7 +416,7 @@
   color: var(--partner-green);
 }
 .campaignRow [data-status='Scheduled'] {
-  color: #60a5fa;
+  color: var(--dashboard-info);
 }
 .templates {
   margin-top: 24px;
@@ -465,7 +475,8 @@
   min-height: 420px;
   align-content: center;
   border: 1px solid var(--partner-border);
-  border-radius: 12px;
+  border-radius: var(--dashboard-radius-panel);
+  background: var(--dashboard-surface);
   text-align: center;
 }
 .unavailable p {

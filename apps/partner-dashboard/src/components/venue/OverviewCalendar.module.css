@@ -5,13 +5,13 @@
 
 .trigger {
   display: inline-flex;
-  min-height: 42px;
+  min-height: 44px;
   align-items: center;
   gap: 10px;
   border: 1px solid rgb(255 255 255 / 13%);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-button);
   color: #d9dbde;
-  background: #0f1113;
+  background: var(--dashboard-control);
   padding: 0 16px;
   cursor: pointer;
   font-size: 14px;
@@ -24,7 +24,7 @@
 .trigger:hover {
   border-color: rgb(255 255 255 / 22%);
   color: #fff;
-  background: #15181b;
+  background: var(--dashboard-hover);
 }
 
 .popover {
@@ -34,9 +34,9 @@
   width: min(320px, calc(100vw - 24px));
   overflow: hidden;
   border: 1px solid rgb(255 255 255 / 14%);
-  border-radius: 12px;
-  background: #111315;
-  box-shadow: 0 22px 60px rgb(0 0 0 / 62%);
+  border-radius: var(--dashboard-radius-menu);
+  background: var(--dashboard-surface-elevated);
+  box-shadow: var(--dashboard-shadow-floating);
 }
 
 .popover header {
@@ -44,7 +44,7 @@
   min-height: 50px;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgb(255 255 255 / 8%);
+  border-bottom: 1px solid var(--dashboard-border);
   padding: 0 12px 0 16px;
 }
 .popover header > div {
@@ -58,18 +58,18 @@
 }
 .popover header button {
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   place-items: center;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-control);
   color: #aeb1b6;
   background: transparent;
   cursor: pointer;
 }
 .popover header button:hover {
   color: #fff;
-  background: rgb(255 255 255 / 5%);
+  background: var(--dashboard-hover);
 }
 .weekdays,
 .days {
@@ -94,7 +94,7 @@
 .days > button {
   position: relative;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-control);
   color: #cfd1d4;
   background: transparent;
   cursor: pointer;
@@ -102,7 +102,7 @@
 }
 .days > button:hover {
   color: #fff;
-  background: rgb(255 255 255 / 6%);
+  background: var(--dashboard-hover);
 }
 .days > button i {
   position: absolute;
@@ -111,12 +111,12 @@
   width: 3px;
   height: 3px;
   border-radius: 50%;
-  background: #f44a22;
+  background: var(--dashboard-accent);
   transform: translateX(-50%);
 }
 .days > button.today {
   color: #fff;
-  background: #f44a22;
+  background: var(--dashboard-accent);
 }
 .days > button.today i {
   background: #fff;

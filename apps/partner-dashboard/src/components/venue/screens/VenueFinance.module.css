@@ -13,8 +13,9 @@
 }
 .header h1 {
   margin: 0;
-  font-size: 34px;
-  font-weight: 600;
+  font-size: 32px;
+  font-weight: 650;
+  line-height: 1.15;
   letter-spacing: -0.035em;
 }
 .header p {
@@ -29,7 +30,7 @@
   justify-content: center;
   gap: 8px;
   border: 1px solid var(--partner-accent);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-button);
   color: #fff;
   background: var(--partner-accent);
   padding: 0 16px;
@@ -49,8 +50,13 @@
 .balanceStrip,
 .history {
   border: 1px solid var(--partner-border);
-  border-radius: 12px;
-  background: #111315;
+  border-radius: var(--dashboard-radius-card);
+  background: var(--dashboard-surface);
+}
+.balance,
+.bank,
+.history {
+  box-shadow: var(--dashboard-shadow-panel);
 }
 .balance {
   display: grid;
@@ -180,7 +186,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: 0 18px;
-  background: #111315;
+  background: var(--dashboard-surface-elevated);
 }
 .history h2 {
   margin: 0;
@@ -203,11 +209,11 @@
 }
 .history input,
 .history select {
-  min-height: 40px;
+  min-height: 44px;
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-control);
   color: var(--partner-text);
-  background: #0d0f11;
+  background: var(--dashboard-control);
   padding: 0 12px 0 38px;
   color-scheme: dark;
 }
@@ -245,7 +251,7 @@
   color: var(--partner-green);
 }
 .payoutRow [data-status='Scheduled'] {
-  color: #60a5fa;
+  color: var(--dashboard-info);
 }
 .payoutRow strong {
   text-align: right;
@@ -254,7 +260,8 @@
   min-height: 420px;
   align-content: center;
   border: 1px solid var(--partner-border);
-  border-radius: 12px;
+  border-radius: var(--dashboard-radius-panel);
+  background: var(--dashboard-surface);
   text-align: center;
 }
 .unavailable p {

@@ -1,28 +1,59 @@
-:root {
-  --partner-bg: #0b0b0c;
-  --partner-sidebar: #0d0f11;
-  --partner-surface: #111315;
-  --partner-surface-raised: #16181b;
-  --partner-border: rgb(255 255 255 / 9%);
-  --partner-border-strong: rgb(255 255 255 / 15%);
-  --partner-text: #f5f5f7;
-  --partner-muted: #92969d;
-  --partner-accent: #f44a22;
-  --partner-green: #34d399;
-  --partner-amber: #f59e0b;
-  --partner-red: #f87171;
-  --partner-radius-sm: 8px;
-  --partner-radius-md: 12px;
-  --partner-radius-lg: 14px;
-  --partner-sidebar-width: 204px;
+.partner-dashboard-shell-v2 {
+  --dashboard-page: #0d0d0f;
+  --dashboard-sidebar: #101012;
+  --dashboard-surface: #151517;
+  --dashboard-surface-elevated: #1b1b1e;
+  --dashboard-control: #202023;
+  --dashboard-selected: #303034;
+  --dashboard-hover: #252528;
+  --dashboard-text: #f7f7f8;
+  --dashboard-text-secondary: #a1a1aa;
+  --dashboard-text-quiet: #71717a;
+  --dashboard-border: rgb(255 255 255 / 7%);
+  --dashboard-border-strong: rgb(255 255 255 / 11%);
+  --dashboard-accent: #f44a22;
+  --dashboard-accent-hover: #ff5a36;
+  --dashboard-accent-pressed: #dc3d1b;
+  --dashboard-success: #34d399;
+  --dashboard-warning: #f59e0b;
+  --dashboard-danger: #f87171;
+  --dashboard-info: #60a5fa;
+  --dashboard-radius-icon: 10px;
+  --dashboard-radius-control: 10px;
+  --dashboard-radius-button: 12px;
+  --dashboard-radius-row: 14px;
+  --dashboard-radius-card: 18px;
+  --dashboard-radius-panel: 18px;
+  --dashboard-radius-primary: 22px;
+  --dashboard-radius-overlay: 20px;
+  --dashboard-radius-menu: 12px;
+  --dashboard-shadow-card: 0 12px 30px rgb(0 0 0 / 18%);
+  --dashboard-shadow-panel: 0 12px 30px rgb(0 0 0 / 18%);
+  --dashboard-shadow-floating: 0 20px 50px rgb(0 0 0 / 28%);
+  --partner-bg: var(--dashboard-page);
+  --partner-sidebar: var(--dashboard-sidebar);
+  --partner-surface: var(--dashboard-surface);
+  --partner-surface-raised: var(--dashboard-surface-elevated);
+  --partner-border: var(--dashboard-border);
+  --partner-border-strong: var(--dashboard-border-strong);
+  --partner-text: var(--dashboard-text);
+  --partner-muted: var(--dashboard-text-secondary);
+  --partner-accent: var(--dashboard-accent);
+  --partner-green: var(--dashboard-success);
+  --partner-amber: var(--dashboard-warning);
+  --partner-red: var(--dashboard-danger);
+  --partner-radius-sm: var(--dashboard-radius-control);
+  --partner-radius-md: var(--dashboard-radius-button);
+  --partner-radius-lg: var(--dashboard-radius-card);
+  --partner-sidebar-width: 208px;
   --partner-sidebar-collapsed: 72px;
-  --partner-topbar-height: 72px;
+  --partner-topbar-height: 64px;
   --partner-content-width: 1500px;
 }
 
 .partner-dashboard-shell-v2 {
   display: grid;
-  min-height: 100vh;
+  min-height: 100dvh;
   grid-template-columns: var(--partner-sidebar-width) minmax(0, 1fr);
   color: var(--partner-text);
   background: var(--partner-bg);
@@ -55,7 +86,7 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
   z-index: 110;
   display: flex;
   width: 100%;
-  height: 100vh;
+  height: 100dvh;
   flex-direction: column;
   overflow: hidden;
   border-right: 1px solid var(--partner-border);
@@ -113,36 +144,38 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
   min-height: 48px;
   align-items: center;
   gap: 14px;
-  border-radius: 8px;
-  color: #d0d2d5;
+  border-radius: var(--dashboard-radius-button);
+  color: var(--dashboard-text-secondary);
   padding: 0 16px;
-  font-size: 14px;
-  font-weight: 450;
+  font-size: 15px;
+  font-weight: 550;
   text-decoration: none;
   transition:
     color 180ms ease,
     background-color 180ms ease;
 }
 
-.partner-sidebar-nav a::before {
+.partner-sidebar-nav a::after {
   position: absolute;
-  top: 4px;
-  bottom: 4px;
-  left: -8px;
-  width: 2px;
+  top: 50%;
+  right: 14px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
   background: transparent;
   content: '';
+  transform: translateY(-50%);
 }
 
 .partner-sidebar-nav a:hover {
   color: var(--partner-text);
-  background: rgb(255 255 255 / 4%);
+  background: var(--dashboard-hover);
 }
 .partner-sidebar-nav a.is-active {
-  color: var(--partner-accent);
-  background: #1b1e21;
+  color: var(--dashboard-text);
+  background: var(--dashboard-selected);
 }
-.partner-sidebar-nav a.is-active::before {
+.partner-sidebar-nav a.is-active::after {
   background: var(--partner-accent);
 }
 .partner-sidebar-nav a svg {
@@ -226,7 +259,7 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
   gap: 24px;
   border-bottom: 1px solid var(--partner-border);
   padding: 0 28px;
-  background: rgb(11 11 12 / 96%);
+  background: var(--dashboard-page);
   backdrop-filter: none;
 }
 
@@ -263,19 +296,20 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
 .partner-command-search {
   position: relative;
   display: flex;
-  height: 42px;
+  height: 44px;
   align-items: center;
   gap: 10px;
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-control);
   padding: 0 10px 0 13px;
   color: #b9bcc1;
-  background: #111315;
+  background: var(--dashboard-control);
 }
 
 .partner-command-search:focus-within {
-  border-color: rgb(244 74 34 / 70%);
-  box-shadow: 0 0 0 3px rgb(244 74 34 / 10%);
+  border-color: var(--dashboard-accent);
+  outline: 1px solid var(--dashboard-accent);
+  outline-offset: 1px;
 }
 .partner-command-search input {
   min-width: 0;
@@ -306,10 +340,10 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
   display: grid;
   overflow: hidden;
   border: 1px solid var(--partner-border-strong);
-  border-radius: 12px;
+  border-radius: var(--dashboard-radius-button);
   padding: 8px;
-  background: #111315;
-  box-shadow: 0 18px 50px rgb(0 0 0 / 55%);
+  background: var(--dashboard-surface-elevated);
+  box-shadow: var(--dashboard-shadow-floating);
 }
 
 .partner-search-results small {
@@ -323,13 +357,13 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
 .partner-search-results a {
   display: flex;
   justify-content: space-between;
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-control);
   color: #d9dbde;
   padding: 10px;
   text-decoration: none;
 }
 .partner-search-results a:hover {
-  background: rgb(255 255 255 / 5%);
+  background: var(--dashboard-hover);
 }
 .partner-search-results p {
   margin: 0;
@@ -350,12 +384,12 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
 .partner-dashboard-shell-v2 .partner-mobile-menu-button {
   position: relative;
   display: grid;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   flex: none;
   place-items: center;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-icon);
   color: #d9dbde;
   background: transparent;
   cursor: pointer;
@@ -363,7 +397,7 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
 
 .partner-notification-button:hover,
 .partner-mobile-search-button:hover {
-  background: rgb(255 255 255 / 4%);
+  background: var(--dashboard-hover);
 }
 .partner-notification-button span {
   position: absolute;
@@ -383,10 +417,10 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
 .partner-dashboard-shell-v2 .partner-primary-action {
   position: relative;
   display: inline-flex;
-  min-height: 42px;
+  min-height: 44px;
   align-items: center;
   gap: 8px;
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-button);
   color: #fff;
   background: var(--partner-accent);
   padding: 0 18px;
@@ -394,11 +428,15 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
   font-weight: 600;
 }
 .partner-dashboard-shell-v2 .partner-primary-action:hover {
-  background: #ff5b36;
+  background: var(--dashboard-accent-hover);
   box-shadow: none;
 }
+.partner-dashboard-shell-v2 .partner-primary-action:active {
+  background: var(--dashboard-accent-pressed);
+  transform: translateY(1px);
+}
 .partner-dashboard-shell-v2 .partner-account-button {
-  width: 42px;
+  width: 44px;
   border: 1px solid #42464c;
   border-radius: 50%;
   color: var(--partner-text);
@@ -418,7 +456,7 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
 
 .partner-dashboard-shell-v2 .partner-dashboard-content {
   width: min(var(--partner-content-width), 100%);
-  min-height: calc(100vh - var(--partner-topbar-height));
+  min-height: calc(100dvh - var(--partner-topbar-height));
   margin: 0 auto;
   padding: 28px 32px 48px;
   outline: none;
@@ -459,9 +497,9 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
   z-index: 150;
   width: min(350px, calc(100vw - 32px));
   border: 1px solid var(--partner-border-strong);
-  border-radius: 12px;
-  background: #111315;
-  box-shadow: 0 18px 50px rgb(0 0 0 / 55%);
+  border-radius: var(--dashboard-radius-button);
+  background: var(--dashboard-surface-elevated);
+  box-shadow: var(--dashboard-shadow-floating);
   backdrop-filter: none;
 }
 
@@ -484,8 +522,9 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
   width: min(360px, calc(100vw - 32px));
   overflow: hidden;
   border: 1px solid var(--partner-border-strong);
-  border-radius: 12px;
-  background: #111315;
+  border-radius: var(--dashboard-radius-overlay);
+  background: var(--dashboard-surface-elevated);
+  box-shadow: var(--dashboard-shadow-floating);
 }
 .partner-notification-drawer > header {
   display: flex;
@@ -550,8 +589,9 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
   width: min(420px, calc(100vw - 32px));
   gap: 12px;
   border: 1px solid var(--partner-border-strong);
-  border-radius: 12px;
-  background: #111315;
+  border-radius: var(--dashboard-radius-overlay);
+  background: var(--dashboard-surface-elevated);
+  box-shadow: var(--dashboard-shadow-floating);
   padding: 24px;
   text-align: center;
 }
@@ -570,7 +610,7 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
 .partner-signout-dialog button {
   min-height: 44px;
   border: 1px solid var(--partner-border);
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-button);
   color: var(--partner-text);
   background: transparent;
 }
@@ -600,6 +640,9 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
   .partner-dashboard-shell-v2 .partner-sidebar-nav a {
     justify-content: center;
     padding: 0;
+  }
+  .partner-dashboard-shell-v2 .partner-sidebar-nav a::after {
+    display: none;
   }
   .partner-dashboard-shell-v2 .partner-sidebar-collapse {
     display: none;
@@ -673,6 +716,9 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
     justify-content: flex-start;
     padding: 0 16px;
   }
+  .partner-dashboard-shell-v2 .partner-sidebar-nav a::after {
+    display: block;
+  }
   .partner-sidebar-collapse {
     display: none;
   }
@@ -681,11 +727,11 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
     top: 15px;
     right: 12px;
     display: grid;
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
     place-items: center;
     border: 0;
-    border-radius: 8px;
+    border-radius: var(--dashboard-radius-control);
     color: var(--partner-text);
     background: transparent;
   }
@@ -715,7 +761,7 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
     display: none;
   }
   .partner-dashboard-shell-v2 .partner-dashboard-content {
-    min-height: calc(100vh - 64px);
+    min-height: calc(100dvh - 64px);
     padding: 20px 12px 40px;
   }
   .partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partner-role='host'])
@@ -758,14 +804,14 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
 .venue-overview-loading header span {
   width: 290px;
   height: 54px;
-  border-radius: 8px;
-  background: #16181b;
+  border-radius: var(--dashboard-radius-control);
+  background: var(--dashboard-surface-elevated);
 }
 .venue-overview-loading header i {
   width: 170px;
   height: 42px;
-  border-radius: 8px;
-  background: #16181b;
+  border-radius: var(--dashboard-radius-control);
+  background: var(--dashboard-surface-elevated);
 }
 .venue-overview-loading-top,
 .venue-overview-loading-bottom {
@@ -775,8 +821,8 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
 }
 .venue-overview-loading-top section {
   min-height: 326px;
-  border-radius: 12px;
-  background: #15171a;
+  border-radius: var(--dashboard-radius-panel);
+  background: var(--dashboard-surface);
 }
 .venue-overview-loading-metrics {
   display: grid;
@@ -784,25 +830,25 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
   gap: 1px;
   overflow: hidden;
   border: 1px solid var(--partner-border);
-  border-radius: 12px;
+  border-radius: var(--dashboard-radius-card);
   background: var(--partner-border);
 }
 .venue-overview-loading-metrics span {
   height: 94px;
-  background: #15171a;
+  background: var(--dashboard-surface);
 }
 .venue-overview-loading-bottom > section {
   min-height: 370px;
-  border-radius: 12px;
-  background: #15171a;
+  border-radius: var(--dashboard-radius-panel);
+  background: var(--dashboard-surface);
 }
 .venue-overview-loading-bottom aside {
   display: grid;
   gap: 12px;
 }
 .venue-overview-loading-bottom aside span {
-  border-radius: 12px;
-  background: #15171a;
+  border-radius: var(--dashboard-radius-card);
+  background: var(--dashboard-surface);
 }
 .venue-overview-loading > * {
   animation: venue-overview-pulse 1.35s ease-in-out infinite alternate;
@@ -814,9 +860,9 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
   place-items: center;
   align-content: center;
   border: 1px solid var(--partner-border);
-  border-radius: 14px;
+  border-radius: var(--dashboard-radius-panel);
   padding: 32px;
-  background: #111315;
+  background: var(--dashboard-surface);
   text-align: center;
 }
 .venue-overview-error > span {
@@ -824,7 +870,7 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
   width: 48px;
   height: 48px;
   place-items: center;
-  border-radius: 12px;
+  border-radius: var(--dashboard-radius-button);
   color: var(--partner-red);
   background: rgb(248 113 113 / 10%);
   font-size: 22px;
@@ -847,7 +893,7 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
   gap: 8px;
   margin-top: 22px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--dashboard-radius-button);
   color: #fff;
   background: var(--partner-accent);
   padding: 0 18px;
