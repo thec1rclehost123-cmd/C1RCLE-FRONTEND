@@ -1,205 +1,592 @@
 'use client';
 
-import { css } from '../charts';
+import Link from 'next/link';
+import { useEffect, useMemo, useRef, useState } from 'react';
+
 import {
-  DISCOVER_DATA,
-  PARTNER_DATA,
-  PERM_DEFS,
-  POSTER_GRADS,
-  PROMO_REQUESTS,
-  STAFF_PERMS,
-  STATUS_COLORS,
-  glassPillBtn,
-  initialsOf,
-  partnerStatusGlass,
-  permChip,
-  pick,
-  segBtn,
-  subTab,
-} from '../data';
-import { useVenueStudio } from '../store';
+  CalendarIcon,
+  CheckIcon,
+  CloseIcon,
+  InviteIcon,
+  LocationIcon,
+  PhoneIcon,
+  SearchIcon,
+  SendIcon,
+} from '@c1rcle/icons';
 
-import type { PartnerCard } from '../data';
-import type { AudienceSeg } from '../store';
+import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 
-const SEGMENTS: readonly (readonly [AudienceSeg, string])[] = [
-  ['venues', 'Venues'],
-  ['promoters', 'Promoters'],
-  ['staff', 'Staff'],
+import { getDiscoverablePartners, getVenuePartners, venueStaff } from '../venue-partners-model';
+
+import styles from './VenuePartners.module.css';
+
+import type {
+  DiscoverablePartner,
+  VenuePartner,
+  VenuePartnerKind,
+  VenueStaffMember,
+} from '../venue-partners-model';
+
+export type PartnersTab = 'hosts' | 'promoters' | 'staff';
+export type PartnersView = 'my' | 'find';
+
+const TAB_LINKS: readonly {
+  readonly id: PartnersTab;
+  readonly label: string;
+  readonly href: string;
+}[] = [
+  { id: 'hosts', label: 'Hosts', href: '/venue/partners?tab=hosts' },
+  { id: 'promoters', label: 'Promoters', href: '/venue/partners?tab=promoters' },
+  { id: 'staff', label: 'Staff', href: '/venue/partners?tab=staff' },
 ];
 
-export function PartnersScreen() {
-  const s = useVenueStudio();
+const partnerKind = (tab: PartnersTab): VenuePartnerKind =>
+  tab === 'promoters' ? 'promoter' : 'host';
 
-  let cards: readonly PartnerCard[];
-  if (s.audienceSeg === 'venues') {
-    cards = s.venueTab === 'discover' ? DISCOVER_DATA.venues : PARTNER_DATA.venues;
-  } else if (s.audienceSeg === 'promoters') {
-    cards =
-      s.promoTab === 'discover'
-        ? DISCOVER_DATA.promoters
-        : s.promoTab === 'requests'
-          ? PROMO_REQUESTS
-          : PARTNER_DATA.promoters;
-  } else {
-    cards = PARTNER_DATA.staff;
+export function PartnersScreen({
+  tab = 'hosts',
+  view = 'my',
+}: {
+  readonly tab?: PartnersTab;
+  readonly view?: PartnersView;
+}) {
+  const auth = useDashboardAuth();
+  const kind = partnerKind(tab);
+  const isStaff = tab === 'staff';
+  const isFind = !isStaff && view === 'find';
+  const canView =
+    auth.grantedPermissions.length === 0 ||
+    auth.grantedPermissions.includes('*') ||
+    auth.hasPermission('VIEW_PARTNERS');
+
+  if (!canView) {
+    return (
+      <section className={styles['unavailable']} role="alert">
+        <h1>Partners unavailable</h1>
+        <p>Your current venue access does not include partners.</p>
+      </section>
+    );
   }
 
   return (
-    <div>
-      <div style={css('margin-bottom:22px;')}>
-        <h1 style={css('margin:0;font-size:30px;font-weight:800;letter-spacing:-0.02em;')}>
-          Partners
-        </h1>
-        <div style={css('font-size:14px;color:#8a8a86;font-weight:500;margin-top:6px;')}>
-          The venues, promoters &amp; staff you run nights with.
+    <section className={styles['page']}>
+      <header className={styles['header']}>
+        <div>
+          <h1>{isFind ? 'Find partners' : isStaff ? 'Staff' : 'Partners'}</h1>
+          <p>
+            {isFind
+              ? 'Meet trusted hosts and promoters.'
+              : isStaff
+                ? 'Manage access for your venue team.'
+                : 'People who help run and promote your events.'}
+          </p>
         </div>
-      </div>
-
-      <div style={css('display:flex;gap:8px;margin-bottom:18px;')}>
-        {SEGMENTS.map(([id, label]) => (
+        {tab === 'promoters' && view === 'my' && auth.canDo('canApprovePromoter') ? (
           <button
-            key={id}
             type="button"
-            onClick={() => {
-              s.setAudienceSeg(id);
-            }}
-            style={css(segBtn(s.audienceSeg === id))}
+            className={styles['primaryAction']}
+            disabled
+            title="Promoter invitations require the partner mutation API."
           >
-            {label}
+            <InviteIcon size={18} aria-hidden="true" /> Invite promoter unavailable
           </button>
+        ) : null}
+        {isStaff && auth.canDo('canManageStaff') ? (
+          <button
+            type="button"
+            className={styles['primaryAction']}
+            disabled
+            title="Staff invitations require the team access mutation API."
+          >
+            <InviteIcon size={18} aria-hidden="true" /> Invite staff unavailable
+          </button>
+        ) : null}
+      </header>
+
+      <nav className={styles['tabs']} aria-label="Partner groups">
+        {TAB_LINKS.map((item) => (
+          <Link
+            key={item.id}
+            href={item.href}
+            className={tab === item.id ? styles['active'] : undefined}
+            aria-current={tab === item.id ? 'page' : undefined}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+
+      {isStaff ? (
+        <StaffDirectory canManage={auth.canDo('canManageStaff')} />
+      ) : isFind ? (
+        <FindPartners kind={kind} />
+      ) : (
+        <MyPartners kind={kind} />
+      )}
+    </section>
+  );
+}
+
+function PartnerSubnav({
+  kind,
+  active,
+}: {
+  readonly kind: VenuePartnerKind;
+  readonly active: PartnersView;
+}) {
+  const tab = kind === 'host' ? 'hosts' : 'promoters';
+  return (
+    <nav className={styles['subnav']} aria-label="Partner views">
+      <Link
+        href={`/venue/partners?tab=${tab}`}
+        className={active === 'my' ? styles['active'] : undefined}
+      >
+        My partners
+      </Link>
+      <Link
+        href={`/venue/partners?tab=${tab}&view=find`}
+        className={active === 'find' ? styles['active'] : undefined}
+      >
+        Find partners
+      </Link>
+    </nav>
+  );
+}
+
+function MyPartners({ kind }: { readonly kind: VenuePartnerKind }) {
+  const [query, setQuery] = useState('');
+  const [selected, setSelected] = useState<VenuePartner | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const partners = getVenuePartners(kind);
+  const filtered = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase('en-IN');
+    return normalized
+      ? partners.filter((item) => item.name.toLocaleLowerCase('en-IN').includes(normalized))
+      : partners;
+  }, [partners, query]);
+
+  return (
+    <>
+      <PartnerSubnav kind={kind} active="my" />
+      <label className={styles['search']}>
+        <span className={styles['srOnly']}>Search {kind === 'host' ? 'hosts' : 'promoters'}</span>
+        <SearchIcon size={19} aria-hidden="true" />
+        <input
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+          }}
+          placeholder={`Search ${kind === 'host' ? 'hosts' : 'promoters'}`}
+        />
+      </label>
+      <div
+        className={styles['partnerTable']}
+        role="table"
+        aria-label={`${kind === 'host' ? 'Host' : 'Promoter'} partners`}
+      >
+        <div className={styles['tableHead']} role="row">
+          <span role="columnheader">{kind === 'host' ? 'Host' : 'Promoter'}</span>
+          <span role="columnheader">{kind === 'host' ? 'Last event' : 'Recent event'}</span>
+          <span role="columnheader">Status</span>
+          <span role="columnheader">Action</span>
+        </div>
+        {filtered.map((item) => (
+          <div className={styles['partnerRow']} role="row" key={item.id}>
+            <div role="cell" className={styles['identity']}>
+              <Avatar initials={item.initials} tone={item.tone} />
+              <span>
+                <strong>{item.name}</strong>
+                <small>{kind === 'host' ? 'Host' : item.city}</small>
+              </span>
+            </div>
+            <span role="cell" className={styles['eventCell']}>
+              <strong>{item.recentEvent}</strong>
+              <small>{item.recentEventDate}</small>
+            </span>
+            <span
+              role="cell"
+              className={item.status === 'Active' ? styles['positive'] : styles['pending']}
+            >
+              {item.status}
+            </span>
+            <span role="cell">
+              <button
+                type="button"
+                className={styles['secondaryAction']}
+                onClick={(event) => {
+                  triggerRef.current = event.currentTarget;
+                  setSelected(item);
+                }}
+              >
+                Contact
+              </button>
+            </span>
+          </div>
         ))}
       </div>
+      <PartnerDrawer
+        partner={selected}
+        triggerRef={triggerRef}
+        onClose={() => {
+          setSelected(null);
+        }}
+      />
+    </>
+  );
+}
 
-      {s.audienceSeg === 'venues' ? (
-        <SubTabs
-          tabs={[
-            ['my', 'My Venues'],
-            ['discover', 'Discover'],
-          ]}
-          active={s.venueTab}
-          onSelect={(id) => {
-            s.setVenueTab(id as 'my' | 'discover');
-          }}
-        />
-      ) : null}
+function FindPartners({ kind }: { readonly kind: VenuePartnerKind }) {
+  const [query, setQuery] = useState('');
+  const [city, setCity] = useState('All cities');
+  const [selected, setSelected] = useState<DiscoverablePartner | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const partners = getDiscoverablePartners(kind);
+  const cities = ['All cities', ...new Set(partners.map((item) => item.city))];
+  const filtered = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase('en-IN');
+    return partners.filter((item) => {
+      const matchesQuery =
+        !normalized || `${item.name} ${item.city}`.toLocaleLowerCase('en-IN').includes(normalized);
+      return matchesQuery && (city === 'All cities' || item.city === city);
+    });
+  }, [city, partners, query]);
 
-      {s.audienceSeg === 'promoters' ? (
-        <SubTabs
-          tabs={[
-            ['my', 'My Promoters'],
-            ['discover', 'Discover'],
-            ['requests', 'Requests'],
-          ]}
-          active={s.promoTab}
-          onSelect={(id) => {
-            s.setPromoTab(id as 'my' | 'discover' | 'requests');
-          }}
-        />
-      ) : null}
-
-      <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:20px;')}>
-        {cards.map((c, i) => {
-          const isStaff = s.audienceSeg === 'staff' && c.name !== 'Add teammate';
-          const granted = STAFF_PERMS[c.name] ?? [];
-          const statusColor = STATUS_COLORS[c.status] ?? '#8a8a86';
-
-          return (
-            <div
-              key={c.name}
-              style={css(
-                'position:relative;border-radius:28px;overflow:hidden;aspect-ratio:4/5;border:1px solid rgba(255,255,255,0.08);box-shadow:0 20px 44px rgba(0,0,0,0.4);',
-              )}
-            >
-              <div style={css(`position:absolute;inset:0;background:${pick(POSTER_GRADS, i)};`)} />
-              <div
-                style={css(
-                  'position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.85) 4%,rgba(0,0,0,0.35) 40%,transparent 64%);',
-                )}
-              />
-              <div
-                style={css(
-                  'position:absolute;top:16px;left:16px;right:16px;display:flex;justify-content:flex-end;',
-                )}
-              >
-                {c.status ? (
-                  <span style={css(partnerStatusGlass)}>
-                    <span
-                      style={css(
-                        `width:7px;height:7px;border-radius:50%;background:${statusColor};box-shadow:0 0 8px ${statusColor};`,
-                      )}
-                    />
-                    {c.status}
-                  </span>
-                ) : null}
-              </div>
-              <div style={css('position:absolute;left:18px;right:18px;bottom:18px;')}>
-                <div
-                  style={css(
-                    'font-size:20px;font-weight:800;letter-spacing:-0.01em;color:#fff;line-height:1.12;margin-bottom:4px;',
-                  )}
-                >
-                  {c.name}
-                </div>
-                <div
-                  style={css(
-                    'font-size:12.5px;font-weight:500;color:rgba(255,255,255,0.66);margin-bottom:12px;',
-                  )}
-                >
-                  {c.role}
-                </div>
-
-                {isStaff ? (
-                  <div style={css('display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;')}>
-                    {PERM_DEFS.map((p) => (
-                      <span key={p} style={css(permChip(granted.includes(p)))}>
-                        {p}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-
-                <button type="button" className="vh-w16" style={css(glassPillBtn)}>
-                  {c.action}
-                </button>
-              </div>
-              {/* initials retained for a11y-free visual parity with the mockup avatars */}
-              <span style={{ display: 'none' }}>{initialsOf(c.name)}</span>
-            </div>
-          );
-        })}
+  return (
+    <>
+      <PartnerSubnav kind={kind} active="find" />
+      <div className={styles['findControls']}>
+        <label className={styles['search']}>
+          <span className={styles['srOnly']}>Search by name or city</span>
+          <SearchIcon size={19} aria-hidden="true" />
+          <input
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+            }}
+            placeholder="Search by name or city"
+          />
+        </label>
+        <label className={styles['cityFilter']}>
+          <LocationIcon size={18} aria-hidden="true" />
+          <span className={styles['srOnly']}>City</span>
+          <select
+            value={city}
+            onChange={(event) => {
+              setCity(event.target.value);
+            }}
+          >
+            {cities.map((item) => (
+              <option key={item}>{item}</option>
+            ))}
+          </select>
+        </label>
       </div>
+      <div className={styles['cardGrid']}>
+        {filtered.map((item) => (
+          <article key={item.id} className={styles['partnerCard']}>
+            <div className={styles['portrait']} data-tone={item.tone}>
+              <span>{item.initials}</span>
+              {item.verified ? (
+                <em>
+                  <CheckIcon size={13} aria-hidden="true" /> Verified
+                </em>
+              ) : null}
+            </div>
+            <h2>{item.name}</h2>
+            <p>
+              {kind === 'host' ? 'Host' : 'Promoter'} · {item.city}
+            </p>
+            <small>{item.genre}</small>
+            <button
+              type="button"
+              onClick={(event) => {
+                triggerRef.current = event.currentTarget;
+                setSelected(item);
+              }}
+            >
+              View profile
+            </button>
+          </article>
+        ))}
+      </div>
+      <PartnerDrawer
+        partner={selected}
+        triggerRef={triggerRef}
+        onClose={() => {
+          setSelected(null);
+        }}
+      />
+    </>
+  );
+}
+
+function StaffDirectory({ canManage }: { readonly canManage: boolean }) {
+  const [selected, setSelected] = useState<VenueStaffMember | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  return (
+    <>
+      <div className={styles['staffTable']} role="table" aria-label="Venue staff">
+        <div className={styles['staffHead']} role="row">
+          <span role="columnheader">Person</span>
+          <span role="columnheader">Role</span>
+          <span role="columnheader">Access</span>
+          <span role="columnheader">Status</span>
+          <span role="columnheader">Action</span>
+        </div>
+        {venueStaff.map((item) => (
+          <div className={styles['staffRow']} role="row" key={item.id}>
+            <div role="cell" className={styles['identity']}>
+              <Avatar initials={item.initials} tone="blue" />
+              <span>
+                <strong>{item.name}</strong>
+                <small>{item.email}</small>
+              </span>
+            </div>
+            <span role="cell">{item.role}</span>
+            <span role="cell">{item.access}</span>
+            <span
+              role="cell"
+              className={item.status === 'Active' ? styles['statusDot'] : styles['pending']}
+            >
+              {item.status}
+            </span>
+            <span role="cell">
+              {canManage ? (
+                <button
+                  type="button"
+                  className={styles['secondaryAction']}
+                  onClick={(event) => {
+                    triggerRef.current = event.currentTarget;
+                    setSelected(item);
+                  }}
+                >
+                  Manage
+                </button>
+              ) : (
+                <span className={styles['muted']}>Unavailable</span>
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+      <StaffDrawer
+        member={selected}
+        triggerRef={triggerRef}
+        onClose={() => {
+          setSelected(null);
+        }}
+      />
+    </>
+  );
+}
+
+function useDrawer(
+  open: boolean,
+  triggerRef: React.RefObject<HTMLButtonElement | null>,
+  onClose: () => void,
+) {
+  const drawerRef = useRef<HTMLElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    closeRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+        window.setTimeout(() => triggerRef.current?.focus(), 0);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusable = Array.from(
+        drawerRef.current?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      }
+      if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    const drawer = drawerRef.current;
+    drawer?.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      drawer?.removeEventListener('keydown', onKeyDown);
+    };
+  }, [onClose, open, triggerRef]);
+  const closeAndRestore = () => {
+    onClose();
+    window.setTimeout(() => triggerRef.current?.focus(), 0);
+  };
+  return { drawerRef, closeRef, closeAndRestore };
+}
+
+function PartnerDrawer({
+  partner,
+  triggerRef,
+  onClose,
+}: {
+  readonly partner: VenuePartner | null;
+  readonly triggerRef: React.RefObject<HTMLButtonElement | null>;
+  readonly onClose: () => void;
+}) {
+  const { drawerRef, closeRef, closeAndRestore } = useDrawer(Boolean(partner), triggerRef, onClose);
+  if (!partner) return null;
+  return (
+    <div className={styles['overlay']}>
+      <button
+        type="button"
+        className={styles['dismiss']}
+        aria-label="Close partner details"
+        onClick={closeAndRestore}
+      />
+      <aside
+        ref={drawerRef}
+        className={styles['drawer']}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${partner.name} partner details`}
+      >
+        <button
+          ref={closeRef}
+          type="button"
+          className={styles['close']}
+          aria-label="Close partner details"
+          onClick={closeAndRestore}
+        >
+          <CloseIcon size={20} aria-hidden="true" />
+        </button>
+        <div className={styles['drawerPortrait']} data-tone={partner.tone}>
+          {partner.initials}
+        </div>
+        <h2>{partner.name}</h2>
+        <p>
+          {partner.kind === 'host' ? 'Host' : 'Promoter'} · {partner.city}
+        </p>
+        <dl>
+          <div>
+            <dt>
+              <PhoneIcon size={18} aria-hidden="true" /> Phone
+            </dt>
+            <dd>{partner.phone ?? 'Unavailable'}</dd>
+          </div>
+          <div>
+            <dt>Instagram</dt>
+            <dd>{partner.instagram ?? 'Unavailable'}</dd>
+          </div>
+          <div>
+            <dt>
+              <CalendarIcon size={18} aria-hidden="true" /> Recent event
+            </dt>
+            <dd>
+              {partner.recentEvent}
+              <small>{partner.recentEventDate}</small>
+            </dd>
+          </div>
+        </dl>
+        <footer>
+          <button type="button" disabled title="Partner messaging is not connected yet.">
+            <SendIcon size={18} aria-hidden="true" /> Message unavailable
+          </button>
+          {partner.kind === 'host' ? (
+            <button type="button" disabled title="Date requests require the partner mutation API.">
+              <CalendarIcon size={18} aria-hidden="true" /> Request a date unavailable
+            </button>
+          ) : null}
+        </footer>
+      </aside>
     </div>
   );
 }
 
-function SubTabs({
-  tabs,
-  active,
-  onSelect,
+function StaffDrawer({
+  member,
+  triggerRef,
+  onClose,
 }: {
-  readonly tabs: readonly (readonly [string, string])[];
-  readonly active: string;
-  readonly onSelect: (id: string) => void;
+  readonly member: VenueStaffMember | null;
+  readonly triggerRef: React.RefObject<HTMLButtonElement | null>;
+  readonly onClose: () => void;
+}) {
+  const { drawerRef, closeRef, closeAndRestore } = useDrawer(Boolean(member), triggerRef, onClose);
+  if (!member) return null;
+  return (
+    <div className={styles['overlay']}>
+      <button
+        type="button"
+        className={styles['dismiss']}
+        aria-label="Close staff access"
+        onClick={closeAndRestore}
+      />
+      <aside
+        ref={drawerRef}
+        className={styles['drawer']}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${member.name} staff access`}
+      >
+        <button
+          ref={closeRef}
+          type="button"
+          className={styles['close']}
+          aria-label="Close staff access"
+          onClick={closeAndRestore}
+        >
+          <CloseIcon size={20} aria-hidden="true" />
+        </button>
+        <Avatar initials={member.initials} tone="blue" large />
+        <h2>{member.name}</h2>
+        <p>
+          {member.role} · {member.email}
+        </p>
+        <section className={styles['permissions']}>
+          <h3>Permissions</h3>
+          {member.permissions.map((permission) => (
+            <div key={permission}>
+              <span>{permission}</span>
+              <CheckIcon size={18} aria-label="Enabled" />
+            </div>
+          ))}
+        </section>
+        <button
+          type="button"
+          className={styles['dangerAction']}
+          disabled
+          title="Permission changes require the team access mutation API."
+        >
+          Access changes unavailable
+        </button>
+      </aside>
+    </div>
+  );
+}
+
+function Avatar({
+  initials,
+  tone,
+  large = false,
+}: {
+  readonly initials: string;
+  readonly tone: VenuePartner['tone'];
+  readonly large?: boolean;
 }) {
   return (
-    <div
-      style={css(
-        'display:flex;gap:4px;background:#141414;border:1px solid rgba(255,255,255,0.06);padding:4px;border-radius:13px;width:fit-content;margin-bottom:20px;',
-      )}
+    <span
+      className={[styles['avatar'], large ? styles['avatarLarge'] : null].filter(Boolean).join(' ')}
+      data-tone={tone}
+      aria-hidden="true"
     >
-      {tabs.map(([id, label]) => (
-        <button
-          key={id}
-          type="button"
-          onClick={() => {
-            onSelect(id);
-          }}
-          style={css(subTab(active === id))}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
+      {initials}
+    </span>
   );
 }

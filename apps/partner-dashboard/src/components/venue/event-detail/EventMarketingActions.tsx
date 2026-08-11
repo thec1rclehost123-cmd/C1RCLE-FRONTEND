@@ -23,7 +23,6 @@ export function CreateEventMessageAction({ label }: { readonly label: 'Create me
       className={label === 'Create message' ? styles['primaryButton'] : styles['secondaryButton']}
       type="button"
       onClick={() => {
-        venue.setCAudience('event');
         venue.go('marketing');
       }}
     >

@@ -1,23 +1,25 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 
 import { PartnerDashboardLayout } from '@/components/partner-shell/PartnerDashboardLayout';
 
-import { CalendarModal } from './modals/CalendarModal';
-import { FloatingCalendar } from './modals/FloatingCalendar';
-import { VenueStudioProvider } from './store';
-
 import type { ReactNode } from 'react';
+
+const LegacyVenueRuntime = dynamic(() =>
+  import('./LegacyVenueRuntime').then((module) => module.LegacyVenueRuntime),
+);
 
 export function VenueDashboardLayout({ children }: { readonly children: ReactNode }) {
   const pathname = usePathname();
 
-  if (
-    pathname === '/venue/overview' ||
-    pathname === '/venue/events' ||
-    pathname === '/venue/events/analytics'
-  ) {
+  const needsLegacyVenueState =
+    pathname === '/venue/door' ||
+    pathname === '/venue/slot-requests' ||
+    (/^\/venue\/events\/[^/]+/.test(pathname) && pathname !== '/venue/events/create');
+
+  if (!needsLegacyVenueState) {
     return (
       <PartnerDashboardLayout partnerRole="venue">
         <div className="venue-studio venue-route">{children}</div>
@@ -25,13 +27,5 @@ export function VenueDashboardLayout({ children }: { readonly children: ReactNod
     );
   }
 
-  return (
-    <VenueStudioProvider>
-      <PartnerDashboardLayout partnerRole="venue">
-        <div className="venue-studio venue-route">{children}</div>
-      </PartnerDashboardLayout>
-      <CalendarModal />
-      <FloatingCalendar />
-    </VenueStudioProvider>
-  );
+  return <LegacyVenueRuntime>{children}</LegacyVenueRuntime>;
 }

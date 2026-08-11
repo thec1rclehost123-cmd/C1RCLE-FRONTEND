@@ -6,7 +6,6 @@ import { CopyEventLinkAction, CreateEventMessageAction } from './EventMarketingA
 
 const mocks = vi.hoisted(() => ({
   permissions: [] as string[],
-  setCAudience: vi.fn(),
   go: vi.fn(),
 }));
 
@@ -19,7 +18,6 @@ vi.mock('@/components/providers/DashboardAuthProvider', () => ({
 }));
 vi.mock('../store', () => ({
   useVenueStudio: () => ({
-    setCAudience: mocks.setCAudience,
     go: mocks.go,
   }),
 }));
@@ -27,16 +25,14 @@ vi.mock('../store', () => ({
 describe('EventMarketingActions', () => {
   beforeEach(() => {
     mocks.permissions = [];
-    mocks.setCAudience.mockReset();
     mocks.go.mockReset();
   });
 
-  it('opens the existing composer with the current event audience selected', async () => {
+  it('opens the route-level composer', async () => {
     const user = userEvent.setup();
     render(<CreateEventMessageAction label="Create message" />);
 
     await user.click(screen.getByRole('button', { name: 'Create message' }));
-    expect(mocks.setCAudience).toHaveBeenCalledWith('event');
     expect(mocks.go).toHaveBeenCalledWith('marketing');
   });
 
