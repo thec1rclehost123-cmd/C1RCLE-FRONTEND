@@ -83,6 +83,10 @@
   background: #ff5830;
 }
 
+.promoterDrawer .messageAction {
+  color: #fff;
+}
+
 .secondaryButton:hover,
 .copyEventLink:hover,
 .copyAction:hover {
@@ -253,14 +257,14 @@
 .dialogBackdrop {
   position: fixed;
   inset: 0;
-  z-index: 70;
+  z-index: 210;
   border: 0;
   background: rgba(0, 0, 0, 0.35);
 }
 
 .promoterDrawer {
   position: fixed;
-  z-index: 71;
+  z-index: 211;
   top: 0;
   right: 0;
   bottom: 0;
@@ -337,7 +341,7 @@
 
 .inviteDialog {
   position: fixed;
-  z-index: 72;
+  z-index: 211;
   top: 50%;
   left: 50%;
   width: min(480px, calc(100vw - 32px));

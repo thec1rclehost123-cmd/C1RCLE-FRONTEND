@@ -244,7 +244,7 @@ export const venueEventDetailFixture: VenueEventDetailFixtureSource = {
     name: 'Neon Nights: Afrobeats',
     venue: 'Skyline Rooftop',
     dateTimeLabel: 'Thu 16 Jul · 10:00 PM',
-    posterSrc: '/venue/events/neon-nights.webp',
+    posterSrc: '/venue/neon-nights-poster.webp',
     posterAlt: 'Neon Nights: Afrobeats event artwork',
   },
   completedPaidOrderValuePaise: 61_200_000,

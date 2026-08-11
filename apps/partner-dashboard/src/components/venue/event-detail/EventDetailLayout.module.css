@@ -56,7 +56,7 @@
   gap: 14px;
 }
 
-.eventActions button {
+.eventActions :is(a, button) {
   display: inline-flex;
   min-height: 48px;
   align-items: center;
@@ -75,18 +75,20 @@
     background-color 180ms ease;
 }
 
-.eventActions button:hover {
+.eventActions :is(a, button):hover {
   border-color: rgb(255 255 255 / 20%);
   background: #16181b;
 }
 
 .eventActions .primaryAction {
   border-color: #f44a22;
+  color: #fff;
   background: #f44a22;
 }
 
 .eventActions .primaryAction:hover {
   border-color: #ff5a34;
+  color: #fff;
   background: #ff5a34;
 }
 
@@ -141,7 +143,7 @@
   background: #f44a22;
 }
 
-.eventActions button:focus-visible,
+.eventActions :is(a, button):focus-visible,
 .eventTabs a:focus-visible {
   outline: 2px solid #f44a22;
   outline-offset: 2px;
@@ -200,7 +202,7 @@
     gap: 10px;
   }
 
-  .eventActions button {
+  .eventActions :is(a, button) {
     min-width: 0;
     min-height: 44px;
     padding-inline: 12px;

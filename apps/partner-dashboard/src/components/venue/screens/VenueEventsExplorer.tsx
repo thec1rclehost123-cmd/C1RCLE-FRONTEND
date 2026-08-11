@@ -120,36 +120,38 @@ export function VenueEventsExplorer({ source }: { readonly source: VenueEventSou
   return (
     <div className={styles['page']}>
       <header className={styles['pageHeader']}>
-        <h1>Events</h1>
-        <p>Manage what’s live and coming up.</p>
-      </header>
+        <div className={styles['pageHeaderCopy']}>
+          <h1>Events</h1>
+          <p>Manage what’s live and coming up.</p>
+        </div>
 
-      <div className={styles['tabs']} role="tablist" aria-label="Event status groups">
-        {tabs.map((item, index) => (
-          <button
-            key={item.key}
-            ref={(element) => {
-              tabRefs.current[index] = element;
-            }}
-            type="button"
-            role="tab"
-            aria-label={
-              item.showCount ? `${item.label} ${String(source.tabCounts[item.key])}` : item.label
-            }
-            aria-selected={tab === item.key}
-            tabIndex={tab === item.key ? 0 : -1}
-            onClick={() => {
-              chooseTab(item.key);
-            }}
-            onKeyDown={(event) => {
-              onTabKeyDown(event, index);
-            }}
-          >
-            {item.label}
-            {item.showCount ? <span>{source.tabCounts[item.key]}</span> : null}
-          </button>
-        ))}
-      </div>
+        <div className={styles['tabs']} role="tablist" aria-label="Event status groups">
+          {tabs.map((item, index) => (
+            <button
+              key={item.key}
+              ref={(element) => {
+                tabRefs.current[index] = element;
+              }}
+              type="button"
+              role="tab"
+              aria-label={
+                item.showCount ? `${item.label} ${String(source.tabCounts[item.key])}` : item.label
+              }
+              aria-selected={tab === item.key}
+              tabIndex={tab === item.key ? 0 : -1}
+              onClick={() => {
+                chooseTab(item.key);
+              }}
+              onKeyDown={(event) => {
+                onTabKeyDown(event, index);
+              }}
+            >
+              {item.label}
+              {item.showCount ? <span>{source.tabCounts[item.key]}</span> : null}
+            </button>
+          ))}
+        </div>
+      </header>
 
       <div className={styles['toolbar']} aria-label="Find and display events">
         <label className={styles['searchControl']}>

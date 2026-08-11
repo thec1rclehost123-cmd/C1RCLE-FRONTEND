@@ -7,7 +7,6 @@ import {
   EmailIcon,
   ForwardIcon,
   GuestIcon,
-  InfoIcon,
   LocationIcon,
   NextIcon,
   PartnerIcon,
@@ -179,23 +178,6 @@ export function VenueOverviewContent({ model }: { readonly model: VenueOverviewV
         </section>
       </div>
 
-      <section
-        className={`${className('panel')} ${className('metrics')}`}
-        aria-label="Venue summary"
-      >
-        {model.metrics.map((metric) => (
-          <article key={metric.label} title={metric.definition}>
-            <span>
-              {metric.label}
-              <InfoIcon size={12} aria-hidden="true" />
-            </span>
-            <strong>{metric.value}</strong>
-            <small>{metric.comparison}</small>
-            <span className={className('srOnly')}>{metric.definition}</span>
-          </article>
-        ))}
-      </section>
-
       <div className={className('lowerGrid')}>
         <section
           className={`${className('panel')} ${className('sales')}`}
@@ -299,6 +281,9 @@ export function VenueOverviewContent({ model }: { readonly model: VenueOverviewV
                 </Link>
               ))}
             </div>
+            <Link className={className('panelFooterLink')} href="/venue/events">
+              View calendar <ForwardIcon size={15} aria-hidden="true" />
+            </Link>
           </section>
 
           <section
@@ -307,9 +292,6 @@ export function VenueOverviewContent({ model }: { readonly model: VenueOverviewV
           >
             <div className={className('sectionHeading')}>
               <h2 id="network-title">My network</h2>
-              <Link href="/venue/partners">
-                Manage network <ForwardIcon size={15} aria-hidden="true" />
-              </Link>
             </div>
             <div className={className('networkList')}>
               {model.network.map((item) => {
@@ -327,6 +309,9 @@ export function VenueOverviewContent({ model }: { readonly model: VenueOverviewV
                 );
               })}
             </div>
+            <Link className={className('panelFooterLink')} href="/venue/partners">
+              Manage network <ForwardIcon size={15} aria-hidden="true" />
+            </Link>
           </section>
         </div>
       </div>

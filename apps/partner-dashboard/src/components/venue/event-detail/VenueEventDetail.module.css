@@ -730,9 +730,20 @@
 }
 
 .guestDrawer {
-  position: sticky;
-  top: 16px;
-  min-height: 570px;
+  position: fixed;
+  top: var(--partner-topbar-height, 64px);
+  right: 0;
+  bottom: 0;
+  z-index: 120;
+  width: min(420px, 34vw);
+  height: calc(100dvh - var(--partner-topbar-height, 64px));
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0;
+  border-radius: 12px 0 0;
+  box-shadow: -20px 0 60px rgb(0 0 0 / 38%);
   padding: 28px 24px;
 }
 
@@ -964,6 +975,7 @@
     bottom: 0;
     z-index: 100;
     width: min(360px, 100vw);
+    height: 100dvh;
     min-height: 0;
     max-height: 100dvh;
     overflow-y: auto;

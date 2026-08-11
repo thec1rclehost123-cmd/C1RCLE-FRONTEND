@@ -79,6 +79,8 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
   const [accountOpen, setAccountOpen] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const contentRef = useRef<HTMLElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLButtonElement>(null);
@@ -141,6 +143,10 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
   }, [membership?.partnerId, partnerRole, pathname]);
 
   useEffect(() => {
+    contentRef.current?.scrollTo({ top: 0, left: 0 });
+  }, [pathname]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
@@ -154,7 +160,9 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
       }
     };
     const onPointerDown = (event: PointerEvent) => {
-      if (!shellRef.current?.contains(event.target as Node)) closeTransientUi();
+      const target = event.target as Node;
+      if (!searchContainerRef.current?.contains(target)) setSearchOpen(false);
+      if (!shellRef.current?.contains(target)) closeTransientUi();
     };
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('pointerdown', onPointerDown);
@@ -306,7 +314,7 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
             <strong>{pageIdentity}</strong>
           </div>
 
-          <div className="partner-command-search">
+          <div ref={searchContainerRef} className="partner-command-search">
             <SearchIcon size={18} strokeWidth={1.7} aria-hidden="true" />
             <input
               ref={searchRef}
@@ -440,7 +448,12 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
           ) : null}
         </header>
 
-        <main id="partner-dashboard-content" className="partner-dashboard-content" tabIndex={-1}>
+        <main
+          ref={contentRef}
+          id="partner-dashboard-content"
+          className="partner-dashboard-content"
+          tabIndex={-1}
+        >
           {children}
         </main>
       </div>

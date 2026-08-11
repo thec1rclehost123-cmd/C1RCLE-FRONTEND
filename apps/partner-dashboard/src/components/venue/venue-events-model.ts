@@ -88,7 +88,7 @@ export const EVENTS: readonly VenueEvent[] = [
     price: '₹800',
     tint: 'linear-gradient(135deg,#f44a22,#551213)',
     card: 'linear-gradient(158deg,#d1490c,#7a1f00 52%,#2a0f04)',
-    artworkSrc: '/venue/events/neon-nights.webp',
+    artworkSrc: '/venue/neon-nights-poster.webp',
     artworkAlt: 'Neon Nights: Afrobeats event artwork',
     venue: 'Kitty Su Mumbai',
     city: 'Mumbai',
