@@ -10,7 +10,14 @@ export default function VenueEventsLoading() {
       <nav>
         <span />
         <span />
+        <span />
+        <span />
       </nav>
+      <div>
+        <span />
+        <i />
+        <i />
+      </div>
       <section>
         <i />
         <i />

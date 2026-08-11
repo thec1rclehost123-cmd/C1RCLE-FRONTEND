@@ -7,77 +7,59 @@ import { CalendarIcon, ChevronDownIcon, ExportIcon } from '@c1rcle/icons';
 import styles from './VenueEventsAnalytics.module.css';
 
 export function VenueEventsAnalyticsFilters({
-  venues,
-  events,
+  rows,
 }: {
-  readonly venues: readonly string[];
-  readonly events: readonly { readonly id: string; readonly name: string }[];
+  readonly rows: readonly { readonly label: string; readonly value: string }[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const updateFilter = (key: string, value: string) => {
+  const updateRange = (value: string) => {
     const next = new URLSearchParams(searchParams.toString());
-    if (value === 'all') next.delete(key);
-    else next.set(key, value);
+    if (value === '7d') next.delete('range');
+    else next.set('range', value);
     const query = next.toString();
     router.replace(query ? `${pathname}?${query}` : pathname);
+  };
+
+  const exportSummary = () => {
+    const csv = [
+      'Metric,Value',
+      ...rows.map((row) => `${JSON.stringify(row.label)},${JSON.stringify(row.value)}`),
+    ].join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'venue-events-analytics.csv';
+    anchor.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
     <div className={styles['analyticsFilters']}>
       <label>
-        <CalendarIcon size={16} aria-hidden="true" />
+        <CalendarIcon size={19} aria-hidden="true" />
         <span className={styles['srOnly']}>Date range</span>
         <select
           value={searchParams.get('range') ?? '7d'}
           onChange={(event) => {
-            updateFilter('range', event.target.value);
+            updateRange(event.target.value);
           }}
         >
-          <option value="7d">10 Jul – 16 Jul 2025</option>
-          <option value="30d">Last 30 days</option>
-          <option value="90d">Last 90 days</option>
+          <option value="7d">Last 7 days</option>
+          <option value="30d" disabled>
+            Last 30 days — unavailable
+          </option>
+          <option value="90d" disabled>
+            Last 90 days — unavailable
+          </option>
         </select>
-        <ChevronDownIcon size={15} aria-hidden="true" />
+        <ChevronDownIcon size={16} aria-hidden="true" />
       </label>
-      <label>
-        <span className={styles['srOnly']}>Venue</span>
-        <select
-          value={searchParams.get('venue') ?? 'all'}
-          onChange={(event) => {
-            updateFilter('venue', event.target.value);
-          }}
-        >
-          <option value="all">All venues</option>
-          {venues.map((venue) => (
-            <option value={venue} key={venue}>
-              {venue}
-            </option>
-          ))}
-        </select>
-        <ChevronDownIcon size={15} aria-hidden="true" />
-      </label>
-      <label>
-        <span className={styles['srOnly']}>Event</span>
-        <select
-          value={searchParams.get('event') ?? 'all'}
-          onChange={(event) => {
-            updateFilter('event', event.target.value);
-          }}
-        >
-          <option value="all">All events</option>
-          {events.map((event) => (
-            <option value={event.id} key={event.id}>
-              {event.name}
-            </option>
-          ))}
-        </select>
-        <ChevronDownIcon size={15} aria-hidden="true" />
-      </label>
-      <button type="button" disabled title="Report export requires the aggregate analytics API">
-        <ExportIcon size={17} aria-hidden="true" /> Export report
+      <button type="button" onClick={exportSummary}>
+        <ExportIcon size={19} aria-hidden="true" />
+        Export
       </button>
     </div>
   );

@@ -1,5 +1,7 @@
 export type EventStatus = 'Live' | 'Confirmed' | 'Draft' | 'Past' | 'Cancelled';
 
+export type VenueEventTab = 'upcoming' | 'live' | 'drafts' | 'past';
+
 export interface VenueEvent {
   readonly id: string;
   readonly name: string;
@@ -29,6 +31,18 @@ export interface VenueEvent {
   readonly month: string;
   readonly time: string;
   readonly host: string;
+  readonly isTonight?: boolean;
+}
+
+export interface VenueEventSource {
+  readonly totalCount: number;
+  readonly events: readonly VenueEvent[];
+  readonly tabCounts: Readonly<Record<VenueEventTab, number>>;
+  readonly pagination: {
+    readonly pageSize: number;
+    readonly hasPreviousPage: boolean;
+    readonly hasNextPage: boolean;
+  };
 }
 
 const percentage = (sold: number, capacity: number): number =>
@@ -85,6 +99,7 @@ export const EVENTS: readonly VenueEvent[] = [
     month: 'MAY',
     time: '10:00 PM',
     host: 'Rhea Kapoor',
+    isTonight: true,
   }),
   createEvent({
     id: 'sunset-sessions-vol-4',
@@ -211,7 +226,18 @@ export const eventCardBg = (index: number, fallback: string): string => {
     : `position:absolute;inset:0;background:${fallback};`;
 };
 
-export const venueEventSource = {
+export const venueEventSource: VenueEventSource = {
   totalCount: 128,
   events: EVENTS,
-} as const;
+  tabCounts: {
+    upcoming: 8,
+    live: 2,
+    drafts: 3,
+    past: 115,
+  },
+  pagination: {
+    pageSize: 5,
+    hasPreviousPage: false,
+    hasNextPage: false,
+  },
+};

@@ -4,15 +4,17 @@
 }
 
 .loading header {
-  display: flex;
-  min-height: 64px;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
+  min-height: 76px;
+  align-content: start;
+  gap: 12px;
 }
 
 .loading header span,
 .loading header i,
 .loading nav span,
+.loading > div span,
+.loading > div i,
 .loading section i {
   display: block;
   border-radius: 8px;
@@ -21,22 +23,35 @@
 
 .loading header span {
   width: 170px;
-  height: 52px;
+  height: 40px;
 }
 
 .loading header i {
-  width: 150px;
-  height: 42px;
+  width: 250px;
+  height: 20px;
 }
 
 .loading nav {
-  display: grid;
-  grid-template-columns: minmax(220px, 1fr) 148px;
-  gap: 12px;
+  display: flex;
+  gap: 28px;
+  border-bottom: 1px solid rgb(255 255 255 / 9%);
 }
 
 .loading nav span {
-  height: 42px;
+  width: 92px;
+  height: 48px;
+  border-radius: 0;
+}
+
+.loading > div {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 126px 132px;
+  gap: 16px;
+}
+
+.loading > div span,
+.loading > div i {
+  height: 52px;
 }
 
 .loading section {
@@ -108,7 +123,11 @@
 }
 
 @media (max-width: 520px) {
-  .loading nav {
-    grid-template-columns: 1fr;
+  .loading > div {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .loading > div span {
+    grid-column: 1 / -1;
   }
 }

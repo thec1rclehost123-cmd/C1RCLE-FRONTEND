@@ -7,6 +7,7 @@ describe('filterVenueEvents', () => {
   it('combines search, status, venue, and month filters', () => {
     expect(
       filterVenueEvents(EVENTS, {
+        tab: 'upcoming',
         query: 'sunset',
         status: 'Confirmed',
         venue: 'Aurus, Lower Parel',
@@ -17,6 +18,7 @@ describe('filterVenueEvents', () => {
 
   it('keeps live and confirmed statuses distinct', () => {
     const live = filterVenueEvents(EVENTS, {
+      tab: 'live',
       query: '',
       status: 'Live',
       venue: 'all',
@@ -24,5 +26,14 @@ describe('filterVenueEvents', () => {
     });
     expect(live).toHaveLength(2);
     expect(live.every((event) => event.status === 'Live')).toBe(true);
+  });
+
+  it('groups upcoming, live, drafts, and past events with plain status rules', () => {
+    const filters = { query: '', status: 'all', venue: 'all', month: 'all' } as const;
+
+    expect(filterVenueEvents(EVENTS, { ...filters, tab: 'upcoming' })).toHaveLength(5);
+    expect(filterVenueEvents(EVENTS, { ...filters, tab: 'live' })).toHaveLength(2);
+    expect(filterVenueEvents(EVENTS, { ...filters, tab: 'drafts' })).toHaveLength(1);
+    expect(filterVenueEvents(EVENTS, { ...filters, tab: 'past' })).toHaveLength(0);
   });
 });
