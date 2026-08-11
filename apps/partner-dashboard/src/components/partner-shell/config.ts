@@ -73,7 +73,7 @@ export const PARTNER_SHELL_CONFIG: Readonly<Record<PartnerDashboardRole, Partner
       },
       { label: 'Settings', href: '/host/settings', icon: 'settings', match: 'exact' },
     ],
-    primaryAction: { label: 'Create event', href: '/host/events/create', icon: 'plus' },
+    primaryAction: { label: 'Find venues', href: '/host/partners?tab=find', icon: 'plus' },
   },
   promoter: {
     role: 'promoter',

@@ -385,6 +385,7 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
 
           <VenueNotificationDrawer
             open={notificationsOpen}
+            role={partnerRole}
             onClose={() => {
               setNotificationsOpen(false);
             }}

@@ -5,6 +5,7 @@ import { useRef } from 'react';
 
 import { CalendarIcon, CloseIcon, ForwardIcon } from '@c1rcle/icons';
 
+import { hostNotifications } from '@/components/host/host-studio-model';
 import { useOverlayFocus } from '@/components/venue/useOverlayFocus';
 import { venueNotifications } from '@/components/venue/venue-notifications-model';
 
@@ -12,15 +13,29 @@ export function VenueNotificationDrawer({
   open,
   onClose,
   trigger,
+  role = 'venue',
 }: {
   readonly open: boolean;
   readonly onClose: () => void;
   readonly trigger: React.RefObject<HTMLButtonElement | null>;
+  readonly role?: 'venue' | 'host' | 'promoter';
 }) {
   const drawerRef = useRef<HTMLElement>(null);
   useOverlayFocus({ open, containerRef: drawerRef, restoreFocusRef: trigger, onClose });
   if (!open) return null;
-  const compact = venueNotifications.slice(0, 3);
+  const compact =
+    role === 'host'
+      ? hostNotifications
+          .slice(0, 3)
+          .map((item) => ({
+            id: item.id,
+            title: item.title,
+            summary: item.body,
+            time: item.time,
+            destination: item.href,
+          }))
+      : venueNotifications.slice(0, 3);
+  const allHref = role === 'host' ? '/host/notifications' : '/venue/notifications';
   return (
     <aside
       ref={drawerRef}
@@ -37,7 +52,7 @@ export function VenueNotificationDrawer({
       </header>
       <div>
         {compact.map((item) => (
-          <Link key={item.id} href={item.destination ?? '/venue/notifications'} onClick={onClose}>
+          <Link key={item.id} href={item.destination ?? allHref} onClick={onClose}>
             <CalendarIcon size={20} aria-hidden="true" />
             <span>
               <strong>{item.title}</strong>
@@ -47,7 +62,7 @@ export function VenueNotificationDrawer({
           </Link>
         ))}
       </div>
-      <Link className="partner-notification-all" href="/venue/notifications" onClick={onClose}>
+      <Link className="partner-notification-all" href={allHref} onClick={onClose}>
         View all notifications <ForwardIcon size={17} aria-hidden="true" />
       </Link>
     </aside>

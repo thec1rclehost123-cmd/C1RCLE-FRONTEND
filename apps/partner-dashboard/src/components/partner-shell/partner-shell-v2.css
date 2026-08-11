@@ -31,14 +31,14 @@
   transition: grid-template-columns 180ms ease;
 }
 
-html:has(.partner-dashboard-shell-v2[data-partner-role='venue']),
-body:has(.partner-dashboard-shell-v2[data-partner-role='venue']) {
+html:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partner-role='host'])),
+body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partner-role='host'])) {
   height: 100dvh;
   overflow: hidden;
   overscroll-behavior: none;
 }
 
-.partner-dashboard-shell-v2[data-partner-role='venue'] {
+.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partner-role='host']) {
   --partner-topbar-height: 64px;
   height: 100dvh;
   min-height: 0;
@@ -200,12 +200,14 @@ body:has(.partner-dashboard-shell-v2[data-partner-role='venue']) {
   min-width: 0;
 }
 
-.partner-dashboard-shell-v2[data-partner-role='venue'] .partner-sidebar {
+.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partner-role='host'])
+  .partner-sidebar {
   height: 100dvh;
   min-height: 0;
 }
 
-.partner-dashboard-shell-v2[data-partner-role='venue'] .partner-workspace {
+.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partner-role='host'])
+  .partner-workspace {
   display: grid;
   height: 100dvh;
   min-height: 0;
@@ -228,7 +230,8 @@ body:has(.partner-dashboard-shell-v2[data-partner-role='venue']) {
   backdrop-filter: none;
 }
 
-.partner-dashboard-shell-v2[data-partner-role='venue'] .partner-topbar {
+.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partner-role='host'])
+  .partner-topbar {
   height: var(--partner-topbar-height);
   min-height: var(--partner-topbar-height);
 }
@@ -422,7 +425,8 @@ body:has(.partner-dashboard-shell-v2[data-partner-role='venue']) {
   animation: none;
 }
 
-.partner-dashboard-shell-v2[data-partner-role='venue'] .partner-dashboard-content {
+.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partner-role='host'])
+  .partner-dashboard-content {
   width: 100%;
   height: auto;
   min-height: 0;
@@ -435,6 +439,13 @@ body:has(.partner-dashboard-shell-v2[data-partner-role='venue']) {
 }
 
 .partner-dashboard-shell-v2[data-partner-role='venue'] .venue-route {
+  width: min(var(--partner-content-width), 100%);
+  min-width: 0;
+  min-height: 100%;
+  margin: 0 auto;
+}
+
+.partner-dashboard-shell-v2[data-partner-role='host'] .host-route {
   width: min(var(--partner-content-width), 100%);
   min-width: 0;
   min-height: 100%;
@@ -598,7 +609,8 @@ body:has(.partner-dashboard-shell-v2[data-partner-role='venue']) {
     gap: 16px;
     padding-inline: 20px;
   }
-  .partner-dashboard-shell-v2[data-partner-role='venue'] .partner-dashboard-content {
+  .partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partner-role='host'])
+    .partner-dashboard-content {
     padding: 20px;
   }
 }
@@ -706,10 +718,12 @@ body:has(.partner-dashboard-shell-v2[data-partner-role='venue']) {
     min-height: calc(100vh - 64px);
     padding: 20px 12px 40px;
   }
-  .partner-dashboard-shell-v2[data-partner-role='venue'] .partner-workspace {
+  .partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partner-role='host'])
+    .partner-workspace {
     height: 100dvh;
   }
-  .partner-dashboard-shell-v2[data-partner-role='venue'] .partner-dashboard-content {
+  .partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partner-role='host'])
+    .partner-dashboard-content {
     min-height: 0;
     padding: 16px;
     scrollbar-gutter: auto;

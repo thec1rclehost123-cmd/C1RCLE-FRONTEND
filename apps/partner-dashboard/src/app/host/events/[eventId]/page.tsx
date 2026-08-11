@@ -1,12 +1,9 @@
-import { notFound } from 'next/navigation';
+import { HostEventSummaryScreen } from '@/components/host/HostEventDetailScreen';
 
-import { DashboardButton, DashboardPageHeader, MetricCard, SectionHeading, StatusBadge } from '@/components/partner-shell/DashboardUi';
-import { formatInr } from '@/lib/partner/contracts';
-import { partnerRepositories } from '@/lib/partner/repositories';
-
-export default async function HostEventDetailPage({ params }: { readonly params: Promise<{ eventId: string }> }) {
-  const { eventId } = await params;
-  const event = await partnerRepositories.host.getEvent(eventId);
-  if (!event) notFound();
-  return <><DashboardPageHeader eyebrow="Host event" title={event.name} description={`${event.date} · ${event.time} · ${event.venue}, ${event.city}`} actions={<><DashboardButton href="/host/events">All events</DashboardButton><DashboardButton href={`/host/events/${event.id}/analytics`} tone="primary">View analytics</DashboardButton></>} /><section className={`host-event-hero host-event-art--${event.id} pd-surface`}><div><StatusBadge tone={event.status === 'on-sale' ? 'positive' : 'neutral'}>{event.status}</StatusBadge><span>{event.category}</span><h2>{event.name}</h2><p>{event.description}</p></div><aside><span>At a glance</span><strong>{event.ticketsSold} / {event.capacity}</strong><small>tickets moved</small><a href={`/host/events/${event.id}/analytics`}>Open full report →</a></aside></section><section className="pd-metrics host-event-metrics"><MetricCard label="Tickets sold" value={String(event.ticketsSold)} trend="+14%" tone="positive" /><MetricCard label="Gross ticket value" value={formatInr(event.grossPaise)} detail="before settlement" tone="accent" /><MetricCard label="Promoters" value={String(event.promoterCount)} detail="linked to event" /><MetricCard label="Check-ins" value={String(event.checkIns)} detail={event.status === 'completed' ? 'final' : 'opens on event day'} /></section><div className="host-event-detail-grid"><section className="pd-surface host-tiers"><SectionHeading title="Ticket tiers" description="Inventory and pricing supplied to checkout." /><div>{event.ticketTiers.map((tier) => <article key={tier.id}><div><strong>{tier.name}</strong><span>{formatInr(tier.pricePaise)}</span></div><div><strong>{tier.sold} / {tier.inventory}</strong><span>sold</span></div></article>)}</div></section><section className="pd-surface host-readiness"><SectionHeading title="Event readiness" description="Backend-dependent launch checks." /><ul><li><span>✓</span><div><strong>Identity complete</strong><small>Public event content is ready</small></div></li><li><span>✓</span><div><strong>Ticket inventory valid</strong><small>Tier totals fit capacity</small></div></li><li><span>○</span><div><strong>Publishing confirmation</strong><small>Waiting for event mutation API</small></div></li></ul></section></div></>;
+export default async function HostEventPage({
+  params,
+}: {
+  readonly params: Promise<{ readonly eventId: string }>;
+}) {
+  return <HostEventSummaryScreen id={(await params).eventId} />;
 }

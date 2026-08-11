@@ -1,8 +1,5 @@
-import { DashboardPageHeader, MetricCard, SectionHeading, StatusBadge } from '@/components/partner-shell/DashboardUi';
-import { formatInr } from '@/lib/partner/contracts';
-import { partnerRepositories } from '@/lib/partner/repositories';
+import { HostFinanceScreen } from '@/components/host/HostFinanceScreen';
 
-export default async function HostFinancePage() {
-  const finance = await partnerRepositories.host.getFinance();
-  return <><DashboardPageHeader eyebrow="Private workspace" title="Finance" description="Host settlements, payout timing and destination account. Never exposed to external partner profiles." actions={<button type="button" className="pd-button pd-button--primary" disabled title="Payout requests require the finance mutation API">Request payout</button>} /><section className="pd-metrics"><MetricCard label="Available" value={formatInr(finance.availablePaise)} detail="eligible for payout" tone="positive" /><MetricCard label="Pending" value={formatInr(finance.pendingPaise)} detail="awaiting settlement" tone="warning" /><MetricCard label="Lifetime paid" value={formatInr(finance.lifetimePaise)} detail="private to your organization" tone="accent" /><MetricCard label="Next payout" value={finance.nextPayout} detail={finance.payoutAccount} /></section><section className="pd-surface host-finance-table"><SectionHeading title="Payout history" description="Settlement history for this organization." /><div><table><thead><tr><th>Reference</th><th>Date</th><th>Account</th><th>Status</th><th>Amount</th></tr></thead><tbody>{finance.payouts.map((payout) => <tr key={payout.id}><td>{payout.id}</td><td>{payout.createdAt}</td><td>{payout.accountLabel}</td><td><StatusBadge tone={payout.status === 'paid' ? 'positive' : payout.status === 'failed' ? 'danger' : 'warning'}>{payout.status}</StatusBadge></td><td><strong>{formatInr(payout.amountPaise)}</strong></td></tr>)}</tbody></table></div></section></>;
+export default function HostFinancePage() {
+  return <HostFinanceScreen />;
 }
