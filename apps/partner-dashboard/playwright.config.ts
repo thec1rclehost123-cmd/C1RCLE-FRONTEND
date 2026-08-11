@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = 3001;
+// Keep browser tests isolated from the normal dashboard dev server (3001).
+const PORT = 3211;
 const baseURL = `http://127.0.0.1:${String(PORT)}`;
 
 export default defineConfig({
@@ -16,10 +17,10 @@ export default defineConfig({
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile-safari', use: { ...devices['iPhone 14'] } },
+    { name: 'mobile-chromium', use: { ...devices['Pixel 7'] } },
   ],
   webServer: {
-    command: 'pnpm start',
+    command: `pnpm exec next start --port ${String(PORT)}`,
     url: baseURL,
     reuseExistingServer: process.env['CI'] === undefined,
     timeout: 120_000,

@@ -1,5 +1,7 @@
 import { Archivo } from 'next/font/google';
 
+import { DashboardAuthProvider } from '@/components/providers/DashboardAuthProvider';
+
 import '../promoter/promoter.css';
 
 import type { ReactNode } from 'react';
@@ -12,5 +14,9 @@ const archivo = Archivo({
 });
 
 export default function PartnerNetworkLayout({ children }: { readonly children: ReactNode }) {
-  return <div className={archivo.variable}>{children}</div>;
+  return (
+    <DashboardAuthProvider>
+      <div className={archivo.variable}>{children}</div>
+    </DashboardAuthProvider>
+  );
 }

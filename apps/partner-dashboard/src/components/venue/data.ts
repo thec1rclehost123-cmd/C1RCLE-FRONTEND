@@ -13,7 +13,7 @@ export const GREEN = '#6ee79b';
 export const RED = '#f0857a';
 export const AMBER = '#ffb020';
 
-export const POSTER_SRC = '/venue/neon-nights-poster.jpg';
+export const POSTER_SRC = '/venue/neon-nights-poster.webp';
 
 // ── shared style helpers ────────────────────────────────────────────────────
 

@@ -1,6 +1,7 @@
 import { Archivo } from 'next/font/google';
 
 import { PromoterDashboardLayout } from '@/components/promoter/PromoterDashboardLayout';
+import { DashboardAuthProvider } from '@/components/providers/DashboardAuthProvider';
 
 import './promoter.css';
 
@@ -20,5 +21,11 @@ export const metadata: Metadata = {
 };
 
 export default function PromoterLayout({ children }: { readonly children: ReactNode }) {
-  return <div className={archivo.variable}><PromoterDashboardLayout>{children}</PromoterDashboardLayout></div>;
+  return (
+    <DashboardAuthProvider>
+      <div className={archivo.variable}>
+        <PromoterDashboardLayout>{children}</PromoterDashboardLayout>
+      </div>
+    </DashboardAuthProvider>
+  );
 }

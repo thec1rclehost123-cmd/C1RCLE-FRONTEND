@@ -15,7 +15,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { getFirebaseAuth } from '@/lib/firebase/client';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 type UserType = 'venue' | 'host' | 'promoter';
 
@@ -49,6 +49,22 @@ const bgPalette = {
 function WorkspaceBg({ type }: { type: UserType | null }) {
   const p = type ? bgPalette[type] : null;
   const r = (a: number) => p?.ring.replace('VAL', String(a)) ?? 'transparent';
+  const reduceMotion = useReducedMotion();
+  const [compactViewport, setCompactViewport] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 767px)');
+    const update = () => {
+      setCompactViewport(query.matches);
+    };
+    update();
+    query.addEventListener('change', update);
+    return () => {
+      query.removeEventListener('change', update);
+    };
+  }, []);
+
+  const animateBackground = !reduceMotion && !compactViewport;
 
   return (
     <AnimatePresence mode="wait">
@@ -74,18 +90,25 @@ function WorkspaceBg({ type }: { type: UserType | null }) {
               x: '-50%',
               y: '-50%',
             }}
-            animate={
-              type === 'venue'
-                ? { scale: [1, 1.15, 1], opacity: [0.7, 1, 0.7] }
-                : type === 'host'
-                  ? {
-                      x: ['-50%', '-40%', '-60%', '-50%'],
-                      y: ['-50%', '-60%', '-40%', '-50%'],
-                      scale: [1, 1.1, 1],
-                    }
-                  : { scale: [1, 1.2, 1], opacity: [0.6, 1, 0.6] }
-            }
-            transition={{ duration: type === 'host' ? 6 : 3, repeat: Infinity, ease: 'easeInOut' }}
+            {...(animateBackground
+              ? {
+                  animate:
+                    type === 'venue'
+                      ? { scale: [1, 1.15, 1], opacity: [0.7, 1, 0.7] }
+                      : type === 'host'
+                        ? {
+                            x: ['-50%', '-40%', '-60%', '-50%'],
+                            y: ['-50%', '-60%', '-40%', '-50%'],
+                            scale: [1, 1.1, 1],
+                          }
+                        : { scale: [1, 1.2, 1], opacity: [0.6, 1, 0.6] },
+                  transition: {
+                    duration: type === 'host' ? 6 : 3,
+                    repeat: Infinity,
+                    ease: 'easeInOut' as const,
+                  },
+                }
+              : {})}
           />
 
           {/* All — same rotating arc style, different colours */}
@@ -112,8 +135,12 @@ function WorkspaceBg({ type }: { type: UserType | null }) {
                 borderLeftColor: r(0.25),
                 rotate: deg,
               }}
-              animate={{ rotate: [deg, deg + 360] }}
-              transition={{ duration: 8 + i * 3, repeat: Infinity, ease: 'linear' }}
+              {...(animateBackground
+                ? {
+                    animate: { rotate: [deg, deg + 360] },
+                    transition: { duration: 8 + i * 3, repeat: Infinity, ease: 'linear' as const },
+                  }
+                : {})}
             />
           ))}
 
@@ -121,8 +148,12 @@ function WorkspaceBg({ type }: { type: UserType | null }) {
           <motion.div
             className="absolute bottom-8 right-8 rounded-full"
             style={{ width: 6, height: 6, background: p.primary }}
-            animate={{ opacity: [1, 0.2, 1] }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+            {...(animateBackground
+              ? {
+                  animate: { opacity: [1, 0.2, 1] },
+                  transition: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' as const },
+                }
+              : {})}
           />
         </motion.div>
       )}

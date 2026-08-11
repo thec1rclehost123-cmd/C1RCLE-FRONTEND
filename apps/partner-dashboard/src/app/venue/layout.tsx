@@ -1,5 +1,6 @@
 import { Archivo } from 'next/font/google';
 
+import { DashboardAuthProvider } from '@/components/providers/DashboardAuthProvider';
 import { VenueDashboardLayout } from '@/components/venue/VenueDashboardLayout';
 
 import './venue.css';
@@ -20,5 +21,11 @@ export const metadata: Metadata = {
 };
 
 export default function VenueLayout({ children }: { readonly children: ReactNode }) {
-  return <div className={archivo.variable}><VenueDashboardLayout>{children}</VenueDashboardLayout></div>;
+  return (
+    <DashboardAuthProvider>
+      <div className={archivo.variable}>
+        <VenueDashboardLayout>{children}</VenueDashboardLayout>
+      </div>
+    </DashboardAuthProvider>
+  );
 }

@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useMotionValue, useSpring } from 'framer-motion';
+import { useEffect, useRef } from 'react';
 
 interface MagneticButtonProps {
   children: React.ReactNode;
@@ -17,11 +17,16 @@ export default function MagneticButton({
   onClick,
 }: MagneticButtonProps) {
   const buttonRef = useRef<HTMLAnchorElement | HTMLButtonElement>(null);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const motionX = useMotionValue(0);
+  const motionY = useMotionValue(0);
+  const springX = useSpring(motionX, { stiffness: 150, damping: 15, mass: 0.1 });
+  const springY = useSpring(motionY, { stiffness: 150, damping: 15, mass: 0.1 });
 
   useEffect(() => {
     const button = buttonRef.current;
-    if (!button) return;
+    const supportsHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!button || !supportsHover || reduceMotion) return;
 
     const handleMouseMove = (e: Event) => {
       const me = e as MouseEvent;
@@ -32,12 +37,14 @@ export default function MagneticButton({
       // Only apply magnetic effect if cursor is within 100px
       const distance = Math.sqrt(x * x + y * y);
       if (distance < 100) {
-        setPosition({ x: x * 0.3, y: y * 0.3 });
+        motionX.set(x * 0.3);
+        motionY.set(y * 0.3);
       }
     };
 
     const handleMouseLeave = () => {
-      setPosition({ x: 0, y: 0 });
+      motionX.set(0);
+      motionY.set(0);
     };
 
     button.addEventListener('mousemove', handleMouseMove);
@@ -47,7 +54,7 @@ export default function MagneticButton({
       button.removeEventListener('mousemove', handleMouseMove);
       button.removeEventListener('mouseleave', handleMouseLeave);
     };
-  }, []);
+  }, [motionX, motionY]);
 
   const Component = href ? motion.a : motion.button;
 
@@ -57,8 +64,7 @@ export default function MagneticButton({
       href={href}
       onClick={onClick}
       className={`cursor-pointer ${className}`}
-      animate={{ x: position.x, y: position.y }}
-      transition={{ type: 'spring', stiffness: 150, damping: 15, mass: 0.1 }}
+      style={{ x: springX, y: springY }}
     >
       {children}
     </Component>

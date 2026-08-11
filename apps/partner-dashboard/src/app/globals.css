@@ -2404,9 +2404,33 @@ html:not(.dark) .venue-shell > div {
 
 /* Reduced motion — kill all venue animations */
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
   .venue-shell * {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Mobile GPUs pay heavily for stacked full-surface backdrop filters. The
+   dashboard keeps its glass palette through translucent fills and borders,
+   while avoiding repeated live blur passes on compact devices. */
+@media (max-width: 767px) {
+  .partner-dashboard *,
+  .venue-studio * {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
 }
 

@@ -3,6 +3,7 @@ import './host.css';
 import { Archivo } from 'next/font/google';
 
 import { HostDashboardLayout } from '@/components/host/HostDashboardLayout';
+import { DashboardAuthProvider } from '@/components/providers/DashboardAuthProvider';
 
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
@@ -19,5 +20,11 @@ export const metadata: Metadata = {
 };
 
 export default function HostLayout({ children }: { readonly children: ReactNode }) {
-  return <div className={archivo.variable}><HostDashboardLayout>{children}</HostDashboardLayout></div>;
+  return (
+    <DashboardAuthProvider>
+      <div className={archivo.variable}>
+        <HostDashboardLayout>{children}</HostDashboardLayout>
+      </div>
+    </DashboardAuthProvider>
+  );
 }

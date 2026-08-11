@@ -280,9 +280,6 @@ importers:
       '@c1rcle/icons':
         specifier: workspace:*
         version: link:../../packages/icons
-      '@c1rcle/providers':
-        specifier: workspace:*
-        version: link:../../packages/providers
       '@c1rcle/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -295,9 +292,6 @@ importers:
       '@hookform/resolvers':
         specifier: 5.7.1
         version: 5.7.1(@standard-schema/spec@1.1.0)(react-hook-form@7.84.0(react@19.2.8))(zod@4.4.3)
-      '@tanstack/react-query':
-        specifier: 5.101.4
-        version: 5.101.4(react@19.2.8)
       firebase:
         specifier: ^11.3.0
         version: 11.10.0
