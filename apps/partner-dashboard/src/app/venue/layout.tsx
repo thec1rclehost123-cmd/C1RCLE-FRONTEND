@@ -1,5 +1,7 @@
 import { Archivo } from 'next/font/google';
 
+import { VenueDashboardLayout } from '@/components/venue/VenueDashboardLayout';
+
 import './venue.css';
 
 import type { Metadata } from 'next';
@@ -18,5 +20,5 @@ export const metadata: Metadata = {
 };
 
 export default function VenueLayout({ children }: { readonly children: ReactNode }) {
-  return <div className={archivo.variable}>{children}</div>;
+  return <div className={archivo.variable}><VenueDashboardLayout>{children}</VenueDashboardLayout></div>;
 }

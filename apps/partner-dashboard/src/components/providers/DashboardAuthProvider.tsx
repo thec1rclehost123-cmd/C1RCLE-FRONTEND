@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
@@ -53,6 +53,7 @@ interface MeApiResponse {
     tier?: string;
     // May be present here (injected by gateway) OR at the top-level activeMembership field.
     activeMembership?: MeActiveMembership;
+    memberships?: MeActiveMembership[];
     _staffTabVisibility?: Record<string, boolean>;
     _staffActionPermissions?: Record<string, boolean>;
     _staffPiiPolicy?: Record<string, boolean>;
@@ -60,6 +61,7 @@ interface MeApiResponse {
   } | null;
   // Gateway puts activeMembership here when loadMemberships succeeds.
   activeMembership?: MeActiveMembership | null;
+  memberships?: MeActiveMembership[];
   // buildGuestAuthBootstrap nests onboardingRequest inside onboarding.
   onboarding?: {
     onboardingRequest?: {
@@ -72,6 +74,7 @@ interface MeApiResponse {
 interface AuthContextValue {
   user: any | null;
   profile: DashboardProfile | null;
+  memberships: PartnerMembership[];
   loading: boolean;
   isApproved: boolean;
   isBanned: boolean;
@@ -108,6 +111,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [user, setUser] = useState<any | null>(null);
   const [profile, setProfile] = useState<DashboardProfile | null>(null);
+  const [memberships, setMemberships] = useState<PartnerMembership[]>([]);
   const [loading, setLoading] = useState(true);
   const [isApproved, setIsApproved] = useState(false);
   const [isBanned, setIsBanned] = useState(false);
@@ -153,6 +157,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
       setUser(firebaseUser);
       if (!firebaseUser) {
         setProfile(null);
+        setMemberships([]);
         setIsApproved(false);
         setIsBanned(false);
         setIsPartnerSuspended(false);
@@ -171,6 +176,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
         // Without this, Account A's profile stays visible while Account B's
         // /api/auth/me fetch is in-flight — causing the wrong account to render.
         setProfile(null);
+        setMemberships([]);
         setIsApproved(false);
         setIsBanned(false);
         setIsPartnerSuspended(false);
@@ -255,6 +261,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
         // activeMembership may live in data.user.activeMembership (injected by gateway)
         // OR at data.activeMembership (top-level) — check both for resilience.
         const rawMembership = userData.activeMembership || data.activeMembership || null;
+        const rawMemberships = userData.memberships || data.memberships || (rawMembership ? [rawMembership] : []);
 
         if (claims['partnerId'] && claims['partnerType'] && claims['partnerRole']) {
           activeMembership = {
@@ -301,6 +308,17 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
             })
             .catch(() => {});
         }
+
+        setMemberships(rawMemberships.map((item) => ({
+          uid: user.uid,
+          partnerId: item.partnerId,
+          partnerType: item.partnerType === 'club' ? 'venue' : item.partnerType,
+          role: item.role,
+          joinedAt: item.joinedAt,
+          isActive: item.partnerId === activeMembership?.partnerId,
+          partnerName: item.partnerName,
+          membershipId: item.membershipId,
+        })));
 
         // Set permissions atomically — all three fields in a single state update
         setPermissions({
@@ -422,16 +440,16 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     };
   }, [user, membershipId]);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     const auth = getFirebaseAuth() as any;
     if (auth && typeof auth.signInWithEmailAndPassword === 'function') {
       await auth.signInWithEmailAndPassword(email, password);
     } else {
       await signInWithEmailAndPassword(auth, email, password).catch(() => {});
     }
-  };
+  }, []);
 
-  const signUp = async (email: string, password: string, displayName: string) => {
+  const signUp = useCallback(async (email: string, password: string, displayName: string) => {
     const auth = getFirebaseAuth() as any;
     const credential = await createUserWithEmailAndPassword(auth, email, password);
 
@@ -456,9 +474,9 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
         isApproved: false,
       }),
     });
-  };
+  }, []);
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = useCallback(async () => {
     const auth = getFirebaseAuth() as any;
     const provider = new GoogleAuthProvider();
     const credential = await signInWithPopup(auth, provider);
@@ -483,18 +501,18 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
         isApproved: false,
       }),
     });
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     const auth = getFirebaseAuth() as any;
     if (auth && typeof auth.signOut === 'function') {
       await auth.signOut();
     } else {
       await firebaseSignOut(auth).catch(() => {});
     }
-  };
+  }, []);
 
-  const switchPartner = async (partnerId: string) => {
+  const switchPartner = useCallback(async (partnerId: string) => {
     if (!user) return;
     try {
       setLoading(true);
@@ -517,14 +535,42 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
-  const canDo = (action: string) =>
-    !permissions.actionPermissions || permissions.actionPermissions[action] === true;
+  const canDo = useCallback((action: string) =>
+    !permissions.actionPermissions || permissions.actionPermissions[action] === true, [permissions.actionPermissions]);
 
-  const getIdToken = async () => {
+  const getIdToken = useCallback(async () => {
     return getCachedFirebaseIdToken(user);
-  };
+  }, [user]);
+
+  const hasPermission = useCallback((permission: string) => grantedPermissions.includes(permission), [grantedPermissions]);
+
+  const authContextValue = useMemo<AuthContextValue>(() => ({
+    user,
+    profile,
+    memberships,
+    loading,
+    isApproved,
+    isBanned,
+    isPartnerSuspended,
+    onboardingStatus,
+    kycStatus,
+    entityType,
+    subscriptionPlan,
+    tabVisibility: permissions.tabVisibility ?? serverDefaultTabVisibility,
+    actionPermissions: permissions.actionPermissions,
+    piiPolicy: permissions.piiPolicy,
+    grantedPermissions,
+    hasPermission,
+    canDo,
+    getIdToken,
+    signIn,
+    signUp,
+    signInWithGoogle,
+    signOut,
+    switchPartner,
+  }), [canDo, entityType, getIdToken, grantedPermissions, hasPermission, isApproved, isBanned, isPartnerSuspended, kycStatus, loading, memberships, onboardingStatus, permissions.actionPermissions, permissions.piiPolicy, permissions.tabVisibility, profile, serverDefaultTabVisibility, signIn, signInWithGoogle, signOut, signUp, subscriptionPlan, switchPartner, user]);
 
   const isDashboardPath = pathname
     ? pathname.startsWith('/venue') ||
@@ -556,32 +602,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        profile,
-        loading,
-        isApproved,
-        isBanned,
-        isPartnerSuspended,
-        onboardingStatus,
-        kycStatus,
-        entityType,
-        subscriptionPlan,
-        tabVisibility: permissions.tabVisibility ?? serverDefaultTabVisibility,
-        actionPermissions: permissions.actionPermissions,
-        piiPolicy: permissions.piiPolicy,
-        grantedPermissions,
-        hasPermission: (permission: string) => grantedPermissions.includes(permission),
-        canDo,
-        getIdToken,
-        signIn,
-        signUp,
-        signInWithGoogle,
-        signOut,
-        switchPartner,
-      }}
-    >
+    <AuthContext.Provider value={authContextValue}>
       {children}
     </AuthContext.Provider>
   );

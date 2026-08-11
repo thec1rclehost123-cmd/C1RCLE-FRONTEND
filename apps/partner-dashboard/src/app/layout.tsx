@@ -1,7 +1,10 @@
 import { AppProviders, themeInitScript } from '@c1rcle/providers';
+
 import { DashboardAuthProvider } from '@/components/providers/DashboardAuthProvider';
 
 import './globals.css';
+import '@/components/partner-shell/partner-shell.css';
+import '@/components/partner-shell/dashboard-ui.css';
 
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';

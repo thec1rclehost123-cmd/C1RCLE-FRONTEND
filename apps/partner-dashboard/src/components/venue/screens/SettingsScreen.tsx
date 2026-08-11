@@ -1,354 +1,110 @@
 'use client';
 
-import { css } from '../charts';
-import { ACCOUNT_ROWS, HIGHLIGHTS, MENU_ITEMS, PRESENCE_STATS, inputStyle, subTab } from '../data';
-import { Icon } from '../Icon';
-import { useVenueStudio } from '../store';
+import { useState } from 'react';
 
-import type { SettingsView } from '../store';
+const SETTING_SECTIONS = ['Venue profile', 'Operations', 'Restaurant', 'Team & account'] as const;
+type SettingSection = (typeof SETTING_SECTIONS)[number];
 
-const SETTINGS_TABS: readonly (readonly [SettingsView, string])[] = [
-  ['public', 'Presence'],
-  ['menu', 'Menu'],
-  ['account', 'Account'],
-];
+const AMENITIES = ['Rooftop', 'Accessible entrance', 'Valet', 'Smoking area', 'Bottle service', 'Food available'];
 
 export function SettingsScreen() {
-  const s = useVenueStudio();
+  const [section, setSection] = useState<SettingSection>('Venue profile');
+  const [saved, setSaved] = useState(false);
+
+  const saveDraft = () => {
+    setSaved(true);
+    window.setTimeout(() => { setSaved(false); }, 2400);
+  };
 
   return (
-    <div>
-      <h1 style={css('margin:0 0 22px;font-size:30px;font-weight:800;letter-spacing:-0.02em;')}>
-        Settings
-      </h1>
-      <div
-        style={css(
-          'display:flex;gap:4px;background:#141414;border:1px solid rgba(255,255,255,0.06);padding:4px;border-radius:13px;width:fit-content;margin-bottom:22px;',
-        )}
-      >
-        {SETTINGS_TABS.map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => {
-              s.setSettingsView(id);
-            }}
-            style={css(subTab(s.settingsView === id))}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+    <div className="venue-settings">
+      <header className="venue-settings-header">
+        <div><span>Venue identity</span><h1>Settings</h1><p>Control the information guests, hosts and promoters see before they work with you.</p></div>
+        <button type="button" onClick={saveDraft}>{saved ? 'Draft saved' : 'Save draft'}</button>
+      </header>
 
-      {s.settingsView === 'public' ? <PresenceView /> : null}
-      {s.settingsView === 'menu' ? <MenuView /> : null}
-      {s.settingsView === 'account' ? <AccountView /> : null}
+      <nav className="venue-settings-tabs" aria-label="Venue settings sections">
+        {SETTING_SECTIONS.map((item) => <button key={item} type="button" className={section === item ? 'is-active' : undefined} onClick={() => { setSection(item); }}>{item}</button>)}
+      </nav>
+
+      {section === 'Venue profile' ? <VenueProfileSettings /> : null}
+      {section === 'Operations' ? <VenueOperationsSettings /> : null}
+      {section === 'Restaurant' ? <VenueRestaurantSettings /> : null}
+      {section === 'Team & account' ? <VenueAccountSettings /> : null}
     </div>
   );
 }
 
-function PresenceView() {
-  const fieldLabel = css(
-    'font-size:13px;font-weight:600;color:#c9c9c6;display:block;margin-bottom:8px;',
-  );
+function Field({ label, hint, children }: { readonly label: string; readonly hint?: string; readonly children: React.ReactNode }) {
+  return <label className="venue-setting-field"><span>{label}</span>{children}{hint ? <small>{hint}</small> : null}</label>;
+}
 
+function VenueProfileSettings() {
   return (
-    <div
-      style={css(
-        'display:grid;grid-template-columns:1.5fr 1fr;gap:20px;align-items:start;max-width:1040px;',
-      )}
-    >
-      <div style={css('display:flex;flex-direction:column;gap:20px;')}>
-        <div
-          style={css(
-            'position:relative;border-radius:24px;overflow:hidden;background:rgba(20,20,20,0.6);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.08);box-shadow:inset 0 1px 0 rgba(255,255,255,0.06),0 20px 50px rgba(0,0,0,0.35);',
-          )}
-        >
-          <div
-            style={css(
-              'height:150px;position:relative;background:linear-gradient(120deg,#2a1206,#3a1a08 40%,#160b04);display:flex;align-items:flex-end;justify-content:flex-end;padding:14px;',
-            )}
-          >
-            <div
-              style={css(
-                'position:absolute;top:-40px;left:30%;width:240px;height:240px;background:radial-gradient(circle,rgba(255,90,31,0.45),transparent 68%);',
-              )}
-            />
-            <button
-              type="button"
-              className="vh-black-60"
-              style={css(
-                'position:relative;display:inline-flex;align-items:center;gap:7px;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.22);color:#fff;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;backdrop-filter:blur(6px);',
-              )}
-            >
-              <Icon name="image" size={13} /> Change cover
-            </button>
+    <div className="venue-settings-grid">
+      <section className="venue-settings-card">
+        <div className="venue-cover-editor"><span>SKYLINE SOCIAL</span><button type="button">Change cover</button></div>
+        <div className="venue-settings-fields">
+          <div className="venue-two-fields">
+            <Field label="Venue name"><input defaultValue="Skyline Social" /></Field>
+            <Field label="Venue category"><select defaultValue="Nightlife venue"><option>Nightlife venue</option><option>Restaurant</option><option>Event space</option><option>Gallery</option></select></Field>
           </div>
-          <div style={css('padding:24px;position:relative;')}>
-            <div
-              style={css(
-                'width:68px;height:68px;border-radius:18px;background:linear-gradient(135deg,#ff5a1f,#c23d10);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:24px;color:#fff;position:absolute;top:-34px;left:24px;border:4px solid #141414;box-shadow:0 8px 24px rgba(255,90,31,0.35);',
-              )}
-            >
-              RK
-            </div>
-            <div style={css('margin-top:26px;display:flex;flex-direction:column;gap:18px;')}>
-              <div>
-                <label htmlFor="st-name" style={fieldLabel}>
-                  Display name
-                </label>
-                <input id="st-name" defaultValue="Rhea Kapoor Events" style={css(inputStyle)} />
-              </div>
-              <div>
-                <label htmlFor="st-bio" style={fieldLabel}>
-                  Bio
-                </label>
-                <textarea
-                  id="st-bio"
-                  defaultValue="Curating Mumbai's best rooftop & warehouse nights since 2019. Afrobeats · House · Techno."
-                  style={{
-                    ...css(inputStyle),
-                    minHeight: 84,
-                    resize: 'vertical',
-                    lineHeight: 1.5,
-                    fontFamily: 'inherit',
-                  }}
-                />
-              </div>
-              <div>
-                <span style={fieldLabel}>Highlights</span>
-                <div style={css('display:flex;gap:8px;flex-wrap:wrap;')}>
-                  {HIGHLIGHTS.map((h) => (
-                    <span
-                      key={h}
-                      style={css(
-                        'display:inline-flex;align-items:center;gap:7px;background:#0d0d0d;border:1px solid rgba(255,255,255,0.1);padding:8px 13px;border-radius:999px;font-size:13px;font-weight:600;',
-                      )}
-                    >
-                      {h}
-                      <Icon name="x" size={12} color="#8a8a86" style={{ cursor: 'pointer' }} />
-                    </span>
-                  ))}
-                  <button
-                    type="button"
-                    style={css(
-                      'background:rgba(255,90,31,0.12);border:1px solid rgba(255,90,31,0.3);color:#ff8a55;padding:8px 13px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;',
-                    )}
-                  >
-                    + Add
-                  </button>
-                </div>
-              </div>
-            </div>
+          <Field label="Public description" hint="Shown on your Guest Portal profile and event pages."><textarea defaultValue="A rooftop venue built for sunset sessions, late-night culture and city-wide collaborations." /></Field>
+          <div className="venue-two-fields">
+            <Field label="Public phone"><input defaultValue="+91 98765 43210" /></Field>
+            <Field label="Public email"><input type="email" defaultValue="hello@skylinesocial.in" /></Field>
           </div>
+          <Field label="Address"><input defaultValue="Linking Road, Bandra West, Mumbai" /></Field>
+          <div className="venue-address-map" aria-label="Venue map preview">
+            <span aria-hidden="true">⌖</span><div><strong>Skyline Social · Bandra West</strong><small>Map coordinates and pin placement will be confirmed by the venue profile API.</small></div><button type="button">Adjust pin</button>
+          </div>
+          <div><span className="venue-setting-label">Amenities</span><div className="venue-amenity-grid">{AMENITIES.map((amenity) => <label key={amenity}><input type="checkbox" defaultChecked={amenity !== 'Smoking area'} /><span>{amenity}</span></label>)}</div></div>
+          <div><span className="venue-setting-label">Gallery & cover</span><div className="venue-gallery-settings"><button type="button"><strong>Cover image</strong><small>16:9 · WebP or AVIF</small></button><button type="button"><strong>Interior</strong><small>3 images</small></button><button type="button"><strong>Food & tables</strong><small>4 images</small></button><button type="button"><strong>+ Add media</strong><small>Optimized on upload</small></button></div></div>
         </div>
-        <button
-          type="button"
-          className="vh-accent"
-          style={css(
-            'display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#ff5a1f;color:#0a0a0a;border:none;padding:15px 28px;border-radius:999px;font-size:15px;font-weight:800;cursor:pointer;align-self:flex-start;',
-          )}
-        >
-          <Icon name="check" size={16} /> Save presence
-        </button>
-      </div>
+      </section>
 
-      {/* live public preview */}
-      <div style={css('position:sticky;top:96px;')}>
-        <div
-          style={css(
-            'display:flex;align-items:center;gap:9px;margin-bottom:16px;padding-left:4px;',
-          )}
-        >
-          <span
-            style={css(
-              'width:7px;height:7px;border-radius:50%;background:#6ee79b;box-shadow:0 0 8px #6ee79b;',
-            )}
-          />
-          <span
-            style={css(
-              'font-size:12px;font-weight:700;color:#8a8a86;text-transform:uppercase;letter-spacing:0.08em;',
-            )}
-          >
-            How guests see you
-          </span>
-        </div>
-        <div
-          style={css(
-            'position:relative;border-radius:24px;overflow:hidden;border:1px solid rgba(255,255,255,0.09);box-shadow:0 24px 56px rgba(0,0,0,0.45);',
-          )}
-        >
-          <div
-            style={css(
-              'height:120px;position:relative;background:linear-gradient(120deg,#2a1206,#3a1a08 40%,#160b04);',
-            )}
-          />
-          <div
-            style={css(
-              'background:rgba(20,20,20,0.85);backdrop-filter:blur(18px);padding:0 22px 22px;position:relative;',
-            )}
-          >
-            <div
-              style={css(
-                'width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#ff5a1f,#c23d10);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:22px;color:#fff;margin-top:-32px;border:4px solid #141414;',
-              )}
-            >
-              RK
-            </div>
-            <div
-              style={css('font-size:19px;font-weight:800;letter-spacing:-0.01em;margin-top:12px;')}
-            >
-              Rhea Kapoor Events
-            </div>
-            <div
-              style={css(
-                'font-size:13px;color:#b5b5b0;font-weight:500;line-height:1.5;margin-top:6px;',
-              )}
-            >
-              Curating Mumbai&apos;s best rooftop &amp; warehouse nights since 2019.
-            </div>
-            <div style={css('display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;')}>
-              {HIGHLIGHTS.map((h) => (
-                <span
-                  key={h}
-                  style={css(
-                    'background:rgba(255,90,31,0.12);border:1px solid rgba(255,90,31,0.28);color:#ff8a55;padding:5px 11px;border-radius:999px;font-size:11.5px;font-weight:700;',
-                  )}
-                >
-                  {h}
-                </span>
-              ))}
-            </div>
-            <div
-              style={css(
-                'display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:20px;',
-              )}
-            >
-              {PRESENCE_STATS.map((st) => (
-                <div
-                  key={st.label}
-                  style={css(
-                    'background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:13px 10px;text-align:center;',
-                  )}
-                >
-                  <div style={css('font-size:19px;font-weight:800;letter-spacing:-0.02em;')}>
-                    {st.value}
-                  </div>
-                  <div style={css('font-size:11px;color:#8a8a86;font-weight:600;margin-top:2px;')}>
-                    {st.label}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              style={css(
-                'width:100%;margin-top:18px;background:#ff5a1f;color:#0a0a0a;border:none;padding:12px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;',
-              )}
-            >
-              Follow
-            </button>
-          </div>
-        </div>
-      </div>
+      <aside className="venue-profile-preview">
+        <div className="venue-preview-cover" />
+        <div className="venue-preview-body"><span className="venue-preview-verified">Verified venue</span><h2>Skyline Social</h2><p>Bandra West · Rooftop · 400 capacity</p><div className="venue-preview-chips"><span>Rooftop</span><span>Valet</span><span>Food</span><span>Accessible</span></div><dl><div><dt>4.8</dt><dd>Guest rating</dd></div><div><dt>84</dt><dd>Events</dd></div><div><dt>12.4k</dt><dd>Interested</dd></div></dl><button type="button" disabled>Guest profile preview</button></div>
+      </aside>
     </div>
   );
 }
 
-function MenuView() {
+function VenueOperationsSettings() {
   return (
-    <div style={css('max-width:620px;')}>
-      <div
-        style={css(
-          'display:flex;align-items:center;justify-content:space-between;background:#141414;border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:16px 20px;margin-bottom:16px;',
-        )}
-      >
-        <div>
-          <div style={css('font-size:15px;font-weight:700;')}>Menu is live</div>
-          <div style={css('font-size:13px;color:#8a8a86;')}>
-            Guests can see and order these items right now.
-          </div>
-        </div>
-        <button
-          type="button"
-          aria-label="Toggle menu visibility"
-          style={css(
-            'width:52px;height:30px;border-radius:999px;background:#ff5a1f;position:relative;cursor:pointer;border:none;',
-          )}
-        >
-          <span
-            style={css(
-              'position:absolute;top:3px;right:3px;width:24px;height:24px;border-radius:50%;background:#0a0a0a;',
-            )}
-          />
-        </button>
-      </div>
-      <div
-        style={css(
-          'background:#141414;border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:12px;',
-        )}
-      >
-        {MENU_ITEMS.map((m) => (
-          <div
-            key={m.name}
-            className="vh-1a"
-            style={css(
-              'display:flex;align-items:center;gap:14px;padding:13px 12px;border-radius:12px;',
-            )}
-          >
-            <Icon name="grip-vertical" size={16} color="#6a6a66" style={{ cursor: 'grab' }} />
-            <div
-              style={css(
-                'width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,0.06);flex:none;',
-              )}
-            />
-            <div style={css('flex:1;')}>
-              <div style={css('font-size:14px;font-weight:600;')}>{m.name}</div>
-              <div style={css('font-size:12px;color:#8a8a86;')}>{m.cat}</div>
-            </div>
-            <span style={css('font-size:15px;font-weight:700;')}>{m.price}</span>
-            <button
-              type="button"
-              aria-label={`Edit ${m.name}`}
-              style={css(
-                'width:32px;height:32px;border-radius:9px;background:#0d0d0d;border:1px solid rgba(255,255,255,0.08);color:#8a8a86;cursor:pointer;display:flex;align-items:center;justify-content:center;',
-              )}
-            >
-              <Icon name="pencil" size={14} />
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
+    <section className="venue-settings-card venue-settings-fields">
+      <div className="venue-two-fields"><Field label="Maximum capacity"><input type="number" defaultValue="400" /></Field><Field label="Minimum age"><select defaultValue="21+"><option>18+</option><option>21+</option><option>25+</option></select></Field></div>
+      <div><span className="venue-setting-label">Spaces & capacity</span><div className="venue-space-list"><article><div><strong>Main rooftop</strong><small>Standing · primary event space</small></div><b>280</b><button type="button">Edit</button></article><article><div><strong>Indoor lounge</strong><small>Seated · weather fallback</small></div><b>80</b><button type="button">Edit</button></article><article><div><strong>Dining deck</strong><small>Tables · reservation enabled</small></div><b>40</b><button type="button">Edit</button></article></div></div>
+      <div className="venue-two-fields"><Field label="Doors open"><input type="time" defaultValue="19:00" /></Field><Field label="Standard closing time"><input type="time" defaultValue="01:30" /></Field></div>
+      <div><span className="venue-setting-label">Opening hours</span><div className="venue-hours-grid">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => <label key={day}><span>{day}</span><input aria-label={`${day} opening time`} type="time" defaultValue={day === 'Sun' ? '17:00' : '18:00'} /><input aria-label={`${day} closing time`} type="time" defaultValue="23:59" /></label>)}</div></div>
+      <Field label="Entry policy"><textarea defaultValue="Government-issued photo ID required. Entry remains subject to venue capacity and conduct policy." /></Field>
+      <Field label="Host booking window"><select defaultValue="30 days"><option>14 days</option><option>30 days</option><option>60 days</option><option>90 days</option></select></Field>
+      <div className="venue-two-fields"><Field label="Minimum booking notice"><select defaultValue="7 days"><option>48 hours</option><option>7 days</option><option>14 days</option></select></Field><Field label="Cancellation window"><select defaultValue="72 hours"><option>24 hours</option><option>72 hours</option><option>7 days</option></select></Field></div>
+      <div><span className="venue-setting-label">Accessibility</span><div className="venue-amenity-grid">{['Step-free entrance', 'Accessible restroom', 'Lift access', 'Low-sensory area', 'Reserved seating'].map((amenity) => <label key={amenity}><input type="checkbox" defaultChecked={amenity !== 'Low-sensory area'} /><span>{amenity}</span></label>)}</div></div>
+      <label className="venue-settings-toggle"><span><strong>Accept partnership requests</strong><small>Let verified hosts and promoters request available dates.</small></span><input type="checkbox" aria-label="Accept partnership requests" defaultChecked /></label>
+      <label className="venue-settings-toggle"><span><strong>Require manual event approval</strong><small>Nothing appears publicly until a venue owner approves it.</small></span><input type="checkbox" aria-label="Require manual event approval" defaultChecked /></label>
+    </section>
   );
 }
 
-function AccountView() {
+function VenueRestaurantSettings() {
   return (
-    <div style={css('max-width:620px;display:flex;flex-direction:column;gap:14px;')}>
-      {ACCOUNT_ROWS.map((a) => (
-        <button
-          key={a.title}
-          type="button"
-          className="vh-19"
-          style={css(
-            'display:flex;align-items:center;gap:14px;background:#141414;border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:18px 20px;cursor:pointer;text-align:left;color:inherit;width:100%;',
-          )}
-        >
-          <div
-            style={css(
-              'width:42px;height:42px;border-radius:12px;background:rgba(255,90,31,0.12);color:#ff8a55;display:flex;align-items:center;justify-content:center;flex:none;',
-            )}
-          >
-            <Icon name={a.icon} size={18} />
-          </div>
-          <div style={css('flex:1;')}>
-            <div style={css('font-size:15px;font-weight:700;')}>{a.title}</div>
-            <div style={css('font-size:13px;color:#8a8a86;')}>{a.sub}</div>
-          </div>
-          <Icon name="chevron-right" size={18} color="#6a6a66" />
-        </button>
-      ))}
+    <section className="venue-settings-card venue-settings-fields">
+      <div className="venue-settings-callout"><div><span>Optional module</span><strong>Restaurant and table reservations</strong><p>Enable this only if the venue serves food or accepts table bookings.</p></div><input type="checkbox" defaultChecked /></div>
+      <div className="venue-two-fields"><Field label="Cuisine"><input defaultValue="Modern Indian · Small plates" /></Field><Field label="Reservation phone"><input defaultValue="+91 98765 43210" /></Field></div>
+      <Field label="Menu URL"><input type="url" defaultValue="https://skylinesocial.in/menu" /></Field>
+      <div className="venue-two-fields"><Field label="Tables available"><input type="number" defaultValue="18" /></Field><Field label="Maximum party size"><input type="number" defaultValue="12" /></Field></div>
+      <label className="venue-settings-toggle"><span><strong>Show Reserve a table</strong><small>Add a reservation CTA to the public venue profile.</small></span><input type="checkbox" aria-label="Show Reserve a table" defaultChecked /></label>
+    </section>
+  );
+}
+
+function VenueAccountSettings() {
+  return (
+    <div className="venue-settings-grid venue-settings-grid--account">
+      <section className="venue-settings-card venue-settings-fields"><h2>Team permissions</h2>{['Maya S. · Door lead', 'Ravi K. · Scan only', 'Tina D. · Menu & orders'].map((member) => <div className="venue-team-row" key={member}><span>{member}</span><button type="button">Manage access</button></div>)}<button className="venue-secondary-button" type="button">Invite teammate</button></section>
+      <section className="venue-settings-card venue-settings-fields"><h2>Payout account</h2><div className="venue-bank-summary"><span>HDFC Bank</span><strong>•••• 4412</strong><small>Verified · settlements enabled</small></div><button className="venue-secondary-button" type="button">Manage payout details</button><p className="venue-settings-footnote">Payout changes require identity verification and backend confirmation.</p></section>
     </div>
   );
 }

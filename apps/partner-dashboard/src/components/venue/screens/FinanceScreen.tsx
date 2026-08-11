@@ -133,18 +133,20 @@ function PayoutsView() {
             <div style={css('display:flex;gap:12px;')}>
               <button
                 type="button"
-                className="vh-accent"
+                disabled
+                title="Withdrawals require the payout API and server confirmation."
                 style={css(
-                  'display:inline-flex;align-items:center;gap:8px;background:#ff5a1f;color:#0a0a0a;border:none;padding:14px 26px;border-radius:999px;font-size:14px;font-weight:800;cursor:pointer;',
+                  'display:inline-flex;align-items:center;gap:8px;background:#303030;color:#858580;border:none;padding:14px 26px;border-radius:999px;font-size:14px;font-weight:800;cursor:not-allowed;',
                 )}
               >
                 <Icon name="arrow-down-to-line" size={16} /> Withdraw
               </button>
               <button
                 type="button"
-                className="vh-w16"
+                disabled
+                title="Payout scheduling requires the payout API and server confirmation."
                 style={css(
-                  'display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.1);color:#f5f5f3;border:1px solid rgba(255,255,255,0.16);padding:14px 26px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;backdrop-filter:blur(8px);',
+                  'display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.05);color:#73736f;border:1px solid rgba(255,255,255,0.08);padding:14px 26px;border-radius:999px;font-size:14px;font-weight:600;cursor:not-allowed;',
                 )}
               >
                 <Icon name="calendar-clock" size={16} /> Request payout

@@ -145,7 +145,7 @@ function EventGallery() {
         </div>
       </div>
 
-      <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:20px;')}>
+      <div className="venue-event-gallery-grid" style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:20px;')}>
         {EVENTS.map((e, i) => (
           <div
             key={e.name}
@@ -159,13 +159,11 @@ function EventGallery() {
               role="button"
               tabIndex={0}
               onClick={() => {
-                s.setSelectedEventIdx(i);
-                s.go('eventDetail');
+                s.openEvent(i);
               }}
               onKeyDown={(ev) => {
                 if (ev.key === 'Enter') {
-                  s.setSelectedEventIdx(i);
-                  s.go('eventDetail');
+                  s.openEvent(i);
                 }
               }}
               style={css('position:relative;height:148px;cursor:pointer;overflow:hidden;')}
@@ -222,13 +220,11 @@ function EventGallery() {
               role="button"
               tabIndex={0}
               onClick={() => {
-                s.setSelectedEventIdx(i);
-                s.go('eventDetail');
+                s.openEvent(i);
               }}
               onKeyDown={(ev) => {
                 if (ev.key === 'Enter') {
-                  s.setSelectedEventIdx(i);
-                  s.go('eventDetail');
+                  s.openEvent(i);
                 }
               }}
               style={css('cursor:pointer;padding:18px 16px 0;')}
@@ -297,8 +293,7 @@ function EventGallery() {
               <button
                 type="button"
                 onClick={() => {
-                  s.setSelectedEventIdx(i);
-                  s.go('eventDetail');
+                  s.openEvent(i);
                 }}
                 className="vh-white"
                 style={css(

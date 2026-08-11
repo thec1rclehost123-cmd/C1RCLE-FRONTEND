@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { buildPaths, css } from '../charts';
 import {
   DETAIL_SPARK_SERIES,
@@ -41,9 +43,9 @@ const DETAIL_TABS: readonly (readonly [DetailTab, string])[] = [
   ['promoters', 'Promoters'],
 ];
 
-export function EventDetailScreen() {
+export function EventDetailScreen({ eventId }: { readonly eventId: string }) {
   const s = useVenueStudio();
-  const idx = s.selectedEventIdx;
+  const idx = EVENTS.findIndex((event) => event.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') === eventId);
   const ev = EVENTS[idx] ?? EVENTS[0];
   if (!ev) return null;
 
@@ -108,6 +110,15 @@ export function EventDetailScreen() {
               </h1>
             </div>
             <div style={css('display:flex;gap:10px;flex:none;')}>
+              <Link
+                href={`/venue/events/${eventId}/analytics`}
+                className="vh-w10"
+                style={css(
+                  'display:flex;align-items:center;gap:7px;background:transparent;border:1px solid rgba(255,255,255,0.22);color:#fff;padding:10px 16px;border-radius:999px;font-size:13px;font-weight:600;text-decoration:none;',
+                )}
+              >
+                <Icon name="trending-up" size={13} /> Analytics
+              </Link>
               <button
                 type="button"
                 onClick={s.openEdit}

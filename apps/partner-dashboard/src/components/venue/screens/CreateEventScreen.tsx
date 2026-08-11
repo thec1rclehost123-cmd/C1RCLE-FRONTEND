@@ -1,6 +1,8 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+import { venueEventDraftSchema } from '@/lib/partner/venue-event-schema';
 
 import { calCells, css } from '../charts';
 import {
@@ -26,6 +28,8 @@ const CARD_GRADS = EVENTS.map((e) => e.card);
 
 export function CreateEventScreen() {
   const s = useVenueStudio();
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [submissionMessage, setSubmissionMessage] = useState<string | null>(null);
 
   const augLabel =
     s.dDay !== null ? `${AUG_DAY_NAMES[(5 + s.dDay) % 7] ?? ''}, Aug ${String(s.dDay)}` : null;
@@ -33,6 +37,58 @@ export function CreateEventScreen() {
   const nextLabel =
     s.createStep === 3 ? (s.editMode ? 'Save changes' : 'Publish event') : 'Continue';
   const nextIcon = s.createStep === 3 ? (s.editMode ? 'check' : 'party-popper') : 'arrow-right';
+  const basicsValid = s.dName.trim().length >= 3;
+  const scheduleValid = s.dDay !== null;
+  const formValid = basicsValid && scheduleValid;
+
+  useEffect(() => {
+    if (!s.dName.trim() && s.dDay === null) return;
+    const warnBeforeExit = (event: BeforeUnloadEvent) => { event.preventDefault(); };
+    window.addEventListener('beforeunload', warnBeforeExit);
+    return () => { window.removeEventListener('beforeunload', warnBeforeExit); };
+  }, [s.dDay, s.dName]);
+
+  const continueWizard = () => {
+    if (s.createStep === 1 && !basicsValid) {
+      setValidationMessage('Add an event name with at least 3 characters before continuing.');
+      return;
+    }
+    if (s.createStep === 2 && !scheduleValid) {
+      setValidationMessage('Choose an event date before reviewing this event.');
+      return;
+    }
+    if (s.createStep === 3 && !formValid) {
+      setValidationMessage('This event is missing required information. Return to the highlighted step.');
+      return;
+    }
+    setValidationMessage(null);
+    setSubmissionMessage(null);
+    if (s.createStep < 3) s.setCreateStep(s.createStep + 1);
+    else {
+      const eventDate = `2026-08-${String(s.dDay ?? 0).padStart(2, '0')}`;
+      const parsed = venueEventDraftSchema.safeParse({
+        name: s.dName,
+        venueId: String(s.dVenue),
+        eventDate,
+        startTime: '21:00',
+        endTime: '23:59',
+        timezone: 'Asia/Kolkata',
+        capacity: 400,
+        ticketTiers: TIER_DEFS.map(([name, price, inventory]) => ({
+          name,
+          pricePaise: price * 100,
+          inventory,
+          saleStartsAt: '2026-08-11T00:00:00.000Z',
+          saleEndsAt: `${eventDate}T14:00:00.000Z`,
+        })),
+      });
+      if (!parsed.success) {
+        setValidationMessage(parsed.error.issues[0]?.message ?? 'Review the event details before publishing.');
+        return;
+      }
+      setSubmissionMessage('Event request validated. Publishing will activate when the event mutation API is connected.');
+    }
+  };
 
   return (
     <div>
@@ -106,11 +162,19 @@ export function CreateEventScreen() {
           {s.createStep === 2 ? <StepVenueTickets /> : null}
           {s.createStep === 3 ? <StepReview augLabel={augLabel} /> : null}
 
+          {validationMessage ? (
+            <div role="alert" style={css('border:1px solid rgba(240,133,122,0.35);border-radius:14px;background:rgba(240,133,122,0.09);color:#f6aaa2;padding:12px 14px;font-size:13px;font-weight:650;line-height:1.45;')}>
+              {validationMessage}
+            </div>
+          ) : null}
+          {submissionMessage ? <div role="status" style={css('border:1px solid rgba(110,231,155,0.3);border-radius:14px;background:rgba(110,231,155,0.08);color:#b9f5cc;padding:12px 14px;font-size:13px;font-weight:650;line-height:1.45;')}>{submissionMessage}</div> : null}
+
           <div style={css('display:flex;gap:12px;')}>
             {s.createStep > 1 ? (
               <button
                 type="button"
                 onClick={() => {
+                  setValidationMessage(null);
                   s.setCreateStep(Math.max(1, s.createStep - 1));
                 }}
                 className="vh-1c"
@@ -123,13 +187,12 @@ export function CreateEventScreen() {
             ) : null}
             <button
               type="button"
-              onClick={() => {
-                if (s.createStep < 3) s.setCreateStep(s.createStep + 1);
-                else s.go('events');
-              }}
+              onClick={continueWizard}
+              aria-disabled={s.createStep === 3 && !formValid}
               className="vh-accent"
               style={css(
-                'display:inline-flex;align-items:center;justify-content:center;gap:9px;flex:1;background:#ff5a1f;color:#0a0a0a;border:none;padding:15px;border-radius:999px;font-size:15px;font-weight:800;cursor:pointer;',
+                'display:inline-flex;align-items:center;justify-content:center;gap:9px;flex:1;background:#ff5a1f;color:#0a0a0a;border:none;padding:15px;border-radius:999px;font-size:15px;font-weight:800;cursor:pointer;' +
+                  (s.createStep === 3 && !formValid ? 'opacity:0.55;' : ''),
               )}
             >
               <Icon name={nextIcon} size={17} /> {nextLabel}

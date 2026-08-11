@@ -1,6 +1,7 @@
 'use client';
 
 import { css } from './charts';
+import { EVENTS } from './data';
 import { CalendarModal } from './modals/CalendarModal';
 import { ComposerModal } from './modals/ComposerModal';
 import { FloatingCalendar } from './modals/FloatingCalendar';
@@ -34,6 +35,11 @@ export function VenueStudio(props: VenueStudioProps) {
 
 function VenueStudioShell({ initials, venueName }: VenueStudioProps) {
   const s = useVenueStudio();
+  const selectedEvent = EVENTS[s.selectedEventIdx];
+  const selectedEventId = selectedEvent?.name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '') ?? 'event';
 
   return (
     <div className="venue-studio" style={css('min-height:100vh;width:100%;position:relative;')}>
@@ -50,7 +56,7 @@ function VenueStudioShell({ initials, venueName }: VenueStudioProps) {
           {s.screen === 'overview' ? <OverviewScreen /> : null}
           {s.screen === 'events' ? <EventsScreen /> : null}
           {s.screen === 'slotRequests' ? <SlotRequestsScreen /> : null}
-          {s.screen === 'eventDetail' ? <EventDetailScreen /> : null}
+          {s.screen === 'eventDetail' ? <EventDetailScreen eventId={selectedEventId} /> : null}
           {s.screen === 'audience' ? <PartnersScreen /> : null}
           {s.screen === 'create' ? <CreateEventScreen /> : null}
           {s.screen === 'marketing' ? <MarketingScreen /> : null}

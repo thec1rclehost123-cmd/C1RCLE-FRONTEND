@@ -7,9 +7,10 @@
  * behaviour (tab memory, wizard step, filters, toggles) matches the prototype.
  */
 
+import { useRouter } from 'next/navigation';
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 
-import { DEFAULT_COMPOSER_TEXT } from './data';
+import { DEFAULT_COMPOSER_TEXT, EVENTS } from './data';
 
 import type { Audience, Channel, Metric, Range, ReqStatus, Screen } from './data';
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
@@ -66,6 +67,7 @@ interface VenueStudioValue {
   setEventsView: Dispatch<SetStateAction<EventsView>>;
   selectedEventIdx: number;
   setSelectedEventIdx: Dispatch<SetStateAction<number>>;
+  openEvent: (index: number) => void;
   detailTab: DetailTab;
   setDetailTab: Dispatch<SetStateAction<DetailTab>>;
 
@@ -147,6 +149,7 @@ interface VenueStudioValue {
 const Ctx = createContext<VenueStudioValue | undefined>(undefined);
 
 export function VenueStudioProvider({ children }: { readonly children: ReactNode }) {
+  const router = useRouter();
   const [screen, setScreen] = useState<Screen>('overview');
 
   const [metric, setMetric] = useState<Metric>('revenue');
@@ -209,7 +212,20 @@ export function VenueStudioProvider({ children }: { readonly children: ReactNode
     setCalendarOpen(false);
     setNotifOpen(false);
     window.scrollTo(0, 0);
-  }, []);
+    const routeByScreen: Record<Screen, string> = {
+      overview: '/venue/overview',
+      events: '/venue/events',
+      eventDetail: '/venue/events/selected',
+      slotRequests: '/venue/slot-requests',
+      audience: '/venue/partners',
+      create: '/venue/events/create',
+      marketing: '/venue/marketing',
+      finance: '/venue/finance',
+      door: '/venue/door',
+      settings: '/venue/settings',
+    };
+    router.push(routeByScreen[next]);
+  }, [router]);
 
   const setRequestStatus = useCallback((id: number, status: ReqStatus) => {
     setRequestOverrides((prev) => ({ ...prev, [id]: status }));
@@ -237,6 +253,15 @@ export function VenueStudioProvider({ children }: { readonly children: ReactNode
     setCreateStep(1);
     go('create');
   }, [go]);
+
+  const openEvent = useCallback((index: number) => {
+    const event = EVENTS[index];
+    if (!event) return;
+    setSelectedEventIdx(index);
+    const slug = event.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    router.push(`/venue/events/${slug}`);
+    window.scrollTo(0, 0);
+  }, [router]);
 
   const goOrders = useCallback(() => {
     setFinanceView('orders');
@@ -281,6 +306,7 @@ export function VenueStudioProvider({ children }: { readonly children: ReactNode
       setEventsView,
       selectedEventIdx,
       setSelectedEventIdx,
+      openEvent,
       detailTab,
       setDetailTab,
       requestsView,
@@ -362,6 +388,7 @@ export function VenueStudioProvider({ children }: { readonly children: ReactNode
       setCalFloatPos,
       eventsView,
       selectedEventIdx,
+      openEvent,
       detailTab,
       requestsView,
       requestOverrides,

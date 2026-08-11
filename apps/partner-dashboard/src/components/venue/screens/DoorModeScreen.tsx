@@ -28,6 +28,8 @@ export function DoorModeScreen() {
   const [checkedIn, setCheckedIn] = useState<Record<string, boolean>>(
     Object.fromEntries(DOOR_GUESTS.map((g) => [g.name, g.done])),
   );
+  const [connection, setConnection] = useState<'online' | 'offline' | 'reconnecting'>('online');
+  const [scanState, setScanState] = useState<'idle' | 'ready' | 'valid' | 'invalid' | 'duplicate'>('idle');
 
   return (
     <div>
@@ -68,6 +70,7 @@ export function DoorModeScreen() {
         <div style={css('display:flex;gap:10px;')}>
           <button
             type="button"
+            onClick={() => { setScanState('ready'); }}
             className="vh-w10"
             style={css(
               'display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#c9c9c6;padding:11px 18px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;',
@@ -77,6 +80,7 @@ export function DoorModeScreen() {
           </button>
           <button
             type="button"
+            onClick={() => { setScanState('invalid'); }}
             className="vh-w10"
             style={css(
               'display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#c9c9c6;padding:11px 18px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;',
@@ -93,15 +97,22 @@ export function DoorModeScreen() {
           </button>
           <button
             type="button"
+            onClick={() => {
+              setConnection((current) => (current === 'online' ? 'offline' : 'reconnecting'));
+            }}
             className="vh-red-20"
             style={css(
               'display:flex;align-items:center;gap:8px;background:rgba(240,133,122,0.12);border:1px solid rgba(240,133,122,0.3);color:#f0857a;padding:11px 18px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;',
             )}
           >
-            <Icon name="power" size={15} /> Disconnect
+            <Icon name="power" size={15} /> {connection === 'online' ? 'Disconnect' : 'Reconnect'}
           </button>
         </div>
       </div>
+
+      <section className={`venue-door-status venue-door-status--${connection}`} aria-live="polite"><div><span /> <strong>{connection === 'online' ? 'Door devices connected' : connection === 'offline' ? 'Offline mode' : 'Reconnecting'}</strong><small>{connection === 'online' ? 'Last sync just now' : connection === 'offline' ? 'Check-ins stay on this device until the network returns.' : 'Attempting to restore the secure scanner session.'}</small></div><button type="button" onClick={() => { setConnection('online'); }}>Retry connection</button></section>
+
+      {scanState !== 'idle' ? <section className={`venue-scan-feedback venue-scan-feedback--${scanState}`} role="status"><div><span>{scanState === 'ready' ? 'Camera ready' : scanState === 'valid' ? 'Entry approved' : scanState === 'duplicate' ? 'Already checked in' : 'Ticket not valid'}</span><strong>{scanState === 'ready' ? 'Point the camera at a C1RCLE ticket.' : scanState === 'valid' ? 'Guest checked in successfully.' : scanState === 'duplicate' ? 'This ticket was scanned at 10:42 PM.' : 'Ask the guest to open the latest ticket in their wallet.'}</strong></div><div>{scanState === 'ready' ? <><button type="button" onClick={() => { setScanState('valid'); }}>Simulate valid scan</button><button type="button" onClick={() => { setScanState('duplicate'); }}>Simulate duplicate</button></> : <button type="button" onClick={() => { setScanState('ready'); }}>Scan another</button>}<button type="button" onClick={() => { setScanState('idle'); }}>Close</button></div></section> : null}
 
       <div style={css('display:grid;grid-template-columns:1.4fr 1fr;gap:20px;align-items:start;')}>
         {/* left */}

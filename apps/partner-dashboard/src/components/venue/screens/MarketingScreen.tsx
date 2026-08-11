@@ -261,12 +261,13 @@ function ComposeView() {
         <div style={css('display:flex;gap:12px;')}>
           <button
             type="button"
-            className="vh-accent"
+            disabled
+            title="Messaging delivery is enabled when the backend campaign mutation is connected."
             style={css(
-              'display:inline-flex;align-items:center;justify-content:center;gap:9px;flex:1;background:#ff5a1f;color:#0a0a0a;border:none;padding:16px;border-radius:999px;font-size:15px;font-weight:800;cursor:pointer;',
+              'display:inline-flex;align-items:center;justify-content:center;gap:9px;flex:1;background:#313131;color:#8a8a86;border:none;padding:16px;border-radius:999px;font-size:15px;font-weight:800;cursor:not-allowed;',
             )}
           >
-            <Icon name="send" size={17} /> Send to {recipients} people
+            <Icon name="send" size={17} /> Connect delivery to send
           </button>
           <button
             type="button"
