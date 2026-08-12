@@ -1,8 +1,36 @@
 .page {
+  position: relative;
+  isolation: isolate;
   display: grid;
   min-width: 0;
   gap: 20px;
   color: var(--dashboard-text);
+}
+
+.page::before {
+  position: absolute;
+  z-index: -2;
+  inset: -90px -80px;
+  background: url('/venue/neon-nights-poster.webp') center / cover;
+  filter: blur(30px) saturate(0.9) brightness(0.42);
+  opacity: 0.5;
+  transform: scale(1.08);
+  content: '';
+  pointer-events: none;
+}
+
+.page::after {
+  position: absolute;
+  z-index: -1;
+  inset: -24px;
+  background: linear-gradient(180deg, rgb(8 8 9 / 58%), rgb(8 8 9 / 84%));
+  content: '';
+  pointer-events: none;
+}
+
+.page > * {
+  position: relative;
+  z-index: 1;
 }
 
 .pageHeader {
@@ -21,10 +49,16 @@
   line-height: 1.15;
 }
 
+.pageHeader p {
+  margin: 6px 0 0;
+  color: var(--dashboard-text-secondary);
+  font-size: 14px;
+}
+
 .analyticsFilters {
   display: flex;
   flex: none;
-  gap: 16px;
+  gap: 10px;
 }
 
 .analyticsFiltersFallback {
@@ -44,7 +78,9 @@
   border: 1px solid rgb(255 255 255 / 11%);
   border-radius: var(--dashboard-radius-control);
   color: var(--dashboard-text);
-  background: var(--dashboard-surface);
+  background: rgb(17 17 18 / 30%);
+  -webkit-backdrop-filter: blur(8px) saturate(1.08);
+  backdrop-filter: blur(8px) saturate(1.08);
   padding: 0 16px;
   font: inherit;
   font-size: 15px;
@@ -78,6 +114,10 @@
   cursor: pointer;
 }
 
+.analyticsFilters label:first-child select {
+  min-width: 190px;
+}
+
 .analyticsFilters label > svg:last-child {
   position: absolute;
   right: 13px;
@@ -93,8 +133,10 @@
   overflow: hidden;
   border: 1px solid var(--dashboard-border);
   border-radius: var(--dashboard-radius-card);
-  background: var(--dashboard-surface);
+  background: rgb(17 17 18 / 30%);
   box-shadow: var(--dashboard-shadow-panel);
+  -webkit-backdrop-filter: blur(10px) saturate(1.08);
+  backdrop-filter: blur(10px) saturate(1.08);
 }
 
 .metrics {
@@ -495,6 +537,10 @@
 
   .analyticsFilters select {
     width: 100%;
+  }
+
+  .analyticsFilters label:first-child select {
+    min-width: 0;
   }
 
   .metrics {

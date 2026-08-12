@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -56,6 +56,33 @@ describe('Venue operations interactions', () => {
     expect(screen.getByRole('textbox', { name: /Message/ })).toHaveValue(
       'Tickets are almost gone for your event.',
     );
+  });
+
+  it('keeps event selection and recipient filters focused on event and gender', async () => {
+    const user = userEvent.setup();
+    render(<MarketingScreen tab="compose" />);
+
+    await user.click(screen.getByRole('button', { name: /Current event: Neon Nights/ }));
+    await user.click(screen.getByRole('button', { name: /Saturday Sessions/ }));
+    expect(
+      screen.getByRole('button', { name: /Current event: Saturday Sessions/ }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Filters' }));
+    const genderFilters = screen.getByRole('group', { name: 'Gender' });
+    const eventFilters = screen.getByRole('group', { name: 'Event' });
+    await user.click(within(genderFilters).getByRole('button', { name: 'Women' }));
+    await user.click(within(eventFilters).getByRole('button', { name: /Urban Fridays/ }));
+
+    expect(within(genderFilters).getByRole('button', { name: 'Women' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(within(eventFilters).getByRole('button', { name: /Urban Fridays/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.queryByRole('button', { name: 'Tags' })).not.toBeInTheDocument();
   });
 
   it('hides payout requests when the action permission is denied', () => {

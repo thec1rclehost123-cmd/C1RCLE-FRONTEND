@@ -5,7 +5,6 @@ import {
   BankIcon,
   CheckIcon,
   EmailIcon,
-  ForwardIcon,
   GuestIcon,
   LocationIcon,
   NextIcon,
@@ -14,7 +13,7 @@ import {
   UsersIcon,
 } from '@c1rcle/icons';
 
-import { venueOverviewModel } from '../overview-model';
+import { formatInrFromPaise, venueOverviewModel } from '../overview-model';
 import { OverviewCalendar } from '../OverviewCalendar';
 
 import styles from './OverviewScreen.module.css';
@@ -57,6 +56,11 @@ const chartPath = (values: readonly number[]): string => {
     .join(' ');
 };
 
+const chartPoint = (value: number, index: number, length: number): { x: number; y: number } => ({
+  x: (index / Math.max(length - 1, 1)) * 650,
+  y: 182 - (value / 200_000) * 182,
+});
+
 export function OverviewScreen() {
   return <VenueOverviewContent model={venueOverviewModel} />;
 }
@@ -77,6 +81,7 @@ export function VenueOverviewContent({ model }: { readonly model: VenueOverviewV
 
   const currentPath = chartPath(model.sales.currentRupees);
   const previousPath = chartPath(model.sales.previousRupees);
+  const latestSales = model.sales.currentRupees.at(-1) ?? 0;
 
   return (
     <div className={className('overview')}>
@@ -163,12 +168,10 @@ export function VenueOverviewContent({ model }: { readonly model: VenueOverviewV
                     <ActivityIcon size={17} strokeWidth={1.8} aria-hidden="true" />
                   </span>
                   <span className={className('activityCopy')}>
-                    <strong>{item.label}</strong>
-                    <small>
-                      {item.context}
-                      <i>•</i>
-                      {item.time}
-                    </small>
+                    <strong>
+                      <span>{item.label}</span>
+                      <time>{item.time}</time>
+                    </strong>
                   </span>
                   <NextIcon size={18} aria-hidden="true" />
                 </Link>
@@ -184,7 +187,14 @@ export function VenueOverviewContent({ model }: { readonly model: VenueOverviewV
           aria-labelledby="sales-title"
         >
           <div className={className('sectionHeading')}>
-            <h2 id="sales-title">Sales overview</h2>
+            <div className={className('performanceCopy')}>
+              <h2 id="sales-title">Performance</h2>
+              <p>Gross sales · Last 7 days</p>
+            </div>
+            <div className={className('chartTotal')}>
+              <span>Gross sales</span>
+              <strong>{formatInrFromPaise(latestSales)}</strong>
+            </div>
             <label className={className('rangeLabel')}>
               <span className={className('srOnly')}>Sales period</span>
               <select defaultValue="7d" aria-label="Sales period">
@@ -223,9 +233,17 @@ export function VenueOverviewContent({ model }: { readonly model: VenueOverviewV
               <path className={className('previousLine')} d={previousPath} />
               <path className={className('currentLine')} d={currentPath} />
               {model.sales.currentRupees.map((value, index) => {
-                const x = (index / Math.max(model.sales.currentRupees.length - 1, 1)) * 650;
-                const y = 182 - (value / 200_000) * 182;
-                return <circle key={`${String(index)}-${String(value)}`} cx={x} cy={y} r="4" />;
+                const point = chartPoint(value, index, model.sales.currentRupees.length);
+                return (
+                  <circle
+                    key={`${String(model.sales.labels[index] ?? index)}-point`}
+                    className={className('currentPoint')}
+                    cx={point.x}
+                    cy={point.y}
+                    r={index === model.sales.currentRupees.length - 1 ? 4.5 : 3}
+                    aria-hidden="true"
+                  />
+                );
               })}
             </svg>
             <div className={className('xLabels')} aria-hidden="true">
@@ -238,9 +256,6 @@ export function VenueOverviewContent({ model }: { readonly model: VenueOverviewV
             <span className={className('currentLegend')}>Gross sales (₹)</span>
             <span className={className('previousLegend')}>Previous 7 days</span>
           </div>
-          <Link className={className('panelFooterLink')} href="/venue/finance">
-            View full report <ForwardIcon size={17} aria-hidden="true" />
-          </Link>
         </section>
 
         <div className={className('rightColumn')}>
@@ -267,12 +282,6 @@ export function VenueOverviewContent({ model }: { readonly model: VenueOverviewV
                   </span>
                   <span className={className('eventCopy')}>
                     <strong>{event.name}</strong>
-                    <small>
-                      {event.date}
-                      <i>•</i>
-                      {event.time}
-                    </small>
-                    <small>{event.venue}</small>
                   </span>
                   <span className={className('sold')}>
                     <strong>{event.soldPercent}%</strong>
@@ -281,9 +290,6 @@ export function VenueOverviewContent({ model }: { readonly model: VenueOverviewV
                 </Link>
               ))}
             </div>
-            <Link className={className('panelFooterLink')} href="/venue/events">
-              View calendar <ForwardIcon size={15} aria-hidden="true" />
-            </Link>
           </section>
 
           <section
@@ -292,6 +298,7 @@ export function VenueOverviewContent({ model }: { readonly model: VenueOverviewV
           >
             <div className={className('sectionHeading')}>
               <h2 id="network-title">My network</h2>
+              <Link href="/venue/partners">View all</Link>
             </div>
             <div className={className('networkList')}>
               {model.network.map((item) => {
@@ -309,9 +316,6 @@ export function VenueOverviewContent({ model }: { readonly model: VenueOverviewV
                 );
               })}
             </div>
-            <Link className={className('panelFooterLink')} href="/venue/partners">
-              Manage network <ForwardIcon size={15} aria-hidden="true" />
-            </Link>
           </section>
         </div>
       </div>

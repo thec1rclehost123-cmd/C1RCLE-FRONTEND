@@ -110,8 +110,10 @@
 .restrictedState {
   border: 1px solid var(--dashboard-border);
   border-radius: var(--dashboard-radius-panel);
-  background: var(--dashboard-surface);
+  background: rgb(17 17 18 / 30%);
   box-shadow: var(--dashboard-shadow-card);
+  -webkit-backdrop-filter: blur(10px) saturate(1.08);
+  backdrop-filter: blur(10px) saturate(1.08);
 }
 
 .promoterSummary {

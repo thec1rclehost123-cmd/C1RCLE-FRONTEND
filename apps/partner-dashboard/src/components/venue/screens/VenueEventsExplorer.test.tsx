@@ -19,7 +19,30 @@ vi.mock('@c1rcle/icons', () => {
   };
 });
 
+const mocks = vi.hoisted(() => ({ push: vi.fn() }));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mocks.push }),
+}));
+
 describe('VenueEventsExplorer', () => {
+  it('opens the event when any part of the strip is clicked or keyboard activated', async () => {
+    const user = userEvent.setup();
+    mocks.push.mockClear();
+    render(<VenueEventsExplorer source={venueEventSource} />);
+
+    const row = screen.getByRole('row', { name: 'Open Neon Nights: Afrobeats' });
+    expect(row).toHaveAttribute('tabindex', '0');
+
+    await user.click(within(row).getByText('Tonight, 10:00 PM'));
+    expect(mocks.push).toHaveBeenCalledWith('/venue/events/neon-nights-afrobeats');
+
+    mocks.push.mockClear();
+    row.focus();
+    await user.keyboard('{Enter}');
+    expect(mocks.push).toHaveBeenCalledWith('/venue/events/neon-nights-afrobeats');
+  });
+
   it('groups tabs and gives draft events a Continue action', async () => {
     const user = userEvent.setup();
     render(<VenueEventsExplorer source={venueEventSource} />);

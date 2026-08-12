@@ -3,6 +3,7 @@
   display: grid;
   gap: 16px;
   width: 100%;
+  padding-bottom: 96px;
   color: var(--dashboard-text);
 }
 
@@ -13,23 +14,24 @@
 .pageHeader {
   position: relative;
   display: flex;
-  min-height: 68px;
-  align-items: flex-start;
+  min-height: 44px;
+  align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  gap: 16px;
+  margin-bottom: 4px;
 }
 
 .pageHeader h1 {
   margin: 0;
-  font-size: 32px;
+  font-size: 26px;
   font-weight: 650;
-  letter-spacing: -0.035em;
-  line-height: 1.15;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
 }
 .pageHeader p {
-  margin: 8px 0 0;
+  margin: 3px 0 0;
   color: var(--dashboard-text-secondary);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .panel {
@@ -159,7 +161,6 @@
 .doorTime {
   display: grid;
   align-content: start;
-  border-right: 1px solid var(--dashboard-border);
 }
 .doorTime span,
 .capacity > span {
@@ -226,22 +227,24 @@
 }
 .capacity > small {
   display: block;
-  margin-top: -4px;
+  margin-top: 4px;
   color: #8d9198;
   font-size: 9px;
+  letter-spacing: 0.05em;
   text-align: right;
   text-transform: uppercase;
 }
 .capacity > a {
-  display: inline-flex;
-  min-height: 44px;
+  display: flex;
+  width: 100%;
+  min-height: 42px;
   align-items: center;
   justify-content: center;
-  margin-top: 25px;
+  margin-top: 14px;
   border-radius: var(--dashboard-radius-control);
   color: #fff;
   background: var(--dashboard-accent);
-  padding: 0 24px;
+  padding: 0 16px;
   font-size: 14px;
   font-weight: 550;
   text-decoration: none;
@@ -279,81 +282,98 @@
 }
 
 .activityList {
-  display: grid;
-  gap: 6px;
-  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 14px;
 }
 .activityList > a {
   display: grid;
   min-height: 52px;
-  grid-template-columns: 35px minmax(0, 1fr) 18px;
+  grid-template-columns: 36px minmax(0, 1fr) 16px;
   align-items: center;
-  gap: 11px;
-  border: 1px solid var(--dashboard-border);
-  border-radius: var(--dashboard-radius-row);
+  gap: 13px;
+  border: none;
+  border-bottom: 1px solid rgb(255 255 255 / 4.5%);
+  border-radius: var(--dashboard-radius-control);
   color: #e8e9eb;
-  background: var(--dashboard-surface-elevated);
-  padding: 0 10px;
+  background: transparent;
+  padding: 9px 10px;
   text-decoration: none;
+  transition:
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+.activityList > a:last-child {
+  border-bottom: none;
 }
 .activityList > a:hover {
-  background: var(--dashboard-hover);
+  background: rgb(255 255 255 / 4.5%);
 }
 .activityList > a:hover .activityCopy strong {
   color: #fff;
 }
 .activityList > a > svg {
-  color: #c7c9cd;
+  color: #8b8e94;
+  transition: color 160ms ease;
+}
+.activityList > a:hover > svg {
+  color: var(--dashboard-text);
 }
 .activityIcon {
   display: grid;
-  width: 33px;
-  height: 33px;
+  width: 34px;
+  height: 34px;
   place-items: center;
-  border: 1px solid var(--dashboard-border);
+  border: 1px solid transparent;
   border-radius: 50%;
+  flex: none;
 }
 .activityIcon.success {
-  border-color: rgb(52 211 153 / 25%);
-  color: #50d890;
-  background: rgb(52 211 153 / 8%);
+  border-color: rgb(52 211 153 / 20%);
+  color: #4ade80;
+  background: rgb(52 211 153 / 10%);
 }
 .activityIcon.info {
-  border-color: rgb(69 147 255 / 25%);
-  color: #55a0ff;
-  background: rgb(55 126 224 / 8%);
+  border-color: rgb(69 147 255 / 20%);
+  color: #60a5fa;
+  background: rgb(55 126 224 / 10%);
 }
 .activityIcon.accent {
-  border-color: rgb(244 74 34 / 25%);
-  color: #f87031;
-  background: rgb(244 74 34 / 8%);
+  border-color: rgb(244 74 34 / 20%);
+  color: #ff6b4a;
+  background: rgb(244 74 34 / 10%);
 }
 .activityIcon.neutral {
-  color: #d1d3d7;
-  background: rgb(255 255 255 / 4%);
+  color: #cbd5e1;
+  background: rgb(255 255 255 / 6%);
 }
 .activityCopy {
-  display: grid;
-  min-width: 0;
-  gap: 4px;
-}
-.activityCopy strong {
-  overflow: hidden;
-  font-size: 13px;
-  font-weight: 450;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.activityCopy small {
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 7px;
+}
+.activityCopy strong {
+  display: flex;
+  min-width: 0;
+  width: 100%;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.activityCopy strong > span {
   overflow: hidden;
-  color: var(--dashboard-text-secondary);
-  font-size: 11px;
+  color: var(--dashboard-text);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.activityCopy strong > time {
+  flex: none;
+  color: var(--dashboard-text-secondary);
+  font-size: 12px;
+  font-weight: 450;
 }
 .activityCopy i {
   color: #71757b;
@@ -361,9 +381,39 @@
 }
 
 .sales {
-  min-height: 370px;
+  display: flex;
+  flex-direction: column;
+  min-height: 350px;
   border-radius: var(--dashboard-radius-primary);
-  padding: 15px 20px 0;
+  padding: 18px 22px 22px;
+}
+.performanceCopy {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+.performanceCopy p {
+  margin: 0;
+  color: var(--dashboard-text-secondary);
+  font-size: 12px;
+}
+.chartTotal {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  margin-left: auto;
+}
+.chartTotal span {
+  color: var(--dashboard-text-secondary);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.chartTotal strong {
+  color: var(--dashboard-text);
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
 }
 .rangeLabel select {
   min-height: 44px;
@@ -377,6 +427,7 @@
 }
 .chart {
   position: relative;
+  flex: 1;
   margin-top: 22px;
   padding: 0 8px 0 48px;
 }
@@ -387,7 +438,8 @@
   overflow: visible;
 }
 .gridLines line {
-  stroke: rgb(255 255 255 / 6%);
+  stroke: rgb(255 255 255 / 8%);
+  stroke-dasharray: 3 5;
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
@@ -396,18 +448,26 @@
   stroke: var(--dashboard-accent);
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 2;
+  stroke-width: 2.8;
+  filter: drop-shadow(0 0 5px rgb(244 74 34 / 34%));
   vector-effect: non-scaling-stroke;
 }
 .previousLine {
   fill: none;
-  stroke: #8b8f95;
+  stroke: rgb(177 181 187 / 52%);
   stroke-dasharray: 6 5;
   stroke-width: 1.2;
   vector-effect: non-scaling-stroke;
 }
 .chart circle {
   fill: var(--dashboard-accent);
+}
+.currentPoint {
+  stroke: var(--dashboard-surface);
+  stroke-width: 2;
+}
+.currentPoint:last-of-type {
+  filter: drop-shadow(0 0 7px rgb(244 74 34 / 62%));
 }
 .yLabels {
   position: absolute;
@@ -430,7 +490,7 @@
 .legend {
   display: flex;
   justify-content: center;
-  gap: 38px;
+  gap: 26px;
   margin-top: 20px;
   color: #b5b8bd;
   font-size: 12px;
@@ -453,14 +513,17 @@
 }
 .panelFooterLink {
   display: flex;
-  width: 100%;
-  min-height: 48px;
+  width: calc(100% + 40px);
+  min-height: 44px;
   align-items: center;
   gap: 9px;
-  margin-top: 16px;
+  margin-top: auto;
+  margin-inline: -20px;
   border-top: 1px solid var(--dashboard-border);
   color: var(--dashboard-accent) !important;
   font-size: 12px;
+  font-weight: 500;
+  padding: 0 20px;
   text-decoration: none;
 }
 
@@ -469,10 +532,13 @@
   gap: 12px;
 }
 .upcoming {
-  padding: 15px 20px 7px;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 22px 22px;
 }
 .upcomingList {
   display: grid;
+  flex: 1;
   gap: 6px;
   margin-top: 7px;
 }
@@ -524,8 +590,8 @@
 }
 .eventCopy strong {
   overflow: hidden;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 550;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -540,6 +606,11 @@
 }
 .eventCopy i {
   font-style: normal;
+}
+.network {
+  display: flex;
+  flex-direction: column;
+  padding: 18px 22px 22px;
 }
 .sold {
   display: grid;
@@ -782,15 +853,16 @@
 
 @media (min-width: 981px) {
   .overview {
-    height: 100%;
-    min-height: 0;
-    grid-template-columns: minmax(0, 1.52fr) minmax(180px, 0.68fr) minmax(180px, 0.68fr);
-    grid-template-rows: auto minmax(0, 0.92fr) minmax(0, 1.08fr);
+    min-height: 100%;
+    height: auto;
+    grid-template-columns: minmax(0, 60fr) minmax(0, 24fr) minmax(0, 16fr);
+    grid-template-rows: auto auto auto;
     grid-template-areas:
       'header header header'
       'tonight activity activity'
       'sales upcoming network';
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .pageHeader {

@@ -4,6 +4,8 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { CalendarIcon, ChevronDownIcon, ExportIcon } from '@c1rcle/icons';
 
+import { EVENTS } from '../venue-events-model';
+
 import styles from './VenueEventsAnalytics.module.css';
 
 export function VenueEventsAnalyticsFilters({
@@ -23,6 +25,14 @@ export function VenueEventsAnalyticsFilters({
     router.replace(query ? `${pathname}?${query}` : pathname);
   };
 
+  const updateEvent = (value: string) => {
+    const next = new URLSearchParams(searchParams.toString());
+    if (value === 'all') next.delete('event');
+    else next.set('event', value);
+    const query = next.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname);
+  };
+
   const exportSummary = () => {
     const csv = [
       'Metric,Value',
@@ -38,6 +48,24 @@ export function VenueEventsAnalyticsFilters({
 
   return (
     <div className={styles['analyticsFilters']}>
+      <label>
+        <span className={styles['srOnly']}>Event filter</span>
+        <select
+          aria-label="Event filter"
+          value={searchParams.get('event') ?? 'all'}
+          onChange={(event) => {
+            updateEvent(event.target.value);
+          }}
+        >
+          <option value="all">All events</option>
+          {EVENTS.map((event) => (
+            <option key={event.id} value={event.id}>
+              {event.name}
+            </option>
+          ))}
+        </select>
+        <ChevronDownIcon size={16} aria-hidden="true" />
+      </label>
       <label>
         <CalendarIcon size={19} aria-hidden="true" />
         <span className={styles['srOnly']}>Date range</span>

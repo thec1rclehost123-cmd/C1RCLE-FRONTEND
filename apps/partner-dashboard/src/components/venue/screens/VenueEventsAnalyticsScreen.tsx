@@ -51,7 +51,10 @@ export function VenueEventsAnalyticsContent({
   return (
     <div className={styles['page']}>
       <header className={styles['pageHeader']}>
-        <h1>Events Analytics</h1>
+        <div>
+          <h1>Cumulative analytics</h1>
+          <p>Venue-wide performance across events and hosts.</p>
+        </div>
         <Suspense
           fallback={<div className={styles['analyticsFiltersFallback']} aria-hidden="true" />}
         >

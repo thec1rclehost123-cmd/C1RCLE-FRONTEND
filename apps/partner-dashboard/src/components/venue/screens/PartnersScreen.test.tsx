@@ -41,6 +41,32 @@ describe('PartnersScreen', () => {
     await waitFor(() => expect(trigger).toHaveFocus());
   });
 
+  it('shows host credibility and expands hosted event history', async () => {
+    const user = userEvent.setup();
+    render(<PartnersScreen tab="hosts" />);
+    await user.click(screen.getAllByRole('button', { name: 'Contact' })[0]!);
+
+    expect(screen.getByRole('heading', { name: 'Credibility' })).toBeInTheDocument();
+    expect(screen.getByText('Events hosted')).toBeInTheDocument();
+    expect(screen.queryByText('Avg. turnout')).not.toBeInTheDocument();
+    expect(screen.queryByText('Venue rebook rate')).not.toBeInTheDocument();
+    const history = screen.getByRole('button', { name: /See hosted events/ });
+    expect(history).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(history);
+    expect(history).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Saturday Sessions')).toBeInTheDocument();
+  });
+
+  it('uses promoter-specific credibility labels and history wording', async () => {
+    const user = userEvent.setup();
+    render(<PartnersScreen tab="promoters" />);
+    await user.click(screen.getAllByRole('button', { name: 'Contact' })[0]!);
+
+    expect(screen.queryByText('Tickets attributed')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /See promoted events/ })).toBeInTheDocument();
+  });
+
   it('keeps unsupported promoter invitations honest', () => {
     render(<PartnersScreen tab="promoters" />);
     const invite = screen.getByRole('button', { name: 'Invite promoter unavailable' });

@@ -103,18 +103,37 @@ export function PartnersScreen({
         ) : null}
       </header>
 
-      <nav className={styles['tabs']} aria-label="Partner groups">
-        {TAB_LINKS.map((item) => (
-          <Link
-            key={item.id}
-            href={item.href}
-            className={tab === item.id ? styles['active'] : undefined}
-            aria-current={tab === item.id ? 'page' : undefined}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
+      <div className={styles['navRow']}>
+        <nav className={styles['tabs']} aria-label="Partner groups">
+          {TAB_LINKS.map((item) => (
+            <Link
+              key={item.id}
+              href={item.href}
+              className={tab === item.id ? styles['active'] : undefined}
+              aria-current={tab === item.id ? 'page' : undefined}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        {!isStaff ? (
+          <nav className={styles['subnav']} aria-label="Partner views">
+            <Link
+              href={`/venue/partners?tab=${tab}`}
+              className={view === 'my' ? styles['active'] : undefined}
+            >
+              My partners
+            </Link>
+            <Link
+              href={`/venue/partners?tab=${tab}&view=find`}
+              className={view === 'find' ? styles['active'] : undefined}
+            >
+              Find partners
+            </Link>
+          </nav>
+        ) : null}
+      </div>
 
       {isStaff ? (
         <StaffDirectory canManage={auth.canDo('canManageStaff')} />
@@ -124,32 +143,6 @@ export function PartnersScreen({
         <MyPartners kind={kind} />
       )}
     </section>
-  );
-}
-
-function PartnerSubnav({
-  kind,
-  active,
-}: {
-  readonly kind: VenuePartnerKind;
-  readonly active: PartnersView;
-}) {
-  const tab = kind === 'host' ? 'hosts' : 'promoters';
-  return (
-    <nav className={styles['subnav']} aria-label="Partner views">
-      <Link
-        href={`/venue/partners?tab=${tab}`}
-        className={active === 'my' ? styles['active'] : undefined}
-      >
-        My partners
-      </Link>
-      <Link
-        href={`/venue/partners?tab=${tab}&view=find`}
-        className={active === 'find' ? styles['active'] : undefined}
-      >
-        Find partners
-      </Link>
-    </nav>
   );
 }
 
@@ -167,7 +160,6 @@ function MyPartners({ kind }: { readonly kind: VenuePartnerKind }) {
 
   return (
     <>
-      <PartnerSubnav kind={kind} active="my" />
       <label className={styles['search']}>
         <span className={styles['srOnly']}>Search {kind === 'host' ? 'hosts' : 'promoters'}</span>
         <SearchIcon size={19} aria-hidden="true" />
@@ -225,6 +217,7 @@ function MyPartners({ kind }: { readonly kind: VenuePartnerKind }) {
         ))}
       </div>
       <PartnerDrawer
+        key={selected?.id ?? 'closed-partner'}
         partner={selected}
         triggerRef={triggerRef}
         onClose={() => {
@@ -253,7 +246,6 @@ function FindPartners({ kind }: { readonly kind: VenuePartnerKind }) {
 
   return (
     <>
-      <PartnerSubnav kind={kind} active="find" />
       <div className={styles['findControls']}>
         <label className={styles['search']}>
           <span className={styles['srOnly']}>Search by name or city</span>
@@ -310,6 +302,7 @@ function FindPartners({ kind }: { readonly kind: VenuePartnerKind }) {
         ))}
       </div>
       <PartnerDrawer
+        key={selected?.id ?? 'closed-discoverable-partner'}
         partner={selected}
         triggerRef={triggerRef}
         onClose={() => {
@@ -440,8 +433,11 @@ function PartnerDrawer({
   readonly triggerRef: React.RefObject<HTMLButtonElement | null>;
   readonly onClose: () => void;
 }) {
+  const [showEvents, setShowEvents] = useState(false);
   const { drawerRef, closeRef, closeAndRestore } = useDrawer(Boolean(partner), triggerRef, onClose);
   if (!partner) return null;
+  const historyId = `${partner.id}-event-history`;
+  const eventVerb = partner.kind === 'host' ? 'hosted' : 'promoted';
   return (
     <div className={styles['overlay']}>
       <button
@@ -494,6 +490,52 @@ function PartnerDrawer({
             </dd>
           </div>
         </dl>
+        <section className={styles['credibility']} aria-labelledby={`${partner.id}-credibility`}>
+          <div className={styles['sectionHeading']}>
+            <div>
+              <h3 id={`${partner.id}-credibility`}>Credibility</h3>
+              <p>Profile performance snapshot.</p>
+            </div>
+            {partner.verified ? (
+              <span className={styles['verifiedBadge']}>
+                <CheckIcon size={13} aria-hidden="true" /> Verified
+              </span>
+            ) : null}
+          </div>
+          <div className={styles['statsGrid']}>
+            <div>
+              <strong>{partner.credibility.trackedEvents}</strong>
+              <span>Events {eventVerb}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            className={styles['historyToggle']}
+            aria-expanded={showEvents}
+            aria-controls={historyId}
+            onClick={() => {
+              setShowEvents((current) => !current);
+            }}
+          >
+            <span>
+              <CalendarIcon size={18} aria-hidden="true" /> See {eventVerb} events
+            </span>
+            <span aria-hidden="true">{showEvents ? '−' : '+'}</span>
+          </button>
+          {showEvents ? (
+            <div id={historyId} className={styles['eventHistory']}>
+              {partner.eventHistory.map((event) => (
+                <article key={event.id}>
+                  <div>
+                    <strong>{event.name}</strong>
+                    <span>{event.date}</span>
+                  </div>
+                  <small>{event.outcome}</small>
+                </article>
+              ))}
+            </div>
+          ) : null}
+        </section>
         <footer>
           <button type="button" disabled title="Partner messaging is not connected yet.">
             <SendIcon size={18} aria-hidden="true" /> Message unavailable

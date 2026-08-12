@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -125,31 +126,38 @@ export function VenueEventsExplorer({ source }: { readonly source: VenueEventSou
           <p>Manage what’s live and coming up.</p>
         </div>
 
-        <div className={styles['tabs']} role="tablist" aria-label="Event status groups">
-          {tabs.map((item, index) => (
-            <button
-              key={item.key}
-              ref={(element) => {
-                tabRefs.current[index] = element;
-              }}
-              type="button"
-              role="tab"
-              aria-label={
-                item.showCount ? `${item.label} ${String(source.tabCounts[item.key])}` : item.label
-              }
-              aria-selected={tab === item.key}
-              tabIndex={tab === item.key ? 0 : -1}
-              onClick={() => {
-                chooseTab(item.key);
-              }}
-              onKeyDown={(event) => {
-                onTabKeyDown(event, index);
-              }}
-            >
-              {item.label}
-              {item.showCount ? <span>{source.tabCounts[item.key]}</span> : null}
-            </button>
-          ))}
+        <div className={styles['pageHeaderActions']}>
+          <Link className={styles['analyticsAction']} href="/venue/events/analytics">
+            Analytics <span aria-hidden="true">↗</span>
+          </Link>
+          <div className={styles['tabs']} role="tablist" aria-label="Event status groups">
+            {tabs.map((item, index) => (
+              <button
+                key={item.key}
+                ref={(element) => {
+                  tabRefs.current[index] = element;
+                }}
+                type="button"
+                role="tab"
+                aria-label={
+                  item.showCount
+                    ? `${item.label} ${String(source.tabCounts[item.key])}`
+                    : item.label
+                }
+                aria-selected={tab === item.key}
+                tabIndex={tab === item.key ? 0 : -1}
+                onClick={() => {
+                  chooseTab(item.key);
+                }}
+                onKeyDown={(event) => {
+                  onTabKeyDown(event, index);
+                }}
+              >
+                {item.label}
+                {item.showCount ? <span>{source.tabCounts[item.key]}</span> : null}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
@@ -331,6 +339,12 @@ export function VenueEventsExplorer({ source }: { readonly source: VenueEventSou
 }
 
 function EventList({ events }: { readonly events: readonly VenueEvent[] }) {
+  const router = useRouter();
+
+  const openEvent = (eventId: string) => {
+    router.push(`/venue/events/${eventId}`);
+  };
+
   return (
     <section className={styles['eventTable']} aria-label="Events list">
       <table>
@@ -345,7 +359,25 @@ function EventList({ events }: { readonly events: readonly VenueEvent[] }) {
         </thead>
         <tbody>
           {events.map((event, index) => (
-            <tr key={event.id}>
+            <tr
+              key={event.id}
+              className={styles['eventRow']}
+              tabIndex={0}
+              aria-label={`Open ${event.name}`}
+              onClick={(clickEvent) => {
+                if (
+                  (clickEvent.target as HTMLElement).closest('a, button, input, select, textarea')
+                ) {
+                  return;
+                }
+                openEvent(event.id);
+              }}
+              onKeyDown={(keyEvent) => {
+                if (keyEvent.key !== 'Enter' && keyEvent.key !== ' ') return;
+                keyEvent.preventDefault();
+                openEvent(event.id);
+              }}
+            >
               <td data-label="Event">
                 <div className={styles['eventIdentity']}>
                   <Image
