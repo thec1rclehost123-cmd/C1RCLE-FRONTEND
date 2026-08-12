@@ -28,6 +28,7 @@ vi.mock('@c1rcle/icons', () => {
     ImageIcon: Icon,
     LocationIcon: Icon,
     NotificationIcon: Icon,
+    OrderIcon: Icon,
     PublishIcon: Icon,
     RequestPayoutIcon: Icon,
     SearchIcon: Icon,
@@ -89,6 +90,10 @@ describe('Venue operations interactions', () => {
     mocks.actions = new Map([['canManageFinance', false]]);
     render(<FinanceScreen />);
     expect(screen.queryByRole('button', { name: /Request payout/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Orders' })).toHaveAttribute(
+      'href',
+      '/venue/finance/orders',
+    );
   });
 
   it('keeps data across all three Create Event steps and publishes through the supplied mutation', async () => {

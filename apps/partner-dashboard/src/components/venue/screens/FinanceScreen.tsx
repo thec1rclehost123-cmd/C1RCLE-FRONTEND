@@ -1,11 +1,13 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
 import {
   BankIcon,
   CalendarIcon,
   CheckIcon,
+  OrderIcon,
   RequestPayoutIcon,
   SearchIcon,
   SettingsIcon,
@@ -52,11 +54,16 @@ export function FinanceScreen() {
           <h1>Finance</h1>
           <p>Your balance and payouts.</p>
         </div>
-        {canRequestPayout ? (
-          <button type="button" disabled title="Payout requests require the payout mutation API.">
-            <RequestPayoutIcon size={18} aria-hidden="true" /> Request payout unavailable
-          </button>
-        ) : null}
+        <div className={styles['headerActions']}>
+          <Link href="/venue/finance/orders">
+            <OrderIcon size={18} aria-hidden="true" /> Orders
+          </Link>
+          {canRequestPayout ? (
+            <button type="button" disabled title="Payout requests require the payout mutation API.">
+              <RequestPayoutIcon size={18} aria-hidden="true" /> Request payout unavailable
+            </button>
+          ) : null}
+        </div>
       </header>
       <div className={styles['summaryGrid']}>
         <article className={styles['balance']}>

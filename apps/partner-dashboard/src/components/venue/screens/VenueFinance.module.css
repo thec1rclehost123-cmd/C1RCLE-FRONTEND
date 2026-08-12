@@ -23,6 +23,7 @@
   color: var(--partner-muted);
 }
 .header button,
+.header a,
 .bank button {
   display: inline-flex;
   min-height: 44px;
@@ -34,6 +35,21 @@
   color: #fff;
   background: var(--partner-accent);
   padding: 0 16px;
+  text-decoration: none;
+}
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.headerActions a {
+  border-color: var(--partner-border);
+  color: var(--partner-text);
+  background: var(--dashboard-control);
+}
+.headerActions a:hover {
+  border-color: rgb(255 71 36 / 55%);
+  background: rgb(255 71 36 / 8%);
 }
 .header button:disabled,
 .bank button:disabled {
@@ -311,7 +327,9 @@
   .header h1 {
     font-size: 30px;
   }
-  .header button {
+  .headerActions,
+  .header button,
+  .header a {
     width: 100%;
   }
   .balance {

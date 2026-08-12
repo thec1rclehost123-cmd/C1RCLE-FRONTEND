@@ -31,7 +31,7 @@ export const PARTNER_SHELL_CONFIG: Readonly<Record<PartnerDashboardRole, Partner
         label: 'Finance',
         href: '/venue/finance',
         icon: 'wallet-cards',
-        match: 'exact',
+        match: 'prefix',
         permission: 'VIEW_FINANCIALS',
       },
       { label: 'Settings', href: '/venue/settings', icon: 'settings', match: 'exact' },
