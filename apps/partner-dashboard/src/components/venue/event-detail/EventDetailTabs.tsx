@@ -33,7 +33,12 @@ export function EventDetailTabs({ eventId }: { readonly eventId: string }) {
       {tabs.map((tab) => {
         const selected = pathname === tab.href;
         return (
-          <Link key={tab.label} href={tab.href} aria-current={selected ? 'page' : undefined}>
+          <Link
+            key={tab.label}
+            href={tab.href}
+            prefetch={selected ? null : false}
+            aria-current={selected ? 'page' : undefined}
+          >
             {tab.label}
           </Link>
         );
