@@ -344,7 +344,7 @@ function GuestList({
             onChange={(event) => {
               setQuery(event.target.value);
             }}
-            placeholder="Search name, phone or order"
+            placeholder="Search guest name or order"
           />
         </label>
         <div role="group" aria-label="Guest filters">
@@ -732,8 +732,8 @@ function GuestDrawer({
             <dd>{guest.orderId}</dd>
           </div>
           <div>
-            <dt>Phone</dt>
-            <dd>{guest.phone}</dd>
+            <dt>Contact</dt>
+            <dd>Details hidden for privacy</dd>
           </div>
           <div>
             <dt>Status</dt>

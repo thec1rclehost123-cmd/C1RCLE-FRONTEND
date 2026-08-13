@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { CloseIcon, CopyIcon, InviteIcon, LinkIcon, PhoneIcon, TicketIcon } from '@c1rcle/icons';
+import { CloseIcon, CopyIcon, InviteIcon, LinkIcon, TicketIcon } from '@c1rcle/icons';
 
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 
@@ -253,17 +253,9 @@ export function EventPromoterTable({ model }: { readonly model: VenueEventPromot
             </span>
             <dl>
               <div>
-                <dt>
-                  <PhoneIcon size={18} aria-hidden="true" /> Phone
-                </dt>
-                <dd>{selected.phone}</dd>
+                <dt>Contact</dt>
+                <dd>Details hidden for privacy</dd>
               </div>
-              {selected.instagram ? (
-                <div>
-                  <dt>Instagram</dt>
-                  <dd>{selected.instagram}</dd>
-                </div>
-              ) : null}
               <div>
                 <dt>
                   <LinkIcon size={18} aria-hidden="true" /> Promoter link
@@ -281,12 +273,6 @@ export function EventPromoterTable({ model }: { readonly model: VenueEventPromot
                 <dd>{selected.earnings}</dd>
               </div>
             </dl>
-            <a
-              className={styles['messageAction']}
-              href={`sms:${selected.phone.replace(/\s/g, '')}`}
-            >
-              Message
-            </a>
             <button className={styles['copyAction']} type="button" onClick={() => void copyLink()}>
               <CopyIcon size={18} aria-hidden="true" />
               {copyStatus}

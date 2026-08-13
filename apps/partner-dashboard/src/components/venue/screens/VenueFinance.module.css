@@ -62,7 +62,7 @@
   gap: 14px;
 }
 .balance,
-.bank,
+.bankCard,
 .balanceStrip,
 .history {
   border: 1px solid var(--partner-border);
@@ -70,7 +70,7 @@
   background: var(--dashboard-surface);
 }
 .balance,
-.bank,
+.bankCard,
 .history {
   box-shadow: var(--dashboard-shadow-panel);
 }
@@ -124,45 +124,96 @@
   font-size: 20px;
   font-weight: 560;
 }
-.bank {
-  padding: 20px;
+/* ─── Premium Black Card ──────────────────────────────────────────────────── */
+.bankCard {
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+  background: linear-gradient(135deg, #1a1a1e 0%, #0d0d0f 40%, #1a1a1e 100%);
+  border: 1px solid rgb(255 255 255 / 8%);
+  aspect-ratio: 1.586 / 1;
+  display: flex;
+  align-items: stretch;
 }
-.bank h2 {
-  margin: 0 0 18px;
-  font-size: 15px;
-  font-weight: 550;
+.cardInner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 18px 20px 16px;
 }
-.bank > div {
+.cardTop {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+}
+.cardBrand {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: rgb(255 255 255 / 70%);
+}
+.cardContactless {
+  opacity: 0.7;
+}
+.cardChip {
+  margin-top: 14px;
+}
+.cardNumber {
+  display: flex;
+  gap: 14px;
+  margin-top: auto;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: rgb(255 255 255 / 80%);
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+}
+.cardBottom {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
   gap: 12px;
+  margin-top: 10px;
 }
-.bank > div > svg {
-  color: var(--partner-accent);
-}
-.bank > div span {
+.cardHolder,
+.cardBank {
   display: grid;
-  gap: 5px;
+  gap: 2px;
 }
-.bank > div small {
-  color: var(--partner-muted);
+.cardHolder small,
+.cardBank small {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 35%);
 }
-.bank dl {
-  border-top: 1px solid var(--partner-border);
-  margin: 16px 0 12px;
-  padding-top: 14px;
+.cardHolder strong,
+.cardBank strong {
+  font-size: 11px;
+  font-weight: 550;
+  color: rgb(255 255 255 / 72%);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
-.bank dt {
-  color: var(--partner-muted);
-  font-size: 12px;
+.cardBank {
+  text-align: right;
 }
-.bank dd {
-  margin: 7px 0 0;
-}
-.bank button {
-  width: 100%;
-  border-color: var(--partner-border);
-  background: transparent;
+/* Decorative overlapping circles */
+.cardDeco {
+  position: absolute;
+  right: -20px;
+  bottom: -30px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 3%);
+  box-shadow:
+    -50px -10px 0 0 rgb(255 255 255 / 2.5%),
+    -90px 10px 0 0 rgb(255 255 255 / 2%);
+  z-index: 0;
 }
 .balanceStrip {
   display: grid;

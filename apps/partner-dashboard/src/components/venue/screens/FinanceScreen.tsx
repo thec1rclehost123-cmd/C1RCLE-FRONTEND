@@ -4,13 +4,11 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
 import {
-  BankIcon,
   CalendarIcon,
   CheckIcon,
   OrderIcon,
   RequestPayoutIcon,
   SearchIcon,
-  SettingsIcon,
   TimeIcon,
   TrendUpIcon,
 } from '@c1rcle/icons';
@@ -83,32 +81,119 @@ export function FinanceScreen() {
             </span>
           </div>
         </article>
-        <article className={styles['bank']}>
-          <h2>Bank account</h2>
-          {venueFinanceModel.bank ? (
-            <>
-              <div>
-                <BankIcon size={34} aria-hidden="true" />
-                <span>
-                  <strong>{venueFinanceModel.bank.name}</strong>
-                  <small>{venueFinanceModel.bank.maskedAccount}</small>
-                </span>
-              </div>
-              <dl>
-                <dt>Account holder</dt>
-                <dd>{venueFinanceModel.bank.accountHolder}</dd>
-              </dl>
-              <button
-                type="button"
-                disabled
-                title="Bank account changes require the payout account mutation API."
+        <article className={styles['bankCard']}>
+          <div className={styles['cardInner']}>
+            {/* Card top row */}
+            <div className={styles['cardTop']}>
+              <span className={styles['cardBrand']}>THE C1RCLE</span>
+              <svg
+                width="28"
+                height="20"
+                viewBox="0 0 32 24"
+                fill="none"
+                aria-hidden="true"
+                className={styles['cardContactless']}
               >
-                <SettingsIcon size={18} aria-hidden="true" /> Manage unavailable
-              </button>
-            </>
-          ) : (
-            <p>Bank account unavailable</p>
-          )}
+                <path
+                  d="M16 18a6 6 0 000-12"
+                  stroke="#d4af37"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M20 20a10 10 0 000-16"
+                  stroke="#d4af37"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M24 22a14 14 0 000-20"
+                  stroke="#d4af37"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+            {/* Chip */}
+            <div className={styles['cardChip']}>
+              <svg width="36" height="28" viewBox="0 0 40 30" fill="none" aria-hidden="true">
+                <rect
+                  x="1"
+                  y="1"
+                  width="38"
+                  height="28"
+                  rx="5"
+                  fill="#c9a84c"
+                  fillOpacity=".25"
+                  stroke="#c9a84c"
+                  strokeOpacity=".6"
+                  strokeWidth="1"
+                />
+                <line
+                  x1="1"
+                  y1="11"
+                  x2="39"
+                  y2="11"
+                  stroke="#c9a84c"
+                  strokeOpacity=".4"
+                  strokeWidth=".7"
+                />
+                <line
+                  x1="1"
+                  y1="19"
+                  x2="39"
+                  y2="19"
+                  stroke="#c9a84c"
+                  strokeOpacity=".4"
+                  strokeWidth=".7"
+                />
+                <line
+                  x1="14"
+                  y1="1"
+                  x2="14"
+                  y2="30"
+                  stroke="#c9a84c"
+                  strokeOpacity=".4"
+                  strokeWidth=".7"
+                />
+                <line
+                  x1="26"
+                  y1="1"
+                  x2="26"
+                  y2="30"
+                  stroke="#c9a84c"
+                  strokeOpacity=".4"
+                  strokeWidth=".7"
+                />
+              </svg>
+            </div>
+            {/* Account number */}
+            <div className={styles['cardNumber']}>
+              {venueFinanceModel.bank ? (
+                <>
+                  <span>•&thinsp;•&thinsp;•&thinsp;•</span>
+                  <span>•&thinsp;•&thinsp;•&thinsp;•</span>
+                  <span>•&thinsp;•&thinsp;•&thinsp;•</span>
+                  <span>{venueFinanceModel.bank.maskedAccount.replace(/[^0-9]/g, '')}</span>
+                </>
+              ) : (
+                <span>— — — —</span>
+              )}
+            </div>
+            {/* Bottom row */}
+            <div className={styles['cardBottom']}>
+              <div className={styles['cardHolder']}>
+                <small>Account Holder</small>
+                <strong>{venueFinanceModel.bank?.accountHolder ?? 'Unavailable'}</strong>
+              </div>
+              <div className={styles['cardBank']}>
+                <small>Bank</small>
+                <strong>{venueFinanceModel.bank?.name ?? '—'}</strong>
+              </div>
+            </div>
+            {/* Decorative circles */}
+            <div className={styles['cardDeco']} aria-hidden="true" />
+          </div>
         </article>
       </div>
       <div className={styles['balanceStrip']}>

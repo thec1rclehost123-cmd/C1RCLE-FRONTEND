@@ -945,6 +945,416 @@
   }
 }
 
+/* ─── Glass event command center refinement ──────────────────────────────── */
+.overview {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 33% 4%, rgb(244 74 34 / 8%), transparent 28%),
+    radial-gradient(circle at 82% 45%, rgb(98 68 157 / 5%), transparent 25%);
+}
+
+.overview::before {
+  position: absolute;
+  z-index: -1;
+  top: -160px;
+  left: 12%;
+  width: 72%;
+  height: 650px;
+  border-radius: 50%;
+  background:
+    linear-gradient(145deg, rgb(7 7 9 / 25%), rgb(7 7 9 / 88%)),
+    url('/venue/neon-nights-poster.webp') center / cover;
+  filter: blur(52px) saturate(1.25);
+  opacity: 0.24;
+  pointer-events: none;
+  content: '';
+}
+
+.overview > * {
+  position: relative;
+  z-index: 1;
+}
+
+.pageHeader {
+  min-height: 58px;
+  margin-bottom: 0;
+}
+
+.pageHeader h1 {
+  font-size: clamp(28px, 2.25vw, 34px);
+  letter-spacing: -0.045em;
+}
+
+.pageHeader p {
+  color: rgb(207 209 214 / 68%);
+}
+
+.panel {
+  border-color: rgb(255 255 255 / 10%);
+  background: rgb(22 22 26 / 67%);
+  box-shadow:
+    0 20px 60px rgb(0 0 0 / 24%),
+    inset 0 1px rgb(255 255 255 / 5%);
+  backdrop-filter: blur(18px) saturate(122%);
+}
+
+.tonight {
+  position: relative;
+  grid-template-columns: minmax(190px, 31%) minmax(0, 1fr);
+  min-height: 344px;
+  border-color: rgb(255 255 255 / 14%);
+  background: rgb(17 17 20 / 58%);
+  box-shadow:
+    0 26px 80px rgb(0 0 0 / 32%),
+    inset 0 1px rgb(255 255 255 / 7%);
+}
+
+.tonight::before {
+  position: absolute;
+  z-index: 0;
+  inset: -42px;
+  border-radius: inherit;
+  background:
+    linear-gradient(100deg, rgb(4 4 6 / 18%), rgb(4 4 6 / 78%)),
+    url('/venue/neon-nights-poster.webp') center / cover;
+  filter: blur(30px) saturate(1.18);
+  opacity: 0.32;
+  transform: scale(1.08);
+  content: '';
+}
+
+.tonight > * {
+  position: relative;
+  z-index: 1;
+}
+
+.poster {
+  min-height: 322px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  box-shadow: 0 18px 42px rgb(0 0 0 / 30%);
+}
+
+.poster::before {
+  background-image: url('/venue/neon-nights-poster.webp');
+  filter: brightness(0.58) saturate(1.45) contrast(1.06);
+}
+
+.tonightBody {
+  margin: 1px 0 1px 8px;
+  border-left: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 0 var(--dashboard-radius-row) var(--dashboard-radius-row) 0;
+  background: linear-gradient(105deg, rgb(255 255 255 / 3%), rgb(255 255 255 / 1%));
+  padding-right: 20px;
+}
+
+.tonightBody h2 {
+  font-size: clamp(24px, 2.1vw, 32px);
+  letter-spacing: -0.045em;
+}
+
+.tonightStats {
+  border-top-color: rgb(255 255 255 / 11%);
+}
+
+.capacity div strong {
+  font-size: 25px;
+}
+
+.capacity div small {
+  font-size: 15px;
+}
+
+.capacity div b {
+  position: absolute;
+  top: -8px;
+  right: 0;
+}
+
+.capacity > a {
+  min-width: 104px;
+  white-space: nowrap;
+}
+
+.capacity > div:first-of-type {
+  position: relative;
+}
+
+.capacity div strong,
+.capacity div small,
+.capacity div b {
+  white-space: nowrap;
+}
+
+.activity {
+  min-height: 344px;
+  background: rgb(18 18 22 / 72%);
+}
+
+.activityList {
+  position: relative;
+  gap: 3px;
+}
+
+.activityList::before {
+  position: absolute;
+  top: 17px;
+  bottom: 17px;
+  left: 27px;
+  border-left: 1px dashed rgb(255 255 255 / 12%);
+  content: '';
+}
+
+.activityList > a {
+  position: relative;
+  z-index: 1;
+  min-height: 56px;
+  border: 1px solid transparent;
+  background: rgb(255 255 255 / 1.5%);
+  padding: 8px 10px;
+}
+
+.activityList > a:hover {
+  border-color: rgb(255 255 255 / 8%);
+  background: rgb(255 255 255 / 5%);
+  transform: translateX(2px);
+}
+
+.activityCopy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 3px;
+}
+
+.activityCopy strong,
+.activityCopy > small {
+  grid-column: 1;
+  min-width: 0;
+}
+
+.activityCopy > small {
+  overflow: hidden;
+  color: rgb(181 184 190 / 62%);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sales {
+  min-height: 380px;
+  background: linear-gradient(145deg, rgb(255 71 36 / 5%), transparent 36%), rgb(19 19 23 / 72%);
+}
+
+.sales .sectionHeading {
+  min-height: 48px;
+}
+
+.chartTotal strong {
+  color: #fff;
+  font-size: 25px;
+}
+
+.rangeLabel select {
+  border-color: rgb(255 255 255 / 12%);
+  background: rgb(255 255 255 / 5%);
+}
+
+.gridLines line {
+  stroke: rgb(255 255 255 / 10%);
+}
+
+.currentLine {
+  stroke-width: 3.2;
+  filter: drop-shadow(0 0 8px rgb(244 74 34 / 42%));
+}
+
+.upcoming,
+.network {
+  background: rgb(20 20 24 / 67%);
+}
+
+.upcomingList {
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.upcomingList > a {
+  min-height: 74px;
+  border-color: rgb(255 255 255 / 8%);
+  background: rgb(255 255 255 / 3%);
+  padding: 6px 10px;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.upcomingList > a:hover {
+  border-color: rgb(255 255 255 / 15%);
+  background: rgb(255 255 255 / 6%);
+  transform: translateY(-1px);
+}
+
+.eventArtwork {
+  position: relative;
+  height: 58px;
+  border: 1px solid rgb(255 255 255 / 11%);
+  background-position: center;
+  background-size: cover;
+  box-shadow: inset 0 0 0 999px rgb(5 5 7 / 42%);
+}
+
+.eventArtwork.bollytech {
+  background-image: url('/venue/events/bollywood-brunch.webp');
+}
+
+.eventArtwork.sunset {
+  background-image: url('/venue/events/sunset-sessions.webp');
+}
+
+.eventArtwork.urban {
+  background-image: url('/venue/events/warehouse-rave.webp');
+}
+
+.eventCopy {
+  gap: 5px;
+}
+
+.eventCopy strong {
+  font-size: 14px;
+}
+
+.eventCopy small {
+  color: rgb(181 184 190 / 66%);
+  font-size: 10px;
+}
+
+.sold {
+  min-width: 58px;
+  gap: 2px;
+}
+
+.sold strong {
+  font-size: 17px;
+}
+
+.sold progress {
+  width: 58px;
+  height: 4px;
+  appearance: none;
+  accent-color: var(--dashboard-accent);
+  border: 0;
+  border-radius: 99px;
+  background: rgb(255 255 255 / 10%);
+  color-scheme: dark;
+}
+
+.sold progress::-webkit-progress-bar {
+  border-radius: inherit;
+  background: rgb(255 255 255 / 10%);
+}
+
+.sold progress::-webkit-progress-value {
+  border-radius: inherit;
+  background: var(--dashboard-accent);
+}
+
+.sold progress::-moz-progress-bar {
+  border-radius: inherit;
+  background: var(--dashboard-accent);
+}
+
+.network {
+  padding: 18px 20px 20px;
+}
+
+.networkList {
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.networkList > div {
+  min-height: 50px;
+  border: 1px solid rgb(255 255 255 / 6%);
+  border-radius: var(--dashboard-radius-control);
+  background: rgb(255 255 255 / 2.5%);
+  padding: 6px 8px;
+}
+
+.networkIcon {
+  width: 34px;
+  height: 34px;
+}
+
+.networkList strong {
+  font-size: 18px;
+}
+
+@media (min-width: 981px) {
+  .overview {
+    grid-template-columns: minmax(0, 58fr) minmax(0, 25fr) minmax(0, 17fr);
+  }
+}
+
+@media (max-width: 1250px) and (min-width: 981px) {
+  .tonight {
+    grid-template-columns: 180px minmax(0, 1fr);
+  }
+
+  .tonightStats {
+    grid-template-columns: 106px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .capacity > a {
+    min-width: 0;
+    padding-inline: 0;
+    font-size: 10px;
+    letter-spacing: -0.02em;
+  }
+}
+
+@media (max-width: 980px) {
+  .tonightBody {
+    margin-left: 0;
+    border-left: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  .tonight {
+    grid-template-columns: 190px minmax(0, 1fr);
+  }
+
+  .tonightBody {
+    margin-top: 0;
+    border-left: 0;
+    background: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .overview::before {
+    top: -120px;
+    left: -15%;
+    width: 130%;
+    opacity: 0.18;
+  }
+
+  .tonightBody {
+    padding-right: 10px;
+  }
+
+  .eventArtwork {
+    height: 52px;
+  }
+
+  .upcomingList > a {
+    min-height: 68px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .overview *,
   .overview *::before,

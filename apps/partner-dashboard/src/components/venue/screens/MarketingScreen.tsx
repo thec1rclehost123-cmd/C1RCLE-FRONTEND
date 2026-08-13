@@ -105,8 +105,8 @@ const EVENTS = [
 type MarketingEventId = (typeof EVENTS)[number]['id'];
 
 const RECIPIENTS = [
-  { id: 'shelby-adams', name: "Shelby Adam's", phone: '+1 602 828 8848' },
-  { id: 'aayush-divase', name: 'Aayush Divase', phone: '+1 602 349 2605' },
+  { id: 'recipient-01', label: 'Eligible guest 01' },
+  { id: 'recipient-02', label: 'Eligible guest 02' },
 ] as const;
 
 const GENDER_FILTERS = ['All genders', 'Women', 'Men', 'Non-binary'] as const;
@@ -240,7 +240,7 @@ function ComposeMarketing({
                 <div className={classNames(styles['popover'], styles['recipientsPopover'])}>
                   <div className={styles['popoverSearch']}>
                     <SearchIcon size={16} aria-hidden="true" />
-                    <input aria-label="Search recipients" placeholder="Search recipients" />
+                    <input aria-label="Search recipients" placeholder="Search eligible guests" />
                   </div>
                   <div className={styles['popoverSection']}>
                     <small>Select all</small>
@@ -275,8 +275,8 @@ function ComposeMarketing({
                           />
                           <CheckBox checked={checked} />
                           <div className={styles['recipientInfo']}>
-                            <strong>{recipient.name}</strong>
-                            <span>{recipient.phone}</span>
+                            <strong>{recipient.label}</strong>
+                            <span>Contact details hidden</span>
                           </div>
                         </label>
                       );
@@ -499,8 +499,11 @@ function ComposeMarketing({
         {/* Cost strip */}
         <div className={styles['costStrip']}>
           <div className={classNames(styles['costTotal'], styles['costTotalCompact'])}>
-            <span className={styles['costTotalLabel']}>Est. total</span>
-            <strong>{cost}</strong>
+            <span className={styles['costTotalLabel']}>
+              <strong>Estimated spend</strong>
+              <small>{audienceCount} recipients · {channel}</small>
+            </span>
+            <b>{cost}</b>
           </div>
         </div>
         <div className={styles['previewMeta']}>
@@ -612,7 +615,7 @@ function IPhonePreview({
         {channel === 'WhatsApp' && <WAScreen msg={message} />}
         {channel === 'SMS' && <SMSScreen msg={message} />}
         {channel === 'Email' && <EmailScreen msg={message} name={eventName} />}
-        {channel === 'Push' && <PushScreen msg={message} />}
+        {channel === 'Push' && <PushScreen msg={message} name={eventName} />}
       </div>
       {/* Home bar */}
       <div className={styles['iphoneHome']} />
@@ -761,28 +764,38 @@ function EmailScreen({ msg, name }: { readonly msg: string; readonly name: strin
             strokeLinejoin="round"
           />
         </svg>
-        <div className={styles['scrTitle']}>
-          <strong>{name}</strong>
-          <small>The C1rcle Team</small>
+        <div className={styles['mailToolbarTitle']}><strong>Inbox</strong></div>
+        <div className={styles['mailToolbarActions']} aria-hidden="true">
+          <span aria-label="Archive">▱</span>
+          <span aria-label="Delete">▢</span>
+          <span aria-label="More">⋮</span>
         </div>
       </div>
       <div className={styles['scrBody']} data-ch="email">
+        <div className={styles['emailSubject']}>{name}</div>
         <div className={styles['emailFrom']}>
           <span className={styles['emailDot']}>C</span>
           <div>
-            <strong>The C1rcle Team</strong>
-            <br />
-            <small>team@thec1rcle.com</small>
+            <strong>The C1RCLE</strong>
+            <small>to eligible guests</small>
           </div>
+          <time>Today, 9:41 AM</time>
         </div>
+        <div className={styles['emailDivider']} />
         <p className={styles['emailPara']}>{msg || 'Email preview'}</p>
+        <div className={styles['emailEventCard']}>
+          <span>THE C1RCLE · EVENT UPDATE</span>
+          <strong>{name}</strong>
+          <small>Tickets are waiting for you.</small>
+          <button type="button">View event</button>
+        </div>
       </div>
     </>
   );
 }
 
 /* ── Push ── */
-function PushScreen({ msg }: { readonly msg: string }) {
+function PushScreen({ msg, name }: { readonly msg: string; readonly name: string }) {
   return (
     <div className={styles['pushBody']}>
       <span className={styles['pushTime']}>9:41</span>
@@ -803,10 +816,13 @@ function PushScreen({ msg }: { readonly msg: string }) {
           </svg>
         </span>
         <div className={styles['pushContent']}>
-          <strong>The C1rcle</strong>
+          <div className={styles['pushHeading']}>
+            <strong>The C1rcle</strong>
+            <small>now</small>
+          </div>
+          <b>{name}</b>
           <p>{msg ? msg.slice(0, 85) + (msg.length > 85 ? '…' : '') : 'Push preview'}</p>
         </div>
-        <small>now</small>
       </div>
     </div>
   );

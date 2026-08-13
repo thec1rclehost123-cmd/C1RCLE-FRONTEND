@@ -9,7 +9,6 @@ import {
   CloseIcon,
   InviteIcon,
   LocationIcon,
-  PhoneIcon,
   SearchIcon,
   SendIcon,
 } from '@c1rcle/icons';
@@ -332,7 +331,7 @@ function StaffDirectory({ canManage }: { readonly canManage: boolean }) {
               <Avatar initials={item.initials} tone="blue" />
               <span>
                 <strong>{item.name}</strong>
-                <small>{item.email}</small>
+                <small>Contact details hidden</small>
               </span>
             </div>
             <span role="cell">{item.role}</span>
@@ -471,14 +470,8 @@ function PartnerDrawer({
         </p>
         <dl>
           <div>
-            <dt>
-              <PhoneIcon size={18} aria-hidden="true" /> Phone
-            </dt>
-            <dd>{partner.phone ?? 'Unavailable'}</dd>
-          </div>
-          <div>
-            <dt>Instagram</dt>
-            <dd>{partner.instagram ?? 'Unavailable'}</dd>
+            <dt>Contact</dt>
+            <dd>Details hidden for privacy</dd>
           </div>
           <div>
             <dt>
@@ -588,9 +581,7 @@ function StaffDrawer({
         </button>
         <Avatar initials={member.initials} tone="blue" large />
         <h2>{member.name}</h2>
-        <p>
-          {member.role} · {member.email}
-        </p>
+        <p>{member.role} · Contact details hidden</p>
         <section className={styles['permissions']}>
           <h3>Permissions</h3>
           {member.permissions.map((permission) => (

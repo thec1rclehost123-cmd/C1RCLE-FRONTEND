@@ -70,7 +70,7 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
 }
 
 .partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partner-role='host']) {
-  --partner-topbar-height: 64px;
+  --partner-topbar-height: 70px;
   height: 100dvh;
   min-height: 0;
   overflow: hidden;
@@ -472,7 +472,8 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 24px;
+  padding: 16px 28px 100px;
+  scroll-padding-top: 16px;
   scrollbar-gutter: stable;
 }
 
@@ -771,7 +772,7 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
   .partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partner-role='host'])
     .partner-dashboard-content {
     min-height: 0;
-    padding: 16px;
+    padding: 16px 16px 100px;
     scrollbar-gutter: auto;
   }
   .partner-dashboard-shell-v2 .partner-notifications {
