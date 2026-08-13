@@ -9,16 +9,16 @@ import {
   PromoterTabs,
 } from '@/components/promoter/PromoterStudioUi';
 
-export default function PromoterEventsPage() {
+export default function InvitationsPage() {
   return (
     <div className="pr-page">
       <PromoterPageHeader
         eyebrow="Event network"
         title="Events"
-        description="Accepted event partnerships, pending invitations and opportunities in one place."
+        description="Review invitations before they expire. Nothing becomes linked until an invitation is accepted."
       />
       <PromoterTabs
-        active="linked"
+        active="invitations"
         items={[
           {
             label: 'Linked',
@@ -41,8 +41,12 @@ export default function PromoterEventsPage() {
         ]}
       />
       <section className="pr-event-grid">
-        {acceptedEvents.map((event) => (
-          <EventCard key={event.id} event={event} href={`/promoter/events/${event.id}`} />
+        {pendingInvitations.map((event) => (
+          <EventCard
+            key={event.id}
+            event={event}
+            href={`/promoter/events/invitations/${event.inviteId ?? event.id}`}
+          />
         ))}
       </section>
     </div>

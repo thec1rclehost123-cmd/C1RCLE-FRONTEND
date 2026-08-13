@@ -8,7 +8,10 @@ import { fixturePromoterRepository } from './fixture-promoter-repository';
 describe('partner role contracts', () => {
   it('keeps promoter navigation focused on links instead of event creation or marketing', () => {
     const config = PARTNER_SHELL_CONFIG.promoter;
-    expect(config.primaryAction).toMatchObject({ label: 'Get link', href: '/promoter/links' });
+    expect(config.primaryAction).toMatchObject({
+      label: 'Create Link',
+      href: '/promoter/links/create',
+    });
     expect(config.navigation.map((item) => item.label)).not.toContain('Marketing');
     expect(config.navigation.map((item) => item.href)).not.toContain('/promoter/events/create');
   });

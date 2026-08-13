@@ -1,10 +1,17 @@
 export default function PromoterLoading() {
   return (
-    <div className="promoter-loading" role="status" aria-label="Loading promoter workspace">
+    <div className="pr-loading" aria-label="Loading Promoter Studio" role="status">
       <span />
-      <div className="promoter-loading-title" />
-      <div className="promoter-loading-metrics">{Array.from({ length: 4 }, (_, index) => <i key={index} />)}</div>
-      <div className="promoter-loading-panel" />
+      <div>
+        <i />
+        <i />
+        <i />
+      </div>
+      <section>
+        <i />
+        <i />
+        <i />
+      </section>
     </div>
   );
 }

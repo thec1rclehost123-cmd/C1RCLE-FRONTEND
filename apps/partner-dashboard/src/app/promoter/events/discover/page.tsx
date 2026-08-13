@@ -3,22 +3,23 @@ import {
   discoverableEvents,
   pendingInvitations,
 } from '@/components/promoter/promoter-studio-model';
+import { SegmentedControl } from '@/components/promoter/PromoterStudioActions';
 import {
   EventCard,
   PromoterPageHeader,
   PromoterTabs,
 } from '@/components/promoter/PromoterStudioUi';
 
-export default function PromoterEventsPage() {
+export default function DiscoverEventsPage() {
   return (
     <div className="pr-page">
       <PromoterPageHeader
         eyebrow="Event network"
         title="Events"
-        description="Accepted event partnerships, pending invitations and opportunities in one place."
+        description="Find verified events currently accepting promoter requests."
       />
       <PromoterTabs
-        active="linked"
+        active="discover"
         items={[
           {
             label: 'Linked',
@@ -40,9 +41,16 @@ export default function PromoterEventsPage() {
           },
         ]}
       />
+      <div className="pr-filterbar">
+        <label>
+          <span>Search events</span>
+          <input type="search" placeholder="Name, venue or city" />
+        </label>
+        <SegmentedControl label="City" options={['All cities', 'Mumbai', 'Bengaluru', 'Delhi']} />
+      </div>
       <section className="pr-event-grid">
-        {acceptedEvents.map((event) => (
-          <EventCard key={event.id} event={event} href={`/promoter/events/${event.id}`} />
+        {discoverableEvents.map((event) => (
+          <EventCard key={event.id} event={event} href={`/promoter/events/discover/${event.id}`} />
         ))}
       </section>
     </div>

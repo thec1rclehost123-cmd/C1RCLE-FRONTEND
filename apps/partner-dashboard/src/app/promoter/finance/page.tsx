@@ -1,27 +1,93 @@
-import { DashboardPageHeader, MetricCard, SectionHeading, StatusBadge } from '@/components/partner-shell/DashboardUi';
-import { formatInr } from '@/lib/partner/contracts';
-import { partnerRepositories } from '@/lib/partner/repositories';
+import Link from 'next/link';
 
-export default async function PromoterFinancePage() {
-  const [finance, links] = await Promise.all([partnerRepositories.promoter.getFinance(), partnerRepositories.promoter.getLinks()]);
+import { anonymousOrders, formatInr } from '@/components/promoter/promoter-studio-model';
+import { UnavailableAction } from '@/components/promoter/PromoterStudioActions';
+import {
+  MetricStrip,
+  PromoterButton,
+  PromoterPageHeader,
+  StatusBadge,
+} from '@/components/promoter/PromoterStudioUi';
+
+export default function FinancePage() {
   return (
-    <>
-      <DashboardPageHeader eyebrow="Private workspace" title="Finance" description="Your commissions, settlements and payout account. These amounts are visible only to your promoter workspace." actions={<button type="button" className="pd-button pd-button--primary" disabled title="Payout requests require the finance mutation API">Request payout</button>} />
-      <section className="pd-metrics">
-        <MetricCard label="Available" value={formatInr(finance.availablePaise)} detail="eligible for payout" tone="positive" />
-        <MetricCard label="Pending" value={formatInr(finance.pendingPaise)} detail="awaiting event settlement" tone="warning" />
-        <MetricCard label="Lifetime earnings" value={formatInr(finance.lifetimePaise)} detail="private to you" tone="accent" />
-        <MetricCard label="Next payout" value={finance.nextPayout} detail={finance.payoutAccount} />
+    <div className="pr-page">
+      <PromoterPageHeader
+        eyebrow="Private workspace"
+        title="Finance"
+        description="Commission balances and event-level adjustments. Attendee identities are never exposed."
+        actions={
+          <>
+            <PromoterButton href="/promoter/finance/payouts">Payout history</PromoterButton>
+            <UnavailableAction
+              label="Request payout"
+              title="Payout request unavailable"
+              description="The payout write adapter is not connected. Your available balance remains unchanged and no request was submitted."
+            />
+          </>
+        }
+      />
+      <section className="pr-balance-card">
+        <span>Available commission</span>
+        <strong>{formatInr(1864000)}</strong>
+        <p>Eligible to request · payout account ending 2481</p>
+        <div>
+          <span>
+            Pending clearance <b>{formatInr(724000)}</b>
+          </span>
+          <span>
+            Lifetime commission <b>{formatInr(12486000)}</b>
+          </span>
+        </div>
       </section>
-      <section className="pd-surface promoter-finance-table">
-        <SectionHeading title="Campaign earnings" description="Private commission totals by tracked campaign." />
-        <div className="promoter-table-scroll"><table><thead><tr><th>Campaign</th><th>Channel</th><th>Status</th><th>Purchases</th><th>Earnings</th></tr></thead><tbody>{links.map((link) => <tr key={link.id}><td><strong>{link.eventName}</strong><small>{link.label}</small></td><td>{link.channel}</td><td><StatusBadge tone={link.status === 'active' ? 'positive' : 'neutral'}>{link.status}</StatusBadge></td><td>{link.purchases}</td><td><strong>{formatInr(link.earningsPaise)}</strong></td></tr>)}</tbody></table></div>
+      <MetricStrip
+        items={[
+          { label: 'This month', value: formatInr(5866000), detail: 'Across 2 active links' },
+          { label: 'Pending refunds', value: formatInr(12000), detail: '1 attributed order' },
+          { label: 'Next settlement', value: '24 Jul', detail: 'After refund windows close' },
+        ]}
+      />
+      <section className="pr-section">
+        <header>
+          <div>
+            <span className="pr-eyebrow">Commission ledger</span>
+            <h2>Recent adjustments</h2>
+          </div>
+        </header>
+        <div className="pr-table-wrap">
+          <table className="pr-table">
+            <thead>
+              <tr>
+                <th>Reference</th>
+                <th>Date</th>
+                <th>Tickets</th>
+                <th>Commission</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {anonymousOrders.map((order) => (
+                <tr key={order.id}>
+                  <td>
+                    <strong>Order #{order.id}</strong>
+                    <small>Guest details private</small>
+                  </td>
+                  <td>{order.createdAt}</td>
+                  <td>{order.tickets}</td>
+                  <td>{formatInr(order.commissionPaise)}</td>
+                  <td>
+                    <StatusBadge state={order.status} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
-      <section className="promoter-finance-notice"><strong>Financial privacy</strong><p>No finance totals appear on your Partner Network performance profile. Venues and hosts see ticket movement and collaboration stats only.</p></section>
-      <section className="promoter-finance-detail-grid">
-        <article className="pd-surface promoter-payout-history"><SectionHeading title="Payout history" description={`${finance.kycStatus === 'verified' ? 'KYC verified' : 'KYC action required'} · ${finance.payoutAccount}`} /><div>{finance.payouts.map((payout) => <div key={payout.id}><span><strong>{payout.date}</strong><small>{payout.id}</small></span><strong>{formatInr(payout.amountPaise)}</strong><StatusBadge tone={payout.status === 'paid' ? 'positive' : payout.status === 'failed' ? 'danger' : 'warning'}>{payout.status}</StatusBadge></div>)}</div></article>
-        <article className="pd-surface promoter-adjustments"><SectionHeading title="Adjustments" description="Refund reversals and campaign bonuses before final payout." /><div>{finance.adjustments.map((adjustment) => <div key={adjustment.id}><span><strong>{adjustment.eventName}</strong><small>{adjustment.date} · {adjustment.label}</small></span><strong className={adjustment.amountPaise < 0 ? 'is-negative' : 'is-positive'}>{formatInr(adjustment.amountPaise)}</strong></div>)}</div></article>
-      </section>
-    </>
+      <p className="pr-footnote">
+        Need help with a settlement? <Link href="/support">Open support</Link> with the anonymous
+        order reference.
+      </p>
+    </div>
   );
 }
