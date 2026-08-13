@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 
-import { acceptedEvents, anonymousOrders } from '@/components/promoter/promoter-studio-model';
+import { eventDetailById } from '@/components/promoter/promoter-event-detail-model';
 import {
   AnonymousOrdersTable,
   EmptyState,
@@ -14,9 +14,9 @@ export default async function EventOrdersPage({
   readonly params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = await params;
-  const event = acceptedEvents.find((item) => item.id === eventId);
-  if (!event) notFound();
-  const orders = anonymousOrders.filter((order) => order.eventId === event.id);
+  const model = eventDetailById(eventId);
+  if (!model) notFound();
+  const { event, orders } = model;
   return (
     <div className="pr-page pr-event-scope">
       <EventHero event={event} active="orders" />

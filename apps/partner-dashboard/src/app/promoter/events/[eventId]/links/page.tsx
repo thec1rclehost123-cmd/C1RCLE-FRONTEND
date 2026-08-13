@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 
-import { acceptedEvents, linkForEvent } from '@/components/promoter/promoter-studio-model';
+import { eventDetailById } from '@/components/promoter/promoter-event-detail-model';
 import { CopyLinkButton } from '@/components/promoter/PromoterStudioActions';
 import {
   CanonicalLinkPanel,
@@ -15,9 +15,9 @@ export default async function EventLinkPage({
   readonly params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = await params;
-  const event = acceptedEvents.find((item) => item.id === eventId);
-  if (!event) notFound();
-  const link = linkForEvent(event.id);
+  const model = eventDetailById(eventId);
+  if (!model) notFound();
+  const { event, link } = model;
   return (
     <div className="pr-page pr-event-scope">
       <EventHero event={event} active="links" />

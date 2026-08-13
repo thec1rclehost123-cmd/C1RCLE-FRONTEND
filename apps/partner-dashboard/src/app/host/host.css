@@ -245,6 +245,12 @@
   grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.75fr);
   gap: 16px;
 }
+
+.host-dashboard-grid,
+.host-activity {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 520px;
+}
 .host-profile-grid > div,
 .host-profile-grid > aside,
 .host-finance-grid > aside {

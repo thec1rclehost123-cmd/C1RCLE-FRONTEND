@@ -15,7 +15,7 @@ export function HostOverviewScreen() {
       />
       {nextEvent ? (
         <section className="host-tonight">
-          <Image src={nextEvent.poster} width={104} height={104} alt="" />
+          <Image src={nextEvent.poster} width={104} height={104} sizes="104px" alt="" />
           <div>
             <HostStatus tone="success">Hosting tonight</HostStatus>
             <h2>{nextEvent.name}</h2>
@@ -95,7 +95,7 @@ export function HostOverviewScreen() {
           <div className="host-compact-list">
             {hostEvents.slice(1, 4).map((event) => (
               <Link href={`/host/events/${event.id}`} key={event.id}>
-                <Image src={event.poster} width={48} height={48} alt="" />
+                <Image src={event.poster} width={48} height={48} sizes="48px" alt="" />
                 <div>
                   <strong>{event.name}</strong>
                   <span>

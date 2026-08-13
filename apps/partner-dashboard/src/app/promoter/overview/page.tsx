@@ -40,6 +40,7 @@ export default function PromoterOverviewPage() {
             alt={`${featured.name} poster`}
             width={188}
             height={220}
+            sizes="(max-width: 640px) 132px, 188px"
             priority
           />
           <div>

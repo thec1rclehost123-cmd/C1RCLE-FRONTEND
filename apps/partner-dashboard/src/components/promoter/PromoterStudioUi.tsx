@@ -52,6 +52,7 @@ export function PromoterTabs({
         <Link
           key={item.value}
           href={item.href}
+          prefetch={item.value === active ? null : false}
           className={active === item.value ? 'is-active' : undefined}
           aria-current={active === item.value ? 'page' : undefined}
         >
@@ -173,7 +174,14 @@ export function EventHero({
     <section className="pr-event-hero">
       <EventAtmosphere event={event} />
       <div className="pr-event-hero__content">
-        <Image src={event.poster} alt={`${event.name} poster`} width={152} height={152} priority />
+        <Image
+          src={event.poster}
+          alt={`${event.name} poster`}
+          width={152}
+          height={152}
+          sizes="(max-width: 640px) 96px, 152px"
+          priority
+        />
         <div>
           <StatusBadge state={event.state} />
           <h1>{event.name}</h1>

@@ -8,6 +8,7 @@
     "dev": "next dev --turbopack --port 3001",
     "build": "next build",
     "start": "next start --port 3001",
+    "start:standalone": "node .next/standalone/apps/partner-dashboard/server.js",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",

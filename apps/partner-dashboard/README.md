@@ -20,15 +20,16 @@ Dev server: <http://localhost:3001>
 
 ## Its scripts
 
-| Command          | What it does                                |
-| ---------------- | ------------------------------------------- |
-| `pnpm dev`       | Dev server on port 3001 (Turbopack)         |
-| `pnpm build`     | Production build                            |
-| `pnpm start`     | Serve the production build on port 3001     |
-| `pnpm lint`      | ESLint, including the architecture rules    |
-| `pnpm typecheck` | `tsc` with the shared strict config         |
-| `pnpm test`      | Vitest unit and component tests             |
-| `pnpm test:e2e`  | Playwright, against a real production build |
+| Command                 | What it does                                |
+| ----------------------- | ------------------------------------------- |
+| `pnpm dev`              | Dev server on port 3001 (Turbopack)         |
+| `pnpm build`            | Production build                            |
+| `pnpm start`            | Serve the production build on port 3001     |
+| `pnpm start:standalone` | Serve a Docker/standalone build artifact    |
+| `pnpm lint`             | ESLint, including the architecture rules    |
+| `pnpm typecheck`        | `tsc` with the shared strict config         |
+| `pnpm test`             | Vitest unit and component tests             |
+| `pnpm test:e2e`         | Playwright, against a real production build |
 
 Build only this app and the packages it actually uses:
 
@@ -83,9 +84,14 @@ contract is in place before the app starts calling a real API.
 
 Two things worth knowing:
 
-- `output: 'standalone'` is applied **only off Vercel**. The Dockerfile copies
-  `.next/standalone`, but Vercel builds its own serverless output and does not
-  consume it.
+- Local production uses `pnpm build` followed by `pnpm start`; this emits and
+  serves the regular Next.js build without a standalone warning.
+- Docker sets `C1RCLE_STANDALONE=1` during its build, copies
+  `.next/standalone`, and starts `apps/partner-dashboard/server.js` from that
+  artifact. `pnpm start:standalone` is the equivalent command when the
+  standalone artifact and its static/public files have been prepared locally.
+- Vercel does not set `C1RCLE_STANDALONE`; it builds its own serverless output
+  and continues to use `vercel.json` unchanged.
 - `turbo.json` enables signed remote caching. It degrades to local-only when
   `TURBO_TOKEN` / `TURBO_TEAM` are absent, so the build does not depend on it.
 

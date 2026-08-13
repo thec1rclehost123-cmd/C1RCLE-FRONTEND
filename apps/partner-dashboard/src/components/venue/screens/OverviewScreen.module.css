@@ -43,11 +43,23 @@
   box-shadow: var(--dashboard-shadow-panel);
 }
 
+@media (max-width: 820px) {
+  .panel {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
 .topGrid,
 .lowerGrid {
   display: grid;
   grid-template-columns: minmax(0, 1.52fr) minmax(360px, 1fr);
   gap: 16px;
+}
+
+.lowerGrid {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 680px;
 }
 
 .tonight {

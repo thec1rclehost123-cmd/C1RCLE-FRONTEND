@@ -21,14 +21,10 @@ import {
   UsersIcon,
 } from '@c1rcle/icons';
 
-import {
-  acceptedEvents,
-  canonicalLinks,
-  partners,
-} from '@/components/promoter/promoter-studio-model';
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 
 import { PARTNER_SHELL_CONFIG } from './config';
+import { promoterShellSearchItems } from './promoter-shell-search-model';
 
 import type { PartnerDashboardLayoutProps, PartnerNavigationItem } from './types';
 import type { IconProps } from '@c1rcle/icons';
@@ -59,27 +55,6 @@ const initialsFrom = (name: string): string =>
     .join('')
     .slice(0, 2)
     .toUpperCase() || 'C1';
-
-const promoterSearchItems = [
-  ...acceptedEvents.map((event) => ({
-    label: event.name,
-    href: `/promoter/events/${event.id}`,
-    icon: 'calendar-days',
-    match: 'exact' as const,
-  })),
-  ...partners.map((partner) => ({
-    label: partner.name,
-    href: `/promoter/partners/${partner.kind === 'venue' ? 'venues' : 'hosts'}/${partner.id}`,
-    icon: 'users',
-    match: 'exact' as const,
-  })),
-  ...canonicalLinks.map((link) => ({
-    label: `${link.eventName} link`,
-    href: `/promoter/links/${link.id}`,
-    icon: 'link',
-    match: 'exact' as const,
-  })),
-];
 
 const isActiveRoute = (pathname: string, item: PartnerNavigationItem): boolean =>
   item.match === 'prefix' ? pathname.startsWith(item.href) : pathname === item.href;
@@ -221,7 +196,7 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
     const normalized = query.trim().toLowerCase();
     const source =
       partnerRole === 'promoter'
-        ? [...visibleNavigation, ...promoterSearchItems]
+        ? [...visibleNavigation, ...promoterShellSearchItems]
         : visibleNavigation;
     if (!normalized) return source.slice(0, 8);
     return source.filter((item) => item.label.toLowerCase().includes(normalized)).slice(0, 8);
@@ -264,6 +239,7 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
       >
         <Link
           href={`/${partnerRole}/overview`}
+          prefetch={false}
           className="partner-sidebar-brand"
           aria-label="THE C1RCLE dashboard home"
           onClick={closeTransientUi}
@@ -294,6 +270,7 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={active ? null : false}
                 className={active ? 'is-active' : undefined}
                 aria-current={active ? 'page' : undefined}
                 aria-label={item.label}
@@ -370,7 +347,12 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
               <div className="partner-search-results" role="listbox" aria-label="Dashboard pages">
                 <small>Quick navigation</small>
                 {searchResults.map((item) => (
-                  <Link key={item.href} href={item.href} onClick={closeTransientUi}>
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    prefetch={false}
+                    onClick={closeTransientUi}
+                  >
                     <span>{item.label}</span>
                     <span aria-hidden="true">↗</span>
                   </Link>

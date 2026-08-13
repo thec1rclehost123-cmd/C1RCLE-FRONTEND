@@ -1,6 +1,14 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
@@ -15,6 +23,8 @@ import {
 import { getFirebaseAuth } from '@/lib/firebase/client';
 import { getCachedFirebaseIdToken } from '@/lib/auth/getCachedFirebaseIdToken';
 import type { DashboardProfile, PartnerMembership, PartnerType, StaffRole } from '@/lib/rbac/types';
+
+import { startPermissionRefreshSchedule } from './permission-refresh-schedule';
 
 // ── Atomic permissions object — always set together to avoid race conditions ──
 interface PermissionsState {
@@ -261,7 +271,8 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
         // activeMembership may live in data.user.activeMembership (injected by gateway)
         // OR at data.activeMembership (top-level) — check both for resilience.
         const rawMembership = userData.activeMembership || data.activeMembership || null;
-        const rawMemberships = userData.memberships || data.memberships || (rawMembership ? [rawMembership] : []);
+        const rawMemberships =
+          userData.memberships || data.memberships || (rawMembership ? [rawMembership] : []);
 
         if (claims['partnerId'] && claims['partnerType'] && claims['partnerRole']) {
           activeMembership = {
@@ -309,16 +320,18 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
             .catch(() => {});
         }
 
-        setMemberships(rawMemberships.map((item) => ({
-          uid: user.uid,
-          partnerId: item.partnerId,
-          partnerType: item.partnerType === 'club' ? 'venue' : item.partnerType,
-          role: item.role,
-          joinedAt: item.joinedAt,
-          isActive: item.partnerId === activeMembership?.partnerId,
-          partnerName: item.partnerName,
-          membershipId: item.membershipId,
-        })));
+        setMemberships(
+          rawMemberships.map((item) => ({
+            uid: user.uid,
+            partnerId: item.partnerId,
+            partnerType: item.partnerType === 'club' ? 'venue' : item.partnerType,
+            role: item.role,
+            joinedAt: item.joinedAt,
+            isActive: item.partnerId === activeMembership?.partnerId,
+            partnerName: item.partnerName,
+            membershipId: item.membershipId,
+          })),
+        );
 
         // Set permissions atomically — all three fields in a single state update
         setPermissions({
@@ -353,48 +366,19 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     return () => controller.abort();
   }, [user]);
 
-  // Re-fetch profile when tab becomes visible after 60s — ensures staff see
-  // updated permissions after the venue owner reassigns their access profile.
-  useEffect(() => {
-    if (!user) return;
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        const elapsed = Date.now() - lastProfileFetchRef.current;
-        if (elapsed > 60 * 1000) {
-          user.getIdToken().then((token: any) => {
-            fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
-              .then((r) => (r.ok ? r.json() : null))
-              .then((data) => {
-                if (!data?.user) return;
-                const userData = data.user;
-                // Atomic update — all three permissions together
-                setPermissions({
-                  tabVisibility: userData._staffTabVisibility ?? null,
-                  actionPermissions: userData._staffActionPermissions ?? null,
-                  piiPolicy: userData._staffPiiPolicy ?? null,
-                });
-                lastProfileFetchRef.current = Date.now();
-              })
-              .catch(() => {});
-          });
-        }
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [user]);
-
-  // Permission sync via authenticated gateway polling. This preserves the
-  // staff-permission refresh path without direct Firestore access in the browser.
+  // One authenticated, visibility-aware permission schedule per membership.
+  // Authorization stays server-owned; the client only applies returned policy.
   useEffect(() => {
     if (!user || !membershipId) return;
     let cancelled = false;
+    const controller = new AbortController();
 
     const syncPermissions = async () => {
       try {
         const token = await user.getIdToken().then((token: any) => token);
         const res = await fetch('/api/auth/me', {
           headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
         });
         if (!res.ok) return;
         const data: MeApiResponse | null = await res.json().catch(() => null);
@@ -425,18 +409,20 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
         }
         lastProfileFetchRef.current = Date.now();
       } catch (err) {
+        if (controller.signal.aborted) return;
         console.error('Error refreshing staff permissions:', err);
       }
     };
 
-    syncPermissions().catch(() => {});
-    const intervalId = window.setInterval(() => {
-      syncPermissions().catch(() => {});
-    }, 30_000);
+    const stopSchedule = startPermissionRefreshSchedule({
+      refresh: syncPermissions,
+      getLastRefreshAt: () => lastProfileFetchRef.current,
+    });
 
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
+      controller.abort();
+      stopSchedule();
     };
   }, [user, membershipId]);
 
@@ -512,65 +498,102 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const switchPartner = useCallback(async (partnerId: string) => {
-    if (!user) return;
-    try {
-      setLoading(true);
-      const token = await user.getIdToken();
-      const res = await fetch('/api/auth/me', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ partnerId }),
-      });
-      if (res.ok) {
-        // Refresh token to get new claims
-        await user.getIdToken(true);
-        window.location.reload();
+  const switchPartner = useCallback(
+    async (partnerId: string) => {
+      if (!user) return;
+      try {
+        setLoading(true);
+        const token = await user.getIdToken();
+        const res = await fetch('/api/auth/me', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ partnerId }),
+        });
+        if (res.ok) {
+          // Refresh token to get new claims
+          await user.getIdToken(true);
+          window.location.reload();
+        }
+      } catch (err) {
+        console.error('Failed to switch partner:', err);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error('Failed to switch partner:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+    },
+    [user],
+  );
 
-  const canDo = useCallback((action: string) =>
-    !permissions.actionPermissions || permissions.actionPermissions[action] === true, [permissions.actionPermissions]);
+  const canDo = useCallback(
+    (action: string) =>
+      !permissions.actionPermissions || permissions.actionPermissions[action] === true,
+    [permissions.actionPermissions],
+  );
 
   const getIdToken = useCallback(async () => {
     return getCachedFirebaseIdToken(user);
   }, [user]);
 
-  const hasPermission = useCallback((permission: string) => grantedPermissions.includes(permission), [grantedPermissions]);
+  const hasPermission = useCallback(
+    (permission: string) => grantedPermissions.includes(permission),
+    [grantedPermissions],
+  );
 
-  const authContextValue = useMemo<AuthContextValue>(() => ({
-    user,
-    profile,
-    memberships,
-    loading,
-    isApproved,
-    isBanned,
-    isPartnerSuspended,
-    onboardingStatus,
-    kycStatus,
-    entityType,
-    subscriptionPlan,
-    tabVisibility: permissions.tabVisibility ?? serverDefaultTabVisibility,
-    actionPermissions: permissions.actionPermissions,
-    piiPolicy: permissions.piiPolicy,
-    grantedPermissions,
-    hasPermission,
-    canDo,
-    getIdToken,
-    signIn,
-    signUp,
-    signInWithGoogle,
-    signOut,
-    switchPartner,
-  }), [canDo, entityType, getIdToken, grantedPermissions, hasPermission, isApproved, isBanned, isPartnerSuspended, kycStatus, loading, memberships, onboardingStatus, permissions.actionPermissions, permissions.piiPolicy, permissions.tabVisibility, profile, serverDefaultTabVisibility, signIn, signInWithGoogle, signOut, signUp, subscriptionPlan, switchPartner, user]);
+  const authContextValue = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      profile,
+      memberships,
+      loading,
+      isApproved,
+      isBanned,
+      isPartnerSuspended,
+      onboardingStatus,
+      kycStatus,
+      entityType,
+      subscriptionPlan,
+      tabVisibility: permissions.tabVisibility ?? serverDefaultTabVisibility,
+      actionPermissions: permissions.actionPermissions,
+      piiPolicy: permissions.piiPolicy,
+      grantedPermissions,
+      hasPermission,
+      canDo,
+      getIdToken,
+      signIn,
+      signUp,
+      signInWithGoogle,
+      signOut,
+      switchPartner,
+    }),
+    [
+      canDo,
+      entityType,
+      getIdToken,
+      grantedPermissions,
+      hasPermission,
+      isApproved,
+      isBanned,
+      isPartnerSuspended,
+      kycStatus,
+      loading,
+      memberships,
+      onboardingStatus,
+      permissions.actionPermissions,
+      permissions.piiPolicy,
+      permissions.tabVisibility,
+      profile,
+      serverDefaultTabVisibility,
+      signIn,
+      signInWithGoogle,
+      signOut,
+      signUp,
+      subscriptionPlan,
+      switchPartner,
+      user,
+    ],
+  );
 
   const isDashboardPath = pathname
     ? pathname.startsWith('/venue') ||
@@ -601,11 +624,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     );
   }
 
-  return (
-    <AuthContext.Provider value={authContextValue}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={authContextValue}>{children}</AuthContext.Provider>;
 }
 
 export function useDashboardAuth() {

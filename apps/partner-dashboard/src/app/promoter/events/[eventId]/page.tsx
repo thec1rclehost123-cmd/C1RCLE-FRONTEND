@@ -1,11 +1,6 @@
 import { notFound } from 'next/navigation';
 
-import {
-  acceptedEvents,
-  conversionRate,
-  formatInr,
-  linkForEvent,
-} from '@/components/promoter/promoter-studio-model';
+import { eventDetailById } from '@/components/promoter/promoter-event-detail-model';
 import {
   EventHero,
   LineChart,
@@ -19,9 +14,9 @@ export default async function EventOverviewPage({
   readonly params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = await params;
-  const event = acceptedEvents.find((item) => item.id === eventId);
-  if (!event) notFound();
-  const link = linkForEvent(event.id);
+  const model = eventDetailById(eventId);
+  if (!model) notFound();
+  const { event, link, metrics } = model;
   return (
     <div className="pr-page pr-event-scope">
       <EventHero event={event} active="overview" />
@@ -29,17 +24,17 @@ export default async function EventOverviewPage({
         items={[
           {
             label: 'Tickets moved',
-            value: link?.tickets.toLocaleString('en-IN') ?? '—',
+            value: metrics.tickets,
             detail: link
               ? 'Attributed to your permanent link'
               : 'Create a link to begin attribution',
           },
-          { label: 'Link visits', value: link?.clicks.toLocaleString('en-IN') ?? '—' },
+          { label: 'Link visits', value: metrics.clicks },
           {
             label: 'Conversion',
-            value: link ? `${conversionRate(link.orders, link.clicks).toString()}%` : '—',
+            value: metrics.conversion,
           },
-          { label: 'Commission earned', value: link ? formatInr(link.earnedPaise) : '—' },
+          { label: 'Commission earned', value: metrics.commission },
         ]}
       />
       <div className="pr-event-detail-grid">
