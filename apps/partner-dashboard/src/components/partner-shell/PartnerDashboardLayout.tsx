@@ -24,6 +24,7 @@ import {
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 
 import { PARTNER_SHELL_CONFIG } from './config';
+import { promoterShellSearchItems } from './promoter-shell-search-model';
 
 import type { PartnerDashboardLayoutProps, PartnerNavigationItem } from './types';
 import type { IconProps } from '@c1rcle/icons';
@@ -78,6 +79,7 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
+  const [createLinkOpen, setCreateLinkOpen] = useState(false);
   const [query, setQuery] = useState('');
   const contentRef = useRef<HTMLElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -95,6 +97,7 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
     setNotificationsOpen(false);
     setAccountOpen(false);
     setSignOutOpen(false);
+    setCreateLinkOpen(false);
   };
 
   const closeMobileNavigation = () => {
@@ -191,9 +194,13 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
 
   const searchResults = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return visibleNavigation;
-    return visibleNavigation.filter((item) => item.label.toLowerCase().includes(normalized));
-  }, [query, visibleNavigation]);
+    const source =
+      partnerRole === 'promoter'
+        ? [...visibleNavigation, ...promoterShellSearchItems]
+        : visibleNavigation;
+    if (!normalized) return source.slice(0, 8);
+    return source.filter((item) => item.label.toLowerCase().includes(normalized)).slice(0, 8);
+  }, [partnerRole, query, visibleNavigation]);
 
   if (auth.loading) return <AuthorizationSplash label="Authorizing access" />;
   if (!user || auth.isBanned || !auth.isApproved || (activeRole && activeRole !== partnerRole)) {
@@ -202,7 +209,8 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
 
   const displayName = membership?.partnerName ?? auth.profile?.displayName ?? config.eyebrow;
   const identityInitials = initialsFrom(displayName);
-  const avatarInitials = partnerRole === 'venue' ? 'VP' : identityInitials;
+  const avatarInitials =
+    partnerRole === 'venue' ? 'VP' : partnerRole === 'promoter' ? 'CZ' : identityInitials;
   const activeNavigation =
     visibleNavigation.find((item) => isActiveRoute(pathname, item)) ?? visibleNavigation[0];
   const pageIdentity = activeNavigation?.label ?? config.eyebrow;
@@ -231,6 +239,7 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
       >
         <Link
           href={`/${partnerRole}/overview`}
+          prefetch={false}
           className="partner-sidebar-brand"
           aria-label="THE C1RCLE dashboard home"
           onClick={closeTransientUi}
@@ -261,6 +270,7 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={active ? null : false}
                 className={active ? 'is-active' : undefined}
                 aria-current={active ? 'page' : undefined}
                 aria-label={item.label}
@@ -325,7 +335,11 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
               onFocus={() => {
                 setSearchOpen(true);
               }}
-              placeholder="Search events, partners, invoices..."
+              placeholder={
+                partnerRole === 'promoter'
+                  ? 'Search events, partners, links...'
+                  : 'Search events, partners, invoices...'
+              }
               aria-label="Search dashboard"
             />
             <kbd>⌘ K</kbd>
@@ -333,7 +347,12 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
               <div className="partner-search-results" role="listbox" aria-label="Dashboard pages">
                 <small>Quick navigation</small>
                 {searchResults.map((item) => (
-                  <Link key={item.href} href={item.href} onClick={closeTransientUi}>
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    prefetch={false}
+                    onClick={closeTransientUi}
+                  >
                     <span>{item.label}</span>
                     <span aria-hidden="true">↗</span>
                   </Link>
@@ -369,9 +388,24 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
               <NotificationIcon size={20} strokeWidth={1.7} aria-hidden="true" />
               <span>3</span>
             </button>
-            <Link href={config.primaryAction.href} className="partner-primary-action">
-              {config.primaryAction.label}
-            </Link>
+            {partnerRole === 'promoter' ? (
+              <button
+                type="button"
+                className="partner-primary-action"
+                aria-expanded={createLinkOpen}
+                onClick={() => {
+                  setCreateLinkOpen((open) => !open);
+                  setAccountOpen(false);
+                  setNotificationsOpen(false);
+                }}
+              >
+                {config.primaryAction.label}
+              </button>
+            ) : (
+              <Link href={config.primaryAction.href} className="partner-primary-action">
+                {config.primaryAction.label}
+              </Link>
+            )}
             <button
               ref={accountButtonRef}
               type="button"
@@ -400,6 +434,25 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
             trigger={notificationButtonRef}
           />
 
+          {createLinkOpen && partnerRole === 'promoter' ? (
+            <div
+              className="partner-popover promoter-create-link-picker"
+              role="dialog"
+              aria-label="Create link"
+            >
+              <small>Create a permanent link</small>
+              <strong>Choose an accepted event</strong>
+              <p>Only events without a link are eligible.</p>
+              <Link href="/promoter/links/create?event=sunset-sessions" onClick={closeTransientUi}>
+                <span>Sunset Sessions Vol. 4</span>
+                <span aria-hidden="true">→</span>
+              </Link>
+              <Link href="/promoter/links" onClick={closeTransientUi}>
+                View existing links
+              </Link>
+            </div>
+          ) : null}
+
           {accountOpen ? (
             <div
               className="partner-popover partner-account-popover"
@@ -415,7 +468,19 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
                   </small>
                 </div>
               </div>
-              <Link href={`/${partnerRole}/settings`} onClick={closeTransientUi}>
+              {partnerRole === 'promoter' ? (
+                <Link href="/promoter/profile" onClick={closeTransientUi}>
+                  View profile
+                </Link>
+              ) : null}
+              <Link
+                href={
+                  partnerRole === 'promoter'
+                    ? '/promoter/settings/profile'
+                    : `/${partnerRole}/settings`
+                }
+                onClick={closeTransientUi}
+              >
                 Profile & settings
               </Link>
               {auth.memberships.length > 1 ? (

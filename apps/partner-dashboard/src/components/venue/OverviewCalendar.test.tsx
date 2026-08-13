@@ -6,21 +6,33 @@ import { OverviewCalendar } from './OverviewCalendar';
 
 vi.mock('@c1rcle/icons', () => {
   const Icon = () => <svg aria-hidden="true" />;
-  return { CalendarIcon: Icon, CloseIcon: Icon, ExternalLinkIcon: Icon };
+  return {
+    AddIcon: Icon,
+    ArchiveIcon: Icon,
+    CalendarIcon: Icon,
+    CloseIcon: Icon,
+    ExternalLinkIcon: Icon,
+    ListViewIcon: Icon,
+    NextIcon: Icon,
+    PreviousIcon: Icon,
+    SearchIcon: Icon,
+    TimeIcon: Icon,
+  };
 });
 
 describe('OverviewCalendar', () => {
-  it('opens, selects a date, closes, and restores focus', async () => {
+  it('opens as a full calendar dialog and exposes event and view controls', async () => {
     const user = userEvent.setup();
     render(<OverviewCalendar />);
     const trigger = screen.getByRole('button', { name: 'Pop-out calendar' });
 
     await user.click(trigger);
     expect(screen.getByRole('dialog', { name: 'July 2026' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'July 18, 2026' }));
+    expect(screen.getByRole('button', { name: 'Month' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Neon Nights: Afrobeats Edition, 10:00 PM' })).toBeInTheDocument();
 
-    expect(screen.queryByRole('dialog', { name: 'July 2026' })).not.toBeInTheDocument();
-    expect(trigger).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: 'Block time' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Time blocking enabled');
   });
 
   it('closes with Escape and restores focus', async () => {

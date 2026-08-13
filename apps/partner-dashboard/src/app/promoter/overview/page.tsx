@@ -1,70 +1,148 @@
+import Image from 'next/image';
 import Link from 'next/link';
 
-import { DashboardButton, DashboardPageHeader, MetricCard, MiniBars, SectionHeading, StatusBadge } from '@/components/partner-shell/DashboardUi';
-import { PromoterEventCard } from '@/components/promoter/PromoterEventCard';
-import { PromoterProfileShareButton } from '@/components/promoter/PromoterShareActions';
-import { formatInr } from '@/lib/partner/contracts';
-import { partnerRepositories } from '@/lib/partner/repositories';
+import {
+  acceptedEvents,
+  canonicalLinks,
+  formatInr,
+  partners,
+  promoterProfile,
+} from '@/components/promoter/promoter-studio-model';
+import {
+  EventCard,
+  LineChart,
+  MetricStrip,
+  PartnerCard,
+  PromoterButton,
+  PromoterPageHeader,
+} from '@/components/promoter/PromoterStudioUi';
 
-export default async function PromoterOverviewPage() {
-  const [overview, finance] = await Promise.all([
-    partnerRepositories.promoter.getOverview(),
-    partnerRepositories.promoter.getFinance(),
-  ]);
-  const ticketTotal = overview.recentOrders.reduce((total, order) => order.status === 'confirmed' ? total + order.ticketCount : total, 0);
-
+export default function PromoterOverviewPage() {
+  const featured = acceptedEvents[0];
+  const tickets = canonicalLinks.reduce((total, link) => total + link.tickets, 0);
+  const earnings = canonicalLinks.reduce((total, link) => total + link.earnedPaise, 0);
+  if (!featured) return null;
   return (
-    <>
-      <DashboardPageHeader
-        eyebrow="Today at a glance"
-        title={`Good evening, ${overview.profile.name.split(' ')[0] ?? 'promoter'}.`}
-        description="Your event opportunities, tracked campaigns and partner activity in one fast workspace."
-        actions={<><PromoterProfileShareButton /><DashboardButton href="/promoter/links" tone="primary">Get a tracked link</DashboardButton><DashboardButton href="/promoter/events?view=discover">Discover events</DashboardButton></>}
+    <div className="pr-page">
+      <PromoterPageHeader
+        title={`Good evening, ${promoterProfile.name}`}
+        description="Here is what is moving across your promoter network today."
+        actions={
+          <PromoterButton href="/promoter/links/create" tone="primary">
+            Create Link
+          </PromoterButton>
+        }
       />
-
-      <section className="promoter-profile-health pd-surface"><div className="promoter-profile-health-avatar">{overview.profile.name.split(' ').map((word) => word[0]).join('').slice(0, 2)}</div><div><span>{overview.profile.verified ? 'Verified promoter' : 'Identity review pending'}</span><strong>{overview.profile.name} · {overview.profile.handle}</strong><small>Your private Partner Network profile is {overview.profile.completion}% complete. Venues and hosts see ticket movement and collaboration signals—not revenue.</small></div><div className="promoter-profile-health-progress"><span><i /></span><b>{overview.profile.completion}%</b></div><Link href="/promoter/settings">Complete profile →</Link></section>
-
-      <section className="pd-metrics" aria-label="Promoter performance summary">
-        <MetricCard label="Tickets moved today" value={String(ticketTotal)} trend="+18%" detail="vs. last active day" tone="positive" />
-        <MetricCard label="30-day conversion" value="7.8%" trend="+1.2 pts" detail="tracked visits to orders" tone="accent" />
-        <MetricCard label="Active campaigns" value="3" detail="across 2 linked events" />
-        <MetricCard label="Available payout" value={formatInr(finance.availablePaise)} detail={finance.nextPayout} tone="warning" />
+      <div className="pr-overview-lead">
+        <section className="pr-featured-event pr-glass-panel">
+          <Image
+            src={featured.poster}
+            alt={`${featured.name} poster`}
+            width={188}
+            height={220}
+            sizes="(max-width: 640px) 132px, 188px"
+            priority
+          />
+          <div>
+            <span className="pr-eyebrow">Top campaign</span>
+            <h2>{featured.name}</h2>
+            <p>
+              {featured.date} · {featured.time}
+            </p>
+            <strong>
+              {featured.tickets}
+              <small> tickets moved</small>
+            </strong>
+            <PromoterButton href={`/promoter/events/${featured.id}`} tone="primary">
+              View performance
+            </PromoterButton>
+          </div>
+        </section>
+        <section className="pr-activity pr-glass-panel">
+          <header>
+            <h2>Recent activity</h2>
+            <Link href="/promoter/notifications">View all</Link>
+          </header>
+          <ul>
+            <li>
+              <span>12</span>
+              <div>
+                <strong>Tickets moved</strong>
+                <small>Neon Nights · 1h ago</small>
+              </div>
+            </li>
+            <li>
+              <span>₹</span>
+              <div>
+                <strong>Commission updated</strong>
+                <small>Warehouse Rave · Yesterday</small>
+              </div>
+            </li>
+            <li>
+              <span>✦</span>
+              <div>
+                <strong>New invitation</strong>
+                <small>Bollywood Brunch · Yesterday</small>
+              </div>
+            </li>
+          </ul>
+        </section>
+      </div>
+      <MetricStrip
+        items={[
+          {
+            label: 'Tickets moved',
+            value: tickets.toLocaleString('en-IN'),
+            detail: 'Across active event links',
+          },
+          {
+            label: 'Attributed orders',
+            value: canonicalLinks
+              .reduce((sum, link) => sum + link.orders, 0)
+              .toLocaleString('en-IN'),
+            detail: 'Guest identities stay private',
+          },
+          {
+            label: 'Available commission',
+            value: formatInr(1864000),
+            detail: `${formatInr(earnings)} lifetime`,
+          },
+        ]}
+      />
+      <div className="pr-overview-grid">
+        <LineChart
+          title="Ticket movement"
+          value="+18.4%"
+          values={[42, 76, 63, 112, 98, 154, 188]}
+          labels={['10 Jul', '11 Jul', '12 Jul', '13 Jul', '14 Jul', '15 Jul', '16 Jul']}
+        />
+        <section className="pr-side-list">
+          <header>
+            <h2>Linked events</h2>
+            <Link href="/promoter/events">View all</Link>
+          </header>
+          {acceptedEvents.slice(0, 2).map((event) => (
+            <EventCard key={event.id} event={event} href={`/promoter/events/${event.id}`} />
+          ))}
+        </section>
+      </div>
+      <section className="pr-section">
+        <header>
+          <div>
+            <span className="pr-eyebrow">Trusted network</span>
+            <h2>My partners</h2>
+          </div>
+          <Link href="/promoter/partners">View all</Link>
+        </header>
+        <div className="pr-partner-grid">
+          {partners
+            .filter((partner) => partner.relationship === 'partnered')
+            .slice(0, 3)
+            .map((partner) => (
+              <PartnerCard key={partner.id} partner={partner} />
+            ))}
+        </div>
       </section>
-
-      <div className="promoter-overview-grid">
-        <section>
-          <SectionHeading title="Next event" description="The next live room connected to your promoter account." action={<Link href="/promoter/events">All events →</Link>} />
-          {overview.nextEvent ? <PromoterEventCard event={overview.nextEvent} /> : <section className="pd-empty-state"><span>No linked event</span><h2>You haven’t linked an event yet.</h2><p>Discover events, complete your profile, or connect with a venue or host to begin.</p><div><DashboardButton href="/promoter/events?view=discover" tone="primary">Discover events</DashboardButton></div></section>}
-        </section>
-
-        <section className="promoter-performance pd-surface">
-          <SectionHeading title="Ticket momentum" description="Tickets attributed to your links over the last 14 active days." />
-          <div className="promoter-performance-total"><strong>126</strong><span>tickets on latest active day</span></div>
-          <MiniBars values={overview.performance} label="Promoter ticket movement for the last fourteen active days" />
-          <div className="promoter-chart-axis"><span>14 days ago</span><span>Today</span></div>
-        </section>
-      </div>
-
-      <div className="promoter-lower-grid">
-        <section className="pd-surface promoter-orders">
-          <SectionHeading title="Recent orders" description="Orders attributed to your tracked links." action={<Link href="/promoter/finance">View finance →</Link>} />
-          <div className="promoter-order-list">
-            {overview.recentOrders.length ? overview.recentOrders.map((order) => (
-              <article key={order.id}>
-                <div><strong>{order.eventName}</strong><span>{order.createdAt} · {order.channel}</span></div>
-                <div><strong>{order.ticketCount} {order.ticketCount === 1 ? 'ticket' : 'tickets'}</strong><StatusBadge tone={order.status === 'confirmed' ? 'positive' : order.status === 'refunded' ? 'danger' : 'warning'}>{order.status}</StatusBadge></div>
-              </article>
-            )) : <p className="promoter-inline-empty">Orders attributed to your links will appear here without exposing guest personal information.</p>}
-          </div>
-        </section>
-
-        <section className="pd-surface promoter-calendar">
-          <SectionHeading title="Coming up" description="Events, response deadlines and payouts." />
-          <div className="promoter-calendar-list">
-            {overview.calendar.map((item) => <article key={`${item.date}-${item.label}`}><time>{item.date}</time><span className={`is-${item.type}`} /><div><strong>{item.label}</strong><small>{item.type}</small></div></article>)}
-          </div>
-        </section>
-      </div>
-    </>
+    </div>
   );
 }

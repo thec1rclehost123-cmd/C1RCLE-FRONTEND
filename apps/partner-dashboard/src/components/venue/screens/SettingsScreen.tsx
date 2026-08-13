@@ -186,37 +186,9 @@ function VenueProfile({ canManage }: { readonly canManage: boolean }) {
             }}
           />
         </Field>
-        <div className={styles['twoColumns']}>
-          <Field label="Phone">
-            <input
-              type="tel"
-              value={form.phone}
-              disabled={!canManage}
-              onChange={(event) => {
-                setField('phone', event.target.value);
-              }}
-            />
-          </Field>
-          <Field label="Public email">
-            <input
-              type="email"
-              value={form.publicEmail}
-              disabled={!canManage}
-              onChange={(event) => {
-                setField('publicEmail', event.target.value);
-              }}
-            />
-          </Field>
-        </div>
-        <Field label="Instagram">
-          <input
-            value={form.instagram}
-            disabled={!canManage}
-            onChange={(event) => {
-              setField('instagram', event.target.value);
-            }}
-          />
-        </Field>
+        <p className={styles['privacyNotice']}>
+          Contact details are managed privately and are not displayed in the dashboard.
+        </p>
       </section>
       <footer>
         <button type="button" onClick={reset}>
@@ -321,7 +293,7 @@ function TeamAccess({ canManage }: { readonly canManage: boolean }) {
               <em>{member.initials}</em>
               <span>
                 <strong>{member.name}</strong>
-                <small>{member.email}</small>
+                <small>Contact details hidden</small>
               </span>
             </span>
             <span role="cell">{member.role}</span>

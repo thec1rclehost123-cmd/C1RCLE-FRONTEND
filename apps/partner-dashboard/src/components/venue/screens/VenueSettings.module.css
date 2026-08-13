@@ -75,6 +75,17 @@
   font-size: 16px;
   font-weight: 560;
 }
+
+.privacyNotice {
+  margin: 0;
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 10px;
+  color: var(--partner-muted);
+  background: rgb(255 255 255 / 3%);
+  padding: 12px 14px;
+  font-size: 12px;
+  line-height: 1.5;
+}
 .identityGrid {
   display: grid;
   grid-template-columns: 132px 1fr;

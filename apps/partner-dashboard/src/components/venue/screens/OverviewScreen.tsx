@@ -172,6 +172,7 @@ export function VenueOverviewContent({ model }: { readonly model: VenueOverviewV
                       <span>{item.label}</span>
                       <time>{item.time}</time>
                     </strong>
+                    <small>{item.context}</small>
                   </span>
                   <NextIcon size={18} aria-hidden="true" />
                 </Link>
@@ -282,10 +283,20 @@ export function VenueOverviewContent({ model }: { readonly model: VenueOverviewV
                   </span>
                   <span className={className('eventCopy')}>
                     <strong>{event.name}</strong>
+                    <small>
+                      <span>{event.date}</span>
+                      <i aria-hidden="true">·</i>
+                      <span>{event.venue}</span>
+                    </small>
                   </span>
                   <span className={className('sold')}>
                     <strong>{event.soldPercent}%</strong>
                     <small>Sold</small>
+                    <progress
+                      value={event.soldPercent}
+                      max={100}
+                      aria-label={`${String(event.soldPercent)} percent sold`}
+                    />
                   </span>
                 </Link>
               ))}

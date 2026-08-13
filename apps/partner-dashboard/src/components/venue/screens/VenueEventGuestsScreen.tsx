@@ -206,7 +206,7 @@ export function VenueEventGuestsScreen({
                         </span>
                         <span className={styles['guestIdentity']}>
                           <strong>{guest.name}</strong>
-                          <small>{guest.maskedPhone}</small>
+                          <small>Contact details hidden</small>
                         </span>
                       </td>
                       <td data-label="Ticket">{guest.ticketType}</td>
@@ -270,8 +270,8 @@ export function VenueEventGuestsScreen({
               <p>{selectedGuest.ticketType}</p>
               <dl>
                 <div>
-                  <dt>Phone</dt>
-                  <dd>{selectedGuest.maskedPhone}</dd>
+                  <dt>Contact</dt>
+                  <dd>Details hidden for privacy</dd>
                 </div>
                 <div>
                   <dt>Check-in</dt>

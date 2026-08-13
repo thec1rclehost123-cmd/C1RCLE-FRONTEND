@@ -13,12 +13,11 @@ const nextConfig: NextConfig = {
   /*
    * Self-contained server bundle, so the Docker image needs no node_modules.
    *
-   * Vercel builds its own serverless output and does not consume `standalone`;
-   * leaving it on there is redundant and has historically confused monorepo
-   * builds, so it is scoped to non-Vercel (i.e. Docker) builds only. The
-   * Dockerfile copies `.next/standalone`, so this must stay set off-Vercel.
+   * Vercel and local `next start` builds do not consume `standalone`. Docker
+   * explicitly sets C1RCLE_STANDALONE=1 and copies `.next/standalone`, keeping
+   * each production target aligned with the artifact it actually starts.
    */
-  ...(process.env['VERCEL'] ? {} : { output: 'standalone' as const }),
+  ...(process.env['C1RCLE_STANDALONE'] === '1' ? { output: 'standalone' as const } : {}),
 
   /*
    * Packages ship compiled JS with their own .d.ts, so Next does not need to

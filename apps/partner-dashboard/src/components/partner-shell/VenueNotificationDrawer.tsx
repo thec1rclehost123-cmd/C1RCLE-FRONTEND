@@ -6,6 +6,7 @@ import { useRef } from 'react';
 import { CalendarIcon, CloseIcon, ForwardIcon } from '@c1rcle/icons';
 
 import { hostNotifications } from '@/components/host/host-studio-model';
+import { promoterNotifications } from '@/components/promoter/promoter-studio-model';
 import { useOverlayFocus } from '@/components/venue/useOverlayFocus';
 import { venueNotifications } from '@/components/venue/venue-notifications-model';
 
@@ -24,18 +25,23 @@ export function VenueNotificationDrawer({
   useOverlayFocus({ open, containerRef: drawerRef, restoreFocusRef: trigger, onClose });
   if (!open) return null;
   const compact =
-    role === 'host'
-      ? hostNotifications
-          .slice(0, 3)
-          .map((item) => ({
+    role === 'promoter'
+      ? promoterNotifications
+      : role === 'host'
+        ? hostNotifications.slice(0, 3).map((item) => ({
             id: item.id,
             title: item.title,
             summary: item.body,
             time: item.time,
             destination: item.href,
           }))
-      : venueNotifications.slice(0, 3);
-  const allHref = role === 'host' ? '/host/notifications' : '/venue/notifications';
+        : venueNotifications.slice(0, 3);
+  const allHref =
+    role === 'promoter'
+      ? '/promoter/notifications'
+      : role === 'host'
+        ? '/host/notifications'
+        : '/venue/notifications';
   return (
     <aside
       ref={drawerRef}

@@ -72,7 +72,7 @@ export function EventInformationAccordion({
           </div>
           <div>
             <dt>Contact</dt>
-            <dd>{information.contact}</dd>
+            <dd>Details hidden for privacy</dd>
           </div>
         </dl>
       ) : null}

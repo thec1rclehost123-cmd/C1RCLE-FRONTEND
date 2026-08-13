@@ -4,7 +4,6 @@ import { NextIcon, TicketIcon } from '@c1rcle/icons';
 
 import { EventInformationAccordion } from '../event-detail/EventInformationAccordion';
 import { EventLineChart } from '../event-detail/EventLineChart';
-
 import styles from '../event-detail/VenueEventDetail.module.css';
 
 import type { VenueEventSummaryModel } from '../event-detail-model';
@@ -48,7 +47,7 @@ export function VenueEventSummaryScreen({
         <section className={styles['panel']} aria-labelledby="sales-progress-title">
           <header className={styles['panelHeading']}>
             <h2 id="sales-progress-title">Sales progress</h2>
-            <Link href={`/venue/events/${eventId}/sales`}>
+            <Link href={`/venue/events/${eventId}/sales`} prefetch>
               View sales <NextIcon size={17} aria-hidden="true" />
             </Link>
           </header>
@@ -65,7 +64,7 @@ export function VenueEventSummaryScreen({
         <section className={styles['panel']} aria-labelledby="recent-orders-title">
           <header className={styles['panelHeading']}>
             <h2 id="recent-orders-title">Recent orders</h2>
-            <Link href={`/venue/events/${eventId}/sales#recent-orders`}>
+            <Link href={`/venue/events/${eventId}/sales#recent-orders`} prefetch>
               View all <NextIcon size={17} aria-hidden="true" />
             </Link>
           </header>
