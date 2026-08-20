@@ -1,6 +1,9 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+
+import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 
 import { css } from './charts';
 import {
@@ -32,6 +35,8 @@ export function TopBar({
 }) {
   const s = useVenueStudio();
   const searchRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+  const { signOut } = useDashboardAuth();
 
   // ⌘K / Ctrl-K focuses global search, matching the shortcut hint in the field.
   useEffect(() => {
@@ -370,6 +375,28 @@ export function TopBar({
           )}
         >
           {initials}
+        </button>
+
+        <button
+          type="button"
+          aria-label="Sign out"
+          onClick={async () => {
+            await signOut();
+            router.push('/login');
+          }}
+          style={css(
+            'height:40px;padding:0 14px;border-radius:11px;background:transparent;border:1px solid rgba(255,255,255,0.1);color:#8a8a86;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s;',
+          )}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'rgba(255,90,31,0.4)';
+            e.currentTarget.style.color = '#ff5a1f';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+            e.currentTarget.style.color = '#8a8a86';
+          }}
+        >
+          Sign out
         </button>
       </div>
     </div>
