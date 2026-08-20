@@ -1,19 +1,12 @@
-'use client';
+﻿'use client';
 
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  GoogleAuthProvider,
-  signInWithPopup,
-  createUserWithEmailAndPassword,
-  updateProfile as updateFirebaseProfile,
-} from 'firebase/auth';
-import { getFirebaseAuth } from '@/lib/firebase/client';
-import { getCachedFirebaseIdToken } from '@/lib/auth/getCachedFirebaseIdToken';
+
+import { getAuthClient, getAccessToken } from '@c1rcle/auth';
+import type { AuthClient, AuthUser } from '@c1rcle/auth';
+
 import type { DashboardProfile, PartnerMembership, PartnerType, StaffRole } from '@/lib/rbac/types';
 
 // ── Atomic permissions object — always set together to avoid race conditions ──
@@ -70,7 +63,7 @@ interface MeApiResponse {
 }
 
 interface AuthContextValue {
-  user: any | null;
+  user: AuthUser | null;
   profile: DashboardProfile | null;
   loading: boolean;
   isApproved: boolean;
@@ -92,7 +85,7 @@ interface AuthContextValue {
   hasPermission: (permission: string) => boolean;
   /** Returns true if owner (null) or the specific action is permitted */
   canDo: (action: string) => boolean;
-  /** Returns the current Firebase ID token, or empty string if not signed in */
+  /** Returns the current access token, or empty string if not signed in */
   getIdToken: () => Promise<string>;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
@@ -106,7 +99,9 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<any | null>(null);
+  const authClient: AuthClient = getAuthClient();
+
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<DashboardProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isApproved, setIsApproved] = useState(false);
@@ -141,17 +136,11 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     }
   }, [loading, user, profile, pathname, router]);
 
+  // V2 Auth state listener - replaces Firebase onAuthStateChanged
   useEffect(() => {
-    const auth = getFirebaseAuth() as any;
-    if (!auth || typeof auth.onAuthStateChanged !== 'function') {
-      // Mock auth object check
-      setLoading(false);
-      return;
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: any) => {
-      setUser(firebaseUser);
-      if (!firebaseUser) {
+    const unsubscribe = authClient.onAuthStateChanged((authUser: AuthUser | null) => {
+      setUser(authUser);
+      if (!authUser) {
         setProfile(null);
         setIsApproved(false);
         setIsBanned(false);
@@ -180,6 +169,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -191,20 +181,16 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
 
     // AbortController cancels in-flight fetches when the user changes.
-    // Without this, Account A's fetch can resolve AFTER Account B's and
-    // overwrite the state — causing the wrong account to appear after login.
     const controller = new AbortController();
 
     const fetchUserData = async () => {
       try {
-        // Force-refresh ensures admin-set custom claims are picked up
-        // immediately without waiting for the 1-hour token TTL.
-        const token = await user.getIdToken(true);
+        const token = getAccessToken();
 
         if (controller.signal.aborted) return;
 
         const res = await fetch('/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
           signal: controller.signal,
         });
 
@@ -225,20 +211,11 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        const tokenResult = await user.getIdTokenResult();
-
-        if (controller.signal.aborted) return;
-
-        const claims = tokenResult.claims as Record<string, any>;
-
         const approvedByDoc = userData.isApproved || false;
-        const approvedByClaims = !!claims['partnerId'];
-        const approvedState = approvedByDoc || approvedByClaims;
-
-        setIsApproved(approvedState);
+        setIsApproved(approvedByDoc);
         setIsBanned(userData.isBanned || false);
 
-        if (!approvedState) {
+        if (!approvedByDoc) {
           if (onboardingRequest) {
             setOnboardingStatus(onboardingRequest.status);
           }
@@ -250,27 +227,14 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
         setEntityType(userData.onboardingEntityType ?? null);
 
         let activeMembership: PartnerMembership | null = null;
-        let plan: string | null = null;
 
         // activeMembership may live in data.user.activeMembership (injected by gateway)
         // OR at data.activeMembership (top-level) — check both for resilience.
         const rawMembership = userData.activeMembership || data.activeMembership || null;
 
-        if (claims['partnerId'] && claims['partnerType'] && claims['partnerRole']) {
+        if (rawMembership) {
           activeMembership = {
-            uid: user.uid,
-            partnerId: claims['partnerId'] as string,
-            partnerType: (claims['partnerType'] === 'club'
-              ? 'venue'
-              : claims['partnerType']) as PartnerType,
-            role: claims['partnerRole'] as StaffRole,
-            joinedAt: 0,
-            isActive: true,
-            partnerName: rawMembership?.partnerName || undefined,
-          };
-        } else if (rawMembership) {
-          activeMembership = {
-            uid: user.uid,
+            uid: user.id,
             partnerId: rawMembership.partnerId,
             partnerType: rawMembership.partnerType === 'club' ? 'venue' : rawMembership.partnerType,
             role: rawMembership.role,
@@ -280,14 +244,14 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
           };
         }
 
-        if (approvedState && activeMembership) {
-          plan = userData.subscriptionPlan || userData.tier || 'basic';
+        if (approvedByDoc && activeMembership) {
+          const plan = userData.subscriptionPlan || userData.tier || 'basic';
           setSubscriptionPlan(plan);
 
           // Fetch server-computed coarse permissions and default tab visibility.
           // Must happen server-side — frontend never derives permissions from role.
           fetch('/api/auth/partner-context', {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
             signal: controller.signal,
           })
             .then((r) => (r.ok ? r.json() : null))
@@ -313,7 +277,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
         setMembershipId(userData.activeMembership?.membershipId ?? null);
 
         setProfile({
-          uid: user.uid,
+          uid: user.id,
           email: user.email || '',
           displayName: userData.displayName || userData.username || 'User',
           activeMembership,
@@ -343,22 +307,23 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
       if (document.visibilityState === 'visible') {
         const elapsed = Date.now() - lastProfileFetchRef.current;
         if (elapsed > 60 * 1000) {
-          user.getIdToken().then((token: any) => {
-            fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
-              .then((r) => (r.ok ? r.json() : null))
-              .then((data) => {
-                if (!data?.user) return;
-                const userData = data.user;
-                // Atomic update — all three permissions together
-                setPermissions({
-                  tabVisibility: userData._staffTabVisibility ?? null,
-                  actionPermissions: userData._staffActionPermissions ?? null,
-                  piiPolicy: userData._staffPiiPolicy ?? null,
-                });
-                lastProfileFetchRef.current = Date.now();
-              })
-              .catch(() => {});
-          });
+          const token = getAccessToken();
+          fetch('/api/auth/me', {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((data) => {
+              if (!data?.user) return;
+              const userData = data.user;
+              // Atomic update — all three permissions together
+              setPermissions({
+                tabVisibility: userData._staffTabVisibility ?? null,
+                actionPermissions: userData._staffActionPermissions ?? null,
+                piiPolicy: userData._staffPiiPolicy ?? null,
+              });
+              lastProfileFetchRef.current = Date.now();
+            })
+            .catch(() => {});
         }
       }
     };
@@ -374,9 +339,9 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
 
     const syncPermissions = async () => {
       try {
-        const token = await user.getIdToken().then((token: any) => token);
+        const token = getAccessToken();
         const res = await fetch('/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.ok) return;
         const data: MeApiResponse | null = await res.json().catch(() => null);
@@ -423,95 +388,29 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   }, [user, membershipId]);
 
   const signIn = async (email: string, password: string) => {
-    const auth = getFirebaseAuth() as any;
-    if (auth && typeof auth.signInWithEmailAndPassword === 'function') {
-      await auth.signInWithEmailAndPassword(email, password);
-    } else {
-      await signInWithEmailAndPassword(auth, email, password).catch(() => {});
-    }
+    await authClient.signIn(email, password);
   };
 
   const signUp = async (email: string, password: string, displayName: string) => {
-    const auth = getFirebaseAuth() as any;
-    const credential = await createUserWithEmailAndPassword(auth, email, password);
-
-    await updateFirebaseProfile(credential.user, { displayName });
-
-    const token = await credential.user.getIdToken();
-    const now = new Date().toISOString();
-
-    await fetch('/api/auth/profile', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        uid: credential.user.uid,
-        email: credential.user.email || '',
-        displayName: displayName,
-        photoURL: credential.user.photoURL || '',
-        createdAt: now,
-        updatedAt: now,
-        isApproved: false,
-      }),
-    });
+    await authClient.signUp(email, password, displayName);
   };
 
   const signInWithGoogle = async () => {
-    const auth = getFirebaseAuth() as any;
-    const provider = new GoogleAuthProvider();
-    const credential = await signInWithPopup(auth, provider);
-
-    const token = await credential.user.getIdToken();
-
-    // Use our endpoint which creates the profile if it doesn't exist
-    const now = new Date().toISOString();
-    await fetch('/api/auth/profile', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        uid: credential.user.uid,
-        email: credential.user.email || '',
-        displayName: credential.user.displayName || 'Member',
-        photoURL: credential.user.photoURL || '',
-        createdAt: now,
-        updatedAt: now,
-        isApproved: false,
-      }),
-    });
+    await authClient.signInWithGoogle();
   };
 
   const signOut = async () => {
-    const auth = getFirebaseAuth() as any;
-    if (auth && typeof auth.signOut === 'function') {
-      await auth.signOut();
-    } else {
-      await firebaseSignOut(auth).catch(() => {});
-    }
+    await authClient.signOut();
   };
 
-  const switchPartner = async (partnerId: string) => {
+  const switchPartner = async (_partnerId: string) => {
     if (!user) return;
     try {
       setLoading(true);
-      const token = await user.getIdToken();
-      const res = await fetch('/api/auth/me', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ partnerId }),
-      });
-      if (res.ok) {
-        // Refresh token to get new claims
-        await user.getIdToken(true);
-        window.location.reload();
-      }
+      // V2: Partner switching is handled by the backend session.
+      // For now, call refresh to re-validate the session, then reload.
+      await authClient.refreshSession();
+      window.location.reload();
     } catch (err) {
       console.error('Failed to switch partner:', err);
     } finally {
@@ -523,7 +422,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     !permissions.actionPermissions || permissions.actionPermissions[action] === true;
 
   const getIdToken = async () => {
-    return getCachedFirebaseIdToken(user);
+    return getAccessToken() ?? '';
   };
 
   const isDashboardPath = pathname
