@@ -268,6 +268,9 @@ importers:
 
   apps/partner-dashboard:
     dependencies:
+      '@c1rcle/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
       '@c1rcle/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -387,7 +390,36 @@ importers:
         specifier: 4.1.10
         version: 4.1.10(@types/node@22.20.1)(@vitest/coverage-v8@4.1.10)(jiti@2.7.0)(jsdom@29.1.1)
 
-  packages/api-client: {}
+  packages/api-client:
+    dependencies:
+      '@c1rcle/types':
+        specifier: workspace:*
+        version: link:../types
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@c1rcle/eslint-config':
+        specifier: workspace:*
+        version: link:../eslint-config
+      '@c1rcle/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@vitest/coverage-v8':
+        specifier: 4.1.10
+        version: 4.1.10(vitest@4.1.10)
+      eslint:
+        specifier: 9.39.5
+        version: 9.39.5(jiti@2.7.0)
+      jiti:
+        specifier: 2.7.0
+        version: 2.7.0
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@types/node@26.1.2)(@vitest/coverage-v8@4.1.10)(jiti@2.7.0)(jsdom@29.1.1)
 
   packages/auth: {}
 
@@ -5215,7 +5247,7 @@ snapshots:
       obug: 2.1.4
       std-env: 4.2.0
       tinyrainbow: 3.1.1
-      vitest: 4.1.10(@types/node@22.20.1)(@vitest/coverage-v8@4.1.10)(jiti@2.7.0)(jsdom@29.1.1)
+      vitest: 4.1.10(@types/node@26.1.2)(@vitest/coverage-v8@4.1.10)(jiti@2.7.0)(jsdom@29.1.1)
 
   '@vitest/expect@4.1.10':
     dependencies:

@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
+  getAuth,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
@@ -12,8 +13,8 @@ import {
   createUserWithEmailAndPassword,
   updateProfile as updateFirebaseProfile,
 } from 'firebase/auth';
-import { getFirebaseAuth } from '@/lib/firebase/client';
-import { getCachedFirebaseIdToken } from '@/lib/auth/getCachedFirebaseIdToken';
+import { apiClient } from '@/lib/api/client';
+import { setCurrentUser } from '@/lib/api/token-store';
 import type { DashboardProfile, PartnerMembership, PartnerType, StaffRole } from '@/lib/rbac/types';
 
 // ── Atomic permissions object — always set together to avoid race conditions ──
@@ -142,15 +143,15 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   }, [loading, user, profile, pathname, router]);
 
   useEffect(() => {
-    const auth = getFirebaseAuth() as any;
+    const auth = getAuth() as any;
     if (!auth || typeof auth.onAuthStateChanged !== 'function') {
-      // Mock auth object check
       setLoading(false);
       return;
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: any) => {
       setUser(firebaseUser);
+      setCurrentUser(firebaseUser);
       if (!firebaseUser) {
         setProfile(null);
         setIsApproved(false);
@@ -197,23 +198,9 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
 
     const fetchUserData = async () => {
       try {
-        // Force-refresh ensures admin-set custom claims are picked up
-        // immediately without waiting for the 1-hour token TTL.
-        const token = await user.getIdToken(true);
-
-        if (controller.signal.aborted) return;
-
-        const res = await fetch('/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` },
+        const data: MeApiResponse = await apiClient.get('/api/auth/me', {
           signal: controller.signal,
         });
-
-        if (!res.ok) {
-          if (!controller.signal.aborted) setLoading(false);
-          return;
-        }
-
-        const data: MeApiResponse = await res.json();
 
         if (controller.signal.aborted) return;
 
@@ -286,12 +273,8 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
 
           // Fetch server-computed coarse permissions and default tab visibility.
           // Must happen server-side — frontend never derives permissions from role.
-          fetch('/api/auth/partner-context', {
-            headers: { Authorization: `Bearer ${token}` },
-            signal: controller.signal,
-          })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((ctx) => {
+          apiClient.get('/api/auth/partner-context', { signal: controller.signal })
+            .then((ctx: any) => {
               if (ctx && !controller.signal.aborted) {
                 const payload = ctx.data || ctx;
                 setGrantedPermissions(payload.permissions ?? []);
@@ -343,11 +326,9 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
       if (document.visibilityState === 'visible') {
         const elapsed = Date.now() - lastProfileFetchRef.current;
         if (elapsed > 60 * 1000) {
-          user.getIdToken().then((token: any) => {
-            fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
-              .then((r) => (r.ok ? r.json() : null))
-              .then((data) => {
-                if (!data?.user) return;
+          apiClient.get<MeApiResponse>('/api/auth/me')
+            .then((data) => {
+              if (!data?.user) return;
                 const userData = data.user;
                 // Atomic update — all three permissions together
                 setPermissions({
@@ -358,7 +339,6 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
                 lastProfileFetchRef.current = Date.now();
               })
               .catch(() => {});
-          });
         }
       }
     };
@@ -374,12 +354,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
 
     const syncPermissions = async () => {
       try {
-        const token = await user.getIdToken().then((token: any) => token);
-        const res = await fetch('/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) return;
-        const data: MeApiResponse | null = await res.json().catch(() => null);
+        const data = await apiClient.get<MeApiResponse>('/api/auth/me');
         if (cancelled || !data?.user) return;
         const userData = data.user;
         const newTabVisibility = userData._staffTabVisibility ?? null;
@@ -423,7 +398,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   }, [user, membershipId]);
 
   const signIn = async (email: string, password: string) => {
-    const auth = getFirebaseAuth() as any;
+    const auth = getAuth() as any;
     if (auth && typeof auth.signInWithEmailAndPassword === 'function') {
       await auth.signInWithEmailAndPassword(email, password);
     } else {
@@ -432,61 +407,44 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, displayName: string) => {
-    const auth = getFirebaseAuth() as any;
+    const auth = getAuth() as any;
     const credential = await createUserWithEmailAndPassword(auth, email, password);
 
     await updateFirebaseProfile(credential.user, { displayName });
 
-    const token = await credential.user.getIdToken();
     const now = new Date().toISOString();
 
-    await fetch('/api/auth/profile', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        uid: credential.user.uid,
-        email: credential.user.email || '',
-        displayName: displayName,
-        photoURL: credential.user.photoURL || '',
-        createdAt: now,
-        updatedAt: now,
-        isApproved: false,
-      }),
+    await apiClient.post('/api/auth/profile', {
+      uid: credential.user.uid,
+      email: credential.user.email || '',
+      displayName: displayName,
+      photoURL: credential.user.photoURL || '',
+      createdAt: now,
+      updatedAt: now,
+      isApproved: false,
     });
   };
 
   const signInWithGoogle = async () => {
-    const auth = getFirebaseAuth() as any;
+    const auth = getAuth() as any;
     const provider = new GoogleAuthProvider();
     const credential = await signInWithPopup(auth, provider);
 
-    const token = await credential.user.getIdToken();
-
     // Use our endpoint which creates the profile if it doesn't exist
     const now = new Date().toISOString();
-    await fetch('/api/auth/profile', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        uid: credential.user.uid,
-        email: credential.user.email || '',
-        displayName: credential.user.displayName || 'Member',
-        photoURL: credential.user.photoURL || '',
-        createdAt: now,
-        updatedAt: now,
-        isApproved: false,
-      }),
+    await apiClient.post('/api/auth/profile', {
+      uid: credential.user.uid,
+      email: credential.user.email || '',
+      displayName: credential.user.displayName || 'Member',
+      photoURL: credential.user.photoURL || '',
+      createdAt: now,
+      updatedAt: now,
+      isApproved: false,
     });
   };
 
   const signOut = async () => {
-    const auth = getFirebaseAuth() as any;
+    const auth = getAuth() as any;
     if (auth && typeof auth.signOut === 'function') {
       await auth.signOut();
     } else {
@@ -498,20 +456,10 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     try {
       setLoading(true);
-      const token = await user.getIdToken();
-      const res = await fetch('/api/auth/me', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ partnerId }),
-      });
-      if (res.ok) {
-        // Refresh token to get new claims
-        await user.getIdToken(true);
-        window.location.reload();
-      }
+      await apiClient.post('/api/auth/me', { partnerId });
+      // Refresh token to get new claims
+      await user.getIdToken(true);
+      window.location.reload();
     } catch (err) {
       console.error('Failed to switch partner:', err);
     } finally {
@@ -523,7 +471,12 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     !permissions.actionPermissions || permissions.actionPermissions[action] === true;
 
   const getIdToken = async () => {
-    return getCachedFirebaseIdToken(user);
+    if (!user) return '';
+    try {
+      return await user.getIdToken();
+    } catch {
+      return '';
+    }
   };
 
   const isDashboardPath = pathname

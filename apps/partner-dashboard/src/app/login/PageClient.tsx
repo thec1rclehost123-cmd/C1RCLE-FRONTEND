@@ -14,7 +14,9 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
-import { getFirebaseAuth } from '@/lib/firebase/client';
+import { getAuth, signOut as firebaseSignOut } from 'firebase/auth';
+import { apiClient } from '@/lib/api/client';
+import { setCurrentUser } from '@/lib/api/token-store';
 import { motion, AnimatePresence } from 'framer-motion';
 
 type UserType = 'venue' | 'host' | 'promoter';
@@ -159,9 +161,9 @@ function LoginForm() {
   useEffect(() => {
     const callbackUrl = searchParams.get('callbackUrl');
     if (callbackUrl) return;
-    const auth = getFirebaseAuth();
+    const auth = getAuth();
     if (auth.currentUser) {
-      auth.signOut();
+      firebaseSignOut(auth);
     }
   }, [searchParams]);
 
@@ -218,8 +220,8 @@ function LoginForm() {
     } else if (!isApproved && profile !== null) {
       // profile is loaded (not null) but user is not approved — safe to reject.
       // We check profile !== null to avoid acting on the initial null state.
-      const auth = getFirebaseAuth();
-      auth.signOut();
+      const auth = getAuth();
+      firebaseSignOut(auth);
       setError(
         onboardingStatus
           ? "You don't have partner access yet. Your application is pending review."
@@ -250,38 +252,32 @@ function LoginForm() {
     try {
       await signIn(email, password);
 
-      const auth = getFirebaseAuth();
+      const auth = getAuth();
       const currentUser = auth.currentUser;
 
       if (currentUser) {
+        setCurrentUser(currentUser);
+
         // Force-refresh the token so the admin-set custom claims
         // (partnerId, partnerType, partnerRole) are included immediately
         // after the first login following admin approval.
-        const token = await currentUser.getIdToken(true);
-
-        // Read claims from the freshly-minted token — this is the most
-        // authoritative source and works even if the gateway membership
-        // query hasn't picked up the Firestore doc yet.
         const tokenResult = await currentUser.getIdTokenResult();
         const claims = tokenResult.claims as Record<string, any>;
 
-        const res = await fetch('/api/auth/me', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'x-user-type': userType || 'venue',
-          },
-        });
-
-        if (!res.ok) {
+        let data: any;
+        try {
+          data = await apiClient.get('/api/auth/me', {
+            headers: { 'x-user-type': userType || 'venue' },
+          });
+        } catch {
           setError('Failed to fetch user profile.');
-          await auth.signOut();
+          await firebaseSignOut(auth);
           setLoading(false);
           return;
         }
 
-        const data = await res.json();
-        const userData = data.user || {};
-        const onboardingRequest = data.onboarding?.onboardingRequest || null;
+        const userData = data?.user || {};
+        const onboardingRequest = data?.onboarding?.onboardingRequest || null;
 
         let assignedType: string | null = null;
 
@@ -330,19 +326,19 @@ function LoginForm() {
               assignedType = onboardingRequest.type || null;
               if (!assignedType) {
                 setError('Application approved, but workspace type unknown. Contact support.');
-                await auth.signOut();
+                await firebaseSignOut(auth);
                 setLoading(false);
                 return;
               }
             } else {
               setError("You don't have partner access yet. Your application is pending review.");
-              await auth.signOut();
+              await firebaseSignOut(auth);
               setLoading(false);
               return;
             }
           } else {
             setError('This account is not registered. Please apply for access.');
-            await auth.signOut();
+            await firebaseSignOut(auth);
             setLoading(false);
             return;
           }
@@ -354,7 +350,7 @@ function LoginForm() {
           setError(
             `This account is registered as ${typeLabel}. Please select the correct workspace.`,
           );
-          await auth.signOut();
+          await firebaseSignOut(auth);
           setLoading(false);
           return;
         }
@@ -382,28 +378,26 @@ function LoginForm() {
     try {
       await signInWithGoogle();
 
-      const auth = getFirebaseAuth();
+      const auth = getAuth();
       const currentUser = auth.currentUser;
 
       if (currentUser) {
-        const token = await currentUser.getIdToken(true);
+        setCurrentUser(currentUser);
         const tokenResult = await currentUser.getIdTokenResult();
         const claims = tokenResult.claims as Record<string, any>;
 
-        const res = await fetch('/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!res.ok) {
+        let data: any;
+        try {
+          data = await apiClient.get('/api/auth/me');
+        } catch {
           setError('Failed to fetch user profile.');
-          await auth.signOut();
+          await firebaseSignOut(auth);
           setLoading(false);
           return;
         }
 
-        const data = await res.json();
-        const userData = data.user || {};
-        const onboardingRequest = data.onboarding?.onboardingRequest || null;
+        const userData = data?.user || {};
+        const onboardingRequest = data?.onboarding?.onboardingRequest || null;
 
         let assignedType: string | null = null;
 
@@ -442,19 +436,19 @@ function LoginForm() {
               assignedType = onboardingRequest.type || null;
               if (!assignedType) {
                 setError('Application approved, but workspace type unknown. Contact support.');
-                await auth.signOut();
+                await firebaseSignOut(auth);
                 setLoading(false);
                 return;
               }
             } else {
               setError("You don't have partner access yet. Your application is pending review.");
-              await auth.signOut();
+              await firebaseSignOut(auth);
               setLoading(false);
               return;
             }
           } else {
             setError('This account is not registered. Please apply for access.');
-            await auth.signOut();
+            await firebaseSignOut(auth);
             setLoading(false);
             return;
           }

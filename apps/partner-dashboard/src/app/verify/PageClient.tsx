@@ -22,7 +22,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
-import { getFirebaseStorage } from '@/lib/firebase/client';
+import { apiClient } from '@/lib/api/client';
+import { getFirebaseStorage } from '@/lib/firebase/config';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -916,17 +917,14 @@ export default function PageClient() {
     if (!user) return;
     setLoadingKyc(true);
     try {
-      const token = await user.getIdToken();
-      const res = await fetch('/api/kyc', { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) throw new Error('Failed to load verification state.');
-      const data = await res.json();
+      const data = await apiClient.get('/api/kyc') as KycState;
       setKycState(data);
       if (!activeStep && data.stepSequence) {
         const firstActionable = data.stepSequence.find((s: string) => {
           const st = data.kycStepStatus[s] || 'not_started';
           return st !== 'approved' && st !== 'submitted' && st !== 'under_review';
         });
-        setActiveStep(firstActionable ?? data.stepSequence[0]);
+        setActiveStep(firstActionable ?? data.stepSequence[0] ?? null);
       }
     } catch (err: any) {
       console.error(err);
@@ -945,17 +943,10 @@ export default function PageClient() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const token = await user.getIdToken();
-      const res = await fetch('/api/kyc', {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stepId, data }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Submission failed.');
+      await apiClient.patch('/api/kyc', { stepId, data });
       await fetchKycState();
     } catch (err: any) {
-      setSubmitError(err.message);
+      setSubmitError(err.message || 'Submission failed.');
     } finally {
       setSubmitting(false);
     }
