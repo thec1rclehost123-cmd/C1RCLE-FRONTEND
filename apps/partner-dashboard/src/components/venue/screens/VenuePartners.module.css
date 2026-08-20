@@ -70,10 +70,12 @@
   align-items: center;
   gap: 8px;
 }
-.tabs a {
+.tabs a,
+.tabs button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border: 0;
   padding: 8px 18px;
   border-radius: 999px;
   color: #a1a5ad;
@@ -81,13 +83,16 @@
   font-weight: 500;
   text-decoration: none;
   background: transparent;
+  cursor: pointer;
   transition: all 160ms ease;
 }
-.tabs a:hover {
+.tabs a:hover,
+.tabs button:hover {
   color: #fff;
   background: rgb(255 255 255 / 6%);
 }
-.tabs a.active {
+.tabs a.active,
+.tabs button.active {
   color: #fff;
   background: var(--partner-accent, #f44a22);
   font-weight: 600;
@@ -101,10 +106,12 @@
   border-radius: 999px;
   border: 1px solid var(--partner-border);
 }
-.subnav a {
+.subnav a,
+.subnav button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border: 0;
   padding: 6px 16px;
   border-radius: 999px;
   color: #a1a5ad;
@@ -112,16 +119,29 @@
   font-weight: 500;
   text-decoration: none;
   background: transparent;
+  cursor: pointer;
   transition: all 160ms ease;
 }
-.subnav a:hover {
+.subnav a:hover,
+.subnav button:hover {
   color: #fff;
 }
-.subnav a.active {
+.subnav a.active,
+.subnav button.active {
   color: #fff;
   background: var(--partner-accent, #f44a22);
   font-weight: 600;
   box-shadow: 0 2px 8px rgb(244 74 34 / 35%);
+}
+.requestToggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.requestToggle button {
+  min-height: 38px;
+  padding: 0 16px;
+  font-size: 13px;
 }
 .search,
 .cityFilter {
@@ -185,6 +205,14 @@
   gap: 20px;
   padding: 0 20px;
 }
+.relationshipTable .tableHead,
+.relationshipTable .partnerRow {
+  grid-template-columns: minmax(220px, 1.35fr) minmax(140px, 0.8fr) minmax(130px, 0.7fr) minmax(170px, 1fr) minmax(100px, 0.55fr) 96px;
+}
+.requestTable .tableHead,
+.requestTable .partnerRow {
+  grid-template-columns: minmax(210px, 1.3fr) minmax(100px, 0.6fr) minmax(190px, 1.1fr) minmax(140px, 0.8fr) minmax(120px, 0.65fr) 96px;
+}
 .tableHead,
 .staffHead {
   position: sticky;
@@ -203,7 +231,7 @@
   padding-left: 62px;
 }
 .partnerRow {
-  min-height: 82px;
+  min-height: 76px;
   border-top: 1px solid var(--partner-border);
 }
 .partnerRow:hover,
@@ -320,26 +348,32 @@
   gap: 16px;
 }
 .partnerCard {
-  overflow: hidden;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  column-gap: 12px;
+  align-items: start;
   border: 1px solid var(--partner-border);
   border-radius: var(--dashboard-radius-panel);
   background: var(--dashboard-surface);
   box-shadow: var(--dashboard-shadow-card);
-  padding: 0 12px 12px;
+  padding: 14px;
 }
 .portrait {
   position: relative;
   display: grid;
-  height: 132px;
+  width: 48px;
+  height: 48px;
   place-items: center;
-  margin: 0 -12px 10px;
-  font-size: 38px;
+  margin: 0;
+  border-radius: 10px;
+  font-size: 16px;
   font-weight: 700;
+  grid-row: span 4;
 }
 .portrait em {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: -8px;
+  left: 34px;
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -347,13 +381,15 @@
   border-radius: 6px;
   color: #fff;
   background: rgb(11 11 12 / 82%);
-  padding: 5px 7px;
-  font-size: 11px;
+  padding: 3px 5px;
+  font-size: 10px;
   font-style: normal;
+  white-space: nowrap;
 }
 .partnerCard h2 {
   margin: 0;
-  font-size: 17px;
+  min-width: 0;
+  font-size: 15px;
   font-weight: 560;
 }
 .partnerCard p,
@@ -361,11 +397,13 @@
   display: block;
   margin: 4px 0 0;
   color: var(--partner-muted);
-  font-size: 13px;
+  font-size: 12px;
 }
 .partnerCard button {
-  width: 100%;
-  margin-top: 12px;
+  width: auto;
+  min-height: 36px;
+  margin-top: 10px;
+  padding-inline: 12px;
   color: var(--partner-accent);
 }
 .staffHead,
@@ -662,8 +700,7 @@
     gap: 12px;
     padding: 16px;
   }
-  .partnerRow > *:nth-child(2),
-  .partnerRow > *:nth-child(3),
+  .partnerRow > *:nth-child(n + 2):not(:last-child),
   .staffRow > *:nth-child(2),
   .staffRow > *:nth-child(3),
   .staffRow > *:nth-child(4) {
@@ -673,6 +710,10 @@
   .staffRow > *:last-child {
     grid-column: 2;
     grid-row: 1 / span 3;
+  }
+  .relationshipTable .partnerRow > *:last-child,
+  .requestTable .partnerRow > *:last-child {
+    grid-row: 1 / span 5;
   }
 }
 @media (max-width: 640px) {

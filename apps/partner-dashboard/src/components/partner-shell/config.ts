@@ -73,7 +73,7 @@ export const PARTNER_SHELL_CONFIG: Readonly<Record<PartnerDashboardRole, Partner
       },
       { label: 'Settings', href: '/host/settings', icon: 'settings', match: 'exact' },
     ],
-    primaryAction: { label: 'Find venues', href: '/host/partners?tab=find', icon: 'plus' },
+    primaryAction: { label: 'Start event request', href: '/host/events/create', icon: 'plus' },
   },
   promoter: {
     role: 'promoter',
@@ -102,7 +102,7 @@ export const PARTNER_SHELL_CONFIG: Readonly<Record<PartnerDashboardRole, Partner
         permission: 'VIEW_FINANCIALS',
       },
       {
-        label: 'Get link',
+        label: 'Links',
         href: '/promoter/links',
         icon: 'link',
         match: 'exact',

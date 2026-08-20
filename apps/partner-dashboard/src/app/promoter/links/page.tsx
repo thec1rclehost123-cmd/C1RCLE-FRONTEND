@@ -1,18 +1,50 @@
-import { DashboardPageHeader, SectionHeading, StatusBadge } from '@/components/partner-shell/DashboardUi';
 import { PromoterLinkBuilder } from '@/components/promoter/PromoterLinkBuilder';
-import { CopyLinkButton } from '@/components/promoter/PromoterShareActions';
+import { PromoterLinksTable } from '@/components/promoter/PromoterLinksTable';
 import { partnerRepositories } from '@/lib/partner/repositories';
 
+import type { PromoterEventLinkRow } from '@/components/promoter/PromoterLinksTable';
+
 export default async function PromoterLinksPage() {
-  const links = await partnerRepositories.promoter.getLinks();
+  const [links, events] = await Promise.all([
+    partnerRepositories.promoter.getLinks(),
+    partnerRepositories.promoter.getLinkedEvents(),
+  ]);
+  const eventLinks = Array.from(
+    links.reduce((groups, link) => {
+      const current = groups.get(link.eventId) ?? [];
+      current.push(link);
+      groups.set(link.eventId, current);
+      return groups;
+    }, new Map<string, typeof links[number][]>()),
+  ).map(([, eventLinksForEvent]): PromoterEventLinkRow => {
+    const primary = eventLinksForEvent[0];
+    if (!primary) throw new Error('Promoter link group must contain a link.');
+    return {
+      eventId: primary.eventId,
+      eventName: primary.eventName,
+      shortUrl: primary.shortUrl,
+      status: primary.status,
+      clicks: eventLinksForEvent.reduce((total, link) => total + link.clicks, 0),
+      purchases: eventLinksForEvent.reduce((total, link) => total + link.purchases, 0),
+      sources: eventLinksForEvent.map((link) => ({
+        channel: link.channel,
+        label: link.label,
+        clicks: link.clicks,
+        purchases: link.purchases,
+      })),
+    };
+  });
+
   return (
     <>
-      <DashboardPageHeader eyebrow="Campaign attribution" title="Get link" description="Prepare event- and channel-specific tracking requests, then watch the clicks and tickets they move." />
-      <PromoterLinkBuilder />
-      <section className="pd-surface promoter-links-list">
-        <SectionHeading title="Active tracked links" description="One purpose per link keeps attribution clear." />
-        <div>{links.map((link) => <article key={link.id}><div><StatusBadge tone={link.status === 'active' ? 'positive' : 'neutral'}>{link.status}</StatusBadge><strong>{link.eventName}</strong><span>{link.channel} · {link.label}</span><small>{link.shortUrl}</small></div><dl><div><dt>{link.clicks.toLocaleString('en-IN')}</dt><dd>Clicks</dd></div><div><dt>{link.purchases}</dt><dd>Purchases</dd></div><div><dt>{link.clicks ? ((link.purchases / link.clicks) * 100).toFixed(1) : '0.0'}%</dt><dd>Conversion</dd></div></dl><CopyLinkButton value={`https://${link.shortUrl}`} /></article>)}</div>
-      </section>
+      <header className="promoter-links-page-header">
+        <div>
+          <h1>Links</h1>
+          <p>Create and manage your tracked event links.</p>
+        </div>
+      </header>
+      <PromoterLinkBuilder events={events} links={eventLinks} />
+      <PromoterLinksTable rows={eventLinks} />
     </>
   );
 }

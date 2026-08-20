@@ -1,50 +1,66 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
+
+import type { PromoterEvent } from '@/lib/partner/contracts';
 
 import { CopyLinkButton } from './PromoterShareActions';
+import type { PromoterEventLinkRow } from './PromoterLinksTable';
 
-const channels = ['Instagram', 'WhatsApp', 'Snapchat', 'Email', 'Bio link', 'Poster QR', 'Custom'] as const;
+const channels = ['Instagram', 'WhatsApp', 'Bio', 'Direct'] as const;
 
-export function PromoterLinkBuilder() {
-  const [eventId, setEventId] = useState('neon-nights');
+export function PromoterLinkBuilder({ events, links }: {
+  readonly events: readonly PromoterEvent[];
+  readonly links: readonly PromoterEventLinkRow[];
+}) {
+  const [eventId, setEventId] = useState(events[0]?.id ?? '');
   const [channel, setChannel] = useState<(typeof channels)[number]>('Instagram');
-  const [label, setLabel] = useState('Main story');
-  const [draftReady, setDraftReady] = useState(false);
-  const [preparing, setPreparing] = useState(false);
-  const [shared, setShared] = useState(false);
-  const slug = useMemo(() => `${eventId}-${channel.toLowerCase().replace(/\s+/g, '-')}`, [channel, eventId]);
-  const previewUrl = `c1rcle.in/zoya/${slug}`;
-  const caption = `Meet me at ${eventId === 'neon-nights' ? 'Neon Nights' : 'Bassline Nights'} — tickets via my C1RCLE link.`;
-
-  const prepare = () => {
-    if (preparing || !label.trim()) return;
-    setPreparing(true);
-    window.setTimeout(() => { setDraftReady(true); setPreparing(false); }, 500);
-  };
-
-  const share = async () => {
-    const data = { title: 'THE C1RCLE event link', text: caption, url: `https://${previewUrl}` };
-    if (typeof navigator.share === 'function') await navigator.share(data);
-    else await navigator.clipboard.writeText(`${caption} https://${previewUrl}`);
-    setShared(true);
-    window.setTimeout(() => { setShared(false); }, 1800);
-  };
+  const [label, setLabel] = useState('');
+  const [selected, setSelected] = useState<PromoterEventLinkRow | null>(null);
+  const selectedLink = links.find((link) => link.eventId === eventId) ?? null;
 
   return (
-    <section className="promoter-link-builder pd-surface">
-      <div className="promoter-link-builder-copy"><span>Tracked campaign</span><h2>Turn any share into measurable ticket movement.</h2><p>Select an event and channel. The backend will issue the authoritative tracking link; this frontend currently prepares and previews the campaign request.</p></div>
+    <section className="promoter-link-builder pd-surface" aria-labelledby="get-link-title">
+      <header>
+        <div>
+          <h2 id="get-link-title">Get link</h2>
+        </div>
+      </header>
       <div className="promoter-link-form">
-        <label><span>Linked event</span><select value={eventId} onChange={(event) => { setEventId(event.target.value); setDraftReady(false); }}><option value="neon-nights">Neon Nights</option><option value="bassline-nights">Bassline Nights</option></select></label>
-        <label><span>Campaign channel</span><select value={channel} onChange={(event) => { setChannel(event.target.value as (typeof channels)[number]); setDraftReady(false); }}>{channels.map((item) => <option key={item}>{item}</option>)}</select></label>
-        <label><span>Campaign label</span><input value={label} onChange={(event) => { setLabel(event.target.value); setDraftReady(false); }} maxLength={40} /></label>
-        <button type="button" onClick={prepare} disabled={!label.trim() || preparing}>{preparing ? 'Preparing…' : 'Prepare tracked-link request'}</button>
+        <label>
+          <span>Event</span>
+          <select value={eventId} onChange={(event) => { setEventId(event.target.value); setSelected(null); }}>
+            {events.map((event) => <option key={event.id} value={event.id}>{event.name}</option>)}
+          </select>
+        </label>
+        <label>
+          <span>Source</span>
+          <select value={channel} onChange={(event) => setChannel(event.target.value as (typeof channels)[number])}>
+            {channels.map((item) => <option key={item}>{item}</option>)}
+          </select>
+        </label>
+        <label>
+          <span>Campaign label <small>Optional</small></span>
+          <input value={label} onChange={(event) => setLabel(event.target.value)} maxLength={40} placeholder="e.g. August story" />
+        </label>
+        <button type="button" onClick={() => setSelected(selectedLink)} disabled={!selectedLink} title={!selectedLink ? 'No permanent tracked link is available for this event.' : undefined}>
+          Get link
+        </button>
       </div>
-      {draftReady ? <div className="promoter-campaign-output" aria-live="polite">
-        <div className="promoter-story-preview promoter-tone promoter-tone--orange"><span>THE C1RCLE · {channel}</span><strong>{eventId === 'neon-nights' ? 'NEON NIGHTS' : 'BASSLINE NIGHTS'}</strong><small>{label}</small><b>GET TICKETS ↗</b></div>
-        <div className="promoter-qr-preview" aria-label="Decorative QR placement preview"><span>QR</span><div>{Array.from({ length: 36 }, (_, index) => <i key={String(index)} className={index % 3 === 0 || index % 7 === 0 ? 'is-dark' : undefined} />)}</div><small>Authoritative QR generated by link API</small></div>
-        <div className="promoter-campaign-actions"><span>Request preview</span><strong>{previewUrl}</strong><small>{channel} · {label}</small><blockquote>{caption}</blockquote><div><CopyLinkButton value={`https://${previewUrl}`} /><CopyLinkButton value={caption} label="Copy caption" /><button type="button" className="promoter-copy-button" onClick={() => { void share(); }}>{shared ? 'Shared' : 'Share campaign'}<span aria-hidden="true">↗</span></button><button type="button" className="promoter-copy-button" disabled title="Download activates after the backend issues the authoritative QR">Download QR</button></div></div>
-      </div> : null}
+      {selected ? (
+        <div className="promoter-link-result" aria-live="polite">
+          <div>
+            <span>{selected.eventName}</span>
+            <strong>Permanent tracked link</strong>
+            <code>{selected.shortUrl}</code>
+            <small>{channel}{label.trim() ? ` · ${label.trim()}` : ''} · one link for this event</small>
+          </div>
+          <div className="promoter-link-result-actions">
+            <CopyLinkButton value={`https://${selected.shortUrl}`} label="Copy" />
+            <a href={`https://${selected.shortUrl}`} target="_blank" rel="noreferrer">View</a>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

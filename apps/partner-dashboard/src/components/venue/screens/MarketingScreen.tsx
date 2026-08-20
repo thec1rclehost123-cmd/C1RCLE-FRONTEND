@@ -551,7 +551,7 @@ function CheckBox({ checked }: { readonly checked: boolean }) {
 
 /* ─── iPhone Preview ───────────────────────────────────────────────────────── */
 
-function IPhonePreview({
+export function IPhonePreview({
   channel,
   message,
   eventName,

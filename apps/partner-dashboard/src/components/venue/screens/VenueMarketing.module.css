@@ -28,20 +28,26 @@
   display: flex;
   gap: 5px;
 }
-.tabs a {
+.tabs a,
+.tabs button {
+  border: 0;
   padding: 6px 14px;
   border-radius: 999px;
   color: #9a9da3;
+  background: transparent;
   font-size: 13px;
   font-weight: 500;
   text-decoration: none;
+  cursor: pointer;
   transition: all 140ms ease;
 }
-.tabs a:hover {
+.tabs a:hover,
+.tabs button:hover {
   color: #fff;
   background: rgb(255 255 255/5%);
 }
-.tabs a.active {
+.tabs a.active,
+.tabs button.active {
   color: #fff;
   background: var(--partner-accent);
   font-weight: 600;

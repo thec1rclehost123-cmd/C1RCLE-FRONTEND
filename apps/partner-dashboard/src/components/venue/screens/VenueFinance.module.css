@@ -24,7 +24,8 @@
 }
 .header button,
 .header a,
-.bank button {
+.bank button,
+.bank a {
   display: inline-flex;
   min-height: 44px;
   align-items: center;
@@ -159,10 +160,23 @@
 .bank dd {
   margin: 7px 0 0;
 }
-.bank button {
+.bank button,
+.bank a {
   width: 100%;
   border-color: var(--partner-border);
   background: transparent;
+}
+.bank a {
+  text-decoration: none;
+}
+.accountStatus[data-status='Verified'] {
+  color: var(--partner-green);
+}
+.accountStatus[data-status='Pending'] {
+  color: var(--partner-amber);
+}
+.accountStatus[data-status='Required'] {
+  color: var(--partner-red);
 }
 .balanceStrip {
   display: grid;
@@ -269,8 +283,85 @@
 .payoutRow [data-status='Scheduled'] {
   color: var(--dashboard-info);
 }
+.payoutRow [data-status='Processing'] {
+  color: var(--partner-amber);
+}
+.payoutRow [data-status='Failed'] {
+  color: var(--partner-red);
+}
 .payoutRow strong {
   text-align: right;
+}
+.tableHead.compactTable,
+.payoutRow.compactTable {
+  grid-template-columns: 160px minmax(0, 1fr) 150px;
+}
+.secondaryTable {
+  min-width: 0;
+  overflow: auto;
+  border: 1px solid var(--partner-border);
+  border-radius: var(--dashboard-radius-card);
+  background: var(--dashboard-surface);
+}
+.secondaryTable > header {
+  display: flex;
+  min-height: 54px;
+  align-items: center;
+  padding: 0 18px;
+  background: var(--dashboard-surface-elevated);
+}
+.secondaryTable h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 560;
+}
+.secondaryTable header p {
+  margin: 5px 0 0;
+  color: var(--partner-muted);
+  font-size: 13px;
+}
+.secondaryTableGrid {
+  min-width: 640px;
+}
+.secondaryHead,
+.secondaryRow {
+  display: grid;
+  align-items: center;
+  gap: 18px;
+  padding: 0 18px;
+}
+.secondaryTableGrid[data-columns='4'] .secondaryHead,
+.secondaryTableGrid[data-columns='4'] .secondaryRow {
+  grid-template-columns: minmax(190px, 1.3fr) minmax(140px, 0.8fr) minmax(180px, 1fr) 140px;
+}
+.secondaryTableGrid[data-columns='5'] .secondaryHead,
+.secondaryTableGrid[data-columns='5'] .secondaryRow {
+  grid-template-columns: minmax(170px, 1.25fr) minmax(190px, 1.3fr) 110px 100px 140px;
+}
+.secondaryHead {
+  min-height: 40px;
+  border-top: 1px solid var(--partner-border);
+  color: var(--partner-muted);
+  font-size: 11px;
+}
+.secondaryRow {
+  min-height: 50px;
+  border-top: 1px solid var(--partner-border);
+  color: var(--partner-muted);
+  font-size: 13px;
+}
+.secondaryRow [data-emphasis='true'] {
+  color: var(--partner-text);
+  font-weight: 560;
+}
+.secondaryRow [data-tone='positive'] {
+  color: var(--partner-green);
+}
+.secondaryRow [data-tone='warning'] {
+  color: var(--partner-amber);
+}
+.secondaryRow [data-tone='negative'] {
+  color: var(--partner-red);
 }
 .unavailable {
   min-height: 420px;
@@ -311,6 +402,17 @@
     grid-column: 1;
   }
   .payoutRow strong {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .payoutRow.compactTable {
+    grid-template-columns: 1fr auto;
+  }
+  .payoutRow.compactTable span:nth-child(2) {
+    grid-column: 1;
+    color: var(--partner-amber);
+  }
+  .payoutRow.compactTable strong {
     grid-column: 2;
     grid-row: 1;
   }

@@ -238,16 +238,14 @@
 .host-dashboard-grid,
 .host-profile-grid,
 .host-invitation-layout,
-.host-request-layout,
-.host-finance-grid {
+.host-request-layout {
   display: grid;
   min-width: 0;
   grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.75fr);
   gap: 16px;
 }
 .host-profile-grid > div,
-.host-profile-grid > aside,
-.host-finance-grid > aside {
+.host-profile-grid > aside {
   display: grid;
   align-content: start;
   gap: 16px;
@@ -433,10 +431,7 @@
 .host-form-grid select,
 .host-form-grid textarea,
 .host-preflight select,
-.host-ticket-editor input,
-.host-compose input,
-.host-compose select,
-.host-compose textarea {
+.host-ticket-editor input {
   width: 100%;
   min-height: 44px;
   border: 1px solid var(--partner-border);
@@ -454,10 +449,7 @@
 .host-form-grid select:hover,
 .host-form-grid textarea:hover,
 .host-preflight select:hover,
-.host-ticket-editor input:hover,
-.host-compose input:hover,
-.host-compose select:hover,
-.host-compose textarea:hover {
+.host-ticket-editor input:hover {
   border-color: var(--partner-border-strong);
 }
 .host-toolbar input:focus,
@@ -466,10 +458,7 @@
 .host-form-grid select:focus,
 .host-form-grid textarea:focus,
 .host-preflight select:focus,
-.host-ticket-editor input:focus,
-.host-compose input:focus,
-.host-compose select:focus,
-.host-compose textarea:focus {
+.host-ticket-editor input:focus {
   border-color: var(--dashboard-accent);
 }
 .host-toolbar select {
@@ -497,18 +486,6 @@
 .host-card-list article > div {
   display: grid;
   gap: 5px;
-}
-.host-event-top {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-.host-event-top > div {
-  display: grid;
-  gap: 6px;
-}
-.host-event-top h1 {
-  font-size: 28px;
 }
 .host-info-list {
   display: grid;
@@ -672,8 +649,7 @@
   border-bottom: 1px solid var(--partner-border);
   padding: 20px 24px;
 }
-.host-preflight-check > span,
-.host-number {
+.host-preflight-check > span {
   display: grid;
   width: 28px;
   height: 28px;
@@ -796,8 +772,7 @@
   gap: 14px;
 }
 .host-form-grid label,
-.host-ticket-editor label,
-.host-compose label {
+.host-ticket-editor label {
   display: grid;
   gap: 6px;
   color: #d7d8db;
@@ -806,8 +781,7 @@
 .host-form-grid .is-wide {
   grid-column: 1/-1;
 }
-.host-form-grid textarea,
-.host-compose textarea {
+.host-form-grid textarea {
   resize: vertical;
 }
 .host-form-grid footer {
@@ -946,80 +920,24 @@
 .host-partner-hero + .host-profile-grid {
   margin-top: 4px;
 }
-.host-marketing-layout {
+.host-marketing-schedule {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.7fr);
-  gap: 16px;
-}
-.host-compose {
-  display: grid;
-  overflow: hidden;
-  border: 1px solid var(--partner-border);
-  border-radius: var(--dashboard-radius-card);
-  background: var(--partner-surface);
-}
-.host-compose > article {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  gap: 12px;
-  border-bottom: 1px solid var(--partner-border);
-  padding: 16px;
-}
-.host-compose > article > div {
-  display: grid;
-  gap: 12px;
-}
-.host-channel-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
-.host-channel-grid button {
-  min-height: 44px;
-  border: 1px solid var(--partner-border);
-  border-radius: var(--dashboard-radius-button);
-  color: var(--partner-text);
-  background: transparent;
-}
-.host-channel-grid button.is-active {
-  border-color: var(--partner-accent);
-  color: var(--partner-accent);
-}
-.host-compose footer {
+.host-marketing-preview-heading {
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 14px 16px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
 }
-.host-marketing-side {
-  display: grid;
-  align-content: start;
-  gap: 14px;
+.host-marketing-preview-heading h2 {
+  margin: 0;
+  font-size: 18px;
 }
-.host-message-preview {
-  display: grid;
-  gap: 8px;
-  min-height: 260px;
-  align-content: start;
-  border: 1px solid var(--partner-border);
-  border-radius: var(--dashboard-radius-card);
-  background: var(--dashboard-control);
-  padding: 18px;
-}
-.host-message-preview p {
-  margin-top: 18px;
-  border-radius: var(--dashboard-radius-button);
-  color: #ddd;
-  background: #23262a;
-  padding: 12px;
-}
-.host-finance-grid {
-  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.6fr);
-}
-.host-large-value {
-  display: block;
-  margin: 14px 0 4px;
-  font-size: 30px;
+.host-marketing-preview-heading small {
+  color: var(--partner-muted);
 }
 .host-settings-layout {
   display: grid;
@@ -1251,8 +1169,7 @@
   .host-partner-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .host-create-layout,
-  .host-marketing-layout {
+  .host-create-layout {
     grid-template-columns: 1fr;
   }
   .host-guest-preview {
@@ -1264,7 +1181,6 @@
   .host-profile-grid,
   .host-invitation-layout,
   .host-request-layout,
-  .host-finance-grid,
   .host-notifications-layout {
     grid-template-columns: 1fr;
   }
@@ -1364,14 +1280,10 @@
   .host-stepper {
     gap: 8px;
   }
-  .host-channel-grid {
-    grid-template-columns: 1fr 1fr;
-  }
   .host-bank-row {
     grid-template-columns: 1fr;
   }
   .host-action-row,
-  .host-compose footer,
   .host-sticky-actions {
     display: grid;
     grid-template-columns: 1fr;

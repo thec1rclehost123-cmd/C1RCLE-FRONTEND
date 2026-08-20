@@ -203,6 +203,39 @@
   width: 6%;
 }
 
+.tableWrap table[data-order-kind='host'] th:nth-child(1) { width: 32%; }
+.tableWrap table[data-order-kind='host'] th:nth-child(2) { width: 22%; }
+.tableWrap table[data-order-kind='host'] th:nth-child(3) { width: 12%; }
+.tableWrap table[data-order-kind='host'] th:nth-child(4) { width: 14%; }
+.tableWrap table[data-order-kind='host'] th:nth-child(5) { width: 14%; }
+.tableWrap table[data-order-kind='host'] th:nth-child(6) { width: 6%; }
+
+.tableWrap table[data-order-kind='promoter'] th:nth-child(1) { width: 22%; }
+.tableWrap table[data-order-kind='promoter'] th:nth-child(2) { width: 17%; }
+.tableWrap table[data-order-kind='promoter'] th:nth-child(3) { width: 17%; }
+.tableWrap table[data-order-kind='promoter'] th:nth-child(4) { width: 10%; }
+.tableWrap table[data-order-kind='promoter'] th:nth-child(5) { width: 15%; }
+.tableWrap table[data-order-kind='promoter'] th:nth-child(6) { width: 13%; }
+.tableWrap table[data-order-kind='promoter'] th:nth-child(7) { width: 6%; }
+.tableWrap table[data-order-kind='promoter-links'] {
+  min-width: 0;
+}
+.tableWrap table[data-order-kind='promoter-links'] th:nth-child(1) { width: 25%; }
+.tableWrap table[data-order-kind='promoter-links'] th:nth-child(2) { width: 30%; }
+.tableWrap table[data-order-kind='promoter-links'] th:nth-child(3) { width: 10%; }
+.tableWrap table[data-order-kind='promoter-links'] th:nth-child(4) { width: 10%; }
+.tableWrap table[data-order-kind='promoter-links'] th:nth-child(5) { width: 10%; }
+.tableWrap table[data-order-kind='promoter-links'] th:nth-child(6) { width: 120px; }
+.tableWrap table[data-order-kind='promoter-links'] td {
+  min-width: 0;
+  overflow: hidden;
+}
+.tableWrap table[data-order-kind='promoter-links'] td:last-child {
+  width: 120px;
+  padding-inline: 10px;
+  white-space: nowrap;
+}
+
 .tableWrap th button {
   display: inline-flex;
   align-items: center;
@@ -292,6 +325,11 @@
 .status[data-status='refunded'] {
   color: #ff9c88;
   background: rgb(255 71 36 / 8%);
+}
+
+.status[data-status='confirmed'] {
+  color: var(--partner-green);
+  background: rgb(50 211 153 / 8%);
 }
 
 .rowActions {
