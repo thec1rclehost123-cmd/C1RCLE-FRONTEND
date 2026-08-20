@@ -1,3 +1,5 @@
+import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
+
 import './globals.css';
 import '@/components/partner-shell/partner-shell.css';
 import '@/components/partner-shell/dashboard-ui.css';
@@ -5,6 +7,20 @@ import '@/components/partner-shell/partner-shell-v2.css';
 
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
+
+const displayFont = Bricolage_Grotesque({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-display',
+  display: 'swap',
+});
+
+const bodyFont = Hanken_Grotesk({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-body',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: {
@@ -26,7 +42,12 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { readonly children: ReactNode }) {
   return (
-    <html lang="en" className="dark" data-scroll-behavior="smooth" suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`dark ${displayFont.variable} ${bodyFont.variable}`}
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+    >
       <body className="antialiased bg-[#0A0A0B] text-white">{children}</body>
     </html>
   );

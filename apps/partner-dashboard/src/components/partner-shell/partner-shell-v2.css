@@ -58,7 +58,7 @@
   color: var(--partner-text);
   background: var(--partner-bg);
   font-family:
-    -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', Inter, sans-serif;
+    var(--font-body), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   transition: grid-template-columns 180ms ease;
 }
 

@@ -11,6 +11,15 @@
   color: inherit;
 }
 
+.pageHeader h1,
+.tonightBody h2,
+.chartTotal strong,
+.doorTime strong,
+.capacity div strong,
+.sold strong {
+  font-family: var(--font-display, var(--font-body, inherit));
+}
+
 .pageHeader {
   position: relative;
   display: flex;
@@ -88,7 +97,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #ff4b26;
+  color: var(--dashboard-accent, #f44a22);
   text-align: center;
   text-shadow: none;
 }
@@ -170,8 +179,8 @@
 .doorTime strong {
   margin-top: 5px;
   color: var(--dashboard-accent);
-  font-size: 27px;
-  font-weight: 450;
+  font-size: 30px;
+  font-weight: 750;
   letter-spacing: -0.03em;
 }
 .doorTime small {
@@ -189,8 +198,8 @@
   margin-top: 4px;
 }
 .capacity div strong {
-  font-size: 27px;
-  font-weight: 450;
+  font-size: 30px;
+  font-weight: 750;
 }
 .capacity div small {
   color: #a8abb1;
@@ -411,8 +420,8 @@
 }
 .chartTotal strong {
   color: var(--dashboard-text);
-  font-size: 22px;
-  font-weight: 650;
+  font-size: 32px;
+  font-weight: 800;
   letter-spacing: -0.03em;
 }
 .rangeLabel select {
@@ -619,8 +628,8 @@
 }
 .sold strong {
   color: var(--dashboard-accent);
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 20px;
+  font-weight: 750;
 }
 .sold small {
   color: #a2a5aa;

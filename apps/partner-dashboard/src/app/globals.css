@@ -92,8 +92,8 @@ body {
 
   /* ─── Typography Stack ─── */
   --font-system:
-    -apple-system, blinkmacsystemfont, 'SF Pro Display', 'SF Pro Text', 'Inter', 'Segoe UI',
-    sans-serif;
+    var(--font-body), -apple-system, blinkmacsystemfont, 'Segoe UI', roboto, sans-serif;
+  --font-display-stack: var(--font-display), var(--font-system);
   --font-mono: 'SF Mono', 'Fira Code', 'Monaco', monospace;
 
   /* ─── Spacing Scale ─── */

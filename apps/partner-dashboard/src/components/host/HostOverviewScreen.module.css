@@ -12,6 +12,14 @@
   text-decoration: none;
 }
 
+.pageHeader h1,
+.tonightBody h2,
+.chartTotal strong,
+.doorTime strong,
+.capacity strong {
+  font-family: var(--font-display, var(--font-body, inherit));
+}
+
 .pageHeader {
   position: relative;
   display: flex;
@@ -24,8 +32,8 @@
 
 .pageHeader h1 {
   margin: 0;
-  font-size: 26px;
-  font-weight: 650;
+  font-size: 28px;
+  font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.1;
 }
@@ -61,8 +69,13 @@
   overflow: hidden;
   border: 1px solid var(--dashboard-border, rgba(255, 255, 255, 0.08));
   border-radius: var(--dashboard-radius-card, 16px);
-  background: var(--overview-panel);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 140px),
+    var(--overview-panel);
   box-shadow: var(--dashboard-shadow-panel, 0 4px 20px rgba(0, 0, 0, 0.25));
+  transition:
+    border-color 200ms ease,
+    box-shadow 200ms ease;
 }
 
 .topGrid,
@@ -111,7 +124,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #f44a22;
+  color: var(--partner-accent, #f44a22);
   text-align: center;
   text-shadow: none;
 }
@@ -159,9 +172,9 @@
   padding: 4px 10px;
   border-radius: 9999px;
   background: rgba(244, 74, 34, 0.15);
-  color: #f44a22;
+  color: var(--partner-accent, #f44a22);
   font-size: 11px;
-  font-weight: 650;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   width: fit-content;
@@ -213,14 +226,15 @@
 }
 
 .doorTime strong {
-  font-size: 22px;
-  font-weight: 700;
-  color: #f44a22;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--partner-accent, #f44a22);
 }
 
 .doorTime small {
   font-size: 11px;
-  color: var(--dashboard-text-tertiary, #64748b);
+  color: var(--dashboard-text-quiet, #71717a);
 }
 
 .capacity {
@@ -241,8 +255,9 @@
 }
 
 .capacity strong {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .capacity small {
@@ -253,7 +268,7 @@
 .capacity b {
   margin-left: auto;
   font-size: 12px;
-  color: #f44a22;
+  color: var(--partner-accent, #f44a22);
 }
 
 .progress {
@@ -272,7 +287,7 @@
 }
 
 .progress::-webkit-progress-value {
-  background: #f44a22;
+  background: var(--partner-accent, #f44a22);
   border-radius: 9999px;
 }
 
@@ -283,16 +298,19 @@
   height: 40px;
   padding: 0 20px;
   border-radius: 10px;
-  background: #f44a22;
+  background: var(--partner-accent, #f44a22);
   color: #ffffff;
   font-size: 13px;
   font-weight: 650;
   margin-top: 12px;
-  transition: background 150ms ease;
+  transition:
+    background 150ms ease,
+    transform 150ms ease;
 }
 
 .openEventButton:hover {
-  background: #ff4b26;
+  background: var(--dashboard-accent-hover, #ff5a36);
+  transform: translateY(-1px);
 }
 
 .sectionHeading {
@@ -311,7 +329,7 @@
 .sectionHeading a {
   font-size: 12px;
   font-weight: 600;
-  color: #f44a22;
+  color: var(--partner-accent, #f44a22);
 }
 
 .activityList {
@@ -326,11 +344,14 @@
   gap: 12px;
   padding: 12px;
   border-radius: 12px;
-  transition: background 150ms ease;
+  transition:
+    background 150ms ease,
+    transform 150ms ease;
 }
 
 .activityItem:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateX(2px);
 }
 
 .activityIcon {
@@ -346,18 +367,18 @@
 }
 
 .activityIcon.success {
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
+  background: rgba(52, 211, 153, 0.15);
+  color: var(--dashboard-success, #34d399);
 }
 
 .activityIcon.warning {
   background: rgba(245, 158, 11, 0.15);
-  color: #f59e0b;
+  color: var(--dashboard-warning, #f59e0b);
 }
 
 .activityIcon.accent {
   background: rgba(244, 74, 34, 0.15);
-  color: #f44a22;
+  color: var(--partner-accent, #f44a22);
 }
 
 .activityCopy {
@@ -377,7 +398,7 @@
 .activityCopy time {
   font-size: 11px;
   font-weight: 400;
-  color: var(--dashboard-text-tertiary, #64748b);
+  color: var(--dashboard-text-quiet, #71717a);
 }
 
 .performanceCopy {
@@ -405,9 +426,9 @@
 }
 
 .chartTotal strong {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
 .chart {
@@ -423,7 +444,7 @@
 
 .currentLine {
   fill: none;
-  stroke: #f44a22;
+  stroke: var(--partner-accent, #f44a22);
   stroke-width: 2.5;
   stroke-linecap: round;
 }
@@ -440,8 +461,8 @@
 }
 
 .currentPoint {
-  fill: #f44a22;
-  stroke: #121214;
+  fill: var(--partner-accent, #f44a22);
+  stroke: var(--overview-panel, #121214);
   stroke-width: 2;
 }
 
@@ -450,7 +471,7 @@
   justify-content: space-between;
   padding: 8px 0 0;
   font-size: 11px;
-  color: var(--dashboard-text-tertiary, #64748b);
+  color: var(--dashboard-text-quiet, #71717a);
 }
 
 .yLabels {
@@ -462,7 +483,7 @@
   flex-direction: column;
   justify-content: space-between;
   font-size: 10px;
-  color: var(--dashboard-text-tertiary, #64748b);
+  color: var(--dashboard-text-quiet, #71717a);
   pointer-events: none;
 }
 
@@ -481,7 +502,7 @@
   display: inline-block;
   width: 16px;
   height: 2.5px;
-  background: #f44a22;
+  background: var(--partner-accent, #f44a22);
   margin-right: 8px;
   vertical-align: middle;
   border-radius: 2px;
@@ -511,18 +532,21 @@
   padding: 10px 12px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
-  transition: background 150ms ease;
+  transition:
+    background 150ms ease,
+    transform 150ms ease;
 }
 
 .upcomingItem:hover {
   background: rgba(255, 255, 255, 0.06);
+  transform: translateX(2px);
 }
 
 .eventArtwork {
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.08);
+  background: linear-gradient(135deg, rgba(244, 74, 34, 0.22), rgba(255, 255, 255, 0.06));
   color: #ffffff;
   font-size: 12px;
   font-weight: 700;
@@ -561,15 +585,15 @@
 }
 
 .statusTag strong.confirmed {
-  color: #10b981;
+  color: var(--dashboard-success, #34d399);
 }
 
 .statusTag strong.warning {
-  color: #f59e0b;
+  color: var(--dashboard-warning, #f59e0b);
 }
 
 .statusTag small {
   font-size: 10px;
-  color: var(--dashboard-text-tertiary, #64748b);
+  color: var(--dashboard-text-quiet, #71717a);
   text-transform: uppercase;
 }
