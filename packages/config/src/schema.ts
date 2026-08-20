@@ -19,6 +19,7 @@ export const clientEnvSchema = z.object({
   NEXT_PUBLIC_APP_NAME: z.string().min(1),
   NEXT_PUBLIC_ENVIRONMENT: z.enum(['development', 'preview', 'production']),
   NEXT_PUBLIC_SENTRY_DSN: url.optional(),
+  NEXT_PUBLIC_FIREBASE_API_KEY: z.string().optional(),
 });
 
 /** Values that stay on the server. Never import this from a client component. */
