@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -14,8 +14,11 @@ vi.mock('@c1rcle/icons', () => {
     CalendarIcon: Icon,
     CheckIcon: Icon,
     CloseIcon: Icon,
-    InviteIcon: Icon,
+    DeleteIcon: Icon,
+    FilterIcon: Icon,
+    LinkIcon: Icon,
     LocationIcon: Icon,
+    PendingIcon: Icon,
     PhoneIcon: Icon,
     SearchIcon: Icon,
     SendIcon: Icon,
@@ -31,46 +34,86 @@ vi.mock('@/components/providers/DashboardAuthProvider', () => ({
 }));
 
 describe('PartnersScreen', () => {
-  it('traps the partner drawer and restores focus to the Contact trigger on Escape', async () => {
-    const user = userEvent.setup();
-    render(<PartnersScreen tab="hosts" />);
-    const trigger = screen.getAllByRole('button', { name: 'Contact' })[0]!;
-    await user.click(trigger);
-    expect(screen.getByRole('dialog', { name: /Rhea Kapoor partner details/ })).toBeInTheDocument();
-    await user.keyboard('{Escape}');
-    await waitFor(() => expect(trigger).toHaveFocus());
+  describe('Connected', () => {
+    it('traps the profile drawer and restores focus to the View profile trigger on Escape', async () => {
+      const user = userEvent.setup();
+      render(<PartnersScreen tab="connected" segment="host" />);
+      const trigger = screen.getAllByRole('button', { name: 'View profile' })[0]!;
+      await user.click(trigger);
+      expect(
+        screen.getByRole('dialog', { name: /Rhea Kapoor partner details/ }),
+      ).toBeInTheDocument();
+      await user.keyboard('{Escape}');
+      await waitFor(() => expect(trigger).toHaveFocus());
+    });
+
+    it('shows host performance stats and expands hosted event history', async () => {
+      const user = userEvent.setup();
+      render(<PartnersScreen tab="connected" segment="host" />);
+      await user.click(screen.getAllByRole('button', { name: 'View profile' })[0]!);
+
+      const dialog = screen.getByRole('dialog', { name: /Rhea Kapoor partner details/ });
+      expect(within(dialog).getByRole('heading', { name: 'Performance' })).toBeInTheDocument();
+      expect(within(dialog).getByText('Events hosted')).toBeInTheDocument();
+      expect(within(dialog).getByText('Average tickets sold')).toBeInTheDocument();
+      const history = within(dialog).getByRole('button', { name: /See hosted events/ });
+      expect(history).toHaveAttribute('aria-expanded', 'false');
+
+      await user.click(history);
+      expect(history).toHaveAttribute('aria-expanded', 'true');
+      expect(within(dialog).getByText('Saturday Sessions')).toBeInTheDocument();
+    });
+
+    it('keeps quick actions honestly disabled with no fake success', async () => {
+      const user = userEvent.setup();
+      render(<PartnersScreen tab="connected" segment="host" />);
+      await user.click(screen.getAllByRole('button', { name: 'View profile' })[0]!);
+
+      const removeButton = screen.getByRole('button', { name: /Remove connection/ });
+      expect(removeButton).toBeDisabled();
+      expect(screen.queryByText(/removed successfully/i)).not.toBeInTheDocument();
+    });
   });
 
-  it('shows host credibility and expands hosted event history', async () => {
-    const user = userEvent.setup();
-    render(<PartnersScreen tab="hosts" />);
-    await user.click(screen.getAllByRole('button', { name: 'Contact' })[0]!);
+  describe('Discover', () => {
+    it('uses promoter-specific performance labels and keeps Connect honestly disabled', async () => {
+      const user = userEvent.setup();
+      render(<PartnersScreen tab="discover" segment="promoter" />);
+      await user.click(screen.getAllByRole('button', { name: 'View profile' })[0]!);
 
-    expect(screen.getByRole('heading', { name: 'Credibility' })).toBeInTheDocument();
-    expect(screen.getByText('Events hosted')).toBeInTheDocument();
-    expect(screen.queryByText('Avg. turnout')).not.toBeInTheDocument();
-    expect(screen.queryByText('Venue rebook rate')).not.toBeInTheDocument();
-    const history = screen.getByRole('button', { name: /See hosted events/ });
-    expect(history).toHaveAttribute('aria-expanded', 'false');
+      expect(screen.getByRole('button', { name: /See promoted events/ })).toBeInTheDocument();
+      const connect = screen.getByRole('button', { name: /Connect/ });
+      expect(connect).toBeDisabled();
+    });
 
-    await user.click(history);
-    expect(history).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByText('Saturday Sessions')).toBeInTheDocument();
+    it('filters results by verified status', async () => {
+      const user = userEvent.setup();
+      render(<PartnersScreen tab="discover" segment="host" />);
+      await user.click(screen.getByRole('button', { name: /Filters/ }));
+      await user.click(screen.getByLabelText('Verified status only'));
+      expect(screen.queryByText('Kabir Malhotra')).not.toBeInTheDocument();
+      expect(screen.getByText('Rhea Kapoor')).toBeInTheDocument();
+    });
   });
 
-  it('uses promoter-specific credibility labels and history wording', async () => {
-    const user = userEvent.setup();
-    render(<PartnersScreen tab="promoters" />);
-    await user.click(screen.getAllByRole('button', { name: 'Contact' })[0]!);
+  describe('Requests', () => {
+    it('shows a pending-count badge on the Requests tab', () => {
+      render(<PartnersScreen tab="discover" segment="host" />);
+      const requestsTab = screen.getByRole('link', { name: /Requests/ });
+      expect(within(requestsTab).getByText('2')).toBeInTheDocument();
+    });
 
-    expect(screen.queryByText('Tickets attributed')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /See promoted events/ })).toBeInTheDocument();
-  });
+    it('keeps accept/decline honestly disabled behind a confirm dialog', async () => {
+      const user = userEvent.setup();
+      render(<PartnersScreen tab="requests" requestView="received" />);
+      await user.click(screen.getAllByRole('button', { name: 'Review' })[0]!);
+      await user.click(screen.getByRole('button', { name: /Accept/ }));
 
-  it('keeps unsupported promoter invitations honest', () => {
-    render(<PartnersScreen tab="promoters" />);
-    const invite = screen.getByRole('button', { name: 'Invite promoter unavailable' });
-    expect(invite).toBeDisabled();
-    expect(screen.queryByText(/invite sent successfully/i)).not.toBeInTheDocument();
+      expect(
+        screen.getByText(/requires the partnership mutation API/i),
+      ).toBeInTheDocument();
+      const confirm = screen.getByRole('button', { name: 'Confirm' });
+      expect(confirm).toBeDisabled();
+    });
   });
 });

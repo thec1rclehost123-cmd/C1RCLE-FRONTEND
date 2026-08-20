@@ -13,8 +13,9 @@
 }
 .header h1 {
   margin: 0;
+  font-family: var(--font-display, inherit);
   font-size: 32px;
-  font-weight: 650;
+  font-weight: 700;
   letter-spacing: -0.035em;
   line-height: 1.15;
 }
@@ -97,6 +98,21 @@
   background: var(--partner-accent, #f44a22);
   font-weight: 600;
 }
+.tabs a b {
+  display: inline-grid;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 8px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 18%);
+  padding: 0 5px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.tabs a.active b {
+  background: rgb(0 0 0 / 22%);
+}
 .subnav {
   display: flex;
   align-items: center;
@@ -173,6 +189,114 @@
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
+}
+.filterToggle {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0;
+  border: 1px solid var(--partner-border);
+  border-radius: var(--dashboard-radius-control);
+  color: var(--partner-text);
+  background: var(--dashboard-control);
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+.filterToggle[aria-expanded='true'] {
+  border-color: rgb(244 74 34 / 55%);
+  background: rgb(244 74 34 / 8%);
+  color: var(--partner-accent);
+}
+.filterToggle b {
+  display: inline-grid;
+  min-width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--partner-accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+.filterPanel {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+  border: 1px solid var(--partner-border);
+  border-radius: var(--dashboard-radius-panel);
+  background: var(--dashboard-surface);
+  padding: 18px;
+}
+.filterPanel label {
+  display: grid;
+  gap: 7px;
+  color: var(--partner-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.filterPanel select {
+  min-height: 42px;
+  border: 1px solid var(--partner-border);
+  border-radius: var(--dashboard-radius-control);
+  outline: 0;
+  color: var(--partner-text);
+  background: var(--dashboard-control);
+  padding: 0 12px;
+  font: inherit;
+  font-size: 13px;
+  text-transform: none;
+  color-scheme: dark;
+}
+.filterPanel select:focus {
+  border-color: rgb(244 74 34 / 70%);
+}
+.filterCheckbox {
+  display: flex !important;
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.filterCheckbox input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--partner-accent);
+}
+.filterCheckbox span {
+  color: var(--partner-text);
+  font-size: 13px;
+  font-weight: 500;
+}
+.clearFilters {
+  align-self: end;
+  border: 0;
+  color: var(--partner-accent);
+  background: transparent;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+@media (max-width: 980px) {
+  .filterPanel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .filterPanel {
+    grid-template-columns: 1fr;
+  }
 }
 .cityFilter {
   width: auto;
@@ -268,9 +392,15 @@
   gap: 4px;
 }
 .positive {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--partner-green);
 }
 .pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--partner-amber);
 }
 .statusDot::before {
@@ -372,19 +502,17 @@
 }
 .portrait em {
   position: absolute;
-  top: -8px;
-  left: 34px;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  border: 1px solid rgb(255 255 255 / 18%);
-  border-radius: 6px;
+  right: -4px;
+  bottom: -4px;
+  display: grid;
+  width: 19px;
+  height: 19px;
+  place-items: center;
+  border: 2px solid var(--dashboard-surface);
+  border-radius: 50%;
   color: #fff;
-  background: rgb(11 11 12 / 82%);
-  padding: 3px 5px;
-  font-size: 10px;
+  background: var(--partner-green);
   font-style: normal;
-  white-space: nowrap;
 }
 .partnerCard h2 {
   margin: 0;
@@ -636,9 +764,103 @@
   flex: none;
   color: #d7d8dc;
 }
-.drawer footer button:first-child {
+.drawer footer button.primary {
   border-color: var(--partner-accent);
+  color: #fff;
   background: var(--partner-accent);
+}
+.drawer footer button.primary:disabled {
+  color: #fff;
+}
+.upcomingList {
+  margin-top: 16px;
+  border-top: 1px solid var(--partner-border);
+  padding-top: 14px;
+}
+.upcomingList h4 {
+  margin: 0 0 10px;
+  color: var(--partner-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.upcomingList > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--partner-border);
+  font-size: 13px;
+}
+.upcomingList > div:first-of-type {
+  border-top: 0;
+}
+.upcomingList small {
+  color: var(--partner-muted);
+}
+.modalBackdrop {
+  position: fixed;
+  z-index: 320;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 60%);
+  padding: 20px;
+}
+.modal {
+  position: relative;
+  width: min(420px, 100%);
+  border: 1px solid var(--partner-border-strong, var(--partner-border));
+  border-radius: var(--dashboard-radius-overlay);
+  background: var(--dashboard-surface-elevated);
+  box-shadow: var(--dashboard-shadow-floating);
+  padding: 26px;
+}
+.modal h2 {
+  margin: 0 0 8px;
+  padding-right: 28px;
+  font-family: var(--font-display, inherit);
+  font-size: 20px;
+}
+.modal p {
+  margin: 0 0 10px;
+  color: var(--partner-muted);
+  line-height: 1.5;
+}
+.unsupported {
+  border: 1px dashed var(--partner-border);
+  border-radius: var(--dashboard-radius-control);
+  padding: 10px 12px;
+  font-size: 12px !important;
+}
+.modal footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+.modal footer button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--partner-border);
+  border-radius: var(--dashboard-radius-button);
+  color: var(--partner-text);
+  background: transparent;
+  padding: 0 16px;
+  font-weight: 600;
+}
+.modal footer button.primary {
+  border-color: var(--partner-accent);
+  color: #fff;
+  background: var(--partner-accent);
+}
+.modal footer button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 .permissions {
   margin-top: 26px;

@@ -1,15 +1,22 @@
 import { PartnersScreen } from '@/components/venue/screens/PartnersScreen';
 
-import type { PartnersTab, PartnersView } from '@/components/venue/screens/PartnersScreen';
+import type { PartnersTab } from '@/components/venue/screens/PartnersScreen';
+import type {
+  PartnershipRequestDirection,
+  VenuePartnerKind,
+} from '@/components/venue/venue-partners-model';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'Partners · Venue Studio' };
+export const metadata: Metadata = { title: 'Partnerships · Venue Studio' };
 
 const parseTab = (value: string | string[] | undefined): PartnersTab =>
-  value === 'promoters' || value === 'staff' ? value : 'hosts';
+  value === 'requests' || value === 'discover' ? value : 'connected';
 
-const parseView = (value: string | string[] | undefined): PartnersView =>
-  value === 'find' ? 'find' : 'my';
+const parseSegment = (value: string | string[] | undefined): VenuePartnerKind =>
+  value === 'promoter' ? 'promoter' : 'host';
+
+const parseRequestView = (value: string | string[] | undefined): PartnershipRequestDirection =>
+  value === 'sent' ? 'sent' : 'received';
 
 export default async function VenuePartnersPage({
   searchParams,
@@ -17,5 +24,11 @@ export default async function VenuePartnersPage({
   readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  return <PartnersScreen tab={parseTab(params['tab'])} view={parseView(params['view'])} />;
+  return (
+    <PartnersScreen
+      tab={parseTab(params['tab'])}
+      segment={parseSegment(params['view'])}
+      requestView={parseRequestView(params['requestView'])}
+    />
+  );
 }
