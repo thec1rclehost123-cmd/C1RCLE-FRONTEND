@@ -24,14 +24,30 @@ export interface SharedEventDetailHeaderModel {
   readonly roleLabel?: string;
 }
 
+export interface SharedEventDetailTab {
+  readonly label: string;
+  readonly href: string;
+  readonly id?: string;
+}
+
+export function isEventDetailTabActive(
+  pathname: string,
+  activeTab: string | undefined,
+  tab: SharedEventDetailTab,
+): boolean {
+  return tab.id ? activeTab === tab.id : pathname === tab.href;
+}
+
 export function EventDetailLayout({
   event,
   tabs,
+  activeTab,
   actions,
   children,
 }: {
   readonly event: SharedEventDetailHeaderModel;
-  readonly tabs?: readonly { readonly label: string; readonly href: string }[];
+  readonly tabs?: readonly SharedEventDetailTab[];
+  readonly activeTab?: string;
   readonly actions?: ReactNode;
   readonly children: ReactNode;
 }) {
@@ -86,7 +102,7 @@ export function EventDetailLayout({
         {tabs ? (
           <nav className={styles['eventTabs']} aria-label="Event details">
             {tabs.map((tab) => {
-              const selected = pathname === tab.href;
+              const selected = isEventDetailTabActive(pathname, activeTab, tab);
               return (
                 <Link key={tab.label} href={tab.href} aria-current={selected ? 'page' : undefined}>
                   {tab.label}

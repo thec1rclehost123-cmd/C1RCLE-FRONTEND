@@ -1,5 +1,3 @@
-'use client';
-
 import { PartnerDashboardLayout } from '@/components/partner-shell/PartnerDashboardLayout';
 
 import type { ReactNode } from 'react';

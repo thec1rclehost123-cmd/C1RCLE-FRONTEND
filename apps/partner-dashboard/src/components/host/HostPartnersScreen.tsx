@@ -3,11 +3,19 @@
 import Link from 'next/link';
 import { useMemo, useRef, useState } from 'react';
 
-import { CheckIcon, LocationIcon, SearchIcon } from '@c1rcle/icons';
+import { CheckIcon, LocationIcon } from '@c1rcle/icons';
 
-import { hostEvents, hostPartners, hostSlotRequests } from './host-studio-model';
+import {
+  PartnerDrawerShell,
+  PartnerModeNavigation,
+  PartnerSearchField,
+  PartnerTable,
+  PartnerTableHeader,
+} from '@/components/partner-shell/PartnerDirectoryUi';
 
 import styles from '../venue/screens/VenuePartners.module.css';
+
+import { hostEvents, hostPartners, hostSlotRequests } from './host-studio-model';
 
 import type { HostPartnerRecord } from './host-studio-model';
 
@@ -81,63 +89,38 @@ export function HostPartnersScreen({
       </header>
 
       {/* ── Navigation Row ── */}
-      <div className={s('navRow')}>
-        {view !== 'requests' ? (
-          <nav className={s('tabs')} aria-label="Partner categories">
-            <button
-              type="button"
-              className={tab === 'venues' ? s('active') : undefined}
-              onClick={() => setTab('venues')}
-            >
-              Venues
-            </button>
-            <button
-              type="button"
-              className={tab === 'promoters' ? s('active') : undefined}
-              onClick={() => setTab('promoters')}
-            >
-              Promoters
-            </button>
-          </nav>
-        ) : null}
-
-        <nav className={s('subnav')} aria-label="Partner views">
-          <button
-            type="button"
-            className={view === 'my' ? s('active') : undefined}
-            onClick={() => setView('my')}
-          >
-            My partners
-          </button>
-          <button
-            type="button"
-            className={view === 'find' ? s('active') : undefined}
-            onClick={() => setView('find')}
-          >
-            Find partners
-          </button>
-          <button
-            type="button"
-            className={view === 'requests' ? s('active') : undefined}
-            onClick={() => setView('requests')}
-          >
-            Requests
-          </button>
-        </nav>
-      </div>
+      <PartnerModeNavigation
+        styles={styles}
+        categories={[
+          { label: 'Venues', value: 'venues' },
+          { label: 'Promoters', value: 'promoters' },
+        ]}
+        activeCategory={tab}
+        onCategoryChange={(value) => {
+          setTab(value as HostPartnerTab);
+        }}
+        views={[
+          { label: 'My partners', value: 'my' },
+          { label: 'Find partners', value: 'find' },
+          { label: 'Requests', value: 'requests' },
+        ]}
+        activeView={view}
+        onViewChange={(value) => {
+          setView(value as HostPartnerView);
+        }}
+        showCategories={view !== 'requests'}
+      />
 
       {/* ── Content View ── */}
       {view === 'my' ? (
         <>
-          <label className={s('search')}>
-            <span className={s('srOnly')}>Search {kind === 'venue' ? 'venues' : 'promoters'}</span>
-            <SearchIcon size={19} aria-hidden="true" />
-            <input
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder={`Search ${kind === 'venue' ? 'venues' : 'promoters'}`}
-            />
-          </label>
+          <PartnerSearchField
+            styles={styles}
+            label={`Search ${kind === 'venue' ? 'venues' : 'promoters'}`}
+            placeholder={`Search ${kind === 'venue' ? 'venues' : 'promoters'}`}
+            value={query}
+            onChange={setQuery}
+          />
 
           {myPartners.length === 0 ? (
             <section className={s('unavailable')}>
@@ -145,15 +128,22 @@ export function HostPartnersScreen({
               <p>Try searching for another name or discover new partners.</p>
             </section>
           ) : (
-            <div className={`${s('partnerTable')} ${s('relationshipTable')}`} role="table" aria-label={`${kind === 'venue' ? 'Venue' : 'Promoter'} partners`}>
-              <div className={s('tableHead')} role="row">
-                <span role="columnheader">{kind === 'venue' ? 'Venue' : 'Promoter'}</span>
-                <span role="columnheader">Location</span>
-                <span role="columnheader">Events together</span>
-                <span role="columnheader">Last event</span>
-                <span role="columnheader">Status</span>
-                <span role="columnheader">Action</span>
-              </div>
+            <PartnerTable
+              styles={styles}
+              variant="relationshipTable"
+              ariaLabel={`${kind === 'venue' ? 'Venue' : 'Promoter'} partners`}
+            >
+              <PartnerTableHeader
+                styles={styles}
+                columns={[
+                  kind === 'venue' ? 'Venue' : 'Promoter',
+                  'Location',
+                  'Events together',
+                  'Last event',
+                  'Status',
+                  'Action',
+                ]}
+              />
               {myPartners.map(p => (
                 <div key={p.id} className={s('partnerRow')} role="row">
                   <div role="cell" className={s('identity')}>
@@ -203,24 +193,27 @@ export function HostPartnersScreen({
                   </span>
                 </div>
               ))}
-            </div>
+            </PartnerTable>
           )}
         </>
       ) : view === 'find' ? (
         <>
           <div className={s('findControls')}>
-            <label className={s('search')}>
-              <span className={s('srOnly')}>Search by name or city</span>
-              <SearchIcon size={19} aria-hidden="true" />
-              <input
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder="Search by name or city"
-              />
-            </label>
+            <PartnerSearchField
+              styles={styles}
+              label="Search by name or city"
+              placeholder="Search by name or city"
+              value={query}
+              onChange={setQuery}
+            />
             <label className={s('cityFilter')}>
               <LocationIcon size={18} aria-hidden="true" />
-              <select value={city} onChange={e => setCity(e.target.value)}>
+              <select
+                value={city}
+                onChange={(e) => {
+                  setCity(e.target.value);
+                }}
+              >
                 {cities.map(c => (
                   <option key={c}>{c}</option>
                 ))}
@@ -269,28 +262,28 @@ export function HostPartnersScreen({
             <button
               type="button"
               className={subTab === 'sent' ? s('primaryAction') : s('secondaryAction')}
-              onClick={() => setSubTab('sent')}
+              onClick={() => {
+                setSubTab('sent');
+              }}
             >
               Sent {hostSlotRequests.length}
             </button>
             <button
               type="button"
               className={subTab === 'incoming' ? s('primaryAction') : s('secondaryAction')}
-              onClick={() => setSubTab('incoming')}
+              onClick={() => {
+                setSubTab('incoming');
+              }}
             >
               Incoming 1
             </button>
           </div>
 
-          <div className={`${s('partnerTable')} ${s('requestTable')}`} role="table" aria-label="Requests table">
-            <div className={s('tableHead')} role="row">
-              <span role="columnheader">Partner</span>
-              <span role="columnheader">Type</span>
-              <span role="columnheader">Request</span>
-              <span role="columnheader">Date</span>
-              <span role="columnheader">Status</span>
-              <span role="columnheader">Action</span>
-            </div>
+          <PartnerTable styles={styles} variant="requestTable" ariaLabel="Requests table">
+            <PartnerTableHeader
+              styles={styles}
+              columns={['Partner', 'Type', 'Request', 'Date', 'Status', 'Action']}
+            />
             {subTab === 'sent' ? (
               hostSlotRequests.map(r => (
                 <div key={r.id} className={s('partnerRow')} role="row">
@@ -352,31 +345,30 @@ export function HostPartnersScreen({
                 </span>
               </div>
             )}
-          </div>
+          </PartnerTable>
         </>
       )}
 
       {/* ── Partner Drawer ── */}
-      {selected ? (
-        <div className={s('overlay')}>
-          <button type="button" className={s('dismiss')} onClick={() => setSelected(null)} />
-          <aside className={s('drawer')} role="dialog" aria-label="Partner profile">
-            <button
-              type="button"
-              className={s('close')}
-              aria-label="Close partner details"
-              onClick={() => setSelected(null)}
-            >
-              ✕
-            </button>
-            <div className={s('drawerPortrait')} data-tone="amber">
-              {selected.name.split(' ').map(w => w[0]).join('').slice(0, 2)}
-            </div>
-            <h2>{selected.name}</h2>
-            <p>
-              {selected.kind === 'venue' ? 'Venue' : 'Promoter'} · {selected.city}
-              {selected.verified ? ' · Verified' : ''}
-            </p>
+      <PartnerDrawerShell
+        styles={styles}
+        open={Boolean(selected)}
+        onClose={() => {
+          setSelected(null);
+        }}
+        ariaLabel="Partner profile"
+        closeLabel="Close partner details"
+        title={selected?.name ?? ''}
+        subtitle={
+          selected
+            ? `${selected.kind === 'venue' ? 'Venue' : 'Promoter'} · ${selected.city}${selected.verified ? ' · Verified' : ''}`
+            : ''
+        }
+        initials={selected ? selected.name.split(' ').map(w => w[0]).join('').slice(0, 2) : ''}
+        tone="amber"
+      >
+        {selected ? (
+          <>
             <dl>
               <div>
                 <dt>Relationship</dt>
@@ -406,9 +398,9 @@ export function HostPartnersScreen({
                 View full profile
               </Link>
             </footer>
-          </aside>
-        </div>
-      ) : null}
+          </>
+        ) : null}
+      </PartnerDrawerShell>
     </div>
   );
 }

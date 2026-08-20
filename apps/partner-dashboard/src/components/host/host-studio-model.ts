@@ -224,13 +224,6 @@ export const hostCampaigns = [
   ['Event announcement', 'Email', '—', 'Draft', 'Result unavailable'],
 ] as const;
 
-export const hostPayouts = [
-  ['4 Jul 2026', 'Neon Nights: Afrobeats', 'Paid', '₹1,24,500'],
-  ['27 Jun 2026', 'Sunset Sessions', 'Paid', '₹92,400'],
-  ['20 Jun 2026', 'Bollywood Brunch', 'Paid', '₹78,250'],
-  ['18 Jul 2026', 'Neon Nights: Afrobeats', 'Scheduled', '₹86,200'],
-] as const;
-
 export const hostNotifications = [
   {
     id: 'invitation',

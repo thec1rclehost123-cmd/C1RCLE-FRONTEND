@@ -45,7 +45,7 @@ export const venueNotifications: readonly VenueNotificationRecord[] = [
     summary: 'A Neon Nights campaign is scheduled.',
     time: 'Yesterday, 4:30 PM',
     unread: false,
-    destination: '/venue/marketing/history',
+    destination: '/venue/marketing?tab=history',
   },
   {
     id: 'staff-access',
@@ -54,7 +54,7 @@ export const venueNotifications: readonly VenueNotificationRecord[] = [
     summary: 'Venue team access was updated.',
     time: 'Yesterday, 11:08 AM',
     unread: false,
-    destination: '/venue/settings/team',
+    destination: '/venue/settings?tab=team',
   },
 ];
 

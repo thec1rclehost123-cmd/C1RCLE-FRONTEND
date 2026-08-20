@@ -70,6 +70,22 @@
   box-shadow: var(--dashboard-shadow-card);
   padding: 20px;
 }
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.sectionHeader h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 560;
+}
+.sectionHeader p {
+  margin: 6px 0 0;
+  color: var(--partner-muted);
+  font-size: 12px;
+}
 .panel h2 {
   margin: 0;
   font-size: 16px;
@@ -83,6 +99,19 @@
 .identityGrid > div {
   display: grid;
   gap: 14px;
+}
+.avatar {
+  display: grid;
+  width: 120px;
+  height: 120px;
+  place-items: center;
+  border: 1px solid var(--partner-border);
+  border-radius: var(--dashboard-radius-control);
+  color: var(--partner-text);
+  background: var(--dashboard-control);
+  font-size: 28px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
 }
 .logoUpload {
   position: relative;
@@ -234,6 +263,36 @@
 }
 .note {
   color: var(--partner-muted);
+}
+.availabilityList {
+  display: grid;
+  gap: 8px;
+}
+.availabilityRow {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--partner-border);
+  border-radius: var(--dashboard-radius-row);
+  color: var(--partner-muted);
+  background: var(--dashboard-surface-elevated);
+  padding: 12px 14px;
+}
+.availabilityRow > span {
+  display: grid;
+  flex: 1;
+  gap: 4px;
+}
+.availabilityRow strong {
+  color: var(--partner-text);
+  font-size: 13px;
+}
+.availabilityRow small,
+.availabilityRow em {
+  color: var(--partner-muted);
+  font-size: 12px;
+  font-style: normal;
 }
 .team > header {
   display: flex;

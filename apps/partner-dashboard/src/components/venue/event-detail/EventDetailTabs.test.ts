@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildEventDetailTabDestinations } from './EventDetailTabs';
+import { isEventDetailTabActive } from './EventDetailLayout';
 
 describe('buildEventDetailTabDestinations', () => {
   it('creates one route destination for each approved event task tab', () => {
@@ -12,5 +13,32 @@ describe('buildEventDetailTabDestinations', () => {
       { label: 'Marketing', href: '/venue/events/neon-nights-afrobeats/marketing' },
       { label: 'Finance', href: '/venue/events/neon-nights-afrobeats/finance' },
     ]);
+  });
+});
+
+describe('query-driven event detail tabs', () => {
+  const pathname = '/promoter/events/neon-nights';
+
+  it.each(['summary', 'performance', 'orders', 'links', 'commission'])(
+    'selects the %s tab from URL state',
+    (id) => {
+      expect(
+        isEventDetailTabActive(pathname, id, {
+          id,
+          label: id,
+          href: `${pathname}?tab=${id}`,
+        }),
+      ).toBe(true);
+    },
+  );
+
+  it('does not select a different query tab', () => {
+    expect(
+      isEventDetailTabActive(pathname, 'orders', {
+        id: 'performance',
+        label: 'Performance',
+        href: `${pathname}?tab=performance`,
+      }),
+    ).toBe(false);
   });
 });

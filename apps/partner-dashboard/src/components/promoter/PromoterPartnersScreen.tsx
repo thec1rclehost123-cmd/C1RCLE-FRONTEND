@@ -3,7 +3,15 @@
 import Link from 'next/link';
 import { useMemo, useRef, useState } from 'react';
 
-import { CheckIcon, LocationIcon, SearchIcon } from '@c1rcle/icons';
+import { CheckIcon, LocationIcon } from '@c1rcle/icons';
+
+import {
+  PartnerDrawerShell,
+  PartnerModeNavigation,
+  PartnerSearchField,
+  PartnerTable,
+  PartnerTableHeader,
+} from '@/components/partner-shell/PartnerDirectoryUi';
 
 import styles from '../venue/screens/VenuePartners.module.css';
 
@@ -76,63 +84,38 @@ export function PromoterPartnersScreen({
       </header>
 
       {/* ── Navigation Row ── */}
-      <div className={s('navRow')}>
-        {view !== 'requests' ? (
-          <nav className={s('tabs')} aria-label="Partner categories">
-            <button
-              type="button"
-              className={tab === 'venues' ? s('active') : undefined}
-              onClick={() => setTab('venues')}
-            >
-              {view === 'my' ? 'My venues' : 'Venues'}
-            </button>
-            <button
-              type="button"
-              className={tab === 'hosts' ? s('active') : undefined}
-              onClick={() => setTab('hosts')}
-            >
-              {view === 'my' ? 'My hosts' : 'Hosts'}
-            </button>
-          </nav>
-        ) : null}
-
-        <nav className={s('subnav')} aria-label="Partner views">
-          <button
-            type="button"
-            className={view === 'my' ? s('active') : undefined}
-            onClick={() => setView('my')}
-          >
-            My partners
-          </button>
-          <button
-            type="button"
-            className={view === 'find' ? s('active') : undefined}
-            onClick={() => setView('find')}
-          >
-            Find partners
-          </button>
-          <button
-            type="button"
-            className={view === 'requests' ? s('active') : undefined}
-            onClick={() => setView('requests')}
-          >
-            Requests
-          </button>
-        </nav>
-      </div>
+      <PartnerModeNavigation
+        styles={styles}
+        categories={[
+          { label: view === 'my' ? 'My venues' : 'Venues', value: 'venues' },
+          { label: view === 'my' ? 'My hosts' : 'Hosts', value: 'hosts' },
+        ]}
+        activeCategory={tab}
+        onCategoryChange={(value) => {
+          setTab(value as PromoterTab);
+        }}
+        views={[
+          { label: 'My partners', value: 'my' },
+          { label: 'Find partners', value: 'find' },
+          { label: 'Requests', value: 'requests' },
+        ]}
+        activeView={view}
+        onViewChange={(value) => {
+          setView(value as PromoterView);
+        }}
+        showCategories={view !== 'requests'}
+      />
 
       {/* ── Content View ── */}
       {view === 'my' ? (
         <>
-          <label className={s('search')}>
-            <span className={s('srOnly')}>Search {kind === 'venue' ? 'venues' : 'hosts'}</span>
-            <SearchIcon size={19} aria-hidden="true" />
-            <input
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder={`Search ${kind === 'venue' ? 'venues' : 'hosts'}`}
-            />
-          </label>
+          <PartnerSearchField
+            styles={styles}
+            label={`Search ${kind === 'venue' ? 'venues' : 'hosts'}`}
+            placeholder={`Search ${kind === 'venue' ? 'venues' : 'hosts'}`}
+            value={query}
+            onChange={setQuery}
+          />
 
           {myPartners.length === 0 ? (
             <section className={s('unavailable')}>
@@ -140,15 +123,22 @@ export function PromoterPartnersScreen({
               <p>Try searching for another name or discover new partners.</p>
             </section>
           ) : (
-            <div className={`${s('partnerTable')} ${s('relationshipTable')}`} role="table" aria-label={`${kind === 'venue' ? 'Venue' : 'Host'} partners`}>
-              <div className={s('tableHead')} role="row">
-                <span role="columnheader">{kind === 'venue' ? 'Venue' : 'Host'}</span>
-                <span role="columnheader">Location</span>
-                <span role="columnheader">Events together</span>
-                <span role="columnheader">Last event</span>
-                <span role="columnheader">Status</span>
-                <span role="columnheader">Action</span>
-              </div>
+            <PartnerTable
+              styles={styles}
+              variant="relationshipTable"
+              ariaLabel={`${kind === 'venue' ? 'Venue' : 'Host'} partners`}
+            >
+              <PartnerTableHeader
+                styles={styles}
+                columns={[
+                  kind === 'venue' ? 'Venue' : 'Host',
+                  'Location',
+                  'Events together',
+                  'Last event',
+                  'Status',
+                  'Action',
+                ]}
+              />
               {myPartners.map(p => (
                 <div key={p.id} className={s('partnerRow')} role="row">
                   <div role="cell" className={s('identity')}>
@@ -186,24 +176,27 @@ export function PromoterPartnersScreen({
                   </span>
                 </div>
               ))}
-            </div>
+            </PartnerTable>
           )}
         </>
       ) : view === 'find' ? (
         <>
           <div className={s('findControls')}>
-            <label className={s('search')}>
-              <span className={s('srOnly')}>Search by name or city</span>
-              <SearchIcon size={19} aria-hidden="true" />
-              <input
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder="Search by name or city"
-              />
-            </label>
+            <PartnerSearchField
+              styles={styles}
+              label="Search by name or city"
+              placeholder="Search by name or city"
+              value={query}
+              onChange={setQuery}
+            />
             <label className={s('cityFilter')}>
               <LocationIcon size={18} aria-hidden="true" />
-              <select value={city} onChange={e => setCity(e.target.value)}>
+              <select
+                value={city}
+                onChange={(e) => {
+                  setCity(e.target.value);
+                }}
+              >
                 {cities.map(c => (
                   <option key={c}>{c}</option>
                 ))}
@@ -252,28 +245,28 @@ export function PromoterPartnersScreen({
             <button
               type="button"
               className={subTab === 'incoming' ? s('primaryAction') : s('secondaryAction')}
-              onClick={() => setSubTab('incoming')}
+              onClick={() => {
+                setSubTab('incoming');
+              }}
             >
               Incoming 1
             </button>
             <button
               type="button"
               className={subTab === 'sent' ? s('primaryAction') : s('secondaryAction')}
-              onClick={() => setSubTab('sent')}
+              onClick={() => {
+                setSubTab('sent');
+              }}
             >
               Sent 2
             </button>
           </div>
 
-          <div className={`${s('partnerTable')} ${s('requestTable')}`} role="table" aria-label="Requests table">
-            <div className={s('tableHead')} role="row">
-              <span role="columnheader">Partner</span>
-              <span role="columnheader">Type</span>
-              <span role="columnheader">Request</span>
-              <span role="columnheader">Date</span>
-              <span role="columnheader">Status</span>
-              <span role="columnheader">Action</span>
-            </div>
+          <PartnerTable styles={styles} variant="requestTable" ariaLabel="Requests table">
+            <PartnerTableHeader
+              styles={styles}
+              columns={['Partner', 'Type', 'Request', 'Date', 'Status', 'Action']}
+            />
             {subTab === 'incoming' ? (
               <div className={s('partnerRow')} role="row">
                 <div role="cell" className={s('identity')}>
@@ -372,52 +365,49 @@ export function PromoterPartnersScreen({
                 </div>
               </>
             )}
-          </div>
+          </PartnerTable>
         </>
       )}
 
       {/* ── Partner Drawer ── */}
-      {selected ? (
-        <div className={s('overlay')}>
-          <button type="button" className={s('dismiss')} onClick={() => setSelected(null)} />
-          <aside className={s('drawer')} role="dialog" aria-label="Partner profile">
-            <button
-              type="button"
-              className={s('close')}
-              aria-label="Close partner details"
-              onClick={() => setSelected(null)}
-            >
-              ✕
-            </button>
-            <div className={s('drawerPortrait')} data-tone="violet">
-              {selected.name.split(' ').map(w => w[0]).join('').slice(0, 2)}
+      <PartnerDrawerShell
+        styles={styles}
+        open={Boolean(selected)}
+        onClose={() => {
+          setSelected(null);
+        }}
+        ariaLabel="Partner profile"
+        closeLabel="Close partner details"
+        title={selected?.name ?? ''}
+        subtitle={
+          selected
+            ? `${selected.kind === 'venue' ? 'Venue' : 'Host'} · ${selected.city}${selected.verified ? ' · Verified' : ''}`
+            : ''
+        }
+        initials={selected ? selected.name.split(' ').map(w => w[0]).join('').slice(0, 2) : ''}
+        tone="violet"
+      >
+        {selected ? (
+          <dl>
+            <div>
+              <dt>Relationship</dt>
+              <dd>{selected.status === 'partnered' ? 'Active partner' : 'Discoverable'}</dd>
             </div>
-            <h2>{selected.name}</h2>
-            <p>
-              {selected.kind === 'venue' ? 'Venue' : 'Host'} · {selected.city}
-              {selected.verified ? ' · Verified' : ''}
-            </p>
-            <dl>
-              <div>
-                <dt>Relationship</dt>
-                <dd>{selected.status === 'partnered' ? 'Active partner' : 'Discoverable'}</dd>
-              </div>
-              <div>
-                <dt>Category</dt>
-                <dd>{selected.category}</dd>
-              </div>
-              <div>
-                <dt>Events together</dt>
-                <dd>{selected.eventsTogether} events</dd>
-              </div>
-              <div>
-                <dt>Latest shared event</dt>
-                <dd>—</dd>
-              </div>
-            </dl>
-          </aside>
-        </div>
-      ) : null}
+            <div>
+              <dt>Category</dt>
+              <dd>{selected.category}</dd>
+            </div>
+            <div>
+              <dt>Events together</dt>
+              <dd>{selected.eventsTogether} events</dd>
+            </div>
+            <div>
+              <dt>Latest shared event</dt>
+              <dd>—</dd>
+            </div>
+          </dl>
+        ) : null}
+      </PartnerDrawerShell>
     </div>
   );
 }

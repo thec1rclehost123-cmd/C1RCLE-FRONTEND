@@ -83,9 +83,6 @@ export function HostEventsScreen({ tab = 'upcoming' }: { readonly tab?: string }
         </div>
 
         <div className={s('pageHeaderActions')}>
-          <Link className={s('analyticsAction')} href="/host/events/analytics">
-            Analytics <span aria-hidden="true">↗</span>
-          </Link>
           <div className={s('tabs')} role="tablist" aria-label="Event groups">
             {TABS.map((item, index) => (
               <button

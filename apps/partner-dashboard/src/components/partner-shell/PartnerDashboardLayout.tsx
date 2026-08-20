@@ -15,7 +15,6 @@ import {
   ForwardIcon,
   LinkIcon,
   MenuIcon,
-  NotificationIcon,
   SearchIcon,
   SettingsIcon,
   UsersIcon,
@@ -24,8 +23,14 @@ import {
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 
 import { PARTNER_SHELL_CONFIG } from './config';
+import { PartnerNotificationButton } from './PartnerNotificationButton';
+import { isPartnerNavigationItemActive } from './partner-navigation';
+import {
+  normalizePartnerRole,
+  resolvePartnerDashboardPath,
+} from './partner-role-routing';
 
-import type { PartnerDashboardLayoutProps, PartnerNavigationItem } from './types';
+import type { PartnerDashboardLayoutProps } from './types';
 import type { IconProps } from '@c1rcle/icons';
 import type { ComponentType } from 'react';
 
@@ -54,9 +59,6 @@ const initialsFrom = (name: string): string =>
     .join('')
     .slice(0, 2)
     .toUpperCase() || 'C1';
-
-const isActiveRoute = (pathname: string, item: PartnerNavigationItem): boolean =>
-  item.match === 'prefix' ? pathname.startsWith(item.href) : pathname === item.href;
 
 function AuthorizationSplash({ label }: { readonly label: string }) {
   return (
@@ -104,7 +106,7 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
   };
 
   const membership = auth.profile?.activeMembership ?? null;
-  const activeRole = membership?.partnerType === 'club' ? 'venue' : membership?.partnerType;
+  const activeRole = normalizePartnerRole(membership?.partnerType);
   const user: unknown = auth.user;
 
   useEffect(() => {
@@ -117,12 +119,19 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
       router.replace('/onboard');
       return;
     }
+    if (membership && !activeRole) {
+      router.replace('/partner/select-organization');
+      return;
+    }
     if (activeRole && activeRole !== partnerRole) {
       const storedRoute = membership?.partnerId
         ? window.localStorage.getItem(`partner:last-route:${membership.partnerId}`)
         : null;
+      const roleRoot = resolvePartnerDashboardPath(activeRole);
       router.replace(
-        storedRoute?.startsWith(`/${activeRole}`) ? storedRoute : `/${activeRole}/overview`,
+        roleRoot && storedRoute?.startsWith(`${roleRoot}/`)
+          ? storedRoute
+          : resolvePartnerDashboardPath(activeRole, 'overview') ?? '/partner/select-organization',
       );
     }
   }, [
@@ -204,7 +213,7 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
   const identityInitials = initialsFrom(displayName);
   const avatarInitials = partnerRole === 'venue' ? 'VP' : identityInitials;
   const activeNavigation =
-    visibleNavigation.find((item) => isActiveRoute(pathname, item)) ?? visibleNavigation[0];
+    visibleNavigation.find((item) => isPartnerNavigationItemActive(pathname, item)) ?? visibleNavigation[0];
   const pageIdentity = activeNavigation?.label ?? config.eyebrow;
 
   return (
@@ -256,7 +265,7 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
         <nav className="partner-sidebar-nav">
           {visibleNavigation.map((item) => {
             const NavIcon = ICONS[item.icon] ?? DashboardIcon;
-            const active = isActiveRoute(pathname, item);
+            const active = isPartnerNavigationItemActive(pathname, item);
             return (
               <Link
                 key={item.href}
@@ -355,20 +364,14 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
             >
               <SearchIcon size={19} aria-hidden="true" />
             </button>
-            <button
-              ref={notificationButtonRef}
-              type="button"
-              className="partner-notification-button"
-              aria-label="Notifications, 3 unread"
-              aria-expanded={notificationsOpen}
+            <PartnerNotificationButton
+              buttonRef={notificationButtonRef}
+              open={notificationsOpen}
               onClick={() => {
                 setNotificationsOpen((open) => !open);
                 setAccountOpen(false);
               }}
-            >
-              <NotificationIcon size={20} strokeWidth={1.7} aria-hidden="true" />
-              <span>3</span>
-            </button>
+            />
             <Link href={config.primaryAction.href} className="partner-primary-action">
               {config.primaryAction.label}
             </Link>

@@ -12,13 +12,27 @@ export default async function PromoterEventDetailPage({
 }) {
   const { eventId } = await params;
   const { tab } = await searchParams;
-  const [linked, discover] = await Promise.all([
+  const activeTab = tab === 'performance' || tab === 'orders' || tab === 'links' || tab === 'commission'
+    ? tab
+    : 'summary';
+  const needsOrders = activeTab === 'summary' || activeTab === 'orders';
+  const needsLinks = activeTab === 'summary' || activeTab === 'links';
+  const [linked, discover, overview, links] = await Promise.all([
     partnerRepositories.promoter.getLinkedEvents(),
     partnerRepositories.promoter.discoverEvents(),
+    needsOrders ? partnerRepositories.promoter.getOverview() : Promise.resolve(null),
+    needsLinks ? partnerRepositories.promoter.getLinks() : Promise.resolve([]),
   ]);
 
   const event = [...linked, ...discover].find((candidate) => candidate.id === eventId);
   if (!event) notFound();
 
-  return <PromoterEventDetailScreen event={event} activeTab={tab ?? 'summary'} />;
+  return (
+    <PromoterEventDetailScreen
+      event={event}
+      orders={overview?.recentOrders ?? []}
+      links={links}
+      activeTab={activeTab}
+    />
+  );
 }

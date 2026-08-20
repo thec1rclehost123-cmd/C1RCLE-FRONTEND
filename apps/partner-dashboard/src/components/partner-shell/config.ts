@@ -68,7 +68,7 @@ export const PARTNER_SHELL_CONFIG: Readonly<Record<PartnerDashboardRole, Partner
         label: 'Finance',
         href: '/host/finance',
         icon: 'wallet-cards',
-        match: 'exact',
+        match: 'prefix',
         permission: 'VIEW_FINANCIALS',
       },
       { label: 'Settings', href: '/host/settings', icon: 'settings', match: 'exact' },
@@ -98,7 +98,7 @@ export const PARTNER_SHELL_CONFIG: Readonly<Record<PartnerDashboardRole, Partner
         label: 'Finance',
         href: '/promoter/finance',
         icon: 'wallet-cards',
-        match: 'exact',
+        match: 'prefix',
         permission: 'VIEW_FINANCIALS',
       },
       {

@@ -15,6 +15,10 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { getFirebaseAuth } from '@/lib/firebase/client';
+import {
+  normalizePartnerRole,
+  resolvePartnerDashboardPath,
+} from '@/components/partner-shell/partner-role-routing';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 type UserType = 'venue' | 'host' | 'promoter';
@@ -243,8 +247,10 @@ function LoginForm() {
       if (callback) {
         router.replace(callback);
       } else {
-        const pt = (profile.activeMembership as any).partnerType;
-        router.replace(`/${pt || userType || 'venue'}`);
+        router.replace(
+          resolvePartnerDashboardPath(profile.activeMembership.partnerType, 'overview') ??
+            '/partner/select-organization',
+        );
       }
     } else if (!isApproved && profile !== null) {
       // profile is loaded (not null) but user is not approved — safe to reject.
@@ -314,23 +320,20 @@ function LoginForm() {
         const userData = data.user || {};
         const onboardingRequest = data.onboarding?.onboardingRequest || null;
 
-        let assignedType: string | null = null;
+        let assignedType: ReturnType<typeof normalizePartnerRole> = null;
 
         // Priority 1: JWT custom claims set by admin approval — available immediately
         // after admin sets them, no Firestore membership query needed.
         if (claims['partnerType']) {
-          const pt = String(claims['partnerType']);
-          assignedType = pt === 'venue' || pt === 'club' ? 'venue' : pt;
+          assignedType = normalizePartnerRole(claims['partnerType']);
         }
 
         // Priority 2: activeMembership.partnerType from the /me response — comes from
         // the partner_memberships collection, more reliable than the users.role field.
         if (!assignedType && userData.activeMembership?.partnerType) {
-          const pt = userData.activeMembership.partnerType;
-          assignedType = pt === 'venue' || pt === 'club' ? 'venue' : pt;
+          assignedType = normalizePartnerRole(userData.activeMembership.partnerType);
         } else if (data.activeMembership?.partnerType) {
-          const pt = data.activeMembership.partnerType;
-          assignedType = pt === 'venue' || pt === 'club' ? 'venue' : pt;
+          assignedType = normalizePartnerRole(data.activeMembership.partnerType);
         } else if (userData.role === 'host') {
           assignedType = 'host';
         } else if (userData.role === 'promoter') {
@@ -358,7 +361,7 @@ function LoginForm() {
             ) {
               // Approved but missing role/activeMembership — rare edge.
               // Let the user through so they land on their partner dashboard.
-              assignedType = onboardingRequest.type || null;
+              assignedType = normalizePartnerRole(onboardingRequest.type);
               if (!assignedType) {
                 setError('Application approved, but workspace type unknown. Contact support.');
                 await auth.signOut();
@@ -391,7 +394,7 @@ function LoginForm() {
         }
       }
 
-      router.push(`/${userType || 'venue'}`);
+      router.push(resolvePartnerDashboardPath(userType) ?? '/partner/select-organization');
     } catch (err: any) {
       console.error('Login error:', err);
       if (err.code === 'auth/user-not-found') {
@@ -436,19 +439,16 @@ function LoginForm() {
         const userData = data.user || {};
         const onboardingRequest = data.onboarding?.onboardingRequest || null;
 
-        let assignedType: string | null = null;
+        let assignedType: ReturnType<typeof normalizePartnerRole> = null;
 
         if (claims['partnerType']) {
-          const pt = String(claims['partnerType']);
-          assignedType = pt === 'venue' || pt === 'club' ? 'venue' : pt;
+          assignedType = normalizePartnerRole(claims['partnerType']);
         }
 
         if (!assignedType && userData.activeMembership?.partnerType) {
-          const pt = userData.activeMembership.partnerType;
-          assignedType = pt === 'venue' || pt === 'club' ? 'venue' : pt;
+          assignedType = normalizePartnerRole(userData.activeMembership.partnerType);
         } else if (data.activeMembership?.partnerType) {
-          const pt = data.activeMembership.partnerType;
-          assignedType = pt === 'venue' || pt === 'club' ? 'venue' : pt;
+          assignedType = normalizePartnerRole(data.activeMembership.partnerType);
         } else if (userData.role === 'host') {
           assignedType = 'host';
         } else if (userData.role === 'promoter') {
@@ -470,7 +470,7 @@ function LoginForm() {
               onboardingRequest.status === 'verified' ||
               onboardingRequest.status === 'approved'
             ) {
-              assignedType = onboardingRequest.type || null;
+              assignedType = normalizePartnerRole(onboardingRequest.type);
               if (!assignedType) {
                 setError('Application approved, but workspace type unknown. Contact support.');
                 await auth.signOut();
@@ -491,7 +491,7 @@ function LoginForm() {
           }
         }
 
-        router.push(`/${assignedType}`);
+        router.push(resolvePartnerDashboardPath(assignedType) ?? '/partner/select-organization');
       }
     } catch (err: any) {
       console.error('Google login error:', err);
@@ -683,9 +683,14 @@ function LoginForm() {
                     const isActive = userType === type;
                     return (
                       <button
-                        key={type}
-                        type="button"
-                        onClick={() => setUserType(type)}
+                      key={type}
+                      type="button"
+                      onClick={() => {
+                        setUserType(type);
+                        const params = new URLSearchParams(searchParams.toString());
+                        params.set('type', type);
+                        router.replace(`/login?${params.toString()}`);
+                      }}
                         className={`relative p-5 rounded-2xl border-2 transition-all duration-200 text-center group ${
                           isActive
                             ? 'border-[var(--accent-primary)] bg-[var(--accent-glow)]'

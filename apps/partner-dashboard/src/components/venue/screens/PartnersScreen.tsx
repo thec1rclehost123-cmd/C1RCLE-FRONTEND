@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -10,10 +9,16 @@ import {
   InviteIcon,
   LocationIcon,
   PhoneIcon,
-  SearchIcon,
   SendIcon,
 } from '@c1rcle/icons';
 
+import {
+  PartnerDrawerShell,
+  PartnerModeNavigation,
+  PartnerSearchField,
+  PartnerTable,
+  PartnerTableHeader,
+} from '@/components/partner-shell/PartnerDirectoryUi';
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 
 import { getDiscoverablePartners, getVenuePartners, venueStaff } from '../venue-partners-model';
@@ -103,37 +108,24 @@ export function PartnersScreen({
         ) : null}
       </header>
 
-      <div className={styles['navRow']}>
-        <nav className={styles['tabs']} aria-label="Partner groups">
-          {TAB_LINKS.map((item) => (
-            <Link
-              key={item.id}
-              href={item.href}
-              className={tab === item.id ? styles['active'] : undefined}
-              aria-current={tab === item.id ? 'page' : undefined}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-
-        {!isStaff ? (
-          <nav className={styles['subnav']} aria-label="Partner views">
-            <Link
-              href={`/venue/partners?tab=${tab}`}
-              className={view === 'my' ? styles['active'] : undefined}
-            >
-              My partners
-            </Link>
-            <Link
-              href={`/venue/partners?tab=${tab}&view=find`}
-              className={view === 'find' ? styles['active'] : undefined}
-            >
-              Find partners
-            </Link>
-          </nav>
-        ) : null}
-      </div>
+      <PartnerModeNavigation
+        styles={styles}
+        categories={TAB_LINKS.map(({ id, label, href }) => ({ value: id, label, href }))}
+        activeCategory={tab}
+        views={
+          isStaff
+            ? undefined
+            : [
+                { label: 'My partners', value: 'my', href: `/venue/partners?tab=${tab}` },
+                {
+                  label: 'Find partners',
+                  value: 'find',
+                  href: `/venue/partners?tab=${tab}&view=find`,
+                },
+              ]
+        }
+        activeView={view}
+      />
 
       {isStaff ? (
         <StaffDirectory canManage={auth.canDo('canManageStaff')} />
@@ -160,28 +152,26 @@ function MyPartners({ kind }: { readonly kind: VenuePartnerKind }) {
 
   return (
     <>
-      <label className={styles['search']}>
-        <span className={styles['srOnly']}>Search {kind === 'host' ? 'hosts' : 'promoters'}</span>
-        <SearchIcon size={19} aria-hidden="true" />
-        <input
-          value={query}
-          onChange={(event) => {
-            setQuery(event.target.value);
-          }}
-          placeholder={`Search ${kind === 'host' ? 'hosts' : 'promoters'}`}
-        />
-      </label>
-      <div
-        className={styles['partnerTable']}
-        role="table"
-        aria-label={`${kind === 'host' ? 'Host' : 'Promoter'} partners`}
+      <PartnerSearchField
+        styles={styles}
+        label={`Search ${kind === 'host' ? 'hosts' : 'promoters'}`}
+        placeholder={`Search ${kind === 'host' ? 'hosts' : 'promoters'}`}
+        value={query}
+        onChange={setQuery}
+      />
+      <PartnerTable
+        styles={styles}
+        ariaLabel={`${kind === 'host' ? 'Host' : 'Promoter'} partners`}
       >
-        <div className={styles['tableHead']} role="row">
-          <span role="columnheader">{kind === 'host' ? 'Host' : 'Promoter'}</span>
-          <span role="columnheader">{kind === 'host' ? 'Last event' : 'Recent event'}</span>
-          <span role="columnheader">Status</span>
-          <span role="columnheader">Action</span>
-        </div>
+        <PartnerTableHeader
+          styles={styles}
+          columns={[
+            kind === 'host' ? 'Host' : 'Promoter',
+            kind === 'host' ? 'Last event' : 'Recent event',
+            'Status',
+            'Action',
+          ]}
+        />
         {filtered.map((item) => (
           <div className={styles['partnerRow']} role="row" key={item.id}>
             <div role="cell" className={styles['identity']}>
@@ -215,7 +205,7 @@ function MyPartners({ kind }: { readonly kind: VenuePartnerKind }) {
             </span>
           </div>
         ))}
-      </div>
+      </PartnerTable>
       <PartnerDrawer
         key={selected?.id ?? 'closed-partner'}
         partner={selected}
@@ -247,17 +237,13 @@ function FindPartners({ kind }: { readonly kind: VenuePartnerKind }) {
   return (
     <>
       <div className={styles['findControls']}>
-        <label className={styles['search']}>
-          <span className={styles['srOnly']}>Search by name or city</span>
-          <SearchIcon size={19} aria-hidden="true" />
-          <input
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-            }}
-            placeholder="Search by name or city"
-          />
-        </label>
+        <PartnerSearchField
+          styles={styles}
+          label="Search by name or city"
+          placeholder="Search by name or city"
+          value={query}
+          onChange={setQuery}
+        />
         <label className={styles['cityFilter']}>
           <LocationIcon size={18} aria-hidden="true" />
           <span className={styles['srOnly']}>City</span>
@@ -439,36 +425,19 @@ function PartnerDrawer({
   const historyId = `${partner.id}-event-history`;
   const eventVerb = partner.kind === 'host' ? 'hosted' : 'promoted';
   return (
-    <div className={styles['overlay']}>
-      <button
-        type="button"
-        className={styles['dismiss']}
-        aria-label="Close partner details"
-        onClick={closeAndRestore}
-      />
-      <aside
-        ref={drawerRef}
-        className={styles['drawer']}
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${partner.name} partner details`}
-      >
-        <button
-          ref={closeRef}
-          type="button"
-          className={styles['close']}
-          aria-label="Close partner details"
-          onClick={closeAndRestore}
-        >
-          <CloseIcon size={20} aria-hidden="true" />
-        </button>
-        <div className={styles['drawerPortrait']} data-tone={partner.tone}>
-          {partner.initials}
-        </div>
-        <h2>{partner.name}</h2>
-        <p>
-          {partner.kind === 'host' ? 'Host' : 'Promoter'} · {partner.city}
-        </p>
+    <PartnerDrawerShell
+      styles={styles}
+      open
+      onClose={closeAndRestore}
+      ariaLabel={`${partner.name} partner details`}
+      closeLabel="Close partner details"
+      title={partner.name}
+      subtitle={`${partner.kind === 'host' ? 'Host' : 'Promoter'} · ${partner.city}`}
+      initials={partner.initials}
+      tone={partner.tone}
+      drawerRef={drawerRef}
+      closeRef={closeRef}
+    >
         <dl>
           <div>
             <dt>
@@ -546,8 +515,7 @@ function PartnerDrawer({
             </button>
           ) : null}
         </footer>
-      </aside>
-    </div>
+    </PartnerDrawerShell>
   );
 }
 

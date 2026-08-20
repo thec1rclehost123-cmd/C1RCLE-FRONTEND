@@ -1,18 +1,48 @@
-import { DashboardButton, DashboardPageHeader } from '@/components/partner-shell/DashboardUi';
-import { PromoterNetworkProfile } from '@/components/promoter/PromoterNetworkProfile';
-import { PromoterProfileEditor } from '@/components/promoter/PromoterProfileEditor';
-import { PromoterProfileShareButton } from '@/components/promoter/PromoterShareActions';
+import { AccountIcon, BankIcon, LockedIcon } from '@c1rcle/icons';
+
+import { PartnerSettingsScreen } from '@/components/partner-shell/PartnerSettingsScreen';
 import { partnerRepositories } from '@/lib/partner/repositories';
 
-export default async function PromoterSettingsPage() {
-  const [profile, networkProfile] = await Promise.all([
+export default async function PromoterSettingsPage({
+  searchParams,
+}: {
+  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const requestedTab = params['tab'];
+  const tab = requestedTab === 'payout' || requestedTab === 'security' ? requestedTab : 'profile';
+  const [profile, finance, links] = await Promise.all([
     partnerRepositories.promoter.getProfile(),
-    partnerRepositories.promoter.getNetworkProfile(),
+    tab === 'payout' ? partnerRepositories.promoter.getFinance() : Promise.resolve(null),
+    tab === 'profile' ? partnerRepositories.promoter.getLinks() : Promise.resolve([]),
   ]);
-  return (
-    <>
-      <DashboardPageHeader eyebrow="Trust profile" title="Profile & settings" description="Shape the private performance profile that verified venues and hosts use when deciding who to work with." actions={<><PromoterProfileShareButton /><DashboardButton href={`/partner-network/promoters/${profile.id}`} tone="primary">View partner profile</DashboardButton></>} />
-      <div className="promoter-settings-grid"><PromoterProfileEditor profile={profile} /><section><div className="promoter-profile-preview-label"><span>Venue & host preview</span><small>No revenue is shown</small></div><PromoterNetworkProfile data={networkProfile} /></section></div>
-    </>
-  );
+  const accountParts = finance?.payoutAccount.split(' ');
+  const linkParts = links[0]?.shortUrl.split('/');
+  return <PartnerSettingsScreen config={{
+    roleLabel: 'Promoter',
+    basePath: '/promoter/settings',
+    tabs: [
+      { id: 'profile', label: 'Promoter profile', icon: AccountIcon },
+      { id: 'payout', label: 'Payout account', icon: BankIcon },
+      { id: 'security', label: 'Security', icon: LockedIcon },
+    ],
+    profile: {
+      name: profile.name,
+      handle: profile.handle,
+      city: profile.city,
+      bio: profile.bio,
+      verified: profile.verified,
+      linkIdentity: linkParts?.length && linkParts.length > 1 ? linkParts[1] : undefined,
+    },
+    ...(finance
+      ? {
+          payout: {
+            bankName: accountParts?.[0],
+            maskedAccount: accountParts?.slice(1).join(' '),
+            status: finance.kycStatus === 'verified' ? 'Verified' : finance.kycStatus === 'pending' ? 'Pending' : 'Unavailable',
+            nextPayout: finance.nextPayout,
+          },
+        }
+      : {}),
+  }} tab={tab} />;
 }

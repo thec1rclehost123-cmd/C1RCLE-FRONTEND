@@ -34,8 +34,10 @@ export function VenueNotificationDrawer({
             time: item.time,
             destination: item.href,
           }))
-      : venueNotifications.slice(0, 3);
-  const allHref = role === 'host' ? '/host/notifications' : '/venue/notifications';
+      : role === 'venue'
+        ? venueNotifications.slice(0, 3)
+        : [];
+  const allHref = role === 'host' ? '/host/notifications' : role === 'venue' ? '/venue/notifications' : null;
   return (
     <aside
       ref={drawerRef}
@@ -51,8 +53,8 @@ export function VenueNotificationDrawer({
         </button>
       </header>
       <div>
-        {compact.map((item) => (
-          <Link key={item.id} href={item.destination ?? allHref} onClick={onClose}>
+        {compact.length ? compact.map((item) => (
+          <Link key={item.id} href={item.destination ?? allHref ?? '#'} onClick={onClose}>
             <CalendarIcon size={20} aria-hidden="true" />
             <span>
               <strong>{item.title}</strong>
@@ -60,11 +62,13 @@ export function VenueNotificationDrawer({
             </span>
             <time>{item.time}</time>
           </Link>
-        ))}
+        )) : <p role="status">Notifications are not available for this workspace.</p>}
       </div>
-      <Link className="partner-notification-all" href={allHref} onClick={onClose}>
-        View all notifications <ForwardIcon size={17} aria-hidden="true" />
-      </Link>
+      {allHref ? (
+        <Link className="partner-notification-all" href={allHref} onClick={onClose}>
+          View all notifications <ForwardIcon size={17} aria-hidden="true" />
+        </Link>
+      ) : null}
     </aside>
   );
 }

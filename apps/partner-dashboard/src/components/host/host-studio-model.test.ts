@@ -5,7 +5,6 @@ import {
   hostAvailability,
   hostEvents,
   hostPartners,
-  hostPayouts,
 } from './host-studio-model';
 
 describe('Host Studio normalized model', () => {
@@ -21,8 +20,7 @@ describe('Host Studio normalized model', () => {
     expect(hostAvailability.slots.every((slot) => slot.id.startsWith('slot-'))).toBe(true);
   });
 
-  it('keeps event and payout values normalized rather than page-owned', () => {
+  it('keeps event values normalized rather than page-owned', () => {
     expect(new Set(hostEvents.map((event) => event.id)).size).toBe(hostEvents.length);
-    expect(hostPayouts.every((payout) => payout[3].startsWith('₹'))).toBe(true);
   });
 });

@@ -939,100 +939,6 @@
 .host-marketing-preview-heading small {
   color: var(--partner-muted);
 }
-.host-settings-layout {
-  display: grid;
-  min-height: 540px;
-  grid-template-columns: 220px minmax(0, 1fr);
-  border: 1px solid var(--partner-border);
-  border-radius: var(--dashboard-radius-primary);
-  overflow: hidden;
-}
-.host-settings-layout > nav {
-  display: grid;
-  align-content: start;
-  border-right: 1px solid var(--partner-border);
-  background: var(--dashboard-control);
-  padding: 12px 0;
-}
-.host-settings-layout > nav button {
-  min-height: 52px;
-  border: 0;
-  margin: 4px 10px;
-  border-radius: var(--dashboard-radius-button);
-  color: #c7c9cd;
-  background: transparent;
-  padding: 0 20px;
-  text-align: left;
-}
-.host-settings-layout > nav button.is-active {
-  color: var(--dashboard-text);
-  background: var(--dashboard-selected);
-}
-.host-settings-body {
-  border: 0;
-  border-radius: 0;
-}
-.host-settings-body > .host-form-grid {
-  max-width: 900px;
-}
-.host-availability-week {
-  display: grid;
-  gap: 6px;
-  margin-bottom: 18px;
-}
-.host-availability-week label {
-  display: grid;
-  grid-template-columns: 24px 1fr auto;
-  min-height: 46px;
-  align-items: center;
-  border-bottom: 1px solid var(--partner-border);
-}
-.host-availability-week input {
-  accent-color: var(--partner-accent);
-}
-.host-availability-summary {
-  margin: 18px 0;
-  border: 1px solid var(--partner-border);
-  border-radius: var(--dashboard-radius-control);
-  padding: 14px;
-}
-.host-bank-row {
-  display: grid;
-  grid-template-columns: 1.2fr 1.2fr auto auto;
-  align-items: center;
-  gap: 18px;
-  border: 1px solid var(--partner-border);
-  border-radius: var(--dashboard-radius-control);
-  padding: 16px;
-}
-.host-bank-row > div {
-  display: grid;
-  gap: 4px;
-}
-.host-security-list {
-  display: grid;
-}
-.host-security-list article {
-  display: flex;
-  min-height: 92px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  border-bottom: 1px solid var(--partner-border);
-}
-.host-security-list article > div {
-  display: grid;
-  gap: 5px;
-}
-.host-unavailable {
-  display: block;
-  border: 1px solid rgb(245 158 11 / 25%);
-  border-radius: var(--dashboard-radius-control);
-  color: var(--partner-amber) !important;
-  background: rgb(245 158 11 / 7%);
-  padding: 10px 12px;
-  font-size: 12px;
-}
 .host-action-row {
   display: flex;
   justify-content: flex-end;
@@ -1187,27 +1093,6 @@
   .host-activity-grid {
     grid-template-columns: 1fr;
   }
-  .host-settings-layout {
-    grid-template-columns: 1fr;
-  }
-  .host-settings-layout > nav {
-    grid-auto-flow: column;
-    overflow-x: auto;
-    border-right: 0;
-    border-bottom: 1px solid var(--partner-border);
-  }
-  .host-settings-layout > nav button {
-    min-width: max-content;
-    border-bottom: 2px solid transparent;
-    border-left: 0;
-  }
-  .host-settings-layout > nav button.is-active {
-    border-bottom-color: var(--partner-accent);
-    border-left: 0;
-  }
-  .host-bank-row {
-    grid-template-columns: 1fr 1fr;
-  }
   .host-sticky-actions {
     bottom: -20px;
   }
@@ -1279,9 +1164,6 @@
   }
   .host-stepper {
     gap: 8px;
-  }
-  .host-bank-row {
-    grid-template-columns: 1fr;
   }
   .host-action-row,
   .host-sticky-actions {
