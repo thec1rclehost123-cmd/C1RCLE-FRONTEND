@@ -3,11 +3,16 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-
+import { apiClient } from '@/lib/api/client';
 import { getAuthClient, getAccessToken } from '@c1rcle/auth';
 import type { AuthClient, AuthUser } from '@c1rcle/auth';
-
 import type { DashboardProfile, PartnerMembership, PartnerType, StaffRole } from '@/lib/rbac/types';
+
+// V2 gateway endpoints (see API_V2_ROUTE_MANIFEST.csv). PARTNER_CONTEXT_ENDPOINT
+// has no live v2 route yet (contract gap flagged to backend) — failures degrade
+// gracefully to default permissions until the route ships.
+const ME_ENDPOINT = '/api/v2/auth/session';
+const PARTNER_CONTEXT_ENDPOINT = '/api/v2/partner/context';
 
 // ── Atomic permissions object — always set together to avoid race conditions ──
 interface PermissionsState {
@@ -185,21 +190,9 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
 
     const fetchUserData = async () => {
       try {
-        const token = getAccessToken();
-
-        if (controller.signal.aborted) return;
-
-        const res = await fetch('/api/auth/me', {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        const data = await apiClient.get<MeApiResponse>(ME_ENDPOINT, {
           signal: controller.signal,
         });
-
-        if (!res.ok) {
-          if (!controller.signal.aborted) setLoading(false);
-          return;
-        }
-
-        const data: MeApiResponse = await res.json();
 
         if (controller.signal.aborted) return;
 
@@ -250,12 +243,9 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
 
           // Fetch server-computed coarse permissions and default tab visibility.
           // Must happen server-side — frontend never derives permissions from role.
-          fetch('/api/auth/partner-context', {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-            signal: controller.signal,
-          })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((ctx) => {
+          apiClient
+            .get(PARTNER_CONTEXT_ENDPOINT, { signal: controller.signal })
+            .then((ctx: any) => {
               if (ctx && !controller.signal.aborted) {
                 const payload = ctx.data || ctx;
                 setGrantedPermissions(payload.permissions ?? []);
@@ -307,11 +297,8 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
       if (document.visibilityState === 'visible') {
         const elapsed = Date.now() - lastProfileFetchRef.current;
         if (elapsed > 60 * 1000) {
-          const token = getAccessToken();
-          fetch('/api/auth/me', {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          })
-            .then((r) => (r.ok ? r.json() : null))
+          apiClient
+            .get<MeApiResponse>(ME_ENDPOINT)
             .then((data) => {
               if (!data?.user) return;
               const userData = data.user;
@@ -339,12 +326,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
 
     const syncPermissions = async () => {
       try {
-        const token = getAccessToken();
-        const res = await fetch('/api/auth/me', {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        if (!res.ok) return;
-        const data: MeApiResponse | null = await res.json().catch(() => null);
+        const data = await apiClient.get<MeApiResponse>(ME_ENDPOINT);
         if (cancelled || !data?.user) return;
         const userData = data.user;
         const newTabVisibility = userData._staffTabVisibility ?? null;
