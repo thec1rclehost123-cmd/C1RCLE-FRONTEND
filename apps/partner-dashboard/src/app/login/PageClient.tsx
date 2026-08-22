@@ -225,6 +225,15 @@ function LoginForm() {
       } else {
         router.replace(`/${assignedType || userType || 'venue'}`);
       }
+    } else if (isApproved && profile !== null) {
+      // Approved but no membership data yet — V2 Phase 0 sessions carry
+      // none. Route to the selected workspace instead of stalling here.
+      const callback = searchParams.get('callbackUrl');
+      if (callback) {
+        router.replace(callback);
+      } else {
+        router.replace(`/${userType || 'venue'}`);
+      }
     } else if (!isApproved && profile !== null) {
       // profile is loaded (not null) but user is not approved — safe to reject.
       // We check profile !== null to avoid acting on the initial null state.

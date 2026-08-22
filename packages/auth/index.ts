@@ -85,6 +85,14 @@ function getBaseUrl(): string {
 
 // ─── HTTP Helpers ─────────────────────────────────────────────────────────────
 
+/** Unique ID per request attempt, per the V2 backend contract (X-Request-Id). */
+function generateRequestId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${String(Date.now())}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 class AuthError extends Error {
   code: string;
   status: number;
@@ -113,7 +121,9 @@ async function v2Request<T>(
   const base = getBaseUrl();
   const url = `${base}${path}`;
 
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = {
+    'x-request-id': generateRequestId(),
+  };
 
   const token = getAccessToken();
   if (token) {
@@ -216,6 +226,7 @@ async function hydrate(): Promise<void> {
     const refreshRes = await fetch(`${base}/api/v2/auth/refresh`, {
       method: 'POST',
       credentials: 'include',
+      headers: { 'x-request-id': generateRequestId() },
     });
 
     if (refreshRes.ok) {

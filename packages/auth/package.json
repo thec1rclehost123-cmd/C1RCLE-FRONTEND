@@ -4,5 +4,13 @@
   "private": true,
   "type": "module",
   "main": "./index.ts",
-  "types": "./index.ts"
+  "types": "./index.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@c1rcle/tsconfig": "workspace:*",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
+  }
 }

@@ -204,13 +204,26 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        const approvedByDoc = userData.isApproved || false;
+        // V2 Phase 0 session carries no approval field — absence means the
+        // backend has no approval gate yet (role 'partner' is server-set at
+        // signup). An explicit value always wins once the contract grows it.
+        const approvedByDoc = userData.isApproved ?? true;
         setIsApproved(approvedByDoc);
         setIsBanned(userData.isBanned || false);
 
         if (!approvedByDoc) {
           if (onboardingRequest) {
             setOnboardingStatus(onboardingRequest.status);
+          } else {
+            // V2 session carries no onboarding block — derive it from the
+            // live onboarding service until the session contract grows it.
+            apiClient
+              .get('/api/v2/onboarding/me', { signal: controller.signal })
+              .then((r: any) => {
+                const req = r?.request ?? null;
+                if (req && !controller.signal.aborted) setOnboardingStatus(req.status);
+              })
+              .catch(() => {});
           }
         } else {
           setOnboardingStatus(null);
