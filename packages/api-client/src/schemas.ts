@@ -6,6 +6,16 @@ import { z } from 'zod';
  * This package owns the frontend copy of every wire schema.
  */
 
+/* ─── T06 shared validation helpers ──────────────────────────────────────── */
+
+export const opaqueIdSchema = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, 'Invalid opaque id format');
+
+export const cursorSchema = z.string().min(1).max(256);
+
 export const roleSchema = z.enum(['guest', 'partner', 'admin']);
 
 export const userSchema = z.object({
@@ -16,10 +26,34 @@ export const userSchema = z.object({
   avatarUrl: z.url().nullable(),
 });
 
+/**
+ * The caller's resolved organization membership, embedded in the session
+ * response so the frontend can bootstrap org context (venue list, partner
+ * type, role) without a separate API call.
+ */
+export const activeMembershipSchema = z.object({
+  /** Organization ID — used as `x-organization-id` on subsequent requests. */
+  partnerId: opaqueIdSchema,
+  /** Operational partner type derived from the org's primary capability. */
+  partnerType: z.enum(['venue', 'host', 'promoter']),
+  /** Mapped role string the frontend expects (OWNER / MANAGER / STAFF). */
+  role: z.enum(['OWNER', 'MANAGER', 'STAFF']),
+  isActive: z.boolean(),
+  /** Unix milliseconds — createdAt of the membership record. */
+  joinedAt: z.number().int().nonnegative(),
+  partnerName: z.string().optional(),
+});
+
 export const sessionSchema = z.object({
   user: userSchema,
   expiresAt: z.number().int().positive(),
+  /**
+   * Present when the authenticated user belongs to at least one organization.
+   * Absent for brand-new accounts that haven't created an organization yet.
+   */
+  activeMembership: activeMembershipSchema.optional(),
 });
+
 
 /* ─── B10 auth bridge (Better Auth session ↔ frontend contract) ─────────── */
 
@@ -61,15 +95,6 @@ export function paginatedSchema<TItem extends z.ZodType>(itemSchema: TItem): z.Z
 
 export const noContentSchema = z.void();
 
-/* ─── T06 shared validation helpers ──────────────────────────────────────── */
-
-export const opaqueIdSchema = z
-  .string()
-  .min(1)
-  .max(64)
-  .regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, 'Invalid opaque id format');
-
-export const cursorSchema = z.string().min(1).max(256);
 
 export const paginationQuerySchema = z.object({
   cursor: cursorSchema.optional(),

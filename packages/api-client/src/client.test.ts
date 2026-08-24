@@ -301,6 +301,83 @@ describe('createApiClient', () => {
       });
       expect(onUnauthorized).toHaveBeenCalledOnce();
     });
+
+    it('calls refreshSession on 401 and retries with the new token', async () => {
+      let callCount = 0;
+      const seenTokens: (string | undefined)[] = [];
+      mockFetch((_url: unknown, init: unknown) => {
+        callCount++;
+        const headers = (init as RequestInit).headers as Record<string, string>;
+        seenTokens.push(headers['Authorization']);
+        if (callCount === 1) {
+          return errorResponse(401, { message: 'Token expired' });
+        }
+        return jsonResponse({ success: true, data: 'recovered' });
+      });
+
+      const refreshSession = vi.fn().mockReturnValue('fresh-token');
+      const client = createApiClient({
+        baseUrl: 'https://api.test.com/v2',
+        getAccessToken: () => 'stale-token',
+        refreshSession,
+        onUnauthorized: vi.fn(),
+        timeoutMs: 200,
+      });
+
+      const result = await client.get('/test', { skipRetry: true });
+      expect(result).toBe('recovered');
+      expect(refreshSession).toHaveBeenCalledOnce();
+      expect(seenTokens[0]).toBe('Bearer stale-token');
+      expect(seenTokens[1]).toBe('Bearer fresh-token');
+    });
+
+    it('falls back to getAccessToken when refreshSession is not provided', async () => {
+      let callCount = 0;
+      mockFetch(() => {
+        callCount++;
+        if (callCount === 1) {
+          return errorResponse(401, { message: 'Token expired' });
+        }
+        return jsonResponse({ success: true, data: 'recovered' });
+      });
+
+      const getAccessToken = vi.fn().mockReturnValue('rotated-token');
+      const client = createApiClient({
+        baseUrl: 'https://api.test.com/v2',
+        getAccessToken,
+        onUnauthorized: vi.fn(),
+        timeoutMs: 200,
+      });
+
+      const result = await client.get('/test', { skipRetry: true });
+      expect(result).toBe('recovered');
+      // Initial request + 401 refresh fallback
+      expect(getAccessToken).toHaveBeenCalledTimes(2);
+    });
+
+    it('supports async refreshSession implementations', async () => {
+      let callCount = 0;
+      mockFetch((_url: unknown, init: unknown) => {
+        callCount++;
+        const headers = (init as RequestInit).headers as Record<string, string>;
+        if (callCount === 1) {
+          return errorResponse(401, { message: 'Token expired' });
+        }
+        expect(headers['Authorization']).toBe('Bearer async-fresh-token');
+        return jsonResponse({ success: true, data: 'ok' });
+      });
+
+      const client = createApiClient({
+        baseUrl: 'https://api.test.com/v2',
+        getAccessToken: () => 'stale-token',
+        refreshSession: async () => await Promise.resolve('async-fresh-token'),
+        onUnauthorized: vi.fn(),
+        timeoutMs: 200,
+      });
+
+      const result = await client.get('/test', { skipRetry: true });
+      expect(result).toBe('ok');
+    });
   });
 
   describe('network retry', () => {

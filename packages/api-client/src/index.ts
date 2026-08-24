@@ -7,6 +7,7 @@ export type { ApiClientErrorOptions } from './errors.js';
 export {
   roleSchema,
   userSchema,
+  activeMembershipSchema,
   sessionSchema,
   signupRequestSchema,
   loginRequestSchema,

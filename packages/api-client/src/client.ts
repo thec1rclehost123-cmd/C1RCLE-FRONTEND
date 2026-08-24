@@ -15,6 +15,12 @@ export interface ApiClientConfig {
   readonly baseUrl: string;
   /** Called before each request to obtain the current access token. */
   readonly getAccessToken: () => string | null | Promise<string | null>;
+  /**
+   * Called when a request receives a 401 to refresh the session and obtain a
+   * fresh access token before retrying once. When omitted, the client falls
+   * back to calling `getAccessToken()` again.
+   */
+  readonly refreshSession?: () => string | null | Promise<string | null>;
   /** Called when a request fails with 401 and refresh also fails. */
   readonly onUnauthorized: () => void;
   /** Maximum number of network-level retries (default: 2). */
@@ -272,6 +278,7 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
     options: RequestOptions,
     retryCount = 0,
     authRetried = false,
+    tokenOverride?: string | null,
   ): Promise<T> {
     const { method, path, body, headers: customHeaders, query, signal } = options;
 
@@ -281,8 +288,9 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
     // Request ID for this attempt
     const requestId = generateRequestId();
 
-    // Get access token
-    const token = await config.getAccessToken();
+    // Get access token (a token returned by refreshSession takes precedence)
+    const token =
+      tokenOverride !== undefined ? tokenOverride : await config.getAccessToken();
 
     // Build headers
     const requestHeaders: Record<string, string> = {
@@ -342,13 +350,15 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
       if (response.status === 401 && !authRetried && !options.skipAuthRetry) {
         await response.text().catch(() => undefined);
 
+        const refresh = config.refreshSession ?? config.getAccessToken;
+        let freshToken: string | null = null;
         try {
-          await config.getAccessToken();
+          freshToken = await refresh.call(config);
         } catch {
           // Refresh failed — fall through to error
         }
 
-        return await doRequest<T>(options, retryCount, true);
+        return await doRequest<T>(options, retryCount, true, freshToken);
       }
 
       // 401 after auth retry (or skipAuthRetry) — session is dead
