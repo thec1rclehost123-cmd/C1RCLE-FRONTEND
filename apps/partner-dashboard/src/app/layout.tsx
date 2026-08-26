@@ -1,9 +1,7 @@
-import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
+import { Archivo, Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
 
 import './globals.css';
-import '@/components/partner-shell/partner-shell.css';
-import '@/components/partner-shell/dashboard-ui.css';
-import '@/components/partner-shell/partner-shell-v2.css';
+import '@/styles/partner-v3.css';
 
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
@@ -19,6 +17,13 @@ const bodyFont = Hanken_Grotesk({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700', '800'],
   variable: '--font-body',
+  display: 'swap',
+});
+
+const partnerV3Font = Archivo({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800', '900'],
+  variable: '--font-partner-v3',
   display: 'swap',
 });
 
@@ -44,7 +49,7 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
   return (
     <html
       lang="en"
-      className={`dark ${displayFont.variable} ${bodyFont.variable}`}
+      className={`dark ${displayFont.variable} ${bodyFont.variable} ${partnerV3Font.variable}`}
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >

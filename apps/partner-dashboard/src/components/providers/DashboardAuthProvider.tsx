@@ -133,7 +133,8 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!loading && user && profile?.mustChangePassword) {
       const isDashboardPath = pathname
-        ? pathname.startsWith('/venue') ||
+        ? pathname.startsWith('/partner/') ||
+          pathname.startsWith('/venue') ||
           pathname.startsWith('/host') ||
           pathname.startsWith('/promoter') ||
           pathname === '/'
@@ -209,8 +210,15 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
 
         if (controller.signal.aborted) return;
 
+        const requestedPartnerType =
+          user.partnerType === 'host' || user.partnerType === 'promoter' || user.partnerType === 'venue'
+            ? user.partnerType
+            : undefined;
         const res = await fetch('/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+            ...(requestedPartnerType ? { 'x-user-type': requestedPartnerType } : {}),
+          },
           signal: controller.signal,
         });
 
@@ -573,7 +581,8 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   }), [canDo, entityType, getIdToken, grantedPermissions, hasPermission, isApproved, isBanned, isPartnerSuspended, kycStatus, loading, memberships, onboardingStatus, permissions.actionPermissions, permissions.piiPolicy, permissions.tabVisibility, profile, serverDefaultTabVisibility, signIn, signInWithGoogle, signOut, signUp, subscriptionPlan, switchPartner, user]);
 
   const isDashboardPath = pathname
-    ? pathname.startsWith('/venue') ||
+    ? pathname.startsWith('/partner/') ||
+      pathname.startsWith('/venue') ||
       pathname.startsWith('/host') ||
       pathname.startsWith('/promoter') ||
       pathname === '/'
@@ -592,9 +601,9 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
 
   if ((loading && !isBypassPath) || redirectPending) {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center">
-        <div className="w-12 h-12 border-4 border-border-subtle border-t-white rounded-full animate-spin mb-4" />
-        <p className="text-zinc-500 text-xs font-black uppercase tracking-[0.3em]">
+      <div className="partner-v3-auth-loading" role="status" aria-live="polite">
+        <div className="partner-v3-spinner" aria-hidden="true" />
+        <p>
           {redirectPending ? 'Redirecting' : 'Authorizing Access'}
         </p>
       </div>

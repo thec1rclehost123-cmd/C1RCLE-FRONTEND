@@ -17,7 +17,7 @@ import {
 import { getFirebaseAuth } from '@/lib/firebase/client';
 import {
   normalizePartnerRole,
-  resolvePartnerDashboardPath,
+  resolvePartnerV3Path,
 } from '@/components/partner-shell/partner-role-routing';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
@@ -248,7 +248,7 @@ function LoginForm() {
         router.replace(callback);
       } else {
         router.replace(
-          resolvePartnerDashboardPath(profile.activeMembership.partnerType, 'overview') ??
+          resolvePartnerV3Path(profile.activeMembership.partnerType) ??
             '/partner/select-organization',
         );
       }
@@ -394,7 +394,7 @@ function LoginForm() {
         }
       }
 
-      router.push(resolvePartnerDashboardPath(userType) ?? '/partner/select-organization');
+      router.push(resolvePartnerV3Path(userType) ?? '/partner/select-organization');
     } catch (err: any) {
       console.error('Login error:', err);
       if (err.code === 'auth/user-not-found') {
@@ -491,7 +491,7 @@ function LoginForm() {
           }
         }
 
-        router.push(resolvePartnerDashboardPath(assignedType) ?? '/partner/select-organization');
+        router.push(resolvePartnerV3Path(assignedType) ?? '/partner/select-organization');
       }
     } catch (err: any) {
       console.error('Google login error:', err);
