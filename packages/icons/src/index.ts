@@ -110,6 +110,8 @@ export {
   UserPlus as InviteIcon,
   Video as VideoIcon,
   Wifi as WifiIcon,
+  CreditCard as CreditCardIcon,
+  Wallet as WalletIcon,
   Wine as BottleServiceIcon,
 } from 'lucide-react';
 
