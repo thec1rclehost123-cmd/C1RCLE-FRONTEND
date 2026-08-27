@@ -140,7 +140,7 @@ interface SessionState {
 }
 ```
 
-- `useSessionStore` (zustand, matching the documented `.d.ts`), `useSession()` → `{ isAuthenticated, isLoading, user }`.
+- `useSessionStore` (**hand-rolled `useSyncExternalStore` pattern — house style, no zustand**), `useSession()` → `{ isAuthenticated, isLoading, user }`.
 - `getAccessToken(): string | null` — **not a hook**; this is the `TokenProvider` handed to `@c1rcle/api-client`.
 - `setSession(session, accessToken, expiresAt)`, `clearSession()`, `markAnonymous()`.
 - Delete the `auth = { currentUser: null }` Firebase-shim export.
@@ -216,15 +216,17 @@ Data reads and business mutations do **not** go through the BFF — they call th
 |---|---|---|
 | Session state + network | `@c1rcle/auth` | §6 |
 | Server bootstrap | `@c1rcle/auth/server-session` | §6.3 |
-| Edge redirect | `src/middleware.ts` | §9.2 |
+| Edge redirect | `src/proxy.ts` | §9.2 |
 | Permission read | `src/lib/access/use-org-access.ts` | §9.4 |
 | React provider | `src/components/providers/session-provider.tsx` | thin: hydrate from server bootstrap, expose `useSession`, run the idle timer (§9.5), wire `createApiClient` once |
 
 Delete: `src/lib/firebase/client.ts`, `src/lib/auth/getCachedFirebaseIdToken.ts`, all `firebase/auth` + `firebase/storage` imports, the `firebase` dependency in `package.json`. Delete the `/auth/change-password` and `/forgot-password` dead references (password reset is a later slice — Better Auth supports it; no route in this slice).
 
-### 9.2 `middleware.ts` — UX redirect only
+### 9.2 `proxy.ts` — UX redirect only
 
 Runs on `/venue/:path*`, `/host/:path*`, `/promoter/:path*`, `/verify/:path*`. If the httpOnly session cookie is **absent**, redirect to `/login?next=<path>`. It **cannot** validate the cookie (no secret at the edge) — this is a fast UX redirect, not a security boundary. Real enforcement is per-request at the gateway (`401`/`403`). Documented as such in the file header.
+
+**Note:** Next 16 renamed `middleware.ts` → `proxy.ts`; add `src/proxy.ts` to the eslint default-export allowlist in `packages/eslint-config/src/next.ts:34-52`.
 
 ### 9.3 Organization selection
 
@@ -373,7 +375,7 @@ Small, in-layer, part of this slice's plan:
 1. **`packages/contracts` build + `scripts/export-contracts.mjs`** (§5). Wire `contract-parity.mjs` into `pnpm check` + pre-push both repos.
 2. **`buildActorContext` (`packages/core/src/infrastructure/utils.ts`)** — throw `UnauthorizedError` (code `unauthorized`), not a generic `Error`, when no actor is resolved on the firestore driver. Fixes routes without `requirePermission` (onboarding, admin) returning `500` instead of `401` when unauthenticated.
 3. **Verify `forwardAuthErrorResponse` (`routes/v2/auth/index.ts`)** emits a generic, non-enumerating message on login failure. Adjust if it leaks account existence.
-4. **Confirm Better Auth cookie flags** — `httpOnly`, `SameSite`, `Secure`-in-prod, rotation enabled, `trustedOrigins` includes the FE origins. Adjust config if needed.
+4. **Confirm Better Auth cookie flags** — `httpOnly`, `SameSite`, `Secure`-in-prod, rotation enabled, `useSecureCookies` prod-gated, `trustedOrigins` includes the FE origins (3000/3001/3002). Adjust config if needed.
 5. **Record D-024** in `docs/architecture/decisions.md` — the §2 conflict resolutions.
 
 Deferred (tracked, not this slice): **signed-URL issuing for onboarding documents** (`POST /onboarding/applications/:id/documents/upload-url`). Blocks §10.3.
@@ -393,7 +395,7 @@ Deferred (tracked, not this slice): **signed-URL issuing for onboarding document
 - Every response the auth/onboarding repositories parse has a `@c1rcle/contracts` schema (no `z.unknown()`).
 
 ### Integration / E2E (`apps/partner-dashboard/e2e`, Playwright)
-- Full journey against a real gateway on `STORAGE_DRIVER=firestore`: signup → start application → autosave → (documents step shows deferred state) → submit blocked without docs → seed an approved application via an admin call → `GET /onboarding/me` returns `approved` → `GET /organizations` → land in `/venue/overview` (or host/promoter) with a real session.
+- Full journey against a real gateway on `STORAGE_DRIVER=firestore`: signup → start application → autosave → (documents step shows deferred state) → submit blocked without docs → **seed an approved application via an admin call (`POST /api/v2/admin/onboarding/applications/:id/approve` needs platform-admin session) or fallback to backend seed script `apps/api-gateway/src/scripts/seed-platform-admin.ts`** → `GET /onboarding/me` returns `approved` → `GET /organizations` → land in `/venue/overview` (or host/promoter) with a real session.
 - Assert: zero requests to any deleted `/api/auth/*` or `/api/kyc/*` route; every `/api/v2` request carries `Authorization: Bearer` and (for org-scoped) matching `X-Organization-Id` + path; a forced 401 mid-session triggers exactly one refresh + retry.
 - Security: CSP header present and correct; no token in `localStorage`/`sessionStorage` at any point; login with a wrong password shows the generic message.
 
@@ -410,9 +412,9 @@ Each is one builder subagent, distinct files, its own tests, verified before the
 
 1. **Backend foundation** — `packages/contracts` build + `export-contracts.mjs`; `buildActorContext` → `UnauthorizedError`; parity wired; D-024 recorded. Gate: `pnpm check` green in `C1RCLE-BACKEND`; parity green.
 2. **FE `@c1rcle/contracts` + `@c1rcle/api-client`** — generate the FE package; `api-client/schemas.ts` re-exports; `@c1rcle/types` overlap collapsed; add `reauth` + `Retry-After`. Gate: `@c1rcle/api-client` tests green; typecheck green.
-3. **FE `@c1rcle/auth`** — `session-store.ts` (zustand), `auth-client.ts`, `server-session.ts`, refresh-stampede guard; delete the Firebase shim. Gate: unit tests green.
+3. **FE `@c1rcle/auth`** — `session-store.ts` (hand-rolled `useSyncExternalStore`), `auth-client.ts`, `server-session.ts`, refresh-stampede guard; delete the Firebase shim. Gate: unit tests green.
 4. **FE auth BFF** — the 5 route handlers, Origin check, CSRF double-submit, prototype-pollution strip, cookie re-scope. Gate: handler tests green.
-5. **FE app integration** — `session-provider.tsx`, `middleware.ts`, `createApiClient` wiring, idle timer, org-selection + `c1rcle.active-org` cookie, `use-org-access.ts`. Gate: provider tests green; app boots.
+5. **FE app integration** — `session-provider.tsx`, `proxy.ts`, `createApiClient` wiring, idle timer, org-selection + `c1rcle.active-org` cookie, `use-org-access.ts`. Gate: provider tests green; app boots.
 6. **FE `/login` + `/signup`** — rebuilt against `@c1rcle/auth`; delete the mock auth routes + Firebase client. Gate: login/signup E2E green; grep confirms no `/api/auth/{me,...}` calls remain.
 7. **FE `/onboard`** — rebuilt to the V2 4-string-profile + deferred-documents flow; delete the KYC mock routes + `/verify`; delete the `firebase` dependency. Gate: onboarding E2E green (through submit-blocked-without-docs).
 8. **CSP + headers + full E2E + parity** — `next.config.ts` CSP/HSTS; the full journey E2E; security assertions; `pnpm check` green in both repos.
@@ -421,7 +423,7 @@ Each is one builder subagent, distinct files, its own tests, verified before the
 
 ## 16. Open questions
 
-1. **Approved-application seeding for E2E** — does an admin endpoint exist to approve an onboarding application in a test run (`POST /api/v2/admin/onboarding/applications/:id/approve` needs a platform-admin session)? The plan needs a seed path. Fallback: a backend seed script.
+1. **Approved-application seeding for E2E** — does an admin endpoint exist to approve an onboarding application in a test run (`POST /api/v2/admin/onboarding/applications/:id/approve` needs a platform-admin session)? The plan needs a seed path. **Fallback: backend seed script `apps/api-gateway/src/scripts/seed-platform-admin.ts` exists.**
 2. **`displayName` at signup vs `legalName` in the profile** — the wizard collects a person's name at signup and a legal/entity name in the application. Confirm these are distinct fields the UI should ask for separately (they are, per the DTOs).
 3. **Password reset** — out of this slice. Better Auth supports it; a `/forgot-password` route + `POST /api/v2/auth/*` reset endpoints are a small follow-up. Confirm the backend exposes them or add to the punch list.
 4. **`c1rcle.active-org` cookie vs URL** — the spec uses the cookie as the source of truth with the URL segment as an override. Confirm this matches how the studio routes are structured (they are currently `/venue/*` with no org segment).
