@@ -8,6 +8,7 @@ import {
   GuestIcon,
   PendingIcon,
   PartnerIcon,
+  NavigationTopIcon,
   SettingsIcon,
   TrendUpIcon,
 } from '@c1rcle/icons';
@@ -30,7 +31,7 @@ const ICONS = {
   settings: SettingsIcon,
 } satisfies Record<StudioIconName, typeof DashboardIcon>;
 
-export function PartnerSidebar({ config, pathname }: { readonly config: StudioConfig; readonly pathname: string }) {
+export function PartnerSidebar({ config, pathname, onLayoutToggle }: { readonly config: StudioConfig; readonly pathname: string; readonly onLayoutToggle: () => void }) {
   return (
     <aside className={styles['sidebar']} aria-label={`${config.label} navigation`}>
       <div className={styles['brandBlock']}>
@@ -53,6 +54,10 @@ export function PartnerSidebar({ config, pathname }: { readonly config: StudioCo
         })}
       </nav>
       <div className={styles['sidebarFooter']}>
+        <button type="button" className={styles['sidebarLayoutSwitch']} onClick={onLayoutToggle}>
+          <NavigationTopIcon size={16} aria-hidden="true" />
+          <span>Top navigation</span>
+        </button>
         <span className={styles['fixtureLabel']}>FOUNDATION</span>
         <span className={styles['sidebarNote']}>V3 shell · read-only routes</span>
       </div>
