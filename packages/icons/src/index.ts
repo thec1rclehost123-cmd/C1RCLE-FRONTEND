@@ -30,6 +30,8 @@ export {
   LogOut as SignOutIcon,
   Menu as MenuIcon,
   Moon as DarkModeIcon,
+  PanelLeft as NavigationSideIcon,
+  PanelTop as NavigationTopIcon,
   Plus as AddIcon,
   Search as SearchIcon,
   Settings as SettingsIcon,

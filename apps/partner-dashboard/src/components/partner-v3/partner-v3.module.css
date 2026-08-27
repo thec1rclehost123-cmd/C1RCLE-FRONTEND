@@ -8,6 +8,10 @@
   font-family: var(--font-partner-v3), sans-serif;
 }
 
+.appTopNavigation {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .sidebar {
   position: sticky;
   top: 0;
@@ -104,6 +108,31 @@
   border-top: 1px solid rgb(255 255 255 / 11%);
 }
 
+.sidebarLayoutSwitch {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -4px -6px 8px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--partner-v3-radius-sm);
+  background: transparent;
+  color: var(--partner-v3-sidebar-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.sidebarLayoutSwitch:hover,
+.sidebarLayoutSwitch:focus-visible {
+  background: rgb(255 255 255 / 7%);
+  color: var(--partner-v3-sidebar-ink);
+  outline: none;
+}
+
 .fixtureLabel {
   color: var(--partner-v3-accent);
   font-size: 10px;
@@ -151,6 +180,81 @@
   font-size: 10px;
   font-weight: 500;
   letter-spacing: .05em;
+}
+
+.topbarBrand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex: none;
+}
+
+.topbarTopNavigation .globalSearchField {
+  width: min(230px, 18vw);
+}
+
+.topbarTopNavigation .accountName {
+  display: none;
+}
+
+.topNavigation {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.topNavigationList {
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  overflow-x: auto;
+  border: 1px solid var(--partner-v3-border);
+  border-radius: 14px;
+  background: var(--partner-v3-surface-muted);
+  scrollbar-width: none;
+}
+
+.topNavigationList::-webkit-scrollbar {
+  display: none;
+}
+
+.topNavigationItem {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  padding: 0 12px;
+  border-radius: 10px;
+  color: var(--partner-v3-ink-muted);
+  font-size: 13px;
+  font-weight: 650;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.topNavigationItem:hover,
+.topNavigationItem:focus-visible {
+  background: rgb(255 255 255 / 6%);
+  color: var(--partner-v3-ink);
+  outline: none;
+}
+
+.topNavigationItemActive {
+  background: var(--partner-v3-accent);
+  color: var(--partner-v3-accent-ink);
+}
+
+.topNavigationItemActive:hover,
+.topNavigationItemActive:focus-visible {
+  background: var(--partner-v3-accent);
+  color: var(--partner-v3-accent-ink);
+}
+
+.topModeMobileIdentity {
+  display: none;
 }
 
 .topbarActions {
@@ -219,6 +323,13 @@
 
 .mobileMenuButton {
   display: none;
+}
+
+.layoutSwitchButton {
+  flex: none;
+  border-color: var(--partner-v3-border);
+  border-radius: 11px;
+  background: var(--partner-v3-surface-muted);
 }
 
 .accountMenu {
@@ -646,12 +757,27 @@
   .accountName { display: none; }
 }
 
+@media (max-width: 1240px) and (min-width: 901px) {
+  .topbarTopNavigation { gap: 12px; padding-inline: 20px; }
+  .topbarTopNavigation .brandText { display: none; }
+  .topbarTopNavigation .globalSearchField { display: none; }
+  .topbarTopNavigation .globalSearchFieldMobileOpen { position: absolute; z-index: 100; top: 48px; right: 0; width: 320px; display: flex; background: var(--partner-v3-surface); }
+  .topbarTopNavigation .mobileSearchTrigger { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid var(--partner-v3-border); border-radius: 11px; background: var(--partner-v3-surface-muted); color: var(--partner-v3-ink); cursor: pointer; }
+  .topbarTopNavigation .accountName { display: none; }
+  .topNavigationItem { padding-inline: 11px; }
+}
+
 @media (max-width: 900px) {
   .app { display: block; }
   .main { height: 100dvh; }
   .sidebar { display: none; }
   .topbar { min-height: 64px; gap: 12px; padding: 0 16px; }
   .mobileMenuButton { display: inline-grid; }
+  .layoutSwitchButton,
+  .topbarBrand,
+  .topNavigation { display: none; }
+  .topModeMobileIdentity { display: grid; }
+  .topbarTopNavigation .topbarActions { margin-left: auto; }
   .topbarIdentity { font-size: 14px; }
   .topbarActions { gap: 4px; }
   .searchInput { width: min(190px, 38vw); }

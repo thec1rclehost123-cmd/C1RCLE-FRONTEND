@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 import { getStudioConfig, type StudioRole } from '@/studios/studio-config';
@@ -13,12 +13,34 @@ import { PartnerTopbar } from './PartnerTopbar';
 
 import type { PartnerShellInteractionData } from '@/data/partner-data-source';
 
+type PartnerNavigationLayout = 'side' | 'top';
+
+const NAVIGATION_LAYOUT_STORAGE_KEY = 'c1rcle.partner.navigation-layout';
+const NAVIGATION_LAYOUT_CHANGE_EVENT = 'partner-navigation-layout-change';
+
+const getStoredNavigationLayout = (): PartnerNavigationLayout => {
+  const savedLayout = window.localStorage.getItem(NAVIGATION_LAYOUT_STORAGE_KEY);
+  return savedLayout === 'top' ? 'top' : 'side';
+};
+
+const subscribeToNavigationLayout = (onStoreChange: () => void) => {
+  window.addEventListener('storage', onStoreChange);
+  window.addEventListener(NAVIGATION_LAYOUT_CHANGE_EVENT, onStoreChange);
+  return () => {
+    window.removeEventListener('storage', onStoreChange);
+    window.removeEventListener(NAVIGATION_LAYOUT_CHANGE_EVENT, onStoreChange);
+  };
+};
+
+const getServerNavigationLayout = (): PartnerNavigationLayout => 'side';
+
 export function PartnerShell({ studio, interactionData, children }: { readonly studio: StudioRole; readonly interactionData: PartnerShellInteractionData; readonly children: ReactNode }) {
   const config = getStudioConfig(studio);
   const pathname = usePathname();
   const router = useRouter();
   const auth = useDashboardAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const navigationLayout = useSyncExternalStore(subscribeToNavigationLayout, getStoredNavigationLayout, getServerNavigationLayout);
   const userName = auth.profile?.displayName ?? 'Partner';
   const appClass = styles['app'] ?? '';
   const activeLabel = config.navigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))?.label ?? config.label;
@@ -38,9 +60,15 @@ export function PartnerShell({ studio, interactionData, children }: { readonly s
     router.replace('/login');
   };
 
+  const toggleNavigationLayout = () => {
+    const nextLayout = navigationLayout === 'side' ? 'top' : 'side';
+    window.localStorage.setItem(NAVIGATION_LAYOUT_STORAGE_KEY, nextLayout);
+    window.dispatchEvent(new Event(NAVIGATION_LAYOUT_CHANGE_EVENT));
+  };
+
   return (
-    <div className={`${appClass} partner-v3-app`}>
-      <PartnerSidebar config={config} pathname={pathname} />
+    <div className={[appClass, navigationLayout === 'top' ? styles['appTopNavigation'] : '', 'partner-v3-app'].filter(Boolean).join(' ')} data-navigation-layout={navigationLayout}>
+      {navigationLayout === 'side' ? <PartnerSidebar config={config} pathname={pathname} onLayoutToggle={toggleNavigationLayout} /> : null}
       <div className={styles['main']}>
         <PartnerTopbar
           config={config}
@@ -48,8 +76,10 @@ export function PartnerShell({ studio, interactionData, children }: { readonly s
           userName={userName}
           searchData={interactionData.search}
           notificationsData={interactionData.notifications}
+          navigationLayout={navigationLayout}
           mobileOpen={mobileOpen}
           onMobileToggle={() => { setMobileOpen((value) => !value); }}
+          onLayoutToggle={toggleNavigationLayout}
           onSignOut={() => void signOut()}
         />
         <main className={styles['content']}>{children}</main>
