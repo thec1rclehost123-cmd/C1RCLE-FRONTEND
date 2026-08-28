@@ -9,16 +9,18 @@
 
 ---
 
-## Prerequisite (must land before any track starts) — Phase 2
+## Prerequisite — Phase 2 — DONE (2026-08-29, `ebe1df8` on `origin/staging`)
 
-One person does this solo first (~1 day):
-- Scaffold `packages/contracts` (copy `packages/config`), generate its `src/` by running `../C1RCLE-BACKEND/scripts/export-contracts.mjs --frontend .`, build it.
-- Add `packages/contracts`, `packages/api-client`, `packages/auth` to root `tsconfig.json` `references`.
-- `@c1rcle/api-client/src/schemas.ts` → re-export from `@c1rcle/contracts/client`.
-- Add `reauth?: () => Promise<boolean>` to `ApiClientConfig`; implement 401 → reauth → replay-once (recursion-guarded); honor `Retry-After` on 429.
-- Gate: `pnpm --filter @c1rcle/api-client test` + `pnpm --filter @c1rcle/contracts test` green; `node ../C1RCLE-BACKEND/scripts/contract-parity.mjs --frontend .` exits 0.
+`@c1rcle/contracts` is scaffolded, generated from the backend, and built.
+`@c1rcle/api-client` re-exports it and has `reauth` + `Retry-After`. Root
+`tsconfig.json` references are wired. `contract-parity.mjs` = 59/59.
 
-Plan Phase 2 has the full task list. Until this is merged to `staging`, the three tracks cannot import `@c1rcle/contracts`.
+**All three tracks can start now.** Branch off `staging` (which now includes
+`ebe1df8`). Import wire schemas from `@c1rcle/contracts` / `@c1rcle/contracts/client`.
+If a schema you need looks missing, check `packages/contracts/src/` first — it may
+just not be re-exported from `client.ts` yet (that's a one-line Track-2 fix, ask
+the lead). Never hand-edit `packages/contracts/src/**` — it is generated from the
+backend.
 
 ---
 
@@ -71,7 +73,7 @@ Each track = one branch off `staging`, one intern, one PR. **File ownership is s
 - `apps/partner-dashboard/src/app/onboard/**` — rebuild the wizard to the V2-reduced flow (spec §10, handoff §6.6):
   - Step 1: `requestedType` (venue/host/promoter) + `plan` (basic/silver/diamond — **no gold**).
   - Step 2: profile — required `legalName`, `contactPerson`, `phone`, `city`; optional `area`, `website`, `capacity`, `instagram`, `bio`, `businessType`, `registrationNumber`, `entityType`. Autosave via `PATCH /api/v2/onboarding/applications/:id` (`onboardingProfileSchema.partial()`, no idempotency key).
-  - Step 3: documents — render the honest **"Document upload will be enabled shortly"** state. No file inputs. (Backend signed-URL issuing is a deferred gap.)
+  - Step 3: documents — render the honest **"Document upload will be enabled shortly"** state. No file inputs. (Backend signed-URL issuing is a deferred gap — a founder is closing it in parallel, see below. If `POST /api/v2/onboarding/applications/:id/documents/upload-url` is live by the time you reach this step, wire the real flow: request an upload URL, `PUT` the file straight to it, then `POST .../documents { label, storagePath }`. Otherwise ship the deferred state behind one `DOCUMENTS_UPLOAD_ENABLED` flag so the switch is a one-line change.)
   - Step 4: review + `POST .../submit` (idempotency key). It 4xx's "missing documents" until the gap closes — surface as a clear message.
   - Resume from `GET /api/v2/onboarding/me`. Poll for `approved` → `GET /organizations` → studio.
   - Optional `verify-document` affordance → render `"Format check passed — pending manual review"`, **never "Verified"**, no green tick.
@@ -122,10 +124,17 @@ Each track = one branch off `staging`, one intern, one PR. **File ownership is s
 
 ## Integration order
 
-1. Phase 2 (contracts + api-client) → merge to `staging`.
+1. ~~Phase 2 (contracts + api-client)~~ — **DONE, `ebe1df8` on `origin/staging`.**
 2. Track 1 & Track 2 in parallel → merge to `staging` (Track 2 can land its stubs first).
 3. Track 3 (needs 1 + 2) → merge to `staging`.
 4. Phase 8: full journey E2E against a real Firestore-backed gateway + cross-repo `pnpm check`. One person, after all merged.
+
+**Running in parallel (not your work — the two founders, in `C1RCLE-BACKEND`):**
+backend Phase 5 completion + the onboarding document-upload gap. See
+`FOUNDER-TASKS-2026-08-29.md`. The only overlap point is Track 3 step 3
+(onboarding documents) — coded behind a flag so it flips on when the backend
+endpoint lands, no rework. If they add a contract schema, they run
+`export-contracts.mjs` and tell you; you `git pull` + rebuild `@c1rcle/contracts`.
 
 ## Local dev
 
