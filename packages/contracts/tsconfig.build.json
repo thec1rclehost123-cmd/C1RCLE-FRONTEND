@@ -1,0 +1,14 @@
+{
+  "extends": "@c1rcle/tsconfig/browser-library.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    // src/** is generated verbatim from C1RCLE-BACKEND/packages/contracts.
+    // The backend package is the authority for these files' cleanliness;
+    // relax the mirror so an unused re-export upstream doesn't break the FE.
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/*.test.tsx"]
+}

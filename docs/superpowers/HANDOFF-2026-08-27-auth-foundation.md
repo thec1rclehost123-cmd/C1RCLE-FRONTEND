@@ -1,8 +1,48 @@
 # HANDOFF — Circle1 V2: Frontend↔Gateway Auth Foundation
 
-**Date:** 2026-08-27
-**Reason:** session usage limit; work continues in a fresh context.
-**Author state:** brainstorming complete, design spec written + committed, implementation plan ~90% researched but **not yet authored**.
+**Date:** 2026-08-27 (updated 2026-08-28)
+**Author state:** design spec + implementation plan + intern-task split all written & committed. Phase 1 (backend) built. **THEN an accidental `rm` during verification deleted `C1RCLE-BACKEND/packages/{core,contracts}` uncommitted WIP — see §12. Recovery in progress; frontend plan paused until the backend is coherent + committed.**
+
+---
+
+## 12. INCIDENT 2026-08-28 — backend working-tree data loss + recovery
+
+**Cause:** during Phase-5 verification I ran `git worktree add /tmp/wt <sha>`, `cp -r <repo>/node_modules /tmp/wt/`, `git worktree remove -f /tmp/wt`. On Windows pnpm's `node_modules/@c1rcle/*` are **junctions**; `cp -r` copied them, `git worktree remove -f` (recursive delete) followed them back into the real repo and deleted the contents of `packages/core/` and `packages/contracts/`. Windows Recycle Bin bypassed; OneDrive over quota so nothing had synced. **Rule now: never `cp -r` / `rm -rf` / `git worktree remove` a tree containing `node_modules` on Windows — use `git show <sha>:<path>` / `git diff <sha>` instead.** (task-observer Obs 8.)
+
+**Lost:** ~8 days of uncommitted backend WIP under `packages/core/src/**` + `packages/contracts/src/**`. Also discovered **committed HEAD `162d1b7` was itself broken** — `apps/api-gateway/src/lib/v2-services.ts` imports `buildRepositories`/`buildActorContext` from a `packages/core/src/infrastructure/utils.ts` that was never committed. The working state only ever existed in the (now-lost) WIP.
+
+**Intact (never touched):** all of `apps/api-gateway/src/**` (door routes incl. untracked `routes/v2/door/`, `v2-services.ts`, `phase5-routes.ts`, `route-manifest.ts`, the Phase-1 auth-oracle edits + `auth/index.test.ts`), all `docs/`, `scripts/` (incl. `export-contracts.mjs`), `eslint.config.mjs`, **the entire `C1RCLE-FRONTEND` repo** (spec, plan, intern-tasks, generated `packages/contracts`), all git history.
+
+**Recovery done (2 subagents):**
+- `packages/core` + `packages/contracts` restored to `162d1b7` then rebuilt: `utils.ts` recovered verbatim (was in my context), `memory/index.ts` barrel created, 9 memory repos re-added to `memory-repositories.ts` from a 6-day-old dangling stash `08697d13` (re-verified vs current port interfaces), `contracts/organization.ts` + `client.ts` + `index.ts` recovered, `package.json` dist-exports re-applied. **`pnpm --filter @c1rcle/core {build,typecheck,test}` GREEN (232 pass), `check-boundaries` clean (1 pre-existing violation: `application/payments/razorpay-adapter.ts` — track G), `pnpm-lock.yaml` unchanged.** Bonus: fixed a `casSet` bug that was red at `162d1b7`.
+- The 5 repos feared lost (PlatformAdmin/ProposedAction/VerificationAttempt/ScannerSession/CoverWalletTxn, memory+firestore) turned out to exist in committed HEAD, consolidated into sibling files.
+- **Still open (subagent 2 running):** `apps/api-gateway` typecheck (9 errors) + 8 tests fail — the intact `routes/v2/door/scanner-routes.ts` calls `ScannerService` methods (`getSession`, `getScan`, `resolveTicket`, `resolveMagicTicket`, `generateMagicTicketQr`, type `TicketResolution`) whose implementation was in the lost `application/scanner/scanner-service.ts` WIP delta. Being reconstructed from the intact route + test files (the "resolve" methods = read-only twins of the existing `scanTicket`/`scanMagicTicket`). Plus 2 pre-existing committed cover-wallet-reconciliation bugs (id > 64 chars; opening-balance double-count) being fixed against the failing test.
+
+**Next once backend is green:** commit the whole recovered `C1RCLE-BACKEND` working tree as ONE coherent commit (it fixes the broken `162d1b7` + carries the Phase-1 auth-foundation changes + the recovered Phase-5 WIP). Message it as a recovery/consolidation commit. THEN resume the frontend plan at Phase 2 (Phase 1's backend deliverables are folded into the recovery commit). The `RECOVERED-utils.ts` + `aug21-stash/*` artifacts are in this session's scratchpad.
+
+### 12.1 — STATE AS OF 2026-08-28 14:00 (session usage limit hit — resets ~14:40 Asia/Kolkata)
+
+**`C1RCLE-BACKEND` — `packages/core` + `packages/contracts` RECOVERED & GREEN.** Uncommitted working-tree changes that ARE the recovery (keep these):
+- `M packages/contracts/{package.json, src/client.ts, src/contracts/organization.ts, src/index.ts}` — dist-exports + 9 lost org/venue schemas (invitation/availability/menu) restored from `aug21-stash`.
+- `M packages/core/src/infrastructure/{index.ts, memory/memory-repositories.ts}` — barrel wiring + 9 memory repos re-added.
+- `?? packages/core/src/infrastructure/{utils.ts, memory/index.ts}` — recovered verbatim / new barrel.
+- Verified: `pnpm --filter @c1rcle/core {build,typecheck,test}` green (232 pass, 3 pre-existing skips), `pnpm --filter @c1rcle/contracts build` green, `check-boundaries` = 1 pre-existing violation only (`application/payments/razorpay-adapter.ts`), `pnpm-lock.yaml` unchanged.
+
+**`C1RCLE-BACKEND` — `api-gateway` STILL BROKEN (the last recovery gap).** `pnpm --filter api-gateway typecheck` = 9 errors, all in the intact WIP file `apps/api-gateway/src/routes/v2/door/scanner-routes.ts`. `pnpm --filter api-gateway test` = 8 fail / 117 pass (`door/scanner-routes.test.ts` 5/12, `door/cover-wallet-routes.test.ts` 6/7; `door/door-sale-routes.test.ts` 4/4 pass). **THE FIX (bounded, ~1 file + 2 tiny bug fixes):**
+1. Add to `packages/core/src/application/scanner/scanner-service.ts` (+ export `TicketResolution` type via `application/index.ts`): `getSession(id)` and `getScan(checkInId)` (trivial repo reads); `resolveTicket(input)` / `resolveMagicTicket(input)` = **non-consuming twins of the existing `scanTicket` / `scanMagicTicket`** (extract the shared validation into a private helper; the "resolve" versions skip the `scanLedger` write + entitlement mutation, return a `TicketResolution` verdict); `generateMagicTicketQr(ticketId)` = rotating HMAC payload (`node:crypto`, ~30-60s TTL, match `magicQrResponseSchema` in `contracts/phase5.ts`, reuse the same secret `scanMagicTicket` VERIFIES with — do NOT enforce a ₹5000 threshold). Spec = the INTACT `scanner-routes.ts` + `scanner-routes.test.ts`.
+2. `packages/core/src/domain/models/cover-wallet-reconciliation.ts` — `createReconciliation()` id `REC-{uuid-eventId}-{date}-{ts}` is ~65 chars, fails `opaqueIdSchema.max(64)`. Shorten (hash/truncate the eventId segment or use a generated opaque id + eventId field).
+3. `packages/core/src/application/cover-wallet/cover-wallet-service.ts` — `runReconciliation()` double-counts `wallet.openingBalance` (it's already a `credit` txn). Don't add it separately.
+   (2 + 3 are pre-existing committed-HEAD bugs; the failing `cover-wallet-routes.test.ts` "reconciles ... no discrepancy" test is the spec.)
+> A subagent (a709d174) started #1, got scanner-service.ts to +291/-107 but died at the session limit before wiring the return object — I **reverted it to HEAD** (core is green). Redo from scratch; the task prompt is preserved in this session's transcript.
+
+**`C1RCLE-FRONTEND` — Phase 2 NOT started.** A subagent (a0f225a9) was dispatched with the full Phase-2 prompt but died at the session limit before touching anything. `packages/contracts/` is still just a generated `src/` (no `package.json`/tsconfig/eslint/vitest). `packages/api-client/src/**` mid-rebuild (not ours). Working tree clean of any subagent damage.
+
+**RESUME ORDER after the limit resets:**
+1. `C1RCLE-BACKEND`: finish the scanner-service reconstruction (§12.1 items 1-3) → `pnpm --filter api-gateway {typecheck,test}` green → `pnpm check` (accept the 1 pre-existing boundary violation + any pre-existing `@c1rcle/core` lint debt — note them, don't fix now).
+2. `C1RCLE-BACKEND`: commit the whole working tree as ONE recovery/consolidation commit (fixes broken `162d1b7` + Phase-1 + recovered Phase-5 WIP). This is the user's repo state to preserve — get their nod on the commit message.
+3. `C1RCLE-FRONTEND`: run Phase 2 (plan §Phase 2 — the a0f225a9 prompt covers it). Then Phase 3, 4, ... per the plan.
+
+**Deferred cleanup for track G (unchanged by the incident):** the razorpay `fetch()` boundary violation in `packages/core`, the `@c1rcle/core` lint debt (`any`s), the 6×501 door routes.
 
 ---
 

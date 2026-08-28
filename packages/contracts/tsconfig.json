@@ -5,7 +5,9 @@
     "composite": false,
     "declaration": false,
     "declarationMap": false,
-    "rootDir": "."
+    "rootDir": ".",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
   },
   "include": [
     "src/**/*.ts",

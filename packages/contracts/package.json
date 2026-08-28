@@ -1,11 +1,12 @@
 {
-  "name": "@c1rcle/api-client",
+  "name": "@c1rcle/contracts",
   "version": "0.0.0",
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./client": "./dist/client.js"
   },
   "types": "./dist/index.d.ts",
   "files": [
@@ -22,14 +23,12 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@c1rcle/config": "workspace:*",
-    "@c1rcle/contracts": "workspace:*",
-    "@c1rcle/types": "workspace:*",
     "zod": "4.4.3"
   },
   "devDependencies": {
     "@c1rcle/eslint-config": "workspace:*",
     "@c1rcle/tsconfig": "workspace:*",
+    "@types/node": "26.1.2",
     "@vitest/coverage-v8": "4.1.10",
     "eslint": "9.39.5",
     "jiti": "2.7.0",
