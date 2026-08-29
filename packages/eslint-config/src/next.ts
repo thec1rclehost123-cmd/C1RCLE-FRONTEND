@@ -47,6 +47,7 @@ export const nextConfig = defineConfig(
       'src/app/**/robots.ts',
       'src/app/**/manifest.ts',
       'src/middleware.ts',
+      'src/proxy.ts',
       'src/instrumentation.ts',
       'next.config.ts',
     ],
@@ -106,6 +107,8 @@ export const nextConfig = defineConfig(
             },
             {
               group: [
+                'firebase',
+                'firebase/*',
                 'firebase-admin',
                 'firebase-admin/*',
                 'pg',

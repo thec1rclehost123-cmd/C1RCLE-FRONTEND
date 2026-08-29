@@ -305,6 +305,7 @@ function checkSingleOwners(members: readonly WorkspaceMember[]): Violation[] {
 /** Rule 6 — this repository is frontend-only. */
 function checkNoBackendDependencies(members: readonly WorkspaceMember[]): Violation[] {
   const FORBIDDEN = [
+    'firebase',
     'firebase-admin',
     'pg',
     'mysql',
