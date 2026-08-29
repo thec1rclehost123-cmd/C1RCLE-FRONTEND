@@ -35,7 +35,11 @@ const markAnonymous = () => {
   clearSession();
 };
 
-const setSession = (session: { user: User }, accessToken: string, expiresAt: number) => {
+const setSession = (
+  session: { user: User },
+  accessToken: string | null,
+  expiresAt: number,
+) => {
   updateSession({ accessToken, session, expiresAt, status: 'authenticated' });
 };
 
