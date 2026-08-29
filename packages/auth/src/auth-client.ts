@@ -23,18 +23,34 @@ interface LoginInput {
 /** Fixed, non-oracular message for any authentication failure. */
 const GENERIC_AUTH_FAILURE = 'Authentication failed';
 
+/** Non-httpOnly CSRF cookie the BFF sets on login/signup; echoed on cookie-authed calls. */
+const CSRF_COOKIE = 'c1rcle.csrf';
+
 // Refresh-stampede guard: holds the in-flight promise so concurrent callers await the same one.
 let inFlightRefresh: Promise<boolean> | null = null;
 
 /**
- * API client for the auth BFF routes (`/api/auth/*`, same-origin).
+ * API client for the auth BFF routes (`/api/auth/*`), which live on the
+ * frontend origin — NOT the gateway. Pointing `baseUrl` at the current
+ * origin (rather than `NEXT_PUBLIC_API_BASE_URL`) is what keeps these calls
+ * same-origin so the httpOnly session cookie is sent and received.
  *
  * No `reauth` handler here on purpose: these functions ARE the reauth
- * primitives, so wiring `reauth` back into this client would recurse.
- * `getToken` is still supplied for the rare authenticated auth call.
+ * primitives, so wiring `reauth` back would recurse. `getToken` is still
+ * supplied for the rare authenticated auth call.
  */
 function createAuthClient() {
-  return createApiClient({ getToken: getAccessToken });
+  const baseUrl = typeof window === 'undefined' ? '' : window.location.origin;
+  return createApiClient({ baseUrl, getToken: getAccessToken });
+}
+
+/** Reads the double-submit CSRF token the BFF set, for the `x-csrf-token` header. */
+function csrfHeaders(): Record<string, string> {
+  if (typeof document === 'undefined') {
+    return {};
+  }
+  const match = new RegExp(`(?:^|;\\s*)${CSRF_COOKIE}=([^;]+)`).exec(document.cookie);
+  return match?.[1] !== undefined ? { 'x-csrf-token': decodeURIComponent(match[1]) } : {};
 }
 
 /**
@@ -102,6 +118,7 @@ export async function refresh(): Promise<boolean> {
         path: '/api/auth/refresh',
         body: null,
         schema: authBridgeResponseSchema,
+        headers: csrfHeaders(),
       });
 
       setSession({ user: response.user }, response.accessToken, response.expiresAt);
@@ -127,6 +144,7 @@ export async function logout(): Promise<void> {
       path: '/api/auth/logout',
       body: null,
       schema: noContentSchema,
+      headers: csrfHeaders(),
     });
   } catch {
     // Best-effort: the server session may already be gone, or the network may
