@@ -1,23 +1,17 @@
-'use client';
-
 import { useSyncExternalStore } from 'react';
 
-export type SessionStatus = 'anonymous' | 'authenticated' | 'unknown';
+import type { User } from '@c1rcle/contracts';
 
-export interface Session {
-  readonly userId?: string;
-}
+export type SessionStatus = 'unknown' | 'authenticated' | 'anonymous';
 
 export interface SessionState {
-  readonly session: Session | null;
+  readonly session: { user: User } | null;
   readonly accessToken: string | null;
+  readonly expiresAt: number | null;
   readonly status: SessionStatus;
-  readonly clearSession: () => void;
-  readonly markAnonymous: () => void;
-  readonly setSession: (session: Session, accessToken: string) => void;
 }
 
-type SessionPatch = Partial<Pick<SessionState, 'session' | 'accessToken' | 'status'>>;
+type SessionPatch = Partial<Pick<SessionState, 'session' | 'accessToken' | 'expiresAt' | 'status'>>;
 type SessionListener = () => void;
 
 const listeners = new Set<SessionListener>();
@@ -34,24 +28,22 @@ const updateSession = (patch: SessionPatch) => {
 };
 
 const clearSession = () => {
-  updateSession({ accessToken: null, session: null, status: 'anonymous' });
+  updateSession({ accessToken: null, session: null, expiresAt: null, status: 'anonymous' });
 };
 
 const markAnonymous = () => {
   clearSession();
 };
 
-const setSession = (session: Session, accessToken: string) => {
-  updateSession({ accessToken, session, status: 'authenticated' });
+const setSession = (session: { user: User }, accessToken: string, expiresAt: number) => {
+  updateSession({ accessToken, session, expiresAt, status: 'authenticated' });
 };
 
 let state: SessionState = {
   accessToken: null,
-  clearSession,
-  markAnonymous,
+  expiresAt: null,
   session: null,
-  setSession,
-  status: 'anonymous',
+  status: 'unknown',
 };
 
 const subscribe = (listener: SessionListener) => {
@@ -78,17 +70,12 @@ export function useSession() {
   return {
     isAuthenticated: sessionState.status === 'authenticated',
     isLoading: sessionState.status === 'unknown',
-    session: sessionState.session,
+    user: sessionState.session?.user ?? null,
   };
 }
 
-export function getAccessToken() {
+export function getAccessToken(): string | null {
   return state.accessToken;
 }
 
 export { clearSession, markAnonymous, setSession };
-
-// UI-only compatibility export. Real Firebase Auth wiring belongs to backend integration.
-export const auth = {
-  currentUser: null,
-};
