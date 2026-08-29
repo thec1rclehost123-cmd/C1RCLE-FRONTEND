@@ -22,10 +22,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "react": "19.2.8",
     "@c1rcle/api-client": "workspace:*",
     "@c1rcle/config": "workspace:*",
-    "@c1rcle/contracts": "workspace:*"
+    "@c1rcle/contracts": "workspace:*",
+    "server-only": "0.0.1"
   },
   "devDependencies": {
     "@c1rcle/eslint-config": "workspace:*",
