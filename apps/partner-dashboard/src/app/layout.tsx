@@ -1,9 +1,14 @@
 import { Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
+import { cookies } from 'next/headers';
 
 import './globals.css';
 import '@/components/partner-shell/partner-shell.css';
 import '@/components/partner-shell/dashboard-ui.css';
 import '@/components/partner-shell/partner-shell-v2.css';
+
+import { getServerSession } from '@c1rcle/auth/server-session';
+
+import { SessionProvider } from '@/components/providers/session-provider';
 
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
@@ -40,7 +45,9 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: { readonly children: ReactNode }) {
+export default async function RootLayout({ children }: { readonly children: ReactNode }) {
+  const session = await getServerSession((await cookies()).toString());
+
   return (
     <html
       lang="en"
@@ -48,7 +55,9 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
-      <body className="antialiased bg-[#0A0A0B] text-white">{children}</body>
+      <body className="antialiased bg-[#0A0A0B] text-white">
+        <SessionProvider initialUser={session}>{children}</SessionProvider>
+      </body>
     </html>
   );
 }
