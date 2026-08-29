@@ -246,6 +246,16 @@ function checkSingleOwners(members: readonly WorkspaceMember[]): Violation[] {
   const rawFetch = /(?<![.\w])fetch\s*\(/;
 
   /*
+   * The auth BFF proxy is the one sanctioned exception to the network-owner
+   * rule (frontend architecture README: `app/api` routes are allowed as
+   * approved BFFs). It must read the raw `Set-Cookie` header off the gateway
+   * response to re-scope the session cookie to the frontend origin — which
+   * `@c1rcle/api-client` (parsed JSON only) cannot do. Confined to this one
+   * module; the `single-env-owner` rule still applies to it.
+   */
+  const BFF_NETWORK_EXCEPTION = /(?:^|[/\\])src[/\\]lib[/\\]bff[/\\]/;
+
+  /*
    * The lint config package contains the *text* of these rules — the strings
    * "fetch(" and "process.env" appear inside the messages that forbid them.
    * Scanning it would flag the enforcement mechanism itself.
@@ -267,7 +277,11 @@ function checkSingleOwners(members: readonly WorkspaceMember[]): Violation[] {
 
       const source = readFileSync(file, 'utf8');
 
-      if (member.name !== NETWORK_OWNER && rawFetch.test(source)) {
+      if (
+        member.name !== NETWORK_OWNER &&
+        rawFetch.test(source) &&
+        !BFF_NETWORK_EXCEPTION.test(rel)
+      ) {
         violations.push({
           rule: 'single-network-owner',
           file: rel,
