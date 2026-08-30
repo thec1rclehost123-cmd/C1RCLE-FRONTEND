@@ -73,8 +73,12 @@ Each track = one branch off `staging`, one intern, one PR. **File ownership is s
 - `apps/partner-dashboard/src/app/onboard/**` — rebuild the wizard to the V2-reduced flow (spec §10, handoff §6.6):
   - Step 1: `requestedType` (venue/host/promoter) + `plan` (basic/silver/diamond — **no gold**).
   - Step 2: profile — required `legalName`, `contactPerson`, `phone`, `city`; optional `area`, `website`, `capacity`, `instagram`, `bio`, `businessType`, `registrationNumber`, `entityType`. Autosave via `PATCH /api/v2/onboarding/applications/:id` (`onboardingProfileSchema.partial()`, no idempotency key).
-  - Step 3: documents — render the honest **"Document upload will be enabled shortly"** state. No file inputs. (Backend signed-URL issuing is a deferred gap — a founder is closing it in parallel, see below. If `POST /api/v2/onboarding/applications/:id/documents/upload-url` is live by the time you reach this step, wire the real flow: request an upload URL, `PUT` the file straight to it, then `POST .../documents { label, storagePath }`. Otherwise ship the deferred state behind one `DOCUMENTS_UPLOAD_ENABLED` flag so the switch is a one-line change.)
-  - Step 4: review + `POST .../submit` (idempotency key). It 4xx's "missing documents" until the gap closes — surface as a clear message.
+  - Step 3: documents — **the backend endpoint is now LIVE** (`C1RCLE-BACKEND` `2a9a4b3`, contracts on `staging` `fb45fc1`). Wire the real flow per label (`id_front`, `id_back`, `selfie`):
+    1. `POST /api/v2/onboarding/applications/:id/documents/upload-url` with `{ label, contentType }` (`contentType` ∈ `image/jpeg | image/png | image/webp`) → `documentUploadUrlDtoSchema` `{ uploadUrl, method: 'PUT', headers, storagePath, expiresAt }`.
+    2. `PUT` the `File` straight to `uploadUrl` with **exactly** the returned `headers` (content-type + `x-goog-content-length-range`). This one `fetch`/`PUT` is to a Google Storage URL, not the gateway — put it behind a tiny `uploadToSignedUrl(grant, file)` helper in `src/lib/onboarding/` and add an eslint-disable with a comment (it is not a gateway call, `@c1rcle/api-client` can't do an opaque cross-origin PUT). Max 5 MiB, images only — validate client-side before requesting the URL.
+    3. `POST /api/v2/onboarding/applications/:id/documents` with `{ label, storagePath }` (the `storagePath` from step 1).
+    Re-picking a label just repeats 1–3; the key is deterministic so it overwrites. On memory-driver dev the `uploadUrl` is a non-routable `memory://…` — detect that prefix and skip the PUT so local dev without a bucket still completes.
+  - Step 4: review + `POST .../submit` (idempotency key). Now succeeds once the 3 documents are recorded; still 4xx "missing documents" before that — surface as a clear inline message, not an error toast.
   - Resume from `GET /api/v2/onboarding/me`. Poll for `approved` → `GET /organizations` → studio.
   - Optional `verify-document` affordance → render `"Format check passed — pending manual review"`, **never "Verified"**, no green tick.
 - `apps/partner-dashboard/src/app/login/layout.tsx`, new `signup/layout.tsx`, `onboard/layout.tsx` — swap `DashboardAuthProvider` → nothing / `SessionProvider` (coordinate with Track 2 on the import).
@@ -130,11 +134,11 @@ Each track = one branch off `staging`, one intern, one PR. **File ownership is s
 4. Phase 8: full journey E2E against a real Firestore-backed gateway + cross-repo `pnpm check`. One person, after all merged.
 
 **Running in parallel (not your work — the two founders, in `C1RCLE-BACKEND`):**
-backend Phase 5 completion + the onboarding document-upload gap. See
-`FOUNDER-TASKS-2026-08-29.md`. The only overlap point is Track 3 step 3
-(onboarding documents) — coded behind a flag so it flips on when the backend
-endpoint lands, no rework. If they add a contract schema, they run
-`export-contracts.mjs` and tell you; you `git pull` + rebuild `@c1rcle/contracts`.
+backend Phase 5 completion. See `FOUNDER-TASKS-2026-08-29.md`. The onboarding
+document-upload gap is **CLOSED** (`2a9a4b3` backend / `fb45fc1` contracts on
+`staging`) — Track 3 step 3 above is the real flow now, no flag needed. If a
+founder adds another contract schema they run `export-contracts.mjs` and tell
+you; you `git pull staging` + `pnpm --filter @c1rcle/contracts build`.
 
 ## Local dev
 

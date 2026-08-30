@@ -58,7 +58,18 @@ that does not block the frontend slice; do it in parallel, any order.
 
 ## FOUNDER A — Onboarding document upload, then scanner-side Phase 5 gaps
 
-### Task A1 — Signed-URL issuing for onboarding KYC documents  ⟵ do this first
+### Task A1 — Signed-URL issuing for onboarding KYC documents  ✅ DONE (`C1RCLE-BACKEND` `2a9a4b3`, contracts `fb45fc1` on FE `staging`)
+
+`ObjectStoragePort` + `EchoObjectStorage` (memory) + `FirebaseObjectStorage`
+(v4 signed PUT, jpeg/png/webp, ≤5 MiB, 10-min TTL) + `OnboardingService.issueDocumentUploadUrl`
++ `POST /api/v2/onboarding/applications/:requestId/documents/upload-url` +
+`documentUploadUrlRequestSchema` / `documentUploadUrlDtoSchema`. 4 new
+integration tests. `FIREBASE_STORAGE_BUCKET` env (defaults `<project>.firebasestorage.app`).
+Intern 3's onboarding wizard is unblocked. Original brief kept below for reference.
+
+---
+
+<details><summary>Original A1 brief</summary>
 
 **The gap:** `POST /api/v2/onboarding/applications/:requestId/documents` already
 exists and takes `{ label, storagePath }` — but a browser has no way to *get* a
@@ -134,6 +145,8 @@ stubbed purely because of this.
 **Gate:** `pnpm check` green; a fresh onboarding application can go
 type → profile → upload-url → PUT (memory: skip) → documents → submit → approved
 entirely through `/api/v2`.
+
+</details>
 
 ### Task A2 — `POST /door/override` + `GET /door/offline-manifest`  (Track G)
 
