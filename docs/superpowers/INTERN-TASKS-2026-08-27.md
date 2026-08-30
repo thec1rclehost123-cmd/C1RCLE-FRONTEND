@@ -1,4 +1,7 @@
-# Intern Tasks — Frontend ↔ API-Gateway Connection (partner-dashboard)
+# Frontend ↔ API-Gateway Integration — Team Tasks (partner-dashboard)
+
+<!-- filename kept as INTERN-TASKS-2026-08-27.md for existing links; this covers the whole team. -->
+
 
 **Read before starting:**
 - `docs/superpowers/specs/2026-08-27-frontend-gateway-auth-foundation-design.md` — the design.
@@ -54,11 +57,13 @@ the *other* mock `app/api/auth/*` routes.**
 
 ---
 
-## Who's on what — assignment 2026-08-29 (skill-matched)
+## Who's on what — assignment 2026-08-29
 
 The original 3-track split (Track 1 = Phases 3+4, done above) is superseded.
-Each lane = one branch off `staging`, one PR. **File ownership is strict — need
-a file outside your list, ask Shriyash (lead).**
+Lanes are drawn by area of focus and by keeping each PR a coherent, isolated
+slice — not by any ranking of people. Each lane = one branch off `staging`,
+one PR. **File ownership is strict — need a file outside your list, ask
+Shriyash (lead).**
 
 | Person | Lane | Plan phase(s) | Section below |
 |---|---|---|---|
@@ -80,8 +85,8 @@ stub that too.
 commit; nobody else edits the deps block. Layouts: Sagar owns root, Anil owns
 `login`/`signup`, Majid owns `onboard`, nobody touches studio layouts.
 
-Anil's in-flight `codex/partner-v3-rebuild` (app-shell WIP) → hand to Sagar as a
-starting reference; Anil restarts on `/login` + `/signup`.
+The in-flight `codex/partner-v3-rebuild` branch (early app-shell exploration) →
+Sagar picks it up as a reference for his lane; Anil's lane is `/login` + `/signup`.
 
 ### Track 2 — App shell + integration  (plan Phase 5 + Phase 8 CSP)
 
