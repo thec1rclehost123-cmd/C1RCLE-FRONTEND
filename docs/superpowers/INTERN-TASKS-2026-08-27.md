@@ -54,32 +54,44 @@ the *other* mock `app/api/auth/*` routes.**
 
 ---
 
-## The remaining tracks — re-sliced per the 2026-08-29 team message
+## Who's on what — assignment 2026-08-29 (skill-matched)
 
 The original 3-track split (Track 1 = Phases 3+4, done above) is superseded.
-Current assignment — each is one branch off `staging`, one PR. **File ownership
-is strict — need a file outside your list, ask the lead.**
+Each lane = one branch off `staging`, one PR. **File ownership is strict — need
+a file outside your list, ask Shriyash (lead).**
 
-| Intern | Plan phases | Section below |
-|---|---|---|
-| **1 — Security & App Shell** | 5 Part A + Phase 8 CSP | "Track 2" |
-| **2 — Org Access & Login Screens** | 5 Part B + Phase 6 | "Track 2" (`lib/org`, `use-org-access`, `select-organization`) + "Track 3" (`/login`, `/signup`, `DashboardAuthProvider` re-home) |
-| **3 — Onboarding & Teardown** | Phase 7 | "Track 3" (`/onboard`, the Great Teardown) |
+| Person | Lane | Plan phase(s) | Section below |
+|---|---|---|---|
+| **Sagar** | App shell + CSP — `proxy.ts` + CSP nonce, `SessionProvider`, `src/lib/api/client.ts`, `next.config.ts` HSTS, all `packages/eslint-config` + `check-boundaries` edits, root `layout.tsx` | 5 Part A + Phase 8 CSP | **"Track 2"** minus the org bullets |
+| **Keshvi** | Org access + context migration — `src/lib/org/**`, `src/lib/access/use-org-access.ts`, `partner/select-organization/page.tsx`, and the `DashboardAuthProvider` → `session-context.tsx` re-home (~40 consumers) | 5 Part B + Phase 6 (context half) | **"Track 2"** org bullets + **"Track 3"** `DashboardAuthProvider` bullet |
+| **Anil** | Auth screens + mock-auth teardown — `/login` + `/signup` rebuilt on `auth.*`, delete `src/lib/firebase/client.ts` + the 12 mock `app/api/auth/*` routes (NOT the 5 real BFF routes) | 6 | **"Track 3"** login/signup + delete bullets |
+| **Majid** | Onboarding + KYC teardown — `/onboard` V2 wizard (the 3-step upload flow is fully spec'd below), delete `/verify` + `app/api/kyc/**`, remove `firebase` from `package.json` (**last commit of the whole effort**) | 7 | **"Track 3"** `/onboard` + `/verify` bullets |
+| **Shriyash** (lead) | Backend Founder Task A2 + Phase 8 E2E + reviews every PR | Track G + Phase 8 | `FOUNDER-TASKS-2026-08-29.md` |
+| **Ayush** (founder) | Backend Founder Task B | Track G | `FOUNDER-TASKS-2026-08-29.md` |
 
-Interns 1 & 2 coordinate on the `src/lib/**` boundary (Intern 1 owns
-`src/lib/api/client.ts` + the providers; Intern 2 owns `src/lib/org/**` +
-`src/lib/access/**`). Intern 2's login flow needs Intern 1's `SessionProvider`
-+ `apiClient` — stub locally, integrate on merge.
+**Merge order** (see "Integration order" at the bottom): Sagar → Keshvi → Anil →
+Majid. Everyone after Sagar imports his `SessionProvider` + `src/lib/api/client.ts`
+— stub the two behind a local `type` until his PR lands. Anil's post-login route
+decision and Majid's approved→studio hop both call Keshvi's `getActiveOrgId()` —
+stub that too.
+
+**Coordination:** `apps/partner-dashboard/package.json` — Sagar adds the
+`@c1rcle/auth` dep his providers need; Majid removes `firebase` as the very last
+commit; nobody else edits the deps block. Layouts: Sagar owns root, Anil owns
+`login`/`signup`, Majid owns `onboard`, nobody touches studio layouts.
+
+Anil's in-flight `codex/partner-v3-rebuild` (app-shell WIP) → hand to Sagar as a
+starting reference; Anil restarts on `/login` + `/signup`.
 
 ### Track 2 — App shell + integration  (plan Phase 5 + Phase 8 CSP)
 
-**Split:** Intern 1 owns everything here **except** `src/lib/org/**`,
+**Split:** **Sagar** owns everything here **except** `src/lib/org/**`,
 `src/lib/access/**`, and `select-organization/page.tsx` — those three go to
-Intern 2 (they belong with the login flow). The `repositories.ts` /
-`gateway-partner-transport.ts` env cleanup (last bullet) is Intern 1's — but
-note those raw `process.env` reads are **only in uncommitted teammate WIP, not
-on `staging`**, so on a fresh branch there is nothing to delete; just make sure
-`getActiveOrgId()` (Intern 2) is the single source of the active-org id.
+**Keshvi** (they belong with the login/org flow). The `repositories.ts` /
+`gateway-partner-transport.ts` env cleanup (last bullet) is Sagar's — but note
+those raw `process.env` reads are **only in uncommitted teammate WIP, not on
+`staging`**, so on a fresh branch there is nothing to delete; just make sure
+`getActiveOrgId()` (Keshvi) is the single source of the active-org id.
 
 **Owns:**
 - `apps/partner-dashboard/src/proxy.ts` — **NOT `middleware.ts`** (Next 16 renamed it). Per-request CSP nonce (copy the pattern in `node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md:34-133`); CSP directives per spec §11.3 (`connect-src 'self' <NEXT_PUBLIC_API_BASE_URL>`, `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`). Auth redirect: on `/venue|/host|/promoter|/onboard|/partner|/partner-network`, if the session cookie is **absent** → `redirect('/login?next=…')`. File header: "UX redirect only — real auth is per-request at the gateway."
@@ -101,10 +113,10 @@ on `staging`**, so on a fresh branch there is nothing to delete; just make sure
 
 ### Track 3 — Screens + mock teardown  (plan Phases 6 + 7)
 
-**Split:** Intern 2 owns `/login`, `/signup`, their layouts, the
-`DashboardAuthProvider` re-home, and the mock `app/api/auth/*` deletions.
-Intern 3 owns `/onboard`, `/verify` + `api/kyc` deletion, `firebase` client
-deletion, and the `firebase` `package.json` removal (last).
+**Split:**
+- **Anil** — `/login`, `/signup`, their layouts, delete `src/lib/firebase/client.ts` + `src/lib/auth/getCachedFirebaseIdToken.ts` + the 12 mock `app/api/auth/*` routes (**not** the 5 real BFF routes) + the `/auth/change-password` / `/forgot-password` links.
+- **Keshvi** — the `DashboardAuthProvider` → `session-context.tsx` re-home only (it pairs with her `useOrgAccess`).
+- **Majid** — `/onboard` wizard, delete `src/app/verify/**` + `src/app/api/kyc/**`, remove `firebase` from `package.json` + `.env.example` cleanup (last).
 
 **Owns:**
 - `apps/partner-dashboard/src/app/login/**` — rebuild `LoginForm` on `auth.login()`. Remove Google / `signInWithPopup` / `signInWithCustomToken` / workspace-type picker. Generic error on 401; field errors on 422.
@@ -120,17 +132,17 @@ deletion, and the `firebase` `package.json` removal (last).
   - Step 4: review + `POST .../submit` (idempotency key). Now succeeds once the 3 documents are recorded; still 4xx "missing documents" before that — surface as a clear inline message, not an error toast.
   - Resume from `GET /api/v2/onboarding/me`. Poll for `approved` → `GET /organizations` → studio.
   - Optional `verify-document` affordance → render `"Format check passed — pending manual review"`, **never "Verified"**, no green tick.
-- `apps/partner-dashboard/src/app/login/layout.tsx`, new `signup/layout.tsx`, `onboard/layout.tsx` — swap `DashboardAuthProvider` → nothing / `SessionProvider` (coordinate with Intern 1 on the import; `onboard/layout.tsx` is Intern 3's, the login/signup layouts are Intern 2's).
-- **Delete:** `src/lib/firebase/client.ts`, `src/lib/auth/getCachedFirebaseIdToken.ts`, `src/app/verify/**`, `src/app/api/auth/{me,partner-context,profile,check-email,check-availability,create-account,onboard,onboard-status,onboarding-progress}/route.ts`, `src/app/api/auth/otp/**`, `src/app/api/kyc/**`, and any `/auth/change-password` / `/forgot-password` links.
-- `apps/partner-dashboard/src/components/providers/DashboardAuthProvider.tsx` — **re-home, don't delete.** ~40 components use `useDashboardAuth()`. Rename to `session-context.tsx`, keep a `useDashboardAuth` alias, re-implement its context on `@c1rcle/auth` (merged) + `useOrgAccess` (Intern 2's own). Map: `user` → `useSession().user`; `isApproved` → "an active org exists"; `signIn/signUp/signOut` → `auth.*`; `hasPermission/canDo` → `useOrgAccess().hasPermission`; `tabVisibility` → `useOrgAccess().tabVisibility`; `getIdToken` → `getAccessToken`; `switchPartner` → `setActiveOrg`. Drop `isBanned`, `kycStatus`, `entityType`, `subscriptionPlan`, `actionPermissions`, `piiPolicy`, `mustChangePassword`, the 30s polling — grep each consumer, replace with the nearest real signal or remove the branch.
-- `apps/partner-dashboard/package.json` — remove `"firebase"` (**Intern 3, do this last** — after Interns 1 + 2 have merged and `git grep -n firebase apps/partner-dashboard/src` is empty).
-- `apps/partner-dashboard/.env.example` — drop `NEXT_PUBLIC_PARTNER_USE_REAL_API` / `NEXT_PUBLIC_PARTNER_DEV_ORG_ID` if present (Intern 1).
+- `login/layout.tsx` + new `signup/layout.tsx` (Anil), `onboard/layout.tsx` (Majid) — swap `DashboardAuthProvider` → `SessionProvider` (Sagar's import).
+- **Delete (Anil):** `src/lib/firebase/client.ts`, `src/lib/auth/getCachedFirebaseIdToken.ts`, `src/app/api/auth/{me,partner-context,profile,check-email,check-availability,create-account,onboard,onboard-status,onboarding-progress}/route.ts`, `src/app/api/auth/otp/**`, the `/auth/change-password` / `/forgot-password` links. **Delete (Majid):** `src/app/verify/**`, `src/app/api/kyc/**`.
+- `apps/partner-dashboard/src/components/providers/DashboardAuthProvider.tsx` (**Keshvi**) — **re-home, don't delete.** ~40 components use `useDashboardAuth()`. Rename to `session-context.tsx`, keep a `useDashboardAuth` alias, re-implement its context on `@c1rcle/auth` (merged) + your own `useOrgAccess`. Map: `user` → `useSession().user`; `isApproved` → "an active org exists"; `signIn/signUp/signOut` → `auth.*`; `hasPermission/canDo` → `useOrgAccess().hasPermission`; `tabVisibility` → `useOrgAccess().tabVisibility`; `getIdToken` → `getAccessToken`; `switchPartner` → `setActiveOrg`. Drop `isBanned`, `kycStatus`, `entityType`, `subscriptionPlan`, `actionPermissions`, `piiPolicy`, `mustChangePassword`, the 30s polling — grep each consumer, replace with the nearest real signal or remove the branch.
+- `apps/partner-dashboard/package.json` — remove `"firebase"` (**Majid, the very last commit** — after Sagar/Keshvi/Anil have merged and `git grep -n firebase apps/partner-dashboard/src` is empty).
+- `apps/partner-dashboard/.env.example` — drop `NEXT_PUBLIC_PARTNER_USE_REAL_API` / `NEXT_PUBLIC_PARTNER_DEV_ORG_ID` if present (Sagar).
 
 **Does NOT touch:** `packages/**`, `src/proxy.ts`, `next.config.ts`, root `layout.tsx`, `src/lib/{api,org,access}`, the studio route-group layouts (`src/app/{venue,host,promoter}/layout.tsx` and everything under those trees — that's a **later** spec), any backend repo.
 
-**Depends on:** `@c1rcle/auth` (merged — import directly) + Intern 1's `SessionProvider` + `src/lib/api/client.ts` + Intern 2's `useOrgAccess` / `setActiveOrg`. Intern 2 owns both the login screens and `useOrgAccess`, so that half is self-contained; the `SessionProvider` / `apiClient` from Intern 1 can be stubbed locally until Intern 1 merges.
+**Depends on:** `@c1rcle/auth` (merged — import directly) + Sagar's `SessionProvider` + `src/lib/api/client.ts` + Keshvi's `getActiveOrgId` / `useOrgAccess`. Stub Sagar's two behind a local `type` and Keshvi's `getActiveOrgId` behind a `() => document.cookie…` shim until those PRs land.
 
-**Gate:** `pnpm --filter @c1rcle/app-partner-dashboard {build,test}` green **for your files** (the app has ~151 pre-existing `@c1rcle/icons` typecheck errors in studio components — ignore those, don't fix them); `git grep -n "firebase" apps/partner-dashboard/src` empty (after Intern 3); `git grep -n "/api/auth/me\|/api/auth/otp" apps/partner-dashboard/src` empty (after Intern 2); login E2E: wrong password → generic message; signup → `/onboard`.
+**Gate:** `pnpm --filter @c1rcle/app-partner-dashboard {build,test}` green **for your files** (the app has ~151 pre-existing `@c1rcle/icons` typecheck errors in studio components — ignore those, don't fix them); `git grep -n "firebase" apps/partner-dashboard/src` empty (after Majid); `git grep -n "/api/auth/me\|/api/auth/otp" apps/partner-dashboard/src` empty (after Anil); login E2E: wrong password → generic message; signup → `/onboard`.
 
 ---
 
@@ -168,10 +180,11 @@ deletion, and the `firebase` `package.json` removal (last).
 ## Integration order
 
 1. ~~Phase 2 (contracts + api-client), Phase 3 (`@c1rcle/auth`), Phase 4 (auth BFF)~~ — **DONE, on `origin/staging` (`ebe1df8` / `3911c4c` / `ef27e1f`).**
-2. **Intern 1** (app shell: `proxy.ts`, `SessionProvider`, `src/lib/api/client.ts`, CSP, eslint) → merge to `staging` first — Interns 2 & 3 layer on it.
-3. **Intern 2** (`src/lib/org/**`, `useOrgAccess`, `/login`, `/signup`, `DashboardAuthProvider` re-home, mock `api/auth/*` deletion) → merge to `staging`.
-4. **Intern 3** (`/onboard` rebuild, `/verify` + `api/kyc` teardown, `firebase` removal) → merge to `staging` last (the `firebase` `package.json` removal is the very last step, once `git grep firebase` is clean).
-5. Phase 8 (the lead, after all merged): full journey E2E against a real Firestore-backed gateway + cross-repo check.
+2. **Sagar** (app shell: `proxy.ts`, `SessionProvider`, `src/lib/api/client.ts`, CSP, eslint) → merge first — everyone layers on it.
+3. **Keshvi** (`src/lib/org/**`, `useOrgAccess`, `select-organization`, `DashboardAuthProvider` re-home) → merge. Needs Sagar's `apiClient`.
+4. **Anil** (`/login`, `/signup`, mock `api/auth/*` + firebase-client deletion) → merge. Needs `auth.*` (have) + Sagar's `SessionProvider` + Keshvi's `getActiveOrgId`.
+5. **Majid** (`/onboard` rebuild, `/verify` + `api/kyc` teardown) → merge. The `firebase` `package.json` removal is the very last commit, once `git grep firebase apps/partner-dashboard/src` is clean.
+6. **Phase 8** (Shriyash, after all merged): full journey E2E against a real Firestore-backed gateway + cross-repo check.
 
 **Running in parallel (not your work — the two founders, in `C1RCLE-BACKEND`):**
 backend Phase 5 completion. See `FOUNDER-TASKS-2026-08-29.md`. The onboarding
