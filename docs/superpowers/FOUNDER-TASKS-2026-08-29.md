@@ -1,19 +1,18 @@
 # Founder Tasks — Backend Phase 5 completion + unblock the frontend interns
 
-**Who:** you + co-founder. Two tasks, one each. **Repo: `C1RCLE-BACKEND` @ `main`.**
-(The 3 interns are on `C1RCLE-FRONTEND` — see `INTERN-TASKS-2026-08-27.md`. They
-never touch the backend; you own it.)
+**Who:** Task A = **Shriyash**, Task B = **Ayush**. **Repo: `C1RCLE-BACKEND` @
+`main`.** (Sagar/Keshvi/Anil/Majid are on `C1RCLE-FRONTEND` — see
+`INTERN-TASKS-2026-08-27.md`. They never touch the backend; the founders own it.)
 
-**Why these two:** the frontend auth slice (Phases 3–8) has exactly one hard
-backend dependency — onboarding document upload — and backend Phase 5 still has
-six honest-501 routes + two boundary/debt items ("Track G"). Founder A clears the
-frontend blocker then takes the scanner-side gaps; Founder B takes the
-wallet/stats/payments side. The two task sets touch different domains, so you
-don't collide.
+**Why this split:** the frontend auth slice had exactly one hard backend
+dependency — onboarding document upload (**A1, now DONE**) — and backend Phase 5
+still has six honest-501 routes + two boundary/debt items ("Track G"). Shriyash
+(Task A) took the blocker then the scanner-side gaps; Ayush (Task B) takes the
+wallet/stats/payments side. Different domains, no collision.
 
-**Priority:** Founder A **Task A1 first** — it is the only thing blocking an
-intern (Track 3, onboarding wizard step 3). Everything else is Phase 5 cleanup
-that does not block the frontend slice; do it in parallel, any order.
+**Status:** **A1 shipped** (`2a9a4b3`). Nothing else here blocks a frontend
+person — do it in parallel, any order. Shriyash also owns Phase 8 E2E and
+reviews every frontend PR, so Task A2 fits around that.
 
 ---
 
@@ -56,7 +55,7 @@ that does not block the frontend slice; do it in parallel, any order.
 
 ---
 
-## FOUNDER A — Onboarding document upload, then scanner-side Phase 5 gaps
+## TASK A (Shriyash) — Onboarding document upload, then scanner-side Phase 5 gaps
 
 ### Task A1 — Signed-URL issuing for onboarding KYC documents  ✅ DONE (`C1RCLE-BACKEND` `2a9a4b3`, contracts `fb45fc1` on FE `staging`)
 
@@ -174,7 +173,7 @@ green; `door` suite green.
 
 ---
 
-## FOUNDER B — Cover-wallet freeze/unfreeze, door stats, payment boundary, lint debt
+## TASK B (Ayush) — Cover-wallet freeze/unfreeze, door stats, payment boundary, lint debt
 
 ### Task B1 — Cover-wallet `freeze` / `unfreeze`  (Track G)
 
