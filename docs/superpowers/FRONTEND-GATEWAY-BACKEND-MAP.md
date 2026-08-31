@@ -59,10 +59,12 @@ not a binding spec — see §8 below for where it diverges from the build.
 │                                                                               │
 │  global onRequest hook (plugins/):                                            │
 │    mint/echo x-request-id  →  resolve Better Auth session → request.user      │
-│    →  resolve org membership (if X-Organization-Id) → request.authContext     │
+│    →  set a session-only actor (org '', role member)  (dc7bb79)               │
+│    →  upgrade it to a full actor if X-Organization-Id resolves to a member    │
 │    →  cache bookkeeping                                                        │
 │         │   (memory driver: fabricates a full-access dev actor, never 401)    │
-│         │   (firestore driver: real Better Auth; no session → 401 downstream) │
+│         │   (firestore: real Better Auth; NO session → 401; session but no    │
+│         │    org → reaches the route, org-scoped calls still 403 via ABAC)    │
 │  per-route preHandler chain:                                                  │
 │    rateLimit(<class>)  →  validateV2({params,query,headers,body})             │
 │    →  requirePermission(<verb>)  →  cached(<policy>)  →  handler              │
@@ -153,7 +155,7 @@ from `@c1rcle/api-client`. Backend never leaks stack traces / SQL / paths.
 | Header | When | Notes |
 |---|---|---|
 | `Authorization: Bearer <token>` | every authenticated call | Better Auth **session token** (via `bearer()` plugin's `set-auth-token`), NOT a minted JWT (D-001, C-4). In-memory only — never localStorage/cookie/URL. |
-| `X-Organization-Id: <opaqueId>` | every org-scoped route | **must equal the `:organizationId` path segment** — the path is authoritative; mismatch → 403. The transport asserts `path === header` before sending. |
+| `X-Organization-Id: <opaqueId>` | every org-**scoped** route (item routes with a `:organizationId`) | **must equal the `:organizationId` path segment** — the path is authoritative; mismatch → 403. The transport asserts `path === header` before sending. **Optional** on the org *collection* routes `GET /organizations` and `POST /organizations` since `dc7bb79` (there is no single org to name). |
 | `X-Request-Id: <uuid>` | every attempt | minted by `@c1rcle/api-client`; never carries token or PII. |
 | `Idempotency-Key: <key>` | writes the route marks required | one key per **user intent**, stable across the client's internal retries (C-8) — minted at the action call site, not per fetch. |
 | `If-Match: <version>` | the 5 versioned PATCH/PUT (org update, venue update, venue profile, venue menu, event update) | value = `version` from the last read DTO. `409 conflict` on mismatch. |
@@ -177,7 +179,14 @@ actor (prod-safe: gated on the env, documented). Session cookie name
 `better-auth.session_token` (`__Secure-` prefix in prod). `role ∈ {guest,
 partner, admin}`, server-set; `/auth/signup` forces `partner`. Per-org
 capability/role comes from `GET /organizations/:id/access`, **never** the token
-(C-10).
+(C-10). Since `dc7bb79` a valid session with no org yields a **session-only
+actor** (`organizationId: ''`, `role: 'member'`) — enough to reach onboarding
+and the org collection routes; org-scoped routes still fail closed.
+
+### Deployed gateway
+`https://circle-v2-backend.onrender.com` (Render, Docker, firestore driver,
+`thec1rcle-india` sandbox). `NEXT_PUBLIC_API_BASE_URL` points here. Health:
+`GET /api/v2/internal/health`. Free tier — hibernates when idle.
 
 ---
 
@@ -190,29 +199,34 @@ returns honest 501.
 
 ### 4.1 Auth & onboarding journey  (Sagar / Anil / Majid own the FE)
 
+**Full flow spec: `ONBOARDING-FLOW-SPEC-2026-09-01.md`** — V1's shape (Apply → role →
+onboard-or-sign-in → wizard) on the V2 stack. 6 steps: (1) role, (2) onboard/sign-in,
+(3) plan → `POST /applications`, (4) profile autosave, (5) documents ×3, (6) review + submit.
+Steps 1–2 are public; `/onboard` is **not** proxy-gated (Anil removes it from `AUTH_GATED_PREFIXES`).
+
 | FE surface | FE calls | route | hop | `/api/v2` endpoint | service.method | domain / repo | Status |
 |---|---|---|---|---|---|---|---|
-| `/signup` form | `auth.signup()` | — | BFF | `POST /auth/signup` | Better Auth `signUpEmail` + `runAuthFlow` | `v2_auth_*` | 🟢 (firestore only) |
-| `/login` form | `auth.login()` | — | BFF | `POST /auth/login` | Better Auth `signInEmail` | " | 🟢 |
+| `/onboard` step 2 — new user | `auth.signup()` | — | BFF | `POST /auth/signup` | Better Auth `signUpEmail` + `runAuthFlow` | `v2_auth_*` | 🟢 (firestore only) |
+| `/onboard` step 2 — returning / `/login` | `auth.login()` | — | BFF | `POST /auth/login` | Better Auth `signInEmail` | " | 🟢 |
 | `SessionProvider` mount, idle-refresh | `auth.refresh()` | — | BFF (CSRF) | `POST /auth/refresh` | re-validate cookie | " | 🟢 |
 | logout / idle timeout | `auth.logout()` | — | BFF (CSRF) | `POST /auth/logout` | revoke session | " | 🟢 |
 | root layout first paint | `getServerSession(cookie)` | server | direct | `GET /auth/session` | `getSession` | " | 🟢 → `{ user, expiresAt }` |
-| `/onboard` resume | `onboardingRepo.getMine()` | server | direct | `GET /onboarding/me` | `OnboardingService.getMine` | `OnboardingRequest` / `onboarding` repo | 🟢 → `{ request \| null }` |
-| `/onboard` step 1 submit | `onboardingRepo.start()` | client | direct | `POST /onboarding/applications` (Idem-Key) | `.start` | createOnboardingRequest | 🟢 |
-| `/onboard` step 2 autosave | `onboardingRepo.saveProgress()` | client | direct | `PATCH /onboarding/applications/:id` (no Idem-Key, `.strict()` → 422 on unknown key) | `.saveProgress` | updateOnboardingProfile + `sanitizeApplicantProfile` | 🟢 |
-| `/onboard` step 3 upload ×3 | `uploadUrlRepo` → PUT → `addDocument` | client | direct → GCS → direct | `POST …/documents/upload-url` → `PUT` (Google Storage) → `POST …/documents` (Idem-Key) | `.issueDocumentUploadUrl` → `.addDocument` | `ObjectStoragePort` (`EchoObjectStorage` memory / `FirebaseObjectStorage` v4 signed PUT) | 🟢 (shipped `2a9a4b3`) |
-| `/onboard` step 4 submit | `onboardingRepo.submit()` | client | direct | `POST …/submit` (Idem-Key) | `.submit` | submitOnboardingRequest (blocks < 3 docs) | 🟢 |
+| `/onboard` resume + step 2 routing | `onboardingRepo.getMine()` | server/client | direct | `GET /onboarding/me` | `OnboardingService.getMine` | `OnboardingRequest` / `onboarding` repo | 🟢 → `{ request \| null }` (session-only actor OK since `dc7bb79`) |
+| `/onboard` step 3 — plan chosen | `onboardingRepo.start()` | client | direct | `POST /onboarding/applications` (Idem-Key) `{ requestedType, plan }` | `.start` | createOnboardingRequest | 🟢 |
+| `/onboard` step 4 autosave | `onboardingRepo.saveProgress()` | client | direct | `PATCH /onboarding/applications/:id` (no Idem-Key, `.strict()` → 422 on unknown key) | `.saveProgress` | updateOnboardingProfile + `sanitizeApplicantProfile` | 🟢 |
+| `/onboard` step 5 upload ×3 | `uploadToSignedUrl` helper | client | direct → GCS → direct | `POST …/documents/upload-url` → `PUT` (Google Storage) → `POST …/documents` (Idem-Key) | `.issueDocumentUploadUrl` → `.addDocument` | `ObjectStoragePort` (`EchoObjectStorage` memory / `FirebaseObjectStorage` v4 signed PUT) | 🟢 (shipped `2a9a4b3`) |
+| `/onboard` step 6 submit | `onboardingRepo.submit()` | client | direct | `POST …/submit` (Idem-Key) | `.submit` | submitOnboardingRequest (blocks < 3 docs) | 🟢 |
 | `/onboard` optional ID format check | `onboardingRepo.verifyDocument()` | client | direct | `POST /onboarding/verify-document` | `.verifyDocument` | `FormatCheckVerificationProvider` — **render "format check passed", never "Verified"** (D-018) | 🟢 |
-| `/partner/select-organization` | `orgRepo.list()` | server | direct | `GET /organizations` | `OrganizationService.list…` | `organizations` repo (membership-filtered) | 🟢 → `{ items: OrganizationDto[], pageInfo }` |
+| `/partner/select-organization` | `orgRepo.list()` | server | direct | `GET /organizations` (no `X-Organization-Id` needed) | `OrganizationService.list…` | `organizations` repo (membership-filtered) | 🟢 → `{ items: OrganizationDto[], pageInfo }` |
 | studio shell — permissions/tabs | `useOrgAccess(orgId)` | client | direct | `GET /organizations/:id/access` | resolve `partnerType` + `permissions[]` + `tabVisibility` | membership + role | 🟢 → `partnerAccessDtoSchema` |
 
 ### 4.2 Organizations / members / invitations  (Keshvi's `src/lib/org/**` + later specs)
 
 | FE surface | endpoint | method | perm | rate | Status |
 |---|---|---|---|---|---|
-| org list / picker | `GET /organizations` | GET | `organization.read` | AUTH_READ | 🟢 |
-| org detail / settings header | `GET /organizations/:organizationId` | GET | `organization.read` | AUTH_READ | 🟢 (cached) |
-| create org (rare — onboarding normally provisions) | `POST /organizations` (Idem-Key, **no `requirePermission`**) | POST | — | STANDARD | 🟢 |
+| org list / picker | `GET /organizations` — **no `X-Organization-Id`**, membership-filtered | GET | `organization.read` (any member passes) | AUTH_READ | 🟢 |
+| org detail / settings header | `GET /organizations/:organizationId` (needs `X-Organization-Id` == path) | GET | `organization.read` | AUTH_READ | 🟢 (cached) |
+| create org (rare — onboarding normally provisions) | `POST /organizations` (Idem-Key, **no `requirePermission`, no `X-Organization-Id`**) | POST | — | STANDARD | 🟢 |
 | org settings save | `PATCH /organizations/:organizationId` (If-Match) | PATCH | `organization.update` | STANDARD | 🟢 |
 | `/venue/settings` staff list | `GET /organizations/:organizationId/members` | GET | `organization.read` | AUTH_READ | 🟢 |
 | add staff | `POST /organizations/:organizationId/members` | POST | `staff.manage` | STANDARD | 🟢 |

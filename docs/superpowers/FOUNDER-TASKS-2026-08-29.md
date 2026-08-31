@@ -15,6 +15,17 @@
 >   domain-model unit test files (Sagar, wk2).
 > - Task B4 (any-ratchet) is folded into P0-A. Task B3 (razorpay boundary) is folded into P0-A.
 >
+> **▶ 2026-09-01 — done since:**
+> - **Backend deployed** — `https://circle-v2-backend.onrender.com` (Render, Docker, firestore).
+>   `C1RCLE-BACKEND` `dc7bb79` added `Dockerfile` + `.dockerignore`. Interns hit it directly.
+> - **Auth "org-less user" bug fixed** (`dc7bb79`) — session-only actor in `plugins/auth.ts`;
+>   `X-Organization-Id` optional on `GET/POST /organizations`. A fresh signup can now reach
+>   onboarding + org routes on the real driver. 133/133 gateway tests + live chain verified.
+>   `plugins/auth.test.ts` added.
+> - **Onboarding flow specced** for the interns — `ONBOARDING-FLOW-SPEC-2026-09-01.md`.
+> - **Still open (P0-A):** core `any` ratchet, razorpay boundary, `compare-and-set.test.ts` root-cause.
+>   Phase 4 route rebuild — not started.
+>
 > Original 2026-08-29 text below stands for the per-task detail.
 
 **Who:** Task A = **Shriyash**, Task B = **Ayush**. **Repo: `C1RCLE-BACKEND` @

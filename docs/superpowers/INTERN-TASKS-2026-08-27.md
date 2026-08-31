@@ -2,13 +2,28 @@
 
 <!-- filename kept as INTERN-TASKS-2026-08-27.md for existing links; this covers the whole team. -->
 
-> **▶ ACTIVE as of 2026-08-31.** Priority, merge order and the parallel backend front are set by
-> `SPRINT-2026-08-31.md` — read that first. This doc holds the per-file ownership detail below,
-> which still stands. Deltas for this sprint: (1) Keshvi's lane now also absorbs the uncommitted
-> `gateway-partner-transport.ts` / `api-partner-decoders.ts` / `api-partner-repositories.ts` WIP —
-> keep the transport/decoder split as shared infra, drop the `NEXT_PUBLIC_PARTNER_*` env flags,
-> active-org from `getActiveOrgId()`; studio-screen wiring in `repositories.ts` stays fixtures
-> (later spec-C effort). (2) Guest-portal de-mock is next sprint, not this one.
+> **▶ ACTIVE — updated 2026-09-01.** Priority, merge order and the parallel backend front are set by
+> `SPRINT-2026-08-31.md` — read that first. This doc holds the per-file ownership detail below.
+> Deltas:
+> 1. Keshvi's lane also absorbs the uncommitted `gateway-partner-transport.ts` /
+>    `api-partner-decoders.ts` / `api-partner-repositories.ts` WIP — keep the transport/decoder
+>    split as shared infra, drop the `NEXT_PUBLIC_PARTNER_*` env flags, active-org from
+>    `getActiveOrgId()`; studio-screen wiring in `repositories.ts` stays fixtures (later spec-C).
+> 2. Guest-portal de-mock is next sprint, not this one.
+> 3. **Backend is deployed** — `https://circle-v2-backend.onrender.com` (Firestore-backed). No need
+>    to run it locally. `NEXT_PUBLIC_API_BASE_URL=https://circle-v2-backend.onrender.com`.
+> 4. **Onboarding flow is fully specced** in `ONBOARDING-FLOW-SPEC-2026-09-01.md` — it replaces the
+>    "Step 1/2/3/4" sketch in Majid's bullet below. The flow is V1's shape (Apply → pick role →
+>    onboard-or-sign-in → wizard) on the V2 stack. **Majid builds from that spec, not this bullet.**
+> 5. **Anil also owns a one-line `proxy.ts` fix**: drop `/onboard` from `AUTH_GATED_PREFIXES` — the
+>    "Apply for Partner Access" button currently dead-ends at `/login` because `/onboard` is gated.
+> 6. `feat/partner-gateway-auth-foundation` on origin is a **large "Partner V3" rebuild** (219 files)
+>    — much bigger than the lanes here. Sagar's app-shell + Anil's login/signup + Keshvi's org layer
+>    landed there together. Review/merge strategy for that branch is a lead conversation, not covered
+>    by this doc's per-lane merge order.
+> 7. Backend fixes landed that this flow depends on: `C1RCLE-BACKEND` `dc7bb79` — a fresh signed-up
+>    user (no org yet) can now hit `/api/v2/onboarding/*` and `GET/POST /api/v2/organizations`
+>    (was 401/422 on the real driver).
 
 
 **Read before starting:**
@@ -127,24 +142,26 @@ those raw `process.env` reads are **only in uncommitted teammate WIP, not on
 ### Track 3 — Screens + mock teardown  (plan Phases 6 + 7)
 
 **Split:**
-- **Anil** — `/login`, `/signup`, their layouts, delete `src/lib/firebase/client.ts` + `src/lib/auth/getCachedFirebaseIdToken.ts` + the 12 mock `app/api/auth/*` routes (**not** the 5 real BFF routes) + the `/auth/change-password` / `/forgot-password` links.
+- **Anil** — `/login`, its layout, `proxy.ts` `/onboard` gate removal (▶ delta 5), delete `src/lib/firebase/client.ts` + `src/lib/auth/getCachedFirebaseIdToken.ts` + the 12 mock `app/api/auth/*` routes (**not** the 5 real BFF routes) + the `/auth/change-password` / `/forgot-password` links. `/signup` becomes a redirect to `/onboard` (signup now lives inside the onboard flow's step 2 — see the onboarding spec).
 - **Keshvi** — the `DashboardAuthProvider` → `session-context.tsx` re-home only (it pairs with her `useOrgAccess`).
-- **Majid** — `/onboard` wizard, delete `src/app/verify/**` + `src/app/api/kyc/**`, remove `firebase` from `package.json` + `.env.example` cleanup (last).
+- **Majid** — the `/onboard` flow **per `ONBOARDING-FLOW-SPEC-2026-09-01.md`** (6 steps: role → onboard/sign-in → plan → profile → documents → review+submit), `src/lib/onboarding/*`, delete `src/app/verify/**` + `src/app/api/kyc/**`, remove `firebase` from `package.json` + `.env.example` cleanup (last).
 
 **Owns:**
-- `apps/partner-dashboard/src/app/login/**` — rebuild `LoginForm` on `auth.login()`. Remove Google / `signInWithPopup` / `signInWithCustomToken` / workspace-type picker. Generic error on 401; field errors on 422.
-- `apps/partner-dashboard/src/app/signup/**` — **new route.** `SignupForm` on `auth.signup({ displayName, email, password })` → `/onboard`. `password` min 8, no `role` field.
-- `apps/partner-dashboard/src/app/onboard/**` — rebuild the wizard to the V2-reduced flow (spec §10, handoff §6.6):
-  - Step 1: `requestedType` (venue/host/promoter) + `plan` (basic/silver/diamond — **no gold**).
-  - Step 2: profile — required `legalName`, `contactPerson`, `phone`, `city`; optional `area`, `website`, `capacity`, `instagram`, `bio`, `businessType`, `registrationNumber`, `entityType`. Autosave via `PATCH /api/v2/onboarding/applications/:id` (`onboardingProfileSchema.partial()`, no idempotency key).
-  - Step 3: documents — **the backend endpoint is now LIVE** (`C1RCLE-BACKEND` `2a9a4b3`, contracts on `staging` `fb45fc1`). Wire the real flow per label (`id_front`, `id_back`, `selfie`):
-    1. `POST /api/v2/onboarding/applications/:id/documents/upload-url` with `{ label, contentType }` (`contentType` ∈ `image/jpeg | image/png | image/webp`) → `documentUploadUrlDtoSchema` `{ uploadUrl, method: 'PUT', headers, storagePath, expiresAt }`.
-    2. `PUT` the `File` straight to `uploadUrl` with **exactly** the returned `headers` (content-type + `x-goog-content-length-range`). This one `fetch`/`PUT` is to a Google Storage URL, not the gateway — put it behind a tiny `uploadToSignedUrl(grant, file)` helper in `src/lib/onboarding/` and add an eslint-disable with a comment (it is not a gateway call, `@c1rcle/api-client` can't do an opaque cross-origin PUT). Max 5 MiB, images only — validate client-side before requesting the URL.
-    3. `POST /api/v2/onboarding/applications/:id/documents` with `{ label, storagePath }` (the `storagePath` from step 1).
-    Re-picking a label just repeats 1–3; the key is deterministic so it overwrites. On memory-driver dev the `uploadUrl` is a non-routable `memory://…` — detect that prefix and skip the PUT so local dev without a bucket still completes.
-  - Step 4: review + `POST .../submit` (idempotency key). Now succeeds once the 3 documents are recorded; still 4xx "missing documents" before that — surface as a clear inline message, not an error toast.
-  - Resume from `GET /api/v2/onboarding/me`. Poll for `approved` → `GET /organizations` → studio.
-  - Optional `verify-document` affordance → render `"Format check passed — pending manual review"`, **never "Verified"**, no green tick.
+- `apps/partner-dashboard/src/app/login/**` — rebuild `LoginForm` on `auth.login()`. Remove Google / `signInWithPopup` / `signInWithCustomToken` / workspace-type picker. Generic error on 401; field errors on 422. `/login` is the pure sign-in screen for a returning user heading straight to their studio.
+- `apps/partner-dashboard/src/app/signup/**` — **redirect to `/onboard`.** Account creation now happens inside the onboard flow (step 2), so a standalone signup form is redundant. If the route stays, it just `redirect('/onboard')`.
+- `apps/partner-dashboard/src/proxy.ts` (Anil) — drop `/onboard` from `AUTH_GATED_PREFIXES`:
+  `['/venue', '/host', '/promoter', '/partner', '/partner-network']`. Keep `/onboard/:path*` in
+  `config.matcher` for the CSP nonce. The `/onboard` route guards itself.
+- `apps/partner-dashboard/src/app/onboard/**` + `src/lib/onboarding/**` (Majid) — **build to
+  `ONBOARDING-FLOW-SPEC-2026-09-01.md`.** Summary: 6 steps — (1) Role `venue|host|promoter` public,
+  (2) Onboard-or-Sign-in public (`auth.signup()` / `auth.login()` + `GET /onboarding/me` routing),
+  (3) Plan `basic|silver|diamond` authed → `POST /api/v2/onboarding/applications { requestedType, plan }`,
+  (4) Profile autosave `PATCH /api/v2/onboarding/applications/:id`, (5) Documents `id_front|id_back|selfie`
+  via `upload-url` → PUT → `documents` (`uploadToSignedUrl` helper, skip PUT on `memory://`),
+  (6) Review + `POST .../submit`. Success → poll `GET /onboarding/me` → `approved` → `GET /organizations`
+  → studio. Resume-on-load from `GET /onboarding/me`. The spec has every field, endpoint, response
+  shape, and the 3 open product decisions.
+- `verify` / `api/kyc` teardown, `firebase` removal (Majid) — unchanged from below.
 - `login/layout.tsx` + new `signup/layout.tsx` (Anil), `onboard/layout.tsx` (Majid) — swap `DashboardAuthProvider` → `SessionProvider` (Sagar's import).
 - **Delete (Anil):** `src/lib/firebase/client.ts`, `src/lib/auth/getCachedFirebaseIdToken.ts`, `src/app/api/auth/{me,partner-context,profile,check-email,check-availability,create-account,onboard,onboard-status,onboarding-progress}/route.ts`, `src/app/api/auth/otp/**`, the `/auth/change-password` / `/forgot-password` links. **Delete (Majid):** `src/app/verify/**`, `src/app/api/kyc/**`.
 - `apps/partner-dashboard/src/components/providers/DashboardAuthProvider.tsx` (**Keshvi**) — **re-home, don't delete.** ~40 components use `useDashboardAuth()`. Rename to `session-context.tsx`, keep a `useDashboardAuth` alias, re-implement its context on `@c1rcle/auth` (merged) + your own `useOrgAccess`. Map: `user` → `useSession().user`; `isApproved` → "an active org exists"; `signIn/signUp/signOut` → `auth.*`; `hasPermission/canDo` → `useOrgAccess().hasPermission`; `tabVisibility` → `useOrgAccess().tabVisibility`; `getIdToken` → `getAccessToken`; `switchPartner` → `setActiveOrg`. Drop `isBanned`, `kycStatus`, `entityType`, `subscriptionPlan`, `actionPermissions`, `piiPolicy`, `mustChangePassword`, the 30s polling — grep each consumer, replace with the nearest real signal or remove the branch.
@@ -208,15 +225,11 @@ and tell you; you `git pull staging` + `pnpm --filter @c1rcle/contracts build`.
 
 ## Local dev
 
-```bash
-# backend (someone runs this so the interns have a gateway to hit)
-cd C1RCLE-BACKEND/apps/api-gateway
-# .env.local: STORAGE_DRIVER=firestore + the thec1rcle-india Firebase creds
-#   (creds: thec1rcle/apps/api-gateway/.env.development — a disposable dev sandbox)
-NODE_OPTIONS=--dns-result-order=ipv4first pnpm dev      # :8080
+The backend is hosted on a shared dev server so you don't need to run it locally!
 
+```bash
 # frontend
 cd C1RCLE-FRONTEND
-# .env.local: NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+# .env.local: NEXT_PUBLIC_API_BASE_URL=https://circle-v2-backend.onrender.com
 pnpm --filter partner-dashboard dev                     # :3001
 ```
