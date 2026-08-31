@@ -2,6 +2,14 @@
 
 <!-- filename kept as INTERN-TASKS-2026-08-27.md for existing links; this covers the whole team. -->
 
+> **▶ ACTIVE as of 2026-08-31.** Priority, merge order and the parallel backend front are set by
+> `SPRINT-2026-08-31.md` — read that first. This doc holds the per-file ownership detail below,
+> which still stands. Deltas for this sprint: (1) Keshvi's lane now also absorbs the uncommitted
+> `gateway-partner-transport.ts` / `api-partner-decoders.ts` / `api-partner-repositories.ts` WIP —
+> keep the transport/decoder split as shared infra, drop the `NEXT_PUBLIC_PARTNER_*` env flags,
+> active-org from `getActiveOrgId()`; studio-screen wiring in `repositories.ts` stays fixtures
+> (later spec-C effort). (2) Guest-portal de-mock is next sprint, not this one.
+
 
 **Read before starting:**
 - `docs/superpowers/specs/2026-08-27-frontend-gateway-auth-foundation-design.md` — the design.
