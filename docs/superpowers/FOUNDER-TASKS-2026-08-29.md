@@ -1,5 +1,22 @@
 # Founder Tasks — Backend Phase 5 completion + unblock the frontend interns
 
+> **▶ 2026-08-31 UPDATE.** A full doc audit changed the backend priority. `SPRINT-2026-08-31.md`
+> is now the authority for this front — read it first. Summary of what's new since 2026-08-29:
+> - **P0-A (new, blocks everything): green `pnpm check`.** lint fails (~900 core `no-explicit-any`),
+>   boundaries fails (razorpay `fetch()` — this doc's Task B3), one test fails (`compare-and-set.test.ts`
+>   — Shriyash root-causes it). Land P0-A before any Phase 4 PR merges.
+> - **P0-B (new): docs reconciliation** — ROADMAP + phase-04/05 files + stale-plan banners (Shriyash).
+> - **P1-A (new, the big item): Phase 4 HTTP route rebuild.** Phase 4's routes (checkout / payments /
+>   orders / tickets / wallet / webhooks / public) were **never committed** — lost in the 2026-08-28
+>   incident, `a1bd2e7` only committed `v2-services.ts`. Domain/services/adapters/contracts are
+>   intact. Split: PR1 public/discovery (Ayush) → PR2 checkout/payments/webhook (Shriyash) ∥ PR3
+>   orders/tickets/wallet (Ayush; Sagar helps wk2). See `SPRINT-2026-08-31.md` §P1-A.
+> - **P1-C: Phase 5 close-out** = Task A2 + Task B1 + Task B2 below, unchanged, **plus** 5
+>   domain-model unit test files (Sagar, wk2).
+> - Task B4 (any-ratchet) is folded into P0-A. Task B3 (razorpay boundary) is folded into P0-A.
+>
+> Original 2026-08-29 text below stands for the per-task detail.
+
 **Who:** Task A = **Shriyash**, Task B = **Ayush**. **Repo: `C1RCLE-BACKEND` @
 `main`.** (Sagar/Keshvi/Anil/Majid are on `C1RCLE-FRONTEND` — see
 `INTERN-TASKS-2026-08-27.md`. They never touch the backend; the founders own it.)
