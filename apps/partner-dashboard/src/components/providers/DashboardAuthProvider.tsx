@@ -1,78 +1,37 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  GoogleAuthProvider,
-  signInWithPopup,
-  createUserWithEmailAndPassword,
-  updateProfile as updateFirebaseProfile,
-} from 'firebase/auth';
-import { getFirebaseAuth } from '@/lib/firebase/client';
-import { getCachedFirebaseIdToken } from '@/lib/auth/getCachedFirebaseIdToken';
+import { createContext, useCallback, useContext, useMemo } from 'react';
+
+import { useSessionStore, login, signup, logout, getAccessToken } from '@c1rcle/auth';
+
+import { useOrgAccess } from '@/lib/access/use-org-access';
+import { getActiveOrgId, setActiveOrg } from '@/lib/org/active-org';
+
 import type { DashboardProfile, PartnerMembership, PartnerType, StaffRole } from '@/lib/rbac/types';
+import type { ReactNode } from 'react';
 
-// ── Atomic permissions object — always set together to avoid race conditions ──
-interface PermissionsState {
-  tabVisibility: Partial<Record<string, boolean>> | null;
-  actionPermissions: Partial<Record<string, boolean>> | null;
-  piiPolicy: Partial<Record<string, boolean>> | null;
+const PARTNER_TYPES: readonly PartnerType[] = ['venue', 'host', 'promoter', 'club'];
+const STAFF_ROLES: readonly StaffRole[] = ['owner', 'admin', 'manager', 'staff', 'promoter'];
+
+function toPartnerType(value: string | null): PartnerType {
+  return (PARTNER_TYPES as readonly string[]).includes(value ?? '')
+    ? (value as PartnerType)
+    : 'venue';
 }
 
-const EMPTY_PERMISSIONS: PermissionsState = {
-  tabVisibility: null,
-  actionPermissions: null,
-  piiPolicy: null,
-};
-
-interface MeActiveMembership {
-  partnerId: string;
-  partnerType: PartnerType;
-  role: StaffRole;
-  joinedAt: number;
-  isActive: boolean;
-  partnerName?: string;
-  membershipId?: string;
-}
-
-interface MeApiResponse {
-  user: {
-    uid: string;
-    email: string;
-    displayName?: string;
-    username?: string;
-    isApproved?: boolean;
-    isBanned?: boolean;
-    kycStatus?: string;
-    onboardingEntityType?: string;
-    subscriptionPlan?: string;
-    tier?: string;
-    // May be present here (injected by gateway) OR at the top-level activeMembership field.
-    activeMembership?: MeActiveMembership;
-    memberships?: MeActiveMembership[];
-    _staffTabVisibility?: Record<string, boolean>;
-    _staffActionPermissions?: Record<string, boolean>;
-    _staffPiiPolicy?: Record<string, boolean>;
-    mustChangePassword?: boolean;
-  } | null;
-  // Gateway puts activeMembership here when loadMemberships succeeds.
-  activeMembership?: MeActiveMembership | null;
-  memberships?: MeActiveMembership[];
-  // buildGuestAuthBootstrap nests onboardingRequest inside onboarding.
-  onboarding?: {
-    onboardingRequest?: {
-      status: string;
-      type?: string;
-    } | null;
-  } | null;
+function toStaffRole(value: string | null): StaffRole {
+  return (STAFF_ROLES as readonly string[]).includes(value ?? '') ? (value as StaffRole) : 'owner';
 }
 
 interface AuthContextValue {
-  user: any | null;
+  /*
+   * Deliberately loose: onboard/PageClient.tsx and verify/PageClient.tsx (both pre-Phase-7,
+   * unmigrated) still read Firebase-shaped fields (`.uid`, `.getIdToken()`) off `user` that
+   * don't exist on the real `User` DTO from @c1rcle/contracts. Narrowing this breaks their
+   * typecheck; that migration is Phase 7 (onboard rebuild + verify deletion), out of scope here.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  user: any;
   profile: DashboardProfile | null;
   memberships: PartnerMembership[];
   loading: boolean;
@@ -83,19 +42,19 @@ interface AuthContextValue {
   kycStatus: string | null;
   entityType: string | null;
   subscriptionPlan: string | null;
-  /** Resolved tab visibility for non-OWNER staff; null means show all tabs */
+  /** Resolved tab visibility; null means show all tabs */
   tabVisibility: Partial<Record<string, boolean>> | null;
-  /** Resolved action permissions for non-OWNER staff; null means all allowed */
+  /** Resolved action permissions; null means all allowed */
   actionPermissions: Partial<Record<string, boolean>> | null;
-  /** Resolved PII policy for non-OWNER staff; null means full visibility */
+  /** Resolved PII policy; null means full visibility */
   piiPolicy: Partial<Record<string, boolean>> | null;
-  /** Coarse-grained permissions returned by the server for this role (e.g. VIEW_FINANCIALS) */
+  /** Permissions returned by the server for this role */
   grantedPermissions: string[];
-  /** Returns true if the server has granted the given coarse permission for this membership */
+  /** Returns true if the server has granted the given permission for this membership */
   hasPermission: (permission: string) => boolean;
   /** Returns true if owner (null) or the specific action is permitted */
   canDo: (action: string) => boolean;
-  /** Returns the current Firebase ID token, or empty string if not signed in */
+  /** Returns the current access token, or empty string if not signed in */
   getIdToken: () => Promise<string>;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
@@ -107,514 +66,120 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function DashboardAuthProvider({ children }: { children: ReactNode }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const [user, setUser] = useState<any | null>(null);
-  const [profile, setProfile] = useState<DashboardProfile | null>(null);
-  const [memberships, setMemberships] = useState<PartnerMembership[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isApproved, setIsApproved] = useState(false);
-  const [isBanned, setIsBanned] = useState(false);
-  const [isPartnerSuspended, setIsPartnerSuspended] = useState(false);
-  const [onboardingStatus, setOnboardingStatus] = useState<string | null>(null);
-  const [kycStatus, setKycStatus] = useState<string | null>(null);
-  const [entityType, setEntityType] = useState<string | null>(null);
-  const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
-  // Atomic permissions — always updated together to prevent mid-render inconsistency
-  const [permissions, setPermissions] = useState<PermissionsState>(EMPTY_PERMISSIONS);
-  const [grantedPermissions, setGrantedPermissions] = useState<string[]>([]);
-  const [serverDefaultTabVisibility, setServerDefaultTabVisibility] = useState<Partial<
-    Record<string, boolean>
-  > | null>(null);
-  // membershipId for periodic permission refresh (staff only)
-  const [membershipId, setMembershipId] = useState<string | null>(null);
-  const lastProfileFetchRef = useRef<number>(0);
+  const sessionState = useSessionStore();
+  const activeOrgId = getActiveOrgId();
+  const orgAccess = useOrgAccess(activeOrgId);
 
-  useEffect(() => {
-    if (!loading && user && profile?.mustChangePassword) {
-      const isDashboardPath = pathname
-        ? pathname.startsWith('/partner/') ||
-          pathname.startsWith('/venue') ||
-          pathname.startsWith('/host') ||
-          pathname.startsWith('/promoter') ||
-          pathname === '/'
-        : false;
+  const loading = sessionState.status === 'unknown' || orgAccess.isLoading;
+  const user = sessionState.session?.user ?? null;
 
-      if (isDashboardPath && pathname !== '/auth/change-password') {
-        router.replace('/auth/change-password');
-      }
-    }
-  }, [loading, user, profile, pathname, router]);
-
-  useEffect(() => {
-    const auth = getFirebaseAuth() as any;
-    if (!auth || typeof auth.onAuthStateChanged !== 'function') {
-      // Mock auth object check
-      setLoading(false);
-      return;
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: any) => {
-      setUser(firebaseUser);
-      if (!firebaseUser) {
-        setProfile(null);
-        setMemberships([]);
-        setIsApproved(false);
-        setIsBanned(false);
-        setIsPartnerSuspended(false);
-        setOnboardingStatus(null);
-        setKycStatus(null);
-        setEntityType(null);
-        setSubscriptionPlan(null);
-        setPermissions(EMPTY_PERMISSIONS);
-        setGrantedPermissions([]);
-        setServerDefaultTabVisibility(null);
-        setMembershipId(null);
-        setLoading(false);
-      } else {
-        // A new user just signed in. Immediately clear any stale profile
-        // data from the previous account and gate all guards with loading=true.
-        // Without this, Account A's profile stays visible while Account B's
-        // /api/auth/me fetch is in-flight — causing the wrong account to render.
-        setProfile(null);
-        setMemberships([]);
-        setIsApproved(false);
-        setIsBanned(false);
-        setIsPartnerSuspended(false);
-        setPermissions(EMPTY_PERMISSIONS);
-        setLoading(true);
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-
-    // Reset loading to true BEFORE the async fetch so that any guard
-    // (login page useEffect, RoleGuard, etc.) sees authLoading=true and
-    // doesn't act on stale isApproved=false while we're still fetching.
-    setLoading(true);
-
-    // AbortController cancels in-flight fetches when the user changes.
-    // Without this, Account A's fetch can resolve AFTER Account B's and
-    // overwrite the state — causing the wrong account to appear after login.
-    const controller = new AbortController();
-
-    const fetchUserData = async () => {
-      try {
-        // Force-refresh ensures admin-set custom claims are picked up
-        // immediately without waiting for the 1-hour token TTL.
-        const token = await user.getIdToken(true);
-
-        if (controller.signal.aborted) return;
-
-        const requestedPartnerType =
-          user.partnerType === 'host' || user.partnerType === 'promoter' || user.partnerType === 'venue'
-            ? user.partnerType
-            : undefined;
-        const res = await fetch('/api/auth/me', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            ...(requestedPartnerType ? { 'x-user-type': requestedPartnerType } : {}),
-          },
-          signal: controller.signal,
-        });
-
-        if (!res.ok) {
-          if (!controller.signal.aborted) setLoading(false);
-          return;
-        }
-
-        const data: MeApiResponse = await res.json();
-
-        if (controller.signal.aborted) return;
-
-        const userData = data.user;
-        const onboardingRequest = data.onboarding?.onboardingRequest || null;
-
-        if (!userData) {
-          if (!controller.signal.aborted) setLoading(false);
-          return;
-        }
-
-        const tokenResult = await user.getIdTokenResult();
-
-        if (controller.signal.aborted) return;
-
-        const claims = tokenResult.claims as Record<string, any>;
-
-        const approvedByDoc = userData.isApproved || false;
-        const approvedByClaims = !!claims['partnerId'];
-        const approvedState = approvedByDoc || approvedByClaims;
-
-        setIsApproved(approvedState);
-        setIsBanned(userData.isBanned || false);
-
-        if (!approvedState) {
-          if (onboardingRequest) {
-            setOnboardingStatus(onboardingRequest.status);
-          }
-        } else {
-          setOnboardingStatus(null);
-        }
-
-        setKycStatus(userData.kycStatus ?? null);
-        setEntityType(userData.onboardingEntityType ?? null);
-
-        let activeMembership: PartnerMembership | null = null;
-        let plan: string | null = null;
-
-        // activeMembership may live in data.user.activeMembership (injected by gateway)
-        // OR at data.activeMembership (top-level) — check both for resilience.
-        const rawMembership = userData.activeMembership || data.activeMembership || null;
-        const rawMemberships = userData.memberships || data.memberships || (rawMembership ? [rawMembership] : []);
-
-        if (claims['partnerId'] && claims['partnerType'] && claims['partnerRole']) {
-          activeMembership = {
-            uid: user.uid,
-            partnerId: claims['partnerId'] as string,
-            partnerType: (claims['partnerType'] === 'club'
-              ? 'venue'
-              : claims['partnerType']) as PartnerType,
-            role: claims['partnerRole'] as StaffRole,
-            joinedAt: 0,
-            isActive: true,
-            partnerName: rawMembership?.partnerName || undefined,
-          };
-        } else if (rawMembership) {
-          activeMembership = {
-            uid: user.uid,
-            partnerId: rawMembership.partnerId,
-            partnerType: rawMembership.partnerType === 'club' ? 'venue' : rawMembership.partnerType,
-            role: rawMembership.role,
-            joinedAt: rawMembership.joinedAt,
-            isActive: rawMembership.isActive,
-            partnerName: rawMembership.partnerName || undefined,
-          };
-        }
-
-        if (approvedState && activeMembership) {
-          plan = userData.subscriptionPlan || userData.tier || 'basic';
-          setSubscriptionPlan(plan);
-
-          // Fetch server-computed coarse permissions and default tab visibility.
-          // Must happen server-side — frontend never derives permissions from role.
-          fetch('/api/auth/partner-context', {
-            headers: { Authorization: `Bearer ${token}` },
-            signal: controller.signal,
-          })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((ctx) => {
-              if (ctx && !controller.signal.aborted) {
-                const payload = ctx.data || ctx;
-                setGrantedPermissions(payload.permissions ?? []);
-                setServerDefaultTabVisibility(payload.tabVisibility ?? null);
-                setIsPartnerSuspended(payload.isSuspended ?? false);
-              }
-            })
-            .catch(() => {});
-        }
-
-        setMemberships(rawMemberships.map((item) => ({
-          uid: user.uid,
-          partnerId: item.partnerId,
-          partnerType: item.partnerType === 'club' ? 'venue' : item.partnerType,
-          role: item.role,
-          joinedAt: item.joinedAt,
-          isActive: item.partnerId === activeMembership?.partnerId,
-          partnerName: item.partnerName,
-          membershipId: item.membershipId,
-        })));
-
-        // Set permissions atomically — all three fields in a single state update
-        setPermissions({
-          tabVisibility: userData._staffTabVisibility ?? null,
-          actionPermissions: userData._staffActionPermissions ?? null,
-          piiPolicy: userData._staffPiiPolicy ?? null,
-        });
-
-        // Capture membershipId for periodic staff-permission refresh
-        setMembershipId(userData.activeMembership?.membershipId ?? null);
-
-        setProfile({
-          uid: user.uid,
-          email: user.email || '',
-          displayName: userData.displayName || userData.username || 'User',
-          activeMembership,
-          mustChangePassword: userData.mustChangePassword ?? false,
-        });
-        lastProfileFetchRef.current = Date.now();
-      } catch (err: any) {
-        if (err?.name === 'AbortError') return; // expected — user changed mid-fetch
-        console.error('Error fetching user data in auth provider:', err);
-        if (!controller.signal.aborted) setLoading(false);
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    };
-
-    fetchUserData();
-
-    // Cancel any in-flight request when user changes or component unmounts
-    return () => controller.abort();
-  }, [user]);
-
-  // Re-fetch profile when tab becomes visible after 60s — ensures staff see
-  // updated permissions after the venue owner reassigns their access profile.
-  useEffect(() => {
-    if (!user) return;
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        const elapsed = Date.now() - lastProfileFetchRef.current;
-        if (elapsed > 60 * 1000) {
-          user.getIdToken().then((token: any) => {
-            fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
-              .then((r) => (r.ok ? r.json() : null))
-              .then((data) => {
-                if (!data?.user) return;
-                const userData = data.user;
-                // Atomic update — all three permissions together
-                setPermissions({
-                  tabVisibility: userData._staffTabVisibility ?? null,
-                  actionPermissions: userData._staffActionPermissions ?? null,
-                  piiPolicy: userData._staffPiiPolicy ?? null,
-                });
-                lastProfileFetchRef.current = Date.now();
-              })
-              .catch(() => {});
-          });
-        }
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [user]);
-
-  // Permission sync via authenticated gateway polling. This preserves the
-  // staff-permission refresh path without direct Firestore access in the browser.
-  useEffect(() => {
-    if (!user || !membershipId) return;
-    let cancelled = false;
-
-    const syncPermissions = async () => {
-      try {
-        const token = await user.getIdToken().then((token: any) => token);
-        const res = await fetch('/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) return;
-        const data: MeApiResponse | null = await res.json().catch(() => null);
-        if (cancelled || !data?.user) return;
-        const userData = data.user;
-        const newTabVisibility = userData._staffTabVisibility ?? null;
-        const newActionPermissions = userData._staffActionPermissions ?? null;
-        const newPiiPolicy = userData._staffPiiPolicy ?? null;
-        // Only update state if something actually changed — avoids context re-renders
-        // on every 30s poll when permissions haven't changed (new object === re-render).
-        setPermissions((prev) => {
-          if (
-            JSON.stringify(prev.tabVisibility) === JSON.stringify(newTabVisibility) &&
-            JSON.stringify(prev.actionPermissions) === JSON.stringify(newActionPermissions) &&
-            JSON.stringify(prev.piiPolicy) === JSON.stringify(newPiiPolicy)
-          ) {
-            return prev; // same reference → no re-render
-          }
-          return {
-            tabVisibility: newTabVisibility,
-            actionPermissions: newActionPermissions,
-            piiPolicy: newPiiPolicy,
-          };
-        });
-        const newMembershipId = userData.activeMembership?.membershipId ?? membershipId;
-        if (newMembershipId !== membershipId) {
-          setMembershipId(newMembershipId);
-        }
-        lastProfileFetchRef.current = Date.now();
-      } catch (err) {
-        console.error('Error refreshing staff permissions:', err);
-      }
-    };
-
-    syncPermissions().catch(() => {});
-    const intervalId = window.setInterval(() => {
-      syncPermissions().catch(() => {});
-    }, 30_000);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-    };
-  }, [user, membershipId]);
+  const isApproved = activeOrgId !== null || user !== null;
+  const isPartnerSuspended = orgAccess.isSuspended;
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const auth = getFirebaseAuth() as any;
-    if (auth && typeof auth.signInWithEmailAndPassword === 'function') {
-      await auth.signInWithEmailAndPassword(email, password);
-    } else {
-      await signInWithEmailAndPassword(auth, email, password).catch(() => {});
-    }
+    await login({ email, password });
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, displayName: string) => {
-    const auth = getFirebaseAuth() as any;
-    const credential = await createUserWithEmailAndPassword(auth, email, password);
-
-    await updateFirebaseProfile(credential.user, { displayName });
-
-    const token = await credential.user.getIdToken();
-    const now = new Date().toISOString();
-
-    await fetch('/api/auth/profile', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        uid: credential.user.uid,
-        email: credential.user.email || '',
-        displayName: displayName,
-        photoURL: credential.user.photoURL || '',
-        createdAt: now,
-        updatedAt: now,
-        isApproved: false,
-      }),
-    });
+    await signup({ email, password, displayName });
   }, []);
 
-  const signInWithGoogle = useCallback(async () => {
-    const auth = getFirebaseAuth() as any;
-    const provider = new GoogleAuthProvider();
-    const credential = await signInWithPopup(auth, provider);
-
-    const token = await credential.user.getIdToken();
-
-    // Use our endpoint which creates the profile if it doesn't exist
-    const now = new Date().toISOString();
-    await fetch('/api/auth/profile', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        uid: credential.user.uid,
-        email: credential.user.email || '',
-        displayName: credential.user.displayName || 'Member',
-        photoURL: credential.user.photoURL || '',
-        createdAt: now,
-        updatedAt: now,
-        isApproved: false,
-      }),
-    });
+  const signInWithGoogle = useCallback((): Promise<void> => {
+    return Promise.reject(new Error('Google sign-in is not supported on V2 API'));
   }, []);
 
   const signOut = useCallback(async () => {
-    const auth = getFirebaseAuth() as any;
-    if (auth && typeof auth.signOut === 'function') {
-      await auth.signOut();
-    } else {
-      await firebaseSignOut(auth).catch(() => {});
-    }
+    await logout();
   }, []);
 
   const switchPartner = useCallback(async (partnerId: string) => {
-    if (!user) return;
-    try {
-      setLoading(true);
-      const token = await user.getIdToken();
-      const res = await fetch('/api/auth/me', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ partnerId }),
-      });
-      if (res.ok) {
-        // Refresh token to get new claims
-        await user.getIdToken(true);
-        window.location.reload();
-      }
-    } catch (err) {
-      console.error('Failed to switch partner:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+    await setActiveOrg(partnerId);
+  }, []);
 
-  const canDo = useCallback((action: string) =>
-    !permissions.actionPermissions || permissions.actionPermissions[action] === true, [permissions.actionPermissions]);
+  const getIdToken = useCallback((): Promise<string> => {
+    return Promise.resolve(getAccessToken() ?? '');
+  }, []);
 
-  const getIdToken = useCallback(async () => {
-    return getCachedFirebaseIdToken(user);
-  }, [user]);
-
-  const hasPermission = useCallback((permission: string) => grantedPermissions.includes(permission), [grantedPermissions]);
-
-  const authContextValue = useMemo<AuthContextValue>(() => ({
-    user,
-    profile,
-    memberships,
-    loading,
-    isApproved,
-    isBanned,
-    isPartnerSuspended,
-    onboardingStatus,
-    kycStatus,
-    entityType,
-    subscriptionPlan,
-    tabVisibility: permissions.tabVisibility ?? serverDefaultTabVisibility,
-    actionPermissions: permissions.actionPermissions,
-    piiPolicy: permissions.piiPolicy,
-    grantedPermissions,
-    hasPermission,
-    canDo,
-    getIdToken,
-    signIn,
-    signUp,
-    signInWithGoogle,
-    signOut,
-    switchPartner,
-  }), [canDo, entityType, getIdToken, grantedPermissions, hasPermission, isApproved, isBanned, isPartnerSuspended, kycStatus, loading, memberships, onboardingStatus, permissions.actionPermissions, permissions.piiPolicy, permissions.tabVisibility, profile, serverDefaultTabVisibility, signIn, signInWithGoogle, signOut, signUp, subscriptionPlan, switchPartner, user]);
-
-  const isDashboardPath = pathname
-    ? pathname.startsWith('/partner/') ||
-      pathname.startsWith('/venue') ||
-      pathname.startsWith('/host') ||
-      pathname.startsWith('/promoter') ||
-      pathname === '/'
-    : false;
-
-  const isBypassPath = pathname
-    ? pathname.startsWith('/onboard') || pathname.startsWith('/login')
-    : false;
-
-  const redirectPending =
-    !loading &&
-    user &&
-    profile?.mustChangePassword &&
-    isDashboardPath &&
-    pathname !== '/auth/change-password';
-
-  if ((loading && !isBypassPath) || redirectPending) {
-    return (
-      <div className="partner-v3-auth-loading" role="status" aria-live="polite">
-        <div className="partner-v3-spinner" aria-hidden="true" />
-        <p>
-          {redirectPending ? 'Redirecting' : 'Authorizing Access'}
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <AuthContext.Provider value={authContextValue}>
-      {children}
-    </AuthContext.Provider>
+  const hasPermission = useCallback(
+    (permission: string) => orgAccess.hasPermission(permission),
+    [orgAccess],
   );
+
+  const canDo = useCallback(
+    (action: string) => orgAccess.hasPermission(action),
+    [orgAccess],
+  );
+
+  const profile = useMemo<DashboardProfile | null>(() => {
+    if (!user) return null;
+    return {
+      uid: user.id,
+      email: user.email,
+      displayName: user.displayName || 'User',
+      activeMembership: activeOrgId
+        ? {
+            uid: user.id,
+            partnerId: activeOrgId,
+            partnerType: toPartnerType(orgAccess.partnerType),
+            role: toStaffRole(orgAccess.role),
+            // Not sourced from the API — `GET /organizations/:id/access` carries no join
+            // date, and nothing downstream reads this field. `0` is an honest "unknown"
+            // rather than a fabricated timestamp (also keeps this memo pure).
+            joinedAt: 0,
+            isActive: true,
+          }
+        : null,
+      mustChangePassword: false,
+    };
+  }, [user, activeOrgId, orgAccess.partnerType, orgAccess.role]);
+
+  const authContextValue = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      profile,
+      memberships: activeOrgId && profile?.activeMembership ? [profile.activeMembership] : [],
+      loading,
+      isApproved,
+      isBanned: false,
+      isPartnerSuspended,
+      onboardingStatus: null,
+      kycStatus: null,
+      entityType: null,
+      subscriptionPlan: 'basic',
+      tabVisibility: orgAccess.tabVisibility,
+      actionPermissions: null,
+      piiPolicy: null,
+      grantedPermissions: orgAccess.permissions,
+      hasPermission,
+      canDo,
+      getIdToken,
+      signIn,
+      signUp,
+      signInWithGoogle,
+      signOut,
+      switchPartner,
+    }),
+    [
+      user,
+      profile,
+      activeOrgId,
+      loading,
+      isApproved,
+      isPartnerSuspended,
+      orgAccess.tabVisibility,
+      orgAccess.permissions,
+      hasPermission,
+      canDo,
+      getIdToken,
+      signIn,
+      signUp,
+      signInWithGoogle,
+      signOut,
+      switchPartner,
+    ],
+  );
+
+  return <AuthContext.Provider value={authContextValue}>{children}</AuthContext.Provider>;
 }
 
 export function useDashboardAuth() {
