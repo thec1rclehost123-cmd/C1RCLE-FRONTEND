@@ -1,6 +1,6 @@
 import { ExploreDiscoveryClient } from '@/features/explore/components/ExploreDiscoveryClient';
 import { ExploreHeroCarouselClient } from '@/features/explore/components/ExploreHeroCarouselClient';
-import { exploreFixture } from '@/features/explore/fixtures/explore.fixture';
+import { getExploreRepository } from '@/features/explore/lib';
 
 import type { Metadata } from 'next';
 
@@ -20,14 +20,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ExplorePage() {
+export default async function ExplorePage() {
+  const { cities, events, featuredEvents } = await getExploreRepository().getExploreData();
+
   return (
     <div className="relative z-10 min-h-screen overflow-x-clip pb-24 text-white md:pb-0">
       <section aria-label="Featured events">
-        <ExploreHeroCarouselClient events={exploreFixture.featuredEvents} />
+        <ExploreHeroCarouselClient events={featuredEvents} />
       </section>
 
-      <ExploreDiscoveryClient events={exploreFixture.events} cities={exploreFixture.cities} />
+      <ExploreDiscoveryClient events={events} cities={cities} />
     </div>
   );
 }
