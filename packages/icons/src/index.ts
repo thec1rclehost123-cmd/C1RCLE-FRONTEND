@@ -30,6 +30,8 @@ export {
   LogOut as SignOutIcon,
   Menu as MenuIcon,
   Moon as DarkModeIcon,
+  PanelLeft as NavigationSideIcon,
+  PanelTop as NavigationTopIcon,
   Plus as AddIcon,
   Search as SearchIcon,
   Settings as SettingsIcon,
@@ -110,6 +112,8 @@ export {
   UserPlus as InviteIcon,
   Video as VideoIcon,
   Wifi as WifiIcon,
+  CreditCard as CreditCardIcon,
+  Wallet as WalletIcon,
   Wine as BottleServiceIcon,
 } from 'lucide-react';
 

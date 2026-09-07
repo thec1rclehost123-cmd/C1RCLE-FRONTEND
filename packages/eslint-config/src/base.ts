@@ -165,6 +165,8 @@ export const baseConfig = defineConfig(
             },
             {
               group: [
+                'firebase',
+                'firebase/*',
                 'firebase-admin',
                 'firebase-admin/*',
                 'pg',
@@ -223,6 +225,40 @@ export const baseConfig = defineConfig(
       'object-shorthand': 'error',
       'no-implicit-coercion': 'error',
       'turbo/no-undeclared-env-vars': 'error',
+    },
+  },
+
+  /*
+   * The auth package must never persist the access token to browser storage —
+   * it lives only in the in-memory session store. Scoped (`packages/auth/**`)
+   * because other packages may legitimately use localStorage (e.g. UI prefs);
+   * the repo-wide fetch/XHR bans are re-stated so they are not dropped here.
+   */
+  {
+    files: ['packages/auth/**'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        {
+          name: 'fetch',
+          message:
+            'ARCHITECTURE: raw fetch() is forbidden. Use @c1rcle/api-client, which owns base URL, auth, retries, timeouts and typed errors.',
+        },
+        {
+          name: 'XMLHttpRequest',
+          message: 'ARCHITECTURE: use @c1rcle/api-client for all backend communication.',
+        },
+        {
+          name: 'localStorage',
+          message:
+            'SECURITY: the access token must live only in the in-memory session store. Never persist it to localStorage.',
+        },
+        {
+          name: 'sessionStorage',
+          message:
+            'SECURITY: the access token must live only in the in-memory session store. Never persist it to sessionStorage.',
+        },
+      ],
     },
   },
 
