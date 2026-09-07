@@ -1,12 +1,12 @@
 /** @type {import('tailwindcss').Config} */
+// Force Tailwind tracking context cache reset
 export default {
+
   content: [
     './src/**/*.{js,jsx,ts,tsx}',
-    './app/**/*.{js,jsx,ts,tsx}',
-    './components/**/*.{js,jsx,ts,tsx}',
-    './lib/**/*.{js,jsx,ts,tsx}',
     '../../packages/ui/src/**/*.{js,jsx,ts,tsx}',
   ],
+
   darkMode: 'class',
   theme: {
     extend: {

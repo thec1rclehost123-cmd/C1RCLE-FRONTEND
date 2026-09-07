@@ -1,0 +1,48 @@
+.guestToolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.guestSearch { display: flex; min-width: 220px; max-width: 320px; flex: 1; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid rgb(255 255 255 / 8%); border-radius: 11px; background: #0d0d0d; color: #6a6a66; }
+.guestSearch input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: #f5f5f3; font: 500 13px/1.2 sans-serif; font-family: inherit; }
+.guestSearch input::placeholder { color: #6a6a66; }
+.guestFilters { display: flex; gap: 2px; padding: 4px; border: 1px solid rgb(255 255 255 / 8%); border-radius: 999px; background: #0d0d0d; }
+.guestFilter, .guestFilterActive { padding: 8px 14px; border-radius: 999px; color: #8a8a86; font-size: 12.5px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.guestFilterActive { background: #f5f5f3; color: #0a0a0a; }
+.guestHost .guestFilterActive { background: #a78bfa; }
+.guestFilter:hover { color: #f5f5f3; }
+.guestAction, .guestRefresh { display: inline-flex; align-items: center; gap: 7px; border: 1px solid rgb(255 255 255 / 8%); border-radius: 999px; background: #0d0d0d; color: #c9c9c6; font-size: 13px; font-weight: 600; text-decoration: none; }
+.guestAction { padding: 10px 15px; }
+.guestAction:disabled { cursor: not-allowed; opacity: .55; }
+.guestRefresh { width: 36px; height: 36px; justify-content: center; border-radius: 10px; color: #8a8a86; }
+.guestScroller { overflow-x: auto; }
+.guestTable { min-width: 760px; }
+.guestTableHeader, .guestTableRow { display: grid; grid-template-columns: 1.6fr .9fr 1fr .7fr 1.3fr 1.3fr; gap: 12px; align-items: center; padding-inline: 10px; }
+.guestTableHeader { padding-block: 12px; border-bottom: 1px solid rgb(255 255 255 / 7%); color: #6a6a66; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.guestTableRow { min-height: 70px; padding-block: 13px; border-bottom: 1px solid rgb(255 255 255 / 4%); color: #c9c9c6; font-size: 13.5px; }
+.guestName { display: flex; min-width: 0; align-items: center; gap: 12px; }
+.guestName > span:last-child { min-width: 0; }
+.guestName strong, .guestName small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.guestName strong { color: #f5f5f3; font-size: 14px; font-weight: 600; }
+.guestName small { margin-top: 3px; color: #8a8a86; font-size: 12px; font-weight: 500; }
+.guestAvatar { display: inline-flex; width: 34px; height: 34px; flex: none; align-items: center; justify-content: center; border: 1px solid rgb(255 255 255 / 12%); border-radius: 50%; background: linear-gradient(135deg, #422006, #7c2d12); color: #ffd8bf; font-size: 11px; font-weight: 800; }
+.guestTableRow > strong { color: #f5f5f3; }
+.genderFemale, .genderMale { display: inline-flex; width: 20px; height: 20px; align-items: center; justify-content: center; border-radius: 50%; font-size: 11px; font-weight: 800; }
+.genderFemale { border: 1px solid rgb(236 72 153 / 40%); background: rgb(236 72 153 / 18%); color: #ec4899; }
+.genderMale { border: 1px solid rgb(59 130 246 / 40%); background: rgb(59 130 246 / 18%); color: #3b82f6; }
+.guestContact { color: #8a8a86; font-size: 12.5px; }
+.guestOrigin { display: flex; align-items: flex-start; gap: 6px; color: #6ee79b; font-size: 12.5px; font-weight: 700; }
+.guestOrigin i { width: 7px; height: 7px; margin-top: 5px; flex: none; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
+.guestOrigin small { display: block; margin-left: 13px; color: #8a8a86; font-size: 11px; font-weight: 600; }
+.guestHost .guestOrigin { color: #f5f5f3; }
+.guestHost .guestOrigin i { background: #a78bfa; box-shadow: 0 0 6px #a78bfa; }
+.guestEmpty { padding: 44px 20px; border: 1px dashed rgb(255 255 255 / 12%); border-radius: 14px; color: #8a8a86; text-align: center; }
+.guestEmpty a { color: #ff8a55; font-weight: 700; }
+.guestHost .guestEmpty a { color: #a78bfa; }
+
+@media (max-width: 820px) {
+  .guestAction { margin-left: 0; }
+}
+
+@media (max-width: 620px) {
+  .guestSearch { max-width: none; flex-basis: 100%; }
+  .guestFilters { overflow-x: auto; max-width: 100%; }
+  .guestAction { flex: 1; justify-content: center; }
+  .guestRefresh { flex: none; }
+}

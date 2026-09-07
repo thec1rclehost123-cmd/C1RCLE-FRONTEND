@@ -1,0 +1,42 @@
+.promotersSection { padding: 0 0 2px; }
+.promotersHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+.promotersHeader h2 { margin: 0 0 4px; color: #f5f5f3; font-size: 18px; font-weight: 800; }
+.promotersHeader p { margin: 0; color: #8a8a86; font-size: 13px; }
+.addPromoter, .selectAll { display: inline-flex; align-items: center; gap: 7px; border: 0; border-radius: 11px; background: #ff5a1f; color: #0a0a0a; font-size: 13.5px; font-weight: 700; }
+.promotersHost .addPromoter { background: #a78bfa; }
+.addPromoter { padding: 11px 18px; }
+.addPromoter:disabled, .selectAll:disabled { cursor: not-allowed; opacity: .55; }
+.promoterToolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+.promoterSearch { display: flex; max-width: 340px; flex: 1; align-items: center; gap: 10px; padding: 11px 14px; border: 1px solid rgb(255 255 255 / 8%); border-radius: 11px; background: #141414; color: #6a6a66; }
+.promoterSearch input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: #f5f5f3; font-family: inherit; font-size: 13px; }
+.promoterSearch input::placeholder { color: #6a6a66; }
+.selectAll { padding: 11px 16px; border: 1px solid rgb(255 255 255 / 10%); background: #141414; color: #c9c9c6; }
+.promoterGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.promoterGrid article { padding: 0; overflow: hidden; }
+.promoterCardHeader { display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid rgb(255 255 255 / 6%); }
+.promoterCardHeader > strong { min-width: 0; flex: 1; color: #f5f5f3; font-size: 14.5px; font-weight: 700; }
+.promoterCardHeader input { width: 18px; height: 18px; accent-color: #ff5a1f; }
+.promoterAvatar { display: inline-flex; width: 36px; height: 36px; flex: none; align-items: center; justify-content: center; border-radius: 50%; background: linear-gradient(135deg, #4c1d95, #be185d); color: #f5f5f3; font-size: 12px; font-weight: 800; }
+.promoterMetrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 16px 18px; }
+.promoterMetric span { display: block; margin-bottom: 6px; color: #8a8a86; font-size: 11px; font-weight: 700; }
+.promoterMetric strong { display: flex; align-items: center; gap: 6px; color: #f5f5f3; font-size: 16px; font-weight: 800; }
+.metricRevenue { color: #ffb020 !important; }
+.metricSuccess { color: #6ee79b !important; }
+.metricAccent { color: #ff8a55 !important; }
+.promotersHost .metricAccent { color: #f5f5f3 !important; }
+.coinIcon { width: 13px; height: 13px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid currentColor; border-radius: 50%; font-size: 9px; }
+.promoterFooter { display: block; padding: 13px; border-top: 1px solid rgb(255 255 255 / 6%); color: #c9c9c6; font-size: 13px; font-weight: 600; text-align: center; text-decoration: none; }
+.promoterFooter:hover { background: #1a1a1a; color: #fff; }
+.promoterEmpty { padding: 44px 20px; border: 1px dashed rgb(255 255 255 / 12%); border-radius: 14px; color: #8a8a86; text-align: center; }
+.promoterEmpty a { color: #ff8a55; font-weight: 700; }
+
+@media (max-width: 820px) {
+  .promoterGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 620px) {
+  .promotersHeader { flex-direction: column; }
+  .addPromoter { width: 100%; justify-content: center; }
+  .promoterGrid { grid-template-columns: 1fr; }
+  .promoterSearch { max-width: none; }
+}
