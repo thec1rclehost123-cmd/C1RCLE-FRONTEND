@@ -47,6 +47,7 @@ export const nextConfig = defineConfig(
       'src/app/**/robots.ts',
       'src/app/**/manifest.ts',
       'src/middleware.ts',
+      'src/proxy.ts',
       'src/instrumentation.ts',
       'next.config.ts',
     ],
@@ -106,6 +107,8 @@ export const nextConfig = defineConfig(
             },
             {
               group: [
+                'firebase',
+                'firebase/*',
                 'firebase-admin',
                 'firebase-admin/*',
                 'pg',
@@ -114,6 +117,11 @@ export const nextConfig = defineConfig(
                 '@prisma/client',
               ],
               message: 'SECURITY: backend SDKs and database clients are never allowed here.',
+            },
+            {
+              group: ['firebase', 'firebase/*'],
+              message:
+                'ARCHITECTURE: firebase is being removed from this application. Auth goes through @c1rcle/auth.',
             },
           ],
         },

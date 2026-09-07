@@ -1,0 +1,144 @@
+.root {
+  position: relative;
+  z-index: 20;
+}
+
+.trigger {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgb(255 255 255 / 13%);
+  border-radius: var(--dashboard-radius-button);
+  color: #d9dbde;
+  background: var(--dashboard-control);
+  padding: 0 16px;
+  cursor: pointer;
+  font-size: 14px;
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.trigger:hover {
+  border-color: rgb(255 255 255 / 22%);
+  color: #fff;
+  background: var(--dashboard-hover);
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(320px, calc(100vw - 24px));
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: var(--dashboard-radius-menu);
+  background: var(--dashboard-surface-elevated);
+  box-shadow: var(--dashboard-shadow-floating);
+}
+
+.popover header {
+  display: flex;
+  min-height: 50px;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--dashboard-border);
+  padding: 0 12px 0 16px;
+}
+.popover header > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.popover header strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.popover header button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: var(--dashboard-radius-control);
+  color: #aeb1b6;
+  background: transparent;
+  cursor: pointer;
+}
+.popover header button:hover {
+  color: #fff;
+  background: var(--dashboard-hover);
+}
+.weekdays,
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+.weekdays {
+  padding: 14px 14px 5px;
+  color: #777b82;
+  font-size: 9px;
+  font-weight: 700;
+  text-align: center;
+}
+.days {
+  padding: 4px 14px 16px;
+}
+.days > span,
+.days > button {
+  min-height: 35px;
+}
+.days > button {
+  position: relative;
+  border: 0;
+  border-radius: var(--dashboard-radius-control);
+  color: #cfd1d4;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+}
+.days > button:hover {
+  color: #fff;
+  background: var(--dashboard-hover);
+}
+.days > button i {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--dashboard-accent);
+  transform: translateX(-50%);
+}
+.days > button.today {
+  color: #fff;
+  background: var(--dashboard-accent);
+}
+.days > button.today i {
+  background: #fff;
+}
+
+@media (max-width: 520px) {
+  .root {
+    width: 100%;
+  }
+  .trigger {
+    width: 100%;
+    justify-content: center;
+  }
+  .popover {
+    right: auto;
+    left: 0;
+    width: min(100%, 340px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger {
+    transition-duration: 0.01ms;
+  }
+}

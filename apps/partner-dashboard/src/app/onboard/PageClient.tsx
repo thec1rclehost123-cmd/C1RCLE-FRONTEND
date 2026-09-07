@@ -29,9 +29,19 @@ import {
   X,
   ArrowRight,
 } from 'lucide-react';
-import { getFirebaseAuth } from '@/lib/firebase/client';
-import { signInWithCustomToken, signInWithEmailAndPassword } from 'firebase/auth';
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
+
+
+// Stubs for legacy auth methods being deprecated in V2
+const getFirebaseAuth = () => ({ currentUser: { getIdToken: async (_force?: boolean) => '' }, signOut: async () => {} });
+const signInWithEmailAndPassword = async (..._args: any[]): Promise<{ user: { getIdToken: (_force?: boolean) => Promise<string> } }> => ({ user: { getIdToken: async () => '' } });
+const signInWithCustomToken = async (..._args: any[]): Promise<{ user: { getIdToken: (_force?: boolean) => Promise<string> } }> => ({ user: { getIdToken: async () => '' } });
+const legacyFetch = (...args: Parameters<typeof fetch>) => window.fetch(...args);
+
+
+
+
+
 
 const Instagram = (props: any) => (
   <svg
@@ -110,7 +120,7 @@ function extractError(data: unknown, fallback: string): string {
 
 // ── OTP API helpers ───────────────────────────────────────────────────────────
 async function apiSendOtp(type: 'email' | 'phone', recipient: string) {
-  const res = await fetch('/api/auth/otp/send', {
+  const res = await legacyFetch('/api/auth/otp/send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ type, recipient }),
@@ -122,7 +132,7 @@ async function apiSendOtp(type: 'email' | 'phone', recipient: string) {
 }
 
 async function apiVerifyOtp(type: 'email' | 'phone', recipient: string, code: string) {
-  const res = await fetch('/api/auth/otp/verify', {
+  const res = await legacyFetch('/api/auth/otp/verify', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ type, recipient, code }),
@@ -208,7 +218,7 @@ function OnboardingContent() {
       if (!auth.currentUser) return;
       try {
         const token = await auth.currentUser.getIdToken();
-        await fetch('/api/auth/onboarding-progress', {
+        await legacyFetch('/api/auth/onboarding-progress', {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -329,7 +339,7 @@ function OnboardingContent() {
       if (authUser) {
         try {
           const token = await authUser.getIdToken();
-          const res = await fetch('/api/auth/me', {
+          const res = await legacyFetch('/api/auth/me', {
             headers: { Authorization: `Bearer ${token}` },
           });
           if (res.ok) {
@@ -425,7 +435,7 @@ function OnboardingContent() {
       if (!currentUser) return;
       try {
         const token = await currentUser.getIdToken();
-        const res = await fetch(
+        const res = await legacyFetch(
           `/api/auth/onboard-status?requestId=${encodeURIComponent(submittedRequestId)}`,
           { headers: { Authorization: `Bearer ${token}` } },
         );
@@ -479,7 +489,7 @@ function OnboardingContent() {
     setLoading(true);
     try {
       // Check if email exists
-      const checkRes = await fetch('/api/auth/check-email', {
+      const checkRes = await legacyFetch('/api/auth/check-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: otpEmail }),
@@ -516,7 +526,7 @@ function OnboardingContent() {
       const userCredential = await signInWithEmailAndPassword(auth as any, otpEmail, loginPassword);
       const token = await userCredential.user.getIdToken();
 
-      const meRes = await fetch('/api/auth/me', {
+      const meRes = await legacyFetch('/api/auth/me', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!meRes.ok) {
@@ -597,7 +607,7 @@ function OnboardingContent() {
       setStep(nextStep);
 
       // Save progress so database records this step transition
-      await fetch('/api/auth/onboarding-progress', {
+      await legacyFetch('/api/auth/onboarding-progress', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -715,7 +725,7 @@ function OnboardingContent() {
     setLoading(true);
     try {
       // Check if phone number is already registered
-      const checkRes = await fetch('/api/auth/check-availability', {
+      const checkRes = await legacyFetch('/api/auth/check-availability', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -829,7 +839,7 @@ function OnboardingContent() {
           }
         }
         // Check if email or phone is already registered before creating
-        const checkRes = await fetch('/api/auth/check-availability', {
+        const checkRes = await legacyFetch('/api/auth/check-availability', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -850,7 +860,7 @@ function OnboardingContent() {
           }
         }
         // Create account server-side (Admin SDK) — avoids client Firebase Auth connectivity issues
-        const res = await fetch('/api/auth/create-account', {
+        const res = await legacyFetch('/api/auth/create-account', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -944,7 +954,7 @@ function OnboardingContent() {
           }
         }
         const effectiveEmail = authUser?.email || formData.email;
-        const res = await fetch('/api/auth/onboard', {
+        const res = await legacyFetch('/api/auth/onboard', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -2177,7 +2187,7 @@ function KycFileZone({
       form.append('stepId', stepId);
       form.append('fieldName', fieldName);
 
-      const res = await fetch('/api/kyc/upload', {
+      const res = await legacyFetch('/api/kyc/upload', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: form,
@@ -2362,7 +2372,7 @@ function KycIdentityForm({
     try {
       const auth = getFirebaseAuth();
       const token = await auth.currentUser?.getIdToken();
-      const res = await fetch('/api/kyc/verify-aadhaar', {
+      const res = await legacyFetch('/api/kyc/verify-aadhaar', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,9 +1,19 @@
 {
+  "extends": "@c1rcle/tsconfig/browser-library.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "declaration": true,
-    "strict": true
-  }
+    "noEmit": true,
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "rootDir": "."
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.d.ts",
+    "*.config.ts",
+    "vitest.setup.ts",
+    "eslint.config.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
 }

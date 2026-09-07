@@ -1,54 +1,34 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@c1rcle/ui';
+import { exploreFixture } from '@/features/explore/fixtures/explore.fixture';
+import { HomeFeaturedDropsClient } from '@/features/home/components/HomeFeaturedDropsClient';
+import { HomeFeaturedEvents } from '@/features/home/components/HomeFeaturedEvents';
+import { HomeHero } from '@/features/home/components/HomeHero';
+import { PhotoStringGallery } from '@/features/home/components/PhotoStringGallery';
+import { homeFixture } from '@/features/home/fixtures/home.fixture';
 
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Overview',
+  title: { absolute: 'THE C1RCLE | Discover Life Offline' },
+  description: 'Discover C1RCLE events, venues, hosts, popups, and curated nightlife experiences.',
+  alternates: { canonical: 'https://thec1rcle.com/' },
+  openGraph: {
+    title: 'THE C1RCLE | Discover Life Offline',
+    description: 'Discover the city after dark with THE C1RCLE.',
+    url: 'https://thec1rcle.com/',
+  },
+  twitter: {
+    title: 'THE C1RCLE | Discover Life Offline',
+    description: 'Discover the city after dark with THE C1RCLE.',
+  },
 };
 
-export default function OverviewPage() {
+export default function HomePage() {
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">C1RCLE Guest Portal</h1>
-        <p className="max-w-prose text-sm text-muted-foreground">
-          Discover, book and manage your C1RCLE experiences.
-        </p>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Shared design system</CardTitle>
-            <CardDescription>
-              Every surface is composed from @c1rcle/ui and the shared token set.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Components are defined once and consumed by all three applications.
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>One network client</CardTitle>
-            <CardDescription>All backend calls go through @c1rcle/api-client.</CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Auth, retries, timeouts, correlation IDs and typed errors live in one place.
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Independent deploy</CardTitle>
-            <CardDescription>This application builds and ships on its own.</CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            A failure here cannot take down the other two.
-          </CardContent>
-        </Card>
-      </div>
+    <div className="relative z-10 bg-black text-white">
+      <HomeHero hero={homeFixture.hero} />
+      <HomeFeaturedDropsClient content={homeFixture.drops} />
+      <HomeFeaturedEvents content={homeFixture.featured} events={exploreFixture.events} />
+      <PhotoStringGallery />
     </div>
   );
 }

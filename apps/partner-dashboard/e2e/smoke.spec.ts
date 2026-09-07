@@ -1,24 +1,28 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('C1RCLE Partner Dashboard', () => {
-  test('renders its landing page', async ({ page }) => {
-    await page.goto('/');
+  test('renders useful landing content without waiting for the cinematic scene', async ({ page }) => {
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
 
     await expect(
-      page.getByRole('heading', { level: 1, name: 'C1RCLE Partner Dashboard' }),
+      page.getByRole('heading', { level: 1, name: 'Command Your Nightlife Empire' }),
     ).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Already a User' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Apply for Partner Access/ })).toBeVisible();
   });
 
-  test('exposes a keyboard skip link as the first stop', async ({ page }) => {
+  test('puts the returning-user action first in keyboard order', async ({ page }) => {
     await page.goto('/');
     await page.keyboard.press('Tab');
 
-    await expect(page.getByRole('link', { name: 'Skip to content' })).toBeFocused();
+    await expect(page.getByRole('link', { name: 'Already a User' })).toBeFocused();
   });
 
-  test('primary navigation is labelled for assistive technology', async ({ page }) => {
-    await page.goto('/');
+  test('exposes every partner role on the login route', async ({ page }) => {
+    await page.goto('/login');
 
-    await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Venue/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Host/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Promoter/ })).toBeVisible();
   });
 });

@@ -10,8 +10,12 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
 
-  /* Self-contained server bundle, so the Docker image needs no node_modules. */
-  output: 'standalone',
+  /*
+   * Docker needs the standalone server bundle. Vercel generates its own
+   * serverless output, so enabling standalone there produces incompatible
+   * tracing artifacts during the platform build hook.
+   */
+  ...(process.env['VERCEL'] ? {} : { output: 'standalone' as const }),
 
   /*
    * Packages ship compiled JS with their own .d.ts, so Next does not need to
@@ -22,9 +26,15 @@ const nextConfig: NextConfig = {
   },
 
   /* A type error must never reach a deploy. */
-  typescript: { ignoreBuildErrors: false },
+  typescript: {
+    ignoreBuildErrors: false,
+    tsconfigPath: 'tsconfig.build.json',
+  },
 
-  images: { formats: ['image/avif', 'image/webp'] },
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 86_400,
+  },
 
   headers() {
     return Promise.resolve([
@@ -35,6 +45,24 @@ const nextConfig: NextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+        ],
+      },
+      {
+        source: '/home/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, stale-while-revalidate=604800',
+          },
+        ],
+      },
+      {
+        source: '/events/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, stale-while-revalidate=604800',
+          },
         ],
       },
     ]);

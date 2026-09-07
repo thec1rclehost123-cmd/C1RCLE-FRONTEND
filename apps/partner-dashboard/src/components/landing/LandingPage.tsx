@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import MagneticButton from '@/components/ui/MagneticButton';
 
 const NightclubScene = dynamic(() => import('./NightclubScene'), {
@@ -11,24 +11,41 @@ const NightclubScene = dynamic(() => import('./NightclubScene'), {
 });
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
+  hidden: { opacity: 1, y: 24 },
   visible: { opacity: 1, y: 0 },
 };
 
 export default function LandingPage() {
-  const [panDone, setPanDone] = useState(false);
+  const [sceneReady, setSceneReady] = useState(false);
+  const reduceMotion = useReducedMotion();
 
-  // Reveal content after the 3D pan finishes (9s)
+  // The useful HTML is rendered immediately. WebGL is progressive enhancement,
+  // deferred until after the browser has painted the headline and CTAs.
   useEffect(() => {
-    const t = setTimeout(() => setPanDone(true), 9200);
-    return () => clearTimeout(t);
-  }, []);
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    const compactViewport = window.matchMedia('(max-width: 767px)').matches;
+    if (reduceMotion || connection?.saveData || compactViewport) return;
+
+    const timer = window.setTimeout(() => {
+      setSceneReady(true);
+    }, 900);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [reduceMotion]);
 
   return (
     <main className="relative w-full h-screen overflow-hidden bg-[#0A0A0B]">
       {/* Layer 1: Three.js 3D nightclub scene */}
-      <div className="absolute inset-0">
-        <NightclubScene />
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(circle at 50% 38%, rgba(244,74,34,0.18), transparent 34%), linear-gradient(160deg, #12080a 0%, #0A0A0B 58%, #060607 100%)',
+        }}
+      >
+        {sceneReady ? <NightclubScene /> : null}
       </div>
 
       {/* Layer 2: Bottom-up vignette so text reads against the scene */}
@@ -42,7 +59,7 @@ export default function LandingPage() {
 
       {/* Top brand label */}
       <motion.div
-        initial={{ opacity: 0, y: -10 }}
+        initial={{ opacity: 1, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.4, ease: [0.4, 0, 0.2, 1] }}
         className="absolute top-7 left-0 right-0 z-20 flex justify-center pointer-events-none"
@@ -55,9 +72,9 @@ export default function LandingPage() {
         </p>
       </motion.div>
 
-      {/* Layer 3: HTML content — only visible after pan completes */}
-      {panDone && (
-        <div className="relative z-10 flex flex-col items-center justify-end h-full pb-20 px-6 text-center">
+      {/* Layer 3: useful HTML is available on first paint and remains usable
+          even when the cinematic layer is disabled or still downloading. */}
+      <div className="relative z-10 flex flex-col items-center justify-end h-full pb-20 px-6 text-center">
           {/* Main headline — each word bursts in with a shiny glow */}
           <h1 className="text-[clamp(36px,8vw,72px)] font-black uppercase tracking-tight leading-[1.0] text-white mb-5">
             {[
@@ -66,11 +83,11 @@ export default function LandingPage() {
             ].map(({ word, color, delay }) => (
               <motion.span
                 key={word}
-                initial={{ opacity: 0, y: 18, filter: 'blur(6px)' }}
+                initial={{ opacity: 1, y: 18, filter: 'blur(0px)' }}
                 animate={{
-                  opacity: [0, 1, 1],
+                  opacity: 1,
                   y: [18, -2, 0],
-                  filter: ['blur(6px)', 'blur(0px)', 'blur(0px)'],
+                  filter: 'blur(0px)',
                   textShadow: [
                     '0 0 0px rgba(255,255,255,0)',
                     '0 0 40px rgba(255,255,255,0.95), 0 0 80px rgba(255,200,120,0.7), 0 0 120px rgba(244,74,34,0.5)',
@@ -90,11 +107,11 @@ export default function LandingPage() {
             ].map(({ word, color, delay }) => (
               <motion.span
                 key={word}
-                initial={{ opacity: 0, y: 18, filter: 'blur(6px)' }}
+                initial={{ opacity: 1, y: 18, filter: 'blur(0px)' }}
                 animate={{
-                  opacity: [0, 1, 1],
+                  opacity: 1,
                   y: [18, -2, 0],
-                  filter: ['blur(6px)', 'blur(0px)', 'blur(0px)'],
+                  filter: 'blur(0px)',
                   textShadow: [
                     '0 0 0px rgba(244,74,34,0)',
                     '0 0 40px rgba(255,120,60,0.95), 0 0 80px rgba(244,74,34,0.8), 0 0 130px rgba(244,74,34,0.5)',
@@ -166,8 +183,7 @@ export default function LandingPage() {
               </span>
             </MagneticButton>
           </motion.div>
-        </div>
-      )}
+      </div>
     </main>
   );
 }

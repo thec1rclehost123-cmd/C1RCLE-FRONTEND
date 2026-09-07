@@ -165,6 +165,8 @@ export const baseConfig = defineConfig(
             },
             {
               group: [
+                'firebase',
+                'firebase/*',
                 'firebase-admin',
                 'firebase-admin/*',
                 'pg',
@@ -175,6 +177,11 @@ export const baseConfig = defineConfig(
               ],
               message:
                 'SECURITY: this is a frontend-only repository. Backend SDKs and database clients are never allowed here.',
+            },
+            {
+              group: ['firebase', 'firebase/*'],
+              message:
+                'ARCHITECTURE: firebase is being removed from this repository. Auth goes through @c1rcle/auth.',
             },
           ],
         },
@@ -226,6 +233,40 @@ export const baseConfig = defineConfig(
     },
   },
 
+  /*
+   * The auth package must never persist the access token to browser storage —
+   * it lives only in the in-memory session store. Scoped (`packages/auth/**`)
+   * because other packages may legitimately use localStorage (e.g. UI prefs);
+   * the repo-wide fetch/XHR bans are re-stated so they are not dropped here.
+   */
+  {
+    files: ['packages/auth/**'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        {
+          name: 'fetch',
+          message:
+            'ARCHITECTURE: raw fetch() is forbidden. Use @c1rcle/api-client, which owns base URL, auth, retries, timeouts and typed errors.',
+        },
+        {
+          name: 'XMLHttpRequest',
+          message: 'ARCHITECTURE: use @c1rcle/api-client for all backend communication.',
+        },
+        {
+          name: 'localStorage',
+          message:
+            'SECURITY: the access token must live only in the in-memory session store. Never persist it to localStorage.',
+        },
+        {
+          name: 'sessionStorage',
+          message:
+            'SECURITY: the access token must live only in the in-memory session store. Never persist it to sessionStorage.',
+        },
+      ],
+    },
+  },
+
   /* Test files relax exactly two things and nothing else. */
   {
     files: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', '**/*.spec.tsx', '**/test/**'],
@@ -252,6 +293,36 @@ export const baseConfig = defineConfig(
     rules: {
       'import-x/no-default-export': 'off',
       'no-restricted-syntax': 'off',
+    },
+  },
+
+  /*
+   * SECURITY: an access token in localStorage/sessionStorage is readable by
+   * any injected script — @c1rcle/auth keeps the token in memory only, and
+   * must never regress to Web Storage. Scoped to that package only.
+   *
+   * `files` globs resolve relative to the *consuming* project's own
+   * eslint.config.ts. `packages/auth/eslint.config.ts` imports `reactConfig`
+   * (which spreads `baseConfig`, defined here), so a per-package `eslint .`
+   * run there addresses its own files as `packages/auth/**` when invoked
+   * from the repo root, and this stays inert (never over-broad) for every
+   * other package or app that also consumes `baseConfig`.
+   */
+  {
+    files: ['packages/auth/**/*.ts', 'packages/auth/**/*.tsx'],
+    ignores: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        {
+          name: 'localStorage',
+          message: 'SECURITY: no access token or session data may be kept in localStorage.',
+        },
+        {
+          name: 'sessionStorage',
+          message: 'SECURITY: no access token or session data may be kept in sessionStorage.',
+        },
+      ],
     },
   },
 

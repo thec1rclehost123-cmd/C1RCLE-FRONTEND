@@ -1,5 +1,5 @@
-import { VenuePageClient } from './PageClient';
+import { redirect } from 'next/navigation';
 
 export default function VenuePage() {
-  return <VenuePageClient />;
+  redirect('/venue/overview');
 }

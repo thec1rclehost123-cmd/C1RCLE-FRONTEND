@@ -801,13 +801,24 @@ export default function NightclubScene() {
 
     // ── Animation loop ────────────────────────────────────────────────
     const clock = new THREE.Clock();
-    let animId: number;
+    let animId = 0;
     let frameCount = 0;
+    let running = true;
+    let pageVisible = document.visibilityState === 'visible';
+    let sceneVisible = true;
+    let lastRenderedAt = 0;
 
-    const animate = () => {
+    const animate = (frameTime: number) => {
+      if (!running) return;
       animId = requestAnimationFrame(animate);
+
+      // Once the nine-second camera reveal is complete, 30fps keeps the
+      // ambience alive while cutting long-session main-thread/GPU work.
+      if (clock.elapsedTime >= 9 && frameTime - lastRenderedAt < 32) return;
+      lastRenderedAt = frameTime;
+
       const delta = Math.min(clock.getDelta(), 0.033);
-      const elapsed = clock.getElapsedTime();
+      const elapsed = clock.elapsedTime;
       frameCount++;
 
       // ── Camera: tight on DJ → smooth zoom-out to reveal full party ──
@@ -831,7 +842,7 @@ export default function NightclubScene() {
       // ── Disco ball ── (cube camera every 6 frames — still looks live, half the cost)
       discoBall.rotation.y += delta * 0.55;
       discoBall.rotation.x = Math.sin(elapsed * 0.35) * 0.12;
-      if (frameCount % 6 === 0) {
+      if (elapsed < 9 && frameCount % 12 === 0) {
         discoBall.visible = false;
         cubeCamera.update(renderer, scene);
         discoBall.visible = true;
@@ -952,22 +963,68 @@ export default function NightclubScene() {
 
       composer.render();
     };
-    animate();
+    const syncAnimation = () => {
+      const shouldRun = pageVisible && sceneVisible;
+      if (shouldRun === running) return;
+
+      running = shouldRun;
+      if (running) {
+        clock.getDelta();
+        animId = requestAnimationFrame(animate);
+      } else {
+        cancelAnimationFrame(animId);
+      }
+    };
+
+    const onVisibilityChange = () => {
+      pageVisible = document.visibilityState === 'visible';
+      syncAnimation();
+    };
+
+    const visibilityObserver = new IntersectionObserver(
+      (entries) => {
+        sceneVisible = entries[0]?.isIntersecting === true;
+        syncAnimation();
+      },
+      { threshold: 0.01 },
+    );
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    visibilityObserver.observe(container);
+    animId = requestAnimationFrame(animate);
 
     // ── Resize ────────────────────────────────────────────────────────
     const onResize = () => {
-      if (!container) return;
       camera.aspect = container.clientWidth / container.clientHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(container.clientWidth, container.clientHeight);
       composer.setSize(container.clientWidth, container.clientHeight);
       bloomPass.resolution.set(container.clientWidth, container.clientHeight);
     };
-    window.addEventListener('resize', onResize);
+    const resizeObserver = new ResizeObserver(onResize);
+    resizeObserver.observe(container);
 
     return () => {
+      running = false;
       cancelAnimationFrame(animId);
-      window.removeEventListener('resize', onResize);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      visibilityObserver.disconnect();
+      resizeObserver.disconnect();
+      scene.traverse((object) => {
+        if (!(object instanceof THREE.Mesh)) return;
+        const mesh = object as THREE.Mesh<
+          THREE.BufferGeometry,
+          THREE.Material | THREE.Material[]
+        >;
+        mesh.geometry.dispose();
+        const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        materials.forEach((material) => {
+          Object.values(material).forEach((value: unknown) => {
+            if (value instanceof THREE.Texture && value !== cubeRT.texture) value.dispose();
+          });
+          material.dispose();
+        });
+      });
       composer.dispose();
       renderer.dispose();
       cubeRT.dispose();

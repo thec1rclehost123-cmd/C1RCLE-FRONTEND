@@ -1,847 +1,1007 @@
 'use client';
 
-import { css } from '../charts';
+import Link from 'next/link';
+import { useMemo, useState } from 'react';
+
+import { ExportIcon, SearchIcon } from '@c1rcle/icons';
+
+import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
+
 import {
-  CAMPAIGNS,
-  CH_BRAND,
-  CH_NAME,
-  PHONE_SCREEN,
-  PHONE_SHELL,
-  RECIPIENTS,
-  STATUS_BG,
-  TEMPLATES,
-  chTag,
-  iconWrapMk,
-  pillTab,
-} from '../data';
-import { Icon } from '../Icon';
-import { useVenueStudio } from '../store';
+  campaignResultLabel,
+  getMarketingTemplate,
+  venueCampaigns,
+  venueMarketingSource,
+  venueMarketingTemplates,
+} from '../venue-marketing-model';
 
-import type { Audience, Channel } from '../data';
-import type { MarketingView } from '../store';
+import styles from './VenueMarketing.module.css';
 
-const MARKETING_TABS: readonly (readonly [MarketingView, string])[] = [
-  ['compose', 'Compose'],
-  ['history', 'Campaign history'],
-  ['templates', 'Templates'],
+import type { MarketingChannel } from '../venue-marketing-model';
+
+export type MarketingTab = 'compose' | 'history' | 'templates';
+
+const TABS: readonly { readonly id: MarketingTab; readonly label: string }[] = [
+  { id: 'compose', label: 'Compose' },
+  { id: 'history', label: 'Campaign history' },
+  { id: 'templates', label: 'Templates' },
 ];
 
-const GLASS_PANEL =
-  'position:relative;border-radius:24px;overflow:hidden;background:rgba(20,20,20,0.6);' +
-  'backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.08);' +
-  'box-shadow:inset 0 1px 0 rgba(255,255,255,0.06),0 20px 50px rgba(0,0,0,0.35);';
+export function MarketingScreen({
+  tab = 'compose',
+  templateId = null,
+}: {
+  readonly tab?: MarketingTab;
+  readonly templateId?: string | null;
+}) {
+  const auth = useDashboardAuth();
+  const canView =
+    auth.grantedPermissions.length === 0 ||
+    auth.grantedPermissions.includes('*') ||
+    auth.hasPermission('VIEW_MARKETING');
 
-const SECTION_LABEL = css(
-  'font-size:12px;font-weight:700;color:#6a6a66;text-transform:uppercase;letter-spacing:0.08em;',
-);
-
-export function MarketingScreen() {
-  const s = useVenueStudio();
+  if (!canView) {
+    return (
+      <section className={styles['unavailable']} role="alert">
+        <h1>Marketing unavailable</h1>
+        <p>Your current venue access does not include marketing.</p>
+      </section>
+    );
+  }
 
   return (
-    <div>
-      <div
-        style={css(
-          'display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;',
-        )}
-      >
+    <section className={styles['page']}>
+      <header className={styles['pageHeader']}>
         <div>
-          <h1 style={css('margin:0;font-size:30px;font-weight:800;letter-spacing:-0.02em;')}>
-            Marketing
-          </h1>
-          <div style={css('font-size:14px;color:#8a8a86;font-weight:500;margin-top:6px;')}>
-            Compose once. See exactly what lands on every guest&apos;s phone.
-          </div>
+          <h1>Marketing</h1>
+          <p>Send one message to fill your next event.</p>
         </div>
-      </div>
-
-      <div
-        style={css(
-          'display:flex;gap:4px;background:rgba(20,20,20,0.6);border:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(18px);padding:4px;border-radius:999px;width:fit-content;margin-bottom:24px;',
-        )}
-      >
-        {MARKETING_TABS.map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => {
-              s.setMarketingView(id);
-            }}
-            style={css(pillTab(s.marketingView === id))}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {s.marketingView === 'compose' ? <ComposeView /> : null}
-      {s.marketingView === 'history' ? <HistoryView /> : null}
-      {s.marketingView === 'templates' ? <TemplatesView /> : null}
-    </div>
+        <nav className={styles['tabs']} aria-label="Marketing sections">
+          {TABS.map((item) => (
+            <Link
+              key={item.id}
+              href={`/venue/marketing?tab=${item.id}`}
+              className={tab === item.id ? styles['active'] : undefined}
+              aria-current={tab === item.id ? 'page' : undefined}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+      </header>
+      {tab === 'compose' ? (
+        <ComposeMarketing templateId={templateId} canSend={auth.canDo('canSendMarketing')} />
+      ) : null}
+      {tab === 'history' ? <CampaignHistory /> : null}
+      {tab === 'templates' ? <MarketingTemplates /> : null}
+    </section>
   );
 }
 
-// ── compose ─────────────────────────────────────────────────────────────────
+/* ─── Compose ──────────────────────────────────────────────────────────────── */
 
-const AUDIENCE_SEGS: readonly (readonly [Audience, string])[] = [
-  ['event', 'This event'],
-  ['all', 'All guests'],
-  ['custom', 'Custom'],
-];
+const CHANNELS: readonly MarketingChannel[] = ['WhatsApp', 'SMS', 'Email', 'Push'];
 
-const CHANNEL_TILES: readonly (readonly [Channel, string])[] = [
-  ['whatsapp', 'WhatsApp'],
-  ['sms', 'SMS'],
-  ['email', 'Email'],
-  ['push', 'Push'],
-];
+const EVENTS = [
+  {
+    id: 'neon-nights',
+    name: 'Neon Nights: Afrobeats Edition',
+    date: 'Thu, 17 Jul · 10 PM',
+    venue: 'Skyline Rooftop',
+  },
+  {
+    id: 'sat-sessions',
+    name: 'Saturday Sessions',
+    date: 'Sat, 19 Jul · 9 PM',
+    venue: 'Skyline Rooftop',
+  },
+  {
+    id: 'urban-fridays',
+    name: 'Urban Fridays',
+    date: 'Fri, 25 Jul · 10 PM',
+    venue: 'Skyline Rooftop',
+  },
+] as const;
+type MarketingEventId = (typeof EVENTS)[number]['id'];
 
-function ComposeView() {
-  const s = useVenueStudio();
+const RECIPIENTS = [
+  { id: 'shelby-adams', name: "Shelby Adam's", phone: '+1 602 828 8848' },
+  { id: 'aayush-divase', name: 'Aayush Divase', phone: '+1 602 349 2605' },
+] as const;
 
-  const charCount = s.cText.length;
-  const segments =
-    s.cChannel === 'sms'
-      ? `${String(Math.max(1, Math.ceil(charCount / 160)))} SMS`
-      : CH_NAME[s.cChannel];
-  const recipients = RECIPIENTS[s.cAudience];
+const GENDER_FILTERS = ['All genders', 'Women', 'Men', 'Non-binary'] as const;
+type GenderFilter = (typeof GENDER_FILTERS)[number];
+
+const classNames = (...values: readonly (string | undefined)[]): string =>
+  values.filter((value): value is string => Boolean(value)).join(' ');
+
+function ComposeMarketing({
+  templateId,
+  canSend,
+}: {
+  readonly templateId: string | null;
+  readonly canSend: boolean;
+}) {
+  const selectedTemplate = getMarketingTemplate(templateId);
+  const [channel, setChannel] = useState<MarketingChannel>(
+    selectedTemplate?.channel ?? venueMarketingSource.defaultChannel,
+  );
+  const [message, setMessage] = useState(
+    selectedTemplate?.preview ?? venueMarketingSource.defaultMessage,
+  );
+  const [eventOpen, setEventOpen] = useState(false);
+  const [recipientsOpen, setRecipientsOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<MarketingEventId>(EVENTS[0].id);
+  const [selectedRecipientIds, setSelectedRecipientIds] = useState<readonly string[]>(
+    RECIPIENTS.map((recipient) => recipient.id),
+  );
+  const [genderFilter, setGenderFilter] = useState<GenderFilter>('All genders');
+  const [recipientEventFilter, setRecipientEventFilter] = useState<'All events' | MarketingEventId>(
+    'All events',
+  );
+
+  // Mock data for the static UI
+  const currentEvent = EVENTS.find((event) => event.id === selectedEventId) ?? EVENTS[0];
+  const audienceCount = selectedRecipientIds.length;
+  const activeFilterCount =
+    Number(genderFilter !== 'All genders') + Number(recipientEventFilter !== 'All events');
+  const cost =
+    channel === 'Push'
+      ? 'Free'
+      : `≈ ₹${(audienceCount * (channel === 'WhatsApp' ? 0.85 : channel === 'SMS' ? 0.25 : 0.12)).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+
+  const insertField = (field: string) => {
+    setMessage((prev) => prev + `{{${field}}}`);
+  };
+
+  const toggleRecipient = (recipientId: string) => {
+    setSelectedRecipientIds((current) =>
+      current.includes(recipientId)
+        ? current.filter((id) => id !== recipientId)
+        : [...current, recipientId],
+    );
+  };
 
   return (
-    <div style={css('display:grid;grid-template-columns:1fr 380px;gap:24px;align-items:start;')}>
-      <div style={css('display:flex;flex-direction:column;gap:20px;')}>
-        {/* audience + channel */}
-        <div style={css(`${GLASS_PANEL}padding:26px;`)}>
-          <div style={{ ...SECTION_LABEL, marginBottom: 16 }}>Who gets it</div>
-          <div style={css('display:flex;align-items:center;gap:16px;')}>
-            <div
-              style={css(
-                'display:inline-flex;gap:4px;background:#0d0d0d;border:1px solid rgba(255,255,255,0.07);padding:4px;border-radius:999px;',
-              )}
-            >
-              {AUDIENCE_SEGS.map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => {
-                    s.setCAudience(id);
-                  }}
-                  style={css(
-                    'border:none;cursor:pointer;padding:9px 18px;border-radius:999px;font-size:13px;font-weight:600;' +
-                      (s.cAudience === id
-                        ? 'background:#ff5a1f;color:#0a0a0a;'
-                        : 'background:transparent;color:#8a8a86;'),
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <div
-              style={css(
-                'margin-left:auto;display:inline-flex;align-items:center;gap:10px;background:rgba(255,90,31,0.12);border:1px solid rgba(255,90,31,0.3);padding:10px 18px;border-radius:999px;',
-              )}
-            >
-              <Icon name="users" size={18} color="#ff8a55" />
-              <span
-                style={css(
-                  'font-size:22px;font-weight:800;color:#ff8a55;letter-spacing:-0.01em;font-variant-numeric:tabular-nums;',
-                )}
+    <div className={styles['composeCard']}>
+      {/* ── Left: Form ── */}
+      <div className={styles['formSide']}>
+        {/* Event, recipients, and audience filters */}
+        <div className={styles['recipientSection']}>
+          <span className={styles['fieldLabel']}>Recipients</span>
+          <div className={styles['recipientsRow']}>
+            <div className={styles['dropdownControl']}>
+              <button
+                type="button"
+                className={classNames(styles['dropdownBtn'], styles['eventBtn'])}
+                aria-label={`Select event. Current event: ${currentEvent.name}`}
+                aria-expanded={eventOpen}
+                onClick={() => {
+                  setEventOpen(!eventOpen);
+                  setRecipientsOpen(false);
+                  setFiltersOpen(false);
+                }}
               >
-                {recipients}
-              </span>
-              <span style={css('font-size:13px;font-weight:600;color:#d8b8a8;')}>people</span>
-            </div>
-          </div>
-
-          <div style={css('height:1px;background:rgba(255,255,255,0.08);margin:24px 0;')} />
-
-          <div style={{ ...SECTION_LABEL, marginBottom: 16 }}>Where it sends</div>
-          <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:12px;')}>
-            {CHANNEL_TILES.map(([id, label]) => {
-              const on = s.cChannel === id;
-              const b = CH_BRAND[id];
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => {
-                    s.setCChannel(id);
-                  }}
-                  style={css(
-                    `display:flex;flex-direction:column;align-items:center;gap:12px;cursor:pointer;padding:18px 8px;border-radius:16px;color:${on ? '#f5f5f3' : '#c9c9c6'};background:${on ? b.bg : '#0d0d0d'};border:1px solid ${on ? b.color : 'rgba(255,255,255,0.07)'};box-shadow:${on ? `0 0 26px ${b.glow}` : 'none'};transition:all .15s;`,
-                  )}
-                >
-                  <div
-                    style={css(
-                      `width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:${on ? b.color : 'rgba(255,255,255,0.05)'};color:${on ? '#fff' : b.color};transition:all .15s;`,
-                    )}
-                  >
-                    <ChannelGlyph channel={id} />
+                <span>
+                  <small>Event</small>
+                  <strong>{currentEvent.name}</strong>
+                </span>
+                <Chevron expanded={eventOpen} />
+              </button>
+              {eventOpen ? (
+                <div className={classNames(styles['popover'], styles['eventPopover'])}>
+                  <div className={styles['popoverHeading']}>
+                    <strong>Select event</strong>
+                    <span>Choose the campaign event.</span>
                   </div>
-                  <span style={css('font-size:13px;font-weight:700;')}>{label}</span>
+                  <div className={styles['eventOptions']}>
+                    {EVENTS.map((event) => (
+                      <button
+                        key={event.id}
+                        type="button"
+                        className={styles['eventOption']}
+                        data-selected={event.id === selectedEventId}
+                        aria-pressed={event.id === selectedEventId}
+                        onClick={() => {
+                          setSelectedEventId(event.id);
+                          setEventOpen(false);
+                        }}
+                      >
+                        <span className={styles['radioMark']} aria-hidden="true" />
+                        <span>
+                          <strong>{event.name}</strong>
+                          <small>
+                            {event.date} · {event.venue}
+                          </small>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div className={styles['dropdownControl']}>
+              <button
+                type="button"
+                className={styles['dropdownBtn']}
+                aria-expanded={recipientsOpen}
+                onClick={() => {
+                  setRecipientsOpen(!recipientsOpen);
+                  setEventOpen(false);
+                  setFiltersOpen(false);
+                }}
+              >
+                <span>{selectedRecipientIds.length} selected</span>
+                <Chevron expanded={recipientsOpen} />
+              </button>
+              {recipientsOpen ? (
+                <div className={classNames(styles['popover'], styles['recipientsPopover'])}>
+                  <div className={styles['popoverSearch']}>
+                    <SearchIcon size={16} aria-hidden="true" />
+                    <input aria-label="Search recipients" placeholder="Search recipients" />
+                  </div>
+                  <div className={styles['popoverSection']}>
+                    <small>Select all</small>
+                    <label className={classNames(styles['popoverItem'], styles['selectAllItem'])}>
+                      <input
+                        className={styles['srOnly']}
+                        type="checkbox"
+                        checked={selectedRecipientIds.length === RECIPIENTS.length}
+                        onChange={(event) => {
+                          setSelectedRecipientIds(
+                            event.target.checked ? RECIPIENTS.map((recipient) => recipient.id) : [],
+                          );
+                        }}
+                      />
+                      <CheckBox checked={selectedRecipientIds.length === RECIPIENTS.length} />
+                      <strong>Select all ({RECIPIENTS.length})</strong>
+                    </label>
+                  </div>
+                  <div className={styles['popoverSection']}>
+                    <small>Recipients</small>
+                    {RECIPIENTS.map((recipient) => {
+                      const checked = selectedRecipientIds.includes(recipient.id);
+                      return (
+                        <label className={styles['popoverItem']} key={recipient.id}>
+                          <input
+                            className={styles['srOnly']}
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              toggleRecipient(recipient.id);
+                            }}
+                          />
+                          <CheckBox checked={checked} />
+                          <div className={styles['recipientInfo']}>
+                            <strong>{recipient.name}</strong>
+                            <span>{recipient.phone}</span>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div className={classNames(styles['dropdownControl'], styles['filterControl'])}>
+              <button
+                type="button"
+                className={styles['dropdownBtn']}
+                aria-expanded={filtersOpen}
+                onClick={() => {
+                  setFiltersOpen(!filtersOpen);
+                  setEventOpen(false);
+                  setRecipientsOpen(false);
+                }}
+              >
+                <span>Filters</span>
+                {activeFilterCount > 0 ? (
+                  <span className={styles['filterCount']}>{activeFilterCount}</span>
+                ) : null}
+                <Chevron expanded={filtersOpen} />
+              </button>
+              {filtersOpen ? (
+                <div className={classNames(styles['popover'], styles['filtersPopover'])}>
+                  <div className={styles['filterHeader']}>
+                    <span>
+                      <strong>Filter recipients</strong>
+                      <small>Refine who receives this campaign.</small>
+                    </span>
+                    <button
+                      type="button"
+                      disabled={activeFilterCount === 0}
+                      onClick={() => {
+                        setGenderFilter('All genders');
+                        setRecipientEventFilter('All events');
+                      }}
+                    >
+                      Clear
+                    </button>
+                  </div>
+
+                  <fieldset className={styles['filterSection']}>
+                    <legend>Gender</legend>
+                    <div className={styles['filterChips']}>
+                      {GENDER_FILTERS.map((gender) => (
+                        <button
+                          key={gender}
+                          type="button"
+                          aria-pressed={genderFilter === gender}
+                          onClick={() => {
+                            setGenderFilter(gender);
+                          }}
+                        >
+                          {gender}
+                        </button>
+                      ))}
+                    </div>
+                  </fieldset>
+
+                  <fieldset className={styles['filterSection']}>
+                    <legend>Event</legend>
+                    <div className={styles['filterEventList']}>
+                      <button
+                        type="button"
+                        aria-pressed={recipientEventFilter === 'All events'}
+                        onClick={() => {
+                          setRecipientEventFilter('All events');
+                        }}
+                      >
+                        <span className={styles['radioMark']} aria-hidden="true" />
+                        <span>
+                          <strong>All events</strong>
+                          <small>Every eligible guest</small>
+                        </span>
+                      </button>
+                      {EVENTS.map((event) => (
+                        <button
+                          key={event.id}
+                          type="button"
+                          aria-pressed={recipientEventFilter === event.id}
+                          onClick={() => {
+                            setRecipientEventFilter(event.id);
+                          }}
+                        >
+                          <span className={styles['radioMark']} aria-hidden="true" />
+                          <span>
+                            <strong>{event.name}</strong>
+                            <small>{event.date}</small>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </fieldset>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        {/* Channel */}
+        <div className={styles['row']}>
+          <span className={styles['fieldLabel']}>Channel</span>
+          <div className={styles['channelRow']}>
+            {CHANNELS.map((ch) => (
+              <button
+                key={ch}
+                type="button"
+                className={classNames(
+                  styles['channelBtn'],
+                  channel === ch ? styles['channelActive'] : undefined,
+                )}
+                onClick={() => {
+                  setChannel(ch);
+                }}
+              >
+                <ChannelSvg channel={ch} size={16} />
+                {ch}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Message */}
+        <div className={styles['row']}>
+          <label className={styles['fieldLabel']} htmlFor="marketing-message">
+            Message
+          </label>
+          <div className={styles['messageWrap']}>
+            <textarea
+              id="marketing-message"
+              className={styles['messageArea']}
+              value={message}
+              maxLength={320}
+              onChange={(e) => {
+                setMessage(e.target.value);
+              }}
+            />
+            <div className={styles['messageMeta']}>
+              <div className={styles['fieldBtns']}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    insertField('first_name');
+                  }}
+                >
+                  First name
                 </button>
-              );
-            })}
+                <button
+                  type="button"
+                  onClick={() => {
+                    insertField('last_name');
+                  }}
+                >
+                  Last name
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    insertField('event_link');
+                  }}
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    aria-hidden="true"
+                  >
+                    <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+                  </svg>
+                  Link
+                </button>
+              </div>
+              <span className={styles['charCount']}>{message.length} / 320</span>
+            </div>
           </div>
         </div>
 
-        {/* message */}
-        <div style={css(`${GLASS_PANEL}padding:24px;`)}>
-          <div
-            style={css(
-              'display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;',
-            )}
-          >
-            <div style={SECTION_LABEL}>Message</div>
-            <div style={css('display:flex;gap:8px;')}>
-              <button
-                type="button"
-                onClick={() => {
-                  s.setCText(`${s.cText}{{name}}`);
-                }}
-                className="vh-accent-18"
-                style={css(
-                  'display:inline-flex;align-items:center;gap:6px;background:rgba(255,90,31,0.1);border:1px solid rgba(255,90,31,0.28);color:#ff8a55;padding:7px 12px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;',
-                )}
-              >
-                <Icon name="user" size={13} /> Guest&apos;s name
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  s.setCText(`${s.cText}thec1rcle.com/e/neon`);
-                }}
-                className="vh-accent-18"
-                style={css(
-                  'display:inline-flex;align-items:center;gap:6px;background:rgba(255,90,31,0.1);border:1px solid rgba(255,90,31,0.28);color:#ff8a55;padding:7px 12px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;',
-                )}
-              >
-                <Icon name="link" size={13} /> Event link
-              </button>
-            </div>
-          </div>
-          <textarea
-            aria-label="Message"
-            value={s.cText}
-            onChange={(e) => {
-              s.setCText(e.target.value);
-            }}
-            placeholder="Write your message..."
-            style={css(
-              'width:100%;min-height:140px;resize:vertical;background:#0d0d0d;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:16px;color:#f5f5f3;font-size:14px;line-height:1.55;font-family:inherit;',
-            )}
-          />
-          <div
-            style={css(
-              'display:flex;align-items:center;justify-content:space-between;margin-top:14px;',
-            )}
-          >
-            <div
-              style={css(
-                'display:inline-flex;align-items:center;gap:9px;font-size:13px;font-weight:600;color:#d8b8a8;',
-              )}
-            >
-              <span
-                style={css(
-                  'width:7px;height:7px;border-radius:50%;background:#ff5a1f;box-shadow:0 0 8px #ff5a1f;',
-                )}
-              />
-              This will be sent via {CH_NAME[s.cChannel]} to {recipients} people.
-            </div>
-            <span
-              style={css(
-                'font-size:12px;color:#8a8a86;font-weight:600;font-variant-numeric:tabular-nums;',
-              )}
-            >
-              {charCount} characters · {segments}
-            </span>
-          </div>
-        </div>
-
-        <div style={css('display:flex;gap:12px;')}>
-          <button
-            type="button"
-            className="vh-accent"
-            style={css(
-              'display:inline-flex;align-items:center;justify-content:center;gap:9px;flex:1;background:#ff5a1f;color:#0a0a0a;border:none;padding:16px;border-radius:999px;font-size:15px;font-weight:800;cursor:pointer;',
-            )}
-          >
-            <Icon name="send" size={17} /> Send to {recipients} people
+        {/* Actions */}
+        <div className={styles['actions']}>
+          <button type="button" className={styles['testBtn']}>
+            Send Test Blast
+          </button>
+          <span className={styles['actionSpacer']} />
+          <button type="button" className={styles['exitBtn']}>
+            Exit Without Saving
           </button>
           <button
             type="button"
-            className="vh-1c"
-            style={css(
-              'background:rgba(20,20,20,0.7);border:1px solid rgba(255,255,255,0.1);color:#f5f5f3;padding:16px 26px;border-radius:999px;font-size:15px;font-weight:600;cursor:pointer;backdrop-filter:blur(10px);',
-            )}
+            className={styles['launchBtn']}
+            disabled={!canSend || true}
+            title={canSend ? 'Scheduling requires the campaign mutation API.' : 'No permission.'}
           >
-            Save draft
+            Launch Campaign
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              aria-hidden="true"
+            >
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
           </button>
         </div>
       </div>
 
-      <PhonePreview />
+      {/* ── Right: Preview + cost ── */}
+      <div className={styles['previewSide']}>
+        <IPhonePreview channel={channel} message={message} eventName={currentEvent.name} />
+        {/* Cost strip */}
+        <div className={styles['costStrip']}>
+          <div className={classNames(styles['costTotal'], styles['costTotalCompact'])}>
+            <span className={styles['costTotalLabel']}>Est. total</span>
+            <strong>{cost}</strong>
+          </div>
+        </div>
+        <div className={styles['previewMeta']}>
+          <span>PREVIEW</span>
+          <small>Simulated {channel} · iPhone</small>
+        </div>
+      </div>
     </div>
   );
 }
 
-function ChannelGlyph({ channel }: { readonly channel: Channel }) {
-  if (channel === 'whatsapp') {
-    return (
-      <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: 24, height: 24 }}>
-        <path d="M17.5 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.16-.17.2-.35.22-.64.08-.3-.15-1.26-.47-2.4-1.48-.89-.8-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.6.13-.14.3-.35.44-.53.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.5h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.01-1.04 2.47 0 1.46 1.06 2.87 1.21 3.07.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.69.63.71.22 1.36.19 1.87.12.57-.09 1.76-.72 2-1.42.25-.7.25-1.29.18-1.42-.07-.13-.27-.2-.57-.35zM12.04 21.5a9.4 9.4 0 01-4.8-1.32l-.34-.2-3.57.93.96-3.48-.23-.36a9.44 9.44 0 01-1.44-5.01c0-5.2 4.24-9.44 9.46-9.44 2.52 0 4.9.99 6.68 2.77a9.38 9.38 0 012.76 6.68c0 5.2-4.24 9.44-9.44 9.44z" />
-      </svg>
-    );
-  }
-  if (channel === 'sms') {
-    return (
-      <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: 24, height: 24 }}>
-        <path d="M12 3C6.5 3 2 6.68 2 11.2c0 2.57 1.46 4.87 3.75 6.38-.18.9-.68 2.16-1.46 3.06-.22.25 0 .63.32.53 1.9-.5 3.28-1.28 4.09-1.87 1.03.24 2.13.37 3.3.37 5.5 0 10-3.68 10-8.2S17.5 3 12 3z" />
-      </svg>
-    );
-  }
-  if (channel === 'email') {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{ width: 23, height: 23 }}
-      >
-        <rect x="2.5" y="4.5" width="19" height="15" rx="2.5" />
-        <path d="M3 7l9 6 9-6" />
-      </svg>
-    );
-  }
+function Chevron({ expanded }: { readonly expanded: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: 23, height: 23 }}>
-      <path d="M12 22a2.5 2.5 0 002.45-2h-4.9A2.5 2.5 0 0012 22zm7-6.2V11c0-3.07-1.64-5.64-4.5-6.32V4a1.5 1.5 0 00-3 0v.68C8.63 5.36 7 7.92 7 11v4.8l-1.7 1.7a1 1 0 00.7 1.7h12a1 1 0 00.7-1.7L19 15.8z" />
+    <svg
+      className={styles['chevron']}
+      data-expanded={expanded}
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
+      <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-function PhonePreview() {
-  const s = useVenueStudio();
-  const ch = s.cChannel;
-  const previewText = s.cText.replace(/\{\{?\s*name\s*\}?\}/gi, 'Aisha') || 'Type your message…';
-  const statusColor = ch === 'email' ? '#202124' : '#fff';
-
-  const statusBar = css(
-    `display:flex;align-items:center;justify-content:space-between;padding:16px 26px 8px;font-size:13px;font-weight:600;color:${statusColor};background:${STATUS_BG[ch]};` +
-      (ch === 'push' ? 'position:absolute;top:0;left:0;right:0;z-index:3;' : ''),
-  );
-
+function CheckBox({ checked }: { readonly checked: boolean }) {
   return (
-    <div style={css('position:sticky;top:96px;')}>
-      <div
-        style={css('display:flex;align-items:center;gap:9px;margin-bottom:16px;padding-left:4px;')}
-      >
-        <span
-          style={css(
-            'width:7px;height:7px;border-radius:50%;background:#6ee79b;box-shadow:0 0 8px #6ee79b;',
-          )}
-        />
-        <span
-          style={css(
-            'font-size:12px;font-weight:700;color:#8a8a86;text-transform:uppercase;letter-spacing:0.08em;',
-          )}
+    <span className={styles['checkbox']} data-checked={checked} aria-hidden="true">
+      {checked ? (
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
         >
-          Live preview · {CH_NAME[ch]}
+          <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : null}
+    </span>
+  );
+}
+
+/* ─── iPhone Preview ───────────────────────────────────────────────────────── */
+
+export function IPhonePreview({
+  channel,
+  message,
+  eventName,
+}: {
+  readonly channel: MarketingChannel;
+  readonly message: string;
+  readonly eventName: string;
+}) {
+  return (
+    <div className={styles['iphone']}>
+      {/* Dynamic Island */}
+      <div className={styles['iphoneIsland']} />
+      {/* Status bar */}
+      <div className={styles['iphoneStatus']}>
+        <span className={styles['iphoneTime']}>9:41</span>
+        <span className={styles['iphoneSignals']}>
+          <svg width="16" height="11" viewBox="0 0 17 12" fill="#fff" aria-hidden="true">
+            <rect y="8" width="3" height="4" rx=".8" />
+            <rect x="4.5" y="5" width="3" height="7" rx=".8" />
+            <rect x="9" y="2" width="3" height="10" rx=".8" />
+            <rect x="13.5" width="3" height="12" rx=".8" />
+          </svg>
+          <svg width="14" height="11" viewBox="0 0 16 12" fill="#fff" aria-hidden="true">
+            <circle cx="8" cy="10" r="1.3" />
+            <path
+              d="M5.2 7.8a4 4 0 015.6 0"
+              stroke="#fff"
+              strokeWidth="1.5"
+              fill="none"
+              strokeLinecap="round"
+            />
+            <path
+              d="M2.5 5.2a8 8 0 0111 0"
+              stroke="#fff"
+              strokeWidth="1.5"
+              fill="none"
+              strokeLinecap="round"
+            />
+          </svg>
+          <svg width="22" height="11" viewBox="0 0 25 12" aria-hidden="true">
+            <rect
+              x=".5"
+              y=".5"
+              width="21"
+              height="11"
+              rx="3.5"
+              fill="none"
+              stroke="#fff"
+              strokeOpacity=".35"
+            />
+            <rect x="2" y="2" width="16" height="8" rx="2" fill="#fff" />
+            <path d="M23 4v4a2 2 0 000-4z" fill="#fff" fillOpacity=".4" />
+          </svg>
         </span>
       </div>
-      <div style={css('position:relative;')}>
-        <div
-          style={{
-            position: 'absolute',
-            inset: -30,
-            background: `radial-gradient(circle at 50% 40%, ${CH_BRAND[ch].glow}, transparent 70%)`,
-            filter: 'blur(20px)',
-            zIndex: 0,
-          }}
-        />
-        <div style={css(PHONE_SHELL)}>
-          <div
-            style={css(
-              'position:absolute;top:10px;left:50%;transform:translateX(-50%);width:96px;height:26px;background:#000;border-radius:999px;z-index:5;',
-            )}
+      {/* Screen */}
+      <div className={styles['iphoneScreen']}>
+        {channel === 'WhatsApp' && <WAScreen msg={message} />}
+        {channel === 'SMS' && <SMSScreen msg={message} />}
+        {channel === 'Email' && <EmailScreen msg={message} name={eventName} />}
+        {channel === 'Push' && <PushScreen msg={message} />}
+      </div>
+      {/* Home bar */}
+      <div className={styles['iphoneHome']} />
+    </div>
+  );
+}
+
+/* ── WhatsApp ── */
+function WAScreen({ msg }: { readonly msg: string }) {
+  return (
+    <>
+      <div className={styles['scrHead']} data-ch="wa">
+        <svg width="8" height="13" viewBox="0 0 8 14" fill="none" aria-hidden="true">
+          <path
+            d="M7 1L1.5 7 7 13"
+            stroke="#25D366"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           />
-          <div style={css(PHONE_SCREEN)}>
-            <div style={statusBar}>
-              <span style={{ fontWeight: 700 }}>9:41</span>
-              <div style={css('display:flex;align-items:center;gap:6px;')}>
-                <Icon name="signal" size={15} />
-                <Icon name="wifi" size={15} />
-                <Icon name="battery-full" size={20} />
-              </div>
-            </div>
-
-            {ch === 'whatsapp' ? <WhatsAppPreview text={previewText} /> : null}
-            {ch === 'sms' ? <SmsPreview text={previewText} /> : null}
-            {ch === 'email' ? <EmailPreview text={previewText} /> : null}
-            {ch === 'push' ? <PushPreview text={previewText} /> : null}
-          </div>
+        </svg>
+        <div className={classNames(styles['scrAvatar'], styles['whatsAppAvatar'])} />
+        <div className={styles['scrTitle']}>
+          <strong>Broadcast List</strong>
+          <small>Online</small>
         </div>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#8696a0" aria-hidden="true">
+          <circle cx="12" cy="5" r="1.5" />
+          <circle cx="12" cy="12" r="1.5" />
+          <circle cx="12" cy="19" r="1.5" />
+        </svg>
       </div>
-    </div>
-  );
-}
-
-function WhatsAppPreview({ text }: { readonly text: string }) {
-  return (
-    <div style={css('flex:1;display:flex;flex-direction:column;background:#0b141a;')}>
-      <div
-        style={css(
-          'display:flex;align-items:center;gap:11px;padding:10px 14px;background:#1f2c34;',
-        )}
-      >
-        <Icon name="chevron-left" size={22} color="#8ea0ab" />
-        <div
-          style={css(
-            'width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#ff5a1f,#c23d10);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;',
-          )}
-        >
-          C1
-        </div>
-        <div style={css('flex:1;')}>
-          <div style={css('font-size:14px;font-weight:700;color:#e9edef;')}>The C1RCLE</div>
-          <div style={css('font-size:11px;color:#8ea0ab;')}>business account</div>
-        </div>
-        <Icon name="video" size={20} color="#8ea0ab" />
-        <Icon name="phone" size={18} color="#8ea0ab" />
-      </div>
-      <div
-        style={{
-          ...css(
-            'flex:1;padding:16px 12px;display:flex;flex-direction:column;justify-content:flex-end;gap:8px;background-color:#0b141a;',
-          ),
-          backgroundImage: 'radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px)',
-          backgroundSize: '18px 18px',
-        }}
-      >
-        <div
-          style={css(
-            'align-self:center;background:rgba(31,44,52,0.9);color:#8ea0ab;font-size:10.5px;font-weight:600;padding:4px 12px;border-radius:8px;margin-bottom:4px;',
-          )}
-        >
+      <div className={styles['scrBody']} data-ch="wa">
+        <span className={styles['scrDate']} data-ch="wa">
           TODAY
-        </div>
-        <div
-          style={css(
-            'align-self:flex-end;max-width:82%;position:relative;background:#005c4b;color:#e9edef;padding:8px 11px 6px;border-radius:10px;border-top-right-radius:2px;font-size:13px;line-height:1.45;box-shadow:0 1px 1px rgba(0,0,0,0.25);',
-          )}
-        >
-          {text}
-          <div
-            style={css(
-              'display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-top:3px;',
-            )}
-          >
-            <span style={css('font-size:10px;color:rgba(233,237,239,0.6);')}>9:41 AM</span>
-            <svg viewBox="0 0 18 12" fill="none" style={{ width: 16, height: 11 }}>
-              <path
-                d="M1 6.5L4 9.5L9.5 3"
-                stroke="#53bdeb"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <path
-                d="M6.5 9.5L12 3"
-                stroke="#53bdeb"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
+        </span>
+        <div className={styles['scrBubble']} data-ch="wa">
+          <p>{msg || 'Message preview'}</p>
+          <span>
+            9:41 AM <CheckChecks />
+          </span>
         </div>
       </div>
-      <div
-        style={css('display:flex;align-items:center;gap:9px;padding:8px 12px;background:#0b141a;')}
-      >
-        <div
-          style={css(
-            'flex:1;background:#1f2c34;border-radius:999px;padding:9px 14px;color:#8ea0ab;font-size:12px;',
-          )}
-        >
+      <div className={styles['scrInput']} data-ch="wa">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="9.5" stroke="#8696a0" strokeWidth="1.3" />
+          <path
+            d="M8 14.5s1.5 2 4 2 4-2 4-2"
+            stroke="#8696a0"
+            strokeWidth="1.3"
+            strokeLinecap="round"
+          />
+          <circle cx="9" cy="10" r="1" fill="#8696a0" />
+          <circle cx="15" cy="10" r="1" fill="#8696a0" />
+        </svg>
+        <span className={styles['scrInputBox']} data-ch="wa">
           Message
-        </div>
-        <div
-          style={css(
-            'width:38px;height:38px;border-radius:50%;background:#00a884;display:flex;align-items:center;justify-content:center;',
-          )}
-        >
-          <Icon name="mic" size={18} color="#fff" />
-        </div>
+        </span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="9" y="3" width="6" height="10" rx="3" stroke="#8696a0" strokeWidth="1.3" />
+          <path d="M5 11a7 7 0 0014 0" stroke="#8696a0" strokeWidth="1.3" strokeLinecap="round" />
+          <line x1="12" y1="18" x2="12" y2="21" stroke="#8696a0" strokeWidth="1.3" />
+        </svg>
       </div>
-    </div>
+    </>
   );
 }
 
-function SmsPreview({ text }: { readonly text: string }) {
+/* ── SMS / iMessage ── */
+function SMSScreen({ msg }: { readonly msg: string }) {
   return (
-    <div style={css('flex:1;display:flex;flex-direction:column;background:#000;')}>
-      <div
-        style={css(
-          'position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 14px 12px;border-bottom:0.5px solid rgba(255,255,255,0.12);',
-        )}
-      >
-        <div style={{ position: 'absolute', left: 12, top: 8 }}>
-          <Icon name="chevron-left" size={22} color="#0a84ff" />
-        </div>
-        <div
-          style={css(
-            'width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#ff5a1f,#c23d10);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;',
-          )}
-        >
-          C1
-        </div>
-        <div
-          style={css(
-            'font-size:12px;font-weight:600;color:#e9e9ea;display:flex;align-items:center;gap:3px;',
-          )}
-        >
-          The C1RCLE <Icon name="chevron-right" size={13} color="#8a8a8e" />
-        </div>
-      </div>
-      <div
-        style={css(
-          'flex:1;padding:16px 14px;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;background:#000;',
-        )}
-      >
-        <div
-          style={css(
-            'align-self:center;font-size:10.5px;color:#8a8a8e;font-weight:600;margin-bottom:4px;',
-          )}
-        >
-          Text Message · Today 9:41 AM
-        </div>
-        <div
-          style={css(
-            'align-self:flex-start;max-width:82%;background:#26252a;color:#fff;padding:9px 14px;border-radius:19px;border-bottom-left-radius:5px;font-size:13px;line-height:1.4;',
-          )}
-        >
-          {text}
-        </div>
-      </div>
-      <div style={css('display:flex;align-items:center;gap:9px;padding:8px 12px 12px;')}>
-        <div
-          style={css(
-            'width:32px;height:32px;border-radius:50%;border:1px solid #3a3a3c;display:flex;align-items:center;justify-content:center;',
-          )}
-        >
-          <Icon name="plus" size={18} color="#8a8a8e" />
-        </div>
-        <div
-          style={css(
-            'flex:1;border:1px solid #3a3a3c;border-radius:999px;padding:8px 14px;color:#8a8a8e;font-size:12px;',
-          )}
-        >
-          Text Message
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function EmailPreview({ text }: { readonly text: string }) {
-  return (
-    <div
-      style={css('flex:1;display:flex;flex-direction:column;background:#faf9fb;overflow:hidden;')}
-    >
-      <div
-        style={css(
-          'display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid #eee;',
-        )}
-      >
-        <Icon name="arrow-left" size={20} color="#5f6368" />
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 12 }}>
-          <Icon name="archive" size={19} color="#5f6368" />
-          <Icon name="trash-2" size={19} color="#5f6368" />
-          <Icon name="mail-open" size={19} color="#5f6368" />
-        </div>
-      </div>
-      <div style={css('padding:16px 16px 12px;')}>
-        <div
-          style={css(
-            'font-size:17px;font-weight:700;color:#202124;line-height:1.3;margin-bottom:12px;',
-          )}
-        >
-          Doors open tonight 🔥
-        </div>
-        <div style={css('display:flex;align-items:center;gap:10px;')}>
-          <div
-            style={css(
-              'width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#ff5a1f,#c23d10);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;',
-            )}
-          >
-            C1
-          </div>
-          <div style={css('flex:1;min-width:0;')}>
-            <div style={css('font-size:13px;font-weight:600;color:#202124;')}>The C1RCLE</div>
-            <div style={css('font-size:11.5px;color:#5f6368;')}>to me · 9:41 AM</div>
-          </div>
-          <Icon name="reply" size={17} color="#5f6368" />
-        </div>
-      </div>
-      <div
-        style={css(
-          'flex:1;overflow:hidden;margin:0 14px 14px;border:1px solid #eee;border-radius:12px;background:#fff;',
-        )}
-      >
-        <div
-          style={css(
-            'height:52px;background:linear-gradient(120deg,#ff5a1f,#c23d10);display:flex;align-items:center;justify-content:center;letter-spacing:0.16em;font-size:13px;font-weight:800;color:#fff;',
-          )}
-        >
-          THE C1RCLE
-        </div>
-        <div style={css('padding:14px;font-size:12.5px;line-height:1.55;color:#3c4043;')}>
-          {text}
-        </div>
-        <div style={css('padding:0 14px 16px;')}>
-          <div
-            style={css(
-              'background:#ff5a1f;color:#fff;text-align:center;padding:10px;border-radius:8px;font-size:12.5px;font-weight:700;',
-            )}
-          >
-            Get your tickets
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PushPreview({ text }: { readonly text: string }) {
-  return (
-    <div
-      style={css(
-        'flex:1;display:flex;flex-direction:column;align-items:center;position:relative;background:linear-gradient(160deg,#1a0f2e,#0a0a0a 60%);',
-      )}
-    >
-      <div
-        style={css(
-          'position:absolute;inset:0;background:radial-gradient(circle at 30% 20%,rgba(255,90,31,0.35),transparent 55%);',
-        )}
-      />
-      <div style={css('position:relative;text-align:center;margin-top:34px;')}>
-        <div
-          style={css(
-            'font-size:15px;font-weight:600;color:rgba(255,255,255,0.85);letter-spacing:0.02em;',
-          )}
-        >
-          Thursday, 16 July
-        </div>
-        <div
-          style={css(
-            'font-size:68px;font-weight:300;color:#fff;line-height:1;margin-top:2px;letter-spacing:-0.02em;',
-          )}
-        >
-          9:41
-        </div>
-      </div>
-      <div
-        style={css(
-          'position:relative;width:calc(100% - 24px);margin:auto 12px 16px;background:rgba(40,40,45,0.6);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:13px;display:flex;gap:11px;',
-        )}
-      >
-        <div
-          style={css(
-            'width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#ff5a1f,#c23d10);display:flex;align-items:center;justify-content:center;flex:none;',
-          )}
-        >
-          <div style={css('width:16px;height:16px;border:2.5px solid #fff;border-radius:50%;')} />
-        </div>
-        <div style={css('flex:1;min-width:0;')}>
-          <div style={css('display:flex;justify-content:space-between;align-items:baseline;')}>
-            <span
-              style={css(
-                'font-size:12px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:0.03em;',
-              )}
-            >
-              THE C1RCLE
-            </span>
-            <span style={css('font-size:11px;color:rgba(255,255,255,0.6);')}>now</span>
-          </div>
-          <div style={css('font-size:13.5px;font-weight:700;color:#fff;margin-top:2px;')}>
-            Tonight at Skyline Rooftop
-          </div>
-          <div
-            style={css(
-              'font-size:12.5px;color:rgba(255,255,255,0.82);line-height:1.4;margin-top:1px;',
-            )}
-          >
-            {text}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── history ─────────────────────────────────────────────────────────────────
-
-function HistoryView() {
-  const donutC = 2 * Math.PI * 42;
-
-  return (
-    <div style={css('display:flex;flex-direction:column;gap:12px;')}>
-      {CAMPAIGNS.map((c) => {
-        const readPct = Math.round((c.read / c.sent) * 100);
-        const tapPct = Math.round((c.clicked / c.sent) * 100);
-        const readDash = (readPct / 100) * donutC;
-        const tapDash = (tapPct / 100) * donutC;
-
-        return (
-          <div
-            key={c.title}
-            style={css(
-              'display:flex;align-items:center;gap:20px;background:rgba(20,20,20,0.5);border:1px solid rgba(255,255,255,0.07);border-radius:18px;padding:16px 22px;',
-            )}
-          >
-            <svg
-              viewBox="0 0 100 100"
-              style={{ width: 76, height: 76, flex: 'none', transform: 'rotate(-90deg)' }}
-            >
-              <circle
-                cx="50"
-                cy="50"
-                r="42"
-                fill="none"
-                stroke="rgba(255,255,255,0.08)"
-                strokeWidth={9}
-              />
-              <circle
-                cx="50"
-                cy="50"
-                r="42"
-                fill="none"
-                stroke="#6ee79b"
-                strokeWidth={9}
-                strokeDasharray={`${String(readDash)} ${String(donutC - readDash)}`}
-                strokeLinecap="round"
-              />
-              <circle
-                cx="50"
-                cy="50"
-                r="30"
-                fill="none"
-                stroke="rgba(255,255,255,0.06)"
-                strokeWidth={7}
-              />
-              <circle
-                cx="50"
-                cy="50"
-                r="30"
-                fill="none"
-                stroke="#ff8a55"
-                strokeWidth={7}
-                strokeDasharray={`${String(tapDash)} ${String(donutC - tapDash)}`}
-                strokeLinecap="round"
-              />
+    <>
+      <div className={styles['scrHead']} data-ch="sms">
+        <svg width="8" height="13" viewBox="0 0 8 14" fill="none" aria-hidden="true">
+          <path
+            d="M7 1L1.5 7 7 13"
+            stroke="#007AFF"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <div className={styles['smsCenter']}>
+          <div className={classNames(styles['scrAvatar'], styles['smsAvatar'])}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#999" aria-hidden="true">
+              <circle cx="12" cy="9" r="4" />
+              <ellipse cx="12" cy="20" rx="7" ry="4" />
             </svg>
-            <div style={css('flex:1;min-width:0;')}>
-              <div style={css('display:flex;align-items:center;gap:10px;margin-bottom:4px;')}>
-                <span style={css('font-size:15px;font-weight:700;')}>{c.title}</span>
-                <span style={css(chTag)}>{c.channel}</span>
-              </div>
-              <div style={css('font-size:12px;color:#8a8a86;font-weight:500;')}>
-                {c.meta} · {c.sent.toLocaleString('en-IN')} sent
-              </div>
-            </div>
-            <div style={css('display:flex;gap:26px;flex:none;')}>
-              <div style={css('text-align:right;')}>
-                <div
-                  style={css(
-                    'font-size:18px;font-weight:800;color:#6ee79b;font-variant-numeric:tabular-nums;',
-                  )}
-                >
-                  {readPct}%
-                </div>
-                <div style={css('font-size:11px;color:#6a6a66;font-weight:600;')}>Read</div>
-              </div>
-              <div style={css('text-align:right;')}>
-                <div
-                  style={css(
-                    'font-size:18px;font-weight:800;color:#ff8a55;font-variant-numeric:tabular-nums;',
-                  )}
-                >
-                  {tapPct}%
-                </div>
-                <div style={css('font-size:11px;color:#6a6a66;font-weight:600;')}>Tapped</div>
-              </div>
-            </div>
           </div>
-        );
-      })}
+          <span className={styles['smsNumber']}>42302 ›</span>
+        </div>
+        <svg width="18" height="14" viewBox="0 0 22 16" fill="none" aria-hidden="true">
+          <rect x="1" y="1" width="13" height="14" rx="2.5" stroke="#007AFF" strokeWidth="1.5" />
+          <path
+            d="M14 5l5.5-3v12L14 11V5Z"
+            stroke="#007AFF"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+      <div className={styles['scrBody']} data-ch="sms">
+        <span className={styles['scrDate']} data-ch="sms">
+          Today at 9:41 AM
+        </span>
+        <div className={styles['scrBubble']} data-ch="sms">
+          <p>{msg || 'Message preview'}</p>
+        </div>
+      </div>
+      <div className={styles['scrInput']} data-ch="sms">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#636366"
+          strokeWidth="1.5"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 8v8M8 12h8" />
+        </svg>
+        <span className={styles['scrInputBox']} data-ch="sms">
+          iMessage
+        </span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" stroke="#636366" strokeWidth="1.5" />
+          <path d="M12 8v4l2.5 1.5" stroke="#636366" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      </div>
+    </>
+  );
+}
+
+/* ── Email ── */
+function EmailScreen({ msg, name }: { readonly msg: string; readonly name: string }) {
+  return (
+    <>
+      <div className={styles['scrHead']} data-ch="email">
+        <svg width="8" height="13" viewBox="0 0 8 14" fill="none" aria-hidden="true">
+          <path
+            d="M7 1L1.5 7 7 13"
+            stroke="#007AFF"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <div className={styles['scrTitle']}>
+          <strong>{name}</strong>
+          <small>The C1rcle Team</small>
+        </div>
+      </div>
+      <div className={styles['scrBody']} data-ch="email">
+        <div className={styles['emailFrom']}>
+          <span className={styles['emailDot']}>C</span>
+          <div>
+            <strong>The C1rcle Team</strong>
+            <br />
+            <small>team@thec1rcle.com</small>
+          </div>
+        </div>
+        <p className={styles['emailPara']}>{msg || 'Email preview'}</p>
+      </div>
+    </>
+  );
+}
+
+/* ── Push ── */
+function PushScreen({ msg }: { readonly msg: string }) {
+  return (
+    <div className={styles['pushBody']}>
+      <span className={styles['pushTime']}>9:41</span>
+      <span className={styles['pushDate']}>Wednesday, August 12</span>
+      <div className={styles['pushCard']}>
+        <span className={styles['pushAppIcon']}>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#f44a22"
+            strokeWidth="2.2"
+            aria-hidden="true"
+          >
+            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 01-3.46 0" strokeLinecap="round" />
+          </svg>
+        </span>
+        <div className={styles['pushContent']}>
+          <strong>The C1rcle</strong>
+          <p>{msg ? msg.slice(0, 85) + (msg.length > 85 ? '…' : '') : 'Push preview'}</p>
+        </div>
+        <small>now</small>
+      </div>
     </div>
   );
 }
 
-// ── templates ───────────────────────────────────────────────────────────────
-
-function TemplatesView() {
-  const s = useVenueStudio();
-
+function CheckChecks() {
   return (
-    <div style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:16px;')}>
-      {TEMPLATES.map((t) => (
-        <div
-          key={t.name}
-          style={css(
-            'position:relative;border-radius:20px;overflow:hidden;background:rgba(20,20,20,0.6);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.08);box-shadow:inset 0 1px 0 rgba(255,255,255,0.05),0 12px 30px rgba(0,0,0,0.3);padding:20px;display:flex;flex-direction:column;gap:14px;min-height:210px;',
-          )}
-        >
-          <div style={css('display:flex;align-items:center;justify-content:space-between;')}>
-            <div style={css(iconWrapMk('rgba(255,90,31,0.14)', '#ff8a55'))}>
-              <Icon name={t.icon} size={18} />
-            </div>
-            <span style={css(chTag)}>
-              <Icon name={t.chIcon} size={12} /> {t.channel}
+    <svg
+      className={styles['checkChecks']}
+      width="14"
+      height="8"
+      viewBox="0 0 18 10"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M1 5l3.5 3.5L12 1"
+        stroke="#53bdeb"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M5 5l3.5 3.5L16 1"
+        stroke="#53bdeb"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/* ─── Campaign History ─────────────────────────────────────────────────────── */
+
+function CampaignHistory() {
+  const [query, setQuery] = useState('');
+  const [channel, setChannel] = useState('All channels');
+  const filtered = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase('en-IN');
+    return venueCampaigns.filter(
+      (campaign) =>
+        (!normalized ||
+          `${campaign.name} ${campaign.eventName}`
+            .toLocaleLowerCase('en-IN')
+            .includes(normalized)) &&
+        (channel === 'All channels' || campaign.channel === channel),
+    );
+  }, [channel, query]);
+  return (
+    <section className={styles['history']}>
+      <div className={styles['historyActions']}>
+        <label className={styles['search']}>
+          <span className={styles['srOnly']}>Search campaigns</span>
+          <SearchIcon size={18} aria-hidden="true" />
+          <input
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+            }}
+            placeholder="Search campaigns"
+          />
+        </label>
+        <label>
+          <span className={styles['srOnly']}>Event</span>
+          <select defaultValue="All events">
+            <option>All events</option>
+            <option>{venueMarketingSource.event.name}</option>
+          </select>
+        </label>
+        <label>
+          <span className={styles['srOnly']}>Channel</span>
+          <select
+            value={channel}
+            onChange={(e) => {
+              setChannel(e.target.value);
+            }}
+          >
+            <option>All channels</option>
+            {CHANNELS.map((c) => (
+              <option key={c}>{c}</option>
+            ))}
+          </select>
+        </label>
+        <button type="button" disabled title="Export unavailable.">
+          <ExportIcon size={18} aria-hidden="true" /> Export
+        </button>
+      </div>
+      <div className={styles['campaignTable']} role="table" aria-label="Campaign history">
+        <div className={styles['campaignHead']} role="row">
+          <span>Campaign</span>
+          <span>Event</span>
+          <span>Channel</span>
+          <span>Sent</span>
+          <span>Result</span>
+          <span>Status</span>
+        </div>
+        {filtered.map((c) => (
+          <div className={styles['campaignRow']} role="row" key={c.id}>
+            <span role="cell">
+              <strong>{c.name}</strong>
+              <small>{c.preview}</small>
+            </span>
+            <span role="cell">{c.eventName}</span>
+            <span role="cell" className={styles['channelCell']}>
+              <ChannelSvg channel={c.channel} size={15} />
+              {c.channel}
+            </span>
+            <span role="cell">{c.sentAt ?? '—'}</span>
+            <span role="cell">{campaignResultLabel(c.providerResult)}</span>
+            <span role="cell" data-status={c.status}>
+              {c.status}
             </span>
           </div>
-          <div style={css('font-size:15px;font-weight:700;')}>{t.name}</div>
-          <div
-            style={css(
-              'flex:1;background:#0d0d0d;border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:13px;font-size:12.5px;color:#b5b5b0;line-height:1.5;',
-            )}
-          >
-            {t.preview}
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              s.setMarketingView('compose');
-            }}
-            className="vh-accent-20"
-            style={css(
-              'background:rgba(255,90,31,0.1);border:1px solid rgba(255,90,31,0.28);color:#ff8a55;padding:11px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;',
-            )}
-          >
-            Use this template
-          </button>
-        </div>
-      ))}
-      <button
-        type="button"
-        className="vh-dashed"
-        style={css(
-          'border:1.5px dashed rgba(255,255,255,0.14);border-radius:20px;padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;cursor:pointer;min-height:210px;background:none;',
-        )}
-      >
-        <div
-          style={css(
-            'width:46px;height:46px;border-radius:14px;background:rgba(255,90,31,0.12);display:flex;align-items:center;justify-content:center;',
-          )}
-        >
-          <Icon name="plus" size={22} color="#ff8a55" />
-        </div>
-        <span style={css('font-size:14px;font-weight:600;color:#8a8a86;')}>New template</span>
-      </button>
-    </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ─── Templates ────────────────────────────────────────────────────────────── */
+
+function MarketingTemplates() {
+  return (
+    <section className={styles['templates']}>
+      <header>
+        <h2>Templates</h2>
+        <p>Start with a message that works.</p>
+      </header>
+      <div className={styles['templateGrid']}>
+        {venueMarketingTemplates.map((t) => (
+          <article key={t.id}>
+            <span className={styles['templateIcon']}>
+              <ChannelSvg channel={t.channel} size={22} />
+            </span>
+            <div>
+              <small>{t.channel}</small>
+              <h3>{t.title}</h3>
+              <p>{t.preview}</p>
+            </div>
+            <Link href={`/venue/marketing?tab=compose&template=${t.id}`}>Use template</Link>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ─── Channel SVGs ─────────────────────────────────────────────────────────── */
+
+function ChannelSvg({
+  channel,
+  size = 20,
+}: {
+  readonly channel: MarketingChannel;
+  readonly size?: number;
+}) {
+  if (channel === 'WhatsApp')
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path
+          d="M12 2C6.477 2 2 6.477 2 12c0 1.89.523 3.657 1.432 5.168L2 22l4.979-1.409A10 10 0 1012 2z"
+          fill="#25D366"
+        />
+        <path
+          d="M17 14.93c-.275-.137-1.628-.803-1.88-.895-.25-.09-.433-.136-.615.137-.182.272-.706.894-.866 1.08-.16.183-.32.206-.594.069-.274-.137-1.157-.426-2.203-1.359-.814-.726-1.363-1.62-1.524-1.894-.16-.274-.017-.422.12-.558.123-.123.274-.32.41-.48.138-.16.183-.274.275-.456.09-.183.045-.343-.023-.48-.069-.137-.614-1.487-.843-2.037-.22-.533-.447-.46-.614-.469L8.8 8.6c-.183 0-.48.069-.731.343-.252.274-.96.937-.96 2.285 0 1.348.984 2.651 1.12 2.834.138.183 1.935 2.95 4.685 4.137.655.283 1.166.452 1.564.578.657.21 1.255.18 1.727.11.527-.078 1.628-.666 1.857-1.31.228-.641.228-1.19.16-1.31-.068-.114-.25-.182-.526-.318z"
+          fill="#fff"
+        />
+      </svg>
+    );
+  if (channel === 'SMS')
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M20 2H4a2 2 0 00-2 2v18l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2z" fill="#34C759" />
+        <path d="M7 9h10M7 13h6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
+  if (channel === 'Email')
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="2" y="4" width="20" height="16" rx="2" fill="#007AFF" />
+        <path
+          d="M2 7l10 7 10-7"
+          stroke="#fff"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" fill="#f44a22" />
+      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="#fff" strokeWidth="1.5" />
+      <path d="M13.73 21a2 2 0 01-3.46 0" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
   );
 }

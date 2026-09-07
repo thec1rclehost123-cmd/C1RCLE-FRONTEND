@@ -2,7 +2,50 @@
   "name": "@c1rcle/auth",
   "version": "0.0.0",
   "private": true,
+  "license": "UNLICENSED",
   "type": "module",
-  "main": "./index.ts",
-  "types": "./index.ts"
+  "exports": {
+    ".": "./dist/index.js",
+    "./server-session": "./dist/server-session.js"
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -b tsconfig.build.json",
+    "dev": "tsc -b tsconfig.build.json --watch",
+    "typecheck": "tsc -b tsconfig.build.json && tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "clean": "rm -rf dist .turbo coverage *.tsbuildinfo",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@c1rcle/api-client": "workspace:*",
+    "@c1rcle/config": "workspace:*",
+    "@c1rcle/contracts": "workspace:*",
+    "server-only": "0.0.1"
+  },
+  "devDependencies": {
+    "@c1rcle/eslint-config": "workspace:*",
+    "@c1rcle/tsconfig": "workspace:*",
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/jest-dom": "7.0.0",
+    "@testing-library/react": "16.3.2",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "@vitejs/plugin-react": "6.0.5",
+    "@vitest/coverage-v8": "4.1.10",
+    "eslint": "9.39.5",
+    "jiti": "2.7.0",
+    "jsdom": "29.1.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  }
 }

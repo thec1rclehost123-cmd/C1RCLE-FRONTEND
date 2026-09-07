@@ -1,0 +1,134 @@
+.loading {
+  display: grid;
+  gap: 16px;
+}
+
+.loading header {
+  display: grid;
+  min-height: 76px;
+  align-content: start;
+  gap: 12px;
+}
+
+.loading header span,
+.loading header i,
+.loading nav span,
+.loading > div span,
+.loading > div i,
+.loading section i {
+  display: block;
+  border-radius: var(--dashboard-radius-control);
+  background: var(--dashboard-surface-elevated);
+}
+
+.loading header span {
+  width: 170px;
+  height: 40px;
+}
+
+.loading header i {
+  width: 250px;
+  height: 20px;
+}
+
+.loading nav {
+  display: flex;
+  gap: 28px;
+  border-bottom: 1px solid var(--dashboard-border);
+}
+
+.loading nav span {
+  width: 92px;
+  height: 48px;
+  border-radius: 0;
+}
+
+.loading > div {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 126px 132px;
+  gap: 16px;
+}
+
+.loading > div span,
+.loading > div i {
+  height: 52px;
+}
+
+.loading section {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--dashboard-border);
+  border-radius: var(--dashboard-radius-panel);
+  background: var(--dashboard-surface);
+  box-shadow: var(--dashboard-shadow-card);
+}
+
+.loading section i {
+  height: 86px;
+  border-top: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 0;
+}
+
+.loading section i:first-child {
+  border-top: 0;
+}
+
+.error {
+  display: grid;
+  min-height: 520px;
+  place-items: center;
+  align-content: center;
+  border: 1px solid var(--dashboard-border);
+  border-radius: var(--dashboard-radius-primary);
+  padding: 32px;
+  background: var(--dashboard-surface);
+  text-align: center;
+}
+
+.error > span {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: var(--dashboard-radius-icon);
+  color: var(--dashboard-danger);
+  background: rgb(248 113 113 / 10%);
+  font-size: 22px;
+}
+
+.error h1 {
+  margin: 18px 0 8px;
+  font-size: 28px;
+  font-weight: 500;
+}
+
+.error p {
+  max-width: 520px;
+  margin: 0;
+  color: var(--dashboard-text-secondary);
+  line-height: 1.6;
+}
+
+.error button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+  border: 0;
+  border-radius: var(--dashboard-radius-button);
+  color: #fff;
+  background: var(--dashboard-accent);
+  padding: 0 18px;
+  cursor: pointer;
+}
+
+@media (max-width: 520px) {
+  .loading > div {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .loading > div span {
+    grid-column: 1 / -1;
+  }
+}

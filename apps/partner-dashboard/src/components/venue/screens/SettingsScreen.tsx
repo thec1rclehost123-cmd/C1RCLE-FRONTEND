@@ -1,354 +1,448 @@
 'use client';
 
-import { css } from '../charts';
-import { ACCOUNT_ROWS, HIGHLIGHTS, MENU_ITEMS, PRESENCE_STATS, inputStyle, subTab } from '../data';
-import { Icon } from '../Icon';
-import { useVenueStudio } from '../store';
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 
-import type { SettingsView } from '../store';
+import {
+  AccountIcon,
+  BankIcon,
+  CheckIcon,
+  ImageIcon,
+  InviteIcon,
+  LockedIcon,
+  SettingsIcon,
+  SignOutIcon,
+  UsersIcon,
+} from '@c1rcle/icons';
 
-const SETTINGS_TABS: readonly (readonly [SettingsView, string])[] = [
-  ['public', 'Presence'],
-  ['menu', 'Menu'],
-  ['account', 'Account'],
+import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
+
+import { resolveVenueSettingsPermissions, venueSettingsSource } from '../venue-settings-model';
+
+import styles from './VenueSettings.module.css';
+
+export type SettingsTab = 'profile' | 'payout' | 'team' | 'security';
+
+const TABS: readonly {
+  readonly id: SettingsTab;
+  readonly label: string;
+  readonly icon: typeof AccountIcon;
+}[] = [
+  { id: 'profile', label: 'Venue profile', icon: AccountIcon },
+  { id: 'payout', label: 'Payout account', icon: BankIcon },
+  { id: 'team', label: 'Team access', icon: UsersIcon },
+  { id: 'security', label: 'Security', icon: LockedIcon },
 ];
 
-export function SettingsScreen() {
-  const s = useVenueStudio();
-
+export function SettingsScreen({ tab = 'profile' }: { readonly tab?: SettingsTab }) {
+  const auth = useDashboardAuth();
+  const permissions = useMemo(() => resolveVenueSettingsPermissions(auth.canDo), [auth.canDo]);
   return (
-    <div>
-      <h1 style={css('margin:0 0 22px;font-size:30px;font-weight:800;letter-spacing:-0.02em;')}>
-        Settings
-      </h1>
-      <div
-        style={css(
-          'display:flex;gap:4px;background:#141414;border:1px solid rgba(255,255,255,0.06);padding:4px;border-radius:13px;width:fit-content;margin-bottom:22px;',
-        )}
-      >
-        {SETTINGS_TABS.map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => {
-              s.setSettingsView(id);
-            }}
-            style={css(subTab(s.settingsView === id))}
-          >
-            {label}
-          </button>
-        ))}
+    <section className={styles['page']}>
+      <header>
+        <h1>{tab === 'team' ? 'Team access' : tab === 'security' ? 'Security' : 'Settings'}</h1>
+        <p>
+          {tab === 'team'
+            ? 'Control who can manage Venue Studio.'
+            : tab === 'security'
+              ? 'Protect your Venue Studio account.'
+              : 'Manage your venue and account.'}
+        </p>
+      </header>
+      <div className={styles['layout']}>
+        <nav className={styles['nav']} aria-label="Settings sections">
+          {TABS.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.id}
+                href={`/venue/settings?tab=${item.id}`}
+                className={tab === item.id ? styles['active'] : undefined}
+                aria-current={tab === item.id ? 'page' : undefined}
+              >
+                <Icon size={21} aria-hidden="true" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <main className={styles['content']}>
+          {tab === 'profile' ? <VenueProfile canManage={permissions.canManageVenue} /> : null}
+          {tab === 'payout' ? (
+            <PayoutAccount canManage={permissions.canChangePayoutAccount} />
+          ) : null}
+          {tab === 'team' ? <TeamAccess canManage={permissions.canManageTeam} /> : null}
+          {tab === 'security' ? (
+            <SecuritySettings canManage={permissions.canManageSecurity} />
+          ) : null}
+        </main>
       </div>
-
-      {s.settingsView === 'public' ? <PresenceView /> : null}
-      {s.settingsView === 'menu' ? <MenuView /> : null}
-      {s.settingsView === 'account' ? <AccountView /> : null}
-    </div>
+    </section>
   );
 }
 
-function PresenceView() {
-  const fieldLabel = css(
-    'font-size:13px;font-weight:600;color:#c9c9c6;display:block;margin-bottom:8px;',
+function VenueProfile({ canManage }: { readonly canManage: boolean }) {
+  const initial = venueSettingsSource.profile;
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [form, setForm] = useState(initial);
+  useEffect(
+    () => () => {
+      if (logoUrl) URL.revokeObjectURL(logoUrl);
+    },
+    [logoUrl],
   );
-
+  const setField = (field: keyof typeof form, value: string | number) => {
+    setForm((current) => ({ ...current, [field]: value }));
+  };
+  const reset = () => {
+    setForm(initial);
+    if (logoUrl) URL.revokeObjectURL(logoUrl);
+    setLogoUrl(null);
+  };
   return (
-    <div
-      style={css(
-        'display:grid;grid-template-columns:1.5fr 1fr;gap:20px;align-items:start;max-width:1040px;',
-      )}
+    <form
+      className={styles['profileForm']}
+      onSubmit={(event) => {
+        event.preventDefault();
+      }}
     >
-      <div style={css('display:flex;flex-direction:column;gap:20px;')}>
-        <div
-          style={css(
-            'position:relative;border-radius:24px;overflow:hidden;background:rgba(20,20,20,0.6);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.08);box-shadow:inset 0 1px 0 rgba(255,255,255,0.06),0 20px 50px rgba(0,0,0,0.35);',
-          )}
-        >
-          <div
-            style={css(
-              'height:150px;position:relative;background:linear-gradient(120deg,#2a1206,#3a1a08 40%,#160b04);display:flex;align-items:flex-end;justify-content:flex-end;padding:14px;',
+      <section className={styles['panel']}>
+        <h2>Venue identity</h2>
+        <div className={styles['identityGrid']}>
+          <label className={styles['logoUpload']}>
+            <span className={styles['srOnly']}>Venue logo</span>
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- local object URL is not an optimizable remote asset
+              <img src={logoUrl} alt="Selected venue logo preview" />
+            ) : (
+              <strong>
+                {initial.logoText.split('\n').map((line) => (
+                  <span key={line}>{line}</span>
+                ))}
+              </strong>
             )}
-          >
-            <div
-              style={css(
-                'position:absolute;top:-40px;left:30%;width:240px;height:240px;background:radial-gradient(circle,rgba(255,90,31,0.45),transparent 68%);',
-              )}
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              disabled={!canManage}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (!file) return;
+                if (logoUrl) URL.revokeObjectURL(logoUrl);
+                setLogoUrl(URL.createObjectURL(file));
+              }}
             />
-            <button
-              type="button"
-              className="vh-black-60"
-              style={css(
-                'position:relative;display:inline-flex;align-items:center;gap:7px;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.22);color:#fff;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;backdrop-filter:blur(6px);',
-              )}
-            >
-              <Icon name="image" size={13} /> Change cover
-            </button>
-          </div>
-          <div style={css('padding:24px;position:relative;')}>
-            <div
-              style={css(
-                'width:68px;height:68px;border-radius:18px;background:linear-gradient(135deg,#ff5a1f,#c23d10);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:24px;color:#fff;position:absolute;top:-34px;left:24px;border:4px solid #141414;box-shadow:0 8px 24px rgba(255,90,31,0.35);',
-              )}
-            >
-              RK
-            </div>
-            <div style={css('margin-top:26px;display:flex;flex-direction:column;gap:18px;')}>
-              <div>
-                <label htmlFor="st-name" style={fieldLabel}>
-                  Display name
-                </label>
-                <input id="st-name" defaultValue="Rhea Kapoor Events" style={css(inputStyle)} />
-              </div>
-              <div>
-                <label htmlFor="st-bio" style={fieldLabel}>
-                  Bio
-                </label>
-                <textarea
-                  id="st-bio"
-                  defaultValue="Curating Mumbai's best rooftop & warehouse nights since 2019. Afrobeats · House · Techno."
-                  style={{
-                    ...css(inputStyle),
-                    minHeight: 84,
-                    resize: 'vertical',
-                    lineHeight: 1.5,
-                    fontFamily: 'inherit',
+            <em>
+              <ImageIcon size={17} aria-hidden="true" /> Change logo
+            </em>
+          </label>
+          <div>
+            <Field label="Venue name">
+              <input
+                value={form.name}
+                disabled={!canManage}
+                onChange={(event) => {
+                  setField('name', event.target.value);
+                }}
+              />
+            </Field>
+            <div className={styles['twoColumns']}>
+              <Field label="Venue type">
+                <select
+                  value={form.type}
+                  disabled={!canManage}
+                  onChange={(event) => {
+                    setField('type', event.target.value);
+                  }}
+                >
+                  <option>Nightclub</option>
+                  <option>Bar</option>
+                  <option>Live venue</option>
+                </select>
+              </Field>
+              <Field label="Capacity">
+                <input
+                  type="number"
+                  min="1"
+                  value={form.capacity}
+                  disabled={!canManage}
+                  onChange={(event) => {
+                    setField('capacity', Number(event.target.value));
                   }}
                 />
-              </div>
-              <div>
-                <span style={fieldLabel}>Highlights</span>
-                <div style={css('display:flex;gap:8px;flex-wrap:wrap;')}>
-                  {HIGHLIGHTS.map((h) => (
-                    <span
-                      key={h}
-                      style={css(
-                        'display:inline-flex;align-items:center;gap:7px;background:#0d0d0d;border:1px solid rgba(255,255,255,0.1);padding:8px 13px;border-radius:999px;font-size:13px;font-weight:600;',
-                      )}
-                    >
-                      {h}
-                      <Icon name="x" size={12} color="#8a8a86" style={{ cursor: 'pointer' }} />
-                    </span>
-                  ))}
-                  <button
-                    type="button"
-                    style={css(
-                      'background:rgba(255,90,31,0.12);border:1px solid rgba(255,90,31,0.3);color:#ff8a55;padding:8px 13px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;',
-                    )}
-                  >
-                    + Add
-                  </button>
-                </div>
-              </div>
+              </Field>
             </div>
           </div>
         </div>
-        <button
-          type="button"
-          className="vh-accent"
-          style={css(
-            'display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#ff5a1f;color:#0a0a0a;border:none;padding:15px 28px;border-radius:999px;font-size:15px;font-weight:800;cursor:pointer;align-self:flex-start;',
-          )}
-        >
-          <Icon name="check" size={16} /> Save presence
+      </section>
+      <section className={styles['panel']}>
+        <h2>Location and contact</h2>
+        <Field label="Address">
+          <input
+            value={form.address}
+            disabled={!canManage}
+            onChange={(event) => {
+              setField('address', event.target.value);
+            }}
+          />
+        </Field>
+        <div className={styles['twoColumns']}>
+          <Field label="Phone">
+            <input
+              type="tel"
+              value={form.phone}
+              disabled={!canManage}
+              onChange={(event) => {
+                setField('phone', event.target.value);
+              }}
+            />
+          </Field>
+          <Field label="Public email">
+            <input
+              type="email"
+              value={form.publicEmail}
+              disabled={!canManage}
+              onChange={(event) => {
+                setField('publicEmail', event.target.value);
+              }}
+            />
+          </Field>
+        </div>
+        <Field label="Instagram">
+          <input
+            value={form.instagram}
+            disabled={!canManage}
+            onChange={(event) => {
+              setField('instagram', event.target.value);
+            }}
+          />
+        </Field>
+      </section>
+      <footer>
+        <button type="button" onClick={reset}>
+          Cancel
         </button>
-      </div>
-
-      {/* live public preview */}
-      <div style={css('position:sticky;top:96px;')}>
-        <div
-          style={css(
-            'display:flex;align-items:center;gap:9px;margin-bottom:16px;padding-left:4px;',
-          )}
-        >
-          <span
-            style={css(
-              'width:7px;height:7px;border-radius:50%;background:#6ee79b;box-shadow:0 0 8px #6ee79b;',
-            )}
-          />
-          <span
-            style={css(
-              'font-size:12px;font-weight:700;color:#8a8a86;text-transform:uppercase;letter-spacing:0.08em;',
-            )}
+        {canManage ? (
+          <button
+            type="submit"
+            className={styles['primary']}
+            disabled
+            title="Venue profile changes require the settings mutation API."
           >
-            How guests see you
-          </span>
-        </div>
-        <div
-          style={css(
-            'position:relative;border-radius:24px;overflow:hidden;border:1px solid rgba(255,255,255,0.09);box-shadow:0 24px 56px rgba(0,0,0,0.45);',
-          )}
-        >
-          <div
-            style={css(
-              'height:120px;position:relative;background:linear-gradient(120deg,#2a1206,#3a1a08 40%,#160b04);',
-            )}
-          />
-          <div
-            style={css(
-              'background:rgba(20,20,20,0.85);backdrop-filter:blur(18px);padding:0 22px 22px;position:relative;',
-            )}
-          >
-            <div
-              style={css(
-                'width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#ff5a1f,#c23d10);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:22px;color:#fff;margin-top:-32px;border:4px solid #141414;',
-              )}
-            >
-              RK
-            </div>
-            <div
-              style={css('font-size:19px;font-weight:800;letter-spacing:-0.01em;margin-top:12px;')}
-            >
-              Rhea Kapoor Events
-            </div>
-            <div
-              style={css(
-                'font-size:13px;color:#b5b5b0;font-weight:500;line-height:1.5;margin-top:6px;',
-              )}
-            >
-              Curating Mumbai&apos;s best rooftop &amp; warehouse nights since 2019.
-            </div>
-            <div style={css('display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;')}>
-              {HIGHLIGHTS.map((h) => (
-                <span
-                  key={h}
-                  style={css(
-                    'background:rgba(255,90,31,0.12);border:1px solid rgba(255,90,31,0.28);color:#ff8a55;padding:5px 11px;border-radius:999px;font-size:11.5px;font-weight:700;',
-                  )}
-                >
-                  {h}
-                </span>
-              ))}
-            </div>
-            <div
-              style={css(
-                'display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:20px;',
-              )}
-            >
-              {PRESENCE_STATS.map((st) => (
-                <div
-                  key={st.label}
-                  style={css(
-                    'background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:13px 10px;text-align:center;',
-                  )}
-                >
-                  <div style={css('font-size:19px;font-weight:800;letter-spacing:-0.02em;')}>
-                    {st.value}
-                  </div>
-                  <div style={css('font-size:11px;color:#8a8a86;font-weight:600;margin-top:2px;')}>
-                    {st.label}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              style={css(
-                'width:100%;margin-top:18px;background:#ff5a1f;color:#0a0a0a;border:none;padding:12px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;',
-              )}
-            >
-              Follow
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+            Save changes unavailable
+          </button>
+        ) : (
+          <span>You do not have permission to change venue settings.</span>
+        )}
+      </footer>
+    </form>
   );
 }
 
-function MenuView() {
+function PayoutAccount({ canManage }: { readonly canManage: boolean }) {
+  const account = venueSettingsSource.payoutAccount;
   return (
-    <div style={css('max-width:620px;')}>
-      <div
-        style={css(
-          'display:flex;align-items:center;justify-content:space-between;background:#141414;border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:16px 20px;margin-bottom:16px;',
+    <section className={styles['payout']}>
+      <header>
+        <h2>Payout account</h2>
+        <p>Where your venue payouts arrive.</p>
+      </header>
+      <div className={styles['bankRow']}>
+        {account ? (
+          <>
+            <BankIcon size={34} aria-hidden="true" />
+            <span>
+              <small>Bank name</small>
+              <strong>{account.name}</strong>
+            </span>
+            <span>
+              <small>Account</small>
+              <strong>{account.maskedAccount}</strong>
+            </span>
+            <span>
+              <small>Account holder</small>
+              <strong>{account.accountHolder}</strong>
+            </span>
+            <span>
+              <small>Status</small>
+              <strong className={styles['verified']}>
+                <CheckIcon size={16} aria-hidden="true" />
+                {account.verified ? 'Verified' : 'Unavailable'}
+              </strong>
+            </span>
+            {canManage ? (
+              <button
+                type="button"
+                disabled
+                title="Bank changes require the payout account mutation API."
+              >
+                Change account unavailable
+              </button>
+            ) : null}
+          </>
+        ) : (
+          <p>Bank account unavailable</p>
         )}
-      >
-        <div>
-          <div style={css('font-size:15px;font-weight:700;')}>Menu is live</div>
-          <div style={css('font-size:13px;color:#8a8a86;')}>
-            Guests can see and order these items right now.
-          </div>
-        </div>
-        <button
-          type="button"
-          aria-label="Toggle menu visibility"
-          style={css(
-            'width:52px;height:30px;border-radius:999px;background:#ff5a1f;position:relative;cursor:pointer;border:none;',
-          )}
-        >
-          <span
-            style={css(
-              'position:absolute;top:3px;right:3px;width:24px;height:24px;border-radius:50%;background:#0a0a0a;',
-            )}
-          />
-        </button>
       </div>
-      <div
-        style={css(
-          'background:#141414;border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:12px;',
-        )}
-      >
-        {MENU_ITEMS.map((m) => (
-          <div
-            key={m.name}
-            className="vh-1a"
-            style={css(
-              'display:flex;align-items:center;gap:14px;padding:13px 12px;border-radius:12px;',
-            )}
+      <dl>
+        <dt>Next payout</dt>
+        <dd>{venueSettingsSource.nextPayout}</dd>
+      </dl>
+      <p className={styles['note']}>Account changes require verification.</p>
+    </section>
+  );
+}
+
+function TeamAccess({ canManage }: { readonly canManage: boolean }) {
+  return (
+    <section className={styles['team']}>
+      <header>
+        {canManage ? (
+          <button
+            type="button"
+            disabled
+            title="Staff invitations require the team access mutation API."
           >
-            <Icon name="grip-vertical" size={16} color="#6a6a66" style={{ cursor: 'grab' }} />
-            <div
-              style={css(
-                'width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,0.06);flex:none;',
+            <InviteIcon size={18} aria-hidden="true" /> Invite staff unavailable
+          </button>
+        ) : null}
+      </header>
+      <div role="table" aria-label="Team access">
+        <div className={styles['teamHead']} role="row">
+          <span>Person</span>
+          <span>Role</span>
+          <span>Access</span>
+          <span>Status</span>
+          <span>Action</span>
+        </div>
+        {venueSettingsSource.staff.map((member) => (
+          <div className={styles['teamRow']} role="row" key={member.id}>
+            <span role="cell">
+              <em>{member.initials}</em>
+              <span>
+                <strong>{member.name}</strong>
+                <small>{member.email}</small>
+              </span>
+            </span>
+            <span role="cell">{member.role}</span>
+            <span role="cell">{member.access}</span>
+            <span role="cell" data-status={member.status}>
+              {member.status}
+            </span>
+            <span role="cell">
+              {canManage ? (
+                <button
+                  type="button"
+                  disabled
+                  title="Permission changes require the team access mutation API."
+                >
+                  Manage unavailable
+                </button>
+              ) : (
+                'Unavailable'
               )}
-            />
-            <div style={css('flex:1;')}>
-              <div style={css('font-size:14px;font-weight:600;')}>{m.name}</div>
-              <div style={css('font-size:12px;color:#8a8a86;')}>{m.cat}</div>
-            </div>
-            <span style={css('font-size:15px;font-weight:700;')}>{m.price}</span>
-            <button
-              type="button"
-              aria-label={`Edit ${m.name}`}
-              style={css(
-                'width:32px;height:32px;border-radius:9px;background:#0d0d0d;border:1px solid rgba(255,255,255,0.08);color:#8a8a86;cursor:pointer;display:flex;align-items:center;justify-content:center;',
-              )}
-            >
-              <Icon name="pencil" size={14} />
-            </button>
+            </span>
           </div>
         ))}
       </div>
+    </section>
+  );
+}
+
+function SecuritySettings({ canManage }: { readonly canManage: boolean }) {
+  const security = venueSettingsSource.security;
+  return (
+    <section className={styles['security']}>
+      <SecurityRow
+        title="Password"
+        detail={security.passwordLastChanged ?? 'Last changed unavailable'}
+        action="Change password unavailable"
+        canManage={canManage}
+      />
+      <SecurityRow
+        title="Two-step verification"
+        detail={
+          security.twoStepEnabled === null
+            ? 'Status unavailable'
+            : security.twoStepEnabled
+              ? 'On'
+              : 'Off'
+        }
+        action="Manage unavailable"
+        canManage={canManage}
+      />
+      <SecurityRow
+        title="Active sessions"
+        detail={
+          security.activeSessions === null
+            ? 'Unavailable'
+            : `${String(security.activeSessions)} devices`
+        }
+        action="View unavailable"
+        canManage={canManage}
+      />
+      <SecurityRow
+        title="Sign out everywhere"
+        detail={`Last sign-in ${security.lastSignIn ?? 'unavailable'}`}
+        action="Sign out everywhere unavailable"
+        canManage={canManage}
+        danger
+      />
+    </section>
+  );
+}
+
+function SecurityRow({
+  title,
+  detail,
+  action,
+  canManage,
+  danger = false,
+}: {
+  readonly title: string;
+  readonly detail: string;
+  readonly action: string;
+  readonly canManage: boolean;
+  readonly danger?: boolean;
+}) {
+  return (
+    <div className={styles['securityRow']}>
+      <span>
+        <strong>{title}</strong>
+        <small>{detail}</small>
+      </span>
+      {canManage ? (
+        <button
+          type="button"
+          className={danger ? styles['danger'] : undefined}
+          disabled
+          title="This security action is not supported by the current authentication API."
+        >
+          {danger ? (
+            <SignOutIcon size={18} aria-hidden="true" />
+          ) : (
+            <SettingsIcon size={18} aria-hidden="true" />
+          )}
+          {action}
+        </button>
+      ) : (
+        <em>Unavailable</em>
+      )}
     </div>
   );
 }
 
-function AccountView() {
+function Field({
+  label,
+  children,
+}: {
+  readonly label: string;
+  readonly children: React.ReactNode;
+}) {
   return (
-    <div style={css('max-width:620px;display:flex;flex-direction:column;gap:14px;')}>
-      {ACCOUNT_ROWS.map((a) => (
-        <button
-          key={a.title}
-          type="button"
-          className="vh-19"
-          style={css(
-            'display:flex;align-items:center;gap:14px;background:#141414;border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:18px 20px;cursor:pointer;text-align:left;color:inherit;width:100%;',
-          )}
-        >
-          <div
-            style={css(
-              'width:42px;height:42px;border-radius:12px;background:rgba(255,90,31,0.12);color:#ff8a55;display:flex;align-items:center;justify-content:center;flex:none;',
-            )}
-          >
-            <Icon name={a.icon} size={18} />
-          </div>
-          <div style={css('flex:1;')}>
-            <div style={css('font-size:15px;font-weight:700;')}>{a.title}</div>
-            <div style={css('font-size:13px;color:#8a8a86;')}>{a.sub}</div>
-          </div>
-          <Icon name="chevron-right" size={18} color="#6a6a66" />
-        </button>
-      ))}
-    </div>
+    <label className={styles['field']}>
+      <span>{label}</span>
+      {children}
+    </label>
   );
 }

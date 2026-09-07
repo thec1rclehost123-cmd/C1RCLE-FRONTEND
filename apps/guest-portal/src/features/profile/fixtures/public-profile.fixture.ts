@@ -1,0 +1,206 @@
+// FIXTURE_ONLY: Temporary frontend development data.
+// Must never be used as an API failure fallback.
+
+import type {
+  ProfileEventSummary,
+  PublicProfileFixture,
+  PublicProfileIdentity,
+} from '../types/profile.types';
+
+const events = {
+  artCollective: {
+    id: 'fixture-public-profile-event-art-collective',
+    slug: 'art-collective',
+    title: 'Art Collective',
+    image: '/events/art-collective.webp',
+    startsAt: '2026-10-03T17:00:00+05:30',
+    venue: 'The Mill',
+    city: 'Mumbai',
+    participationLabel: 'Guestlist',
+  },
+  indieJam: {
+    id: 'fixture-public-profile-event-indie-jam',
+    slug: 'indie-jam',
+    title: 'Indie Jam',
+    image: '/events/indie-jam.webp',
+    startsAt: '2026-10-10T20:00:00+05:30',
+    venue: 'The Courtyard',
+    city: 'Pune',
+    participationLabel: 'Interested',
+  },
+  neonNights: {
+    id: 'fixture-public-profile-event-neon-nights',
+    slug: 'neon-nights',
+    title: 'Neon Nights',
+    image: '/events/neon-nights.webp',
+    startsAt: '2026-06-12T21:00:00+05:30',
+    venue: 'The Glass House',
+    city: 'Mumbai',
+    participationLabel: 'Attended',
+  },
+  rooftopJazz: {
+    id: 'fixture-public-profile-event-rooftop-jazz',
+    slug: 'rooftop-jazz',
+    title: 'Rooftop Jazz',
+    image: '/events/rooftop-jazz.webp',
+    startsAt: '2026-09-18T19:30:00+05:30',
+    venue: 'Skyline Social',
+    city: 'Pune',
+    participationLabel: 'Gallery Pass',
+  },
+  sundaySoul: {
+    id: 'fixture-public-profile-event-sunday-soul',
+    slug: 'sunday-soul',
+    title: 'Sunday Soul',
+    image: '/events/sunday-soul.webp',
+    startsAt: '2026-10-18T11:00:00+05:30',
+    venue: 'Garden City Club',
+    city: 'Bengaluru',
+    participationLabel: 'Interested',
+  },
+  technoBunker: {
+    id: 'fixture-public-profile-event-techno-bunker',
+    slug: 'techno-bunker',
+    title: 'Techno Bunker',
+    image: '/events/techno-bunker.webp',
+    startsAt: '2026-09-25T23:00:00+05:30',
+    venue: 'Sector 9',
+    city: 'Bengaluru',
+    participationLabel: 'Guestlist',
+  },
+} satisfies Record<string, ProfileEventSummary>;
+
+const member = (
+  identity: PublicProfileIdentity,
+  upcomingEvents: readonly ProfileEventSummary[],
+  attendedEvents: readonly ProfileEventSummary[],
+): PublicProfileFixture => ({ attendedEvents, identity, upcomingEvents });
+
+export const publicProfileFixtures: readonly PublicProfileFixture[] = [
+  member(
+    {
+      id: 'riya',
+      displayName: 'Riya Kapoor',
+      initials: 'RI',
+      city: 'Pune',
+      instagram: 'riyaoffline',
+      bio: 'Always looking for intimate live sets, new rooms, and the people who make a night memorable.',
+      memberSince: '2025-08-18T00:00:00.000Z',
+      badges: ['Member', 'Early Access'],
+      interests: ['Live music', 'Rooftops', 'Art'],
+      tone: 'orange',
+    },
+    [events.rooftopJazz, events.artCollective],
+    [events.neonNights],
+  ),
+  member(
+    {
+      id: 'ishika',
+      displayName: 'Ishika Shah',
+      initials: 'IS',
+      city: 'Mumbai',
+      instagram: 'ishika.afterdark',
+      bio: 'Design, dance floors, and small gatherings with a point of view.',
+      memberSince: '2025-11-02T00:00:00.000Z',
+      badges: ['Member'],
+      interests: ['Design', 'Dance', 'Pop-ups'],
+      tone: 'red',
+    },
+    [events.artCollective, events.technoBunker],
+    [events.neonNights],
+  ),
+  member(
+    {
+      id: 'ajay',
+      displayName: 'Ajay Mehta',
+      initials: 'AJ',
+      city: 'Bengaluru',
+      bio: 'A regular at independent gigs, late sets, and rooms built around good sound.',
+      memberSince: '2026-01-14T00:00:00.000Z',
+      badges: ['Member'],
+      interests: ['Techno', 'Indie', 'Late nights'],
+      tone: 'purple',
+    },
+    [events.technoBunker, events.indieJam],
+    [],
+  ),
+  member(
+    {
+      id: 'maya',
+      displayName: 'Maya Rao',
+      initials: 'M',
+      city: 'Pune',
+      bio: 'Sunday scenes, soulful lineups, and discovering a new favorite artist early.',
+      memberSince: '2025-09-21T00:00:00.000Z',
+      badges: ['Member', 'Early Access'],
+      interests: ['Soul', 'Jazz', 'Day parties'],
+      tone: 'orange',
+    },
+    [events.rooftopJazz, events.sundaySoul],
+    [events.neonNights],
+  ),
+  member(
+    {
+      id: 'dev',
+      displayName: 'Dev Malhotra',
+      initials: 'D',
+      city: 'Bengaluru',
+      bio: 'Here for the selectors, the systems, and the after-hours conversations.',
+      memberSince: '2026-02-08T00:00:00.000Z',
+      badges: ['Member'],
+      interests: ['Electronic', 'Afters', 'Sound'],
+      tone: 'purple',
+    },
+    [events.technoBunker],
+    [],
+  ),
+  member(
+    {
+      id: 'harsh',
+      displayName: 'Harsh Vardhan',
+      initials: 'H',
+      city: 'Mumbai',
+      bio: 'Live music first. Everything else is a reason to stay after the encore.',
+      memberSince: '2025-12-12T00:00:00.000Z',
+      badges: ['Member'],
+      interests: ['Live music', 'Indie', 'Community'],
+      tone: 'red',
+    },
+    [events.indieJam, events.artCollective],
+    [events.neonNights],
+  ),
+  member(
+    {
+      id: 'nia',
+      displayName: 'Nia Fernandes',
+      initials: 'N',
+      city: 'Mumbai',
+      bio: 'Collecting good posters, better playlists, and weekends worth remembering.',
+      memberSince: '2026-03-01T00:00:00.000Z',
+      badges: ['Member'],
+      interests: ['Art', 'Soul', 'Rooftops'],
+      tone: 'orange',
+    },
+    [events.artCollective, events.sundaySoul],
+    [],
+  ),
+  member(
+    {
+      id: 'kabir',
+      displayName: 'Kabir Singh',
+      initials: 'K',
+      city: 'Pune',
+      bio: 'New music, unlisted rooms, and plans that become stories by morning.',
+      memberSince: '2025-10-09T00:00:00.000Z',
+      badges: ['Member', 'Early Access'],
+      interests: ['Discovery', 'Jazz', 'Afters'],
+      tone: 'purple',
+    },
+    [events.rooftopJazz, events.technoBunker],
+    [events.neonNights],
+  ),
+];
+
+export function findPublicProfileFixture(userId: string) {
+  return publicProfileFixtures.find((profile) => profile.identity.id === userId);
+}

@@ -1,290 +1,464 @@
 'use client';
 
-import { css } from '../charts';
-import {
-  POSTER_GRADS,
-  REQ_DOT,
-  SLOT_REQUESTS,
-  gAvatar,
-  initialsOf,
-  outlinePill,
-  pick,
-  subTab,
-} from '../data';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useCallback, useMemo, useRef, useState } from 'react';
+
+import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
+
 import { Icon } from '../Icon';
-import { useVenueStudio } from '../store';
+import { useOverlayFocus } from '../useOverlayFocus';
+import { filterSlotRequests } from '../venue-slot-requests-model';
 
-import type { ReqStatus } from '../data';
+import styles from './SlotRequests.module.css';
 
-const STAT_CARD = css(
-  'display:flex;align-items:center;justify-content:space-between;background:#141414;border:1px solid rgba(255,255,255,0.06);border-radius:18px;padding:20px 22px;',
-);
+import type {
+  SlotRequestAdapters,
+  SlotRequestTab,
+  VenueSlotRequest,
+} from '../venue-slot-requests-model';
 
-const STAT_LABEL = css(
-  'font-size:11px;font-weight:800;color:#6a6a66;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;',
-);
+type Action = 'accept' | 'decline' | 'suggest';
 
-export function SlotRequestsScreen() {
-  const s = useVenueStudio();
+export function SlotRequestsScreen({
+  tab = 'pending',
+  adapters,
+}: {
+  readonly tab?: SlotRequestTab;
+  readonly adapters?: SlotRequestAdapters;
+}) {
+  const auth = useDashboardAuth();
+  const [query, setQuery] = useState('');
+  const [selected, setSelected] = useState<VenueSlotRequest | null>(null);
+  const [action, setAction] = useState<Action | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const canView =
+    auth.grantedPermissions.length === 0 ||
+    auth.grantedPermissions.includes('*') ||
+    auth.hasPermission('VIEW_EVENTS');
+  const canManage = auth.canDo('canEditEvent');
+  const shown = useMemo(() => filterSlotRequests(tab, query), [query, tab]);
 
-  const requests = SLOT_REQUESTS.map((r) => ({
-    ...r,
-    status: s.requestOverrides[r.id] ?? r.status,
-  }));
+  if (!canView)
+    return (
+      <SlotState
+        title="Permission denied"
+        detail="You do not have access to venue slot requests."
+      />
+    );
 
-  const countBy = (st: ReqStatus) => requests.filter((r) => r.status === st).length;
-  const shown =
-    s.requestsView === 'pending' ? requests.filter((r) => r.status === 'pending') : requests;
-  const noPending = s.requestsView === 'pending' && shown.length === 0;
-
+  const supported = (kind: Action) =>
+    kind === 'accept'
+      ? Boolean(adapters?.accept)
+      : kind === 'decline'
+        ? Boolean(adapters?.decline)
+        : Boolean(adapters?.suggestDate);
   return (
-    <div>
-      <div
-        style={css(
-          'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;',
-        )}
-      >
-        <button
-          type="button"
-          onClick={() => {
-            s.go('events');
-          }}
-          className="vh-text"
-          style={css(
-            'display:flex;align-items:center;gap:7px;background:none;border:none;color:#8a8a86;font-size:14px;font-weight:600;cursor:pointer;padding:0;',
-          )}
-        >
-          <Icon name="arrow-left" size={16} /> Back to Events
-        </button>
-        <button
-          type="button"
-          className="vh-1c"
-          style={css(
-            'display:flex;align-items:center;gap:8px;background:#141414;border:1px solid rgba(255,255,255,0.08);color:#f5f5f3;padding:10px 16px;border-radius:11px;font-size:13px;font-weight:600;cursor:pointer;',
-          )}
-        >
-          <Icon name="refresh-cw" size={14} /> Refresh
-        </button>
-      </div>
-      <h1 style={css('margin:4px 0 20px;font-size:30px;font-weight:800;letter-spacing:-0.02em;')}>
-        Slot Requests
-      </h1>
-
-      <div
-        style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:22px;')}
-      >
-        {(
-          [
-            ['Pending', countBy('pending'), '#ffb020', 'rgba(255,176,32,0.14)', 'clock'],
-            [
-              'Approved',
-              countBy('approved'),
-              '#6ee79b',
-              'rgba(110,231,155,0.14)',
-              'check-circle-2',
-            ],
-            ['Rejected', countBy('rejected'), '#f0857a', 'rgba(240,133,122,0.14)', 'x-circle'],
-          ] as const
-        ).map(([label, count, color, bg, icon]) => (
-          <div key={label} style={STAT_CARD}>
-            <div>
-              <div style={STAT_LABEL}>{label}</div>
-              <div
-                style={{
-                  fontSize: 30,
-                  fontWeight: 800,
-                  color,
-                  fontVariantNumeric: 'tabular-nums',
-                }}
-              >
-                {count}
-              </div>
-            </div>
-            <div
-              style={css(
-                `width:46px;height:46px;border-radius:14px;background:${bg};color:${color};display:flex;align-items:center;justify-content:center;`,
-              )}
+    <section className={styles['page']}>
+      <header className={styles['header']}>
+        <div>
+          <h1>Slot requests</h1>
+          <p>Review requests to host events at your venue.</p>
+        </div>
+      </header>
+      <div className={styles['toolbar']}>
+        <nav aria-label="Slot request status">
+          {(['pending', 'accepted', 'declined'] as const).map((item) => (
+            <Link
+              key={item}
+              href={`/venue/slot-requests?tab=${item}`}
+              aria-current={tab === item ? 'page' : undefined}
             >
-              <Icon name={icon} size={20} />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div
-        style={css(
-          'display:flex;gap:4px;background:#141414;border:1px solid rgba(255,255,255,0.06);padding:4px;border-radius:13px;width:fit-content;margin-bottom:20px;',
-        )}
-      >
-        {(
-          [
-            ['pending', 'Pending'],
-            ['all', 'All Requests'],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => {
-              s.setRequestsView(id);
+              {item[0]?.toUpperCase()}
+              {item.slice(1)}
+              {item === 'pending' ? <b>{filterSlotRequests('pending', '').length}</b> : null}
+            </Link>
+          ))}
+        </nav>
+        <label>
+          <Icon name="search" size={18} />
+          <span className="sr-only">Search requests</span>
+          <input
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
             }}
-            style={css(subTab(s.requestsView === id))}
-          >
-            {label}
-          </button>
-        ))}
+            placeholder="Search requests…"
+          />
+        </label>
       </div>
+      {message ? (
+        <p className={styles['status']} role="status" aria-live="polite">
+          {message}
+        </p>
+      ) : null}
+      {shown.length ? (
+        <div className={styles['list']}>
+          {shown.map((request) => (
+            <button
+              key={request.id}
+              type="button"
+              className={styles['requestRow']}
+              aria-pressed={selected?.id === request.id}
+              onClick={() => {
+                setSelected(request);
+              }}
+            >
+              <Image src={request.posterSrc} alt="" width={80} height={80} />
+              <span className={styles['requestIdentity']}>
+                <strong>{request.eventName}</strong>
+                <small>
+                  <i>{request.requesterInitials}</i>
+                  {request.requester}
+                </small>
+              </span>
+              <span data-label="Date">
+                <Icon name="calendar" size={16} />
+                {request.date}
+                <small>{request.time}</small>
+              </span>
+              <span data-label="Guests">
+                <Icon name="users" size={16} />
+                {request.expectedGuests}
+                <small>Expected guests</small>
+              </span>
+              <span data-label="Type">{request.eventType}</span>
+              <time>{request.submittedAt}</time>
+              <em>{request.status}</em>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <SlotState
+          title={`No ${tab} requests`}
+          detail={
+            tab === 'pending' ? 'You are all caught up.' : `No requests are currently ${tab}.`
+          }
+        />
+      )}
+      <RequestDrawer
+        request={selected}
+        canManage={canManage}
+        supported={supported}
+        onAction={setAction}
+        onClose={() => {
+          setSelected(null);
+        }}
+      />
+      <RequestActionDialog
+        request={selected}
+        action={action}
+        busy={busy}
+        supported={action ? supported(action) : false}
+        onClose={() => {
+          setAction(null);
+        }}
+        onSubmit={async (values) => {
+          if (!selected || !action) return;
+          setBusy(true);
+          setMessage(null);
+          try {
+            if (action === 'accept') await adapters?.accept?.(selected.id);
+            else if (action === 'decline')
+              await adapters?.decline?.(selected.id, values.note || null);
+            else
+              await adapters?.suggestDate?.(selected.id, {
+                date: values.date,
+                time: values.time,
+                note: values.note || null,
+              });
+            setMessage(
+              action === 'accept'
+                ? 'Request accepted.'
+                : action === 'decline'
+                  ? 'Request declined.'
+                  : 'Another date was suggested.',
+            );
+            setAction(null);
+            setSelected(null);
+          } catch {
+            setMessage('Action unavailable. Try again later.');
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+    </section>
+  );
+}
 
-      {noPending ? (
-        <div
-          style={css(
-            'background:#141414;border:1px solid rgba(255,255,255,0.06);border-radius:22px;padding:70px 20px;display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;',
-          )}
+function RequestDrawer({
+  request,
+  canManage,
+  supported,
+  onAction,
+  onClose,
+}: {
+  readonly request: VenueSlotRequest | null;
+  readonly canManage: boolean;
+  readonly supported: (action: Action) => boolean;
+  readonly onAction: (action: Action) => void;
+  readonly onClose: () => void;
+}) {
+  const ref = useRef<HTMLElement>(null);
+  const close = useCallback(() => {
+    onClose();
+  }, [onClose]);
+  useOverlayFocus({ containerRef: ref, open: Boolean(request), onClose: close, lockScroll: true });
+  if (!request) return null;
+  return (
+    <div className={styles['backdrop']}>
+      <aside
+        ref={ref}
+        className={styles['drawer']}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Request details for ${request.eventName}`}
+        tabIndex={-1}
+      >
+        <button
+          type="button"
+          className={styles['close']}
+          aria-label="Close request details"
+          onClick={onClose}
         >
-          <div
-            style={css(
-              'width:58px;height:58px;border-radius:50%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;color:#8a8a86;',
-            )}
-          >
-            <Icon name="calendar" size={24} />
+          ×
+        </button>
+        <h2>Request details</h2>
+        <div className={styles['eventCard']}>
+          <Image src={request.posterSrc} alt="" width={80} height={72} />
+          <span>
+            <strong>{request.eventName}</strong>
+            <em>{request.status}</em>
+          </span>
+        </div>
+        <section>
+          <h3>Requester</h3>
+          <p className={styles['requester']}>
+            <i>{request.requesterInitials}</i>
+            {request.requester}
+          </p>
+        </section>
+        <dl>
+          <div>
+            <dt>Requested date</dt>
+            <dd>{request.date}</dd>
           </div>
           <div>
-            <div style={css('font-size:17px;font-weight:700;margin-bottom:5px;')}>
-              No pending requests
-            </div>
-            <div style={css('font-size:13px;color:#8a8a86;')}>
-              All event slot requests have been reviewed.
-            </div>
+            <dt>Requested time</dt>
+            <dd>{request.time}</dd>
           </div>
+          <div>
+            <dt>Expected guests</dt>
+            <dd>{request.expectedGuests}</dd>
+          </div>
+          <div>
+            <dt>Event type</dt>
+            <dd>{request.eventType}</dd>
+          </div>
+        </dl>
+        <section>
+          <h3>Note from requester</h3>
+          <p className={styles['note']}>{request.note}</p>
+        </section>
+        {request.history.length ? (
+          <section>
+            <h3>Event history with this requester</h3>
+            {request.history.map((item) => (
+              <div className={styles['history']} key={item.id}>
+                <span>
+                  <strong>{item.eventName}</strong>
+                  <small>{item.date}</small>
+                </span>
+                <em data-status={item.status}>{item.status}</em>
+              </div>
+            ))}
+          </section>
+        ) : null}
+        {request.status === 'pending' ? (
+          <footer>
+            <button
+              type="button"
+              disabled={!canManage || !supported('decline')}
+              onClick={() => {
+                onAction('decline');
+              }}
+            >
+              Decline
+            </button>
+            <button
+              type="button"
+              disabled={!canManage || !supported('suggest')}
+              onClick={() => {
+                onAction('suggest');
+              }}
+            >
+              Suggest another date
+            </button>
+            <button
+              type="button"
+              className={styles['primary']}
+              disabled={!canManage || !supported('accept')}
+              onClick={() => {
+                onAction('accept');
+              }}
+            >
+              Accept request
+            </button>
+            {!supported('accept') && !supported('decline') && !supported('suggest') ? (
+              <p>Slot Request mutation adapters are unavailable.</p>
+            ) : null}
+          </footer>
+        ) : null}
+      </aside>
+    </div>
+  );
+}
+
+function RequestActionDialog({
+  request,
+  action,
+  busy,
+  supported,
+  onClose,
+  onSubmit,
+}: {
+  readonly request: VenueSlotRequest | null;
+  readonly action: Action | null;
+  readonly busy: boolean;
+  readonly supported: boolean;
+  readonly onClose: () => void;
+  readonly onSubmit: (values: {
+    readonly date: string;
+    readonly time: string;
+    readonly note: string;
+  }) => Promise<void>;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const close = useCallback(() => {
+    onClose();
+  }, [onClose]);
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
+  const [note, setNote] = useState('');
+  useOverlayFocus({ containerRef: ref, open: Boolean(action), onClose: close, lockScroll: true });
+  if (!request || !action) return null;
+  const title =
+    action === 'accept'
+      ? 'Accept this request?'
+      : action === 'decline'
+        ? 'Decline this request?'
+        : 'Suggest another date';
+  const valid = action !== 'suggest' || Boolean(date && time);
+  return (
+    <div className={styles['modalBackdrop']}>
+      <div
+        ref={ref}
+        className={styles['modal']}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="slot-action-title"
+        tabIndex={-1}
+      >
+        <button type="button" className={styles['close']} aria-label="Close" onClick={onClose}>
+          ×
+        </button>
+        <h2 id="slot-action-title">{title}</h2>
+        <p>
+          {action === 'accept'
+            ? 'This will accept the request after the server confirms it.'
+            : action === 'decline'
+              ? 'Add a short optional reason.'
+              : 'Propose an alternative date and time.'}
+        </p>
+        {action === 'suggest' ? (
+          <div className={styles['modalFields']}>
+            <label>
+              Date
+              <input
+                type="date"
+                value={date}
+                onChange={(event) => {
+                  setDate(event.target.value);
+                }}
+              />
+            </label>
+            <label>
+              Time
+              <input
+                type="time"
+                value={time}
+                onChange={(event) => {
+                  setTime(event.target.value);
+                }}
+              />
+            </label>
+          </div>
+        ) : null}
+        {action !== 'accept' ? (
+          <label>
+            Note {action === 'decline' ? '(optional)' : 'to requester (optional)'}
+            <textarea
+              maxLength={120}
+              value={note}
+              onChange={(event) => {
+                setNote(event.target.value);
+              }}
+            />
+            <small>{note.length}/120</small>
+          </label>
+        ) : (
+          <dl>
+            <div>
+              <dt>Event</dt>
+              <dd>{request.eventName}</dd>
+            </div>
+            <div>
+              <dt>Date</dt>
+              <dd>{request.date}</dd>
+            </div>
+            <div>
+              <dt>Time</dt>
+              <dd>{request.time}</dd>
+            </div>
+          </dl>
+        )}
+        {!supported ? (
+          <p className={styles['unsupported']}>
+            This action requires a Slot Request mutation adapter.
+          </p>
+        ) : null}
+        <footer>
+          <button type="button" onClick={onClose}>
+            Cancel
+          </button>
           <button
             type="button"
-            className="vh-1c"
-            style={css(
-              'background:#141414;border:1px solid rgba(255,255,255,0.12);color:#f5f5f3;padding:11px 18px;border-radius:999px;font-size:13px;font-weight:600;cursor:pointer;',
-            )}
+            className={styles['primary']}
+            disabled={!supported || !valid || busy}
+            onClick={() => void onSubmit({ date, time, note })}
           >
-            Share your venue link
+            {busy
+              ? 'Working…'
+              : action === 'accept'
+                ? 'Accept request'
+                : action === 'decline'
+                  ? 'Decline request'
+                  : 'Send suggestion'}
           </button>
-        </div>
-      ) : null}
-
-      <div style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:20px;')}>
-        {shown.map((r) => (
-          <div
-            key={r.id}
-            className="vh-lift-sm"
-            style={css(
-              'position:relative;border-radius:24px;overflow:hidden;background:#0c0c0c;border:1px solid rgba(255,255,255,0.09);box-shadow:0 20px 46px rgba(0,0,0,0.4);transition:transform .32s cubic-bezier(.2,.8,.2,1);',
-            )}
-          >
-            <div style={css('position:relative;height:96px;')}>
-              <div
-                style={css(`position:absolute;inset:0;background:${pick(POSTER_GRADS, r.id)};`)}
-              />
-              <div
-                style={css(
-                  'position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0) 45%,rgba(0,0,0,0.55) 100%);',
-                )}
-              />
-              <div style={css('position:absolute;top:14px;left:14px;')}>
-                <span style={css(outlinePill)}>
-                  <span
-                    style={css(
-                      `width:6px;height:6px;border-radius:50%;background:${REQ_DOT[r.status]};box-shadow:0 0 6px ${REQ_DOT[r.status]};`,
-                    )}
-                  />
-                  {r.status}
-                </span>
-              </div>
-              <div
-                style={css(
-                  'position:absolute;top:14px;right:14px;display:flex;align-items:center;gap:8px;',
-                )}
-              >
-                <div style={css(gAvatar(pick(POSTER_GRADS, r.id)))}>{initialsOf(r.host)}</div>
-              </div>
-            </div>
-
-            <div style={css('padding:18px 18px 0;')}>
-              <div
-                style={css(
-                  'background:linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02));border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:13px 16px;margin-bottom:16px;',
-                )}
-              >
-                <div
-                  style={css(
-                    'font-size:16px;font-weight:800;letter-spacing:-0.01em;color:#fff;line-height:1.15;',
-                  )}
-                >
-                  {r.eventName}
-                </div>
-                <div
-                  style={css(
-                    'font-size:11px;font-weight:800;color:#ff8a55;letter-spacing:0.06em;text-transform:uppercase;margin-top:4px;',
-                  )}
-                >
-                  Requested by {r.host}
-                </div>
-              </div>
-
-              <div style={css('display:flex;flex-direction:column;gap:10px;margin-bottom:16px;')}>
-                <div style={css('display:flex;align-items:center;gap:10px;')}>
-                  <Icon name="calendar" size={14} color="#6a6a66" />
-                  <span style={css('font-size:13px;font-weight:600;')}>
-                    {r.date} · {r.time}
-                  </span>
-                </div>
-                <div style={css('display:flex;align-items:center;gap:10px;')}>
-                  <Icon name="map-pin" size={14} color="#6a6a66" />
-                  <span style={css('font-size:13px;font-weight:600;')}>{r.venue}</span>
-                </div>
-                <div style={css('display:flex;align-items:center;gap:10px;')}>
-                  <Icon name="ticket" size={14} color="#6a6a66" />
-                  <span style={css('font-size:13px;font-weight:600;')}>{r.tier}</span>
-                </div>
-              </div>
-              <div
-                style={css(
-                  'font-size:12.5px;color:#8a8a86;line-height:1.5;margin-bottom:16px;min-height:38px;',
-                )}
-              >
-                {r.note}
-              </div>
-            </div>
-
-            <div style={css('padding:0 18px 18px;')}>
-              {r.status === 'pending' ? (
-                <div style={css('display:flex;gap:10px;')}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      s.setRequestStatus(r.id, 'rejected');
-                    }}
-                    className="vh-red-18"
-                    style={css(
-                      'flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:rgba(240,133,122,0.1);border:1px solid rgba(240,133,122,0.3);color:#f0857a;padding:12px;border-radius:999px;font-size:12.5px;font-weight:700;cursor:pointer;',
-                    )}
-                  >
-                    <Icon name="x" size={14} /> Decline
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      s.setRequestStatus(r.id, 'approved');
-                    }}
-                    className="vh-white"
-                    style={css(
-                      'flex:1;display:flex;align-items:center;justify-content:center;gap:6px;background:#f5f5f3;border:none;color:#0a0a0a;padding:12px;border-radius:999px;font-size:12.5px;font-weight:800;cursor:pointer;',
-                    )}
-                  >
-                    <Icon name="check" size={14} /> Accept
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        ))}
+        </footer>
       </div>
     </div>
+  );
+}
+
+function SlotState({ title, detail }: { readonly title: string; readonly detail: string }) {
+  return (
+    <section className={styles['empty']} role="status">
+      <Icon name="inbox" size={42} />
+      <h2>{title}</h2>
+      <p>{detail}</p>
+    </section>
   );
 }
