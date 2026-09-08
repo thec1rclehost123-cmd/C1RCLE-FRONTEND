@@ -6,6 +6,7 @@ import '@/styles/partner-v3.css';
 
 import { getServerSession } from '@c1rcle/auth/server-session';
 
+import { DashboardAuthProvider } from '@/components/providers/DashboardAuthProvider';
 import { SessionProvider } from '@/components/providers/session-provider';
 
 import type { Metadata, Viewport } from 'next';
@@ -61,7 +62,9 @@ export default async function RootLayout({ children }: { readonly children: Reac
       suppressHydrationWarning
     >
       <body className="antialiased bg-[#0A0A0B] text-white">
-        <SessionProvider initialUser={session}>{children}</SessionProvider>
+        <SessionProvider initialUser={session}>
+          <DashboardAuthProvider>{children}</DashboardAuthProvider>
+        </SessionProvider>
       </body>
     </html>
   );
