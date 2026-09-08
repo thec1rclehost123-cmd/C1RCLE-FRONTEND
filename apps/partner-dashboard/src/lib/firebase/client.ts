@@ -1,141 +1,75 @@
 /**
- * Mock Firebase Auth client for pure UI mode.
+ * Real GCP Identity Platform (Firebase Auth) client, scoped to ONE use: the
+ * onboarding wizard's phone-verification step (`signInWithPhoneNumber` +
+ * `RecaptchaVerifier`, see `app/onboard/PageClient.tsx`). This is the ONE
+ * legitimate client-side Firebase usage in this app's architecture —
+ * `@c1rcle/auth` (Better Auth) owns account creation, login, and session
+ * everywhere else. Identity Platform owns phone OTP send/verify/cooldown so
+ * the backend never stores or rate-limits phone codes itself; the backend
+ * only verifies the resulting ID token server-side (`firebase-admin`'s
+ * `verifyIdToken`, see `C1RCLE-BACKEND`'s `firebase-phone-verifier.ts`).
  *
- * The dashboard is being built ahead of the real auth backend, so this stands
- * in for `firebase/auth`. It is deliberately session-*ful*: an earlier version
- * returned a bare object with a permanent `currentUser` and no
- * `onAuthStateChanged`, which meant `DashboardAuthProvider` bailed out of its
- * subscription and never set `user` — so signing in appeared to do nothing.
- *
- * The modular `onAuthStateChanged(auth, cb)` / `signInWithEmailAndPassword`
- * helpers delegate to the methods on this object, so implementing them here is
- * enough for the real call sites to work unchanged.
- *
- * Any email + password is accepted. Replace this file with a real
- * `initializeApp` / `getAuth` once the backend exists.
+ * `initializeApp`/`getAuth` config values are public web-app config (not
+ * secrets — see `packages/config/src/schema.ts`'s doc comment on the
+ * `NEXT_PUBLIC_FIREBASE_*` vars). Same GCP project as the backend's
+ * `FIREBASE_PROJECT_ID`.
  */
 
-import type { PartnerType } from '@/lib/rbac/types';
+import { getApps, initializeApp } from 'firebase/app';
+import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
 
-const SESSION_KEY = 'c1rcle.mock-auth.session';
+import { getClientEnv } from '@c1rcle/config';
 
-interface MockSession {
-  uid: string;
-  email: string;
-  displayName: string;
-  partnerType: PartnerType;
-}
+import type { FirebaseApp } from 'firebase/app';
+import type { Auth, ConfirmationResult } from 'firebase/auth';
 
-export interface MockUser extends MockSession {
-  getIdToken: (forceRefresh?: boolean) => Promise<string>;
-  getIdTokenResult: () => Promise<{ claims: Record<string, unknown> }>;
-}
+// Re-exported so this stays the ONE file in the app that imports `firebase/*`
+// directly (enforced by `no-restricted-imports`, see eslint.config.ts) —
+// callers (the onboard wizard's phone step) go through this module only.
+export { RecaptchaVerifier, signInWithPhoneNumber };
+export type { ConfirmationResult };
 
-type Listener = (user: MockUser | null) => void;
+let app: FirebaseApp | undefined;
+let auth: Auth | undefined;
 
-const listeners = new Set<Listener>();
-let session: MockSession | null = null;
-let hydrated = false;
+export function getFirebaseAuth(): Auth {
+  if (auth) return auth;
 
-const isBrowser = (): boolean => typeof window !== 'undefined';
-
-/** Reads the persisted session once, so a refresh keeps you signed in. */
-function hydrate(): void {
-  if (hydrated || !isBrowser()) return;
-  hydrated = true;
-  try {
-    const raw = window.localStorage.getItem(SESSION_KEY);
-    session = raw ? (JSON.parse(raw) as MockSession) : null;
-  } catch {
-    session = null;
+  const env = getClientEnv();
+  if (
+    !env.NEXT_PUBLIC_FIREBASE_API_KEY ||
+    !env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ||
+    !env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+    !env.NEXT_PUBLIC_FIREBASE_APP_ID
+  ) {
+    throw new Error(
+      'Phone verification is not configured: NEXT_PUBLIC_FIREBASE_API_KEY, ' +
+        'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, NEXT_PUBLIC_FIREBASE_PROJECT_ID and ' +
+        'NEXT_PUBLIC_FIREBASE_APP_ID must all be set (see .env.example).',
+    );
   }
-}
 
-function persist(next: MockSession | null): void {
-  session = next;
-  if (!isBrowser()) return;
-  try {
-    if (next) window.localStorage.setItem(SESSION_KEY, JSON.stringify(next));
-    else window.localStorage.removeItem(SESSION_KEY);
-  } catch {
-    // Private browsing / storage disabled — session simply won't survive reload.
-  }
-}
+  // `getApps()` guard: Next.js Fast Refresh re-runs this module without a
+  // full page reload, and `initializeApp` throws if called twice for the
+  // same app name.
+  app ??=
+    getApps()[0] ??
+    initializeApp({
+      apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY,
+      authDomain: env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+      projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      appId: env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    });
 
-function toUser(s: MockSession | null): MockUser | null {
-  if (!s) return null;
-  return {
-    ...s,
-    getIdToken: () => Promise.resolve(`mock_token_${s.uid}`),
-    // The provider prefers custom claims over the /api/auth/me payload when all
-    // three partner claims are present, so supply them here.
-    getIdTokenResult: () =>
-      Promise.resolve({
-        claims: {
-          partnerId: `partner_${s.partnerType}_001`,
-          partnerType: s.partnerType,
-          partnerRole: 'owner',
-        },
-      }),
-  };
-}
-
-function notify(): void {
-  const user = toUser(session);
-  for (const l of listeners) l(user);
+  auth = getAuth(app);
+  return auth;
 }
 
 /**
- * The partner type being signed in as. The login screen carries it in the URL
- * (`/login?type=venue`), which is the only signal available to this mock.
+ * NOT real — `verify/PageClient.tsx`'s KYC-image upload still targets this.
+ * Out of scope for the phone-verification fix; that page is a separate,
+ * not-yet-rewired flow (see the frontend re-wire plan's remaining-work list).
  */
-function partnerTypeFromUrl(): PartnerType {
-  if (!isBrowser()) return 'venue';
-  const t = new URLSearchParams(window.location.search).get('type');
-  return t === 'host' || t === 'promoter' || t === 'club' ? t : 'venue';
-}
-
-export function getFirebaseAuth() {
-  hydrate();
-
-  return {
-    get currentUser() {
-      return toUser(session);
-    },
-
-    onAuthStateChanged(callback: Listener) {
-      hydrate();
-      listeners.add(callback);
-      // Fire once with the current state, as the real SDK does.
-      const user = toUser(session);
-      queueMicrotask(() => {
-        callback(user);
-      });
-      return () => {
-        listeners.delete(callback);
-      };
-    },
-
-    signInWithEmailAndPassword(email: string, _password: string) {
-      const partnerType = partnerTypeFromUrl();
-      persist({
-        uid: 'user_demo_123',
-        email,
-        displayName: `Demo ${partnerType.toUpperCase()} Partner`,
-        partnerType,
-      });
-      notify();
-      return Promise.resolve({ user: toUser(session) });
-    },
-
-    signOut() {
-      persist(null);
-      notify();
-      return Promise.resolve();
-    },
-  };
-}
-
 export function getFirebaseStorage() {
   return {};
 }

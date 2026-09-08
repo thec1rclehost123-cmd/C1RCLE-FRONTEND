@@ -31,9 +31,8 @@ import {
 } from 'lucide-react';
 import { isApiClientError } from '@c1rcle/api-client';
 import { login, signup } from '@c1rcle/auth';
-import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
 
-import { getFirebaseAuth } from '@/lib/firebase/client';
+import { getFirebaseAuth, RecaptchaVerifier, signInWithPhoneNumber } from '@/lib/firebase/client';
 import {
   addOnboardingDocument,
   getDocumentUploadUrl,
@@ -46,7 +45,7 @@ import {
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 
 import type { OnboardingDocumentLabel, OnboardingProfileDto } from '@c1rcle/contracts';
-import type { ConfirmationResult } from 'firebase/auth';
+import type { ConfirmationResult } from '@/lib/firebase/client';
 
 const Instagram = (props: any) => (
   <svg
