@@ -2,13 +2,13 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { useSessionStore } from '@c1rcle/auth';
+import { clearSession, useSessionStore } from '@c1rcle/auth';
 
 import TicketsPage from './page';
 
 describe('TicketsPage fixture wallet', () => {
   beforeEach(() => {
-    useSessionStore.getState().clearSession();
+    clearSession();
   });
 
   it('renders the logged-out guest ticket showcase without wallet passes', () => {

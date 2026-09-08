@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useSessionStore } from '@c1rcle/auth';
+import { clearSession, useSessionStore } from '@c1rcle/auth';
 
 import { ProfileLoggedOutView } from '@/features/profile/components/ProfileLoggedOutView';
 
@@ -14,7 +14,7 @@ vi.mock('next/image', () => ({
   ),
 }));
 
-const replace = vi.fn();
+const replace = vi.fn<(href: string) => void>();
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace }),
@@ -22,8 +22,8 @@ vi.mock('next/navigation', () => ({
 
 describe('ProfilePage', () => {
   beforeEach(() => {
-    replace.mockClear();
-    useSessionStore.getState().clearSession();
+    vi.clearAllMocks();
+    clearSession();
   });
 
   it('renders the fixture owner overview without fake authentication controls', async () => {
