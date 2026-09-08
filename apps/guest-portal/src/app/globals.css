@@ -266,10 +266,14 @@
 }
 
 .light-string::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: -2px 0;
-  background-image: radial-gradient(circle 2.5px, rgba(255, 240, 200, 1) 40%, rgba(255, 240, 200, 0) 60%);
+  background-image: radial-gradient(
+    circle 2.5px,
+    rgba(255, 240, 200, 1) 40%,
+    rgba(255, 240, 200, 0) 60%
+  );
   background-size: 60px 8px;
   background-position: 20px center;
   background-repeat: repeat-x;
@@ -278,8 +282,13 @@
 }
 
 @keyframes string-twinkle {
-  0% { opacity: 0.6; }
-  100% { opacity: 1; filter: drop-shadow(0 0 6px rgba(255, 230, 180, 1)); }
+  0% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px rgba(255, 230, 180, 1));
+  }
 }
 
 /* ── Scrolling track ── */
@@ -289,18 +298,24 @@
   width: max-content;
 }
 
-.photo-string-rows[data-active="true"] .string-row-track {
+.photo-string-rows[data-active='true'] .string-row-track {
   will-change: transform;
 }
 
-.photo-string-rows[data-active="false"] .string-row-track,
-.photo-string-rows[data-active="false"] .light-string::before {
+.photo-string-rows[data-active='false'] .string-row-track,
+.photo-string-rows[data-active='false'] .light-string::before {
   animation-play-state: paused;
 }
 
-.photo-speed-38 { --scroll-speed: 38s; }
-.photo-speed-40 { --scroll-speed: 40s; }
-.photo-speed-45 { --scroll-speed: 45s; }
+.photo-speed-38 {
+  --scroll-speed: 38s;
+}
+.photo-speed-40 {
+  --scroll-speed: 40s;
+}
+.photo-speed-45 {
+  --scroll-speed: 45s;
+}
 
 .scroll-left {
   animation: marquee-left var(--scroll-speed, 35s) linear infinite;
@@ -311,8 +326,12 @@
 }
 
 @keyframes marquee-left {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 /* ── Photo on string ── */
@@ -325,15 +344,33 @@
   transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.photo-rotate-none { --rot: 0deg; }
-.photo-rotate-n1 { --rot: -1deg; }
-.photo-rotate-n2 { --rot: -2deg; }
-.photo-rotate-n3 { --rot: -3deg; }
-.photo-rotate-n4 { --rot: -4deg; }
-.photo-rotate-p1 { --rot: 1deg; }
-.photo-rotate-p2 { --rot: 2deg; }
-.photo-rotate-p3 { --rot: 3deg; }
-.photo-rotate-p4 { --rot: 4deg; }
+.photo-rotate-none {
+  --rot: 0deg;
+}
+.photo-rotate-n1 {
+  --rot: -1deg;
+}
+.photo-rotate-n2 {
+  --rot: -2deg;
+}
+.photo-rotate-n3 {
+  --rot: -3deg;
+}
+.photo-rotate-n4 {
+  --rot: -4deg;
+}
+.photo-rotate-p1 {
+  --rot: 1deg;
+}
+.photo-rotate-p2 {
+  --rot: 2deg;
+}
+.photo-rotate-p3 {
+  --rot: 3deg;
+}
+.photo-rotate-p4 {
+  --rot: 4deg;
+}
 
 /* ── Clip / Pin ── */
 .photo-clip {
@@ -354,7 +391,7 @@
 }
 
 .clip-body::before {
-  content: "";
+  content: '';
   position: absolute;
   top: -4px;
   left: 50%;
@@ -383,7 +420,7 @@
 }
 
 .disposable-frame::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
   border-radius: 4px;
@@ -434,7 +471,7 @@
 }
 
 .disposable-date {
-  font-family: "Courier New", monospace;
+  font-family: 'Courier New', monospace;
   font-size: 0.6rem;
   font-weight: 700;
   color: #c4a87a;
@@ -443,7 +480,7 @@
 }
 
 .disposable-counter {
-  font-family: "Courier New", monospace;
+  font-family: 'Courier New', monospace;
   font-size: 0.55rem;
   font-weight: 600;
   color: #d4a574;
@@ -514,12 +551,12 @@
 }
 
 /* Public profile motion is enhancement-only: content remains visible without JavaScript. */
-[data-profile-motion="ready"] [data-profile-reveal] {
+[data-profile-motion='ready'] [data-profile-reveal] {
   opacity: 0;
   transform: translateY(24px);
 }
 
-[data-profile-motion="ready"] [data-profile-reveal][data-profile-visible="true"] {
+[data-profile-motion='ready'] [data-profile-reveal][data-profile-visible='true'] {
   opacity: 1;
   transform: translateY(0);
   transition:
@@ -528,8 +565,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-profile-motion="ready"] [data-profile-reveal],
-  [data-profile-motion="ready"] [data-profile-reveal][data-profile-visible="true"] {
+  [data-profile-motion='ready'] [data-profile-reveal],
+  [data-profile-motion='ready'] [data-profile-reveal][data-profile-visible='true'] {
     opacity: 1;
     transform: none;
     transition: none;

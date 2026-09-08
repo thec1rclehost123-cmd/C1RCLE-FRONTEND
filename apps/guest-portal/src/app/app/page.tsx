@@ -5,7 +5,8 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'THE C1RCLE App | Discover Life Offline',
-  description: 'Get THE C1RCLE Mobile App for iOS and Android. Discover events, get on guest lists, and walk right in.',
+  description:
+    'Get THE C1RCLE Mobile App for iOS and Android. Discover events, get on guest lists, and walk right in.',
 };
 
 export default function AppPage() {

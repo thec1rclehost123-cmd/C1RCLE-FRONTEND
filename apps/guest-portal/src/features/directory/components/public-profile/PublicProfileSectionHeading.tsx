@@ -21,9 +21,7 @@ export function PublicProfileSectionHeading({
         {title}
       </h2>
       {description && (
-        <p className="mt-5 max-w-2xl text-sm leading-7 text-white/48 sm:text-base">
-          {description}
-        </p>
+        <p className="mt-5 max-w-2xl text-sm leading-7 text-white/48 sm:text-base">{description}</p>
       )}
     </header>
   );

@@ -24,7 +24,10 @@ export const OtpVerifyStep: React.FC<OtpVerifyStepProps> = ({
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <label htmlFor="otp-input" className="text-[10px] font-black uppercase tracking-[0.3em] text-white/70 block">
+        <label
+          htmlFor="otp-input"
+          className="text-[10px] font-black uppercase tracking-[0.3em] text-white/70 block"
+        >
           ENTER VERIFICATION CODE
         </label>
         <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">

@@ -234,7 +234,9 @@ export function ExploreHeroCarouselClient({ events }: { events: readonly Explore
                   setActiveIndex(index);
                 }}
                 className={`h-1.5 rounded-full transition-[width,background-color] motion-reduce:transition-none ${
-                  index === activeIndex ? 'w-7 bg-white sm:w-9' : 'w-1.5 bg-white/35 hover:bg-white/70'
+                  index === activeIndex
+                    ? 'w-7 bg-white sm:w-9'
+                    : 'w-1.5 bg-white/35 hover:bg-white/70'
                 }`}
               />
             ))}

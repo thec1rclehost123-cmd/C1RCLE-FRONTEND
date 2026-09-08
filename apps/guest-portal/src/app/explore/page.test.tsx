@@ -34,7 +34,9 @@ describe('ExplorePage', () => {
     expect(screen.getByText('6 events found')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View Sunday Soul' })).toBeInTheDocument();
     expect(screen.getByLabelText('184 people interested')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /pause featured events/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /pause featured events/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('searches and filters fixtures without backend behavior', () => {

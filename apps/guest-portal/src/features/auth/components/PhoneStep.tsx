@@ -33,7 +33,10 @@ export const PhoneStep: React.FC<PhoneStepProps> = ({
 
       {/* Country Selector */}
       <div className="space-y-1.5">
-        <label htmlFor="country-select" className="text-[9px] font-bold uppercase tracking-widest text-white/40 block">
+        <label
+          htmlFor="country-select"
+          className="text-[9px] font-bold uppercase tracking-widest text-white/40 block"
+        >
           Country
         </label>
         <select
@@ -55,7 +58,10 @@ export const PhoneStep: React.FC<PhoneStepProps> = ({
 
       {/* Phone Input */}
       <div className="space-y-1.5">
-        <label htmlFor="phone-input" className="text-[9px] font-bold uppercase tracking-widest text-white/40 block">
+        <label
+          htmlFor="phone-input"
+          className="text-[9px] font-bold uppercase tracking-widest text-white/40 block"
+        >
           Mobile Number
         </label>
         <div className="flex items-center gap-2">
@@ -78,9 +84,7 @@ export const PhoneStep: React.FC<PhoneStepProps> = ({
       </div>
 
       {error && (
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[#FF4400]">
-          {error}
-        </p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#FF4400]">{error}</p>
       )}
     </div>
   );

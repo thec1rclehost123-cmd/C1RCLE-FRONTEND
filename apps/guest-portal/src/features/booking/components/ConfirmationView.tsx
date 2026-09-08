@@ -52,13 +52,7 @@ export function ConfirmationView({
         >
           <div className="relative flex flex-col items-center justify-center p-6 text-center md:p-8">
             <div className="relative aspect-[3/4] w-full max-w-[240px] overflow-hidden rounded-2xl border border-white/10 shadow-2xl">
-              <Image
-                src={event.image}
-                alt={event.title}
-                fill
-                priority
-                className="object-cover"
-              />
+              <Image src={event.image} alt={event.title} fill priority className="object-cover" />
             </div>
             <p className="mt-4 text-[10px] font-black uppercase tracking-[0.2em] text-white/50">
               {event.category}
@@ -76,7 +70,10 @@ export function ConfirmationView({
                 </span>
               </div>
 
-              <h2 id="digital-pass-heading" className="mt-4 text-2xl font-black uppercase tracking-tight sm:text-3xl">
+              <h2
+                id="digital-pass-heading"
+                className="mt-4 text-2xl font-black uppercase tracking-tight sm:text-3xl"
+              >
                 {event.title}
               </h2>
 
@@ -95,7 +92,9 @@ export function ConfirmationView({
                     Venue
                   </p>
                   <p className="mt-1 text-sm font-bold text-white">{event.venue}</p>
-                  <p className="text-xs text-white/60">{event.address}, {event.city}</p>
+                  <p className="text-xs text-white/60">
+                    {event.address}, {event.city}
+                  </p>
                 </div>
 
                 <div>

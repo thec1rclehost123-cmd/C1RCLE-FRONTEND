@@ -64,7 +64,9 @@ function ScrollingRow({ photos, direction, rowIndex, speedClass }: ScrollingRowP
           <DisposablePhoto
             key={`${String(rowIndex)}-${String(index)}`}
             src={photo}
-            rotationClass={rotationClasses[rowIndex]?.[index % photos.length] ?? 'photo-rotate-none'}
+            rotationClass={
+              rotationClasses[rowIndex]?.[index % photos.length] ?? 'photo-rotate-none'
+            }
             index={index % photos.length}
           />
         ))}

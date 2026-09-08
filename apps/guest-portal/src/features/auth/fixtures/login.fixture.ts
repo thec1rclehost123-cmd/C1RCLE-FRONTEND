@@ -26,12 +26,7 @@ export const loginFixture: LoginFixtureData = {
     'Campus nights',
     'Food & pop-ups',
   ],
-  intentOptions: [
-    'Find events',
-    'Meet people',
-    'Follow hosts',
-    'Try something new',
-  ],
+  intentOptions: ['Find events', 'Meet people', 'Follow hosts', 'Try something new'],
   supportedCountries: [
     { code: 'IN', name: 'India', dialCode: '+91', flag: '🇮🇳' },
     { code: 'AE', name: 'United Arab Emirates', dialCode: '+971', flag: '🇦🇪' },

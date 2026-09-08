@@ -3,14 +3,7 @@
 export type AuthProviderPreview = 'apple' | 'google' | 'phone' | null;
 
 export type AuthStep =
-  | 'methods'
-  | 'phone'
-  | 'verify_otp'
-  | 'identity'
-  | 'city'
-  | 'tastes'
-  | 'intent'
-  | 'complete';
+  'methods' | 'phone' | 'verify_otp' | 'identity' | 'city' | 'tastes' | 'intent' | 'complete';
 
 export interface CountryOption {
   code: string;

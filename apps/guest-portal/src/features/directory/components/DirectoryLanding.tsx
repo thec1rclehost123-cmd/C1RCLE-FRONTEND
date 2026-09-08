@@ -66,7 +66,9 @@ export function DirectoryLanding({
             aria-label="Back to home"
             className="inline-flex size-10 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white backdrop-blur-xl transition-colors hover:bg-white hover:text-black"
           >
-            <span aria-hidden="true" className="text-lg">←</span>
+            <span aria-hidden="true" className="text-lg">
+              ←
+            </span>
           </Link>
         </div>
 
@@ -115,7 +117,14 @@ export function DirectoryLanding({
         {/* Search Bar */}
         <div className="mt-10 relative w-full max-w-5xl mx-auto">
           <div className="flex items-center gap-3.5 rounded-full border border-white/10 bg-white/[0.04] px-6 py-4 backdrop-blur-2xl transition-colors focus-within:border-white/25">
-            <svg aria-hidden="true" className="size-5 shrink-0 text-white/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              aria-hidden="true"
+              className="size-5 shrink-0 text-white/40"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.3-4.3" />
             </svg>
@@ -144,7 +153,14 @@ export function DirectoryLanding({
             }}
             className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white shrink-0 hover:bg-white hover:text-black transition-colors"
           >
-            <svg aria-hidden="true" className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              aria-hidden="true"
+              className="size-4 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <line x1="4" x2="20" y1="6" y2="6" />
               <line x1="8" x2="16" y1="12" y2="12" />
               <line x1="10" x2="14" y1="18" y2="18" />

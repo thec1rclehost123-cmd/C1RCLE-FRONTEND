@@ -1,6 +1,9 @@
 import Image from 'next/image';
 
-import { PublicProfileActions, PublicProfileMobileCta } from './public-profile/PublicProfileActions';
+import {
+  PublicProfileActions,
+  PublicProfileMobileCta,
+} from './public-profile/PublicProfileActions';
 import { PublicProfileEvents } from './public-profile/PublicProfileEvents';
 import { PublicProfileGalleryClient } from './public-profile/PublicProfileGalleryClient';
 import { PublicProfileSectionHeading } from './public-profile/PublicProfileSectionHeading';
@@ -118,7 +121,10 @@ export function RestaurantVenueProfile({ profile }: { profile: RestaurantVenuePu
               <p className="text-[9px] font-black uppercase tracking-[0.28em] text-[var(--profile-accent-text)]">
                 Plan your evening
               </p>
-              <h2 id="restaurant-hours-heading" className="mt-2 text-2xl font-black uppercase tracking-[-0.04em]">
+              <h2
+                id="restaurant-hours-heading"
+                className="mt-2 text-2xl font-black uppercase tracking-[-0.04em]"
+              >
                 Working hours
               </h2>
             </div>
@@ -168,7 +174,9 @@ export function RestaurantVenueProfile({ profile }: { profile: RestaurantVenuePu
                   <h3 className="mt-3 font-[Georgia,'Times_New_Roman',serif] text-3xl text-[#F8E7C3]">
                     {item.name}
                   </h3>
-                  <p className="mt-3 max-w-sm text-sm leading-6 text-white/45">{item.description}</p>
+                  <p className="mt-3 max-w-sm text-sm leading-6 text-white/45">
+                    {item.description}
+                  </p>
                   {item.priceLabel && (
                     <p className="mt-5 text-xs font-black tracking-[0.14em] text-white/70">
                       {item.priceLabel}
@@ -191,7 +199,11 @@ export function RestaurantVenueProfile({ profile }: { profile: RestaurantVenuePu
           </div>
         </section>
 
-        <PublicProfileEvents events={profile.events} eyebrow="After dinner" title="Happening at Skyline" />
+        <PublicProfileEvents
+          events={profile.events}
+          eyebrow="After dinner"
+          title="Happening at Skyline"
+        />
 
         <section
           id="reservations"

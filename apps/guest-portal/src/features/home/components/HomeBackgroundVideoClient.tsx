@@ -41,9 +41,8 @@ export function HomeBackgroundVideoClient({
   useEffect(() => {
     if (!motionAllowed) return;
 
-    const connection = (
-      navigator as Navigator & { connection?: { readonly saveData?: boolean } }
-    ).connection;
+    const connection = (navigator as Navigator & { connection?: { readonly saveData?: boolean } })
+      .connection;
     if (connection?.saveData) return;
 
     let idleCallback = 0;
