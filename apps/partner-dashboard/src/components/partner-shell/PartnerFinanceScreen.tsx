@@ -72,7 +72,7 @@ export function PartnerFinanceScreen({
   const [query, setQuery] = useState('');
   const filteredHistory = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase('en-IN');
-        return normalized
+    return normalized
       ? history.filter((row) =>
           `${row.date} ${row.event ?? ''} ${row.status} ${row.amount}`
             .toLocaleLowerCase('en-IN')
@@ -208,7 +208,9 @@ export function PartnerFinanceScreen({
             aria-label={section.title}
           >
             <div className={styles['secondaryHead']} role="row">
-              {section.columns.map((column) => <span key={column}>{column}</span>)}
+              {section.columns.map((column) => (
+                <span key={column}>{column}</span>
+              ))}
             </div>
             {section.rows.map((row) => (
               <div className={styles['secondaryRow']} role="row" key={row.id}>

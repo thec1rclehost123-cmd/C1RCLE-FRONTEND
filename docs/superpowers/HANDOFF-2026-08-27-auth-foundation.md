@@ -14,6 +14,7 @@
 **Intact (never touched):** all of `apps/api-gateway/src/**` (door routes incl. untracked `routes/v2/door/`, `v2-services.ts`, `phase5-routes.ts`, `route-manifest.ts`, the Phase-1 auth-oracle edits + `auth/index.test.ts`), all `docs/`, `scripts/` (incl. `export-contracts.mjs`), `eslint.config.mjs`, **the entire `C1RCLE-FRONTEND` repo** (spec, plan, intern-tasks, generated `packages/contracts`), all git history.
 
 **Recovery done (2 subagents):**
+
 - `packages/core` + `packages/contracts` restored to `162d1b7` then rebuilt: `utils.ts` recovered verbatim (was in my context), `memory/index.ts` barrel created, 9 memory repos re-added to `memory-repositories.ts` from a 6-day-old dangling stash `08697d13` (re-verified vs current port interfaces), `contracts/organization.ts` + `client.ts` + `index.ts` recovered, `package.json` dist-exports re-applied. **`pnpm --filter @c1rcle/core {build,typecheck,test}` GREEN (232 pass), `check-boundaries` clean (1 pre-existing violation: `application/payments/razorpay-adapter.ts` — track G), `pnpm-lock.yaml` unchanged.** Bonus: fixed a `casSet` bug that was red at `162d1b7`.
 - The 5 repos feared lost (PlatformAdmin/ProposedAction/VerificationAttempt/ScannerSession/CoverWalletTxn, memory+firestore) turned out to exist in committed HEAD, consolidated into sibling files.
 - **Still open (subagent 2 running):** `apps/api-gateway` typecheck (9 errors) + 8 tests fail — the intact `routes/v2/door/scanner-routes.ts` calls `ScannerService` methods (`getSession`, `getScan`, `resolveTicket`, `resolveMagicTicket`, `generateMagicTicketQr`, type `TicketResolution`) whose implementation was in the lost `application/scanner/scanner-service.ts` WIP delta. Being reconstructed from the intact route + test files (the "resolve" methods = read-only twins of the existing `scanTicket`/`scanMagicTicket`). Plus 2 pre-existing committed cover-wallet-reconciliation bugs (id > 64 chars; opening-balance double-count) being fixed against the failing test.
@@ -23,21 +24,25 @@
 ### 12.1 — STATE AS OF 2026-08-28 14:00 (session usage limit hit — resets ~14:40 Asia/Kolkata)
 
 **`C1RCLE-BACKEND` — `packages/core` + `packages/contracts` RECOVERED & GREEN.** Uncommitted working-tree changes that ARE the recovery (keep these):
+
 - `M packages/contracts/{package.json, src/client.ts, src/contracts/organization.ts, src/index.ts}` — dist-exports + 9 lost org/venue schemas (invitation/availability/menu) restored from `aug21-stash`.
 - `M packages/core/src/infrastructure/{index.ts, memory/memory-repositories.ts}` — barrel wiring + 9 memory repos re-added.
 - `?? packages/core/src/infrastructure/{utils.ts, memory/index.ts}` — recovered verbatim / new barrel.
 - Verified: `pnpm --filter @c1rcle/core {build,typecheck,test}` green (232 pass, 3 pre-existing skips), `pnpm --filter @c1rcle/contracts build` green, `check-boundaries` = 1 pre-existing violation only (`application/payments/razorpay-adapter.ts`), `pnpm-lock.yaml` unchanged.
 
 **`C1RCLE-BACKEND` — `api-gateway` STILL BROKEN (the last recovery gap).** `pnpm --filter api-gateway typecheck` = 9 errors, all in the intact WIP file `apps/api-gateway/src/routes/v2/door/scanner-routes.ts`. `pnpm --filter api-gateway test` = 8 fail / 117 pass (`door/scanner-routes.test.ts` 5/12, `door/cover-wallet-routes.test.ts` 6/7; `door/door-sale-routes.test.ts` 4/4 pass). **THE FIX (bounded, ~1 file + 2 tiny bug fixes):**
+
 1. Add to `packages/core/src/application/scanner/scanner-service.ts` (+ export `TicketResolution` type via `application/index.ts`): `getSession(id)` and `getScan(checkInId)` (trivial repo reads); `resolveTicket(input)` / `resolveMagicTicket(input)` = **non-consuming twins of the existing `scanTicket` / `scanMagicTicket`** (extract the shared validation into a private helper; the "resolve" versions skip the `scanLedger` write + entitlement mutation, return a `TicketResolution` verdict); `generateMagicTicketQr(ticketId)` = rotating HMAC payload (`node:crypto`, ~30-60s TTL, match `magicQrResponseSchema` in `contracts/phase5.ts`, reuse the same secret `scanMagicTicket` VERIFIES with — do NOT enforce a ₹5000 threshold). Spec = the INTACT `scanner-routes.ts` + `scanner-routes.test.ts`.
 2. `packages/core/src/domain/models/cover-wallet-reconciliation.ts` — `createReconciliation()` id `REC-{uuid-eventId}-{date}-{ts}` is ~65 chars, fails `opaqueIdSchema.max(64)`. Shorten (hash/truncate the eventId segment or use a generated opaque id + eventId field).
 3. `packages/core/src/application/cover-wallet/cover-wallet-service.ts` — `runReconciliation()` double-counts `wallet.openingBalance` (it's already a `credit` txn). Don't add it separately.
    (2 + 3 are pre-existing committed-HEAD bugs; the failing `cover-wallet-routes.test.ts` "reconciles ... no discrepancy" test is the spec.)
+
 > A subagent (a709d174) started #1, got scanner-service.ts to +291/-107 but died at the session limit before wiring the return object — I **reverted it to HEAD** (core is green). Redo from scratch; the task prompt is preserved in this session's transcript.
 
 **`C1RCLE-FRONTEND` — Phase 2 NOT started.** A subagent (a0f225a9) was dispatched with the full Phase-2 prompt but died at the session limit before touching anything. `packages/contracts/` is still just a generated `src/` (no `package.json`/tsconfig/eslint/vitest). `packages/api-client/src/**` mid-rebuild (not ours). Working tree clean of any subagent damage.
 
 **RESUME ORDER after the limit resets:**
+
 1. `C1RCLE-BACKEND`: finish the scanner-service reconstruction (§12.1 items 1-3) → `pnpm --filter api-gateway {typecheck,test}` green → `pnpm check` (accept the 1 pre-existing boundary violation + any pre-existing `@c1rcle/core` lint debt — note them, don't fix now).
 2. `C1RCLE-BACKEND`: commit the whole working tree as ONE recovery/consolidation commit (fixes broken `162d1b7` + Phase-1 + recovered Phase-5 WIP). This is the user's repo state to preserve — get their nod on the commit message.
 3. `C1RCLE-FRONTEND`: run Phase 2 (plan §Phase 2 — the a0f225a9 prompt covers it). Then Phase 3, 4, ... per the plan.
@@ -56,7 +61,7 @@ Progress:
 2. **Design spec written and committed** — `C1RCLE-FRONTEND/docs/superpowers/specs/2026-08-27-frontend-gateway-auth-foundation-design.md`, commit `db5f91d` on branch `staging`. **User approved it ("ok").**
 3. **Implementation plan** — `claude-mem:make-plan` was invoked. Phase 0 (documentation discovery) research is complete (§5, §6). The phased plan doc itself was **not written**. That is the immediate next task.
 
-**The first deliverable slice** = the complete critical-path journey **signup → login → onboarding/KYC → select organization → land in the correct partner studio**, fully de-mocked, on real `/api/v2`. Studio screen data (venue/host/promoter dashboards) is a *later* spec (spec C). Guest-portal = spec D. Admin-console = spec E. Backend Phase 5 = track G.
+**The first deliverable slice** = the complete critical-path journey **signup → login → onboarding/KYC → select organization → land in the correct partner studio**, fully de-mocked, on real `/api/v2`. Studio screen data (venue/host/promoter dashboards) is a _later_ spec (spec C). Guest-portal = spec D. Admin-console = spec E. Backend Phase 5 = track G.
 
 ---
 
@@ -139,26 +144,26 @@ Each phase = **one builder subagent, distinct files, own tests, gated**. Never t
 
 ## 5. Copy-ready patterns (from the FE reconnaissance subagent)
 
-| Need | Location |
-|---|---|
-| Hand-rolled store pattern (house style, no zustand) | `packages/auth/index.ts:1-94` (`useSyncExternalStore` + `Set<listener>` + `getAccessToken()` non-hook) |
-| External store w/ server snapshot | `packages/providers/src/theme-store.ts` |
-| `createApiClient` / `ApiClientConfig` | `packages/api-client/src/factory.ts:14`, `packages/api-client/src/types.ts:11-21` (no `reauth` yet — additive) |
-| 401 handling to modify | `packages/api-client/src/client.ts:214-219` (`#toHttpError`) + retry loop `client.ts:108-198` |
-| `fetchImpl` test-injection | `packages/api-client/src/client.test.ts:9-24` (`clientWith(fetchImpl, overrides)`) |
-| TanStack Query client (available, `@tanstack/react-query@5.101.4`) | `packages/providers/src/query-provider.tsx:23-42` (`createQueryClient`). **Only `admin-console` mounts `AppProviders`; partner-dashboard uses zero Query today.** |
-| Compiled react-library archetype (for `@c1rcle/auth`) | `packages/hooks/{package.json, vitest.config.ts, vitest.setup.ts}` (jsdom, `@testing-library/*`, `@vitejs/plugin-react`) |
-| Compiled zod-library archetype (for `@c1rcle/contracts`) | `packages/config/{package.json, tsconfig.json, tsconfig.build.json, eslint.config.ts, vitest.config.ts}` |
-| App-level `vi.mock('@c1rcle/auth', ...)` | `apps/guest-portal/vitest.setup.ts:31-48` |
-| Playwright config | `apps/partner-dashboard/playwright.config.ts` (port 3211, `next start`, `test:e2e` turbo-depends on build). Only `e2e/smoke.spec.ts` exists — **no fixtures/helpers; build the journey harness from scratch.** |
-| `@c1rcle/config` — add a `NEXT_PUBLIC_*` key = **4 edits** | `schema.ts` (`clientEnvSchema`) + `env.ts:29-36` (`readRawClientEnv()` literal) + `process-env.d.ts:15-22` + each app's `.env.example` |
-| eslint restriction rules | `packages/eslint-config/src/base.ts` — `no-restricted-imports` (147-181), `no-restricted-globals` (187-198), `no-restricted-syntax` (199-211). **`react.ts:37-54` fully redefines `no-restricted-syntax`** — add new selectors in BOTH. `next.ts:82-122` has a second app-scoped `no-restricted-imports`. `next.ts:34-52` default-export allowlist lists `src/middleware.ts` — **add `src/proxy.ts`.** |
-| Boundary grep gate | `tooling/scripts/src/check-boundaries.ts` — `checkSingleOwners` (240-289) bans `fetch(`/`process.env` outside owners; `checkNoBackendDependencies` (292-323) `FORBIDDEN` has `firebase-admin` but **NOT `firebase`** — add it. |
-| Next 16 `proxy.ts` + CSP nonce | `node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md:34-133` (canonical nonce pattern) + `.../03-file-conventions/proxy.md` (matcher rules; `runtime` option throws; Node-only). Nonce forces dynamic rendering (disables static/ISR/PPR). |
-| `buildActorContext` fix site | `C1RCLE-BACKEND/packages/core/src/infrastructure/utils.ts:164-168` |
-| Better Auth config | `C1RCLE-BACKEND/apps/api-gateway/src/plugins/auth.ts:35-65` (minimal; `useSecureCookies` prod-gated; `trustedOrigins` = 3000/3001/3002; `bearer()`; relies on Better Auth cookie defaults: httpOnly, SameSite=lax, 7d session / 1d updateAge) |
-| `contract-parity.mjs` | `C1RCLE-BACKEND/scripts/contract-parity.mjs` — imports FE `packages/api-client/dist/{schemas,errors}.js` + backend `packages/contracts/src/{client,index}.ts`. Only checks `role`/`user`/`session` + envelope today. **Expand** to auth-bridge + onboarding + org fixtures, point at the new FE `@c1rcle/contracts/dist`. |
-| Thin route idiom (backend, for reference) | `C1RCLE-BACKEND/apps/api-gateway/src/routes/v2/partner/organizations.ts` (validate → actor → one service call → `validateV2Response` → serialize; `runIdempotent`; local `mapDomainError`) |
+| Need                                                               | Location                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Hand-rolled store pattern (house style, no zustand)                | `packages/auth/index.ts:1-94` (`useSyncExternalStore` + `Set<listener>` + `getAccessToken()` non-hook)                                                                                                                                                                                                                                                                                                 |
+| External store w/ server snapshot                                  | `packages/providers/src/theme-store.ts`                                                                                                                                                                                                                                                                                                                                                                |
+| `createApiClient` / `ApiClientConfig`                              | `packages/api-client/src/factory.ts:14`, `packages/api-client/src/types.ts:11-21` (no `reauth` yet — additive)                                                                                                                                                                                                                                                                                         |
+| 401 handling to modify                                             | `packages/api-client/src/client.ts:214-219` (`#toHttpError`) + retry loop `client.ts:108-198`                                                                                                                                                                                                                                                                                                          |
+| `fetchImpl` test-injection                                         | `packages/api-client/src/client.test.ts:9-24` (`clientWith(fetchImpl, overrides)`)                                                                                                                                                                                                                                                                                                                     |
+| TanStack Query client (available, `@tanstack/react-query@5.101.4`) | `packages/providers/src/query-provider.tsx:23-42` (`createQueryClient`). **Only `admin-console` mounts `AppProviders`; partner-dashboard uses zero Query today.**                                                                                                                                                                                                                                      |
+| Compiled react-library archetype (for `@c1rcle/auth`)              | `packages/hooks/{package.json, vitest.config.ts, vitest.setup.ts}` (jsdom, `@testing-library/*`, `@vitejs/plugin-react`)                                                                                                                                                                                                                                                                               |
+| Compiled zod-library archetype (for `@c1rcle/contracts`)           | `packages/config/{package.json, tsconfig.json, tsconfig.build.json, eslint.config.ts, vitest.config.ts}`                                                                                                                                                                                                                                                                                               |
+| App-level `vi.mock('@c1rcle/auth', ...)`                           | `apps/guest-portal/vitest.setup.ts:31-48`                                                                                                                                                                                                                                                                                                                                                              |
+| Playwright config                                                  | `apps/partner-dashboard/playwright.config.ts` (port 3211, `next start`, `test:e2e` turbo-depends on build). Only `e2e/smoke.spec.ts` exists — **no fixtures/helpers; build the journey harness from scratch.**                                                                                                                                                                                         |
+| `@c1rcle/config` — add a `NEXT_PUBLIC_*` key = **4 edits**         | `schema.ts` (`clientEnvSchema`) + `env.ts:29-36` (`readRawClientEnv()` literal) + `process-env.d.ts:15-22` + each app's `.env.example`                                                                                                                                                                                                                                                                 |
+| eslint restriction rules                                           | `packages/eslint-config/src/base.ts` — `no-restricted-imports` (147-181), `no-restricted-globals` (187-198), `no-restricted-syntax` (199-211). **`react.ts:37-54` fully redefines `no-restricted-syntax`** — add new selectors in BOTH. `next.ts:82-122` has a second app-scoped `no-restricted-imports`. `next.ts:34-52` default-export allowlist lists `src/middleware.ts` — **add `src/proxy.ts`.** |
+| Boundary grep gate                                                 | `tooling/scripts/src/check-boundaries.ts` — `checkSingleOwners` (240-289) bans `fetch(`/`process.env` outside owners; `checkNoBackendDependencies` (292-323) `FORBIDDEN` has `firebase-admin` but **NOT `firebase`** — add it.                                                                                                                                                                         |
+| Next 16 `proxy.ts` + CSP nonce                                     | `node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md:34-133` (canonical nonce pattern) + `.../03-file-conventions/proxy.md` (matcher rules; `runtime` option throws; Node-only). Nonce forces dynamic rendering (disables static/ISR/PPR).                                                                                                                                         |
+| `buildActorContext` fix site                                       | `C1RCLE-BACKEND/packages/core/src/infrastructure/utils.ts:164-168`                                                                                                                                                                                                                                                                                                                                     |
+| Better Auth config                                                 | `C1RCLE-BACKEND/apps/api-gateway/src/plugins/auth.ts:35-65` (minimal; `useSecureCookies` prod-gated; `trustedOrigins` = 3000/3001/3002; `bearer()`; relies on Better Auth cookie defaults: httpOnly, SameSite=lax, 7d session / 1d updateAge)                                                                                                                                                          |
+| `contract-parity.mjs`                                              | `C1RCLE-BACKEND/scripts/contract-parity.mjs` — imports FE `packages/api-client/dist/{schemas,errors}.js` + backend `packages/contracts/src/{client,index}.ts`. Only checks `role`/`user`/`session` + envelope today. **Expand** to auth-bridge + onboarding + org fixtures, point at the new FE `@c1rcle/contracts/dist`.                                                                              |
+| Thin route idiom (backend, for reference)                          | `C1RCLE-BACKEND/apps/api-gateway/src/routes/v2/partner/organizations.ts` (validate → actor → one service call → `validateV2Response` → serialize; `runIdempotent`; local `mapDomainError`)                                                                                                                                                                                                             |
 
 ---
 
@@ -169,6 +174,7 @@ Each phase = **one builder subagent, distinct files, own tests, gated**. Never t
 **Auth** — `POST /api/v2/auth/{signup,login,refresh,logout}`, `GET /api/v2/auth/session`. Only real on `STORAGE_DRIVER=firestore` (503 on memory). Bodies: `signupRequestSchema {email,password 8-128,displayName}` `.strict()`, `loginRequestSchema {email,password}` `.strict()` — **neither has `role`** (backend forces `partner`). Responses: `authBridgeResponseSchema {user, accessToken, expiresAt}` (signup/login/refresh), `sessionSchema {user, expiresAt}` (GET session). `expiresAt` = **epoch ms**. Access token = Better Auth session token via `set-auth-token` header (not a JWT). `refresh` is cookie-only, no body. `logout` → 204 + Set-Cookie clear. Rate class `SENSITIVE_COMMAND` (10/60s).
 
 **Onboarding** (not org-scoped, no `requirePermission`, userId from session or `X-User-Id`):
+
 - `GET /api/v2/onboarding/me` → `{ request: onboardingRequestDtoSchema | null }`
 - `GET /api/v2/onboarding/applications` (paginated)
 - `POST /api/v2/onboarding/applications` `{requestedType: venue|host|promoter, plan: basic|silver|diamond, profile}` — Idempotency-Key required
@@ -180,6 +186,7 @@ Each phase = **one builder subagent, distinct files, own tests, gated**. Never t
 `onboardingProfileSchema` (`.strict()`, `role` stripped): **required** `legalName`, `contactPerson`, `phone` (6-20), `city`. Optional: `area`, `website`, `capacity` (number|null), `instagram`, `bio`, `businessType` (free string ≤120), `registrationNumber`, `entityType` (free string ≤120, gates nothing). Required document labels: **`id_front`, `id_back`, `selfie` ONLY**. Timestamps ISO-8601.
 
 **Organizations** — `GET|POST /api/v2/organizations`, `GET|PATCH /api/v2/organizations/:organizationId`, `GET|POST .../members`, `GET|POST .../invitations`, `POST /api/v2/invitations/:id/{revoke,accept}`, `GET /api/v2/organizations/:id/access`.
+
 - `organizationDtoSchema {id, name, slug, role (caller's role in the org), status (active|suspended|archived), version, createdAt, updatedAt}`
 - `POST /organizations` has **NO `requirePermission`** (first org has no membership yet); body `{name, slug, settings?}` `.strict()` (local schema, wider than the contract's `createOrganizationSchema`); Idempotency-Key required
 - `POST /invitations/:id/accept` — **no `requirePermission`, no `X-Organization-Id`** (that's what it grants)
@@ -198,6 +205,7 @@ Each phase = **one builder subagent, distinct files, own tests, gated**. Never t
 **Error codes:** 422 validation (+`fieldErrors`, unknown keys → `_root`), 401 unauthorized, 403 forbidden (identical whether the resource exists — no oracle), 404 not_found, 409 conflict (version or idempotency), 429 rate_limited (+`Retry-After`), ≥500 server (generic message, internals logged only). **Flat envelope from every path**, bare DTO on success.
 
 **Actor resolution (`apps/api-gateway/src/lib/v2-services.ts:117` `actorFromRequest`):**
+
 - `STORAGE_DRIVER=memory` (default, CI): fabricates an actor from `x-organization-id` / `x-user-id` headers, role `owner`, never throws. `X-User-Id` honored.
 - `STORAGE_DRIVER=firestore`: `plugins/auth.ts` `onRequest` resolves the real session + membership. If no `request.actor` → falls through to core `buildActorContext` which **throws a generic `Error` → 500** (should be `UnauthorizedError` → 401). This is the Phase-1 backend fix. `X-User-Id` ignored.
 
@@ -205,16 +213,16 @@ Each phase = **one builder subagent, distinct files, own tests, gated**. Never t
 
 ### 6.2 Conflict resolutions (docs vs live) — record as backend D-024
 
-| Concern | Frozen doc | Live | Resolution |
-|---|---|---|---|
-| Auth routes | `/api/v2/session{,/sync,/logout}` DEFERRED | `/api/v2/auth/*` live | **`/api/v2/auth/*`** |
-| Success envelope | `{ data, meta }` | bare DTO / `{items, pageInfo}` | **bare DTO** |
-| Identity | Firebase ID-token (manifest) / Better Auth (middleware doc) | Better Auth cookie + `bearer()` | **Better Auth** |
-| Middleware chain | `rateLimit→validate→rbac→cache` | identical | agree |
-| Rate classes | 4 vs 9 | 4 (`PUBLIC_READ 120`/`AUTH_READ 240`/`STANDARD_COMMAND 60`/`SENSITIVE_COMMAND 10` per 60s) | **4** |
-| CSRF | "frontend/BFF concern" (PLAN:125) | gateway has none | **Next.js BFF** owns cookie/CSRF (also fixes prod cross-domain cookie) |
-| Idempotency key | one per intent | FE mints per-call (wrong) | **per user action, stable across retries** |
-| `role` on user | V1 role soup | `{guest, partner, admin}` | **`{guest, partner, admin}`**; per-org role from `/access` only |
+| Concern          | Frozen doc                                                  | Live                                                                                       | Resolution                                                             |
+| ---------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| Auth routes      | `/api/v2/session{,/sync,/logout}` DEFERRED                  | `/api/v2/auth/*` live                                                                      | **`/api/v2/auth/*`**                                                   |
+| Success envelope | `{ data, meta }`                                            | bare DTO / `{items, pageInfo}`                                                             | **bare DTO**                                                           |
+| Identity         | Firebase ID-token (manifest) / Better Auth (middleware doc) | Better Auth cookie + `bearer()`                                                            | **Better Auth**                                                        |
+| Middleware chain | `rateLimit→validate→rbac→cache`                             | identical                                                                                  | agree                                                                  |
+| Rate classes     | 4 vs 9                                                      | 4 (`PUBLIC_READ 120`/`AUTH_READ 240`/`STANDARD_COMMAND 60`/`SENSITIVE_COMMAND 10` per 60s) | **4**                                                                  |
+| CSRF             | "frontend/BFF concern" (PLAN:125)                           | gateway has none                                                                           | **Next.js BFF** owns cookie/CSRF (also fixes prod cross-domain cookie) |
+| Idempotency key  | one per intent                                              | FE mints per-call (wrong)                                                                  | **per user action, stable across retries**                             |
+| `role` on user   | V1 role soup                                                | `{guest, partner, admin}`                                                                  | **`{guest, partner, admin}`**; per-org role from `/access` only        |
 
 ### 6.3 Frontend current state (partner-dashboard)
 
@@ -251,6 +259,7 @@ Backend-owned, `zod ^4.2`, only dep is zod. `exports` map points at `./src/*.ts`
 ### 6.6 V2 onboarding wizard — the reduced flow
 
 V1 was 6-7 steps (role → email OTP → phone OTP → entity type → details → KYC identity/business/signatory → success), account created mid-flow, ~40 fields. **V2:**
+
 1. `POST /api/v2/auth/signup {email, password, displayName}` — separate prerequisite (through the BFF)
 2. `POST /api/v2/onboarding/applications {requestedType, plan, profile}` — profile min = `legalName, contactPerson, phone, city`
 3. `PATCH .../applications/:id` autosave (wizard step is **client state only** — V2 does not persist `onboardingStep`)
@@ -276,7 +285,7 @@ V1 was 6-7 steps (role → email OTP → phone OTP → entity type → details �
 - **`role` never in any auth/onboarding request body.**
 - **PII:** money = paise, timestamps ISO-8601 (except the 2 epoch-ms fields); BFF **never logs request/response bodies** (CWE-532); no `console.log` committed; no token/OTP/password/document-number in any URL/query/`x-request-id`; KYC/Aadhaar values only in client state for the active step; `verify-document` never rendered "verified".
 - **Frontend posture:** no backend SDKs / Firebase Admin / DB clients / secrets; `firebase` dep **deleted**; no `fetch` outside `@c1rcle/api-client`; no `process.env` outside `@c1rcle/config`; initial reads in Server Components; **no fixture fallback after an API error** — typed empty/unavailable/retry; zod-validate every response.
-- **`proxy.ts` (middleware) is a UX redirect only** — it can only check cookie *presence*, not validity. Real enforcement is per-request at the gateway.
+- **`proxy.ts` (middleware) is a UX redirect only** — it can only check cookie _presence_, not validity. Real enforcement is per-request at the gateway.
 - Incident-derived rules that matter here: no endpoint both public + calling credential-generation (#1); a credential must not flow through >1 of {DB, API response, email} (#2); **default DENY on any security-check failure** (#3, threat-model P3); privilege-granting endpoints need auth AND email-ownership proof, never credentials in URLs (#4); derive identity from a verified credential, never the request body (#11); idempotency key deterministic, one per intent (#12); validate role against an allowlist, unknown → deny (#14); audit logs append-only (#18).
 
 ### 6.8 Legacy auth mechanics worth keeping (from `thec1rcle`)
@@ -299,6 +308,7 @@ V1 was 6-7 steps (role → email OTP → phone OTP → entity type → details �
 ## 7. Do's and Don'ts
 
 ### Do
+
 - **Read the design spec first** (`docs/superpowers/specs/2026-08-27-...`). It is the contract. This handoff is context; the spec is authority.
 - Offer the `task-observer` review at session start (7 OPEN observations, never reviewed) — one line, don't force it.
 - Keep caveman mode for chat. Normal prose for docs/code/commits.
@@ -310,6 +320,7 @@ V1 was 6-7 steps (role → email OTP → phone OTP → entity type → details �
 - `NODE_OPTIONS=--dns-result-order=ipv4first` for backend commands (this sandbox has no IPv6; `pnpm`'s fetch fails `ENOTFOUND` without it). Firestore latency spikes to 10s+ — bump test timeouts.
 
 ### Don't
+
 - Don't touch the Phase 5 WIP on `C1RCLE-BACKEND main` (stash/discard/reformat) — it's the user's, "mine to continue".
 - Don't revert the `@c1rcle/api-client` rebuild in the FE working tree — it's a precondition that mostly exists.
 - Don't use `middleware.ts` — Next 16 renamed it to `proxy.ts` (a `middleware.ts` file is deprecated). Add `src/proxy.ts` to the eslint default-export allowlist (`packages/eslint-config/src/next.ts:34-52`).

@@ -10,7 +10,13 @@ import type { PromoterOverviewData, PromoterOverviewLinks } from '@/data/partner
 const metricOptions = ['clicks', 'revenue'] as const;
 const metricLabels = { tickets: 'Tickets', revenue: 'Revenue', clicks: 'Clicks' } as const;
 
-export function PromoterOverviewScreen({ data, links }: { readonly data: PromoterOverviewData; readonly links: PromoterOverviewLinks }) {
+export function PromoterOverviewScreen({
+  data,
+  links,
+}: {
+  readonly data: PromoterOverviewData;
+  readonly links: PromoterOverviewLinks;
+}) {
   return (
     <div className={styles['overview']}>
       <h1>Overview</h1>
@@ -46,8 +52,13 @@ export function PromoterOverviewScreen({ data, links }: { readonly data: Promote
               <div className={styles['orderRow']} key={order.id}>
                 <span className={styles['orderAvatar']}>{order.initials}</span>
                 <div className={styles['orderDetails']}>
-                  <div className={styles['orderName']}><strong>{order.name}</strong><span>TICKET</span></div>
-                  <small>{order.event} · {order.when}</small>
+                  <div className={styles['orderName']}>
+                    <strong>{order.name}</strong>
+                    <span>TICKET</span>
+                  </div>
+                  <small>
+                    {order.event} · {order.when}
+                  </small>
                 </div>
                 <strong className={styles['orderAmount']}>{order.amount}</strong>
               </div>
@@ -56,7 +67,10 @@ export function PromoterOverviewScreen({ data, links }: { readonly data: Promote
         </section>
       </div>
 
-      <section className={[styles['card'], styles['upcomingCard']].join(' ')} aria-labelledby="upcoming-events-title">
+      <section
+        className={[styles['card'], styles['upcomingCard']].join(' ')}
+        aria-labelledby="upcoming-events-title"
+      >
         <header className={styles['sectionHeader']}>
           <h2 id="upcoming-events-title">Upcoming Events</h2>
           <Link href={links.events}>Open events →</Link>
@@ -67,7 +81,9 @@ export function PromoterOverviewScreen({ data, links }: { readonly data: Promote
               <Link className={styles['linkedEvent']} href={event.href} key={event.id}>
                 <strong>{event.name}</strong>
                 <span>{event.venue}</span>
-                <small>{event.clicks} clicks · {event.sales} sales</small>
+                <small>
+                  {event.clicks} clicks · {event.sales} sales
+                </small>
               </Link>
             ))}
           </div>

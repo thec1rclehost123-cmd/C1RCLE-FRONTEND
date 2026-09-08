@@ -1012,10 +1012,7 @@ export default function NightclubScene() {
       resizeObserver.disconnect();
       scene.traverse((object) => {
         if (!(object instanceof THREE.Mesh)) return;
-        const mesh = object as THREE.Mesh<
-          THREE.BufferGeometry,
-          THREE.Material | THREE.Material[]
-        >;
+        const mesh = object as THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>;
         mesh.geometry.dispose();
         const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
         materials.forEach((material) => {

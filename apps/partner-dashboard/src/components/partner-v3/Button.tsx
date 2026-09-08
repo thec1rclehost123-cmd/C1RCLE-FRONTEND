@@ -2,7 +2,6 @@ import styles from './partner-v3.module.css';
 
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
-
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -19,7 +18,10 @@ export function Button({ variant = 'secondary', className, children, ...props }:
   }[variant];
 
   return (
-    <button className={[styles['button'], variantClass, className].filter(Boolean).join(' ')} {...props}>
+    <button
+      className={[styles['button'], variantClass, className].filter(Boolean).join(' ')}
+      {...props}
+    >
       {children}
     </button>
   );

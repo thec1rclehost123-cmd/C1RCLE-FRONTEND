@@ -9,6 +9,15 @@ const labels: Record<SlotRequestStatus, string> = {
 };
 
 export function SlotRequestStatusBadge({ status }: { readonly status: SlotRequestStatus }) {
-  const statusClass = { pending: styles['statusPending'], approved: styles['statusApproved'], rejected: styles['statusRejected'] }[status];
-  return <span className={[styles['statusBadge'], statusClass].join(' ')}><i aria-hidden="true" />{labels[status]}</span>;
+  const statusClass = {
+    pending: styles['statusPending'],
+    approved: styles['statusApproved'],
+    rejected: styles['statusRejected'],
+  }[status];
+  return (
+    <span className={[styles['statusBadge'], statusClass].join(' ')}>
+      <i aria-hidden="true" />
+      {labels[status]}
+    </span>
+  );
 }

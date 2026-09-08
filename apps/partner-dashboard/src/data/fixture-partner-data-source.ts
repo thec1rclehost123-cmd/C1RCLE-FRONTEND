@@ -1,4 +1,63 @@
-import type { CalendarBlock, CalendarDayState, CalendarEvent, CalendarMonth, DoorActivityRecord, DoorEventData, DoorModeData, EventEditorData, EventEditorDraft, EventEditorPromoterOption, EventEditorVenueOption, EventGuestsData, EventOperationsData, EventPromotersData, EventSalesData, EventSalesTone, HostAvailabilityData, HostEventsData, HostFinanceData, HostPartnersData, HostSlotRequestsData, MarketingAttendee, MarketingCampaign, MarketingData, MarketingEventOption, MarketingTemplate, OverviewData, OverviewTrendMetric, OverviewTrendRange, PartnerDataSource, PartnerEventDetailData, PartnerEventRecord, PartnerNotificationsData, PartnerRelationshipSet, PartnerSearchData, PartnerSearchResult, PartnerSettingsData, PartnerShellInteractionData, PromoterAnalyticsData, PromoterDiscoverEvent, PromoterEventsData, PromoterFinanceData, PromoterGuestEventOption, PromoterGuestsData, PromoterLeaderboardData, PromoterLinkedEvent, PromoterOverviewData, PromoterPartnerRecord, PromoterPartnersData, PromoterLinkPerformance, SlotRequest, SlotRequestEvent, StudioShellData, VenueEventsData, VenueFinanceData, VenuePartnersData, VenueSlotRequestsData, VenueCalendarData } from './partner-data-source';
+import type {
+  CalendarBlock,
+  CalendarDayState,
+  CalendarEvent,
+  CalendarMonth,
+  DoorActivityRecord,
+  DoorEventData,
+  DoorModeData,
+  EventEditorData,
+  EventEditorDraft,
+  EventEditorPromoterOption,
+  EventEditorVenueOption,
+  EventGuestsData,
+  EventOperationsData,
+  EventPromotersData,
+  EventSalesData,
+  EventSalesTone,
+  HostAvailabilityData,
+  HostEventsData,
+  HostFinanceData,
+  HostPartnersData,
+  HostSlotRequestsData,
+  MarketingAttendee,
+  MarketingCampaign,
+  MarketingData,
+  MarketingEventOption,
+  MarketingTemplate,
+  OverviewData,
+  OverviewTrendMetric,
+  OverviewTrendRange,
+  PartnerDataSource,
+  PartnerEventDetailData,
+  PartnerEventRecord,
+  PartnerNotificationsData,
+  PartnerRelationshipSet,
+  PartnerSearchData,
+  PartnerSearchResult,
+  PartnerSettingsData,
+  PartnerShellInteractionData,
+  PromoterAnalyticsData,
+  PromoterDiscoverEvent,
+  PromoterEventsData,
+  PromoterFinanceData,
+  PromoterGuestEventOption,
+  PromoterGuestsData,
+  PromoterLeaderboardData,
+  PromoterLinkedEvent,
+  PromoterOverviewData,
+  PromoterPartnerRecord,
+  PromoterPartnersData,
+  PromoterLinkPerformance,
+  SlotRequest,
+  SlotRequestEvent,
+  StudioShellData,
+  VenueEventsData,
+  VenueFinanceData,
+  VenuePartnersData,
+  VenueSlotRequestsData,
+  VenueCalendarData,
+} from './partner-data-source';
 import type { StudioRole } from '@/studios/studio-config';
 
 const shellData: StudioShellData = {
@@ -35,23 +94,121 @@ const venueOverviewData: OverviewData = {
     capacity: 1000,
   },
   trends: [
-    makeTrend('tickets', '1D', '112', '+18%', 'Today, by the hour', [2, 4, 3, 6, 7, 6, 9, 11, 10, 13, 15, 18]),
+    makeTrend(
+      'tickets',
+      '1D',
+      '112',
+      '+18%',
+      'Today, by the hour',
+      [2, 4, 3, 6, 7, 6, 9, 11, 10, 13, 15, 18],
+    ),
     makeTrend('tickets', '1W', '425', '+12%', 'This week, by day', [40, 52, 48, 61, 70, 66, 88]),
-    makeTrend('tickets', '1M', '822', '+24%', 'This month, by day', [30, 38, 44, 52, 49, 60, 68, 66, 76, 84, 96, 104]),
-    makeTrend('tickets', 'All', '1,160', '+41%', 'All time, by month', [16, 32, 48, 36, 64, 80, 72, 96, 120, 112, 144, 168]),
-    makeTrend('revenue', '1D', '₹3,13,000', '+18%', 'Today, by the hour', [8, 12, 10, 18, 22, 19, 28, 34, 30, 38, 44, 52]),
-    makeTrend('revenue', '1W', '₹11,70,000', '+12%', 'This week, by day', [120, 145, 132, 168, 190, 175, 240]),
-    makeTrend('revenue', '1M', '₹18,45,000', '+24%', 'This month, by day', [80, 95, 110, 130, 125, 150, 170, 165, 190, 210, 240, 260]),
-    makeTrend('revenue', 'All', '₹24,50,000', '+41%', 'All time, by month', [40, 80, 120, 90, 160, 200, 180, 240, 300, 280, 360, 420]),
+    makeTrend(
+      'tickets',
+      '1M',
+      '822',
+      '+24%',
+      'This month, by day',
+      [30, 38, 44, 52, 49, 60, 68, 66, 76, 84, 96, 104],
+    ),
+    makeTrend(
+      'tickets',
+      'All',
+      '1,160',
+      '+41%',
+      'All time, by month',
+      [16, 32, 48, 36, 64, 80, 72, 96, 120, 112, 144, 168],
+    ),
+    makeTrend(
+      'revenue',
+      '1D',
+      '₹3,13,000',
+      '+18%',
+      'Today, by the hour',
+      [8, 12, 10, 18, 22, 19, 28, 34, 30, 38, 44, 52],
+    ),
+    makeTrend(
+      'revenue',
+      '1W',
+      '₹11,70,000',
+      '+12%',
+      'This week, by day',
+      [120, 145, 132, 168, 190, 175, 240],
+    ),
+    makeTrend(
+      'revenue',
+      '1M',
+      '₹18,45,000',
+      '+24%',
+      'This month, by day',
+      [80, 95, 110, 130, 125, 150, 170, 165, 190, 210, 240, 260],
+    ),
+    makeTrend(
+      'revenue',
+      'All',
+      '₹24,50,000',
+      '+41%',
+      'All time, by month',
+      [40, 80, 120, 90, 160, 200, 180, 240, 300, 280, 360, 420],
+    ),
   ],
   recentActivity: [
-    { id: 'order-aisha', kind: 'ticket', name: 'Aisha Menon', meta: '2× VIP · Neon Nights · 4m ago', amount: '+ ₹5,000', tone: 'positive' },
-    { id: 'payout-hdfc', kind: 'payout', name: 'Payout to HDFC ••4412', meta: 'Sunset Sessions · 1h ago', amount: '− ₹84,200', tone: 'neutral' },
-    { id: 'order-karan', kind: 'ticket', name: 'Karan Shah', meta: '1× GA · Neon Nights · 2h ago', amount: '+ ₹1,800', tone: 'positive' },
-    { id: 'refund-meera', kind: 'refund', name: 'Refund · Meera Rao', meta: '1× GA · Warehouse Rave · 3h ago', amount: '− ₹1,800', tone: 'negative' },
-    { id: 'order-devansh', kind: 'ticket', name: 'Devansh Iyer', meta: '4× GA · Neon Nights · 5h ago', amount: '+ ₹7,200', tone: 'positive' },
-    { id: 'table-priya', kind: 'table', name: 'Table booking · Priya K', meta: 'Bottle service · 6h ago', amount: '+ ₹24,000', tone: 'positive' },
-    { id: 'order-nikhil', kind: 'ticket', name: 'Nikhil Verma', meta: '2× GA · Sunset Sessions · 8h ago', amount: '+ ₹3,600', tone: 'positive' },
+    {
+      id: 'order-aisha',
+      kind: 'ticket',
+      name: 'Aisha Menon',
+      meta: '2× VIP · Neon Nights · 4m ago',
+      amount: '+ ₹5,000',
+      tone: 'positive',
+    },
+    {
+      id: 'payout-hdfc',
+      kind: 'payout',
+      name: 'Payout to HDFC ••4412',
+      meta: 'Sunset Sessions · 1h ago',
+      amount: '− ₹84,200',
+      tone: 'neutral',
+    },
+    {
+      id: 'order-karan',
+      kind: 'ticket',
+      name: 'Karan Shah',
+      meta: '1× GA · Neon Nights · 2h ago',
+      amount: '+ ₹1,800',
+      tone: 'positive',
+    },
+    {
+      id: 'refund-meera',
+      kind: 'refund',
+      name: 'Refund · Meera Rao',
+      meta: '1× GA · Warehouse Rave · 3h ago',
+      amount: '− ₹1,800',
+      tone: 'negative',
+    },
+    {
+      id: 'order-devansh',
+      kind: 'ticket',
+      name: 'Devansh Iyer',
+      meta: '4× GA · Neon Nights · 5h ago',
+      amount: '+ ₹7,200',
+      tone: 'positive',
+    },
+    {
+      id: 'table-priya',
+      kind: 'table',
+      name: 'Table booking · Priya K',
+      meta: 'Bottle service · 6h ago',
+      amount: '+ ₹24,000',
+      tone: 'positive',
+    },
+    {
+      id: 'order-nikhil',
+      kind: 'ticket',
+      name: 'Nikhil Verma',
+      meta: '2× GA · Sunset Sessions · 8h ago',
+      amount: '+ ₹3,600',
+      tone: 'positive',
+    },
   ],
   calendar: {
     monthLabel: 'July 2026',
@@ -64,16 +221,88 @@ const venueOverviewData: OverviewData = {
     }),
   },
   upcomingEvents: [
-    { id: 'sunset-sessions-vol-4', name: 'Sunset Sessions Vol. 4', venue: 'Skyline Rooftop', dateLabel: 'Aug 2', timeLabel: '5:00 PM', href: '/partner/venue/events/sunset-sessions-vol-4', status: 'live', sold: 620, capacity: 1000 },
-    { id: 'warehouse-rave', name: 'Warehouse Rave', venue: 'The Docks', dateLabel: 'Aug 9', timeLabel: '11:00 PM', href: '/partner/venue/events/warehouse-rave', status: 'draft', sold: 615, capacity: 1500 },
-    { id: 'bollywood-brunch', name: 'Bollywood Brunch', venue: 'Garden Terrace', dateLabel: 'Aug 15', timeLabel: '12:00 PM', href: '/partner/venue/events/bollywood-brunch', status: 'live', sold: 780, capacity: 1000 },
-    { id: 'monsoon-sessions', name: 'Monsoon Sessions', venue: 'Skyline Rooftop', dateLabel: 'Jun 28', timeLabel: '8:00 PM', href: '/partner/venue/events/monsoon-sessions', status: 'past', sold: 672, capacity: 700 },
+    {
+      id: 'sunset-sessions-vol-4',
+      name: 'Sunset Sessions Vol. 4',
+      venue: 'Skyline Rooftop',
+      dateLabel: 'Aug 2',
+      timeLabel: '5:00 PM',
+      href: '/partner/venue/events/sunset-sessions-vol-4',
+      status: 'live',
+      sold: 620,
+      capacity: 1000,
+    },
+    {
+      id: 'warehouse-rave',
+      name: 'Warehouse Rave',
+      venue: 'The Docks',
+      dateLabel: 'Aug 9',
+      timeLabel: '11:00 PM',
+      href: '/partner/venue/events/warehouse-rave',
+      status: 'draft',
+      sold: 615,
+      capacity: 1500,
+    },
+    {
+      id: 'bollywood-brunch',
+      name: 'Bollywood Brunch',
+      venue: 'Garden Terrace',
+      dateLabel: 'Aug 15',
+      timeLabel: '12:00 PM',
+      href: '/partner/venue/events/bollywood-brunch',
+      status: 'live',
+      sold: 780,
+      capacity: 1000,
+    },
+    {
+      id: 'monsoon-sessions',
+      name: 'Monsoon Sessions',
+      venue: 'Skyline Rooftop',
+      dateLabel: 'Jun 28',
+      timeLabel: '8:00 PM',
+      href: '/partner/venue/events/monsoon-sessions',
+      status: 'past',
+      sold: 672,
+      capacity: 700,
+    },
   ],
   network: [
-    { id: 'skyline-rooftop', name: 'Skyline Rooftop', role: 'Venue', initials: 'SR', status: 'Partnered', statusTone: 'success', accent: 'orange' },
-    { id: 'arjun-pulse', name: 'Arjun (Pulse)', role: 'Promoter', initials: 'AP', status: 'Partnered', statusTone: 'success', accent: 'violet' },
-    { id: 'the-docks', name: 'The Docks', role: 'Venue', initials: 'TD', status: 'Invite sent', statusTone: 'accent', accent: 'teal' },
-    { id: 'maya-staff', name: 'Maya (Staff)', role: 'Door lead', initials: 'MS', status: 'Active', statusTone: 'neutral', accent: 'pink' },
+    {
+      id: 'skyline-rooftop',
+      name: 'Skyline Rooftop',
+      role: 'Venue',
+      initials: 'SR',
+      status: 'Partnered',
+      statusTone: 'success',
+      accent: 'orange',
+    },
+    {
+      id: 'arjun-pulse',
+      name: 'Arjun (Pulse)',
+      role: 'Promoter',
+      initials: 'AP',
+      status: 'Partnered',
+      statusTone: 'success',
+      accent: 'violet',
+    },
+    {
+      id: 'the-docks',
+      name: 'The Docks',
+      role: 'Venue',
+      initials: 'TD',
+      status: 'Invite sent',
+      statusTone: 'accent',
+      accent: 'teal',
+    },
+    {
+      id: 'maya-staff',
+      name: 'Maya (Staff)',
+      role: 'Door lead',
+      initials: 'MS',
+      status: 'Active',
+      statusTone: 'neutral',
+      accent: 'pink',
+    },
   ],
 };
 
@@ -96,23 +325,89 @@ const promoterOverviewData: PromoterOverviewData = {
   dataStatus: 'fixture',
   totalClicks: 8,
   trends: [
-    makeTrend('clicks', '1D', '8', '+14%', 'Today, by the hour', [0, 0, 1, 1, 2, 2, 3, 4, 4, 5, 7, 8]),
+    makeTrend(
+      'clicks',
+      '1D',
+      '8',
+      '+14%',
+      'Today, by the hour',
+      [0, 0, 1, 1, 2, 2, 3, 4, 4, 5, 7, 8],
+    ),
     makeTrend('clicks', '1W', '8', '+14%', 'This week, by day', [0, 0, 1, 2, 2, 5, 8]),
-    makeTrend('clicks', '1M', '8', '+14%', 'This month, by day', [0, 0, 1, 1, 2, 2, 3, 4, 4, 5, 7, 8]),
+    makeTrend(
+      'clicks',
+      '1M',
+      '8',
+      '+14%',
+      'This month, by day',
+      [0, 0, 1, 1, 2, 2, 3, 4, 4, 5, 7, 8],
+    ),
     makeTrend('clicks', 'All', '8', '+14%', 'All time, by month', [0, 1, 1, 2, 2, 3, 4, 5, 6, 8]),
-    makeTrend('revenue', '1D', '₹1,306', '+10%', 'Today, by the hour', [0, 0, 0, 120, 120, 240, 240, 435, 435, 871, 871, 1306]),
-    makeTrend('revenue', '1W', '₹1,306', '+10%', 'This week, by day', [0, 0, 0, 435, 435, 871, 1306]),
-    makeTrend('revenue', '1M', '₹1,306', '+10%', 'This month, by day', [0, 0, 0, 435, 435, 871, 871, 871, 1306, 1306, 1306, 1306]),
-    makeTrend('revenue', 'All', '₹1,306', '+10%', 'All time, by month', [0, 0, 435, 435, 871, 871, 1306]),
+    makeTrend(
+      'revenue',
+      '1D',
+      '₹1,306',
+      '+10%',
+      'Today, by the hour',
+      [0, 0, 0, 120, 120, 240, 240, 435, 435, 871, 871, 1306],
+    ),
+    makeTrend(
+      'revenue',
+      '1W',
+      '₹1,306',
+      '+10%',
+      'This week, by day',
+      [0, 0, 0, 435, 435, 871, 1306],
+    ),
+    makeTrend(
+      'revenue',
+      '1M',
+      '₹1,306',
+      '+10%',
+      'This month, by day',
+      [0, 0, 0, 435, 435, 871, 871, 871, 1306, 1306, 1306, 1306],
+    ),
+    makeTrend(
+      'revenue',
+      'All',
+      '₹1,306',
+      '+10%',
+      'All time, by month',
+      [0, 0, 435, 435, 871, 871, 1306],
+    ),
   ],
   latestOrders: [
-    { id: 'promoter-order-1', name: 'Guest', initials: 'GU', event: 'Event 30th July', when: '30 Jul, 11:11 am', amount: '₹870.8' },
-    { id: 'promoter-order-2', name: 'Guest', initials: 'GU', event: 'Event 30th July', when: '30 Jul, 11:11 am', amount: '₹435.4' },
+    {
+      id: 'promoter-order-1',
+      name: 'Guest',
+      initials: 'GU',
+      event: 'Event 30th July',
+      when: '30 Jul, 11:11 am',
+      amount: '₹870.8',
+    },
+    {
+      id: 'promoter-order-2',
+      name: 'Guest',
+      initials: 'GU',
+      event: 'Event 30th July',
+      when: '30 Jul, 11:11 am',
+      amount: '₹435.4',
+    },
   ],
   upcomingEvents: [],
   activity: [
-    { id: 'promoter-activity-1', title: 'Nova Nexus', meta: 'Nova Nexus · agarwalkespe8', time: '26 DAYS AGO' },
-    { id: 'promoter-activity-2', title: 'Event - 297', meta: 'Event - 297 · agarwalkespe8', time: '27 DAYS AGO' },
+    {
+      id: 'promoter-activity-1',
+      title: 'Nova Nexus',
+      meta: 'Nova Nexus · agarwalkespe8',
+      time: '26 DAYS AGO',
+    },
+    {
+      id: 'promoter-activity-2',
+      title: 'Event - 297',
+      meta: 'Event - 297 · agarwalkespe8',
+      time: '27 DAYS AGO',
+    },
   ],
 };
 
@@ -134,7 +429,11 @@ const venueEvents: readonly PartnerEventRecord[] = [
     sold: 850,
     capacity: 1000,
     revenueLabel: '₹6,12,000',
-    artwork: { type: 'image', value: '/partner-v3/venue/neon-nights-poster.jpg', alt: 'Neon Nights event artwork' },
+    artwork: {
+      type: 'image',
+      value: '/partner-v3/venue/neon-nights-poster.jpg',
+      alt: 'Neon Nights event artwork',
+    },
   },
   {
     id: 'sunset-sessions-vol-4',
@@ -223,22 +522,44 @@ const venueEventsData: VenueEventsData = {
 const toAmount = (value: string) => Number.parseInt(value.replace(/[^\d]/g, ''), 10) || 0;
 const formatInr = (value: number) => `₹${value.toLocaleString('en-IN')}`;
 
-const salesToneForFill = (fillPercent: number): EventSalesTone => fillPercent >= 70 ? 'green' : fillPercent >= 40 ? 'yellow' : 'red';
+const salesToneForFill = (fillPercent: number): EventSalesTone =>
+  fillPercent >= 70 ? 'green' : fillPercent >= 40 ? 'yellow' : 'red';
 
-const makeEventSalesData = (event: PartnerEventRecord, summary: PartnerEventDetailData['salesSummary'], accent: 'orange' | 'lavender' = 'orange'): EventSalesData => {
+const makeEventSalesData = (
+  event: PartnerEventRecord,
+  summary: PartnerEventDetailData['salesSummary'],
+  accent: 'orange' | 'lavender' = 'orange',
+): EventSalesData => {
   const donutCircumference = 2 * Math.PI * 54;
   let donutOffset = 0;
   const gender = [
-    { label: 'Female', percent: 54, tone: accent === 'lavender' ? 'lavender' as const : 'orange' as const },
-    { label: 'Male', percent: 42, tone: accent === 'lavender' ? 'lavender' as const : 'violet' as const },
+    {
+      label: 'Female',
+      percent: 54,
+      tone: accent === 'lavender' ? ('lavender' as const) : ('orange' as const),
+    },
+    {
+      label: 'Male',
+      percent: 42,
+      tone: accent === 'lavender' ? ('lavender' as const) : ('violet' as const),
+    },
     { label: 'Other', percent: 4, tone: 'green' as const },
   ].map((segment) => {
     const dash = (segment.percent / 100) * donutCircumference;
-    const result = { ...segment, dashArray: `${String(dash)} ${String(donutCircumference - dash)}`, dashOffset: -donutOffset };
+    const result = {
+      ...segment,
+      dashArray: `${String(dash)} ${String(donutCircumference - dash)}`,
+      dashOffset: -donutOffset,
+    };
     donutOffset += dash;
     return result;
   });
-  const comparisonEvents = [event, ...venueEvents.filter((candidate) => candidate.venue === event.venue && candidate.id !== event.id)].slice(0, 3);
+  const comparisonEvents = [
+    event,
+    ...venueEvents.filter(
+      (candidate) => candidate.venue === event.venue && candidate.id !== event.id,
+    ),
+  ].slice(0, 3);
   const comparison = comparisonEvents.map((candidate, index) => {
     const fillPercent = Math.round((candidate.sold / candidate.capacity) * 100);
     return {
@@ -254,13 +575,22 @@ const makeEventSalesData = (event: PartnerEventRecord, summary: PartnerEventDeta
   return {
     funnel: {
       stats: [
-        { label: 'View → Purchase', value: '0.0%', tone: accent === 'lavender' ? 'lavender' : 'orange' },
+        {
+          label: 'View → Purchase',
+          value: '0.0%',
+          tone: accent === 'lavender' ? 'lavender' : 'orange',
+        },
         { label: 'Checkout Abandon', value: '0.0%', tone: 'red' },
         { label: 'Purchase → Arrival', value: '0.0%', tone: 'green' },
         { label: 'Guestlist → Arrival', value: '0.0%', tone: 'violet' },
       ],
       steps: [
-        { label: 'Page Views', count: '0', fillPercent: 0, tone: accent === 'lavender' ? 'lavender' : 'orange' },
+        {
+          label: 'Page Views',
+          count: '0',
+          fillPercent: 0,
+          tone: accent === 'lavender' ? 'lavender' : 'orange',
+        },
         { label: 'Interested', count: '0', fillPercent: 0, tone: 'violet' },
         { label: 'Ticket Bought', count: '0', fillPercent: 0, tone: 'lavender' },
         { label: 'Checked In', count: '0', fillPercent: 0, tone: 'yellow' },
@@ -272,16 +602,44 @@ const makeEventSalesData = (event: PartnerEventRecord, summary: PartnerEventDeta
       breakdown: [
         { label: 'Gross ticket sales', value: summary.moneyMade, tone: 'muted' },
         { label: 'Refunds', value: `−${summary.refunds}`, tone: 'red' },
-        { label: 'Net revenue', value: formatInr(toAmount(summary.moneyMade) - toAmount(summary.refunds)), tone: 'green' },
+        {
+          label: 'Net revenue',
+          value: formatInr(toAmount(summary.moneyMade) - toAmount(summary.refunds)),
+          tone: 'green',
+        },
       ],
     },
     crowd: {
       gender,
       age: [
-        { label: '18–24', percent: '38%', count: '0', fillPercent: 86, tone: accent === 'lavender' ? 'lavender' : 'orange' },
-        { label: '25–34', percent: '44%', count: '0', fillPercent: 100, tone: accent === 'lavender' ? 'lavender' : 'orange' },
-        { label: '35–44', percent: '14%', count: '0', fillPercent: 32, tone: accent === 'lavender' ? 'lavender' : 'orange' },
-        { label: '45+', percent: '4%', count: '0', fillPercent: 9, tone: accent === 'lavender' ? 'lavender' : 'orange' },
+        {
+          label: '18–24',
+          percent: '38%',
+          count: '0',
+          fillPercent: 86,
+          tone: accent === 'lavender' ? 'lavender' : 'orange',
+        },
+        {
+          label: '25–34',
+          percent: '44%',
+          count: '0',
+          fillPercent: 100,
+          tone: accent === 'lavender' ? 'lavender' : 'orange',
+        },
+        {
+          label: '35–44',
+          percent: '14%',
+          count: '0',
+          fillPercent: 32,
+          tone: accent === 'lavender' ? 'lavender' : 'orange',
+        },
+        {
+          label: '45+',
+          percent: '4%',
+          count: '0',
+          fillPercent: 9,
+          tone: accent === 'lavender' ? 'lavender' : 'orange',
+        },
       ],
       segments: [
         { label: 'New Guests', value: '0', sub: 'First time at your venue', tone: 'green' },
@@ -302,12 +660,90 @@ const makeEventSalesData = (event: PartnerEventRecord, summary: PartnerEventDeta
 const venueEventGuests: EventGuestsData = {
   attendeeCount: '6',
   guests: [
-    { id: 'aisha-menon', name: 'Aisha Menon', initials: 'AM', tier: '2× VIP Entry', tag: 'VIP', arrival: 'Checked in', origin: 'Online', gender: 'F', ticketCount: '2', spend: '₹8,000', contact: '+91 98200 xxxxx', lastPurchase: 'Aug 12' },
-    { id: 'karan-shah', name: 'Karan Shah', initials: 'KS', tier: '1× General Admission', tag: 'Repeat', arrival: 'Checked in', origin: 'Online', gender: 'M', ticketCount: '1', spend: '₹800', contact: '+91 99870 xxxxx', lastPurchase: 'Aug 14' },
-    { id: 'devansh-iyer', name: 'Devansh Iyer', initials: 'DI', tier: '4× General Admission', tag: 'New', arrival: 'Not yet', origin: 'Online', gender: 'M', ticketCount: '4', spend: '₹3,200', contact: '+91 90210 xxxxx', lastPurchase: 'Aug 10' },
-    { id: 'priya-kapoor', name: 'Priya Kapoor', initials: 'PK', tier: '1× VIP Table', tag: 'VIP', arrival: 'Checked in', origin: 'Walk-in', gender: 'F', ticketCount: '1', spend: '₹4,000', contact: '+91 98765 xxxxx', lastPurchase: 'Today' },
-    { id: 'nikhil-verma', name: 'Nikhil Verma', initials: 'NV', tier: '2× General Admission', tag: 'Repeat', arrival: 'Not yet', origin: 'Online', gender: 'M', ticketCount: '2', spend: '₹1,600', contact: '+91 97654 xxxxx', lastPurchase: 'Aug 9' },
-    { id: 'sara-dsouza', name: 'Sara D’Souza', initials: 'SD', tier: '1× VIP Entry', tag: 'New', arrival: 'Not yet', origin: 'Walk-in', gender: 'F', ticketCount: '1', spend: '₹4,000', contact: '+91 91234 xxxxx', lastPurchase: 'Today' },
+    {
+      id: 'aisha-menon',
+      name: 'Aisha Menon',
+      initials: 'AM',
+      tier: '2× VIP Entry',
+      tag: 'VIP',
+      arrival: 'Checked in',
+      origin: 'Online',
+      gender: 'F',
+      ticketCount: '2',
+      spend: '₹8,000',
+      contact: '+91 98200 xxxxx',
+      lastPurchase: 'Aug 12',
+    },
+    {
+      id: 'karan-shah',
+      name: 'Karan Shah',
+      initials: 'KS',
+      tier: '1× General Admission',
+      tag: 'Repeat',
+      arrival: 'Checked in',
+      origin: 'Online',
+      gender: 'M',
+      ticketCount: '1',
+      spend: '₹800',
+      contact: '+91 99870 xxxxx',
+      lastPurchase: 'Aug 14',
+    },
+    {
+      id: 'devansh-iyer',
+      name: 'Devansh Iyer',
+      initials: 'DI',
+      tier: '4× General Admission',
+      tag: 'New',
+      arrival: 'Not yet',
+      origin: 'Online',
+      gender: 'M',
+      ticketCount: '4',
+      spend: '₹3,200',
+      contact: '+91 90210 xxxxx',
+      lastPurchase: 'Aug 10',
+    },
+    {
+      id: 'priya-kapoor',
+      name: 'Priya Kapoor',
+      initials: 'PK',
+      tier: '1× VIP Table',
+      tag: 'VIP',
+      arrival: 'Checked in',
+      origin: 'Walk-in',
+      gender: 'F',
+      ticketCount: '1',
+      spend: '₹4,000',
+      contact: '+91 98765 xxxxx',
+      lastPurchase: 'Today',
+    },
+    {
+      id: 'nikhil-verma',
+      name: 'Nikhil Verma',
+      initials: 'NV',
+      tier: '2× General Admission',
+      tag: 'Repeat',
+      arrival: 'Not yet',
+      origin: 'Online',
+      gender: 'M',
+      ticketCount: '2',
+      spend: '₹1,600',
+      contact: '+91 97654 xxxxx',
+      lastPurchase: 'Aug 9',
+    },
+    {
+      id: 'sara-dsouza',
+      name: 'Sara D’Souza',
+      initials: 'SD',
+      tier: '1× VIP Entry',
+      tag: 'New',
+      arrival: 'Not yet',
+      origin: 'Walk-in',
+      gender: 'F',
+      ticketCount: '1',
+      spend: '₹4,000',
+      contact: '+91 91234 xxxxx',
+      lastPurchase: 'Today',
+    },
   ],
 };
 
@@ -326,10 +762,46 @@ const venueEventOperations: EventOperationsData = {
 
 const venueEventPromoters: EventPromotersData = {
   promoters: [
-    { id: 'arjun-pulse', name: 'Arjun (Pulse Collective)', initials: 'AP', tickets: '124', owed: '₹18,600', revenue: '₹1,86,000', rsvps: '140', conversion: '88.6%' },
-    { id: 'zoya-nightowl', name: 'Zoya (Nightowl)', initials: 'ZN', tickets: '88', owed: '₹13,200', revenue: '₹1,32,000', rsvps: '102', conversion: '86.3%' },
-    { id: 'kabir-m', name: 'Kabir M.', initials: 'KM', tickets: '56', owed: '₹8,400', revenue: '₹84,000', rsvps: '70', conversion: '80.0%' },
-    { id: 'riya-house-parties', name: 'Riya (House parties)', initials: 'RH', tickets: '31', owed: '₹4,650', revenue: '₹46,500', rsvps: '44', conversion: '70.5%' },
+    {
+      id: 'arjun-pulse',
+      name: 'Arjun (Pulse Collective)',
+      initials: 'AP',
+      tickets: '124',
+      owed: '₹18,600',
+      revenue: '₹1,86,000',
+      rsvps: '140',
+      conversion: '88.6%',
+    },
+    {
+      id: 'zoya-nightowl',
+      name: 'Zoya (Nightowl)',
+      initials: 'ZN',
+      tickets: '88',
+      owed: '₹13,200',
+      revenue: '₹1,32,000',
+      rsvps: '102',
+      conversion: '86.3%',
+    },
+    {
+      id: 'kabir-m',
+      name: 'Kabir M.',
+      initials: 'KM',
+      tickets: '56',
+      owed: '₹8,400',
+      revenue: '₹84,000',
+      rsvps: '70',
+      conversion: '80.0%',
+    },
+    {
+      id: 'riya-house-parties',
+      name: 'Riya (House parties)',
+      initials: 'RH',
+      tickets: '31',
+      owed: '₹4,650',
+      revenue: '₹46,500',
+      rsvps: '44',
+      conversion: '70.5%',
+    },
   ],
 };
 
@@ -339,7 +811,10 @@ const getVenueEvent = (eventId: string): PartnerEventRecord => {
   return event;
 };
 
-const venueEventDetailBases: readonly Omit<PartnerEventDetailData, 'sales' | 'guests' | 'operations' | 'promoters'>[] = [
+const venueEventDetailBases: readonly Omit<
+  PartnerEventDetailData,
+  'sales' | 'guests' | 'operations' | 'promoters'
+>[] = [
   {
     dataStatus: 'fixture',
     event: getVenueEvent('neon-nights-afrobeats'),
@@ -358,7 +833,13 @@ const venueEventDetailBases: readonly Omit<PartnerEventDetailData, 'sales' | 'gu
       tiers: [
         { name: 'VIP Table', count: '48', money: '₹2,40,000', fillPercent: 40, accent: 'violet' },
         { name: 'VIP Entry', count: '92', money: '₹1,84,000', fillPercent: 70, accent: 'teal' },
-        { name: 'General Admission', count: '200', money: '₹1,88,000', fillPercent: 100, accent: 'orange' },
+        {
+          name: 'General Admission',
+          count: '200',
+          money: '₹1,88,000',
+          fillPercent: 100,
+          accent: 'orange',
+        },
       ],
     },
   },
@@ -380,7 +861,13 @@ const venueEventDetailBases: readonly Omit<PartnerEventDetailData, 'sales' | 'gu
       tiers: [
         { name: 'VIP Table', count: '20', money: '₹1,00,000', fillPercent: 35, accent: 'violet' },
         { name: 'VIP Entry', count: '64', money: '₹1,28,000', fillPercent: 58, accent: 'teal' },
-        { name: 'General Admission', count: '164', money: '₹1,60,000', fillPercent: 82, accent: 'orange' },
+        {
+          name: 'General Admission',
+          count: '164',
+          money: '₹1,60,000',
+          fillPercent: 82,
+          accent: 'orange',
+        },
       ],
     },
   },
@@ -402,7 +889,13 @@ const venueEventDetailBases: readonly Omit<PartnerEventDetailData, 'sales' | 'gu
       tiers: [
         { name: 'VIP Table', count: '12', money: '₹84,000', fillPercent: 25, accent: 'violet' },
         { name: 'VIP Entry', count: '32', money: '₹32,000', fillPercent: 42, accent: 'teal' },
-        { name: 'General Admission', count: '120', money: '₹48,000', fillPercent: 60, accent: 'orange' },
+        {
+          name: 'General Admission',
+          count: '120',
+          money: '₹48,000',
+          fillPercent: 60,
+          accent: 'orange',
+        },
       ],
     },
   },
@@ -424,7 +917,13 @@ const venueEventDetailBases: readonly Omit<PartnerEventDetailData, 'sales' | 'gu
       tiers: [
         { name: 'VIP Table', count: '30', money: '₹90,000', fillPercent: 38, accent: 'violet' },
         { name: 'VIP Entry', count: '70', money: '₹1,05,000', fillPercent: 70, accent: 'teal' },
-        { name: 'General Admission', count: '212', money: '₹39,000', fillPercent: 94, accent: 'orange' },
+        {
+          name: 'General Admission',
+          count: '212',
+          money: '₹39,000',
+          fillPercent: 94,
+          accent: 'orange',
+        },
       ],
     },
   },
@@ -446,25 +945,41 @@ const venueEventDetailBases: readonly Omit<PartnerEventDetailData, 'sales' | 'gu
       tiers: [
         { name: 'VIP Table', count: '52', money: '₹2,60,000', fillPercent: 52, accent: 'violet' },
         { name: 'VIP Entry', count: '96', money: '₹2,40,000', fillPercent: 76, accent: 'teal' },
-        { name: 'General Admission', count: '188', money: '₹2,05,000', fillPercent: 100, accent: 'orange' },
+        {
+          name: 'General Admission',
+          count: '188',
+          money: '₹2,05,000',
+          fillPercent: 100,
+          accent: 'orange',
+        },
       ],
     },
   },
 ];
 
-const venueEventDetails: readonly PartnerEventDetailData[] = venueEventDetailBases.map((detail) => ({
-  ...detail,
-  sales: makeEventSalesData(detail.event, detail.salesSummary),
-  guests: venueEventGuests,
-  operations: venueEventOperations,
-  promoters: venueEventPromoters,
-}));
+const venueEventDetails: readonly PartnerEventDetailData[] = venueEventDetailBases.map(
+  (detail) => ({
+    ...detail,
+    sales: makeEventSalesData(detail.event, detail.salesSummary),
+    guests: venueEventGuests,
+    operations: venueEventOperations,
+    promoters: venueEventPromoters,
+  }),
+);
 
-const hostEvents: readonly PartnerEventRecord[] = venueEvents.map((event, index) => index === 0 ? {
-  ...event,
-  name: 'Neon Nights: Afrobeats',
-  artwork: { type: 'image', value: '/partner-v3/host/one-direction-tribute-poster.jpg', alt: 'Neon Nights event artwork' },
-} : event);
+const hostEvents: readonly PartnerEventRecord[] = venueEvents.map((event, index) =>
+  index === 0
+    ? {
+        ...event,
+        name: 'Neon Nights: Afrobeats',
+        artwork: {
+          type: 'image',
+          value: '/partner-v3/host/one-direction-tribute-poster.jpg',
+          alt: 'Neon Nights event artwork',
+        },
+      }
+    : event,
+);
 
 const hostEventsData: HostEventsData = {
   dataStatus: 'fixture',
@@ -481,7 +996,10 @@ const getHostEvent = (eventId: string): PartnerEventRecord => {
 const hostEventDetails: readonly PartnerEventDetailData[] = venueEventDetails.map((detail) => {
   const hostSummary = {
     ...detail.salesSummary,
-    tiers: detail.salesSummary.tiers.map((tier, index) => ({ ...tier, accent: index === 1 ? 'teal' as const : 'violet' as const })),
+    tiers: detail.salesSummary.tiers.map((tier, index) => ({
+      ...tier,
+      accent: index === 1 ? ('teal' as const) : ('violet' as const),
+    })),
   };
   const hostEvent = getHostEvent(detail.event.id);
   return {
@@ -493,21 +1011,27 @@ const hostEventDetails: readonly PartnerEventDetailData[] = venueEventDetails.ma
 });
 
 const doorActivity: readonly DoorActivityRecord[] = [
-  { id: 'invalid-ticket', text: 'Refused entry — invalid ticket', time: '9:44 PM', kind: 'incident' },
+  {
+    id: 'invalid-ticket',
+    text: 'Refused entry — invalid ticket',
+    time: '9:44 PM',
+    kind: 'incident',
+  },
   { id: 'vip-capacity', text: 'VIP section at capacity', time: '9:30 PM', kind: 'note' },
   { id: 'ga-closed', text: 'Guest list closed for GA', time: '9:15 PM', kind: 'note' },
 ];
 
-const makeDoorEvents = (details: readonly PartnerEventDetailData[]): readonly DoorEventData[] => details.map((detail) => ({
-  event: detail.event,
-  venueLine: detail.venueLine,
-  insideNow: 247,
-  capacity: 400,
-  expectedCount: 93,
-  walkInCount: 34,
-  guests: detail.guests.guests,
-  activity: doorActivity,
-}));
+const makeDoorEvents = (details: readonly PartnerEventDetailData[]): readonly DoorEventData[] =>
+  details.map((detail) => ({
+    event: detail.event,
+    venueLine: detail.venueLine,
+    insideNow: 247,
+    capacity: 400,
+    expectedCount: 93,
+    walkInCount: 34,
+    guests: detail.guests.guests,
+    activity: doorActivity,
+  }));
 
 const venueDoorModeData: DoorModeData = {
   dataStatus: 'fixture',
@@ -547,10 +1071,30 @@ const makeSettingsData = (role: 'venue' | 'host'): PartnerSettingsData => ({
     { id: 'loaded-nachos', name: 'Loaded Nachos', category: 'Food', price: '₹400' },
   ],
   accountRows: [
-    { id: 'business-profile', icon: 'business', title: 'Business profile', description: 'Rhea Kapoor Events LLP · GST verified' },
-    { id: 'team-staff', icon: 'team', title: 'Team & staff', description: 'Managed in Partners → Staff' },
-    { id: 'notifications', icon: 'notifications', title: 'Notifications', description: 'Sales alerts, payout reminders, door pings' },
-    { id: 'privacy-security', icon: 'security', title: 'Privacy & security', description: 'Login, guest data handling, exports' },
+    {
+      id: 'business-profile',
+      icon: 'business',
+      title: 'Business profile',
+      description: 'Rhea Kapoor Events LLP · GST verified',
+    },
+    {
+      id: 'team-staff',
+      icon: 'team',
+      title: 'Team & staff',
+      description: 'Managed in Partners → Staff',
+    },
+    {
+      id: 'notifications',
+      icon: 'notifications',
+      title: 'Notifications',
+      description: 'Sales alerts, payout reminders, door pings',
+    },
+    {
+      id: 'privacy-security',
+      icon: 'security',
+      title: 'Privacy & security',
+      description: 'Login, guest data handling, exports',
+    },
   ],
 });
 
@@ -558,19 +1102,105 @@ const venueSettingsData = makeSettingsData('venue');
 const hostSettingsData = makeSettingsData('host');
 
 const promoterDiscoverEvents: readonly PromoterDiscoverEvent[] = [
-  { id: 'eclipse-royale', name: 'Eclipse Royale', venue: 'Your Venue, Pune, IN', city: 'Pune', dateLabel: 'Wed, 05 Aug', timeLabel: '8:00 PM', accessState: 'pending', artwork: { type: 'gradient', value: 'eclipse' } },
-  { id: 'testing-event', name: 'testing event', venue: "Gaikwad's Club, Pune", city: 'Pune', dateLabel: 'Mon, 30 Mar', timeLabel: '11:00 PM', accessState: 'required', artwork: { type: 'gradient', value: 'placeholder' } },
-  { id: 'check-event-2', name: 'check event 2', venue: 'EPITOME, Pune', city: 'Pune', dateLabel: 'Fri, 27 Mar', timeLabel: '9:00 PM', accessState: 'required', artwork: { type: 'gradient', value: 'placeholder' } },
-  { id: 'night-of-mystery', name: 'Night of Mystery', venue: 'Aria Lounge, Pune', city: 'Pune', dateLabel: 'Sat, 12 Sep', timeLabel: '10:00 PM', accessState: 'required', artwork: { type: 'gradient', value: 'mystery' } },
-  { id: 'retro-fridays', name: 'Retro Fridays', venue: 'The Docks, Mumbai', city: 'Mumbai', dateLabel: 'Fri, 18 Sep', timeLabel: '10:00 PM', accessState: 'required', artwork: { type: 'gradient', value: 'placeholder' } },
-  { id: 'sunday-sessions', name: 'Sunday Sessions', venue: 'Skyline Rooftop, Pune', city: 'Pune', dateLabel: 'Sun, 20 Sep', timeLabel: '5:00 PM', accessState: 'required', artwork: { type: 'gradient', value: 'placeholder' } },
+  {
+    id: 'eclipse-royale',
+    name: 'Eclipse Royale',
+    venue: 'Your Venue, Pune, IN',
+    city: 'Pune',
+    dateLabel: 'Wed, 05 Aug',
+    timeLabel: '8:00 PM',
+    accessState: 'pending',
+    artwork: { type: 'gradient', value: 'eclipse' },
+  },
+  {
+    id: 'testing-event',
+    name: 'testing event',
+    venue: "Gaikwad's Club, Pune",
+    city: 'Pune',
+    dateLabel: 'Mon, 30 Mar',
+    timeLabel: '11:00 PM',
+    accessState: 'required',
+    artwork: { type: 'gradient', value: 'placeholder' },
+  },
+  {
+    id: 'check-event-2',
+    name: 'check event 2',
+    venue: 'EPITOME, Pune',
+    city: 'Pune',
+    dateLabel: 'Fri, 27 Mar',
+    timeLabel: '9:00 PM',
+    accessState: 'required',
+    artwork: { type: 'gradient', value: 'placeholder' },
+  },
+  {
+    id: 'night-of-mystery',
+    name: 'Night of Mystery',
+    venue: 'Aria Lounge, Pune',
+    city: 'Pune',
+    dateLabel: 'Sat, 12 Sep',
+    timeLabel: '10:00 PM',
+    accessState: 'required',
+    artwork: { type: 'gradient', value: 'mystery' },
+  },
+  {
+    id: 'retro-fridays',
+    name: 'Retro Fridays',
+    venue: 'The Docks, Mumbai',
+    city: 'Mumbai',
+    dateLabel: 'Fri, 18 Sep',
+    timeLabel: '10:00 PM',
+    accessState: 'required',
+    artwork: { type: 'gradient', value: 'placeholder' },
+  },
+  {
+    id: 'sunday-sessions',
+    name: 'Sunday Sessions',
+    venue: 'Skyline Rooftop, Pune',
+    city: 'Pune',
+    dateLabel: 'Sun, 20 Sep',
+    timeLabel: '5:00 PM',
+    accessState: 'required',
+    artwork: { type: 'gradient', value: 'placeholder' },
+  },
 ];
 
 const promoterLinkedEvents: readonly PromoterLinkedEvent[] = [
-  { id: 'nova-nexus', name: 'Nova Nexus', venue: 'Skyline Rooftop, Pune', city: 'Pune', clicks: 3, sales: 0, artwork: { type: 'gradient', value: 'eclipse' } },
-  { id: 'event-297', name: 'Event - 297', venue: 'The Docks, Pune', city: 'Pune', clicks: 2, sales: 0, artwork: { type: 'gradient', value: 'placeholder' } },
-  { id: 'event-by-new-host', name: 'Event by new host', venue: 'Warehouse District, Pune', city: 'Pune', clicks: 1, sales: 0, artwork: { type: 'gradient', value: 'mystery' } },
-  { id: 'event-30th-july', name: 'Event 30th July', venue: 'Skyline Rooftop, Pune', city: 'Pune', clicks: 2, sales: 2, artwork: { type: 'gradient', value: 'nova' } },
+  {
+    id: 'nova-nexus',
+    name: 'Nova Nexus',
+    venue: 'Skyline Rooftop, Pune',
+    city: 'Pune',
+    clicks: 3,
+    sales: 0,
+    artwork: { type: 'gradient', value: 'eclipse' },
+  },
+  {
+    id: 'event-297',
+    name: 'Event - 297',
+    venue: 'The Docks, Pune',
+    city: 'Pune',
+    clicks: 2,
+    sales: 0,
+    artwork: { type: 'gradient', value: 'placeholder' },
+  },
+  {
+    id: 'event-by-new-host',
+    name: 'Event by new host',
+    venue: 'Warehouse District, Pune',
+    city: 'Pune',
+    clicks: 1,
+    sales: 0,
+    artwork: { type: 'gradient', value: 'mystery' },
+  },
+  {
+    id: 'event-30th-july',
+    name: 'Event 30th July',
+    venue: 'Skyline Rooftop, Pune',
+    city: 'Pune',
+    clicks: 2,
+    sales: 2,
+    artwork: { type: 'gradient', value: 'nova' },
+  },
 ];
 
 const promoterEventsData: PromoterEventsData = {
@@ -592,45 +1222,294 @@ const partnerProfileDefaults = {
 
 const venuePartners: PartnerRelationshipSet = {
   connected: [
-    { ...partnerProfileDefaults, id: 'kabir-sunday-sessions', name: 'Kabir M. (Sunday Sessions)', initials: 'KS', kind: 'host', role: '6 events hosted', genres: ['House', 'Deep House'], stats: [{ label: 'Events hosted', value: '6' }, { label: 'Venues worked with', value: '4' }, { label: 'Tickets sold', value: '3,860' }, { label: 'Experience', value: '3 yrs' }], cardTone: 'orange', status: 'Partnered' },
-    { ...partnerProfileDefaults, id: 'nightscape-collective', name: 'Nightscape Collective', initials: 'NC', kind: 'host', role: '9 events hosted', genres: ['Techno', 'Rave'], stats: [{ label: 'Events hosted', value: '9' }, { label: 'Venues worked with', value: '4' }, { label: 'Tickets sold', value: '3,860' }, { label: 'Experience', value: '3 yrs' }], cardTone: 'teal', status: 'Partnered' },
-    { ...partnerProfileDefaults, id: 'pulse-collective', name: 'Pulse Collective', initials: 'PC', kind: 'host', role: '14 events hosted', genres: ['Afrobeats', 'Club Night'], stats: [{ label: 'Events hosted', value: '14' }, { label: 'Venues worked with', value: '4' }, { label: 'Tickets sold', value: '3,860' }, { label: 'Experience', value: '3 yrs' }], cardTone: 'gold', status: 'Partnered' },
+    {
+      ...partnerProfileDefaults,
+      id: 'kabir-sunday-sessions',
+      name: 'Kabir M. (Sunday Sessions)',
+      initials: 'KS',
+      kind: 'host',
+      role: '6 events hosted',
+      genres: ['House', 'Deep House'],
+      stats: [
+        { label: 'Events hosted', value: '6' },
+        { label: 'Venues worked with', value: '4' },
+        { label: 'Tickets sold', value: '3,860' },
+        { label: 'Experience', value: '3 yrs' },
+      ],
+      cardTone: 'orange',
+      status: 'Partnered',
+    },
+    {
+      ...partnerProfileDefaults,
+      id: 'nightscape-collective',
+      name: 'Nightscape Collective',
+      initials: 'NC',
+      kind: 'host',
+      role: '9 events hosted',
+      genres: ['Techno', 'Rave'],
+      stats: [
+        { label: 'Events hosted', value: '9' },
+        { label: 'Venues worked with', value: '4' },
+        { label: 'Tickets sold', value: '3,860' },
+        { label: 'Experience', value: '3 yrs' },
+      ],
+      cardTone: 'teal',
+      status: 'Partnered',
+    },
+    {
+      ...partnerProfileDefaults,
+      id: 'pulse-collective',
+      name: 'Pulse Collective',
+      initials: 'PC',
+      kind: 'host',
+      role: '14 events hosted',
+      genres: ['Afrobeats', 'Club Night'],
+      stats: [
+        { label: 'Events hosted', value: '14' },
+        { label: 'Venues worked with', value: '4' },
+        { label: 'Tickets sold', value: '3,860' },
+        { label: 'Experience', value: '3 yrs' },
+      ],
+      cardTone: 'gold',
+      status: 'Partnered',
+    },
   ],
   discover: [
-    { ...partnerProfileDefaults, id: 'zoya-nightowl-discover', name: 'Zoya (Nightowl)', initials: 'ZN', kind: 'host', role: '5 events hosted', genres: ['Retro', 'Club Night'], stats: [{ label: 'Events hosted', value: '5' }, { label: 'Venues worked with', value: '3' }, { label: 'Tickets sold', value: '2,100' }, { label: 'Experience', value: '2 yrs' }], cardTone: 'violet' },
-    { ...partnerProfileDefaults, id: 'arjun-bassline', name: 'Arjun (Bassline Collective)', initials: 'AB', kind: 'host', role: '8 events hosted', genres: ['Bass', 'Techno'], stats: [{ label: 'Events hosted', value: '8' }, { label: 'Venues worked with', value: '5' }, { label: 'Tickets sold', value: '4,200' }, { label: 'Experience', value: '4 yrs' }], cardTone: 'indigo' },
-    { ...partnerProfileDefaults, id: 'sunday-sessions-host', name: 'The Sunday Sessions', initials: 'SS', kind: 'host', role: '3 events hosted', genres: ['Deep House'], stats: [{ label: 'Events hosted', value: '3' }, { label: 'Venues worked with', value: '2' }, { label: 'Tickets sold', value: '1,400' }, { label: 'Experience', value: '2 yrs' }], cardTone: 'pink' },
+    {
+      ...partnerProfileDefaults,
+      id: 'zoya-nightowl-discover',
+      name: 'Zoya (Nightowl)',
+      initials: 'ZN',
+      kind: 'host',
+      role: '5 events hosted',
+      genres: ['Retro', 'Club Night'],
+      stats: [
+        { label: 'Events hosted', value: '5' },
+        { label: 'Venues worked with', value: '3' },
+        { label: 'Tickets sold', value: '2,100' },
+        { label: 'Experience', value: '2 yrs' },
+      ],
+      cardTone: 'violet',
+    },
+    {
+      ...partnerProfileDefaults,
+      id: 'arjun-bassline',
+      name: 'Arjun (Bassline Collective)',
+      initials: 'AB',
+      kind: 'host',
+      role: '8 events hosted',
+      genres: ['Bass', 'Techno'],
+      stats: [
+        { label: 'Events hosted', value: '8' },
+        { label: 'Venues worked with', value: '5' },
+        { label: 'Tickets sold', value: '4,200' },
+        { label: 'Experience', value: '4 yrs' },
+      ],
+      cardTone: 'indigo',
+    },
+    {
+      ...partnerProfileDefaults,
+      id: 'sunday-sessions-host',
+      name: 'The Sunday Sessions',
+      initials: 'SS',
+      kind: 'host',
+      role: '3 events hosted',
+      genres: ['Deep House'],
+      stats: [
+        { label: 'Events hosted', value: '3' },
+        { label: 'Venues worked with', value: '2' },
+        { label: 'Tickets sold', value: '1,400' },
+        { label: 'Experience', value: '2 yrs' },
+      ],
+      cardTone: 'pink',
+    },
   ],
   requests: {
-    incoming: [{ id: 'sana-echo-crew', name: 'Sana (Echo Crew)', initials: 'SE', kind: 'host', direction: 'incoming', note: 'Wants to host a recurring slot' }],
-    outgoing: [{ id: 'vikram-loud-nights', name: 'Vikram (Loud Nights)', initials: 'VL', kind: 'host', direction: 'outgoing', note: 'Invite sent 3 days ago' }],
+    incoming: [
+      {
+        id: 'sana-echo-crew',
+        name: 'Sana (Echo Crew)',
+        initials: 'SE',
+        kind: 'host',
+        direction: 'incoming',
+        note: 'Wants to host a recurring slot',
+      },
+    ],
+    outgoing: [
+      {
+        id: 'vikram-loud-nights',
+        name: 'Vikram (Loud Nights)',
+        initials: 'VL',
+        kind: 'host',
+        direction: 'outgoing',
+        note: 'Invite sent 3 days ago',
+      },
+    ],
   },
 };
 
 const promoterPartners: PartnerRelationshipSet = {
   connected: [
-    { ...partnerProfileDefaults, id: 'arjun-pulse-promoter', name: 'Arjun (Pulse Collective)', initials: 'AP', kind: 'promoter', role: '124 tickets driven', genres: ['House', 'Club Night'], stats: [{ label: 'Events promoted', value: '12' }, { label: 'Tickets sold', value: '1,240' }, { label: 'Avg. conversion', value: '82%' }, { label: 'Experience', value: '2 yrs' }], cardTone: 'orange', status: 'Partnered' },
-    { ...partnerProfileDefaults, id: 'zoya-nightowl-promoter', name: 'Zoya (Nightowl)', initials: 'ZN', kind: 'promoter', role: '88 tickets driven', genres: ['Techno', 'Rave'], stats: [{ label: 'Events promoted', value: '9' }, { label: 'Tickets sold', value: '1,240' }, { label: 'Avg. conversion', value: '82%' }, { label: 'Experience', value: '2 yrs' }], cardTone: 'violet', status: 'Partnered' },
-    { ...partnerProfileDefaults, id: 'kabir-m-promoter', name: 'Kabir M.', initials: 'KM', kind: 'promoter', role: '56 tickets driven', genres: ['House', 'Deep House'], stats: [{ label: 'Events promoted', value: '6' }, { label: 'Tickets sold', value: '1,240' }, { label: 'Avg. conversion', value: '82%' }, { label: 'Experience', value: '2 yrs' }], cardTone: 'teal', status: 'Invite sent' },
-    { ...partnerProfileDefaults, id: 'riya-house-parties-promoter', name: 'Riya (House parties)', initials: 'RH', kind: 'promoter', role: '31 tickets driven', genres: ['Deep House'], stats: [{ label: 'Events promoted', value: '4' }, { label: 'Tickets sold', value: '1,240' }, { label: 'Avg. conversion', value: '82%' }, { label: 'Experience', value: '2 yrs' }], cardTone: 'pink', status: 'Waiting on them' },
+    {
+      ...partnerProfileDefaults,
+      id: 'arjun-pulse-promoter',
+      name: 'Arjun (Pulse Collective)',
+      initials: 'AP',
+      kind: 'promoter',
+      role: '124 tickets driven',
+      genres: ['House', 'Club Night'],
+      stats: [
+        { label: 'Events promoted', value: '12' },
+        { label: 'Tickets sold', value: '1,240' },
+        { label: 'Avg. conversion', value: '82%' },
+        { label: 'Experience', value: '2 yrs' },
+      ],
+      cardTone: 'orange',
+      status: 'Partnered',
+    },
+    {
+      ...partnerProfileDefaults,
+      id: 'zoya-nightowl-promoter',
+      name: 'Zoya (Nightowl)',
+      initials: 'ZN',
+      kind: 'promoter',
+      role: '88 tickets driven',
+      genres: ['Techno', 'Rave'],
+      stats: [
+        { label: 'Events promoted', value: '9' },
+        { label: 'Tickets sold', value: '1,240' },
+        { label: 'Avg. conversion', value: '82%' },
+        { label: 'Experience', value: '2 yrs' },
+      ],
+      cardTone: 'violet',
+      status: 'Partnered',
+    },
+    {
+      ...partnerProfileDefaults,
+      id: 'kabir-m-promoter',
+      name: 'Kabir M.',
+      initials: 'KM',
+      kind: 'promoter',
+      role: '56 tickets driven',
+      genres: ['House', 'Deep House'],
+      stats: [
+        { label: 'Events promoted', value: '6' },
+        { label: 'Tickets sold', value: '1,240' },
+        { label: 'Avg. conversion', value: '82%' },
+        { label: 'Experience', value: '2 yrs' },
+      ],
+      cardTone: 'teal',
+      status: 'Invite sent',
+    },
+    {
+      ...partnerProfileDefaults,
+      id: 'riya-house-parties-promoter',
+      name: 'Riya (House parties)',
+      initials: 'RH',
+      kind: 'promoter',
+      role: '31 tickets driven',
+      genres: ['Deep House'],
+      stats: [
+        { label: 'Events promoted', value: '4' },
+        { label: 'Tickets sold', value: '1,240' },
+        { label: 'Avg. conversion', value: '82%' },
+        { label: 'Experience', value: '2 yrs' },
+      ],
+      cardTone: 'pink',
+      status: 'Waiting on them',
+    },
   ],
   discover: [
-    { ...partnerProfileDefaults, id: 'vikram-loud-nights-promoter', name: 'Vikram (Loud Nights)', initials: 'VL', kind: 'promoter', role: '62 tickets driven', genres: ['Club Night'], stats: [{ label: 'Events promoted', value: '6' }, { label: 'Tickets sold', value: '620' }, { label: 'Avg. conversion', value: '76%' }, { label: 'Experience', value: '1 yr' }], cardTone: 'gold' },
-    { ...partnerProfileDefaults, id: 'sana-echo-crew-promoter', name: 'Sana (Echo Crew)', initials: 'SE', kind: 'promoter', role: '40 tickets driven', genres: ['House'], stats: [{ label: 'Events promoted', value: '4' }, { label: 'Tickets sold', value: '400' }, { label: 'Avg. conversion', value: '71%' }, { label: 'Experience', value: '1 yr' }], cardTone: 'indigo' },
+    {
+      ...partnerProfileDefaults,
+      id: 'vikram-loud-nights-promoter',
+      name: 'Vikram (Loud Nights)',
+      initials: 'VL',
+      kind: 'promoter',
+      role: '62 tickets driven',
+      genres: ['Club Night'],
+      stats: [
+        { label: 'Events promoted', value: '6' },
+        { label: 'Tickets sold', value: '620' },
+        { label: 'Avg. conversion', value: '76%' },
+        { label: 'Experience', value: '1 yr' },
+      ],
+      cardTone: 'gold',
+    },
+    {
+      ...partnerProfileDefaults,
+      id: 'sana-echo-crew-promoter',
+      name: 'Sana (Echo Crew)',
+      initials: 'SE',
+      kind: 'promoter',
+      role: '40 tickets driven',
+      genres: ['House'],
+      stats: [
+        { label: 'Events promoted', value: '4' },
+        { label: 'Tickets sold', value: '400' },
+        { label: 'Avg. conversion', value: '71%' },
+        { label: 'Experience', value: '1 yr' },
+      ],
+      cardTone: 'indigo',
+    },
   ],
   requests: {
-    incoming: [{ id: 'rhea-afterglow', name: 'Rhea (Afterglow)', initials: 'RA', kind: 'promoter', direction: 'incoming', note: 'Wants to promote your events' }],
+    incoming: [
+      {
+        id: 'rhea-afterglow',
+        name: 'Rhea (Afterglow)',
+        initials: 'RA',
+        kind: 'promoter',
+        direction: 'incoming',
+        note: 'Wants to promote your events',
+      },
+    ],
     outgoing: [
-      { id: 'kabir-m-promoter-request', name: 'Kabir M.', initials: 'KM', kind: 'promoter', direction: 'outgoing', note: 'Invite sent 4 days ago' },
-      { id: 'riya-house-parties-promoter-request', name: 'Riya (House parties)', initials: 'RH', kind: 'promoter', direction: 'outgoing', note: 'Invite sent 9 days ago' },
+      {
+        id: 'kabir-m-promoter-request',
+        name: 'Kabir M.',
+        initials: 'KM',
+        kind: 'promoter',
+        direction: 'outgoing',
+        note: 'Invite sent 4 days ago',
+      },
+      {
+        id: 'riya-house-parties-promoter-request',
+        name: 'Riya (House parties)',
+        initials: 'RH',
+        kind: 'promoter',
+        direction: 'outgoing',
+        note: 'Invite sent 9 days ago',
+      },
     ],
   },
 };
 
 const venueStaff = [
-  { id: 'maya-s', name: 'Maya S.', initials: 'MS', role: 'Door lead · Full access', status: 'Active', permissions: ['Door check-in', 'Event editing'] },
-  { id: 'ravi-k', name: 'Ravi K.', initials: 'RK', role: 'Check-in · Scan only', status: 'Active', permissions: ['Door check-in'] },
-  { id: 'tina-d', name: 'Tina D.', initials: 'TD', role: 'Bar · Menu & orders', status: 'Active', permissions: ['Finance view', 'Guest messaging'] },
+  {
+    id: 'maya-s',
+    name: 'Maya S.',
+    initials: 'MS',
+    role: 'Door lead · Full access',
+    status: 'Active',
+    permissions: ['Door check-in', 'Event editing'],
+  },
+  {
+    id: 'ravi-k',
+    name: 'Ravi K.',
+    initials: 'RK',
+    role: 'Check-in · Scan only',
+    status: 'Active',
+    permissions: ['Door check-in'],
+  },
+  {
+    id: 'tina-d',
+    name: 'Tina D.',
+    initials: 'TD',
+    role: 'Bar · Menu & orders',
+    status: 'Active',
+    permissions: ['Finance view', 'Guest messaging'],
+  },
 ] as const;
 
 const venuePartnersData: VenuePartnersData = {
@@ -642,21 +1521,180 @@ const venuePartnersData: VenuePartnersData = {
 
 const hostVenues: PartnerRelationshipSet = {
   connected: [
-    { ...partnerProfileDefaults, id: 'skyline-rooftop-host', name: 'Skyline Rooftop', initials: 'SR', kind: 'venue', role: 'Capacity 400 · 6 events booked', genres: [], stats: [{ label: 'Events hosted', value: '400' }, { label: 'Venues worked with', value: '4' }, { label: 'Tickets sold', value: '3,860' }, { label: 'Experience', value: '3 yrs' }], cardTone: 'orange', status: 'Partnered' },
-    { ...partnerProfileDefaults, id: 'the-docks-host', name: 'The Docks', initials: 'TD', kind: 'venue', role: 'Capacity 900 · 11 events booked', genres: [], stats: [{ label: 'Events hosted', value: '900' }, { label: 'Venues worked with', value: '4' }, { label: 'Tickets sold', value: '3,860' }, { label: 'Experience', value: '3 yrs' }], cardTone: 'teal', status: 'Invite sent' },
-    { ...partnerProfileDefaults, id: 'warehouse-district-host', name: 'Warehouse District', initials: 'WD', kind: 'venue', role: 'Capacity 1200 · 9 events booked', genres: [], stats: [{ label: 'Events hosted', value: '1200' }, { label: 'Venues worked with', value: '4' }, { label: 'Tickets sold', value: '3,860' }, { label: 'Experience', value: '3 yrs' }], cardTone: 'slate', status: 'Partnered' },
-    { ...partnerProfileDefaults, id: 'aria-lounge-host', name: 'Aria Lounge', initials: 'AL', kind: 'venue', role: 'Capacity 220 · 4 events booked', genres: [], stats: [{ label: 'Events hosted', value: '220' }, { label: 'Venues worked with', value: '4' }, { label: 'Tickets sold', value: '3,860' }, { label: 'Experience', value: '3 yrs' }], cardTone: 'pink', status: 'Waiting on them' },
-    { ...partnerProfileDefaults, id: 'the-yard-host', name: 'The Yard', initials: 'TY', kind: 'venue', role: 'Capacity 650 · 14 events booked', genres: [], stats: [{ label: 'Events hosted', value: '650' }, { label: 'Venues worked with', value: '4' }, { label: 'Tickets sold', value: '3,860' }, { label: 'Experience', value: '3 yrs' }], cardTone: 'gold', status: 'Partnered' },
-    { ...partnerProfileDefaults, id: 'circuit-hall-host', name: 'Circuit Hall', initials: 'CH', kind: 'venue', role: 'Capacity 500 · 7 events booked', genres: [], stats: [{ label: 'Events hosted', value: '500' }, { label: 'Venues worked with', value: '4' }, { label: 'Tickets sold', value: '3,860' }, { label: 'Experience', value: '3 yrs' }], cardTone: 'indigo', status: 'Invite sent' },
+    {
+      ...partnerProfileDefaults,
+      id: 'skyline-rooftop-host',
+      name: 'Skyline Rooftop',
+      initials: 'SR',
+      kind: 'venue',
+      role: 'Capacity 400 · 6 events booked',
+      genres: [],
+      stats: [
+        { label: 'Events hosted', value: '400' },
+        { label: 'Venues worked with', value: '4' },
+        { label: 'Tickets sold', value: '3,860' },
+        { label: 'Experience', value: '3 yrs' },
+      ],
+      cardTone: 'orange',
+      status: 'Partnered',
+    },
+    {
+      ...partnerProfileDefaults,
+      id: 'the-docks-host',
+      name: 'The Docks',
+      initials: 'TD',
+      kind: 'venue',
+      role: 'Capacity 900 · 11 events booked',
+      genres: [],
+      stats: [
+        { label: 'Events hosted', value: '900' },
+        { label: 'Venues worked with', value: '4' },
+        { label: 'Tickets sold', value: '3,860' },
+        { label: 'Experience', value: '3 yrs' },
+      ],
+      cardTone: 'teal',
+      status: 'Invite sent',
+    },
+    {
+      ...partnerProfileDefaults,
+      id: 'warehouse-district-host',
+      name: 'Warehouse District',
+      initials: 'WD',
+      kind: 'venue',
+      role: 'Capacity 1200 · 9 events booked',
+      genres: [],
+      stats: [
+        { label: 'Events hosted', value: '1200' },
+        { label: 'Venues worked with', value: '4' },
+        { label: 'Tickets sold', value: '3,860' },
+        { label: 'Experience', value: '3 yrs' },
+      ],
+      cardTone: 'slate',
+      status: 'Partnered',
+    },
+    {
+      ...partnerProfileDefaults,
+      id: 'aria-lounge-host',
+      name: 'Aria Lounge',
+      initials: 'AL',
+      kind: 'venue',
+      role: 'Capacity 220 · 4 events booked',
+      genres: [],
+      stats: [
+        { label: 'Events hosted', value: '220' },
+        { label: 'Venues worked with', value: '4' },
+        { label: 'Tickets sold', value: '3,860' },
+        { label: 'Experience', value: '3 yrs' },
+      ],
+      cardTone: 'pink',
+      status: 'Waiting on them',
+    },
+    {
+      ...partnerProfileDefaults,
+      id: 'the-yard-host',
+      name: 'The Yard',
+      initials: 'TY',
+      kind: 'venue',
+      role: 'Capacity 650 · 14 events booked',
+      genres: [],
+      stats: [
+        { label: 'Events hosted', value: '650' },
+        { label: 'Venues worked with', value: '4' },
+        { label: 'Tickets sold', value: '3,860' },
+        { label: 'Experience', value: '3 yrs' },
+      ],
+      cardTone: 'gold',
+      status: 'Partnered',
+    },
+    {
+      ...partnerProfileDefaults,
+      id: 'circuit-hall-host',
+      name: 'Circuit Hall',
+      initials: 'CH',
+      kind: 'venue',
+      role: 'Capacity 500 · 7 events booked',
+      genres: [],
+      stats: [
+        { label: 'Events hosted', value: '500' },
+        { label: 'Venues worked with', value: '4' },
+        { label: 'Tickets sold', value: '3,860' },
+        { label: 'Experience', value: '3 yrs' },
+      ],
+      cardTone: 'indigo',
+      status: 'Invite sent',
+    },
   ],
   discover: [
-    { ...partnerProfileDefaults, id: 'neon-basement-host', name: 'Neon Basement', initials: 'NB', kind: 'venue', role: 'Capacity 300 · 5 events hosted here', genres: [], stats: [{ label: 'Events hosted', value: '300' }, { label: 'Venues worked with', value: '3' }, { label: 'Tickets sold', value: '2,100' }, { label: 'Experience', value: '2 yrs' }], cardTone: 'violet' },
-    { ...partnerProfileDefaults, id: 'riverside-hall-host', name: 'Riverside Hall', initials: 'RH', kind: 'venue', role: 'Capacity 800 · 8 events hosted here', genres: [], stats: [{ label: 'Events hosted', value: '800' }, { label: 'Venues worked with', value: '3' }, { label: 'Tickets sold', value: '2,100' }, { label: 'Experience', value: '2 yrs' }], cardTone: 'teal' },
-    { ...partnerProfileDefaults, id: 'attic-club-host', name: 'The Attic Club', initials: 'AC', kind: 'venue', role: 'Capacity 180 · 3 events hosted here', genres: [], stats: [{ label: 'Events hosted', value: '180' }, { label: 'Venues worked with', value: '3' }, { label: 'Tickets sold', value: '2,100' }, { label: 'Experience', value: '2 yrs' }], cardTone: 'pink' },
+    {
+      ...partnerProfileDefaults,
+      id: 'neon-basement-host',
+      name: 'Neon Basement',
+      initials: 'NB',
+      kind: 'venue',
+      role: 'Capacity 300 · 5 events hosted here',
+      genres: [],
+      stats: [
+        { label: 'Events hosted', value: '300' },
+        { label: 'Venues worked with', value: '3' },
+        { label: 'Tickets sold', value: '2,100' },
+        { label: 'Experience', value: '2 yrs' },
+      ],
+      cardTone: 'violet',
+    },
+    {
+      ...partnerProfileDefaults,
+      id: 'riverside-hall-host',
+      name: 'Riverside Hall',
+      initials: 'RH',
+      kind: 'venue',
+      role: 'Capacity 800 · 8 events hosted here',
+      genres: [],
+      stats: [
+        { label: 'Events hosted', value: '800' },
+        { label: 'Venues worked with', value: '3' },
+        { label: 'Tickets sold', value: '2,100' },
+        { label: 'Experience', value: '2 yrs' },
+      ],
+      cardTone: 'teal',
+    },
+    {
+      ...partnerProfileDefaults,
+      id: 'attic-club-host',
+      name: 'The Attic Club',
+      initials: 'AC',
+      kind: 'venue',
+      role: 'Capacity 180 · 3 events hosted here',
+      genres: [],
+      stats: [
+        { label: 'Events hosted', value: '180' },
+        { label: 'Venues worked with', value: '3' },
+        { label: 'Tickets sold', value: '2,100' },
+        { label: 'Experience', value: '2 yrs' },
+      ],
+      cardTone: 'pink',
+    },
   ],
   requests: {
-    incoming: [{ id: 'sana-echo-crew-host', name: 'Sana (Echo Crew)', initials: 'SE', kind: 'host', direction: 'incoming', note: 'Wants to host a recurring slot' }],
-    outgoing: [{ id: 'vikram-loud-nights-host', name: 'Vikram (Loud Nights)', initials: 'VL', kind: 'host', direction: 'outgoing', note: 'Invite sent 3 days ago' }],
+    incoming: [
+      {
+        id: 'sana-echo-crew-host',
+        name: 'Sana (Echo Crew)',
+        initials: 'SE',
+        kind: 'host',
+        direction: 'incoming',
+        note: 'Wants to host a recurring slot',
+      },
+    ],
+    outgoing: [
+      {
+        id: 'vikram-loud-nights-host',
+        name: 'Vikram (Loud Nights)',
+        initials: 'VL',
+        kind: 'host',
+        direction: 'outgoing',
+        note: 'Invite sent 3 days ago',
+      },
+    ],
   },
 };
 
@@ -667,7 +1705,9 @@ const hostPartnersData: HostPartnersData = {
   staff: venueStaff,
 };
 
-const promoterPartnerProfile = (record: Omit<PromoterPartnerRecord, 'location' | 'verified' | 'upcomingEvents'>): PromoterPartnerRecord => ({
+const promoterPartnerProfile = (
+  record: Omit<PromoterPartnerRecord, 'location' | 'verified' | 'upcomingEvents'>,
+): PromoterPartnerRecord => ({
   ...record,
   location: 'Mumbai, India',
   verified: false,
@@ -681,15 +1721,92 @@ const promoterPartnersData: PromoterPartnersData = {
   venuesCount: 2,
   hostsCount: 1,
   active: [
-    promoterPartnerProfile({ id: 'majids-club-promoter', name: "Majid's Club", initials: 'MC', kind: 'venue', role: '0 events | 0 followers', genres: [], stats: [], cardTone: 'gold', state: 'active', actionLabel: 'Connected' }),
-    promoterPartnerProfile({ id: 'bloom-circle-promoter', name: 'Bloom Circle', initials: 'BC', kind: 'venue', role: '0 events | 0 followers', genres: [], stats: [], cardTone: 'violet', state: 'active', actionLabel: 'Connected' }),
-    promoterPartnerProfile({ id: 'new-host-promoter', name: 'New Host', initials: 'NH', kind: 'host', role: '0 events | 0 followers', genres: [], stats: [], cardTone: 'teal', state: 'active', actionLabel: 'Connected' }),
+    promoterPartnerProfile({
+      id: 'majids-club-promoter',
+      name: "Majid's Club",
+      initials: 'MC',
+      kind: 'venue',
+      role: '0 events | 0 followers',
+      genres: [],
+      stats: [],
+      cardTone: 'gold',
+      state: 'active',
+      actionLabel: 'Connected',
+    }),
+    promoterPartnerProfile({
+      id: 'bloom-circle-promoter',
+      name: 'Bloom Circle',
+      initials: 'BC',
+      kind: 'venue',
+      role: '0 events | 0 followers',
+      genres: [],
+      stats: [],
+      cardTone: 'violet',
+      state: 'active',
+      actionLabel: 'Connected',
+    }),
+    promoterPartnerProfile({
+      id: 'new-host-promoter',
+      name: 'New Host',
+      initials: 'NH',
+      kind: 'host',
+      role: '0 events | 0 followers',
+      genres: [],
+      stats: [],
+      cardTone: 'teal',
+      state: 'active',
+      actionLabel: 'Connected',
+    }),
   ],
   discover: [
-    promoterPartnerProfile({ id: 'anonymous-promoter', name: 'Anonymous', initials: 'A', kind: 'host', role: '0 events | 0 followers', genres: [], stats: [], cardTone: 'orange', state: 'discover', actionLabel: 'Send Request' }),
-    promoterPartnerProfile({ id: 'playboy-club-delhi-promoter', name: 'Playboy Club Delhi', initials: 'PC', kind: 'host', role: '0 events | 410 followers', genres: [], stats: [], cardTone: 'indigo', state: 'discover', actionLabel: 'Send Request' }),
-    promoterPartnerProfile({ id: 'dot-pune-promoter', name: 'D.O.T Pune', initials: 'DP', kind: 'host', role: '0 events | 220 followers', genres: [], stats: [], cardTone: 'pink', state: 'discover', actionLabel: 'Send Request' }),
-    promoterPartnerProfile({ id: 'quantika-promoter', name: 'Quantika', initials: 'Q', kind: 'host', role: '0 events | 880 followers', genres: [], stats: [], cardTone: 'slate', state: 'discover', actionLabel: 'Send Request' }),
+    promoterPartnerProfile({
+      id: 'anonymous-promoter',
+      name: 'Anonymous',
+      initials: 'A',
+      kind: 'host',
+      role: '0 events | 0 followers',
+      genres: [],
+      stats: [],
+      cardTone: 'orange',
+      state: 'discover',
+      actionLabel: 'Send Request',
+    }),
+    promoterPartnerProfile({
+      id: 'playboy-club-delhi-promoter',
+      name: 'Playboy Club Delhi',
+      initials: 'PC',
+      kind: 'host',
+      role: '0 events | 410 followers',
+      genres: [],
+      stats: [],
+      cardTone: 'indigo',
+      state: 'discover',
+      actionLabel: 'Send Request',
+    }),
+    promoterPartnerProfile({
+      id: 'dot-pune-promoter',
+      name: 'D.O.T Pune',
+      initials: 'DP',
+      kind: 'host',
+      role: '0 events | 220 followers',
+      genres: [],
+      stats: [],
+      cardTone: 'pink',
+      state: 'discover',
+      actionLabel: 'Send Request',
+    }),
+    promoterPartnerProfile({
+      id: 'quantika-promoter',
+      name: 'Quantika',
+      initials: 'Q',
+      kind: 'host',
+      role: '0 events | 880 followers',
+      genres: [],
+      stats: [],
+      cardTone: 'slate',
+      state: 'discover',
+      actionLabel: 'Send Request',
+    }),
   ],
   incoming: [],
   pending: [],
@@ -731,19 +1848,115 @@ const venueFinanceData: VenueFinanceData = {
     cvv: '•••',
   },
   payouts: [
-    { id: 'payout-jul-18', date: 'Fri, Jul 18', detail: 'Scheduled · Neon Nights + 2 events', status: 'Scheduled', amount: '₹4,86,200' },
-    { id: 'payout-jul-11', date: 'Fri, Jul 11', detail: 'HDFC ••4412 · Sunset Sessions', status: 'Paid', amount: '₹3,88,000' },
-    { id: 'payout-jul-04', date: 'Fri, Jul 4', detail: 'HDFC ••4412 · Monsoon Sessions', status: 'Paid', amount: '₹7,05,000' },
-    { id: 'payout-jun-27', date: 'Fri, Jun 27', detail: 'HDFC ••4412 · Bollywood Brunch', status: 'Paid', amount: '₹2,34,000' },
-    { id: 'payout-jun-20', date: 'Fri, Jun 20', detail: 'HDFC ••4412 · Warehouse Rave', status: 'Paid', amount: '₹1,64,000' },
+    {
+      id: 'payout-jul-18',
+      date: 'Fri, Jul 18',
+      detail: 'Scheduled · Neon Nights + 2 events',
+      status: 'Scheduled',
+      amount: '₹4,86,200',
+    },
+    {
+      id: 'payout-jul-11',
+      date: 'Fri, Jul 11',
+      detail: 'HDFC ••4412 · Sunset Sessions',
+      status: 'Paid',
+      amount: '₹3,88,000',
+    },
+    {
+      id: 'payout-jul-04',
+      date: 'Fri, Jul 4',
+      detail: 'HDFC ••4412 · Monsoon Sessions',
+      status: 'Paid',
+      amount: '₹7,05,000',
+    },
+    {
+      id: 'payout-jun-27',
+      date: 'Fri, Jun 27',
+      detail: 'HDFC ••4412 · Bollywood Brunch',
+      status: 'Paid',
+      amount: '₹2,34,000',
+    },
+    {
+      id: 'payout-jun-20',
+      date: 'Fri, Jun 20',
+      detail: 'HDFC ••4412 · Warehouse Rave',
+      status: 'Paid',
+      amount: '₹1,64,000',
+    },
   ],
   orders: [
-    { id: 'order-8823', name: 'Priya Kapoor', initials: 'PK', orderNumber: '#8823', date: '4m ago', event: 'Neon Nights', tickets: 5, amount: '₹28,000', status: 'Confirmed', avatarTone: 'orange' },
-    { id: 'order-8822', name: 'Aisha Menon', initials: 'AM', orderNumber: '#8822', date: '22m ago', event: 'Neon Nights', tickets: 2, amount: '₹5,000', status: 'Confirmed', avatarTone: 'violet' },
-    { id: 'order-8821', name: 'Karan Shah', initials: 'KS', orderNumber: '#8821', date: '1h ago', event: 'Neon Nights', tickets: 1, amount: '₹1,800', status: 'Pending', avatarTone: 'teal' },
-    { id: 'order-8815', name: 'Meera Rao', initials: 'MR', orderNumber: '#8815', date: '3h ago', event: 'Warehouse Rave', tickets: 1, amount: '₹1,800', status: 'Refunded', avatarTone: 'pink' },
-    { id: 'order-8810', name: 'Devansh Iyer', initials: 'DI', orderNumber: '#8810', date: '5h ago', event: 'Neon Nights', tickets: 4, amount: '₹7,200', status: 'Confirmed', avatarTone: 'gold' },
-    { id: 'order-8804', name: 'Sara D’Souza', initials: 'SD', orderNumber: '#8804', date: '8h ago', event: 'Sunset Sessions', tickets: 1, amount: '₹2,500', status: 'Cancelled', avatarTone: 'indigo' },
+    {
+      id: 'order-8823',
+      name: 'Priya Kapoor',
+      initials: 'PK',
+      orderNumber: '#8823',
+      date: '4m ago',
+      event: 'Neon Nights',
+      tickets: 5,
+      amount: '₹28,000',
+      status: 'Confirmed',
+      avatarTone: 'orange',
+    },
+    {
+      id: 'order-8822',
+      name: 'Aisha Menon',
+      initials: 'AM',
+      orderNumber: '#8822',
+      date: '22m ago',
+      event: 'Neon Nights',
+      tickets: 2,
+      amount: '₹5,000',
+      status: 'Confirmed',
+      avatarTone: 'violet',
+    },
+    {
+      id: 'order-8821',
+      name: 'Karan Shah',
+      initials: 'KS',
+      orderNumber: '#8821',
+      date: '1h ago',
+      event: 'Neon Nights',
+      tickets: 1,
+      amount: '₹1,800',
+      status: 'Pending',
+      avatarTone: 'teal',
+    },
+    {
+      id: 'order-8815',
+      name: 'Meera Rao',
+      initials: 'MR',
+      orderNumber: '#8815',
+      date: '3h ago',
+      event: 'Warehouse Rave',
+      tickets: 1,
+      amount: '₹1,800',
+      status: 'Refunded',
+      avatarTone: 'pink',
+    },
+    {
+      id: 'order-8810',
+      name: 'Devansh Iyer',
+      initials: 'DI',
+      orderNumber: '#8810',
+      date: '5h ago',
+      event: 'Neon Nights',
+      tickets: 4,
+      amount: '₹7,200',
+      status: 'Confirmed',
+      avatarTone: 'gold',
+    },
+    {
+      id: 'order-8804',
+      name: 'Sara D’Souza',
+      initials: 'SD',
+      orderNumber: '#8804',
+      date: '8h ago',
+      event: 'Sunset Sessions',
+      tickets: 1,
+      amount: '₹2,500',
+      status: 'Cancelled',
+      avatarTone: 'indigo',
+    },
   ],
 };
 
@@ -769,7 +1982,8 @@ const promoterFinanceData: PromoterFinanceData = {
   payoutsTitle: 'Payouts',
   lastUpdated: '02:55 pm',
   emptyPayoutTitle: 'No earnings yet.',
-  emptyPayoutDescription: 'Commission rows will appear here once tickets are sold through your promoter links.',
+  emptyPayoutDescription:
+    'Commission rows will appear here once tickets are sold through your promoter links.',
 };
 
 const promoterGuestEvents: readonly PromoterGuestEventOption[] = [
@@ -784,8 +1998,28 @@ const promoterGuestsData: PromoterGuestsData = {
   commission: '₹131',
   events: promoterGuestEvents,
   guests: [
-    { id: 'promoter-guest-1', name: 'Guest', initials: 'GU', tickets: '2 tickets', event: 'Event 30th July', amount: '₹871', commission: '+₹87', status: 'Ticket', when: '26d ago' },
-    { id: 'promoter-guest-2', name: 'Guest', initials: 'GU', tickets: '1 ticket', event: 'Event 30th July', amount: '₹435', commission: '+₹44', status: 'Ticket', when: '26d ago' },
+    {
+      id: 'promoter-guest-1',
+      name: 'Guest',
+      initials: 'GU',
+      tickets: '2 tickets',
+      event: 'Event 30th July',
+      amount: '₹871',
+      commission: '+₹87',
+      status: 'Ticket',
+      when: '26d ago',
+    },
+    {
+      id: 'promoter-guest-2',
+      name: 'Guest',
+      initials: 'GU',
+      tickets: '1 ticket',
+      event: 'Event 30th July',
+      amount: '₹435',
+      commission: '+₹44',
+      status: 'Ticket',
+      when: '26d ago',
+    },
   ],
 };
 
@@ -808,10 +2042,30 @@ const promoterAnalyticsData: PromoterAnalyticsData = {
   totalLinks: 4,
   topLinks: promoterTopLinks,
   recentActivity: [
-    { id: 'analytics-activity-1', title: 'Nova Nexus', meta: 'Nova Nexus · agarwalkespe8', time: '26 DAYS AGO' },
-    { id: 'analytics-activity-2', title: 'Event - 297', meta: 'Event - 297 · agarwalkespe8', time: '27 DAYS AGO' },
-    { id: 'analytics-activity-3', title: 'Event by new host', meta: 'Event by new host · agarwalkespe8', time: '27 DAYS AGO' },
-    { id: 'analytics-activity-4', title: 'Event 30th July', meta: 'Event 30th July · agarwalkespe8', time: '26 DAYS AGO' },
+    {
+      id: 'analytics-activity-1',
+      title: 'Nova Nexus',
+      meta: 'Nova Nexus · agarwalkespe8',
+      time: '26 DAYS AGO',
+    },
+    {
+      id: 'analytics-activity-2',
+      title: 'Event - 297',
+      meta: 'Event - 297 · agarwalkespe8',
+      time: '27 DAYS AGO',
+    },
+    {
+      id: 'analytics-activity-3',
+      title: 'Event by new host',
+      meta: 'Event by new host · agarwalkespe8',
+      time: '27 DAYS AGO',
+    },
+    {
+      id: 'analytics-activity-4',
+      title: 'Event 30th July',
+      meta: 'Event 30th July · agarwalkespe8',
+      time: '26 DAYS AGO',
+    },
   ],
 };
 
@@ -828,20 +2082,66 @@ const promoterLeaderboardData: PromoterLeaderboardData = {
     { value: 'pune', label: 'Pune' },
   ],
   podium: [
-    { id: 'sarah-v', name: 'Sarah V.', initials: 'SV', tickets: 201, xp: 426, rank: 2, avatarTone: 'silver' },
-    { id: 'nadia-p', name: 'Nadia P.', initials: 'NP', tickets: 225, xp: 480, rank: 1, avatarTone: 'gold' },
-    { id: 'marcus-s', name: 'Marcus S.', initials: 'MS', tickets: 189, xp: 403, rank: 3, avatarTone: 'bronze' },
+    {
+      id: 'sarah-v',
+      name: 'Sarah V.',
+      initials: 'SV',
+      tickets: 201,
+      xp: 426,
+      rank: 2,
+      avatarTone: 'silver',
+    },
+    {
+      id: 'nadia-p',
+      name: 'Nadia P.',
+      initials: 'NP',
+      tickets: 225,
+      xp: 480,
+      rank: 1,
+      avatarTone: 'gold',
+    },
+    {
+      id: 'marcus-s',
+      name: 'Marcus S.',
+      initials: 'MS',
+      tickets: 189,
+      xp: 403,
+      rank: 3,
+      avatarTone: 'bronze',
+    },
   ],
   ranked: [
-    { id: 'chloe-matrix', name: 'Chloe Matrix', initials: 'CM', rank: 4, xp: 304, avatarTone: 'red' },
-    { id: 'alex-thunder', name: 'Alex Thunder', initials: 'AT', rank: 5, xp: 286, avatarTone: 'purple' },
-    { id: 'tariq-storm', name: 'Tariq Storm', initials: 'TS', rank: 6, xp: 214, avatarTone: 'blue' },
+    {
+      id: 'chloe-matrix',
+      name: 'Chloe Matrix',
+      initials: 'CM',
+      rank: 4,
+      xp: 304,
+      avatarTone: 'red',
+    },
+    {
+      id: 'alex-thunder',
+      name: 'Alex Thunder',
+      initials: 'AT',
+      rank: 5,
+      xp: 286,
+      avatarTone: 'purple',
+    },
+    {
+      id: 'tariq-storm',
+      name: 'Tariq Storm',
+      initials: 'TS',
+      rank: 6,
+      xp: 214,
+      avatarTone: 'blue',
+    },
   ],
 };
 
 const basslineSlotEvent: SlotRequestEvent = {
   name: 'Bassline Nights',
-  description: 'Bass-heavy night with a rotating cast of underground selectors. Doors at 11, headline set at 1 AM.',
+  description:
+    'Bass-heavy night with a rotating cast of underground selectors. Doors at 11, headline set at 1 AM.',
   date: 'Sat, Aug 22',
   time: '11:00 PM – 4:00 AM',
   venue: 'Skyline Rooftop',
@@ -891,15 +2191,63 @@ const sundaySlotEvent: SlotRequestEvent = {
 };
 
 const venueSlotRequests: readonly SlotRequest[] = [
-  { id: 'venue-slot-bassline', status: 'pending', direction: 'incoming', partnerName: 'Arjun (Pulse Collective)', partnerRoleLabel: 'Host', partnerInitials: 'AP', event: basslineSlotEvent },
-  { id: 'venue-slot-retro', status: 'pending', direction: 'incoming', partnerName: 'Zoya (Nightowl)', partnerRoleLabel: 'Host', partnerInitials: 'ZN', event: retroSlotEvent },
-  { id: 'venue-slot-sunday', status: 'approved', direction: 'incoming', partnerName: 'Kabir M.', partnerRoleLabel: 'Host', partnerInitials: 'KM', event: sundaySlotEvent },
+  {
+    id: 'venue-slot-bassline',
+    status: 'pending',
+    direction: 'incoming',
+    partnerName: 'Arjun (Pulse Collective)',
+    partnerRoleLabel: 'Host',
+    partnerInitials: 'AP',
+    event: basslineSlotEvent,
+  },
+  {
+    id: 'venue-slot-retro',
+    status: 'pending',
+    direction: 'incoming',
+    partnerName: 'Zoya (Nightowl)',
+    partnerRoleLabel: 'Host',
+    partnerInitials: 'ZN',
+    event: retroSlotEvent,
+  },
+  {
+    id: 'venue-slot-sunday',
+    status: 'approved',
+    direction: 'incoming',
+    partnerName: 'Kabir M.',
+    partnerRoleLabel: 'Host',
+    partnerInitials: 'KM',
+    event: sundaySlotEvent,
+  },
 ];
 
 const hostSlotRequests: readonly SlotRequest[] = [
-  { id: 'host-slot-bassline', status: 'pending', direction: 'outgoing', partnerName: 'Skyline Rooftop', partnerRoleLabel: 'Venue', partnerInitials: 'SR', event: basslineSlotEvent },
-  { id: 'host-slot-retro', status: 'pending', direction: 'outgoing', partnerName: 'Skyline Rooftop', partnerRoleLabel: 'Venue', partnerInitials: 'SR', event: retroSlotEvent },
-  { id: 'host-slot-sunday', status: 'approved', direction: 'outgoing', partnerName: 'Skyline Rooftop', partnerRoleLabel: 'Venue', partnerInitials: 'SR', event: sundaySlotEvent },
+  {
+    id: 'host-slot-bassline',
+    status: 'pending',
+    direction: 'outgoing',
+    partnerName: 'Skyline Rooftop',
+    partnerRoleLabel: 'Venue',
+    partnerInitials: 'SR',
+    event: basslineSlotEvent,
+  },
+  {
+    id: 'host-slot-retro',
+    status: 'pending',
+    direction: 'outgoing',
+    partnerName: 'Skyline Rooftop',
+    partnerRoleLabel: 'Venue',
+    partnerInitials: 'SR',
+    event: retroSlotEvent,
+  },
+  {
+    id: 'host-slot-sunday',
+    status: 'approved',
+    direction: 'outgoing',
+    partnerName: 'Skyline Rooftop',
+    partnerRoleLabel: 'Venue',
+    partnerInitials: 'SR',
+    event: sundaySlotEvent,
+  },
 ];
 
 const venueSlotRequestsData: VenueSlotRequestsData = {
@@ -916,7 +2264,14 @@ const hostSlotRequestsData: HostSlotRequestsData = {
   requests: hostSlotRequests,
 };
 
-const makeCalendarMonth = (key: string, label: string, daysInMonth: number, events: readonly CalendarEvent[], blocks: readonly CalendarBlock[] = [], dayStates: Readonly<Record<number, CalendarDayState>> = {}): CalendarMonth => {
+const makeCalendarMonth = (
+  key: string,
+  label: string,
+  daysInMonth: number,
+  events: readonly CalendarEvent[],
+  blocks: readonly CalendarBlock[] = [],
+  dayStates: Readonly<Record<number, CalendarDayState>> = {},
+): CalendarMonth => {
   const [yearValue, monthValue] = key.split('-').map(Number);
   const year = yearValue ?? 2026;
   const month = monthValue ?? 7;
@@ -930,32 +2285,139 @@ const makeCalendarMonth = (key: string, label: string, daysInMonth: number, even
     const date = `${key}-${String(day).padStart(2, '0')}`;
     const dayEvents = eventsByDate[date] ?? [];
     const block = blocksByDate.get(date);
-    const state = block ? 'blocked' : dayStates[day] ?? (dayEvents.some((event) => event.status === 'pending') ? 'pending' : dayEvents.length ? 'confirmed' : 'available');
+    const state = block
+      ? 'blocked'
+      : (dayStates[day] ??
+        (dayEvents.some((event) => event.status === 'pending')
+          ? 'pending'
+          : dayEvents.length
+            ? 'confirmed'
+            : 'available'));
     return { date, day, state, events: dayEvents, slots: [] };
   });
-  return { key, label, firstDayOffset: new Date(Date.UTC(year, month - 1, 1)).getUTCDay(), daysInMonth, days };
+  return {
+    key,
+    label,
+    firstDayOffset: new Date(Date.UTC(year, month - 1, 1)).getUTCDay(),
+    daysInMonth,
+    days,
+  };
 };
 
 const calendarEvents: readonly CalendarEvent[] = [
-  { id: 'private-booking-corporate', date: '2026-07-03', name: 'Private booking · Corporate', time: '7:00 PM – 11:00 PM', status: 'confirmed', venue: 'Skyline Rooftop' },
-  { id: 'warehouse-rave-on-hold', date: '2026-07-09', name: 'Warehouse Rave (on hold)', time: '11:00 PM – 4:00 AM', status: 'pending', venue: 'The Docks' },
-  { id: 'venue-maintenance', date: '2026-07-12', name: 'Venue maintenance', time: 'All day', status: 'blocked', venue: 'Skyline Rooftop' },
-  { id: 'neon-nights-setup', date: '2026-07-16', name: 'Soundcheck & setup', time: '5:00 PM – 8:00 PM', status: 'confirmed', venue: 'Skyline Rooftop', href: '/partner/venue/events/neon-nights-afrobeats' },
-  { id: 'neon-nights-calendar', date: '2026-07-16', name: 'Neon Nights: Afrobeats Edition', time: '9:00 PM – 3:00 AM', status: 'confirmed', venue: 'Skyline Rooftop', href: '/partner/venue/events/neon-nights-afrobeats' },
-  { id: 'bollywood-brunch-matinee', date: '2026-07-23', name: 'Bollywood Brunch (matinee)', time: '12:00 PM – 4:00 PM', status: 'confirmed', venue: 'Garden Terrace', href: '/partner/venue/events/bollywood-brunch' },
-  { id: 'sunset-sessions-calendar', date: '2026-07-30', name: 'Sunset Sessions Vol. 4', time: '5:00 PM – 11:00 PM', status: 'confirmed', venue: 'Skyline Rooftop', href: '/partner/venue/events/sunset-sessions-vol-4' },
-  { id: 'sunset-sessions-august', date: '2026-08-02', name: 'Sunset Sessions Vol. 4', time: '5:00 PM – 11:00 PM', status: 'confirmed', venue: 'Skyline Rooftop', href: '/partner/venue/events/sunset-sessions-vol-4' },
-  { id: 'warehouse-rave-august', date: '2026-08-09', name: 'Warehouse Rave', time: '11:00 PM – 4:00 AM', status: 'pending', venue: 'The Docks', href: '/partner/venue/events/warehouse-rave' },
-  { id: 'bollywood-brunch-august', date: '2026-08-15', name: 'Bollywood Brunch', time: '12:00 PM – 4:00 PM', status: 'confirmed', venue: 'Garden Terrace', href: '/partner/venue/events/bollywood-brunch' },
+  {
+    id: 'private-booking-corporate',
+    date: '2026-07-03',
+    name: 'Private booking · Corporate',
+    time: '7:00 PM – 11:00 PM',
+    status: 'confirmed',
+    venue: 'Skyline Rooftop',
+  },
+  {
+    id: 'warehouse-rave-on-hold',
+    date: '2026-07-09',
+    name: 'Warehouse Rave (on hold)',
+    time: '11:00 PM – 4:00 AM',
+    status: 'pending',
+    venue: 'The Docks',
+  },
+  {
+    id: 'venue-maintenance',
+    date: '2026-07-12',
+    name: 'Venue maintenance',
+    time: 'All day',
+    status: 'blocked',
+    venue: 'Skyline Rooftop',
+  },
+  {
+    id: 'neon-nights-setup',
+    date: '2026-07-16',
+    name: 'Soundcheck & setup',
+    time: '5:00 PM – 8:00 PM',
+    status: 'confirmed',
+    venue: 'Skyline Rooftop',
+    href: '/partner/venue/events/neon-nights-afrobeats',
+  },
+  {
+    id: 'neon-nights-calendar',
+    date: '2026-07-16',
+    name: 'Neon Nights: Afrobeats Edition',
+    time: '9:00 PM – 3:00 AM',
+    status: 'confirmed',
+    venue: 'Skyline Rooftop',
+    href: '/partner/venue/events/neon-nights-afrobeats',
+  },
+  {
+    id: 'bollywood-brunch-matinee',
+    date: '2026-07-23',
+    name: 'Bollywood Brunch (matinee)',
+    time: '12:00 PM – 4:00 PM',
+    status: 'confirmed',
+    venue: 'Garden Terrace',
+    href: '/partner/venue/events/bollywood-brunch',
+  },
+  {
+    id: 'sunset-sessions-calendar',
+    date: '2026-07-30',
+    name: 'Sunset Sessions Vol. 4',
+    time: '5:00 PM – 11:00 PM',
+    status: 'confirmed',
+    venue: 'Skyline Rooftop',
+    href: '/partner/venue/events/sunset-sessions-vol-4',
+  },
+  {
+    id: 'sunset-sessions-august',
+    date: '2026-08-02',
+    name: 'Sunset Sessions Vol. 4',
+    time: '5:00 PM – 11:00 PM',
+    status: 'confirmed',
+    venue: 'Skyline Rooftop',
+    href: '/partner/venue/events/sunset-sessions-vol-4',
+  },
+  {
+    id: 'warehouse-rave-august',
+    date: '2026-08-09',
+    name: 'Warehouse Rave',
+    time: '11:00 PM – 4:00 AM',
+    status: 'pending',
+    venue: 'The Docks',
+    href: '/partner/venue/events/warehouse-rave',
+  },
+  {
+    id: 'bollywood-brunch-august',
+    date: '2026-08-15',
+    name: 'Bollywood Brunch',
+    time: '12:00 PM – 4:00 PM',
+    status: 'confirmed',
+    venue: 'Garden Terrace',
+    href: '/partner/venue/events/bollywood-brunch',
+  },
 ];
 
 const venueCalendarBlocks: readonly CalendarBlock[] = [
-  { id: 'maintenance-july-12', date: '2026-07-12', reason: 'Maintenance', from: '00:00', to: '23:59' },
+  {
+    id: 'maintenance-july-12',
+    date: '2026-07-12',
+    reason: 'Maintenance',
+    from: '00:00',
+    to: '23:59',
+  },
 ];
 
 const venueCalendarMonths: readonly CalendarMonth[] = [
-  makeCalendarMonth('2026-07', 'July 2026', 31, calendarEvents.filter((event) => event.date.startsWith('2026-07')), venueCalendarBlocks),
-  makeCalendarMonth('2026-08', 'August 2026', 31, calendarEvents.filter((event) => event.date.startsWith('2026-08'))),
+  makeCalendarMonth(
+    '2026-07',
+    'July 2026',
+    31,
+    calendarEvents.filter((event) => event.date.startsWith('2026-07')),
+    venueCalendarBlocks,
+  ),
+  makeCalendarMonth(
+    '2026-08',
+    'August 2026',
+    31,
+    calendarEvents.filter((event) => event.date.startsWith('2026-08')),
+  ),
 ];
 
 const venueCalendarData: VenueCalendarData = {
@@ -966,37 +2428,73 @@ const venueCalendarData: VenueCalendarData = {
 };
 
 const hostVenueOptions = [
-  { id: 'skyline-rooftop', name: 'Skyline Rooftop', meta: 'Capacity 400 · 6 events booked', status: 'Partnered' as const },
-  { id: 'warehouse-district', name: 'Warehouse District', meta: 'Capacity 1200 · 9 events booked', status: 'Partnered' as const },
-  { id: 'the-yard', name: 'The Yard', meta: 'Capacity 650 · 14 events booked', status: 'Partnered' as const },
+  {
+    id: 'skyline-rooftop',
+    name: 'Skyline Rooftop',
+    meta: 'Capacity 400 · 6 events booked',
+    status: 'Partnered' as const,
+  },
+  {
+    id: 'warehouse-district',
+    name: 'Warehouse District',
+    meta: 'Capacity 1200 · 9 events booked',
+    status: 'Partnered' as const,
+  },
+  {
+    id: 'the-yard',
+    name: 'The Yard',
+    meta: 'Capacity 650 · 14 events booked',
+    status: 'Partnered' as const,
+  },
 ];
 
-const addAvailabilitySlots = (months: readonly CalendarMonth[]): readonly CalendarMonth[] => months.map((month) => ({
-  ...month,
-  days: month.days.map((day) => ({
-    ...day,
-    slots: day.state === 'available' ? [
-      { id: `${day.date}-late`, label: '8:00 PM – 11:00 PM', status: 'available' as const },
-      { id: `${day.date}-night`, label: '11:00 PM – 3:00 AM', status: 'available' as const },
-    ] : [],
-  })),
-}));
+const addAvailabilitySlots = (months: readonly CalendarMonth[]): readonly CalendarMonth[] =>
+  months.map((month) => ({
+    ...month,
+    days: month.days.map((day) => ({
+      ...day,
+      slots:
+        day.state === 'available'
+          ? [
+              { id: `${day.date}-late`, label: '8:00 PM – 11:00 PM', status: 'available' as const },
+              {
+                id: `${day.date}-night`,
+                label: '11:00 PM – 3:00 AM',
+                status: 'available' as const,
+              },
+            ]
+          : [],
+    })),
+  }));
 
-const calendarForVenue = (venueName: string, months: readonly CalendarMonth[]): readonly CalendarMonth[] => months.map((month) => ({
-  ...month,
-  days: month.days.map((day) => {
-    const events = day.events.filter((event) => event.venue === venueName);
-    const state: CalendarDayState = events.some((event) => event.status === 'pending') ? 'pending' : events.length ? 'confirmed' : venueName === 'Skyline Rooftop' && day.state === 'blocked' ? 'blocked' : 'available';
-    return { ...day, state, events };
-  }),
-}));
+const calendarForVenue = (
+  venueName: string,
+  months: readonly CalendarMonth[],
+): readonly CalendarMonth[] =>
+  months.map((month) => ({
+    ...month,
+    days: month.days.map((day) => {
+      const events = day.events.filter((event) => event.venue === venueName);
+      const state: CalendarDayState = events.some((event) => event.status === 'pending')
+        ? 'pending'
+        : events.length
+          ? 'confirmed'
+          : venueName === 'Skyline Rooftop' && day.state === 'blocked'
+            ? 'blocked'
+            : 'available';
+      return { ...day, state, events };
+    }),
+  }));
 
 const hostAvailabilityData: HostAvailabilityData = {
   dataStatus: 'fixture',
   accent: 'lavender',
   venues: hostVenueOptions.map((venue, index) => ({
     venue,
-    months: index === 0 ? addAvailabilitySlots(calendarForVenue(venue.name, venueCalendarMonths)) : addAvailabilitySlots([makeCalendarMonth('2026-07', 'July 2026', 31, [])]),
+    months:
+      index === 0
+        ? addAvailabilitySlots(calendarForVenue(venue.name, venueCalendarMonths))
+        : addAvailabilitySlots([makeCalendarMonth('2026-07', 'July 2026', 31, [])]),
   })),
 };
 
@@ -1007,11 +2505,16 @@ const editorVenues: readonly EventEditorVenueOption[] = hostVenueOptions.map((ve
 
 const editorPromoters: readonly EventEditorPromoterOption[] = promoterPartners.connected
   .filter((partner) => partner.kind === 'promoter')
-  .map((partner) => ({ id: partner.id, name: partner.name, initials: partner.initials, role: partner.role }));
+  .map((partner) => ({
+    id: partner.id,
+    name: partner.name,
+    initials: partner.initials,
+    role: partner.role,
+  }));
 
 const defaultEditorDraft = (role: 'venue' | 'host'): EventEditorDraft => ({
   name: '',
-  venueId: role === 'host' ? editorVenues[0]?.id ?? '' : 'skyline-rooftop',
+  venueId: role === 'host' ? (editorVenues[0]?.id ?? '') : 'skyline-rooftop',
   date: '',
   dateLabel: 'No date picked yet',
   time: '9:00 PM',
@@ -1040,7 +2543,11 @@ const venueEventEditorData: EventEditorData = {
   genres: ['House', 'Techno', 'Afrobeats', 'Bollywood', 'Deep House'],
   extraGenres: ['R&B', 'Hip-hop', 'Disco', 'Live music', 'Brunch'],
   artworkOptions: [
-    { type: 'image', value: '/partner-v3/venue/neon-nights-poster.jpg', alt: 'Neon Nights event artwork' },
+    {
+      type: 'image',
+      value: '/partner-v3/venue/neon-nights-poster.jpg',
+      alt: 'Neon Nights event artwork',
+    },
     { type: 'gradient', value: 'sunset' },
     { type: 'gradient', value: 'warehouse' },
     { type: 'gradient', value: 'bollywood' },
@@ -1054,37 +2561,163 @@ const hostEventEditorData: EventEditorData = {
   defaultDraft: defaultEditorDraft('host'),
 };
 
-const marketingEventOptions = (events: readonly PartnerEventRecord[]): readonly MarketingEventOption[] => events.map((event) => ({
-  id: event.id,
-  name: event.name,
-  date: `${event.monthLabel} ${event.dayLabel}`,
-  venue: event.venue,
-  artwork: event.artwork,
-}));
+const marketingEventOptions = (
+  events: readonly PartnerEventRecord[],
+): readonly MarketingEventOption[] =>
+  events.map((event) => ({
+    id: event.id,
+    name: event.name,
+    date: `${event.monthLabel} ${event.dayLabel}`,
+    venue: event.venue,
+    artwork: event.artwork,
+  }));
 
 const marketingAttendees: readonly MarketingAttendee[] = [
-  { id: 'marketing-aisha', name: 'Aisha Menon', initials: 'AM', contact: '+91 98200 xxxxx', email: 'aisha.m@email.com', gender: 'F', source: 'online', eventId: 'neon-nights-afrobeats', date: '2026-07-16' },
-  { id: 'marketing-karan', name: 'Karan Shah', initials: 'KS', contact: '+91 99870 xxxxx', email: 'karan.s@email.com', gender: 'M', source: 'online', eventId: 'bollywood-brunch', date: '2026-08-15' },
-  { id: 'marketing-devansh', name: 'Devansh Iyer', initials: 'DI', contact: '+91 90210 xxxxx', email: 'devansh.i@email.com', gender: 'M', source: 'online', eventId: 'warehouse-rave', date: '2026-08-09' },
-  { id: 'marketing-priya', name: 'Priya Kapoor', initials: 'PK', contact: '+91 98765 xxxxx', email: 'priya.s@email.com', gender: 'F', source: 'walkin', eventId: 'neon-nights-afrobeats', date: '2026-07-16' },
-  { id: 'marketing-nikhil', name: 'Nikhil Verma', initials: 'NV', contact: '+91 97654 xxxxx', email: 'nikhil.v@email.com', gender: 'M', source: 'online', eventId: 'sunset-sessions-vol-4', date: '2026-08-02' },
-  { id: 'marketing-sara', name: 'Sara D’Souza', initials: 'SD', contact: '+91 91234 xxxxx', email: 'sara.d@email.com', gender: 'F', source: 'walkin', eventId: 'sunset-sessions-vol-4', date: '2026-08-02' },
+  {
+    id: 'marketing-aisha',
+    name: 'Aisha Menon',
+    initials: 'AM',
+    contact: '+91 98200 xxxxx',
+    email: 'aisha.m@email.com',
+    gender: 'F',
+    source: 'online',
+    eventId: 'neon-nights-afrobeats',
+    date: '2026-07-16',
+  },
+  {
+    id: 'marketing-karan',
+    name: 'Karan Shah',
+    initials: 'KS',
+    contact: '+91 99870 xxxxx',
+    email: 'karan.s@email.com',
+    gender: 'M',
+    source: 'online',
+    eventId: 'bollywood-brunch',
+    date: '2026-08-15',
+  },
+  {
+    id: 'marketing-devansh',
+    name: 'Devansh Iyer',
+    initials: 'DI',
+    contact: '+91 90210 xxxxx',
+    email: 'devansh.i@email.com',
+    gender: 'M',
+    source: 'online',
+    eventId: 'warehouse-rave',
+    date: '2026-08-09',
+  },
+  {
+    id: 'marketing-priya',
+    name: 'Priya Kapoor',
+    initials: 'PK',
+    contact: '+91 98765 xxxxx',
+    email: 'priya.s@email.com',
+    gender: 'F',
+    source: 'walkin',
+    eventId: 'neon-nights-afrobeats',
+    date: '2026-07-16',
+  },
+  {
+    id: 'marketing-nikhil',
+    name: 'Nikhil Verma',
+    initials: 'NV',
+    contact: '+91 97654 xxxxx',
+    email: 'nikhil.v@email.com',
+    gender: 'M',
+    source: 'online',
+    eventId: 'sunset-sessions-vol-4',
+    date: '2026-08-02',
+  },
+  {
+    id: 'marketing-sara',
+    name: 'Sara D’Souza',
+    initials: 'SD',
+    contact: '+91 91234 xxxxx',
+    email: 'sara.d@email.com',
+    gender: 'F',
+    source: 'walkin',
+    eventId: 'sunset-sessions-vol-4',
+    date: '2026-08-02',
+  },
 ];
 
 const marketingCampaigns: readonly MarketingCampaign[] = [
-  { id: 'campaign-neon-last-call', title: 'Neon Nights — last call for tickets', meta: 'Sent Jul 14 · Neon Nights guests', channel: 'sms', status: 'sent', eventId: 'neon-nights-afrobeats', audienceLabel: 'Neon Nights guests', sent: 2140, read: 1880, clicked: 642 },
-  { id: 'campaign-sunset-announcement', title: 'Sunset Sessions announcement', meta: 'Sent Jul 8 · All guests', channel: 'whatsapp', status: 'sent', audienceLabel: 'All guests', sent: 8420, read: 7190, clicked: 2310 },
-  { id: 'campaign-monsoon-thanks', title: 'Thank you for coming!', meta: 'Sent Jun 30 · Monsoon Sessions guests', channel: 'email', status: 'sent', eventId: 'monsoon-sessions', audienceLabel: 'Monsoon Sessions guests', sent: 1960, read: 1120, clicked: 488 },
-  { id: 'campaign-vip-tables', title: 'Early-bird VIP tables open', meta: 'Scheduled Jul 22 · VIP guests', channel: 'push', status: 'scheduled', audienceLabel: 'VIP guests', sent: 640, read: 590, clicked: 214 },
+  {
+    id: 'campaign-neon-last-call',
+    title: 'Neon Nights — last call for tickets',
+    meta: 'Sent Jul 14 · Neon Nights guests',
+    channel: 'sms',
+    status: 'sent',
+    eventId: 'neon-nights-afrobeats',
+    audienceLabel: 'Neon Nights guests',
+    sent: 2140,
+    read: 1880,
+    clicked: 642,
+  },
+  {
+    id: 'campaign-sunset-announcement',
+    title: 'Sunset Sessions announcement',
+    meta: 'Sent Jul 8 · All guests',
+    channel: 'whatsapp',
+    status: 'sent',
+    audienceLabel: 'All guests',
+    sent: 8420,
+    read: 7190,
+    clicked: 2310,
+  },
+  {
+    id: 'campaign-monsoon-thanks',
+    title: 'Thank you for coming!',
+    meta: 'Sent Jun 30 · Monsoon Sessions guests',
+    channel: 'email',
+    status: 'sent',
+    eventId: 'monsoon-sessions',
+    audienceLabel: 'Monsoon Sessions guests',
+    sent: 1960,
+    read: 1120,
+    clicked: 488,
+  },
+  {
+    id: 'campaign-vip-tables',
+    title: 'Early-bird VIP tables open',
+    meta: 'Scheduled Jul 22 · VIP guests',
+    channel: 'push',
+    status: 'scheduled',
+    audienceLabel: 'VIP guests',
+    sent: 640,
+    read: 590,
+    clicked: 214,
+  },
 ];
 
 const marketingTemplates: readonly MarketingTemplate[] = [
-  { id: 'template-announcement', name: 'Event announcement', channel: 'whatsapp', preview: 'Hey {name}! We just dropped a new night you won’t want to miss. Grab early-bird tickets before they’re gone 🔥' },
-  { id: 'template-last-call', name: 'Last-call reminder', channel: 'sms', preview: 'Only a few tickets left for tonight, {name}. Doors at 9PM — tap the link to lock yours in.' },
-  { id: 'template-thank-you', name: 'Thank-you note', channel: 'email', preview: 'Thanks for coming out, {name}! Here’s 15% off your next night with us. See you on the dancefloor soon.' },
+  {
+    id: 'template-announcement',
+    name: 'Event announcement',
+    channel: 'whatsapp',
+    preview:
+      'Hey {name}! We just dropped a new night you won’t want to miss. Grab early-bird tickets before they’re gone 🔥',
+  },
+  {
+    id: 'template-last-call',
+    name: 'Last-call reminder',
+    channel: 'sms',
+    preview:
+      'Only a few tickets left for tonight, {name}. Doors at 9PM — tap the link to lock yours in.',
+  },
+  {
+    id: 'template-thank-you',
+    name: 'Thank-you note',
+    channel: 'email',
+    preview:
+      'Thanks for coming out, {name}! Here’s 15% off your next night with us. See you on the dancefloor soon.',
+  },
 ];
 
-const makeMarketingData = (role: 'venue' | 'host', events: readonly PartnerEventRecord[]): MarketingData => ({
+const makeMarketingData = (
+  role: 'venue' | 'host',
+  events: readonly PartnerEventRecord[],
+): MarketingData => ({
   dataStatus: 'fixture',
   role,
   accent: role === 'host' ? 'lavender' : 'orange',
@@ -1092,43 +2725,80 @@ const makeMarketingData = (role: 'venue' | 'host', events: readonly PartnerEvent
   attendees: marketingAttendees,
   campaigns: marketingCampaigns,
   templates: marketingTemplates,
-  audiences: role === 'host' ? [
-    { id: 'event', label: "This event's guests", sub: 'Guests from the partnered venue event', count: '2,140' },
-    { id: 'all', label: 'All guests', sub: 'Guests from your partnered events', count: '8,420' },
-    { id: 'custom', label: 'Custom filter', sub: 'VIP · Repeat · New — pick your own', count: 'Select…' },
-  ] : [
-    { id: 'event', label: "This event's guests", sub: 'Neon Nights: Afrobeats Edition', count: '2,140' },
-    { id: 'all', label: 'All guests', sub: 'Everyone who has ever attended', count: '8,420' },
-    { id: 'custom', label: 'Custom filter', sub: 'VIP · Repeat · New — pick your own', count: 'Select…' },
-  ],
-  defaultMessage: 'Hi {{name}}, doors open at 9PM tonight for Neon Nights 🔥 Show this message at the door to skip the line. See you on the rooftop!',
+  audiences:
+    role === 'host'
+      ? [
+          {
+            id: 'event',
+            label: "This event's guests",
+            sub: 'Guests from the partnered venue event',
+            count: '2,140',
+          },
+          {
+            id: 'all',
+            label: 'All guests',
+            sub: 'Guests from your partnered events',
+            count: '8,420',
+          },
+          {
+            id: 'custom',
+            label: 'Custom filter',
+            sub: 'VIP · Repeat · New — pick your own',
+            count: 'Select…',
+          },
+        ]
+      : [
+          {
+            id: 'event',
+            label: "This event's guests",
+            sub: 'Neon Nights: Afrobeats Edition',
+            count: '2,140',
+          },
+          { id: 'all', label: 'All guests', sub: 'Everyone who has ever attended', count: '8,420' },
+          {
+            id: 'custom',
+            label: 'Custom filter',
+            sub: 'VIP · Repeat · New — pick your own',
+            count: 'Select…',
+          },
+        ],
+  defaultMessage:
+    'Hi {{name}}, doors open at 9PM tonight for Neon Nights 🔥 Show this message at the door to skip the line. See you on the rooftop!',
   defaultEventId: events[0]?.id ?? '',
 });
 
 const venueMarketingData = makeMarketingData('venue', venueEvents);
 const hostMarketingData = makeMarketingData('host', hostEvents);
 
-const makeEventSearchResults = (role: 'venue' | 'host', events: readonly PartnerEventRecord[]): readonly PartnerSearchResult[] => events.map((event) => ({
-  id: `${role}-search-event-${event.id}`,
-  type: 'event',
-  group: 'Events',
-  title: event.name,
-  subtitle: `${event.dateLabel} · ${event.venue}`,
-  href: `/partner/${role}/events/${event.id}`,
-  icon: 'event',
-  keywords: [event.name, event.tag, event.venue, event.host],
-}));
+const makeEventSearchResults = (
+  role: 'venue' | 'host',
+  events: readonly PartnerEventRecord[],
+): readonly PartnerSearchResult[] =>
+  events.map((event) => ({
+    id: `${role}-search-event-${event.id}`,
+    type: 'event',
+    group: 'Events',
+    title: event.name,
+    subtitle: `${event.dateLabel} · ${event.venue}`,
+    href: `/partner/${role}/events/${event.id}`,
+    icon: 'event',
+    keywords: [event.name, event.tag, event.venue, event.host],
+  }));
 
-const makePartnerSearchResults = (role: StudioRole, partners: readonly { readonly id: string; readonly name: string; readonly role: string }[]): readonly PartnerSearchResult[] => partners.map((partner) => ({
-  id: `${role}-search-partner-${partner.id}`,
-  type: 'partner',
-  group: 'Partners',
-  title: partner.name,
-  subtitle: partner.role,
-  href: `/partner/${role}/partners?profile=${partner.id}`,
-  icon: 'partner',
-  keywords: [partner.name, partner.role],
-}));
+const makePartnerSearchResults = (
+  role: StudioRole,
+  partners: readonly { readonly id: string; readonly name: string; readonly role: string }[],
+): readonly PartnerSearchResult[] =>
+  partners.map((partner) => ({
+    id: `${role}-search-partner-${partner.id}`,
+    type: 'partner',
+    group: 'Partners',
+    title: partner.name,
+    subtitle: partner.role,
+    href: `/partner/${role}/partners?profile=${partner.id}`,
+    icon: 'partner',
+    keywords: [partner.name, partner.role],
+  }));
 
 const venueSearchData: PartnerSearchData = {
   dataStatus: 'fixture',
@@ -1139,9 +2809,36 @@ const venueSearchData: PartnerSearchData = {
       ...venuePartnersData.promoters.connected,
       ...venuePartnersData.staff,
     ]),
-    { id: 'venue-search-requests', type: 'request', group: 'Requests', title: 'Slot requests', subtitle: 'Review incoming event requests', href: '/partner/venue/slot-requests', icon: 'request', keywords: ['slot', 'request', 'requests'] },
-    { id: 'venue-search-finance', type: 'finance', group: 'Finance', title: 'Finance', subtitle: 'Payouts, orders and bank details', href: '/partner/venue/finance', icon: 'finance', keywords: ['finance', 'payout', 'orders', 'bank'] },
-    { id: 'venue-search-settings', type: 'settings', group: 'Settings', title: 'Settings', subtitle: 'Presence, menu and account', href: '/partner/venue/settings', icon: 'settings', keywords: ['settings', 'account', 'menu'] },
+    {
+      id: 'venue-search-requests',
+      type: 'request',
+      group: 'Requests',
+      title: 'Slot requests',
+      subtitle: 'Review incoming event requests',
+      href: '/partner/venue/slot-requests',
+      icon: 'request',
+      keywords: ['slot', 'request', 'requests'],
+    },
+    {
+      id: 'venue-search-finance',
+      type: 'finance',
+      group: 'Finance',
+      title: 'Finance',
+      subtitle: 'Payouts, orders and bank details',
+      href: '/partner/venue/finance',
+      icon: 'finance',
+      keywords: ['finance', 'payout', 'orders', 'bank'],
+    },
+    {
+      id: 'venue-search-settings',
+      type: 'settings',
+      group: 'Settings',
+      title: 'Settings',
+      subtitle: 'Presence, menu and account',
+      href: '/partner/venue/settings',
+      icon: 'settings',
+      keywords: ['settings', 'account', 'menu'],
+    },
   ],
 };
 
@@ -1153,46 +2850,168 @@ const hostSearchData: PartnerSearchData = {
       ...hostPartnersData.venues.connected,
       ...hostPartnersData.promoters.connected,
     ]),
-    { id: 'host-search-requests', type: 'request', group: 'Requests', title: 'Slot requests', subtitle: 'Review venue requests and approvals', href: '/partner/host/slot-requests', icon: 'request', keywords: ['slot', 'request', 'approval'] },
-    { id: 'host-search-finance', type: 'finance', group: 'Finance', title: 'Finance', subtitle: 'Payouts, orders and account details', href: '/partner/host/finance', icon: 'finance', keywords: ['finance', 'payout', 'orders', 'bank'] },
-    { id: 'host-search-settings', type: 'settings', group: 'Settings', title: 'Settings', subtitle: 'Presence and account', href: '/partner/host/settings', icon: 'settings', keywords: ['settings', 'account', 'presence'] },
+    {
+      id: 'host-search-requests',
+      type: 'request',
+      group: 'Requests',
+      title: 'Slot requests',
+      subtitle: 'Review venue requests and approvals',
+      href: '/partner/host/slot-requests',
+      icon: 'request',
+      keywords: ['slot', 'request', 'approval'],
+    },
+    {
+      id: 'host-search-finance',
+      type: 'finance',
+      group: 'Finance',
+      title: 'Finance',
+      subtitle: 'Payouts, orders and account details',
+      href: '/partner/host/finance',
+      icon: 'finance',
+      keywords: ['finance', 'payout', 'orders', 'bank'],
+    },
+    {
+      id: 'host-search-settings',
+      type: 'settings',
+      group: 'Settings',
+      title: 'Settings',
+      subtitle: 'Presence and account',
+      href: '/partner/host/settings',
+      icon: 'settings',
+      keywords: ['settings', 'account', 'presence'],
+    },
   ],
 };
 
 const promoterSearchData: PartnerSearchData = {
   dataStatus: 'fixture',
   results: [
-    ...promoterDiscoverEvents.map((event) => ({ id: `promoter-search-event-${event.id}`, type: 'event' as const, group: 'Events', title: event.name, subtitle: `${event.dateLabel} · ${event.venue}`, href: `/partner/promoter/events/${event.id}`, icon: 'event' as const, keywords: [event.name, event.venue, event.city] })),
-    ...promoterLinkedEvents.map((event) => ({ id: `promoter-search-linked-${event.id}`, type: 'event' as const, group: 'Linked Events', title: event.name, subtitle: `${String(event.clicks)} clicks · ${String(event.sales)} sales`, href: `/partner/promoter/events/${event.id}`, icon: 'event' as const, keywords: [event.name, event.venue, event.city, 'linked'] })),
+    ...promoterDiscoverEvents.map((event) => ({
+      id: `promoter-search-event-${event.id}`,
+      type: 'event' as const,
+      group: 'Events',
+      title: event.name,
+      subtitle: `${event.dateLabel} · ${event.venue}`,
+      href: `/partner/promoter/events/${event.id}`,
+      icon: 'event' as const,
+      keywords: [event.name, event.venue, event.city],
+    })),
+    ...promoterLinkedEvents.map((event) => ({
+      id: `promoter-search-linked-${event.id}`,
+      type: 'event' as const,
+      group: 'Linked Events',
+      title: event.name,
+      subtitle: `${String(event.clicks)} clicks · ${String(event.sales)} sales`,
+      href: `/partner/promoter/events/${event.id}`,
+      icon: 'event' as const,
+      keywords: [event.name, event.venue, event.city, 'linked'],
+    })),
     ...makePartnerSearchResults('promoter', promoterPartnersData.active),
-    { id: 'promoter-search-guests', type: 'guest', group: 'Guests', title: 'Guest Stream', subtitle: 'Attributed guests and commissions', href: '/partner/promoter/guests', icon: 'guest', keywords: ['guest', 'guests', 'ticket', 'commission'] },
-    { id: 'promoter-search-analytics', type: 'finance', group: 'Analytics', title: 'Analytics', subtitle: 'Clicks, sales and link performance', href: '/partner/promoter/analytics', icon: 'finance', keywords: ['analytics', 'clicks', 'sales', 'links'] },
-    { id: 'promoter-search-finance', type: 'finance', group: 'Finance', title: 'Finance', subtitle: 'Wallet and commission payouts', href: '/partner/promoter/finance', icon: 'finance', keywords: ['finance', 'wallet', 'earnings', 'payout'] },
+    {
+      id: 'promoter-search-guests',
+      type: 'guest',
+      group: 'Guests',
+      title: 'Guest Stream',
+      subtitle: 'Attributed guests and commissions',
+      href: '/partner/promoter/guests',
+      icon: 'guest',
+      keywords: ['guest', 'guests', 'ticket', 'commission'],
+    },
+    {
+      id: 'promoter-search-analytics',
+      type: 'finance',
+      group: 'Analytics',
+      title: 'Analytics',
+      subtitle: 'Clicks, sales and link performance',
+      href: '/partner/promoter/analytics',
+      icon: 'finance',
+      keywords: ['analytics', 'clicks', 'sales', 'links'],
+    },
+    {
+      id: 'promoter-search-finance',
+      type: 'finance',
+      group: 'Finance',
+      title: 'Finance',
+      subtitle: 'Wallet and commission payouts',
+      href: '/partner/promoter/finance',
+      icon: 'finance',
+      keywords: ['finance', 'wallet', 'earnings', 'payout'],
+    },
   ],
 };
 
 const makeNotifications = (role: 'venue' | 'host'): PartnerNotificationsData => ({
   dataStatus: 'fixture',
   notifications: [
-    { id: `${role}-notification-payout`, description: 'Payout of ₹4,86,200 is scheduled for Fri, Jul 18.', time: '12m ago', type: 'payout', icon: 'finance', href: `/partner/${role}/finance`, unread: true },
-    { id: `${role}-notification-partner`, description: 'The Docks accepted your partner invite.', time: '1h ago', type: 'request', icon: 'partner', href: `/partner/${role}/partners`, unread: true },
-    { id: `${role}-notification-marketing`, description: 'Neon Nights last-call campaign finished sending.', time: '3h ago', type: 'marketing', icon: 'marketing', href: `/partner/${role}/marketing`, unread: true },
-    { id: `${role}-notification-door`, description: '2 guests flagged at the door for Neon Nights.', time: '5h ago', type: 'operations', icon: 'operations', href: `/partner/${role}/door`, unread: false },
-    { id: `${role}-notification-request`, description: 'Zoya (Nightowl) requested to promote your next event.', time: '1d ago', type: 'request', icon: 'request', href: `/partner/${role}/slot-requests`, unread: false },
+    {
+      id: `${role}-notification-payout`,
+      description: 'Payout of ₹4,86,200 is scheduled for Fri, Jul 18.',
+      time: '12m ago',
+      type: 'payout',
+      icon: 'finance',
+      href: `/partner/${role}/finance`,
+      unread: true,
+    },
+    {
+      id: `${role}-notification-partner`,
+      description: 'The Docks accepted your partner invite.',
+      time: '1h ago',
+      type: 'request',
+      icon: 'partner',
+      href: `/partner/${role}/partners`,
+      unread: true,
+    },
+    {
+      id: `${role}-notification-marketing`,
+      description: 'Neon Nights last-call campaign finished sending.',
+      time: '3h ago',
+      type: 'marketing',
+      icon: 'marketing',
+      href: `/partner/${role}/marketing`,
+      unread: true,
+    },
+    {
+      id: `${role}-notification-door`,
+      description: '2 guests flagged at the door for Neon Nights.',
+      time: '5h ago',
+      type: 'operations',
+      icon: 'operations',
+      href: `/partner/${role}/door`,
+      unread: false,
+    },
+    {
+      id: `${role}-notification-request`,
+      description: 'Zoya (Nightowl) requested to promote your next event.',
+      time: '1d ago',
+      type: 'request',
+      icon: 'request',
+      href: `/partner/${role}/slot-requests`,
+      unread: false,
+    },
   ],
 });
 
-const promoterNotificationsData: PartnerNotificationsData = { dataStatus: 'fixture', notifications: [] };
-
-const makeShellInteractionData = (role: 'venue' | 'host' | 'promoter'): PartnerShellInteractionData => ({
+const promoterNotificationsData: PartnerNotificationsData = {
   dataStatus: 'fixture',
-  search: role === 'venue' ? venueSearchData : role === 'host' ? hostSearchData : promoterSearchData,
+  notifications: [],
+};
+
+const makeShellInteractionData = (
+  role: 'venue' | 'host' | 'promoter',
+): PartnerShellInteractionData => ({
+  dataStatus: 'fixture',
+  search:
+    role === 'venue' ? venueSearchData : role === 'host' ? hostSearchData : promoterSearchData,
   notifications: role === 'promoter' ? promoterNotificationsData : makeNotifications(role),
 });
 
 export const fixturePartnerDataSource: PartnerDataSource = {
   getStudioShell(role) {
-    return Promise.resolve({ ...shellData, role, displayName: `${role.charAt(0).toUpperCase()}${role.slice(1)} Studio` });
+    return Promise.resolve({
+      ...shellData,
+      role,
+      displayName: `${role.charAt(0).toUpperCase()}${role.slice(1)} Studio`,
+    });
   },
   getVenueOverview() {
     return Promise.resolve(venueOverviewData);

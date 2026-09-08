@@ -12,14 +12,25 @@ describe('VenuePartnersScreen', () => {
 
     expect(screen.getByRole('heading', { name: 'Partners' })).toBeInTheDocument();
     expect(screen.getByText('Kabir M. (Sunday Sessions)')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Promoters' })).toHaveAttribute('href', '/partner/venue/partners?tab=promoters');
-    expect(screen.getByRole('link', { name: 'Discover' })).toHaveAttribute('href', '/partner/venue/partners?view=discover');
-    expect(screen.getAllByRole('link', { name: /View profile/ })[0]).toHaveAttribute('href', '/partner/venue/partners?profile=kabir-sunday-sessions');
+    expect(screen.getByRole('link', { name: 'Promoters' })).toHaveAttribute(
+      'href',
+      '/partner/venue/partners?tab=promoters',
+    );
+    expect(screen.getByRole('link', { name: 'Discover' })).toHaveAttribute(
+      'href',
+      '/partner/venue/partners?view=discover',
+    );
+    expect(screen.getAllByRole('link', { name: /View profile/ })[0]).toHaveAttribute(
+      'href',
+      '/partner/venue/partners?profile=kabir-sunday-sessions',
+    );
   });
 
   it('renders requests, staff access, and fixture-safe staff invitation entry', async () => {
     const data = await fixturePartnerDataSource.getVenuePartners();
-    const { rerender } = render(<VenuePartnersScreen data={data} segment="promoters" subView="requests" />);
+    const { rerender } = render(
+      <VenuePartnersScreen data={data} segment="promoters" subView="requests" />,
+    );
 
     expect(screen.getByText('Rhea (Afterglow)')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Accept' })).toBeDisabled();

@@ -21,7 +21,12 @@ export default async function HostFinanceOrdersPage() {
         createdAt: order.createdAt,
         ticketCount: order.ticketCount,
         total: formatInr(order.amountPaise),
-        status: order.status === 'confirmed' ? 'Confirmed' : order.status === 'refunded' ? 'Refunded' : 'Pending',
+        status:
+          order.status === 'confirmed'
+            ? 'Confirmed'
+            : order.status === 'refunded'
+              ? 'Refunded'
+              : 'Pending',
       }))}
     />
   );

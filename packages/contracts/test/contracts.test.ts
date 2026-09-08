@@ -24,9 +24,9 @@ describe('@c1rcle/contracts (generated mirror)', () => {
       },
       accessToken: 'tok',
     };
-    expect(authBridgeResponseSchema.safeParse({ ...base, expiresAt: 1_800_000_000_000 }).success).toBe(
-      true,
-    );
+    expect(
+      authBridgeResponseSchema.safeParse({ ...base, expiresAt: 1_800_000_000_000 }).success,
+    ).toBe(true);
     expect(
       authBridgeResponseSchema.safeParse({ ...base, expiresAt: '2026-08-29T00:00:00Z' }).success,
     ).toBe(false);

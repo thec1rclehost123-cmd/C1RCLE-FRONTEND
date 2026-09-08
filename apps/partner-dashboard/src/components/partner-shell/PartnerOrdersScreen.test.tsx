@@ -71,7 +71,10 @@ describe('PartnerOrdersScreen', () => {
     expect(screen.queryByText('Bassline Nights')).not.toBeInTheDocument();
 
     await user.clear(screen.getByRole('searchbox', { name: 'Search orders' }));
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Filter by status' }), 'Refunded');
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Filter by status' }),
+      'Refunded',
+    );
     expect(screen.getByText('Bassline Nights')).toBeInTheDocument();
     expect(screen.queryByText('Neon Nights')).not.toBeInTheDocument();
   });

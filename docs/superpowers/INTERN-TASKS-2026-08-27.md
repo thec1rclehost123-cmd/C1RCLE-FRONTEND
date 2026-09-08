@@ -1,6 +1,7 @@
 # Intern Tasks — Frontend ↔ API-Gateway Connection (partner-dashboard)
 
 **Read before starting:**
+
 - `docs/superpowers/specs/2026-08-27-frontend-gateway-auth-foundation-design.md` — the design.
 - `docs/superpowers/plans/2026-08-27-auth-foundation-plan.md` — the phased plan. **Phase 0 (Allowed APIs) is your API reference. Do not call any endpoint not listed there.**
 - `docs/superpowers/HANDOFF-2026-08-27-auth-foundation.md` — §6 (knowledge base), §7 (do's/don'ts). Read §6.5, §6.6, §6.7 in full.
@@ -28,9 +29,10 @@ backend.
 
 Each track = one branch off `staging`, one intern, one PR. **File ownership is strict — if you need a file outside your list, ask the lead, do not just edit it.**
 
-### Track 1 — Auth package + BFF  (plan Phases 3 + 4)
+### Track 1 — Auth package + BFF (plan Phases 3 + 4)
 
 **Owns:**
+
 - `packages/auth/**` — rebuild from the current source-consumed stub into a compiled react-library (copy `packages/hooks` scaffolding). Three modules:
   - `src/session-store.ts` — in-memory `{ session, accessToken, expiresAt, status }` via the **hand-rolled `useSyncExternalStore` pattern** (copy `packages/auth/index.ts:1-94`). `getAccessToken()` (plain fn, the TokenProvider), `setSession`, `clearSession`, `markAnonymous`, `useSession`.
   - `src/auth-client.ts` — `signup` / `login` / `refresh` / `logout` / `fetchSession`, each via `createApiClient()` against the **BFF paths** (`/api/auth/*`, same-origin, `credentials: 'include'`). Validate bodies against `signupRequestSchema` / `loginRequestSchema` first. Refresh-stampede guard (one in-flight promise). `login` failure → fixed generic message.
@@ -45,9 +47,10 @@ Each track = one branch off `staging`, one intern, one PR. **File ownership is s
 
 **Gate:** `pnpm --filter @c1rcle/auth {build,test,typecheck}` green; `pnpm --filter partner-dashboard test -- src/app/api/auth` green; `pnpm --filter guest-portal typecheck` + `pnpm --filter admin-console typecheck` still green (they consume `@c1rcle/auth`).
 
-### Track 2 — App shell + integration  (plan Phase 5 + Phase 8 CSP)
+### Track 2 — App shell + integration (plan Phase 5 + Phase 8 CSP)
 
 **Owns:**
+
 - `apps/partner-dashboard/src/proxy.ts` — **NOT `middleware.ts`** (Next 16 renamed it). Per-request CSP nonce (copy the pattern in `node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md:34-133`); CSP directives per spec §11.3 (`connect-src 'self' <NEXT_PUBLIC_API_BASE_URL>`, `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`). Auth redirect: on `/venue|/host|/promoter|/onboard|/partner|/partner-network`, if the session cookie is **absent** → `redirect('/login?next=…')`. File header: "UX redirect only — real auth is per-request at the gateway."
 - `apps/partner-dashboard/next.config.ts` — add `Strict-Transport-Security: max-age=31536000; includeSubDomains`; keep the existing 4 headers; **no CSP here** (it's in `proxy.ts`). Confirm no duplicate CSP header.
 - `apps/partner-dashboard/src/components/providers/session-provider.tsx` — `'use client'`, thin. Props `initialUser` from `getServerSession()`. On mount: hydrate + one `auth.refresh()` to get the in-memory token. 30-min idle timer → `auth.logout()` + `/login`. Focus-refresh when `expiresAt` near.
@@ -65,9 +68,10 @@ Each track = one branch off `staging`, one intern, one PR. **File ownership is s
 
 **Gate:** `pnpm --filter partner-dashboard {build,test,typecheck}` green; `pnpm --filter @c1rcle/eslint-config build` green; `pnpm boundaries` green; manual: `/venue` with no cookie → redirect to `/login`; response has a `Content-Security-Policy` header with a `nonce-`.
 
-### Track 3 — Screens + mock teardown  (plan Phases 6 + 7)
+### Track 3 — Screens + mock teardown (plan Phases 6 + 7)
 
 **Owns:**
+
 - `apps/partner-dashboard/src/app/login/**` — rebuild `LoginForm` on `auth.login()`. Remove Google / `signInWithPopup` / `signInWithCustomToken` / workspace-type picker. Generic error on 401; field errors on 422.
 - `apps/partner-dashboard/src/app/signup/**` — **new route.** `SignupForm` on `auth.signup({ displayName, email, password })` → `/onboard`. `password` min 8, no `role` field.
 - `apps/partner-dashboard/src/app/onboard/**` — rebuild the wizard to the V2-reduced flow (spec §10, handoff §6.6):
@@ -94,6 +98,7 @@ Each track = one branch off `staging`, one intern, one PR. **File ownership is s
 ## Shared DO / DON'T (all three tracks)
 
 ### DO
+
 - Branch off `staging`. Small commits. PR back to `staging`. Rebase, don't merge-commit.
 - `pnpm --filter <your-package> {test,typecheck,lint}` **and** `pnpm boundaries` green before every commit.
 - Import wire types/schemas **only** from `@c1rcle/contracts`. Network **only** via `@c1rcle/api-client`. Env **only** via `@c1rcle/config`.
@@ -106,6 +111,7 @@ Each track = one branch off `staging`, one intern, one PR. **File ownership is s
 - Ask the lead before editing any file outside your track's ownership list.
 
 ### DON'T
+
 - **No `C1RCLE-BACKEND` / `thec1rcle` edits. Ever.** Not "to make it easier", not "just a small fix". Hand backend needs to the backend lead.
 - No `middleware.ts` — it's `proxy.ts` in Next 16.
 - No `zustand` — it is not installed. Use the hand-rolled `useSyncExternalStore` pattern.

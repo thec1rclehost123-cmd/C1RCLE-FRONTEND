@@ -38,12 +38,17 @@ describe('PartnerEventEditor', () => {
     await user.type(screen.getByLabelText('Event name'), 'Test night');
     const availableDate = availability.months[0]?.days.find((day) => day.state === 'available');
     expect(availableDate).toBeDefined();
-    if (availableDate) await user.click(screen.getByRole('button', { name: String(availableDate.day) }));
+    if (availableDate)
+      await user.click(screen.getByRole('button', { name: String(availableDate.day) }));
     await user.click(screen.getByRole('button', { name: 'Continue' }));
-    expect(push).toHaveBeenLastCalledWith('/partner/venue/events/create?step=promoters', { scroll: false });
+    expect(push).toHaveBeenLastCalledWith('/partner/venue/events/create?step=promoters', {
+      scroll: false,
+    });
 
     await user.click(screen.getByRole('button', { name: 'Continue' }));
-    expect(push).toHaveBeenLastCalledWith('/partner/venue/events/create?step=review', { scroll: false });
+    expect(push).toHaveBeenLastCalledWith('/partner/venue/events/create?step=review', {
+      scroll: false,
+    });
     expect(screen.getByText(/publishing is unavailable/i)).toBeInTheDocument();
   });
 
@@ -51,14 +56,26 @@ describe('PartnerEventEditor', () => {
     const user = userEvent.setup();
     const data = await fixturePartnerDataSource.getHostEventEditor();
     const availability = await fixturePartnerDataSource.getHostAvailability();
-    render(<PartnerEventEditor data={data} availability={availability} mode="create" initialVenueId="skyline-rooftop" initialDate="2026-07-18" initialStep="venue" />);
+    render(
+      <PartnerEventEditor
+        data={data}
+        availability={availability}
+        mode="create"
+        initialVenueId="skyline-rooftop"
+        initialDate="2026-07-18"
+        initialStep="venue"
+      />,
+    );
 
     expect(screen.getByText('Choose a venue')).toBeInTheDocument();
     expect(screen.queryByText('Block date')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /8:00 PM – 11:00 PM/ }));
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     expect(screen.getByRole('alert')).toHaveTextContent('Add an event name.');
-    expect(push).not.toHaveBeenCalledWith(expect.stringContaining('step=basics'), expect.anything());
+    expect(push).not.toHaveBeenCalledWith(
+      expect.stringContaining('step=basics'),
+      expect.anything(),
+    );
   });
 
   it('opens Guest portal and Mobile app preview choices from the live preview', async () => {

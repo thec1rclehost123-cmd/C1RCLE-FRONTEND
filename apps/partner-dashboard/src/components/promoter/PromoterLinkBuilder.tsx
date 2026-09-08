@@ -9,7 +9,10 @@ import type { PromoterEventLinkRow } from './PromoterLinksTable';
 
 const channels = ['Instagram', 'WhatsApp', 'Bio', 'Direct'] as const;
 
-export function PromoterLinkBuilder({ events, links }: {
+export function PromoterLinkBuilder({
+  events,
+  links,
+}: {
   readonly events: readonly PromoterEvent[];
   readonly links: readonly PromoterEventLinkRow[];
 }) {
@@ -29,21 +32,50 @@ export function PromoterLinkBuilder({ events, links }: {
       <div className="promoter-link-form">
         <label>
           <span>Event</span>
-          <select value={eventId} onChange={(event) => { setEventId(event.target.value); setSelected(null); }}>
-            {events.map((event) => <option key={event.id} value={event.id}>{event.name}</option>)}
+          <select
+            value={eventId}
+            onChange={(event) => {
+              setEventId(event.target.value);
+              setSelected(null);
+            }}
+          >
+            {events.map((event) => (
+              <option key={event.id} value={event.id}>
+                {event.name}
+              </option>
+            ))}
           </select>
         </label>
         <label>
           <span>Source</span>
-          <select value={channel} onChange={(event) => setChannel(event.target.value as (typeof channels)[number])}>
-            {channels.map((item) => <option key={item}>{item}</option>)}
+          <select
+            value={channel}
+            onChange={(event) => setChannel(event.target.value as (typeof channels)[number])}
+          >
+            {channels.map((item) => (
+              <option key={item}>{item}</option>
+            ))}
           </select>
         </label>
         <label>
-          <span>Campaign label <small>Optional</small></span>
-          <input value={label} onChange={(event) => setLabel(event.target.value)} maxLength={40} placeholder="e.g. August story" />
+          <span>
+            Campaign label <small>Optional</small>
+          </span>
+          <input
+            value={label}
+            onChange={(event) => setLabel(event.target.value)}
+            maxLength={40}
+            placeholder="e.g. August story"
+          />
         </label>
-        <button type="button" onClick={() => setSelected(selectedLink)} disabled={!selectedLink} title={!selectedLink ? 'No permanent tracked link is available for this event.' : undefined}>
+        <button
+          type="button"
+          onClick={() => setSelected(selectedLink)}
+          disabled={!selectedLink}
+          title={
+            !selectedLink ? 'No permanent tracked link is available for this event.' : undefined
+          }
+        >
           Get link
         </button>
       </div>
@@ -53,11 +85,16 @@ export function PromoterLinkBuilder({ events, links }: {
             <span>{selected.eventName}</span>
             <strong>Permanent tracked link</strong>
             <code>{selected.shortUrl}</code>
-            <small>{channel}{label.trim() ? ` · ${label.trim()}` : ''} · one link for this event</small>
+            <small>
+              {channel}
+              {label.trim() ? ` · ${label.trim()}` : ''} · one link for this event
+            </small>
           </div>
           <div className="promoter-link-result-actions">
             <CopyLinkButton value={`https://${selected.shortUrl}`} label="Copy" />
-            <a href={`https://${selected.shortUrl}`} target="_blank" rel="noreferrer">View</a>
+            <a href={`https://${selected.shortUrl}`} target="_blank" rel="noreferrer">
+              View
+            </a>
           </div>
         </div>
       ) : null}

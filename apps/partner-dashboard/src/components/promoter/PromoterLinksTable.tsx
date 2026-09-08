@@ -45,7 +45,9 @@ export function PromoterLinksTable({ rows }: { readonly rows: readonly PromoterE
                 <th scope="col">Tickets</th>
                 <th scope="col">Clicks</th>
                 <th scope="col">Conversion</th>
-                <th scope="col"><span className={styles['srOnly']}>Actions</span></th>
+                <th scope="col">
+                  <span className={styles['srOnly']}>Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -68,23 +70,35 @@ export function PromoterLinksTable({ rows }: { readonly rows: readonly PromoterE
                           <span className="promoter-link-breakdown">
                             {row.sources.map((source) => (
                               <span key={`${row.eventId}-${source.channel}-${source.label}`}>
-                                {source.channel} · {source.label} · {source.clicks.toLocaleString('en-IN')} clicks · {source.purchases} tickets
+                                {source.channel} · {source.label} ·{' '}
+                                {source.clicks.toLocaleString('en-IN')} clicks · {source.purchases}{' '}
+                                tickets
                               </span>
                             ))}
                           </span>
                         </details>
                       ) : row.sources[0] ? (
-                        <small>{row.sources[0].channel} · {row.sources[0].label}</small>
+                        <small>
+                          {row.sources[0].channel} · {row.sources[0].label}
+                        </small>
                       ) : null}
                     </span>
                   </td>
                   <td data-label="Tickets">{row.purchases.toLocaleString('en-IN')}</td>
                   <td data-label="Clicks">{row.clicks.toLocaleString('en-IN')}</td>
-                  <td data-label="Conversion">{row.clicks ? `${((row.purchases / row.clicks) * 100).toFixed(1)}%` : '0.0%'}</td>
+                  <td data-label="Conversion">
+                    {row.clicks ? `${((row.purchases / row.clicks) * 100).toFixed(1)}%` : '0.0%'}
+                  </td>
                   <td className={styles['rowActions']}>
                     <span className="promoter-link-actions">
                       <CopyLinkButton value={`https://${row.shortUrl}`} label="Copy" />
-                      <a href={`https://${row.shortUrl}`} target="_blank" rel="noreferrer" aria-label={`Open ${row.eventName} link`} title="Open link">
+                      <a
+                        href={`https://${row.shortUrl}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label={`Open ${row.eventName} link`}
+                        title="Open link"
+                      >
                         <ExternalLinkIcon size={17} aria-hidden="true" />
                       </a>
                     </span>

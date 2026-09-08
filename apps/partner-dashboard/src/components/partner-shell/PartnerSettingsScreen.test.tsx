@@ -8,8 +8,17 @@ import { PartnerSettingsScreen } from './PartnerSettingsScreen';
 import type { ReactNode } from 'react';
 
 vi.mock('next/link', () => ({
-  default: ({ children, href, ...props }: { readonly children: ReactNode; readonly href: string }) => (
-    <a href={href} {...props}>{children}</a>
+  default: ({
+    children,
+    href,
+    ...props
+  }: {
+    readonly children: ReactNode;
+    readonly href: string;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
   ),
 }));
 

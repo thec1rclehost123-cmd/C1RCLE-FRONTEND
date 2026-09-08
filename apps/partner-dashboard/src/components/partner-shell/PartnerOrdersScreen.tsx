@@ -90,7 +90,9 @@ export function PartnerOrdersScreen({
             <label className={styles['statusFilter']}>
               <span className={styles['srOnly']}>Filter by status</span>
               <select value={status} onChange={(event) => setStatus(event.target.value)}>
-                {statusOptions.map((option) => <option key={option}>{option}</option>)}
+                {statusOptions.map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
               </select>
             </label>
           </div>
@@ -113,7 +115,9 @@ export function PartnerOrdersScreen({
                   <th scope="col">Tickets</th>
                   <th scope="col">{kind === 'promoter' ? 'Attributed earnings' : 'Total'}</th>
                   <th scope="col">Status</th>
-                  <th scope="col"><span className={styles['srOnly']}>Actions</span></th>
+                  <th scope="col">
+                    <span className={styles['srOnly']}>Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>

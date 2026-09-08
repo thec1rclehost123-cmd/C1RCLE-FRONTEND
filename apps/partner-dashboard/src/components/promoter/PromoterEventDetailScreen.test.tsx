@@ -5,7 +5,6 @@ import { PromoterEventDetailScreen } from './PromoterEventDetailScreen';
 
 import type { ReactNode } from 'react';
 
-
 vi.mock('next/image', () => ({
   default: () => <span aria-hidden="true" />,
 }));
@@ -15,8 +14,17 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('next/link', () => ({
-  default: ({ children, href, ...props }: { readonly children: ReactNode; readonly href: string }) => (
-    <a href={href} {...props}>{children}</a>
+  default: ({
+    children,
+    href,
+    ...props
+  }: {
+    readonly children: ReactNode;
+    readonly href: string;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
   ),
 }));
 
@@ -50,18 +58,20 @@ describe('PromoterEventDetailScreen', () => {
         event={event}
         activeTab="links"
         orders={[]}
-        links={[{
-          id: 'lnk-neon',
-          eventId: 'neon-nights',
-          eventName: 'Neon Nights',
-          channel: 'Instagram',
-          label: 'Main story',
-          shortUrl: 'c1rcle.in/zoya/neon',
-          status: 'active',
-          clicks: 1184,
-          purchases: 42,
-          earningsPaise: 756000,
-        }]}
+        links={[
+          {
+            id: 'lnk-neon',
+            eventId: 'neon-nights',
+            eventName: 'Neon Nights',
+            channel: 'Instagram',
+            label: 'Main story',
+            shortUrl: 'c1rcle.in/zoya/neon',
+            status: 'active',
+            clicks: 1184,
+            purchases: 42,
+            earningsPaise: 756000,
+          },
+        ]}
       />,
     );
 
@@ -70,7 +80,9 @@ describe('PromoterEventDetailScreen', () => {
       '/promoter/events/neon-nights?tab=links',
     );
     expect(screen.getAllByRole('button', { name: 'Copy link' })).toHaveLength(2);
-    expect(screen.queryByRole('link', { name: /open door mode|edit event/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /open door mode|edit event/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('uses an honest Links route when no permanent link exists', () => {

@@ -181,9 +181,7 @@ describe('ApiClient', () => {
     try {
       const fetchImpl = vi
         .fn<typeof fetch>()
-        .mockResolvedValueOnce(
-          new Response('{}', { status: 429, headers: { 'retry-after': '2' } }),
-        )
+        .mockResolvedValueOnce(new Response('{}', { status: 429, headers: { 'retry-after': '2' } }))
         .mockResolvedValueOnce(jsonResponse({ id: 'a' }));
 
       const promise = clientWith(fetchImpl, { maxRetries: 1 }).get({ path: '/users', schema });

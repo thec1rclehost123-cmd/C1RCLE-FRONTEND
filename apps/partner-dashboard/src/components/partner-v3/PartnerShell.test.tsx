@@ -26,9 +26,13 @@ describe('PartnerShell navigation layouts', () => {
     Object.defineProperty(window, 'localStorage', {
       configurable: true,
       value: {
-        clear: () => { storedValues.clear(); },
+        clear: () => {
+          storedValues.clear();
+        },
         getItem: (key: string) => storedValues.get(key) ?? null,
-        setItem: (key: string, value: string) => { storedValues.set(key, value); },
+        setItem: (key: string, value: string) => {
+          storedValues.set(key, value);
+        },
       },
     });
   });
@@ -42,18 +46,31 @@ describe('PartnerShell navigation layouts', () => {
     const user = userEvent.setup();
     const interactionData = await fixturePartnerDataSource.getPartnerShellInteractions('venue');
 
-    render(<PartnerShell studio="venue" interactionData={interactionData}><div>Overview content</div></PartnerShell>);
+    render(
+      <PartnerShell studio="venue" interactionData={interactionData}>
+        <div>Overview content</div>
+      </PartnerShell>,
+    );
 
-    expect(screen.getByRole('complementary', { name: 'Venue Studio navigation' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('complementary', { name: 'Venue Studio navigation' }),
+    ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Top navigation' }));
 
-    expect(screen.queryByRole('complementary', { name: 'Venue Studio navigation' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('complementary', { name: 'Venue Studio navigation' }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Venue Studio navigation' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Use side navigation' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Use side navigation' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     expect(window.localStorage.getItem('c1rcle.partner.navigation-layout')).toBe('top');
 
     await user.click(screen.getByRole('button', { name: 'Use side navigation' }));
-    expect(screen.getByRole('complementary', { name: 'Venue Studio navigation' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('complementary', { name: 'Venue Studio navigation' }),
+    ).toBeInTheDocument();
     expect(window.localStorage.getItem('c1rcle.partner.navigation-layout')).toBe('side');
   });
 
@@ -62,10 +79,16 @@ describe('PartnerShell navigation layouts', () => {
     window.localStorage.setItem('c1rcle.partner.navigation-layout', 'top');
     const interactionData = await fixturePartnerDataSource.getPartnerShellInteractions('host');
 
-    render(<PartnerShell studio="host" interactionData={interactionData}><div>Host content</div></PartnerShell>);
+    render(
+      <PartnerShell studio="host" interactionData={interactionData}>
+        <div>Host content</div>
+      </PartnerShell>,
+    );
 
     await waitFor(() => {
-      expect(screen.getByRole('navigation', { name: 'Host Studio navigation' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('navigation', { name: 'Host Studio navigation' }),
+      ).toBeInTheDocument();
     });
     expect(screen.getByRole('link', { name: 'Overview' })).toHaveAttribute('aria-current', 'page');
   });

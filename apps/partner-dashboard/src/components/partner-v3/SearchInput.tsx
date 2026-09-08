@@ -1,4 +1,3 @@
-
 import { SearchIcon } from '@c1rcle/icons';
 
 import styles from './partner-v3.module.css';

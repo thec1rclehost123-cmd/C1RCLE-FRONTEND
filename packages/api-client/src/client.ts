@@ -180,11 +180,7 @@ export class ApiClient {
     const correlationId = (response.headers.get('x-request-id') ?? requestId) as RequestId;
 
     if (!response.ok) {
-      if (
-        response.status === 401 &&
-        this.#config.reauth !== undefined &&
-        !isReauthRetry
-      ) {
+      if (response.status === 401 && this.#config.reauth !== undefined && !isReauthRetry) {
         const recovered = await this.#config.reauth();
         if (recovered) {
           return this.#attempt(options, true);

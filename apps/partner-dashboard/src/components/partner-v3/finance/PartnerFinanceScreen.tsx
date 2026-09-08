@@ -7,7 +7,12 @@ import { FinancePayoutHistory } from './FinancePayoutHistory';
 import { FinanceSummary } from './FinanceSummary';
 import { FinanceTabs } from './FinanceTabs';
 
-import type { FinanceDateRange, FinanceOrderStatus, FinanceView, PartnerFinanceData } from '@/data/partner-data-source';
+import type {
+  FinanceDateRange,
+  FinanceOrderStatus,
+  FinanceView,
+  PartnerFinanceData,
+} from '@/data/partner-data-source';
 
 type OrderSort = 'tickets' | 'amount';
 type SortDirection = 'asc' | 'desc';
@@ -37,10 +42,18 @@ export function PartnerFinanceScreen({
   return (
     <PageContainer>
       <div className={styles['financePage']} data-accent={data.accent}>
-        <header className={styles['financeHeader']}><h1>Finance</h1></header>
+        <header className={styles['financeHeader']}>
+          <h1>Finance</h1>
+        </header>
         <FinanceTabs baseHref={baseHref} activeView={view} />
         {view === 'orders' ? (
-          <FinanceOrdersTable rows={data.orders} initialSearch={search} initialStatus={status} initialSort={sort} initialDirection={direction} />
+          <FinanceOrdersTable
+            rows={data.orders}
+            initialSearch={search}
+            initialStatus={status}
+            initialSort={sort}
+            initialDirection={direction}
+          />
         ) : view === 'bank' ? (
           <FinanceBankCards data={data} />
         ) : (

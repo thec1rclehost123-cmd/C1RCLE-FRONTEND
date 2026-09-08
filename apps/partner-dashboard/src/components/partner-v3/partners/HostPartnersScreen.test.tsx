@@ -10,8 +10,14 @@ describe('HostPartnersScreen', () => {
     const data = await fixturePartnerDataSource.getHostPartners();
     render(<HostPartnersScreen data={data} />);
 
-    expect(screen.getByRole('link', { name: 'Venues' })).toHaveAttribute('href', '/partner/host/partners');
-    expect(screen.getByRole('link', { name: 'My Venues' })).toHaveAttribute('href', '/partner/host/partners');
+    expect(screen.getByRole('link', { name: 'Venues' })).toHaveAttribute(
+      'href',
+      '/partner/host/partners',
+    );
+    expect(screen.getByRole('link', { name: 'My Venues' })).toHaveAttribute(
+      'href',
+      '/partner/host/partners',
+    );
     expect(screen.getByText('Skyline Rooftop')).toBeInTheDocument();
     expect(screen.getByText('Capacity 400 · 6 events booked')).toBeInTheDocument();
     expect(screen.queryByPlaceholderText('Search partners')).not.toBeInTheDocument();
@@ -19,10 +25,15 @@ describe('HostPartnersScreen', () => {
 
   it('renders Host promoter discovery and staff states from URL-owned props', async () => {
     const data = await fixturePartnerDataSource.getHostPartners();
-    const { rerender } = render(<HostPartnersScreen data={data} segment="promoters" subView="discover" />);
+    const { rerender } = render(
+      <HostPartnersScreen data={data} segment="promoters" subView="discover" />,
+    );
 
     expect(screen.getByText('Vikram (Loud Nights)')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Venues' })).toHaveAttribute('href', '/partner/host/partners');
+    expect(screen.getByRole('link', { name: 'Venues' })).toHaveAttribute(
+      'href',
+      '/partner/host/partners',
+    );
 
     rerender(<HostPartnersScreen data={data} segment="staff" />);
     expect(screen.getByRole('button', { name: 'Add staff' })).toBeInTheDocument();

@@ -10,6 +10,7 @@
 ## How to run this plan
 
 For each phase:
+
 1. Spawn one builder subagent. Give it: this file's phase section, the spec sections it names, and the handoff §5/§6 rows it needs.
 2. The subagent implements exactly the phase's task list, framed as **copy the pattern at `<file:line>`**, not "migrate the old code".
 3. The subagent runs the phase's verification checklist and reports the command output.
@@ -26,23 +27,23 @@ Consolidated from 8 investigation subagents (handoff §9). Every later phase cit
 
 ### Allowed — backend `/api/v2` (runtime truth = `C1RCLE-BACKEND/apps/api-gateway/src/routes/v2/route-manifest.ts` + route files)
 
-| Endpoint | Method | Request | Response | Notes |
-|---|---|---|---|---|
-| `/api/v2/auth/signup` | POST | `signupRequestSchema {email, password 8-128, displayName}` `.strict()` | 201 `authBridgeResponseSchema {user, accessToken, expiresAt}` | `expiresAt` epoch ms. `SENSITIVE_COMMAND` rate class. **No `role` in body.** |
-| `/api/v2/auth/login` | POST | `loginRequestSchema {email, password}` `.strict()` | 200 `authBridgeResponseSchema` | generic error message on 401 |
-| `/api/v2/auth/refresh` | POST | *(cookie only, no body)* | 200 `authBridgeResponseSchema` | re-validates the httpOnly cookie |
-| `/api/v2/auth/logout` | POST | — | 204 + Set-Cookie clear | revokes server session |
-| `/api/v2/auth/session` | GET | — | 200 `sessionSchema {user, expiresAt}` or 401 | `AUTH_READ` rate class |
-| `/api/v2/onboarding/me` | GET | — | `{ request: onboardingRequestDtoSchema \| null }` | session-scoped (not `X-Organization-Id`) |
-| `/api/v2/onboarding/applications` | POST | `{ requestedType: venue\|host\|promoter, plan: basic\|silver\|diamond, profile }` | 201 `onboardingRequestDtoSchema` | `Idempotency-Key` required |
-| `/api/v2/onboarding/applications/:id` | PATCH | `onboardingProfileSchema.partial().strict()` | `onboardingRequestDtoSchema` | autosave; **not** idempotency-keyed; unknown key → 422 |
-| `/api/v2/onboarding/applications/:id/documents` | POST | `{ label, storagePath }` | `onboardingRequestDtoSchema` | labels `id_front`\|`id_back`\|`selfie`; `Idempotency-Key` required; **deferred this slice** (§10.3) |
-| `/api/v2/onboarding/applications/:id/submit` | POST | — | `onboardingRequestDtoSchema` | blocks without 3 docs; `Idempotency-Key` required |
-| `/api/v2/onboarding/verify-document` | POST | `{ documentType, documentNumber, holderName? }` | `verificationResultDtoSchema {passed, provider, reason, referenceId}` | provider `format-check`; ≤5/applicant; **never render "verified"** |
-| `/api/v2/organizations` | GET | pagination query | `paginatedSchema(organizationDtoSchema)` = `{items, pageInfo}` | `AUTH_READ` |
-| `/api/v2/organizations` | POST | `{name, slug, settings?}` `.strict()` | 201 `organizationDtoSchema` | **no `requirePermission`**; `Idempotency-Key` required |
-| `/api/v2/organizations/:id` | GET | — | `organizationDtoSchema` | cached `ORGANIZATION` |
-| `/api/v2/organizations/:id/access` | GET | — | `partnerAccessDtoSchema {organizationId, userId, partnerType, role, permissions[], tabVisibility}` | the RBAC source; `tabVisibility` null = show all |
+| Endpoint                                        | Method | Request                                                                           | Response                                                                                           | Notes                                                                                               |
+| ----------------------------------------------- | ------ | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `/api/v2/auth/signup`                           | POST   | `signupRequestSchema {email, password 8-128, displayName}` `.strict()`            | 201 `authBridgeResponseSchema {user, accessToken, expiresAt}`                                      | `expiresAt` epoch ms. `SENSITIVE_COMMAND` rate class. **No `role` in body.**                        |
+| `/api/v2/auth/login`                            | POST   | `loginRequestSchema {email, password}` `.strict()`                                | 200 `authBridgeResponseSchema`                                                                     | generic error message on 401                                                                        |
+| `/api/v2/auth/refresh`                          | POST   | _(cookie only, no body)_                                                          | 200 `authBridgeResponseSchema`                                                                     | re-validates the httpOnly cookie                                                                    |
+| `/api/v2/auth/logout`                           | POST   | —                                                                                 | 204 + Set-Cookie clear                                                                             | revokes server session                                                                              |
+| `/api/v2/auth/session`                          | GET    | —                                                                                 | 200 `sessionSchema {user, expiresAt}` or 401                                                       | `AUTH_READ` rate class                                                                              |
+| `/api/v2/onboarding/me`                         | GET    | —                                                                                 | `{ request: onboardingRequestDtoSchema \| null }`                                                  | session-scoped (not `X-Organization-Id`)                                                            |
+| `/api/v2/onboarding/applications`               | POST   | `{ requestedType: venue\|host\|promoter, plan: basic\|silver\|diamond, profile }` | 201 `onboardingRequestDtoSchema`                                                                   | `Idempotency-Key` required                                                                          |
+| `/api/v2/onboarding/applications/:id`           | PATCH  | `onboardingProfileSchema.partial().strict()`                                      | `onboardingRequestDtoSchema`                                                                       | autosave; **not** idempotency-keyed; unknown key → 422                                              |
+| `/api/v2/onboarding/applications/:id/documents` | POST   | `{ label, storagePath }`                                                          | `onboardingRequestDtoSchema`                                                                       | labels `id_front`\|`id_back`\|`selfie`; `Idempotency-Key` required; **deferred this slice** (§10.3) |
+| `/api/v2/onboarding/applications/:id/submit`    | POST   | —                                                                                 | `onboardingRequestDtoSchema`                                                                       | blocks without 3 docs; `Idempotency-Key` required                                                   |
+| `/api/v2/onboarding/verify-document`            | POST   | `{ documentType, documentNumber, holderName? }`                                   | `verificationResultDtoSchema {passed, provider, reason, referenceId}`                              | provider `format-check`; ≤5/applicant; **never render "verified"**                                  |
+| `/api/v2/organizations`                         | GET    | pagination query                                                                  | `paginatedSchema(organizationDtoSchema)` = `{items, pageInfo}`                                     | `AUTH_READ`                                                                                         |
+| `/api/v2/organizations`                         | POST   | `{name, slug, settings?}` `.strict()`                                             | 201 `organizationDtoSchema`                                                                        | **no `requirePermission`**; `Idempotency-Key` required                                              |
+| `/api/v2/organizations/:id`                     | GET    | —                                                                                 | `organizationDtoSchema`                                                                            | cached `ORGANIZATION`                                                                               |
+| `/api/v2/organizations/:id/access`              | GET    | —                                                                                 | `partnerAccessDtoSchema {organizationId, userId, partnerType, role, permissions[], tabVisibility}` | the RBAC source; `tabVisibility` null = show all                                                    |
 
 `onboardingProfileSchema` (`.strict()`, `role` stripped): required `legalName`, `contactPerson`, `phone` (6–20), `city`; optional `area`, `website`, `capacity` (number\|null), `instagram`, `bio`, `businessType` (≤120), `registrationNumber`, `entityType` (≤120).
 
@@ -156,7 +157,12 @@ grep -n "UnauthorizedError" packages/core/src/infrastructure/utils.ts # present
 5. **`@c1rcle/api-client/src/schemas.ts`** — replace the local zod definitions with re-exports:
    ```ts
    export {
-     pageInfoSchema, paginatedSchema, roleSchema, userSchema, sessionSchema, noContentSchema,
+     pageInfoSchema,
+     paginatedSchema,
+     roleSchema,
+     userSchema,
+     sessionSchema,
+     noContentSchema,
    } from '@c1rcle/contracts/client';
    ```
    Add `"@c1rcle/contracts": "workspace:*"` to `packages/api-client/package.json` deps + a `references` entry in `packages/api-client/tsconfig.build.json`.
@@ -270,7 +276,7 @@ git grep -n "currentUser" packages/auth/src   # empty — shim gone
    - `assertCsrf(req: NextRequest)` — compare the `c1rcle.csrf` cookie value to the `x-csrf-token` header; mismatch/absent → 403. Constant-time compare.
    - `stripProtoKeys(obj)` — recursively delete `__proto__` / `constructor` / `prototype` own-keys.
    - `mintCsrfToken()` — 32 random bytes → base64url (`crypto.getRandomValues` / `crypto.randomUUID` ×2).
-   - `forwardToGateway(path, { method, body?, cookie? })` — `fetch(\`${GATEWAY}${path}\`, ...)` where `GATEWAY = getClientEnv().NEXT_PUBLIC_API_BASE_URL`; returns the raw `Response`. **No body logging.** (File-level eslint-disable for `no-restricted-syntax` fetch, with comment — this is a server module and the approved BFF.)
+   - `forwardToGateway(path, { method, body?, cookie? })` — `fetch(\`${GATEWAY}${path}\`, ...)`where`GATEWAY = getClientEnv().NEXT_PUBLIC_API_BASE_URL`; returns the raw `Response`. **No body logging.** (File-level eslint-disable for `no-restricted-syntax` fetch, with comment — this is a server module and the approved BFF.)
    - `rescopeSessionCookie(gatewayResponse, nextResponse)` — read every `Set-Cookie` from the gateway response; for the Better Auth session cookie, re-emit via `nextResponse.cookies.set(name, value, { httpOnly: true, sameSite: 'lax', secure: isProd, path: '/', maxAge })`. Drop any `Domain` attribute.
 2. **`src/app/api/auth/signup/route.ts`** — `POST`. `assertSameOrigin` → parse + `stripProtoKeys` body → `forwardToGateway('/api/v2/auth/signup', { method: 'POST', body })` → on 2xx: `rescopeSessionCookie`, set a fresh `c1rcle.csrf` cookie (non-httpOnly, `SameSite=Strict`, `Secure` in prod), return the gateway JSON (`{user, accessToken, expiresAt}`) with status 201; on 4xx: return `{ code, message: 'Authentication failed', status, requestId }` (generic).
 3. **`src/app/api/auth/login/route.ts`** — same as signup but `POST /api/v2/auth/login`, status 200.
@@ -329,7 +335,13 @@ pnpm --filter partner-dashboard typecheck
    export const apiClient = createApiClient({
      getToken: getAccessToken,
      reauth: () => refresh(),
-     onUnauthorized: () => { if (!redirecting) { redirecting = true; clearSession(); window.location.assign('/login'); } },
+     onUnauthorized: () => {
+       if (!redirecting) {
+         redirecting = true;
+         clearSession();
+         window.location.assign('/login');
+       }
+     },
    });
    ```
 5. **Org selection** — `src/lib/org/active-org.ts`:
@@ -395,7 +407,7 @@ pnpm boundaries                                  # no new fetch/env violations
    - `getIdToken` → `getAccessToken`
    - `switchPartner` → `setActiveOrg`
    - drop: `isBanned`, `kycStatus`, `entityType`, `subscriptionPlan`, `actionPermissions`, `piiPolicy`, `mustChangePassword`, the 30s polling. Any component reading a dropped field: replace with the nearest real signal or remove the branch (grep each; small, mechanical).
-   Rename the file to `session-context.tsx` and keep a `useDashboardAuth` export alias to minimise churn, OR do a codemod of the import across the ~40 files. **Builder's call — pick the lower-risk path and say which.**
+     Rename the file to `session-context.tsx` and keep a `useDashboardAuth` export alias to minimise churn, OR do a codemod of the import across the ~40 files. **Builder's call — pick the lower-risk path and say which.**
 6. **`.env.example`** — `apps/partner-dashboard/.env.example`: ensure `NEXT_PUBLIC_API_BASE_URL` is present; remove `NEXT_PUBLIC_PARTNER_USE_REAL_API` / `NEXT_PUBLIC_PARTNER_DEV_ORG_ID` if listed.
 
 ### Verification

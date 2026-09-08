@@ -23,7 +23,6 @@ import {
 } from 'lucide-react';
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 
-
 // Stubs for legacy storage methods being deprecated in V2
 const getFirebaseStorage = () => ({});
 const ref = (..._args: any[]) => ({});
@@ -32,9 +31,6 @@ const uploadBytesResumable = (..._args: any[]): any => ({
 });
 const getDownloadURL = async (..._args: any[]) => '';
 const legacyFetch = (...args: Parameters<typeof fetch>) => window.fetch(...args);
-
-
-
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -112,7 +108,6 @@ function stepStatusColor(status: StepStatus): string {
   if (status === 'in_progress') return 'text-blue-400';
   return 'text-text-tertiary';
 }
-
 
 // ── File drop zone ────────────────────────────────────────────────────────────
 
@@ -306,7 +301,9 @@ function KycIdentityForm({
   const [docFront, setDocFront] = useState<string | null>(
     (initialData['docFrontUrl'] as string) || null,
   );
-  const [docBack, setDocBack] = useState<string | null>((initialData['docBackUrl'] as string) || null);
+  const [docBack, setDocBack] = useState<string | null>(
+    (initialData['docBackUrl'] as string) || null,
+  );
   const [selfie, setSelfie] = useState<string | null>((initialData['selfieUrl'] as string) || null);
 
   const needsBack = ['aadhaar', 'driving_licence', 'voter_id'].includes(idType);
@@ -524,7 +521,9 @@ function KycSignatoryForm({
   const [docFront, setDocFront] = useState<string | null>(
     (initialData['docFrontUrl'] as string) || null,
   );
-  const [docBack, setDocBack] = useState<string | null>((initialData['docBackUrl'] as string) || null);
+  const [docBack, setDocBack] = useState<string | null>(
+    (initialData['docBackUrl'] as string) || null,
+  );
   const [selfie, setSelfie] = useState<string | null>((initialData['selfieUrl'] as string) || null);
   const [declared, setDeclared] = useState(false);
 
@@ -709,7 +708,9 @@ function BankSetupForm({
   submitting: boolean;
   resubmitReason?: string | undefined;
 }) {
-  const [accountHolder, setAccountHolder] = useState((initialData['accountHolder'] as string) || '');
+  const [accountHolder, setAccountHolder] = useState(
+    (initialData['accountHolder'] as string) || '',
+  );
   const [accountNumber, setAccountNumber] = useState('');
   const [confirmNumber, setConfirmNumber] = useState('');
   const [ifsc, setIfsc] = useState((initialData['ifsc'] as string) || '');
@@ -902,11 +903,7 @@ function CelebrationScreen({ entityType }: { entityType: string }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function PageClient() {
-  const {
-    user,
-    isApproved,
-    loading: authLoading,
-  } = useDashboardAuth();
+  const { user, isApproved, loading: authLoading } = useDashboardAuth();
   const router = useRouter();
 
   const [kycState, setKycState] = useState<KycState | null>(null);

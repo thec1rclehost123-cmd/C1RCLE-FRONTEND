@@ -331,11 +331,15 @@
 }
 .relationshipTable .tableHead,
 .relationshipTable .partnerRow {
-  grid-template-columns: minmax(220px, 1.35fr) minmax(140px, 0.8fr) minmax(130px, 0.7fr) minmax(170px, 1fr) minmax(100px, 0.55fr) 96px;
+  grid-template-columns:
+    minmax(220px, 1.35fr) minmax(140px, 0.8fr) minmax(130px, 0.7fr) minmax(170px, 1fr)
+    minmax(100px, 0.55fr) 96px;
 }
 .requestTable .tableHead,
 .requestTable .partnerRow {
-  grid-template-columns: minmax(210px, 1.3fr) minmax(100px, 0.6fr) minmax(190px, 1.1fr) minmax(140px, 0.8fr) minmax(120px, 0.65fr) 96px;
+  grid-template-columns:
+    minmax(210px, 1.3fr) minmax(100px, 0.6fr) minmax(190px, 1.1fr) minmax(140px, 0.8fr)
+    minmax(120px, 0.65fr) 96px;
 }
 .tableHead,
 .staffHead {

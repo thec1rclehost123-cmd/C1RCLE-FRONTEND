@@ -35,13 +35,29 @@ function statusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral
 // ─── main component ────────────────────────────────────────────────────────
 
 export function HostEventsScreen({ tab = 'upcoming' }: { readonly tab?: string }) {
-  const activeTab = (tab as HostTab) in STATUS_TONE || tab === 'upcoming' || tab === 'live' || tab === 'invitations' || tab === 'requests' || tab === 'past' ? (tab as HostTab) : 'upcoming';
+  const activeTab =
+    (tab as HostTab) in STATUS_TONE ||
+    tab === 'upcoming' ||
+    tab === 'live' ||
+    tab === 'invitations' ||
+    tab === 'requests' ||
+    tab === 'past'
+      ? (tab as HostTab)
+      : 'upcoming';
   const [query, setQuery] = useState('');
 
   const TABS: { key: HostTab; label: string; count?: number }[] = [
-    { key: 'upcoming', label: 'Upcoming', count: hostEvents.filter(e => e.status === 'Upcoming').length },
-    { key: 'live', label: 'Live', count: hostEvents.filter(e => e.status === 'Live').length },
-    { key: 'invitations', label: 'Invitations', count: hostEvents.filter(e => e.status === 'Invitation').length },
+    {
+      key: 'upcoming',
+      label: 'Upcoming',
+      count: hostEvents.filter((e) => e.status === 'Upcoming').length,
+    },
+    { key: 'live', label: 'Live', count: hostEvents.filter((e) => e.status === 'Live').length },
+    {
+      key: 'invitations',
+      label: 'Invitations',
+      count: hostEvents.filter((e) => e.status === 'Invitation').length,
+    },
     { key: 'requests', label: 'Slot requests', count: hostSlotRequests.length },
     { key: 'past', label: 'Past' },
   ];
@@ -49,18 +65,21 @@ export function HostEventsScreen({ tab = 'upcoming' }: { readonly tab?: string }
   const filteredEvents = useMemo(() => {
     const q = query.trim().toLowerCase();
     const base =
-      activeTab === 'live' ? hostEvents.filter(e => e.status === 'Live')
-      : activeTab === 'past' ? hostEvents.filter(e => e.status === 'Completed')
-      : activeTab === 'invitations' ? hostEvents.filter(e => e.status === 'Invitation')
-      : hostEvents.filter(e => e.status === 'Upcoming');
+      activeTab === 'live'
+        ? hostEvents.filter((e) => e.status === 'Live')
+        : activeTab === 'past'
+          ? hostEvents.filter((e) => e.status === 'Completed')
+          : activeTab === 'invitations'
+            ? hostEvents.filter((e) => e.status === 'Invitation')
+            : hostEvents.filter((e) => e.status === 'Upcoming');
     if (!q) return base;
-    return base.filter(e => `${e.name} ${e.venue} ${e.city}`.toLowerCase().includes(q));
+    return base.filter((e) => `${e.name} ${e.venue} ${e.city}`.toLowerCase().includes(q));
   }, [activeTab, query]);
 
   const filteredRequests = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return hostSlotRequests;
-    return hostSlotRequests.filter(r => `${r.eventName} ${r.venue}`.toLowerCase().includes(q));
+    return hostSlotRequests.filter((r) => `${r.eventName} ${r.venue}`.toLowerCase().includes(q));
   }, [query]);
 
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -87,7 +106,9 @@ export function HostEventsScreen({ tab = 'upcoming' }: { readonly tab?: string }
             {TABS.map((item, index) => (
               <button
                 key={item.key}
-                ref={el => { tabRefs.current[index] = el; }}
+                ref={(el) => {
+                  tabRefs.current[index] = el;
+                }}
                 type="button"
                 role="tab"
                 aria-selected={activeTab === item.key}
@@ -95,7 +116,7 @@ export function HostEventsScreen({ tab = 'upcoming' }: { readonly tab?: string }
                 onClick={() => {
                   window.location.href = `/host/events?tab=${item.key}`;
                 }}
-                onKeyDown={e => onTabKeyDown(e, index)}
+                onKeyDown={(e) => onTabKeyDown(e, index)}
               >
                 {item.label}
                 {item.count !== undefined ? <span>{item.count}</span> : null}
@@ -113,7 +134,7 @@ export function HostEventsScreen({ tab = 'upcoming' }: { readonly tab?: string }
           <input
             type="search"
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
             placeholder="Search events"
           />
         </label>
@@ -152,11 +173,7 @@ export function HostEventsScreen({ tab = 'upcoming' }: { readonly tab?: string }
 
 // ─── events table (Upcoming / Live / Past) ────────────────────────────────
 
-function EventsTable({
-  rows,
-}: {
-  readonly rows: typeof hostEvents;
-}) {
+function EventsTable({ rows }: { readonly rows: typeof hostEvents }) {
   if (rows.length === 0) {
     return (
       <section className={s('emptyState')}>
@@ -184,7 +201,9 @@ function EventsTable({
             <th scope="col">When</th>
             <th scope="col">Guests</th>
             <th scope="col">Status</th>
-            <th scope="col" style={{ textAlign: 'right' }}>Action</th>
+            <th scope="col" style={{ textAlign: 'right' }}>
+              Action
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -238,7 +257,7 @@ function EventsTable({
   );
 }
 
-function GuestCell({ event }: { readonly event: typeof hostEvents[number] }) {
+function GuestCell({ event }: { readonly event: (typeof hostEvents)[number] }) {
   const confirmed = event.confirmed;
   const allocation = event.guests;
   if (confirmed !== null && allocation !== null) {
@@ -302,7 +321,9 @@ function InvitationsTable({ rows }: { readonly rows: typeof hostEvents }) {
             <th scope="col">Proposed date</th>
             <th scope="col">Guest allocation</th>
             <th scope="col">Status</th>
-            <th scope="col" style={{ textAlign: 'right' }}>Action</th>
+            <th scope="col" style={{ textAlign: 'right' }}>
+              Action
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -389,11 +410,13 @@ function RequestsTable({ rows }: { readonly rows: typeof hostSlotRequests }) {
             <th scope="col">Requested slot</th>
             <th scope="col">Updated</th>
             <th scope="col">Status</th>
-            <th scope="col" style={{ textAlign: 'right' }}>Action</th>
+            <th scope="col" style={{ textAlign: 'right' }}>
+              Action
+            </th>
           </tr>
         </thead>
         <tbody>
-          {rows.map(request => (
+          {rows.map((request) => (
             <tr key={request.id} tabIndex={0}>
               <td data-label="Event">
                 <div className={s('whenCell')}>

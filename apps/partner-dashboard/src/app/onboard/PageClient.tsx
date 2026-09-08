@@ -600,7 +600,10 @@ function OnboardingContent() {
       const res = await fetch('/api/auth/phone-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber: formData.phone || otpPhone.replace(/\s/g, ''), idToken }),
+        body: JSON.stringify({
+          phoneNumber: formData.phone || otpPhone.replace(/\s/g, ''),
+          idToken,
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -2039,7 +2042,9 @@ function KycIdentityForm({
   const [docFront, setDocFront] = useState<string | null>(
     (initialData['docFrontUrl'] as string) || null,
   );
-  const [docBack, setDocBack] = useState<string | null>((initialData['docBackUrl'] as string) || null);
+  const [docBack, setDocBack] = useState<string | null>(
+    (initialData['docBackUrl'] as string) || null,
+  );
   const [selfie, setSelfie] = useState<string | null>((initialData['selfieUrl'] as string) || null);
 
   // New state for Aadhaar verification
@@ -2329,7 +2334,9 @@ function KycSignatoryForm({
   const [docFront, setDocFront] = useState<string | null>(
     (initialData['docFrontUrl'] as string) || null,
   );
-  const [docBack, setDocBack] = useState<string | null>((initialData['docBackUrl'] as string) || null);
+  const [docBack, setDocBack] = useState<string | null>(
+    (initialData['docBackUrl'] as string) || null,
+  );
   const [selfie, setSelfie] = useState<string | null>((initialData['selfieUrl'] as string) || null);
   const [declared, setDeclared] = useState(false);
   const needsBack = ['aadhaar', 'driving_licence', 'voter_id'].includes(idType);

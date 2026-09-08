@@ -63,11 +63,15 @@ describe('POST /api/auth/signup', () => {
     );
 
     const res = await signup(
-      post('/api/auth/signup', { origin: APP_ORIGIN }, {
-        email: 'a@b.com',
-        password: 'password123',
-        displayName: 'A',
-      }),
+      post(
+        '/api/auth/signup',
+        { origin: APP_ORIGIN },
+        {
+          email: 'a@b.com',
+          password: 'password123',
+          displayName: 'A',
+        },
+      ),
     );
 
     expect(res.status).toBe(201);
@@ -116,7 +120,9 @@ describe('POST /api/auth/signup', () => {
       ),
     );
 
-    const res = await signup(post('/api/auth/signup', { origin: APP_ORIGIN }, { email: 'a@b.com' }));
+    const res = await signup(
+      post('/api/auth/signup', { origin: APP_ORIGIN }, { email: 'a@b.com' }),
+    );
 
     expect(res.status).toBe(422);
     await expect(res.json()).resolves.toMatchObject({
@@ -131,10 +137,14 @@ describe('POST /api/auth/signup', () => {
     mockForward.mockResolvedValue(gatewayResponse(AUTH_BODY, { status: 201 }));
 
     await signup(
-      post('/api/auth/signup', { origin: APP_ORIGIN }, {
-        email: 'secret@b.com',
-        password: 'hunter2xx',
-      }),
+      post(
+        '/api/auth/signup',
+        { origin: APP_ORIGIN },
+        {
+          email: 'secret@b.com',
+          password: 'hunter2xx',
+        },
+      ),
     );
 
     const logged = [...log.mock.calls, ...errorLog.mock.calls].flat().map((entry) => String(entry));

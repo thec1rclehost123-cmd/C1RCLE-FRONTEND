@@ -58,18 +58,39 @@
   color: var(--partner-text);
   background: var(--partner-bg);
   font-family:
-    var(--font-body), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    var(--font-body),
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
   transition: grid-template-columns 180ms ease;
 }
 
-html:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partner-role='host'], [data-partner-role='promoter'])),
-body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partner-role='host'], [data-partner-role='promoter'])) {
+html:has(
+  .partner-dashboard-shell-v2:is(
+    [data-partner-role='venue'],
+    [data-partner-role='host'],
+    [data-partner-role='promoter']
+  )
+),
+body:has(
+  .partner-dashboard-shell-v2:is(
+    [data-partner-role='venue'],
+    [data-partner-role='host'],
+    [data-partner-role='promoter']
+  )
+) {
   height: 100dvh;
   overflow: hidden;
   overscroll-behavior: none;
 }
 
-.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partner-role='host'], [data-partner-role='promoter']) {
+.partner-dashboard-shell-v2:is(
+  [data-partner-role='venue'],
+  [data-partner-role='host'],
+  [data-partner-role='promoter']
+) {
   --partner-topbar-height: 64px;
   height: 100dvh;
   min-height: 0;
@@ -239,7 +260,11 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
   min-height: 0;
 }
 
-.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partner-role='host'], [data-partner-role='promoter'])
+.partner-dashboard-shell-v2:is(
+    [data-partner-role='venue'],
+    [data-partner-role='host'],
+    [data-partner-role='promoter']
+  )
   .partner-workspace {
   display: grid;
   height: 100dvh;
@@ -463,7 +488,11 @@ body:has(.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partn
   animation: none;
 }
 
-.partner-dashboard-shell-v2:is([data-partner-role='venue'], [data-partner-role='host'], [data-partner-role='promoter'])
+.partner-dashboard-shell-v2:is(
+    [data-partner-role='venue'],
+    [data-partner-role='host'],
+    [data-partner-role='promoter']
+  )
   .partner-dashboard-content {
   width: 100%;
   height: auto;

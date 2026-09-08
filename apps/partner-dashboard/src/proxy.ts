@@ -30,7 +30,14 @@ import type { NextRequest } from 'next/server';
 const SESSION_COOKIE = 'better-auth.session_token';
 
 /** Paths that demand a session. Host/path-char gating is done in the handler. */
-const AUTH_GATED_PREFIXES = ['/venue', '/host', '/promoter', '/onboard', '/partner', '/partner-network'];
+const AUTH_GATED_PREFIXES = [
+  '/venue',
+  '/host',
+  '/promoter',
+  '/onboard',
+  '/partner',
+  '/partner-network',
+];
 
 /** Gateway origin for `connect-src`, read once via @c1rcle/config at module load. */
 const GATEWAY_ORIGIN = getClientEnv().NEXT_PUBLIC_API_BASE_URL.replace(/\/$/, '');

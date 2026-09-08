@@ -25,10 +25,7 @@ import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 import { PARTNER_SHELL_CONFIG } from './config';
 import { PartnerNotificationButton } from './PartnerNotificationButton';
 import { isPartnerNavigationItemActive } from './partner-navigation';
-import {
-  normalizePartnerRole,
-  resolvePartnerDashboardPath,
-} from './partner-role-routing';
+import { normalizePartnerRole, resolvePartnerDashboardPath } from './partner-role-routing';
 
 import type { PartnerDashboardLayoutProps } from './types';
 import type { IconProps } from '@c1rcle/icons';
@@ -131,7 +128,7 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
       router.replace(
         roleRoot && storedRoute?.startsWith(`${roleRoot}/`)
           ? storedRoute
-          : resolvePartnerDashboardPath(activeRole, 'overview') ?? '/partner/select-organization',
+          : (resolvePartnerDashboardPath(activeRole, 'overview') ?? '/partner/select-organization'),
       );
     }
   }, [
@@ -213,7 +210,8 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
   const identityInitials = initialsFrom(displayName);
   const avatarInitials = partnerRole === 'venue' ? 'VP' : identityInitials;
   const activeNavigation =
-    visibleNavigation.find((item) => isPartnerNavigationItemActive(pathname, item)) ?? visibleNavigation[0];
+    visibleNavigation.find((item) => isPartnerNavigationItemActive(pathname, item)) ??
+    visibleNavigation[0];
   const pageIdentity = activeNavigation?.label ?? config.eyebrow;
 
   return (

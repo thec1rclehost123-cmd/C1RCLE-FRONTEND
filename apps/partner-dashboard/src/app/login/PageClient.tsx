@@ -18,8 +18,6 @@ import { useState, useEffect, Suspense } from 'react';
 import { resolvePartnerV3Path } from '@/components/partner-shell/partner-role-routing';
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 
-
-
 type UserType = 'venue' | 'host' | 'promoter';
 
 const roleConfig = {
@@ -470,14 +468,14 @@ function LoginForm() {
                     const isActive = userType === type;
                     return (
                       <button
-                      key={type}
-                      type="button"
-                      onClick={() => {
-                        setUserType(type);
-                        const params = new URLSearchParams(searchParams.toString());
-                        params.set('type', type);
-                        router.replace(`/login?${params.toString()}`);
-                      }}
+                        key={type}
+                        type="button"
+                        onClick={() => {
+                          setUserType(type);
+                          const params = new URLSearchParams(searchParams.toString());
+                          params.set('type', type);
+                          router.replace(`/login?${params.toString()}`);
+                        }}
                         className={`relative p-5 rounded-2xl border-2 transition-all duration-200 text-center group ${
                           isActive
                             ? 'border-[var(--accent-primary)] bg-[var(--accent-glow)]'
@@ -557,7 +555,9 @@ function LoginForm() {
                           rule) and must never hint whether an email is registered. */}
                       {error.includes('partner access') && (
                         <button
-                          onClick={() => { router.push(`/onboard?email=${email}&type=${userType}`); }}
+                          onClick={() => {
+                            router.push(`/onboard?email=${email}&type=${userType}`);
+                          }}
                           className="text-[13px] font-semibold text-[var(--state-error)] underline mt-2 hover:no-underline"
                         >
                           Apply for Access →
@@ -576,7 +576,9 @@ function LoginForm() {
                       <input
                         type="email"
                         value={email}
-                        onChange={(e) => { setEmail(e.target.value); }}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                        }}
                         required
                         autoFocus
                         className="input input-lg pl-12"
@@ -592,14 +594,18 @@ function LoginForm() {
                       <input
                         type={showPassword ? 'text' : 'password'}
                         value={password}
-                        onChange={(e) => { setPassword(e.target.value); }}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                        }}
                         required
                         className="input input-lg pl-12 pr-12"
                         placeholder="Enter your password"
                       />
                       <button
                         type="button"
-                        onClick={() => { setShowPassword(!showPassword); }}
+                        onClick={() => {
+                          setShowPassword(!showPassword);
+                        }}
                         className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-placeholder)] hover:text-[var(--text-secondary)] transition-colors"
                       >
                         {showPassword ? (
@@ -612,11 +618,11 @@ function LoginForm() {
                     <div className="flex justify-end">
                       <button
                         type="button"
-                        onClick={() =>
-                          { router.push(
+                        onClick={() => {
+                          router.push(
                             `/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ''}`,
-                          ); }
-                        }
+                          );
+                        }}
                         className="text-[12px] font-medium text-[var(--accent-primary)] hover:underline"
                       >
                         Forgot password?
@@ -658,7 +664,12 @@ function LoginForm() {
             <p className="text-body-sm text-[var(--text-secondary)] mb-4">
               Join our network of premium nightlife venues, hosts, and promoters.
             </p>
-            <button onClick={() => { router.push('/onboard'); }} className="btn btn-secondary w-full">
+            <button
+              onClick={() => {
+                router.push('/onboard');
+              }}
+              className="btn btn-secondary w-full"
+            >
               Apply for Partner Access
             </button>
           </div>

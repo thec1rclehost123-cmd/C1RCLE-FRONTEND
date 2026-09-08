@@ -22,7 +22,8 @@ export default function LandingPage() {
   // The useful HTML is rendered immediately. WebGL is progressive enhancement,
   // deferred until after the browser has painted the headline and CTAs.
   useEffect(() => {
-    const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean } })
+      .connection;
     const compactViewport = window.matchMedia('(max-width: 767px)').matches;
     if (reduceMotion || connection?.saveData || compactViewport) return;
 
@@ -75,114 +76,114 @@ export default function LandingPage() {
       {/* Layer 3: useful HTML is available on first paint and remains usable
           even when the cinematic layer is disabled or still downloading. */}
       <div className="relative z-10 flex flex-col items-center justify-end h-full pb-20 px-6 text-center">
-          {/* Main headline — each word bursts in with a shiny glow */}
-          <h1 className="text-[clamp(36px,8vw,72px)] font-black uppercase tracking-tight leading-[1.0] text-white mb-5">
-            {[
-              { word: 'Command', color: '#FFFFFF', delay: 0 },
-              { word: 'Your', color: '#FFFFFF', delay: 0.13 },
-            ].map(({ word, color, delay }) => (
-              <motion.span
-                key={word}
-                initial={{ opacity: 1, y: 18, filter: 'blur(0px)' }}
-                animate={{
-                  opacity: 1,
-                  y: [18, -2, 0],
-                  filter: 'blur(0px)',
-                  textShadow: [
-                    '0 0 0px rgba(255,255,255,0)',
-                    '0 0 40px rgba(255,255,255,0.95), 0 0 80px rgba(255,200,120,0.7), 0 0 120px rgba(244,74,34,0.5)',
-                    '0 0 20px rgba(255,255,255,0.15), 0 0 40px rgba(244,74,34,0.2)',
-                  ],
-                }}
-                transition={{ duration: 0.75, delay, times: [0, 0.35, 1], ease: 'easeOut' }}
-                style={{ color, display: 'inline-block', marginRight: '0.28em' }}
-              >
-                {word}
-              </motion.span>
-            ))}
-            <br />
-            {[
-              { word: 'Nightlife', color: '#F44A22', delay: 0.26 },
-              { word: 'Empire', color: '#F44A22', delay: 0.39 },
-            ].map(({ word, color, delay }) => (
-              <motion.span
-                key={word}
-                initial={{ opacity: 1, y: 18, filter: 'blur(0px)' }}
-                animate={{
-                  opacity: 1,
-                  y: [18, -2, 0],
-                  filter: 'blur(0px)',
-                  textShadow: [
-                    '0 0 0px rgba(244,74,34,0)',
-                    '0 0 40px rgba(255,120,60,0.95), 0 0 80px rgba(244,74,34,0.8), 0 0 130px rgba(244,74,34,0.5)',
-                    '0 0 20px rgba(244,74,34,0.3), 0 0 40px rgba(244,74,34,0.15)',
-                  ],
-                }}
-                transition={{ duration: 0.75, delay, times: [0, 0.35, 1], ease: 'easeOut' }}
-                style={{ color, display: 'inline-block', marginRight: '0.28em' }}
-              >
-                {word}
-              </motion.span>
-            ))}
-          </h1>
+        {/* Main headline — each word bursts in with a shiny glow */}
+        <h1 className="text-[clamp(36px,8vw,72px)] font-black uppercase tracking-tight leading-[1.0] text-white mb-5">
+          {[
+            { word: 'Command', color: '#FFFFFF', delay: 0 },
+            { word: 'Your', color: '#FFFFFF', delay: 0.13 },
+          ].map(({ word, color, delay }) => (
+            <motion.span
+              key={word}
+              initial={{ opacity: 1, y: 18, filter: 'blur(0px)' }}
+              animate={{
+                opacity: 1,
+                y: [18, -2, 0],
+                filter: 'blur(0px)',
+                textShadow: [
+                  '0 0 0px rgba(255,255,255,0)',
+                  '0 0 40px rgba(255,255,255,0.95), 0 0 80px rgba(255,200,120,0.7), 0 0 120px rgba(244,74,34,0.5)',
+                  '0 0 20px rgba(255,255,255,0.15), 0 0 40px rgba(244,74,34,0.2)',
+                ],
+              }}
+              transition={{ duration: 0.75, delay, times: [0, 0.35, 1], ease: 'easeOut' }}
+              style={{ color, display: 'inline-block', marginRight: '0.28em' }}
+            >
+              {word}
+            </motion.span>
+          ))}
+          <br />
+          {[
+            { word: 'Nightlife', color: '#F44A22', delay: 0.26 },
+            { word: 'Empire', color: '#F44A22', delay: 0.39 },
+          ].map(({ word, color, delay }) => (
+            <motion.span
+              key={word}
+              initial={{ opacity: 1, y: 18, filter: 'blur(0px)' }}
+              animate={{
+                opacity: 1,
+                y: [18, -2, 0],
+                filter: 'blur(0px)',
+                textShadow: [
+                  '0 0 0px rgba(244,74,34,0)',
+                  '0 0 40px rgba(255,120,60,0.95), 0 0 80px rgba(244,74,34,0.8), 0 0 130px rgba(244,74,34,0.5)',
+                  '0 0 20px rgba(244,74,34,0.3), 0 0 40px rgba(244,74,34,0.15)',
+                ],
+              }}
+              transition={{ duration: 0.75, delay, times: [0, 0.35, 1], ease: 'easeOut' }}
+              style={{ color, display: 'inline-block', marginRight: '0.28em' }}
+            >
+              {word}
+            </motion.span>
+          ))}
+        </h1>
 
-          {/* Tagline */}
-          <motion.p
-            variants={fadeUp}
-            initial="hidden"
-            animate="visible"
-            transition={{ duration: 0.7, delay: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="text-[15px] font-bold text-white/55 mb-10 max-w-sm leading-relaxed"
-          >
-            The all-in-one partner platform for venues, hosts &amp; promoters.
-          </motion.p>
+        {/* Tagline */}
+        <motion.p
+          variants={fadeUp}
+          initial="hidden"
+          animate="visible"
+          transition={{ duration: 0.7, delay: 0.2, ease: [0.4, 0, 0.2, 1] }}
+          className="text-[15px] font-bold text-white/55 mb-10 max-w-sm leading-relaxed"
+        >
+          The all-in-one partner platform for venues, hosts &amp; promoters.
+        </motion.p>
 
-          {/* CTAs */}
-          <motion.div
-            variants={fadeUp}
-            initial="hidden"
-            animate="visible"
-            transition={{ duration: 0.7, delay: 0.4, ease: [0.4, 0, 0.2, 1] }}
-            className="flex flex-col sm:flex-row gap-3 justify-center"
-          >
-            <MagneticButton href="/login" className="group">
-              <span
-                className="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl text-[15px] font-semibold text-white cursor-pointer select-none
+        {/* CTAs */}
+        <motion.div
+          variants={fadeUp}
+          initial="hidden"
+          animate="visible"
+          transition={{ duration: 0.7, delay: 0.4, ease: [0.4, 0, 0.2, 1] }}
+          className="flex flex-col sm:flex-row gap-3 justify-center"
+        >
+          <MagneticButton href="/login" className="group">
+            <span
+              className="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl text-[15px] font-semibold text-white cursor-pointer select-none
                   transition-all duration-200 ease-out
                   group-hover:bg-white/20 group-hover:scale-[1.03]
                   group-active:scale-[0.97]"
-                style={{
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  background: 'rgba(255,255,255,0.08)',
-                  backdropFilter: 'blur(12px)',
-                  WebkitBackdropFilter: 'blur(12px)',
-                }}
-              >
-                Already a User
-              </span>
-            </MagneticButton>
+              style={{
+                border: '1px solid rgba(255,255,255,0.2)',
+                background: 'rgba(255,255,255,0.08)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+              }}
+            >
+              Already a User
+            </span>
+          </MagneticButton>
 
-            <MagneticButton href="/onboard" className="group">
-              <span
-                className="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl text-[15px] font-semibold text-white cursor-pointer select-none
+          <MagneticButton href="/onboard" className="group">
+            <span
+              className="inline-flex items-center justify-center gap-2 px-7 py-4 rounded-2xl text-[15px] font-semibold text-white cursor-pointer select-none
                   transition-all duration-200 ease-out
                   group-hover:brightness-110 group-hover:scale-[1.03]
                   group-active:scale-[0.97]"
-                style={{
-                  background: '#F44A22',
-                  boxShadow: '0 0 40px rgba(244,74,34,0.35), 0 4px 16px rgba(0,0,0,0.4)',
-                }}
+              style={{
+                background: '#F44A22',
+                boxShadow: '0 0 40px rgba(244,74,34,0.35), 0 4px 16px rgba(0,0,0,0.4)',
+              }}
+            >
+              Apply for Partner Access
+              <span
+                aria-hidden
+                className="transition-transform duration-200 group-hover:translate-x-1"
               >
-                Apply for Partner Access
-                <span
-                  aria-hidden
-                  className="transition-transform duration-200 group-hover:translate-x-1"
-                >
-                  →
-                </span>
+                →
               </span>
-            </MagneticButton>
-          </motion.div>
+            </span>
+          </MagneticButton>
+        </motion.div>
       </div>
     </main>
   );

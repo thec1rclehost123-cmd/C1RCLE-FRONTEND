@@ -26,5 +26,14 @@ export function VenueEventsScreen({
   readonly initialParty?: PartnerEventParty;
   readonly initialView?: 'list' | 'grid';
 }) {
-  return <PartnerEventsScreen config={venueEventsConfig} data={data} initialSearch={initialSearch} initialStatus={initialStatus} initialParty={initialParty} initialView={initialView} />;
+  return (
+    <PartnerEventsScreen
+      config={venueEventsConfig}
+      data={data}
+      initialSearch={initialSearch}
+      initialStatus={initialStatus}
+      initialParty={initialParty}
+      initialView={initialView}
+    />
+  );
 }

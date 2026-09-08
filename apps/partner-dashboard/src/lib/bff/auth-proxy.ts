@@ -187,7 +187,13 @@ function parseSetCookie(raw: string): ParsedSetCookie | null {
     }
   }
 
-  return { name: pair.slice(0, eq).trim(), value: pair.slice(eq + 1).trim(), path, maxAge, expires };
+  return {
+    name: pair.slice(0, eq).trim(),
+    value: pair.slice(eq + 1).trim(),
+    path,
+    maxAge,
+    expires,
+  };
 }
 
 /**
