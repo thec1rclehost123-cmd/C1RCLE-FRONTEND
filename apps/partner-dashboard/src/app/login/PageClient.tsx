@@ -1,8 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   Mail,
   Lock,
@@ -14,12 +12,13 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
-import { getFirebaseAuth } from '@/lib/firebase/client';
-import {
-  normalizePartnerRole,
-  resolvePartnerV3Path,
-} from '@/components/partner-shell/partner-role-routing';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+
+import { resolvePartnerV3Path } from '@/components/partner-shell/partner-role-routing';
+import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
+
+
 
 type UserType = 'venue' | 'host' | 'promoter';
 
@@ -168,8 +167,8 @@ function WorkspaceBg({ type }: { type: UserType | null }) {
 function LoginForm() {
   const {
     signIn,
-    signInWithGoogle,
     signOut,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- AuthContextValue.user is deliberately `any` (see DashboardAuthProvider.tsx's doc comment); only used here for a truthy/falsy check, never dereferenced.
     user,
     profile,
     isApproved,
@@ -185,20 +184,6 @@ function LoginForm() {
   const [userType, setUserType] = useState<UserType | null>(
     (searchParams.get('type') as UserType) || null,
   );
-
-  // Clear any stale session on mount so a different account can log in cleanly.
-  // Without this, a persistent Firebase session (Account A) auto-redirects to
-  // Account A's dashboard before the user can enter Account B's credentials.
-  // Skip the sign-out if a callbackUrl is present — that means a guard redirected
-  // here mid-authentication, and we must not clobber the session being established.
-  useEffect(() => {
-    const callbackUrl = searchParams.get('callbackUrl');
-    if (callbackUrl) return;
-    const auth = getFirebaseAuth();
-    if (auth.currentUser) {
-      auth.signOut();
-    }
-  }, [searchParams]);
 
   // Per-ring colours: default = tri-colour, selected = single colour
   const ringColors = [
@@ -255,8 +240,8 @@ function LoginForm() {
     } else if (!isApproved && profile !== null) {
       // profile is loaded (not null) but user is not approved — safe to reject.
       // We check profile !== null to avoid acting on the initial null state.
-      const auth = getFirebaseAuth();
-      auth.signOut();
+      void signOut();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- real UX requirement: a definitively-unapproved account must show why immediately, not after another render cycle.
       setError(
         onboardingStatus
           ? "You don't have partner access yet. Your application is pending review."
@@ -285,219 +270,21 @@ function LoginForm() {
     setLoading(true);
 
     try {
+      // signIn() calls the real /api/v2/auth/login BFF proxy — a successful
+      // call updates the session store, which re-renders this component with
+      // a fresh `user`/`profile`/`isApproved`; the redirect effect above
+      // (reading those same fields) does the actual navigation once
+      // DashboardAuthProvider's own post-login fetch (memberships +
+      // onboarding status) resolves. Workspace type is a UI hint only — the
+      // server, not the tile the user clicked, decides which dashboard they
+      // land on (D-024 C-10: role/partnerType come from the gateway, never
+      // client-selected).
       await signIn(email, password);
-
-      const auth = getFirebaseAuth();
-      const currentUser = auth.currentUser;
-
-      if (currentUser) {
-        // Force-refresh the token so the admin-set custom claims
-        // (partnerId, partnerType, partnerRole) are included immediately
-        // after the first login following admin approval.
-        const token = await currentUser.getIdToken(true);
-
-        // Read claims from the freshly-minted token — this is the most
-        // authoritative source and works even if the gateway membership
-        // query hasn't picked up the Firestore doc yet.
-        const tokenResult = await currentUser.getIdTokenResult();
-        const claims = tokenResult.claims as Record<string, any>;
-
-        const res = await fetch('/api/auth/me', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'x-user-type': userType || 'venue',
-          },
-        });
-
-        if (!res.ok) {
-          setError('Failed to fetch user profile.');
-          await auth.signOut();
-          setLoading(false);
-          return;
-        }
-
-        const data = await res.json();
-        const userData = data.user || {};
-        const onboardingRequest = data.onboarding?.onboardingRequest || null;
-
-        let assignedType: ReturnType<typeof normalizePartnerRole> = null;
-
-        // Priority 1: JWT custom claims set by admin approval — available immediately
-        // after admin sets them, no Firestore membership query needed.
-        if (claims['partnerType']) {
-          assignedType = normalizePartnerRole(claims['partnerType']);
-        }
-
-        // Priority 2: activeMembership.partnerType from the /me response — comes from
-        // the partner_memberships collection, more reliable than the users.role field.
-        if (!assignedType && userData.activeMembership?.partnerType) {
-          assignedType = normalizePartnerRole(userData.activeMembership.partnerType);
-        } else if (data.activeMembership?.partnerType) {
-          assignedType = normalizePartnerRole(data.activeMembership.partnerType);
-        } else if (userData.role === 'host') {
-          assignedType = 'host';
-        } else if (userData.role === 'promoter') {
-          assignedType = 'promoter';
-        } else if (userData.role === 'partner' || userData.venueId) {
-          assignedType = 'venue';
-        }
-
-        // Priority 3: legacy role/venueId fields on the users doc — kept as fallback
-        // but may be stale (e.g. role='partner' for a host approved on an older path).
-        if (!assignedType) {
-          if (userData.role === 'host') assignedType = 'host';
-          else if (userData.role === 'promoter') assignedType = 'promoter';
-          else if (userData.role === 'partner' || userData.role === 'staff' || userData.venueId)
-            assignedType = 'venue';
-        }
-
-        // Do NOT grant access based solely on a pending onboarding request —
-        // only users with an active approved account (activeMembership/role/venueId) pass.
-        if (!assignedType) {
-          if (onboardingRequest) {
-            if (
-              onboardingRequest.status === 'verified' ||
-              onboardingRequest.status === 'approved'
-            ) {
-              // Approved but missing role/activeMembership — rare edge.
-              // Let the user through so they land on their partner dashboard.
-              assignedType = normalizePartnerRole(onboardingRequest.type);
-              if (!assignedType) {
-                setError('Application approved, but workspace type unknown. Contact support.');
-                await auth.signOut();
-                setLoading(false);
-                return;
-              }
-            } else {
-              setError("You don't have partner access yet. Your application is pending review.");
-              await auth.signOut();
-              setLoading(false);
-              return;
-            }
-          } else {
-            setError('This account is not registered. Please apply for access.');
-            await auth.signOut();
-            setLoading(false);
-            return;
-          }
-        }
-
-        if (userType && assignedType !== userType) {
-          const typeLabel =
-            assignedType === 'venue' ? 'Venue' : assignedType === 'host' ? 'Host' : 'Promoter';
-          setError(
-            `This account is registered as ${typeLabel}. Please select the correct workspace.`,
-          );
-          await auth.signOut();
-          setLoading(false);
-          return;
-        }
-      }
-
-      router.push(resolvePartnerV3Path(userType) ?? '/partner/select-organization');
-    } catch (err: any) {
-      console.error('Login error:', err);
-      if (err.code === 'auth/user-not-found') {
-        setError('No account found with this email. Please apply for access or check your email.');
-      } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-        setError(
-          `Invalid credentials for the ${userType} workspace. Please check your email/password or ensure you've selected the correct workspace and environment.`,
-        );
-      } else {
-        setError('An error occurred. Please try again.');
-      }
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    setError('');
-    setLoading(true);
-    try {
-      await signInWithGoogle();
-
-      const auth = getFirebaseAuth();
-      const currentUser = auth.currentUser;
-
-      if (currentUser) {
-        const token = await currentUser.getIdToken(true);
-        const tokenResult = await currentUser.getIdTokenResult();
-        const claims = tokenResult.claims as Record<string, any>;
-
-        const res = await fetch('/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!res.ok) {
-          setError('Failed to fetch user profile.');
-          await auth.signOut();
-          setLoading(false);
-          return;
-        }
-
-        const data = await res.json();
-        const userData = data.user || {};
-        const onboardingRequest = data.onboarding?.onboardingRequest || null;
-
-        let assignedType: ReturnType<typeof normalizePartnerRole> = null;
-
-        if (claims['partnerType']) {
-          assignedType = normalizePartnerRole(claims['partnerType']);
-        }
-
-        if (!assignedType && userData.activeMembership?.partnerType) {
-          assignedType = normalizePartnerRole(userData.activeMembership.partnerType);
-        } else if (data.activeMembership?.partnerType) {
-          assignedType = normalizePartnerRole(data.activeMembership.partnerType);
-        } else if (userData.role === 'host') {
-          assignedType = 'host';
-        } else if (userData.role === 'promoter') {
-          assignedType = 'promoter';
-        } else if (userData.role === 'partner' || userData.venueId) {
-          assignedType = 'venue';
-        }
-
-        if (!assignedType) {
-          if (userData.role === 'host') assignedType = 'host';
-          else if (userData.role === 'promoter') assignedType = 'promoter';
-          else if (userData.role === 'partner' || userData.role === 'staff' || userData.venueId)
-            assignedType = 'venue';
-        }
-
-        if (!assignedType) {
-          if (onboardingRequest) {
-            if (
-              onboardingRequest.status === 'verified' ||
-              onboardingRequest.status === 'approved'
-            ) {
-              assignedType = normalizePartnerRole(onboardingRequest.type);
-              if (!assignedType) {
-                setError('Application approved, but workspace type unknown. Contact support.');
-                await auth.signOut();
-                setLoading(false);
-                return;
-              }
-            } else {
-              setError("You don't have partner access yet. Your application is pending review.");
-              await auth.signOut();
-              setLoading(false);
-              return;
-            }
-          } else {
-            setError('This account is not registered. Please apply for access.');
-            await auth.signOut();
-            setLoading(false);
-            return;
-          }
-        }
-
-        router.push(resolvePartnerV3Path(assignedType) ?? '/partner/select-organization');
-      }
-    } catch (err: any) {
-      console.error('Google login error:', err);
-      if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
-        setError('Google sign-in failed. Please try again.');
-      }
+    } catch {
+      // login() already collapses every BFF 4xx into one generic error
+      // (account-existence oracle suppression, D-024's login-path rule) —
+      // there is no further error code to branch on here.
+      setError('Invalid email or password. Please try again.');
       setLoading(false);
     }
   };
@@ -764,9 +551,13 @@ function LoginForm() {
                     <AlertCircle className="h-5 w-5 text-[var(--state-error)] flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
                       <p className="text-[14px] text-[var(--state-error)] font-medium">{error}</p>
-                      {error.includes('not registered') && (
+                      {/* Only the "no partner access yet" case (a real, authenticated
+                          account) offers this — the login failure path is
+                          deliberately generic (D-024's anti-account-existence-oracle
+                          rule) and must never hint whether an email is registered. */}
+                      {error.includes('partner access') && (
                         <button
-                          onClick={() => router.push(`/onboard?email=${email}&type=${userType}`)}
+                          onClick={() => { router.push(`/onboard?email=${email}&type=${userType}`); }}
                           className="text-[13px] font-semibold text-[var(--state-error)] underline mt-2 hover:no-underline"
                         >
                           Apply for Access →
@@ -785,7 +576,7 @@ function LoginForm() {
                       <input
                         type="email"
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        onChange={(e) => { setEmail(e.target.value); }}
                         required
                         autoFocus
                         className="input input-lg pl-12"
@@ -801,14 +592,14 @@ function LoginForm() {
                       <input
                         type={showPassword ? 'text' : 'password'}
                         value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        onChange={(e) => { setPassword(e.target.value); }}
                         required
                         className="input input-lg pl-12 pr-12"
                         placeholder="Enter your password"
                       />
                       <button
                         type="button"
-                        onClick={() => setShowPassword(!showPassword)}
+                        onClick={() => { setShowPassword(!showPassword); }}
                         className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-placeholder)] hover:text-[var(--text-secondary)] transition-colors"
                       >
                         {showPassword ? (
@@ -822,9 +613,9 @@ function LoginForm() {
                       <button
                         type="button"
                         onClick={() =>
-                          router.push(
+                          { router.push(
                             `/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ''}`,
-                          )
+                          ); }
                         }
                         className="text-[12px] font-medium text-[var(--accent-primary)] hover:underline"
                       >
@@ -851,34 +642,6 @@ function LoginForm() {
                     )}
                   </button>
                 </form>
-
-                {/* Google Sign In */}
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  disabled={loading || authLoading}
-                  className="btn btn-secondary w-full flex items-center justify-center gap-3 mt-4"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path
-                      fill="currentColor"
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    />
-                    <path
-                      fill="currentColor"
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    />
-                    <path
-                      fill="currentColor"
-                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                    />
-                    <path
-                      fill="currentColor"
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                    />
-                  </svg>
-                  Sign in with Google
-                </button>
               </motion.div>
             )}
           </AnimatePresence>
@@ -895,7 +658,7 @@ function LoginForm() {
             <p className="text-body-sm text-[var(--text-secondary)] mb-4">
               Join our network of premium nightlife venues, hosts, and promoters.
             </p>
-            <button onClick={() => router.push('/onboard')} className="btn btn-secondary w-full">
+            <button onClick={() => { router.push('/onboard'); }} className="btn btn-secondary w-full">
               Apply for Partner Access
             </button>
           </div>
