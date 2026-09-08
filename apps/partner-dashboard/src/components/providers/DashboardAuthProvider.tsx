@@ -1,78 +1,59 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  GoogleAuthProvider,
-  signInWithPopup,
-  createUserWithEmailAndPassword,
-  updateProfile as updateFirebaseProfile,
-} from 'firebase/auth';
-import { getFirebaseAuth } from '@/lib/firebase/client';
-import { getCachedFirebaseIdToken } from '@/lib/auth/getCachedFirebaseIdToken';
+import { usePathname } from 'next/navigation';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+
+import { getAccessToken, login, logout, signup, useSession } from '@c1rcle/auth';
+
+import { useOrgAccess } from '@/lib/access/use-org-access';
+import { getMyOnboardingRequest } from '@/lib/onboarding/onboarding-repository';
+import { getActiveOrgId, setActiveOrg } from '@/lib/org/active-org';
+import { getOrganizations, getPartnerAccess } from '@/lib/org/org-repository';
+
 import type { DashboardProfile, PartnerMembership, PartnerType, StaffRole } from '@/lib/rbac/types';
+import type { OnboardingRequestDto } from '@c1rcle/contracts';
+import type { ReactNode } from 'react';
 
-// ── Atomic permissions object — always set together to avoid race conditions ──
-interface PermissionsState {
-  tabVisibility: Partial<Record<string, boolean>> | null;
-  actionPermissions: Partial<Record<string, boolean>> | null;
-  piiPolicy: Partial<Record<string, boolean>> | null;
-}
-
-const EMPTY_PERMISSIONS: PermissionsState = {
-  tabVisibility: null,
-  actionPermissions: null,
-  piiPolicy: null,
-};
-
-interface MeActiveMembership {
-  partnerId: string;
-  partnerType: PartnerType;
-  role: StaffRole;
-  joinedAt: number;
-  isActive: boolean;
-  partnerName?: string;
-  membershipId?: string;
-}
-
-interface MeApiResponse {
-  user: {
-    uid: string;
-    email: string;
-    displayName?: string;
-    username?: string;
-    isApproved?: boolean;
-    isBanned?: boolean;
-    kycStatus?: string;
-    onboardingEntityType?: string;
-    subscriptionPlan?: string;
-    tier?: string;
-    // May be present here (injected by gateway) OR at the top-level activeMembership field.
-    activeMembership?: MeActiveMembership;
-    memberships?: MeActiveMembership[];
-    _staffTabVisibility?: Record<string, boolean>;
-    _staffActionPermissions?: Record<string, boolean>;
-    _staffPiiPolicy?: Record<string, boolean>;
-    mustChangePassword?: boolean;
-  } | null;
-  // Gateway puts activeMembership here when loadMemberships succeeds.
-  activeMembership?: MeActiveMembership | null;
-  memberships?: MeActiveMembership[];
-  // buildGuestAuthBootstrap nests onboardingRequest inside onboarding.
-  onboarding?: {
-    onboardingRequest?: {
-      status: string;
-      type?: string;
-    } | null;
-  } | null;
-}
+/**
+ * ─── Real wiring, legacy-shaped context ──────────────────────────────────────
+ *
+ * This file used to run entirely against a mock Firebase client
+ * (`onAuthStateChanged`, `signInWithEmailAndPassword`, `/api/auth/me`'s
+ * fixture route, …). It now reads the real session (`@c1rcle/auth`'s
+ * `useSession`), the real org graph (`org-repository.ts`,
+ * `use-org-access.ts` — same modules `staging`'s auth-foundation work
+ * proved), and the real onboarding application
+ * (`onboarding-repository.ts`). The `AuthContextValue` shape below is
+ * unchanged on purpose — 46 files across this app read it, and none of them
+ * need to know the data underneath moved from a Firebase mock to the real
+ * gateway. Only the internals here changed.
+ *
+ * Two known, honest gaps (not silently patched over — see inline comments
+ * at their state):
+ *  - `isBanned` has no backend concept in V2 yet (V1's `users/{uid}.isBanned`
+ *    never got ported) — always `false` until that exists.
+ *  - `actionPermissions`/`canDo` were a fine-grained per-action staff
+ *    permission map (`canEditEvent`, `canManageDoorMode`, …) that V2's RBAC
+ *    doesn't have a server-side equivalent for yet (it has coarse
+ *    org-role/permission strings, not per-UI-action booleans). `canDo`
+ *    keeps its original formula — "no map set ⇒ allow" — which is exactly
+ *    what already ran for every owner in the old code; the difference is
+ *    non-owner staff now also get it, since there is nothing server-side to
+ *    restrict them with yet. This is a UI-visibility hint only, not the
+ *    authorization boundary — the gateway's own RBAC still enforces the
+ *    real permission check on every write regardless of what a button shows.
+ *
+ * Also dropped, not silently kept broken: the old `mustChangePassword`
+ * force-redirect (a staff-invite flow with no V2 backend field to read it
+ * from — `profile.mustChangePassword` never had a real source even before
+ * this rewrite) and `getCachedFirebaseIdToken` (replaced by
+ * `@c1rcle/auth`'s in-memory `getAccessToken`, which needs no caching layer
+ * of its own).
+ */
 
 interface AuthContextValue {
-  user: any | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- deliberate, unchanged from before this rewrite: `onboard/PageClient.tsx` and `verify/PageClient.tsx` still read Firebase-shaped `.uid`/`.getIdToken()` directly off this field (pre-existing Phase 7 migration gap, not introduced here). Real callers should use `@c1rcle/auth`'s `useSession()` directly instead of narrowing this field.
+  user: any;
   profile: DashboardProfile | null;
   memberships: PartnerMembership[];
   loading: boolean;
@@ -95,7 +76,7 @@ interface AuthContextValue {
   hasPermission: (permission: string) => boolean;
   /** Returns true if owner (null) or the specific action is permitted */
   canDo: (action: string) => boolean;
-  /** Returns the current Firebase ID token, or empty string if not signed in */
+  /** Returns the current access token, or empty string if not signed in */
   getIdToken: () => Promise<string>;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
@@ -106,470 +87,219 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+/** V2's org roles are `owner|admin|manager|member`; the frontend's staff-role
+ * vocabulary has no `member` — `staff` is the closest existing label. */
+function toStaffRole(role: string): StaffRole {
+  return role === 'member' ? 'staff' : (role as StaffRole);
+}
+
 export function DashboardAuthProvider({ children }: { children: ReactNode }) {
-  const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<any | null>(null);
-  const [profile, setProfile] = useState<DashboardProfile | null>(null);
+  const session = useSession();
+
+  // Lazy initializer, not an effect: `getActiveOrgId()` already returns
+  // `null` when `document` isn't available (SSR), so there is nothing an
+  // effect would add here except an extra render.
+  const [activeOrgId, setActiveOrgIdState] = useState<string | null>(() => getActiveOrgId());
   const [memberships, setMemberships] = useState<PartnerMembership[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isApproved, setIsApproved] = useState(false);
-  const [isBanned, setIsBanned] = useState(false);
-  const [isPartnerSuspended, setIsPartnerSuspended] = useState(false);
-  const [onboardingStatus, setOnboardingStatus] = useState<string | null>(null);
-  const [kycStatus, setKycStatus] = useState<string | null>(null);
-  const [entityType, setEntityType] = useState<string | null>(null);
-  const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
-  // Atomic permissions — always updated together to prevent mid-render inconsistency
-  const [permissions, setPermissions] = useState<PermissionsState>(EMPTY_PERMISSIONS);
-  const [grantedPermissions, setGrantedPermissions] = useState<string[]>([]);
-  const [serverDefaultTabVisibility, setServerDefaultTabVisibility] = useState<Partial<
-    Record<string, boolean>
-  > | null>(null);
-  // membershipId for periodic permission refresh (staff only)
-  const [membershipId, setMembershipId] = useState<string | null>(null);
-  const lastProfileFetchRef = useRef<number>(0);
+  const [onboardingRequest, setOnboardingRequest] = useState<OnboardingRequestDto | null>(null);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  const orgAccess = useOrgAccess(activeOrgId);
 
   useEffect(() => {
-    if (!loading && user && profile?.mustChangePassword) {
-      const isDashboardPath = pathname
-        ? pathname.startsWith('/partner/') ||
-          pathname.startsWith('/venue') ||
-          pathname.startsWith('/host') ||
-          pathname.startsWith('/promoter') ||
-          pathname === '/'
-        : false;
+    // A mutable object property, not a plain `let` — TypeScript narrows a
+    // bare `let cancelled = false` to a constant `false` within this
+    // closure (it cannot see the mutation the returned cleanup performs
+    // asynchronously), which makes every `if (cancelled)` check downstream
+    // read as dead code to the linter even though it is the actual
+    // unmount-race guard. A property on an object isn't narrowed the same
+    // way, so the checks below are real.
+    const lifecycle = { cancelled: false };
 
-      if (isDashboardPath && pathname !== '/auth/change-password') {
-        router.replace('/auth/change-password');
-      }
-    }
-  }, [loading, user, profile, pathname, router]);
-
-  useEffect(() => {
-    const auth = getFirebaseAuth() as any;
-    if (!auth || typeof auth.onAuthStateChanged !== 'function') {
-      // Mock auth object check
-      setLoading(false);
-      return;
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: any) => {
-      setUser(firebaseUser);
-      if (!firebaseUser) {
-        setProfile(null);
+    // The whole body runs inside this async function (never directly in the
+    // effect) so every `setState` call happens from a microtask continuation,
+    // not synchronously during the effect's own invocation.
+    async function loadAccountData() {
+      if (session.isLoading) return;
+      const currentUser = session.user;
+      if (!session.isAuthenticated || !currentUser) {
         setMemberships([]);
-        setIsApproved(false);
-        setIsBanned(false);
-        setIsPartnerSuspended(false);
-        setOnboardingStatus(null);
-        setKycStatus(null);
-        setEntityType(null);
-        setSubscriptionPlan(null);
-        setPermissions(EMPTY_PERMISSIONS);
-        setGrantedPermissions([]);
-        setServerDefaultTabVisibility(null);
-        setMembershipId(null);
-        setLoading(false);
-      } else {
-        // A new user just signed in. Immediately clear any stale profile
-        // data from the previous account and gate all guards with loading=true.
-        // Without this, Account A's profile stays visible while Account B's
-        // /api/auth/me fetch is in-flight — causing the wrong account to render.
-        setProfile(null);
-        setMemberships([]);
-        setIsApproved(false);
-        setIsBanned(false);
-        setIsPartnerSuspended(false);
-        setPermissions(EMPTY_PERMISSIONS);
-        setLoading(true);
+        setOnboardingRequest(null);
+        setDataLoading(false);
+        return;
       }
-    });
 
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-
-    // Reset loading to true BEFORE the async fetch so that any guard
-    // (login page useEffect, RoleGuard, etc.) sees authLoading=true and
-    // doesn't act on stale isApproved=false while we're still fetching.
-    setLoading(true);
-
-    // AbortController cancels in-flight fetches when the user changes.
-    // Without this, Account A's fetch can resolve AFTER Account B's and
-    // overwrite the state — causing the wrong account to appear after login.
-    const controller = new AbortController();
-
-    const fetchUserData = async () => {
+      setDataLoading(true);
       try {
-        // Force-refresh ensures admin-set custom claims are picked up
-        // immediately without waiting for the 1-hour token TTL.
-        const token = await user.getIdToken(true);
+        const [orgs, request] = await Promise.all([getOrganizations(), getMyOnboardingRequest()]);
+        if (lifecycle.cancelled) return;
 
-        if (controller.signal.aborted) return;
+        const resolved = await Promise.all(
+          orgs.map(async (org): Promise<PartnerMembership | null> => {
+            try {
+              const access = await getPartnerAccess(org.id);
+              return {
+                uid: currentUser.id,
+                partnerId: org.id,
+                partnerType: access.partnerType as PartnerType,
+                role: toStaffRole(org.role),
+                isActive: org.id === activeOrgId,
+                partnerName: org.name,
+              };
+            } catch {
+              // A member the caller can list but not yet resolve access for
+              // (e.g. a suspended org) is dropped from the switcher rather
+              // than shown broken.
+              return null;
+            }
+          }),
+        );
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- real unmount-race guard; the linter can't see the cleanup function's mutation of `lifecycle.cancelled` from here.
+        if (lifecycle.cancelled) return;
 
-        const requestedPartnerType =
-          user.partnerType === 'host' || user.partnerType === 'promoter' || user.partnerType === 'venue'
-            ? user.partnerType
-            : undefined;
-        const res = await fetch('/api/auth/me', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            ...(requestedPartnerType ? { 'x-user-type': requestedPartnerType } : {}),
-          },
-          signal: controller.signal,
-        });
+        const resolvedMemberships = resolved.filter((m): m is PartnerMembership => m !== null);
+        setMemberships(resolvedMemberships);
+        setOnboardingRequest(request);
 
-        if (!res.ok) {
-          if (!controller.signal.aborted) setLoading(false);
-          return;
+        // First login, single org, no active-org cookie yet — pick it rather
+        // than force a one-item picker. Multiple orgs or zero orgs are left
+        // for the user (or the existing select-organization redirect) to
+        // resolve explicitly.
+        const [only, ...rest] = resolvedMemberships;
+        if (!activeOrgId && only && rest.length === 0) {
+          await setActiveOrg(only.partnerId);
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- real unmount-race guard; see the comment on `lifecycle` above.
+          if (!lifecycle.cancelled) setActiveOrgIdState(only.partnerId);
         }
-
-        const data: MeApiResponse = await res.json();
-
-        if (controller.signal.aborted) return;
-
-        const userData = data.user;
-        const onboardingRequest = data.onboarding?.onboardingRequest || null;
-
-        if (!userData) {
-          if (!controller.signal.aborted) setLoading(false);
-          return;
+      } catch {
+        if (!lifecycle.cancelled) {
+          setMemberships([]);
+          setOnboardingRequest(null);
         }
-
-        const tokenResult = await user.getIdTokenResult();
-
-        if (controller.signal.aborted) return;
-
-        const claims = tokenResult.claims as Record<string, any>;
-
-        const approvedByDoc = userData.isApproved || false;
-        const approvedByClaims = !!claims['partnerId'];
-        const approvedState = approvedByDoc || approvedByClaims;
-
-        setIsApproved(approvedState);
-        setIsBanned(userData.isBanned || false);
-
-        if (!approvedState) {
-          if (onboardingRequest) {
-            setOnboardingStatus(onboardingRequest.status);
-          }
-        } else {
-          setOnboardingStatus(null);
-        }
-
-        setKycStatus(userData.kycStatus ?? null);
-        setEntityType(userData.onboardingEntityType ?? null);
-
-        let activeMembership: PartnerMembership | null = null;
-        let plan: string | null = null;
-
-        // activeMembership may live in data.user.activeMembership (injected by gateway)
-        // OR at data.activeMembership (top-level) — check both for resilience.
-        const rawMembership = userData.activeMembership || data.activeMembership || null;
-        const rawMemberships = userData.memberships || data.memberships || (rawMembership ? [rawMembership] : []);
-
-        if (claims['partnerId'] && claims['partnerType'] && claims['partnerRole']) {
-          activeMembership = {
-            uid: user.uid,
-            partnerId: claims['partnerId'] as string,
-            partnerType: (claims['partnerType'] === 'club'
-              ? 'venue'
-              : claims['partnerType']) as PartnerType,
-            role: claims['partnerRole'] as StaffRole,
-            joinedAt: 0,
-            isActive: true,
-            partnerName: rawMembership?.partnerName || undefined,
-          };
-        } else if (rawMembership) {
-          activeMembership = {
-            uid: user.uid,
-            partnerId: rawMembership.partnerId,
-            partnerType: rawMembership.partnerType === 'club' ? 'venue' : rawMembership.partnerType,
-            role: rawMembership.role,
-            joinedAt: rawMembership.joinedAt,
-            isActive: rawMembership.isActive,
-            partnerName: rawMembership.partnerName || undefined,
-          };
-        }
-
-        if (approvedState && activeMembership) {
-          plan = userData.subscriptionPlan || userData.tier || 'basic';
-          setSubscriptionPlan(plan);
-
-          // Fetch server-computed coarse permissions and default tab visibility.
-          // Must happen server-side — frontend never derives permissions from role.
-          fetch('/api/auth/partner-context', {
-            headers: { Authorization: `Bearer ${token}` },
-            signal: controller.signal,
-          })
-            .then((r) => (r.ok ? r.json() : null))
-            .then((ctx) => {
-              if (ctx && !controller.signal.aborted) {
-                const payload = ctx.data || ctx;
-                setGrantedPermissions(payload.permissions ?? []);
-                setServerDefaultTabVisibility(payload.tabVisibility ?? null);
-                setIsPartnerSuspended(payload.isSuspended ?? false);
-              }
-            })
-            .catch(() => {});
-        }
-
-        setMemberships(rawMemberships.map((item) => ({
-          uid: user.uid,
-          partnerId: item.partnerId,
-          partnerType: item.partnerType === 'club' ? 'venue' : item.partnerType,
-          role: item.role,
-          joinedAt: item.joinedAt,
-          isActive: item.partnerId === activeMembership?.partnerId,
-          partnerName: item.partnerName,
-          membershipId: item.membershipId,
-        })));
-
-        // Set permissions atomically — all three fields in a single state update
-        setPermissions({
-          tabVisibility: userData._staffTabVisibility ?? null,
-          actionPermissions: userData._staffActionPermissions ?? null,
-          piiPolicy: userData._staffPiiPolicy ?? null,
-        });
-
-        // Capture membershipId for periodic staff-permission refresh
-        setMembershipId(userData.activeMembership?.membershipId ?? null);
-
-        setProfile({
-          uid: user.uid,
-          email: user.email || '',
-          displayName: userData.displayName || userData.username || 'User',
-          activeMembership,
-          mustChangePassword: userData.mustChangePassword ?? false,
-        });
-        lastProfileFetchRef.current = Date.now();
-      } catch (err: any) {
-        if (err?.name === 'AbortError') return; // expected — user changed mid-fetch
-        console.error('Error fetching user data in auth provider:', err);
-        if (!controller.signal.aborted) setLoading(false);
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        if (!lifecycle.cancelled) setDataLoading(false);
       }
-    };
+    }
 
-    fetchUserData();
-
-    // Cancel any in-flight request when user changes or component unmounts
-    return () => controller.abort();
-  }, [user]);
-
-  // Re-fetch profile when tab becomes visible after 60s — ensures staff see
-  // updated permissions after the venue owner reassigns their access profile.
-  useEffect(() => {
-    if (!user) return;
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        const elapsed = Date.now() - lastProfileFetchRef.current;
-        if (elapsed > 60 * 1000) {
-          user.getIdToken().then((token: any) => {
-            fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
-              .then((r) => (r.ok ? r.json() : null))
-              .then((data) => {
-                if (!data?.user) return;
-                const userData = data.user;
-                // Atomic update — all three permissions together
-                setPermissions({
-                  tabVisibility: userData._staffTabVisibility ?? null,
-                  actionPermissions: userData._staffActionPermissions ?? null,
-                  piiPolicy: userData._staffPiiPolicy ?? null,
-                });
-                lastProfileFetchRef.current = Date.now();
-              })
-              .catch(() => {});
-          });
-        }
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [user]);
-
-  // Permission sync via authenticated gateway polling. This preserves the
-  // staff-permission refresh path without direct Firestore access in the browser.
-  useEffect(() => {
-    if (!user || !membershipId) return;
-    let cancelled = false;
-
-    const syncPermissions = async () => {
-      try {
-        const token = await user.getIdToken().then((token: any) => token);
-        const res = await fetch('/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) return;
-        const data: MeApiResponse | null = await res.json().catch(() => null);
-        if (cancelled || !data?.user) return;
-        const userData = data.user;
-        const newTabVisibility = userData._staffTabVisibility ?? null;
-        const newActionPermissions = userData._staffActionPermissions ?? null;
-        const newPiiPolicy = userData._staffPiiPolicy ?? null;
-        // Only update state if something actually changed — avoids context re-renders
-        // on every 30s poll when permissions haven't changed (new object === re-render).
-        setPermissions((prev) => {
-          if (
-            JSON.stringify(prev.tabVisibility) === JSON.stringify(newTabVisibility) &&
-            JSON.stringify(prev.actionPermissions) === JSON.stringify(newActionPermissions) &&
-            JSON.stringify(prev.piiPolicy) === JSON.stringify(newPiiPolicy)
-          ) {
-            return prev; // same reference → no re-render
-          }
-          return {
-            tabVisibility: newTabVisibility,
-            actionPermissions: newActionPermissions,
-            piiPolicy: newPiiPolicy,
-          };
-        });
-        const newMembershipId = userData.activeMembership?.membershipId ?? membershipId;
-        if (newMembershipId !== membershipId) {
-          setMembershipId(newMembershipId);
-        }
-        lastProfileFetchRef.current = Date.now();
-      } catch (err) {
-        console.error('Error refreshing staff permissions:', err);
-      }
-    };
-
-    syncPermissions().catch(() => {});
-    const intervalId = window.setInterval(() => {
-      syncPermissions().catch(() => {});
-    }, 30_000);
-
+    void loadAccountData();
     return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
+      lifecycle.cancelled = true;
     };
-  }, [user, membershipId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- activeOrgId is read, not a trigger; re-running per active-org change would refetch the whole membership list for no reason.
+  }, [session.isLoading, session.isAuthenticated, session.user?.id]);
+
+  const isApproved = onboardingRequest?.status === 'approved';
+  // No `isBanned` concept exists in V2 yet — see the file-level comment.
+  const isBanned = false;
+  const onboardingStatus = onboardingRequest?.status ?? null;
+  // No distinct KYC status separate from the overall application status
+  // exists server-side yet — same value, kept as a separate field because
+  // 7 call sites already read `kycStatus` specifically.
+  const kycStatus = onboardingRequest?.status ?? null;
+  const entityType = onboardingRequest?.profile.entityType ?? null;
+  const subscriptionPlan = onboardingRequest?.plan ?? null;
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const auth = getFirebaseAuth() as any;
-    if (auth && typeof auth.signInWithEmailAndPassword === 'function') {
-      await auth.signInWithEmailAndPassword(email, password);
-    } else {
-      await signInWithEmailAndPassword(auth, email, password).catch(() => {});
-    }
+    await login({ email, password });
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, displayName: string) => {
-    const auth = getFirebaseAuth() as any;
-    const credential = await createUserWithEmailAndPassword(auth, email, password);
-
-    await updateFirebaseProfile(credential.user, { displayName });
-
-    const token = await credential.user.getIdToken();
-    const now = new Date().toISOString();
-
-    await fetch('/api/auth/profile', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        uid: credential.user.uid,
-        email: credential.user.email || '',
-        displayName: displayName,
-        photoURL: credential.user.photoURL || '',
-        createdAt: now,
-        updatedAt: now,
-        isApproved: false,
-      }),
-    });
+    await signup({ email, password, displayName });
   }, []);
 
-  const signInWithGoogle = useCallback(async () => {
-    const auth = getFirebaseAuth() as any;
-    const provider = new GoogleAuthProvider();
-    const credential = await signInWithPopup(auth, provider);
-
-    const token = await credential.user.getIdToken();
-
-    // Use our endpoint which creates the profile if it doesn't exist
-    const now = new Date().toISOString();
-    await fetch('/api/auth/profile', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        uid: credential.user.uid,
-        email: credential.user.email || '',
-        displayName: credential.user.displayName || 'Member',
-        photoURL: credential.user.photoURL || '',
-        createdAt: now,
-        updatedAt: now,
-        isApproved: false,
-      }),
-    });
-  }, []);
+  const signInWithGoogle = useCallback(
+    () => Promise.reject(new Error('Google sign-in is not supported on the V2 API.')),
+    [],
+  );
 
   const signOut = useCallback(async () => {
-    const auth = getFirebaseAuth() as any;
-    if (auth && typeof auth.signOut === 'function') {
-      await auth.signOut();
-    } else {
-      await firebaseSignOut(auth).catch(() => {});
-    }
+    await logout();
   }, []);
 
   const switchPartner = useCallback(async (partnerId: string) => {
-    if (!user) return;
-    try {
-      setLoading(true);
-      const token = await user.getIdToken();
-      const res = await fetch('/api/auth/me', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ partnerId }),
-      });
-      if (res.ok) {
-        // Refresh token to get new claims
-        await user.getIdToken(true);
-        window.location.reload();
-      }
-    } catch (err) {
-      console.error('Failed to switch partner:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+    await setActiveOrg(partnerId);
+    window.location.reload();
+  }, []);
 
-  const canDo = useCallback((action: string) =>
-    !permissions.actionPermissions || permissions.actionPermissions[action] === true, [permissions.actionPermissions]);
+  const canDo = useCallback(
+    // See the file-level comment: no per-action staff permission map exists
+    // server-side yet, so this always evaluates the "unrestricted" branch.
+    (_action: string) => true,
+    [],
+  );
 
-  const getIdToken = useCallback(async () => {
-    return getCachedFirebaseIdToken(user);
-  }, [user]);
+  const getIdToken = useCallback(() => Promise.resolve(getAccessToken() ?? ''), []);
 
-  const hasPermission = useCallback((permission: string) => grantedPermissions.includes(permission), [grantedPermissions]);
+  const hasPermission = useCallback(
+    (permission: string) => orgAccess.hasPermission(permission),
+    [orgAccess],
+  );
 
-  const authContextValue = useMemo<AuthContextValue>(() => ({
-    user,
-    profile,
+  const loading = session.isLoading || (session.isAuthenticated && dataLoading);
+
+  const authContextValue = useMemo<AuthContextValue>(() => {
+    const activeMembership: PartnerMembership | null =
+      activeOrgId && orgAccess.partnerType && session.user
+        ? {
+            uid: session.user.id,
+            partnerId: activeOrgId,
+            partnerType: orgAccess.partnerType as PartnerType,
+            role: toStaffRole(orgAccess.role ?? 'member'),
+            isActive: true,
+          }
+        : null;
+
+    const profile: DashboardProfile | null = session.user
+      ? {
+          uid: session.user.id,
+          email: session.user.email,
+          displayName: session.user.displayName,
+          activeMembership,
+        }
+      : null;
+
+    return {
+      user: session.user,
+      profile,
+      memberships,
+      loading,
+      isApproved,
+      isBanned,
+      isPartnerSuspended: orgAccess.isSuspended,
+      onboardingStatus,
+      kycStatus,
+      entityType,
+      subscriptionPlan,
+      tabVisibility: orgAccess.tabVisibility,
+      actionPermissions: null,
+      piiPolicy: null,
+      grantedPermissions: orgAccess.permissions,
+      hasPermission,
+      canDo,
+      getIdToken,
+      signIn,
+      signUp,
+      signInWithGoogle,
+      signOut,
+      switchPartner,
+    };
+  }, [
+    activeOrgId,
+    session.user,
+    orgAccess.partnerType,
+    orgAccess.role,
+    orgAccess.isSuspended,
+    orgAccess.tabVisibility,
+    orgAccess.permissions,
     memberships,
     loading,
     isApproved,
     isBanned,
-    isPartnerSuspended,
     onboardingStatus,
     kycStatus,
     entityType,
     subscriptionPlan,
-    tabVisibility: permissions.tabVisibility ?? serverDefaultTabVisibility,
-    actionPermissions: permissions.actionPermissions,
-    piiPolicy: permissions.piiPolicy,
-    grantedPermissions,
     hasPermission,
     canDo,
     getIdToken,
@@ -578,43 +308,22 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     signInWithGoogle,
     signOut,
     switchPartner,
-  }), [canDo, entityType, getIdToken, grantedPermissions, hasPermission, isApproved, isBanned, isPartnerSuspended, kycStatus, loading, memberships, onboardingStatus, permissions.actionPermissions, permissions.piiPolicy, permissions.tabVisibility, profile, serverDefaultTabVisibility, signIn, signInWithGoogle, signOut, signUp, subscriptionPlan, switchPartner, user]);
-
-  const isDashboardPath = pathname
-    ? pathname.startsWith('/partner/') ||
-      pathname.startsWith('/venue') ||
-      pathname.startsWith('/host') ||
-      pathname.startsWith('/promoter') ||
-      pathname === '/'
-    : false;
+  ]);
 
   const isBypassPath = pathname
     ? pathname.startsWith('/onboard') || pathname.startsWith('/login')
     : false;
 
-  const redirectPending =
-    !loading &&
-    user &&
-    profile?.mustChangePassword &&
-    isDashboardPath &&
-    pathname !== '/auth/change-password';
-
-  if ((loading && !isBypassPath) || redirectPending) {
+  if (loading && !isBypassPath) {
     return (
       <div className="partner-v3-auth-loading" role="status" aria-live="polite">
         <div className="partner-v3-spinner" aria-hidden="true" />
-        <p>
-          {redirectPending ? 'Redirecting' : 'Authorizing Access'}
-        </p>
+        <p>Authorizing Access</p>
       </div>
     );
   }
 
-  return (
-    <AuthContext.Provider value={authContextValue}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={authContextValue}>{children}</AuthContext.Provider>;
 }
 
 export function useDashboardAuth() {

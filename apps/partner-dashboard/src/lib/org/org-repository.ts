@@ -1,0 +1,44 @@
+import { organizationDtoSchema, paginatedSchema, partnerAccessDtoSchema } from '@c1rcle/contracts';
+
+import { apiClient } from '@/lib/api/client';
+
+import type { CreateOrganizationInput, OrganizationDto, PartnerAccessDto } from '@c1rcle/contracts';
+
+/**
+ * Fetches all organizations the logged-in user has access to.
+ */
+export async function getOrganizations(): Promise<OrganizationDto[]> {
+  const response = await apiClient.get({
+    path: '/api/v2/organizations',
+    schema: paginatedSchema(organizationDtoSchema),
+  });
+  return response.items;
+}
+
+/**
+ * Server-computed role/permissions/tabVisibility for one organization. Same
+ * endpoint `useOrgAccess` calls for the *active* org — exposed here as a
+ * plain function too so a membership list (many orgs, not just the active
+ * one) can resolve each org's `partnerType` without a hook-in-a-loop.
+ */
+export async function getPartnerAccess(organizationId: string): Promise<PartnerAccessDto> {
+  return apiClient.get({
+    path: `/api/v2/organizations/${organizationId}/access`,
+    schema: partnerAccessDtoSchema,
+  });
+}
+
+/**
+ * Creates a new organization.
+ */
+export async function createOrganization(input: CreateOrganizationInput): Promise<OrganizationDto> {
+  const idempotencyKey = crypto.randomUUID();
+  return apiClient.post({
+    path: '/api/v2/organizations',
+    body: input,
+    schema: organizationDtoSchema,
+    headers: {
+      'Idempotency-Key': idempotencyKey,
+    },
+  });
+}
