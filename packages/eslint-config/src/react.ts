@@ -4,6 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 
 import { baseConfig } from './base.js';
+import { APP_PACKAGE_PATTERN } from './constants.js';
 
 /**
  * Configuration for anything that renders React.
@@ -32,6 +33,52 @@ export const reactConfig = defineConfig(
       /* React correctness */
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
+
+      /*
+       * Redefines base's no-restricted-imports (rather than extending it) so
+       * this package's own pattern set stays visible in one place — kept in
+       * sync with base.ts and next.ts, which each redefine it too.
+       */
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [APP_PACKAGE_PATTERN, `${APP_PACKAGE_PATTERN}/**`],
+              message:
+                'ARCHITECTURE: applications are leaves. Nothing may import an application. Move the shared code into packages/.',
+            },
+            {
+              group: ['@c1rcle/*/src/*', '@c1rcle/*/dist/*', '@c1rcle/*/*/*'],
+              message:
+                'ARCHITECTURE: deep imports are forbidden. Import the package root and let its `exports` map define the public API.',
+            },
+            {
+              group: ['axios', 'axios/*', 'got', 'node-fetch', 'superagent', 'ky'],
+              message:
+                'ARCHITECTURE: every backend request goes through @c1rcle/api-client. Do not add another HTTP client.',
+            },
+            {
+              group: [
+                'firebase-admin',
+                'firebase-admin/*',
+                'pg',
+                'mysql2',
+                'mongodb',
+                'prisma',
+                '@prisma/client',
+              ],
+              message:
+                'SECURITY: this is a frontend-only repository. Backend SDKs and database clients are never allowed here.',
+            },
+            {
+              group: ['firebase', 'firebase/*'],
+              message:
+                'ARCHITECTURE: firebase is being removed from this repository. Auth goes through @c1rcle/auth.',
+            },
+          ],
+        },
+      ],
 
       /* Styling is Tailwind + design tokens only — never inline style objects. */
       'no-restricted-syntax': [

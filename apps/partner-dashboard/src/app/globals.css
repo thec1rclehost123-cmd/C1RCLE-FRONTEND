@@ -1,4 +1,6 @@
+/* Updated Tailwind CSS globals */
 @tailwind base;
+
 @tailwind components;
 @tailwind utilities;
 
