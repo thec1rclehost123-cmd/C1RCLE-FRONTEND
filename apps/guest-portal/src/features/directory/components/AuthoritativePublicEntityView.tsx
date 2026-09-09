@@ -1,8 +1,8 @@
 import { Breadcrumbs } from '@/components/seo/Breadcrumbs';
 
-import type { HostPublicDto, VenueDto } from '@c1rcle/contracts';
+import type { HostPublicDto, VenuePublicDetailDto } from '@c1rcle/contracts';
 
-export function AuthoritativeVenueView({ venue }: { readonly venue: VenueDto }) {
+export function AuthoritativeVenueView({ venue }: { readonly venue: VenuePublicDetailDto }) {
   return (
     <article className="relative z-10 mx-auto min-h-screen max-w-6xl px-6 pb-24 pt-32 text-white">
       <Breadcrumbs
@@ -14,7 +14,7 @@ export function AuthoritativeVenueView({ venue }: { readonly venue: VenueDto }) 
       />
       <header className="max-w-4xl">
         <p className="text-[10px] font-black uppercase tracking-[0.25em] text-[#FF6842]">
-          {venue.city ?? 'Venue'}
+          {venue.address.city ?? venue.city ?? 'Venue'}
         </p>
         <h1 className="mt-5 text-5xl font-black uppercase leading-[0.9] tracking-[-0.055em] sm:text-7xl">
           {venue.name}

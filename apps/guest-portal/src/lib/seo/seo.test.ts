@@ -8,7 +8,7 @@ import { buildPrivateMetadata, buildPublicMetadata } from './metadata';
 import { isEligiblePublicEvent, isEligiblePublicHost, isEligiblePublicVenue } from './public-data';
 import { absoluteUrl, getSeoEnvironment, getSiteUrl } from './site';
 
-import type { EventDto, HostPublicDto, VenueDto } from '@c1rcle/contracts';
+import type { EventDto, HostPublicDto, VenuePublicDetailDto } from '@c1rcle/contracts';
 
 const event: EventDto = {
   id: 'event-1',
@@ -127,7 +127,7 @@ describe('authoritative entity eligibility', () => {
   });
 
   it('fails closed for venue and host contracts missing SEO publication fields', () => {
-    const venue: VenueDto = {
+    const venue: VenuePublicDetailDto = {
       id: 'venue-1',
       organizationId: 'org-1',
       name: 'Venue',
@@ -136,6 +136,9 @@ describe('authoritative entity eligibility', () => {
       description: 'Description',
       capacity: null,
       city: 'Pune',
+      photoUrl: 'https://images.example.test/venue.webp',
+      address: { city: 'Pune', country: 'IN' },
+      facilities: ['stage'],
       version: 1,
       createdAt: '2029-01-01T00:00:00.000Z',
       updatedAt: '2029-01-01T00:00:00.000Z',

@@ -18,14 +18,14 @@ export const dynamic = 'force-dynamic';
 export async function generateMetadata({ params }: EventDetailPageProps): Promise<Metadata> {
   const { eventId } = await params;
   const slug = decodeURIComponent(eventId);
-  const authoritativeEvent = await getPublicEventForSeo(slug);
+  const authoritativeDetail = await getPublicEventForSeo(slug);
 
-  if (authoritativeEvent !== null) {
+  if (authoritativeDetail !== null) {
     return buildPublicMetadata({
-      path: `/event/${encodeURIComponent(authoritativeEvent.slug)}`,
-      title: authoritativeEvent.title,
-      description: authoritativeEvent.summary,
-      image: authoritativeEvent.imageUrl,
+      path: `/event/${encodeURIComponent(authoritativeDetail.slug)}`,
+      title: authoritativeDetail.title,
+      description: authoritativeDetail.summary,
+      image: authoritativeDetail.imageUrl,
     });
   }
 
@@ -54,9 +54,9 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
 export default async function EventDetailPage({ params }: EventDetailPageProps) {
   const { eventId } = await params;
   const slug = decodeURIComponent(eventId);
-  const authoritativeEvent = await getPublicEventForSeo(slug);
+  const authoritativeDetail = await getPublicEventForSeo(slug);
 
-  if (authoritativeEvent !== null) return <AuthoritativeEventView event={authoritativeEvent} />;
+  if (authoritativeDetail !== null) return <AuthoritativeEventView detail={authoritativeDetail} />;
 
   const event = isProductionSeo() ? undefined : findEventDetailFixture(slug);
 

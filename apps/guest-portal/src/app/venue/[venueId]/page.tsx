@@ -24,6 +24,7 @@ export async function generateMetadata({ params }: VenueProfilePageProps): Promi
       path: `/venue/${encodeURIComponent(authoritativeVenue.slug)}`,
       title: authoritativeVenue.name,
       description: authoritativeVenue.description,
+      image: authoritativeVenue.photoUrl,
       indexable: isEligiblePublicVenue(authoritativeVenue),
     });
   }

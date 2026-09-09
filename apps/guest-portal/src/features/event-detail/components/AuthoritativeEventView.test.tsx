@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { AuthoritativeEventView } from './AuthoritativeEventView';
 
-import type { EventDto } from '@c1rcle/contracts';
+import type { EventDto, EventPublicDetailDto } from '@c1rcle/contracts';
 
 vi.mock('@/lib/seo/site', () => ({
   absoluteUrl: (path: string) => `https://thec1rcle.com${path}`,
@@ -31,9 +31,29 @@ const event: EventDto = {
   updatedAt: '2029-06-01T00:00:00.000Z',
 };
 
+const detail: EventPublicDetailDto = {
+  ...event,
+  venue: {
+    id: 'venue-1',
+    name: 'Public Venue',
+    slug: 'public-venue',
+    photoUrl: 'https://images.example.test/venue.webp',
+    address: {
+      street: '1 Test Street',
+      city: 'Pune',
+      state: 'Maharashtra',
+      zip: '411001',
+      country: 'IN',
+      lat: 18.5204,
+      lng: 73.8567,
+    },
+  },
+  organizer: { id: 'org-1', name: 'Public Host', slug: 'public-host' },
+};
+
 describe('AuthoritativeEventView structured data', () => {
-  it('uses authoritative event fields and omits unsupported venue, organizer, and offers', () => {
-    const { container } = render(<AuthoritativeEventView event={event} />);
+  it('uses the authoritative venue and links its public relationships', () => {
+    const { container, getByRole } = render(<AuthoritativeEventView detail={detail} />);
     const script = [...container.querySelectorAll('script[type="application/ld+json"]')].find(
       (candidate) => candidate.textContent.includes('"@type":"Event"'),
     );
@@ -46,11 +66,43 @@ describe('AuthoritativeEventView structured data', () => {
       image: ['https://images.example.test/event.webp'],
       startDate: '2030-01-01T18:00:00.000Z',
       url: 'https://thec1rcle.com/event/public-event',
+      location: {
+        '@type': 'Place',
+        name: 'Public Venue',
+        url: 'https://thec1rcle.com/venue/public-venue',
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: '1 Test Street',
+          addressLocality: 'Pune',
+          addressRegion: 'Maharashtra',
+          postalCode: '411001',
+          addressCountry: 'IN',
+        },
+        geo: { '@type': 'GeoCoordinates', latitude: 18.5204, longitude: 73.8567 },
+      },
     });
-    expect(jsonLd).not.toHaveProperty('location');
+    expect(getByRole('link', { name: 'Public Venue' })).toHaveAttribute(
+      'href',
+      '/venue/public-venue',
+    );
+    expect(getByRole('link', { name: 'Public Host' })).toHaveAttribute('href', '/host/public-host');
     expect(jsonLd).not.toHaveProperty('organizer');
     expect(jsonLd).not.toHaveProperty('offers');
     expect(JSON.stringify(jsonLd)).not.toContain('org-1');
     expect(JSON.stringify(jsonLd)).not.toContain('venue-1');
+  });
+
+  it('omits location, organizer, and offers when relationships are unavailable', () => {
+    const { container } = render(
+      <AuthoritativeEventView detail={{ ...event, venue: null, organizer: null }} />,
+    );
+    const script = [...container.querySelectorAll('script[type="application/ld+json"]')].find(
+      (candidate) => candidate.textContent.includes('"@type":"Event"'),
+    );
+    const jsonLd = JSON.parse(script?.textContent ?? '{}') as Record<string, unknown>;
+
+    expect(jsonLd).not.toHaveProperty('location');
+    expect(jsonLd).not.toHaveProperty('organizer');
+    expect(jsonLd).not.toHaveProperty('offers');
   });
 });

@@ -1,10 +1,37 @@
+import Link from 'next/link';
+
 import { Breadcrumbs } from '@/components/seo/Breadcrumbs';
 import { JsonLd } from '@/lib/seo/json-ld';
 import { absoluteUrl } from '@/lib/seo/site';
 
-import type { EventDto } from '@c1rcle/contracts';
+import type { EventPublicDetailDto, EventVenuePublicDto } from '@c1rcle/contracts';
 
-export function AuthoritativeEventView({ event }: { readonly event: EventDto }) {
+function venueAddressJsonLd(venue: EventVenuePublicDto): Record<string, unknown> | null {
+  const address = {
+    ...(venue.address.street === undefined ? {} : { streetAddress: venue.address.street }),
+    ...(venue.address.city === undefined ? {} : { addressLocality: venue.address.city }),
+    ...(venue.address.state === undefined ? {} : { addressRegion: venue.address.state }),
+    ...(venue.address.zip === undefined ? {} : { postalCode: venue.address.zip }),
+    ...(venue.address.country === undefined ? {} : { addressCountry: venue.address.country }),
+  };
+  return Object.keys(address).length === 0 ? null : { '@type': 'PostalAddress', ...address };
+}
+
+function venueGeoJsonLd(venue: EventVenuePublicDto): Record<string, unknown> | null {
+  return venue.address.lat === undefined || venue.address.lng === undefined
+    ? null
+    : {
+        '@type': 'GeoCoordinates',
+        latitude: venue.address.lat,
+        longitude: venue.address.lng,
+      };
+}
+
+export function AuthoritativeEventView({ detail }: { readonly detail: EventPublicDetailDto }) {
+  const { venue, organizer } = detail;
+  const event = detail;
+  const address = venue === null ? null : venueAddressJsonLd(venue);
+  const geo = venue === null ? null : venueGeoJsonLd(venue);
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Event',
@@ -16,6 +43,18 @@ export function AuthoritativeEventView({ event }: { readonly event: EventDto }) 
     eventStatus: 'https://schema.org/EventScheduled',
     eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
     url: absoluteUrl(`/event/${encodeURIComponent(event.slug)}`),
+    ...(venue === null
+      ? {}
+      : {
+          location: {
+            '@type': 'Place',
+            name: venue.name,
+            url: absoluteUrl(`/venue/${encodeURIComponent(venue.slug)}`),
+            ...(venue.photoUrl === null ? {} : { image: venue.photoUrl }),
+            ...(address === null ? {} : { address }),
+            ...(geo === null ? {} : { geo }),
+          },
+        }),
   };
 
   return (
@@ -38,6 +77,26 @@ export function AuthoritativeEventView({ event }: { readonly event: EventDto }) 
           {event.title}
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-8 text-white/65">{event.summary}</p>
+        {(venue !== null || organizer !== null) && (
+          <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/55">
+            {venue !== null && (
+              <p>
+                Venue:{' '}
+                <Link className="font-bold text-white" href={`/venue/${venue.slug}`}>
+                  {venue.name}
+                </Link>
+              </p>
+            )}
+            {organizer !== null && (
+              <p>
+                Host:{' '}
+                <Link className="font-bold text-white" href={`/host/${organizer.slug}`}>
+                  {organizer.name}
+                </Link>
+              </p>
+            )}
+          </div>
+        )}
       </header>
       {event.imageUrl !== null && (
         // The public contract does not yet provide image dimensions or an allow-listed host.

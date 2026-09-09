@@ -3,14 +3,20 @@ import 'server-only';
 import { createApiClient } from '@c1rcle/api-client';
 import {
   discoveryFeedDtoSchema,
-  eventDtoSchema,
+  eventPublicDetailDtoSchema,
   hostPublicDtoSchema,
-  venueDtoSchema,
+  venuePublicDetailDtoSchema,
 } from '@c1rcle/contracts';
 
 import { isProductionSeo } from './site';
 
-import type { DiscoveryFeedDto, EventDto, HostPublicDto, VenueDto } from '@c1rcle/contracts';
+import type {
+  DiscoveryFeedDto,
+  EventDto,
+  EventPublicDetailDto,
+  HostPublicDto,
+  VenuePublicDetailDto,
+} from '@c1rcle/contracts';
 import type { z } from 'zod';
 
 const EXPIRED_EVENT_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -43,7 +49,7 @@ export function isEligiblePublicEvent(event: EventDto, now = new Date()): boolea
  * has no verified/publication flag. Keep it out of search until that contract
  * exists rather than inferring verification from an active status.
  */
-export function isEligiblePublicVenue(_venue: VenueDto): boolean {
+export function isEligiblePublicVenue(_venue: VenuePublicDetailDto): boolean {
   return false;
 }
 
@@ -52,18 +58,21 @@ export function isEligiblePublicHost(_host: HostPublicDto): boolean {
   return false;
 }
 
-export async function getPublicEventForSeo(slug: string): Promise<EventDto | null> {
+export async function getPublicEventForSeo(slug: string): Promise<EventPublicDetailDto | null> {
   if (!isProductionSeo()) return null;
-  const event = await readPublic<EventDto>(
+  const detail = await readPublic<EventPublicDetailDto>(
     `/api/v2/public/events/${encodeURIComponent(slug)}`,
-    eventDtoSchema,
+    eventPublicDetailDtoSchema,
   );
-  return event !== null && isEligiblePublicEvent(event) ? event : null;
+  return detail !== null && isEligiblePublicEvent(detail) ? detail : null;
 }
 
-export async function getPublicVenueForSeo(slug: string): Promise<VenueDto | null> {
+export async function getPublicVenueForSeo(slug: string): Promise<VenuePublicDetailDto | null> {
   if (!isProductionSeo()) return null;
-  return readPublic<VenueDto>(`/api/v2/public/venues/${encodeURIComponent(slug)}`, venueDtoSchema);
+  return readPublic<VenuePublicDetailDto>(
+    `/api/v2/public/venues/${encodeURIComponent(slug)}`,
+    venuePublicDetailDtoSchema,
+  );
 }
 
 export async function getPublicHostForSeo(slug: string): Promise<HostPublicDto | null> {
@@ -84,7 +93,7 @@ export async function getPublicEventsForSitemap(): Promise<readonly EventDto[]> 
 }
 
 // No authoritative public venue/host list contracts exist in this checkout.
-export function getPublicVenuesForSitemap(): Promise<readonly VenueDto[]> {
+export function getPublicVenuesForSitemap(): Promise<readonly VenuePublicDetailDto[]> {
   return Promise.resolve([]);
 }
 
