@@ -44,7 +44,10 @@ export function buildPublicMetadata({
   type = 'website',
   indexable = true,
 }: PublicMetadataInput): Metadata {
-  const canonical = absoluteUrl(path);
+  const canonicalUrl = new URL(absoluteUrl(path));
+  canonicalUrl.search = '';
+  canonicalUrl.hash = '';
+  const canonical = canonicalUrl.toString();
   const socialImage = image === null ? null : absoluteUrl(image ?? DEFAULT_IMAGE_PATH);
   const resolvedTitle = brandedTitle(title);
 

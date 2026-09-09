@@ -71,6 +71,17 @@ describe('SEO environment and metadata', () => {
     expect(metadata.twitter).toMatchObject({ card: 'summary_large_image' });
   });
 
+  it('removes query parameters and fragments from canonical and social URLs', () => {
+    const metadata = buildPublicMetadata({
+      path: '/explore?city=pune#events',
+      title: 'Discover Events',
+      description: 'Discover public events.',
+    });
+
+    expect(metadata.alternates).toEqual({ canonical: 'https://thec1rcle.com/explore' });
+    expect(metadata.openGraph).toMatchObject({ url: 'https://thec1rcle.com/explore' });
+  });
+
   it('globally suppresses preview indexing and uses the preview origin', () => {
     vi.stubEnv('VERCEL_ENV', 'preview');
     vi.stubEnv('VERCEL_URL', 'guest-preview.vercel.app');
@@ -105,6 +116,14 @@ describe('authoritative entity eligibility', () => {
     expect(isEligiblePublicEvent({ ...event, status: 'draft' })).toBe(false);
     expect(isEligiblePublicEvent({ ...event, isPublic: false })).toBe(false);
     expect(isEligiblePublicEvent({ ...event, imageUrl: null })).toBe(false);
+    expect(isEligiblePublicEvent({ ...event, summary: '' })).toBe(false);
+    expect(isEligiblePublicEvent({ ...event, venueId: null })).toBe(false);
+    expect(
+      isEligiblePublicEvent(
+        { ...event, startAt: '2029-10-01T00:00:00.000Z' },
+        new Date('2029-12-01T00:00:00.000Z'),
+      ),
+    ).toBe(false);
   });
 
   it('fails closed for venue and host contracts missing SEO publication fields', () => {
