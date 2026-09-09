@@ -158,9 +158,9 @@ export function ExploreHeroCarouselClient({ events }: { events: readonly Explore
               {event.badge ?? 'Featured experience'}
             </p>
 
-            <h1 className="explore-hero-copy-reveal explore-hero-delay-2 mt-4 max-w-[12ch] text-[clamp(2.35rem,11vw,3.25rem)] font-black uppercase leading-[0.88] tracking-[-0.058em] text-white drop-shadow-[0_14px_42px_rgba(0,0,0,0.7)] sm:mt-5 sm:text-[clamp(3rem,5.2vw,5rem)]">
+            <h2 className="explore-hero-copy-reveal explore-hero-delay-2 mt-4 max-w-[12ch] text-[clamp(2.35rem,11vw,3.25rem)] font-black uppercase leading-[0.88] tracking-[-0.058em] text-white drop-shadow-[0_14px_42px_rgba(0,0,0,0.7)] sm:mt-5 sm:text-[clamp(3rem,5.2vw,5rem)]">
               {event.title}
-            </h1>
+            </h2>
 
             <div className="explore-hero-copy-reveal explore-hero-delay-3 mt-5 flex flex-col gap-2.5 text-[13px] font-bold text-white/82 sm:mt-6 sm:gap-3 sm:text-sm lg:text-base">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5 sm:gap-x-4">

@@ -16,7 +16,13 @@ export function RestaurantVenueProfile({ profile }: { profile: RestaurantVenuePu
   const primaryAction = profile.actions[0];
 
   return (
-    <PublicProfileShell backHref="/hosts#venues" backLabel="All venues" theme={profile.theme}>
+    <PublicProfileShell
+      backHref="/hosts#venues"
+      backLabel="All venues"
+      currentHref={`/venue/${profile.id}`}
+      currentLabel={profile.hero.title}
+      theme={profile.theme}
+    >
       <article>
         <header className="relative min-h-[36rem] overflow-hidden rounded-[2rem] border border-white/10 bg-[#0A0806] shadow-[0_40px_140px_var(--profile-accent-soft)] sm:min-h-[42rem] lg:min-h-[46rem]">
           <Image

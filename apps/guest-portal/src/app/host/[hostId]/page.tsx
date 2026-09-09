@@ -1,10 +1,11 @@
 import { notFound } from 'next/navigation';
 
+import { AuthoritativeHostView } from '@/features/directory/components/AuthoritativePublicEntityView';
 import { HostProfileView } from '@/features/directory/components/HostProfileView';
-import {
-  findHostPublicProfileFixture,
-  hostPublicProfileFixtures,
-} from '@/features/directory/fixtures/public-profile.fixture';
+import { findHostPublicProfileFixture } from '@/features/directory/fixtures/public-profile.fixture';
+import { buildPublicMetadata } from '@/lib/seo/metadata';
+import { getPublicHostForSeo, isEligiblePublicHost } from '@/lib/seo/public-data';
+import { isProductionSeo } from '@/lib/seo/site';
 
 import type { Metadata } from 'next';
 
@@ -12,40 +13,49 @@ interface HostProfilePageProps {
   params: Promise<{ hostId: string }>;
 }
 
-export const dynamicParams = false;
-
-export function generateStaticParams() {
-  return hostPublicProfileFixtures.map((host) => ({ hostId: host.id }));
-}
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: HostProfilePageProps): Promise<Metadata> {
   const { hostId } = await params;
-  const host = findHostPublicProfileFixture(decodeURIComponent(hostId));
-
-  if (!host) {
-    return {
-      title: 'Host unavailable | THE C1RCLE',
-      description: 'This C1RCLE host profile is unavailable.',
-      robots: { follow: false, index: false },
-    };
+  const slug = decodeURIComponent(hostId);
+  const authoritativeHost = await getPublicHostForSeo(slug);
+  if (authoritativeHost !== null) {
+    return buildPublicMetadata({
+      path: `/host/${encodeURIComponent(authoritativeHost.slug)}`,
+      title: authoritativeHost.name,
+      description: `Events and experiences from ${authoritativeHost.name}.`,
+      indexable: isEligiblePublicHost(authoritativeHost),
+    });
   }
 
-  return {
-    title: `${host.hero.title} | THE C1RCLE`,
+  if (isProductionSeo()) notFound();
+
+  const host = findHostPublicProfileFixture(slug);
+
+  if (!host) {
+    return buildPublicMetadata({
+      path: `/host/${encodeURIComponent(slug)}`,
+      title: 'Host unavailable',
+      description: 'This C1RCLE host profile is unavailable.',
+      indexable: false,
+    });
+  }
+
+  return buildPublicMetadata({
+    path: `/host/${encodeURIComponent(host.id)}`,
+    title: host.hero.title,
     description: host.bio,
-    alternates: { canonical: `https://thec1rcle.com/host/${encodeURIComponent(host.id)}` },
-    robots: { follow: false, index: false },
-    openGraph: {
-      title: host.hero.title,
-      description: host.bio,
-      images: [{ url: host.hero.cover.src, alt: host.hero.cover.alt }],
-    },
-  };
+    image: host.hero.cover.src,
+    indexable: false,
+  });
 }
 
 export default async function HostProfilePage({ params }: HostProfilePageProps) {
   const { hostId } = await params;
-  const host = findHostPublicProfileFixture(decodeURIComponent(hostId));
+  const slug = decodeURIComponent(hostId);
+  const authoritativeHost = await getPublicHostForSeo(slug);
+  if (authoritativeHost !== null) return <AuthoritativeHostView host={authoritativeHost} />;
+  const host = isProductionSeo() ? undefined : findHostPublicProfileFixture(slug);
 
   if (!host) notFound();
 

@@ -20,6 +20,10 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace }),
 }));
 
+vi.mock('@/lib/auth/require-session', () => ({
+  requireGuestSession: vi.fn(() => Promise.resolve({ user: { id: 'test-user' } })),
+}));
+
 describe('ProfilePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();

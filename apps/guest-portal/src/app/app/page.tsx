@@ -1,13 +1,16 @@
 import { HomeAppReview } from '@/features/home/components/HomeAppReview';
 import { HomePhoneStoryClient } from '@/features/home/components/HomePhoneStoryClient';
+import { buildPublicMetadata } from '@/lib/seo/metadata';
 
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'THE C1RCLE App | Discover Life Offline',
-  description:
-    'Get THE C1RCLE Mobile App for iOS and Android. Discover events, get on guest lists, and walk right in.',
-};
+export function generateMetadata(): Metadata {
+  return buildPublicMetadata({
+    path: '/app',
+    title: 'THE C1RCLE App',
+    description: 'Discover how THE C1RCLE helps members find events, guest lists, and experiences.',
+  });
+}
 
 export default function AppPage() {
   return (

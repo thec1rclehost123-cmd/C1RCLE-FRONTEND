@@ -21,7 +21,13 @@ export function ExperienceVenueProfile({ profile }: { profile: ExperienceVenuePu
     .filter((host) => host !== undefined);
 
   return (
-    <PublicProfileShell backHref="/hosts#venues" backLabel="All venues" theme={profile.theme}>
+    <PublicProfileShell
+      backHref="/hosts#venues"
+      backLabel="All venues"
+      currentHref={`/venue/${profile.id}`}
+      currentLabel={profile.hero.title}
+      theme={profile.theme}
+    >
       <article>
         <header className="relative min-h-[38rem] overflow-hidden rounded-[2rem] border border-white/10 bg-[#080808] shadow-[0_40px_140px_var(--profile-accent-soft)] sm:min-h-[44rem]">
           <Image

@@ -1,10 +1,9 @@
 import { notFound } from 'next/navigation';
 
 import { PublicProfileView } from '@/features/profile/components/PublicProfileView';
-import {
-  findPublicProfileFixture,
-  publicProfileFixtures,
-} from '@/features/profile/fixtures/public-profile.fixture';
+import { findPublicProfileFixture } from '@/features/profile/fixtures/public-profile.fixture';
+import { buildPrivateMetadata } from '@/lib/seo/metadata';
+import { isProductionSeo } from '@/lib/seo/site';
 
 import type { ProfileEventFilter } from '@/features/profile/types/profile.types';
 import type { Metadata } from 'next';
@@ -14,11 +13,8 @@ interface PublicProfilePageProps {
   searchParams?: Promise<{ filter?: string | string[] }>;
 }
 
-export const dynamicParams = false;
-
-export function generateStaticParams() {
-  return publicProfileFixtures.map((profile) => ({ userId: profile.identity.id }));
-}
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -30,28 +26,19 @@ function resolveEventFilter(value: string | undefined): ProfileEventFilter {
 
 export async function generateMetadata({ params }: PublicProfilePageProps): Promise<Metadata> {
   const { userId } = await params;
+  if (isProductionSeo()) notFound();
   const profile = findPublicProfileFixture(decodeURIComponent(userId));
 
   if (!profile) {
-    return {
-      title: 'Member unavailable | THE C1RCLE',
-      description: 'This C1RCLE member profile is unavailable.',
-      robots: { follow: false, index: false },
-    };
+    return buildPrivateMetadata('Member unavailable', 'This C1RCLE member profile is unavailable.');
   }
 
-  return {
-    title: `${profile.identity.displayName} | THE C1RCLE`,
-    description: profile.identity.bio,
-    alternates: {
-      canonical: `https://thec1rcle.com/profile/${encodeURIComponent(profile.identity.id)}`,
-    },
-    robots: { follow: false, index: false },
-  };
+  return buildPrivateMetadata('Member profile', 'View a C1RCLE member profile.');
 }
 
 export default async function PublicProfilePage({ params, searchParams }: PublicProfilePageProps) {
   const [{ userId }, query] = await Promise.all([params, searchParams]);
+  if (isProductionSeo()) notFound();
   const profile = findPublicProfileFixture(decodeURIComponent(userId));
 
   if (!profile) notFound();

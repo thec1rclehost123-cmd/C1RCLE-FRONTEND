@@ -75,7 +75,7 @@ export function DirectoryLanding({
         {/* Hero Header Section */}
         <div className="flex flex-col items-center text-center">
           <h1 className="text-5xl font-black uppercase tracking-tight text-white sm:text-7xl lg:text-8xl">
-            {activeTab === 'venues' ? 'DISCOVER VENUES' : 'DISCOVER HOSTS'}
+            DISCOVER HOSTS &amp; VENUES
           </h1>
           <p className="mt-4 max-w-2xl text-xs font-bold uppercase tracking-[0.22em] text-white/60 sm:text-sm">
             {activeTab === 'venues'
@@ -129,6 +129,7 @@ export function DirectoryLanding({
               <path d="m21 21-4.3-4.3" />
             </svg>
             <input
+              aria-label="Search hosts and venues"
               type="search"
               value={search}
               onChange={(e) => {
@@ -191,6 +192,9 @@ export function DirectoryLanding({
 
         {/* Cards Grid */}
         <div className="mt-10">
+          <h2 className="mb-6 text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">
+            {activeTab === 'venues' ? 'Venues' : 'Hosts'}
+          </h2>
           {activeTab === 'venues' ? (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filteredVenues.map((venue) => (

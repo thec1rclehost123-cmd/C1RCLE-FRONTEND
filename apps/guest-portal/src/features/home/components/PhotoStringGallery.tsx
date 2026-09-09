@@ -29,9 +29,8 @@ function DisposablePhoto({ src, rotationClass, index }: DisposablePhotoProps) {
         <div className="disposable-inner">
           <Image
             src={`/home/memories/${src}`}
-            alt={`C1RCLE memory ${String(index + 1)}`}
+            alt=""
             fill
-            unoptimized
             sizes="(max-width: 480px) 110px, (max-width: 768px) 135px, 200px"
             className="disposable-img"
           />

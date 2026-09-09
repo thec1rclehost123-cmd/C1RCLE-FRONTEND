@@ -1,19 +1,21 @@
 import { AppShell } from '@/components/app-shell';
+import { getMetadataBase, publicRobots } from '@/lib/seo/metadata';
 
 import './globals.css';
 
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 
-export const metadata: Metadata = {
-  metadataBase: new URL('https://thec1rcle.com'),
-  title: {
-    default: 'C1RCLE Guest Portal',
-    template: '%s · Guest',
-  },
-  description: 'Discover, book and manage your C1RCLE experiences.',
-  robots: { index: false, follow: false },
-};
+export function generateMetadata(): Metadata {
+  return {
+    metadataBase: getMetadataBase(),
+    title: 'THE C1RCLE | Discover Life Offline',
+    description: 'Discover, book and manage your C1RCLE experiences.',
+    robots: publicRobots(),
+    icons: { icon: [{ url: '/c1rcle-logo.webp', type: 'image/webp', sizes: '128x128' }] },
+    manifest: '/manifest.webmanifest',
+  };
+}
 
 export const viewport: Viewport = {
   width: 'device-width',

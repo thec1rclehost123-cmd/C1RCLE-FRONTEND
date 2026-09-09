@@ -1,9 +1,9 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { publicProfileFixtures } from '@/features/profile/fixtures/public-profile.fixture';
+import { resetEnvCacheForTests } from '@c1rcle/config';
 
-import PublicProfilePage, { generateMetadata, generateStaticParams } from './page';
+import PublicProfilePage, { dynamic, generateMetadata } from './page';
 
 vi.mock('next/image', () => ({
   default: ({ alt, fill: _fill, ...props }: React.ComponentProps<'img'> & { fill?: boolean }) => (
@@ -18,12 +18,14 @@ vi.mock('next/navigation', () => ({
   },
 }));
 
-describe('PublicProfilePage', () => {
-  it('prebuilds a destination for every event guest fixture profile', () => {
-    const ids = generateStaticParams().map(({ userId }) => userId);
+afterEach(() => {
+  vi.unstubAllEnvs();
+  resetEnvCacheForTests();
+});
 
-    expect(ids).toEqual(publicProfileFixtures.map((profile) => profile.identity.id));
-    expect(ids).toEqual(expect.arrayContaining(['riya', 'ishika', 'ajay', 'maya', 'dev']));
+describe('PublicProfilePage', () => {
+  it('renders non-indexable development profiles on demand', () => {
+    expect(dynamic).toBe('force-dynamic');
   });
 
   it('renders public member identity and upcoming events without private account data', async () => {
@@ -60,10 +62,19 @@ describe('PublicProfilePage', () => {
     ).rejects.toThrow('NEXT_NOT_FOUND');
   });
 
+  it('does not expose fixture member profiles in production', async () => {
+    vi.stubEnv('NEXT_PUBLIC_ENVIRONMENT', 'production');
+    resetEnvCacheForTests();
+
+    await expect(
+      PublicProfilePage({ params: Promise.resolve({ userId: 'riya' }) }),
+    ).rejects.toThrow('NEXT_NOT_FOUND');
+  });
+
   it('generates member-specific metadata without indexing fixture profiles', async () => {
     const metadata = await generateMetadata({ params: Promise.resolve({ userId: 'riya' }) });
 
-    expect(metadata.title).toBe('Riya Kapoor | THE C1RCLE');
-    expect(metadata.robots).toEqual({ follow: false, index: false });
+    expect(metadata.title).toEqual({ absolute: 'Member profile | THE C1RCLE' });
+    expect(metadata.robots).toMatchObject({ follow: true, index: false, noarchive: true });
   });
 });

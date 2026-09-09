@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import HostProfilePage, { generateMetadata, generateStaticParams } from './page';
+import HostProfilePage, { dynamic, generateMetadata } from './page';
 
 vi.mock('next/image', () => ({
   default: ({
@@ -22,14 +22,8 @@ vi.mock('next/navigation', () => ({
 }));
 
 describe('HostProfilePage', () => {
-  it('prebuilds every fixture host profile', () => {
-    expect(generateStaticParams()).toEqual(
-      expect.arrayContaining([
-        { hostId: 'high-spirits-collective' },
-        { hostId: 'underground-studio' },
-        { hostId: 'sunday-service' },
-      ]),
-    );
+  it('renders public host profiles on demand', () => {
+    expect(dynamic).toBe('force-dynamic');
   });
 
   it('renders verified host identity, events, and venue destinations', async () => {
@@ -74,7 +68,7 @@ describe('HostProfilePage', () => {
       params: Promise.resolve({ hostId: 'high-spirits-collective' }),
     });
 
-    expect(metadata.title).toBe('High Spirits Collective | THE C1RCLE');
-    expect(metadata.robots).toEqual({ follow: false, index: false });
+    expect(metadata.title).toEqual({ absolute: 'High Spirits Collective | THE C1RCLE' });
+    expect(metadata.robots).toMatchObject({ follow: false, index: false, noarchive: true });
   });
 });

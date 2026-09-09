@@ -20,7 +20,13 @@ export function HostProfileView({ host }: { host: HostPublicProfile }) {
     .slice(0, 2);
 
   return (
-    <PublicProfileShell backHref="/hosts" backLabel="All hosts" theme={host.theme}>
+    <PublicProfileShell
+      backHref="/hosts"
+      backLabel="All hosts"
+      currentHref={`/host/${host.id}`}
+      currentLabel={host.hero.title}
+      theme={host.theme}
+    >
       <article>
         <header className="relative min-h-[40rem] overflow-hidden rounded-[2rem] border border-white/10 bg-[#070707] shadow-[0_40px_140px_var(--profile-accent-soft)] sm:min-h-[45rem]">
           <Image
