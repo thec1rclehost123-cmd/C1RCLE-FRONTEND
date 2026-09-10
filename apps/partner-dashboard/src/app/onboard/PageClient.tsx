@@ -29,19 +29,35 @@ import {
   X,
   ArrowRight,
 } from 'lucide-react';
+import { isApiClientError } from '@c1rcle/api-client';
+import { getClientEnv } from '@c1rcle/config';
+
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
+import {
+  addDocument,
+  getMine,
+  getUploadUrl,
+  saveProgress as saveOnboardingProgress,
+  start as startOnboarding,
+  submit as submitOnboardingApplication,
+  verifyDocument,
+} from '@/lib/onboarding/onboarding-repository';
+import { sendOtp, verifyOtp } from '@/lib/onboarding/otp';
+import { uploadToSignedUrl } from '@/lib/onboarding/uploadToSignedUrl';
+import { confirmPhoneOtp, getTestingBypassEnabled, sendPhoneOtp } from '@/lib/firebase/phone-auth';
+import { routeAfterAuth } from '@/lib/org/route-after-auth';
 
+import type { ConfirmationResult } from 'firebase/auth';
 
-// Stubs for legacy auth methods being deprecated in V2
-const getFirebaseAuth = () => ({ currentUser: { getIdToken: async (_force?: boolean) => '' }, signOut: async () => {} });
-const signInWithEmailAndPassword = async (..._args: any[]): Promise<{ user: { getIdToken: (_force?: boolean) => Promise<string> } }> => ({ user: { getIdToken: async () => '' } });
-const signInWithCustomToken = async (..._args: any[]): Promise<{ user: { getIdToken: (_force?: boolean) => Promise<string> } }> => ({ user: { getIdToken: async () => '' } });
-const legacyFetch = (...args: Parameters<typeof fetch>) => window.fetch(...args);
+const PHONE_RECAPTCHA_CONTAINER_ID = 'phone-verify-recaptcha';
 
-
-
-
-
+/** v1's rule, ported: a bare 10-digit number is assumed Indian (+91-prefixed). */
+function toE164(phone: string): string {
+  const digitsOnly = phone.replace(/[^\d+]/g, '');
+  if (digitsOnly.startsWith('+')) return digitsOnly;
+  if (/^\d{10}$/.test(digitsOnly)) return `+91${digitsOnly}`;
+  return `+${digitsOnly}`;
+}
 
 const Instagram = (props: any) => (
   <svg
@@ -64,6 +80,7 @@ const Instagram = (props: any) => (
 
 // ── Step type ─────────────────────────────────────────────────────────────────
 type OnboardingStep =
+  | 'signup'
   | 'email_verify'
   | 'phone_verify'
   | 'entity_type'
@@ -77,14 +94,26 @@ type OnboardingStep =
 type PartnerType = 'venue' | 'host' | 'promoter';
 type EntityType = 'individual' | 'business';
 
-// Dynamic sequence based on entity type (KYC steps vary)
+// Dynamic sequence based on entity type (KYC steps vary). `signup` runs
+// before `email_verify` — the real `/onboarding/otp/send` route requires an
+// authenticated session, so the account must exist before the first OTP.
 function getStepSequence(et: EntityType): OnboardingStep[] {
   const kycSteps: OnboardingStep[] =
     et === 'business' ? ['kyc_business', 'kyc_signatory'] : ['kyc_identity'];
-  return ['role', 'email_verify', 'phone_verify', 'entity_type', 'details', ...kycSteps, 'success'];
+  return [
+    'role',
+    'signup',
+    'email_verify',
+    'phone_verify',
+    'entity_type',
+    'details',
+    ...kycSteps,
+    'success',
+  ];
 }
 
 const STEP_LABELS: Record<OnboardingStep, string> = {
+  signup: 'Sign Up',
   email_verify: 'Email',
   phone_verify: 'Phone',
   entity_type: 'Entity',
@@ -96,64 +125,21 @@ const STEP_LABELS: Record<OnboardingStep, string> = {
   success: 'Done',
 };
 
-// ── Error extractor — gateway returns { success: false, error: { message } } ──
-function extractError(data: unknown, fallback: string): string {
-  if (!data || typeof data !== 'object') return fallback;
-  const obj = data as Record<string, any>;
-  const errorObj = obj['error'] as Record<string, any> | undefined;
-  if (errorObj && typeof errorObj === 'object') {
-    if (Array.isArray(errorObj['details']) && errorObj['details'].length > 0) {
-      const detailsMsg = errorObj['details']
-        .map((d: any) => {
-          const field = d.path ? d.path.replace(/^(body\.|query\.|params\.)/, '') : '';
-          return field ? `${field}: ${d.message}` : d.message;
-        })
-        .join(', ');
-      return `${errorObj['message'] || 'Validation failed'}: ${detailsMsg}`;
-    }
-    if (typeof errorObj['message'] === 'string') return errorObj['message'];
-  }
-  if (typeof obj['message'] === 'string') return obj['message'];
-  if (typeof obj['error'] === 'string') return obj['error'];
-  return fallback;
-}
-
-// ── OTP API helpers ───────────────────────────────────────────────────────────
-async function apiSendOtp(type: 'email' | 'phone', recipient: string) {
-  const res = await legacyFetch('/api/auth/otp/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type, recipient }),
-  });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(extractError(data, 'Failed to send code.'));
-  }
-}
-
-async function apiVerifyOtp(type: 'email' | 'phone', recipient: string, code: string) {
-  const res = await legacyFetch('/api/auth/otp/verify', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type, recipient, code }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.success) {
-    throw new Error(extractError(data, 'Incorrect code.'));
-  }
-  return true;
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const {
     user: authUser,
-    profile: authProfile,
+    signIn: authSignIn,
+    signUp: authSignUp,
     signOut,
     loading: authLoading,
   } = useDashboardAuth();
+
+  const clientEnv = getClientEnv();
+  const testingBypass = getTestingBypassEnabled();
+  const testPhone = testingBypass ? (clientEnv.NEXT_PUBLIC_FIREBASE_TEST_PHONE ?? '') : '';
 
   const [step, setStep] = useState<OnboardingStep>('role');
   const [partnerType, setPartnerType] = useState<PartnerType>('venue');
@@ -166,7 +152,6 @@ function OnboardingContent() {
 
   // KYC state — collected during onboarding, submitted with the application
   const [createdUid, setCreatedUid] = useState<string | null>(null);
-  const [kycStepData, setKycStepData] = useState<Record<string, Record<string, unknown>>>({});
   const [, setKycSubmitting] = useState(false);
   const [kycError, setKycError] = useState('');
 
@@ -180,10 +165,11 @@ function OnboardingContent() {
   const [otpEmailSent, setOtpEmailSent] = useState(false);
   const [emailCooldown, setEmailCooldown] = useState(0);
 
-  const [otpPhone, setOtpPhone] = useState('+91 ');
+  const [otpPhone, setOtpPhone] = useState(testPhone || '+91 ');
   const [otpPhoneCode, setOtpPhoneCode] = useState('');
   const [otpPhoneSent, setOtpPhoneSent] = useState(false);
   const [phoneCooldown, setPhoneCooldown] = useState(0);
+  const [phoneConfirmation, setPhoneConfirmation] = useState<ConfirmationResult | null>(null);
 
   const emailCooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const phoneCooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -212,107 +198,41 @@ function OnboardingContent() {
   });
 
   // ── Save onboarding progress so the user can resume mid-form ─────────
+  // `currentStep` is UI-only now — the real backend has no step field, it
+  // just stores profile fields; resume position is re-derived from those
+  // fields + document/status state via `getMine()`, not from a stored step.
+  // `plan`/`role`/`association`/`associatedHostId`/`upcomingEventsText`/
+  // `pastEventsText` have no home in `saveOnboardingProgressSchema` (it's
+  // `.strict()`) so they stay purely local UI state, never sent to the server.
   const saveProgress = useCallback(
-    async (currentStep: OnboardingStep) => {
-      const auth = getFirebaseAuth();
-      if (!auth.currentUser) return;
+    async (_currentStep: OnboardingStep) => {
+      if (!submittedRequestId) return;
       try {
-        const token = await auth.currentUser.getIdToken();
-        await legacyFetch('/api/auth/onboarding-progress', {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            onboardingStep: currentStep,
-            entityType: entityType || undefined,
-            name: formData.name || undefined,
-            contactPerson: formData.contactPerson || undefined,
-            city: formData.city || undefined,
-            area: formData.area || undefined,
-            website: formData.website || undefined,
-            capacity: formData.capacity || undefined,
-            plan: formData.plan || undefined,
-            role: formData.role || undefined,
-            association: formData.association || undefined,
-            associatedHostId: formData.associatedHostId || undefined,
-            instagram: formData.instagram || undefined,
-            bio: formData.bio || undefined,
-            upcomingEventsText: formData.upcomingEventsText || undefined,
-            pastEventsText: formData.pastEventsText || undefined,
-            businessType: formData.businessType || undefined,
-            registrationNumber: formData.registrationNumber || undefined,
-          }),
+        await saveOnboardingProgress(submittedRequestId, {
+          legalName: formData.name || undefined,
+          contactPerson: formData.contactPerson || undefined,
+          phone: formData.phone || otpPhone.replace(/\s/g, '') || undefined,
+          city: formData.city || undefined,
+          area: formData.area || undefined,
+          website: formData.website || undefined,
+          capacity: formData.capacity ? Number(formData.capacity) : undefined,
+          instagram: formData.instagram || undefined,
+          bio: formData.bio || undefined,
+          businessType: formData.businessType || undefined,
+          registrationNumber: formData.registrationNumber || undefined,
+          entityType: entityType || undefined,
         });
       } catch {
-        /* silent — non-critical */
+        /* silent — non-critical, matches the prior best-effort autosave */
       }
     },
-    [entityType, formData],
+    [submittedRequestId, entityType, formData, otpPhone],
   );
 
   // Dynamic sequence depends on entity type chosen at step 4
   const stepSequence = getStepSequence(entityType);
 
-  // ── Resume from saved onboarding step if user is returning ───────────
   const initialised = useRef(false);
-  useEffect(() => {
-    if (!authUser || !authProfile) return;
-    const savedStep = (authProfile as any)?.onboardingStep;
-    const savedEntity = (authProfile as any)?.entityType;
-    const ALL_ONBOARDING_STEPS: OnboardingStep[] = [
-      'role',
-      'email_verify',
-      'phone_verify',
-      'entity_type',
-      'details',
-      'kyc_identity',
-      'kyc_business',
-      'kyc_signatory',
-      'success',
-    ];
-    if (savedStep && !initialised.current && ALL_ONBOARDING_STEPS.includes(savedStep)) {
-      initialised.current = true;
-      if (savedEntity === 'business' || savedEntity === 'individual') {
-        setEntityType(savedEntity);
-      }
-      setCreatedUid(authUser.uid);
-
-      const p = authProfile as any;
-      setFormData((prev) => ({
-        ...prev,
-        email: authUser.email || prev.email,
-        name: p.name || prev.name,
-        contactPerson: p.contactPerson || prev.contactPerson,
-        phone: p.phone || prev.phone,
-        city: p.city || prev.city,
-        area: p.area || prev.area,
-        website: p.website || prev.website,
-        capacity: p.capacity || prev.capacity,
-        plan: p.plan || prev.plan,
-        role: p.role || prev.role,
-        association: p.association || prev.association,
-        associatedHostId: p.associatedHostId || prev.associatedHostId,
-        instagram: p.instagram || prev.instagram,
-        bio: p.bio || prev.bio,
-        upcomingEventsText: p.upcomingEventsText || prev.upcomingEventsText,
-        pastEventsText: p.pastEventsText || prev.pastEventsText,
-        businessType: p.businessType || prev.businessType,
-        registrationNumber: p.registrationNumber || prev.registrationNumber,
-      }));
-      if (p.phone) {
-        setOtpPhone(p.phone);
-      }
-
-      // Jump ahead if the saved step is past the early steps
-      if (['kyc_identity', 'kyc_business', 'kyc_signatory'].includes(savedStep)) {
-        setStep(savedStep);
-      } else if (savedStep === 'details') {
-        setStep(savedStep);
-      }
-    }
-  }, [authUser, authProfile, stepSequence]);
 
   // Pre-fill from URL params (existing behaviour kept)
   useEffect(() => {
@@ -338,86 +258,68 @@ function OnboardingContent() {
       initialChecked.current = true;
       if (authUser) {
         try {
-          const token = await authUser.getIdToken();
-          const res = await legacyFetch('/api/auth/me', {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (res.ok) {
-            const meData = await res.json();
-            const onboardingRequest = meData.onboarding?.onboardingRequest || null;
-            const onboardingComplete = meData.onboarding?.onboardingComplete === true;
-            const profileObj = meData.profile || {};
-            const userObj = meData.user || {};
-            const savedStep = profileObj.onboardingStep || userObj.onboardingStep;
+          const application = await getMine();
+          if (application) {
+            setSubmittedRequestId(application.id);
 
-            if (onboardingRequest || onboardingComplete) {
-              if (onboardingRequest) {
-                setSubmittedRequestId(onboardingRequest.id);
-                const reqStatus = onboardingRequest.status?.toLowerCase();
-                if (
-                  reqStatus === 'approved' ||
-                  reqStatus === 'verified' ||
-                  meData.user?.isApproved === true ||
-                  meData.profile?.isApproved === true
-                ) {
-                  setApprovalStatus('verified');
-                } else {
-                  setApprovalStatus('pending');
-                }
-              } else if (onboardingComplete) {
-                const isApproved =
-                  meData.user?.isApproved === true || meData.profile?.isApproved === true;
-                setApprovalStatus(isApproved ? 'verified' : 'pending');
-              }
+            if (application.status !== 'draft') {
+              // submitted / changes_requested / approved / rejected — the
+              // success screen renders the real status, no further wizard
+              // steps to resume into.
+              setApprovalStatus(application.status === 'approved' ? 'verified' : 'pending');
               setStep('success');
               initialised.current = true;
               return;
-            } else if (savedStep) {
-              const savedEntity = profileObj.entityType || userObj.entityType;
-              if (savedEntity === 'business' || savedEntity === 'individual') {
-                setEntityType(savedEntity);
-              }
-              setCreatedUid(authUser.uid);
-
-              setFormData((prev) => ({
-                ...prev,
-                email: authUser.email || prev.email,
-                name: profileObj.name || prev.name,
-                contactPerson: profileObj.contactPerson || prev.contactPerson,
-                phone: profileObj.phone || prev.phone,
-                city: profileObj.city || prev.city,
-                area: profileObj.area || prev.area,
-                website: profileObj.website || prev.website,
-                capacity: profileObj.capacity || prev.capacity,
-                plan: profileObj.plan || prev.plan,
-                role: profileObj.role || prev.role,
-                association: profileObj.association || prev.association,
-                associatedHostId: profileObj.associatedHostId || prev.associatedHostId,
-                instagram: profileObj.instagram || prev.instagram,
-                bio: profileObj.bio || prev.bio,
-                upcomingEventsText: profileObj.upcomingEventsText || prev.upcomingEventsText,
-                pastEventsText: profileObj.pastEventsText || prev.pastEventsText,
-                businessType: profileObj.businessType || prev.businessType,
-                registrationNumber: profileObj.registrationNumber || prev.registrationNumber,
-              }));
-              if (profileObj.phone) {
-                setOtpPhone(profileObj.phone);
-              }
-
-              setStep(savedStep);
-              initialised.current = true;
-              return;
             }
+
+            // Draft application — resume mid-wizard from its saved profile.
+            // The backend has no stored "step"; missingDocuments tells us
+            // whether they still owe KYC images or are ready to submit.
+            const p = application.profile;
+            const isBusiness = p.entityType === 'business';
+            setEntityType(isBusiness ? 'business' : 'individual');
+            setCreatedUid(authUser.id);
+
+            setFormData((prev) => ({
+              ...prev,
+              email: authUser.email || prev.email,
+              name: p.legalName || prev.name,
+              contactPerson: p.contactPerson || prev.contactPerson,
+              phone: p.phone || prev.phone,
+              city: p.city || prev.city,
+              area: p.area || prev.area,
+              website: p.website || prev.website,
+              capacity: p.capacity != null ? String(p.capacity) : prev.capacity,
+              instagram: p.instagram || prev.instagram,
+              bio: p.bio || prev.bio,
+              businessType: p.businessType || prev.businessType,
+              registrationNumber: p.registrationNumber || prev.registrationNumber,
+            }));
+            if (p.phone) {
+              setOtpPhone(p.phone);
+            }
+
+            const seq = getStepSequence(isBusiness ? 'business' : 'individual');
+            const resumeStep =
+              application.missingDocuments.length > 0
+                ? seq[seq.indexOf('details') + 1]
+                : seq[seq.length - 2];
+            setStep(resumeStep ?? 'details');
+            initialised.current = true;
+            return;
           }
+
+          // Authenticated but no application on record yet — this account is
+          // already good (they have a live session), so continue the wizard
+          // from the first authed step instead of discarding it. Mirrors the
+          // equivalent branch in `handleExistingUserLogin`.
+          setFormData((prev) => ({ ...prev, email: authUser.email || prev.email }));
+          setOtpEmail(authUser.email || '');
+          initialised.current = true;
+          setStep('phone_verify');
+          return;
         } catch (err) {
           console.error('Error checking initial onboarding state:', err);
-        }
-        // If onboarding is not complete and no saved step or request has been found,
-        // sign the user out to start fresh from Step 1.
-        try {
-          await signOut();
-        } catch (e) {
-          console.error('Error signing out on reload:', e);
         }
       }
       setStep('role');
@@ -426,28 +328,14 @@ function OnboardingContent() {
     checkInitialState();
   }, [authLoading, authUser, signOut]);
 
-  // Approval polling (fixed to read request.status)
+  // Approval polling — real application status via getMine()
   useEffect(() => {
     if (step !== 'success' || !submittedRequestId) return;
-    const auth = getFirebaseAuth();
     const checkApproval = async () => {
-      const currentUser = auth.currentUser;
-      if (!currentUser) return;
       try {
-        const token = await currentUser.getIdToken();
-        const res = await legacyFetch(
-          `/api/auth/onboard-status?requestId=${encodeURIComponent(submittedRequestId)}`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-        if (!res.ok) return;
-        const data = await res.json();
-        const reqObj = data.request || data;
-        const status = (reqObj.status as string | undefined)?.toLowerCase();
-        if (status === 'verified' || status === 'approved') {
-          setApprovalStatus('verified');
-        } else {
-          setApprovalStatus('pending');
-        }
+        const application = await getMine();
+        if (!application) return;
+        setApprovalStatus(application.status === 'approved' ? 'verified' : 'pending');
       } catch {
         /* silent */
       }
@@ -479,36 +367,43 @@ function OnboardingContent() {
     }, 1000);
   }
 
-  // ── Email OTP ─────────────────────────────────────────────────────────────
-  const handleEmailSubmit = async () => {
+  // ── Signup ────────────────────────────────────────────────────────────────
+  // Its own step, before email verification (per ONBOARDING-FLOW-SPEC-2026-09-01.md
+  // §Step 2): the real `/onboarding/otp/send` route is a "new-signup gate" —
+  // it requires an authenticated session (requireUserId) — so the account
+  // has to exist before the first OTP send, not folded into that screen.
+  // No real check-email endpoint exists; a duplicate email surfaces as a 409
+  // here, routing to the "Welcome Back" sign-in recovery instead of a
+  // separate enumeration-risk pre-flight check.
+  const handleSignup = async () => {
     setError('');
+    if (!formData.name.trim()) {
+      setError('Please enter your name.');
+      return;
+    }
     if (!otpEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(otpEmail)) {
       setError('Please enter a valid email address.');
       return;
     }
+    if (!formData.password || formData.password.length < 8) {
+      setError('Password must be at least 8 characters long.');
+      return;
+    }
     setLoading(true);
     try {
-      // Check if email exists
-      const checkRes = await legacyFetch('/api/auth/check-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: otpEmail }),
-      });
-      if (!checkRes.ok) {
-        throw new Error('Failed to verify email existence. Please try again.');
-      }
-      const checkData = await checkRes.json();
-      if (checkData.exists) {
+      await authSignUp(otpEmail, formData.password, formData.name.trim());
+      await sendOtp(otpEmail);
+      setOtpEmailSent(true);
+      setFormData((prev) => ({ ...prev, email: otpEmail }));
+      startCooldown(setEmailCooldown, emailCooldownRef);
+      setStep('email_verify');
+    } catch (err) {
+      if (isApiClientError(err) && err.status === 409) {
         setEmailExists(true);
+        setError('This email is already registered.');
       } else {
-        // Normal flow: send OTP
-        await apiSendOtp('email', otpEmail);
-        setOtpEmailSent(true);
-        setFormData((prev) => ({ ...prev, email: otpEmail }));
-        startCooldown(setEmailCooldown, emailCooldownRef);
+        setError(err instanceof Error ? err.message : 'An error occurred. Please try again.');
       }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -522,129 +417,65 @@ function OnboardingContent() {
     }
     setLoading(true);
     try {
-      const auth = getFirebaseAuth();
-      const userCredential = await signInWithEmailAndPassword(auth as any, otpEmail, loginPassword);
-      const token = await userCredential.user.getIdToken();
+      await authSignIn(otpEmail, loginPassword);
 
-      const meRes = await legacyFetch('/api/auth/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!meRes.ok) {
-        throw new Error('Failed to fetch account details. Please try logging in again.');
-      }
-      const meData = await meRes.json();
+      const application = await getMine();
 
-      // Check if onboarding is already completed / submitted (KYC is completed/pending review)
-      const onboardingRequest = meData.onboarding?.onboardingRequest || null;
-      const onboardingComplete = meData.onboarding?.onboardingComplete === true;
-
-      if (onboardingRequest || onboardingComplete) {
-        if (onboardingRequest) {
-          setSubmittedRequestId(onboardingRequest.id);
-          const reqStatus = onboardingRequest.status?.toLowerCase();
-          if (
-            reqStatus === 'approved' ||
-            reqStatus === 'verified' ||
-            meData.user?.isApproved === true ||
-            meData.profile?.isApproved === true
-          ) {
-            setApprovalStatus('verified');
-          } else {
-            setApprovalStatus('pending');
-          }
-        } else if (onboardingComplete) {
-          const isApproved =
-            meData.user?.isApproved === true || meData.profile?.isApproved === true;
-          setApprovalStatus(isApproved ? 'verified' : 'pending');
-        }
+      if (application && application.status !== 'draft') {
+        setSubmittedRequestId(application.id);
+        setApprovalStatus(application.status === 'approved' ? 'verified' : 'pending');
         initialised.current = true;
         setStep('success');
         setLoading(false);
         return;
       }
 
-      const userObj = meData.user || {};
-      const profileObj = meData.profile || {};
+      if (application) {
+        setSubmittedRequestId(application.id);
+        const p = application.profile;
+        const isBusiness = p.entityType === 'business';
+        setEntityType(isBusiness ? 'business' : 'individual');
 
-      // Determine entityType
-      const savedEntity = userObj.entityType || profileObj.entityType || 'individual';
-      const isBusiness = savedEntity === 'business';
-      setEntityType(isBusiness ? 'business' : 'individual');
+        setFormData((prev) => ({
+          ...prev,
+          email: otpEmail,
+          name: p.legalName || prev.name,
+          contactPerson: p.contactPerson || prev.contactPerson,
+          phone: p.phone || prev.phone,
+          city: p.city || prev.city,
+          area: p.area || prev.area,
+          website: p.website || prev.website,
+          capacity: p.capacity != null ? String(p.capacity) : prev.capacity,
+          instagram: p.instagram || prev.instagram,
+          bio: p.bio || prev.bio,
+          businessType: p.businessType || prev.businessType,
+          registrationNumber: p.registrationNumber || prev.registrationNumber,
+        }));
+        if (p.phone) setOtpPhone(p.phone);
 
-      // Pre-populate formData from the database profile
-      setFormData((prev) => ({
-        ...prev,
-        email: userObj.email || otpEmail,
-        name: profileObj.name || userObj.displayName || prev.name,
-        contactPerson: profileObj.contactPerson || prev.contactPerson,
-        phone: profileObj.phone || userObj.phone || prev.phone,
-        city: profileObj.city || prev.city,
-        area: profileObj.area || prev.area,
-        website: profileObj.website || prev.website,
-        capacity: profileObj.capacity || prev.capacity,
-        plan: profileObj.plan || prev.plan,
-        role: profileObj.role || prev.role,
-        association: profileObj.association || prev.association,
-        associatedHostId: profileObj.associatedHostId || prev.associatedHostId,
-        instagram: profileObj.instagram || prev.instagram,
-        bio: profileObj.bio || prev.bio,
-        upcomingEventsText: profileObj.upcomingEventsText || prev.upcomingEventsText,
-        pastEventsText: profileObj.pastEventsText || prev.pastEventsText,
-        businessType: profileObj.businessType || prev.businessType,
-        registrationNumber: profileObj.registrationNumber || prev.registrationNumber,
-      }));
+        const seq = getStepSequence(isBusiness ? 'business' : 'individual');
+        const nextStep =
+          application.missingDocuments.length > 0
+            ? seq[seq.indexOf('details') + 1]
+            : seq[seq.length - 2];
 
-      if (profileObj.phone || userObj.phone) {
-        setOtpPhone(profileObj.phone || userObj.phone);
+        initialised.current = true;
+        setStep(nextStep ?? 'details');
+        return;
       }
-      setCreatedUid(userObj.uid);
 
-      // Determine Step 6 based on entity type: kyc_business for business, kyc_identity for individual
-      const nextStep = isBusiness ? 'kyc_business' : 'kyc_identity';
-
-      // Navigate to Step 6
+      // Account exists but never started an application — resume at
+      // phone_verify, not details: this account has never had its phone
+      // collected/verified, and `handleCreateAccount` requires a valid
+      // phone (min 6 chars) to open the application. Email is already
+      // known-good (they just logged in with it), so email_verify is
+      // skipped, but phone still needs collecting.
+      setFormData((prev) => ({ ...prev, email: otpEmail }));
       initialised.current = true;
-      setStep(nextStep);
-
-      // Save progress so database records this step transition
-      await legacyFetch('/api/auth/onboarding-progress', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          onboardingStep: nextStep,
-          entityType: isBusiness ? 'business' : 'individual',
-          name: profileObj.name || userObj.displayName || undefined,
-          contactPerson: profileObj.contactPerson || undefined,
-          city: profileObj.city || undefined,
-          area: profileObj.area || undefined,
-          website: profileObj.website || undefined,
-          capacity: profileObj.capacity || undefined,
-          plan: profileObj.plan || undefined,
-          role: profileObj.role || undefined,
-          association: profileObj.association || undefined,
-          associatedHostId: profileObj.associatedHostId || undefined,
-          instagram: profileObj.instagram || undefined,
-          bio: profileObj.bio || undefined,
-          upcomingEventsText: profileObj.upcomingEventsText || undefined,
-          pastEventsText: profileObj.pastEventsText || undefined,
-          businessType: profileObj.businessType || undefined,
-          registrationNumber: profileObj.registrationNumber || undefined,
-        }),
-      });
+      setStep('phone_verify');
     } catch (err: any) {
       console.error('Existing user login error:', err);
-      let msg = err.message || 'Verification failed. Please try again.';
-      if (
-        msg.includes('auth/invalid-credential') ||
-        msg.includes('auth/wrong-password') ||
-        msg.includes('INVALID_LOGIN_CREDENTIALS')
-      ) {
-        msg = 'Incorrect password. Please try again.';
-      }
-      setError(msg);
+      setError(err instanceof Error ? err.message : 'Verification failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -658,7 +489,7 @@ function OnboardingContent() {
     }
     setLoading(true);
     try {
-      await apiSendOtp('email', otpEmail);
+      await sendOtp(otpEmail);
       setOtpEmailSent(true);
       setFormData((prev) => ({ ...prev, email: otpEmail }));
       startCooldown(setEmailCooldown, emailCooldownRef);
@@ -677,7 +508,7 @@ function OnboardingContent() {
     }
     setLoading(true);
     try {
-      await apiVerifyOtp('email', otpEmail, otpEmailCode);
+      await verifyOtp(otpEmail, otpEmailCode);
       setStep('phone_verify');
     } catch (err: any) {
       setError(err.message);
@@ -724,32 +555,20 @@ function OnboardingContent() {
 
     setLoading(true);
     try {
-      // Check if phone number is already registered
-      const checkRes = await legacyFetch('/api/auth/check-availability', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: cleanPhone,
-        }),
-      });
-      if (checkRes.ok) {
-        const checkData = await checkRes.json();
-        if (!checkData.available && checkData.taken?.includes('phone')) {
-          setError('This phone number is already registered.');
-          setLoading(false);
-          return;
-        }
-      } else {
-        const data = await checkRes.json().catch(() => ({}));
-        throw new Error(extractError(data, 'Failed to check phone number availability.'));
-      }
-
-      await apiSendOtp('phone', cleanPhone);
+      // No real phone-availability pre-check exists; a duplicate phone has no
+      // enforcement point until the application is saved, same tradeoff as
+      // the dropped email pre-check above.
+      //
+      // GCP Identity Platform owns send/verify/rate-limit/cooldown for phone
+      // entirely client-side (see lib/firebase/phone-auth.ts) — there is no
+      // backend OTP call here, unlike the email step above.
+      const confirmation = await sendPhoneOtp(toE164(cleanPhone), PHONE_RECAPTCHA_CONTAINER_ID);
+      setPhoneConfirmation(confirmation);
       setOtpPhoneSent(true);
       setFormData((prev) => ({ ...prev, phone: cleanPhone }));
       startCooldown(setPhoneCooldown, phoneCooldownRef);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Could not send the SMS code. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -761,258 +580,133 @@ function OnboardingContent() {
       setError('Enter the 6-digit code.');
       return;
     }
+    if (!phoneConfirmation) {
+      setError('Please request a new code.');
+      return;
+    }
     setLoading(true);
     try {
       const cleanPhone = otpPhone.replace(/\s/g, '');
-      await apiVerifyOtp('phone', cleanPhone, otpPhoneCode);
+      // Identity Platform confirming the code only proves the applicant holds
+      // that Firebase-side session, not that it's their number — the ID token
+      // it returns still has to be checked server-side against the applicant's
+      // own entered number via the real onboarding verification endpoint.
+      const idToken = await confirmPhoneOtp(phoneConfirmation, otpPhoneCode);
+      const result = await verifyDocument({
+        documentType: 'phone',
+        documentNumber: cleanPhone,
+        proofToken: idToken,
+      });
+      if (!result.passed) {
+        throw new Error(result.reason || 'Phone verification failed.');
+      }
       setStep('entity_type');
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Invalid or expired code.');
     } finally {
       setLoading(false);
     }
   };
 
-  // ── Step 5: Create Firebase account, then advance to first KYC step ────────
+  // ── Step 5: Open the application, advance to KYC ──
+  // The account itself was already created back at the email_verify step
+  // (the real OTP send route requires an existing session) and the phone
+  // was already format-validated there too, so this step only opens the
+  // onboarding application against the now-established session.
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const auth = getFirebaseAuth();
-      let uid: string;
-      const effectiveEmail = authUser?.email || formData.email;
-
-      if (authUser && authUser.email === effectiveEmail) {
-        uid = authUser.uid;
-      } else {
-        if (!formData.email || !formData.password) {
-          setError('Please provide both email and password.');
-          setLoading(false);
-          return;
-        }
-        if (formData.password.length < 8) {
-          setError('Password must be at least 8 characters long.');
-          setLoading(false);
-          return;
-        }
-        const createPhone = formData.phone || otpPhone.replace(/\s/g, '');
-        if (createPhone) {
-          // Check for only numbers (with optional leading +)
-          if (!/^\+?[0-9]+$/.test(createPhone)) {
-            setError('Phone number must contain only numbers (no letters or special characters).');
-            setLoading(false);
-            return;
-          }
-
-          const digitsOnly = createPhone.replace(/[^\d]/g, '');
-          if (createPhone.startsWith('+')) {
-            if (createPhone.startsWith('+91')) {
-              const localNumber = createPhone.slice(3);
-              if (localNumber.length !== 10) {
-                setError('Please enter a valid 10-digit Indian mobile number after +91.');
-                setLoading(false);
-                return;
-              }
-            } else {
-              if (digitsOnly.length < 8) {
-                setError(
-                  'Phone number too short. Include your country code (e.g., +919876543210).',
-                );
-                setLoading(false);
-                return;
-              }
-            }
-          } else {
-            if (digitsOnly.length !== 10) {
-              setError('Please enter a valid 10-digit Indian mobile number.');
-              setLoading(false);
-              return;
-            }
-          }
-          if (createPhone.length < 10) {
-            setError(
-              'Please enter a valid phone number (at least 10 characters long, including country code).',
-            );
-            setLoading(false);
-            return;
-          }
-        }
-        // Check if email or phone is already registered before creating
-        const checkRes = await legacyFetch('/api/auth/check-availability', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: formData.email,
-            phone: createPhone || undefined,
-          }),
-        });
-        if (checkRes.ok) {
-          const checkData = await checkRes.json();
-          if (!checkData.available && checkData.taken?.length > 0) {
-            const msgs: string[] = [];
-            if (checkData.taken.includes('email')) msgs.push('This email is already registered.');
-            if (checkData.taken.includes('phone'))
-              msgs.push('This phone number is already registered.');
-            setError(msgs.join('\n'));
-            setLoading(false);
-            return;
-          }
-        }
-        // Create account server-side (Admin SDK) — avoids client Firebase Auth connectivity issues
-        const res = await legacyFetch('/api/auth/create-account', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: formData.email,
-            password: formData.password,
-            phone: createPhone || undefined,
-            name: formData.name,
-            contactPerson: formData.contactPerson,
-            city: formData.city,
-            area: formData.area,
-            website: formData.website,
-            capacity: formData.capacity,
-            plan: formData.plan,
-            role: formData.role,
-            association: formData.association,
-            associatedHostId: formData.associatedHostId,
-            instagram: formData.instagram,
-            bio: formData.bio,
-            upcomingEventsText: formData.upcomingEventsText,
-            pastEventsText: formData.pastEventsText,
-            businessType: formData.businessType,
-            registrationNumber: formData.registrationNumber,
-            entityType: entityType,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          if (res.status === 409) {
-            const loginUrl = `/login?email=${encodeURIComponent(formData.email)}&type=${encodeURIComponent(partnerType)}`;
-            setError('This email is already registered.');
-            setLoading(false);
-            router.push(loginUrl);
-            return;
-          }
-          throw new Error(extractError(data, 'Failed to create account.'));
-        }
-        // Sign the client in using the custom token returned by the server
-        const { customToken, uid: newUid } = data;
-        try {
-          await signInWithCustomToken(auth as any, customToken);
-        } catch {
-          // Custom token sign-in failed — fall back to email/password so
-          // subsequent API calls (KYC upload, onboard submission) have auth.
-          try {
-            await signInWithEmailAndPassword(auth as any, formData.email, formData.password);
-          } catch (e2: any) {
-            console.error('Fallback sign-in also failed:', e2?.message);
-          }
-        }
-        uid = newUid;
+      if (!authUser) {
+        setError('Your session expired. Please verify your email again to continue.');
+        setStep('email_verify');
+        setLoading(false);
+        return;
       }
+      const createPhone = formData.phone || otpPhone.replace(/\s/g, '');
 
-      setCreatedUid(uid);
+      // Open the application now that we have a real session — this is the
+      // one call that persists the full profile server-side; the request id
+      // it returns backs every subsequent saveProgress/upload/submit call.
+      const application = await startOnboarding(
+        {
+          requestedType: partnerType,
+          plan: formData.plan as 'basic' | 'silver' | 'diamond',
+          profile: {
+            legalName: formData.name,
+            contactPerson: formData.contactPerson,
+            phone: createPhone,
+            city: formData.city,
+            area: formData.area || undefined,
+            website: formData.website || undefined,
+            capacity: formData.capacity ? Number(formData.capacity) : undefined,
+            instagram: formData.instagram || undefined,
+            bio: formData.bio || undefined,
+            businessType: formData.businessType || undefined,
+            registrationNumber: formData.registrationNumber || undefined,
+            entityType,
+          },
+        },
+        crypto.randomUUID(),
+      );
+      setSubmittedRequestId(application.id);
+      setCreatedUid(authUser?.id ?? null);
+
       // Advance to the first KYC step in the sequence
       const seq = getStepSequence(entityType);
       const detailsIdx = seq.indexOf('details');
       const nextStep = seq[detailsIdx + 1];
       if (nextStep) {
         setStep(nextStep);
-        saveProgress(nextStep);
       }
     } catch (err: any) {
       console.error('Account creation error:', err);
-      setError(err.message || 'Failed to create account. Please try again.');
+      if (isApiClientError(err) && err.status === 409) {
+        setError('You already have an application in progress.');
+      } else {
+        setError(err.message || 'Failed to create account. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   // ── KYC step: save data and submit when it's the last step ─────────────
+  // Documents themselves are already uploaded/verified by this point (each
+  // KycFileZone / handleVerifyAadhaar call landed on the application as it
+  // happened) — this only needs to flag the application as submitted.
   const submitApplication = useCallback(
-    async (stepId: string, data: Record<string, unknown>) => {
-      const updatedKycData = { ...kycStepData, [stepId]: data };
-      setKycStepData(updatedKycData);
+    async (_stepId: string, _data: Record<string, unknown>) => {
       setKycSubmitting(true);
       setKycError('');
       try {
-        const auth = getFirebaseAuth();
-        let token = await auth.currentUser?.getIdToken();
-        if (!token) {
-          // Session may have been lost — try re-signing in
-          try {
-            await signInWithEmailAndPassword(
-              auth as any,
-              authUser?.email || formData.email,
-              formData.password,
-            );
-            token = await auth.currentUser?.getIdToken();
-          } catch {
-            /* silent — will fail with 401 below */
-          }
+        if (!submittedRequestId) {
+          throw new Error('No application found. Please restart onboarding.');
         }
-        const effectiveEmail = authUser?.email || formData.email;
-        const res = await legacyFetch('/api/auth/onboard', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token && { Authorization: `Bearer ${token}` }),
-          },
-          body: JSON.stringify({
-            type: partnerType,
-            entityType,
-            name: formData.name,
-            email: effectiveEmail,
-            phone: formData.phone || otpPhone.replace(/\s/g, ''),
-            contactPerson: formData.contactPerson,
-            city: formData.city,
-            area: formData.area,
-            website: formData.website,
-            capacity: formData.capacity,
-            plan: formData.plan,
-            role: formData.role,
-            association: formData.association,
-            associatedHostId: formData.associatedHostId,
-            instagram: formData.instagram,
-            bio: formData.bio,
-            upcomingEventsText: formData.upcomingEventsText,
-            pastEventsText: formData.pastEventsText,
-            businessType: formData.businessType,
-            registrationNumber: formData.registrationNumber,
-            kycStepData: updatedKycData,
-          }),
-        });
-        if (!res.ok) {
-          let errMsg = 'Failed to submit application.';
-          try {
-            const data = await res.clone().json();
-            errMsg =
-              typeof data.error === 'string'
-                ? data.error
-                : data.error?.message || data.message || errMsg;
-          } catch {
-            /* non-JSON response */
-          }
-          throw new Error(errMsg);
-        }
-        const responseData = await res.json();
-        if (responseData.requestId) setSubmittedRequestId(responseData.requestId);
+        const application = await submitOnboardingApplication(
+          submittedRequestId,
+          crypto.randomUUID(),
+        );
+        setSubmittedRequestId(application.id);
+        setApprovalStatus('pending');
         setStep('success');
       } catch (err: any) {
         console.error('Final submit error:', err);
-        const msg = err?.message || '';
-        if (msg.includes('_zod') || msg.includes('undefined')) {
-          setKycError('Validation failed. Please check your details and try again.');
+        if (isApiClientError(err) && err.status === 400) {
+          setKycError(
+            err.fieldErrors
+              ? Object.values(err.fieldErrors).flat().join(' ')
+              : 'Please upload all required documents before submitting.',
+          );
         } else {
-          setKycError(msg || 'Failed to submit. Please try again.');
+          setKycError(err?.message || 'Failed to submit. Please try again.');
         }
       } finally {
         setKycSubmitting(false);
       }
     },
-    [kycStepData, authUser, formData, partnerType, entityType, otpPhone],
+    [submittedRequestId],
   );
 
   // ── Intermediate KYC step: save data locally and advance or submit ─────
@@ -1024,7 +718,6 @@ function OnboardingContent() {
       if (isLastStep) {
         submitApplication(stepId, data);
       } else {
-        setKycStepData((prev) => ({ ...prev, [stepId]: data }));
         if (idx !== -1 && idx < seq.length - 1) {
           const next = seq[idx + 1];
           if (next) {
@@ -1038,7 +731,7 @@ function OnboardingContent() {
   );
 
   const currentStepIndex = stepSequence.indexOf(step);
-  const effectiveUid = createdUid || authUser?.uid || '';
+  const effectiveUid = createdUid || authUser?.id || '';
 
   return (
     <div className="min-h-screen bg-[var(--surface-base)]">
@@ -1110,6 +803,115 @@ function OnboardingContent() {
 
       <main className="max-w-xl mx-auto px-6 pb-24">
         <AnimatePresence mode="wait">
+          {/* ── Sign Up ── */}
+          {step === 'signup' && (
+            <motion.div
+              key="signup"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <StepHeader
+                step={String(stepSequence.indexOf('signup') + 1).padStart(2, '0')}
+                label="Sign Up"
+                title={emailExists ? 'Welcome Back' : 'Create Your Account'}
+                description={
+                  emailExists
+                    ? 'Log in with your existing account to resume onboarding.'
+                    : "Enter your email and set a password. We'll verify your email next."
+                }
+              />
+              {/* In-place Sign Up / Log In toggle — switching never leaves /onboard,
+                  so partner-type + progress are kept regardless of which path a
+                  visitor takes. */}
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border-subtle)] mb-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmailExists(false);
+                    setError('');
+                  }}
+                  className={`flex-1 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${!emailExists ? 'bg-[var(--accent-primary)] text-white' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}`}
+                >
+                  Sign Up
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmailExists(true);
+                    setError('');
+                  }}
+                  className={`flex-1 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${emailExists ? 'bg-[var(--accent-primary)] text-white' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}`}
+                >
+                  Log In
+                </button>
+              </div>
+              <ErrorBanner error={error} />
+              <div className="space-y-5">
+                {!emailExists && (
+                  <FormInput
+                    label="Full Name"
+                    icon={User}
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    placeholder="Your name"
+                    required
+                  />
+                )}
+                <FormInput
+                  label="Email Address"
+                  icon={Mail}
+                  type="email"
+                  value={otpEmail}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOtpEmail(e.target.value)}
+                  placeholder="you@company.com"
+                />
+                <div className="relative">
+                  <FormInput
+                    label="Password"
+                    icon={Lock}
+                    type={showPassword ? 'text' : 'password'}
+                    value={emailExists ? loginPassword : formData.password}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      emailExists
+                        ? setLoginPassword(e.target.value)
+                        : setFormData((prev) => ({ ...prev, password: e.target.value }))
+                    }
+                    placeholder={emailExists ? 'Enter your password' : 'Minimum 8 characters'}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-[42px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+                {emailExists ? (
+                  <ActionButton
+                    onClick={handleExistingUserLogin}
+                    loading={loading}
+                    loadingText="AUTHORIZING ACCESS..."
+                  >
+                    Verify & Login <ChevronRight className="h-5 w-5" />
+                  </ActionButton>
+                ) : (
+                  <ActionButton onClick={handleSignup} loading={loading}>
+                    Continue <ChevronRight className="h-5 w-5" />
+                  </ActionButton>
+                )}
+              </div>
+            </motion.div>
+          )}
+
           {/* ── Email Verification ── */}
           {step === 'email_verify' && (
             <motion.div
@@ -1120,14 +922,10 @@ function OnboardingContent() {
               transition={{ duration: 0.3 }}
             >
               <StepHeader
-                step="02"
+                step={String(stepSequence.indexOf('email_verify') + 1).padStart(2, '0')}
                 label="Verify Email"
-                title={emailExists ? 'Welcome Back' : 'Confirm Your Email'}
-                description={
-                  emailExists
-                    ? 'Your email is already registered. Enter your password to resume onboarding.'
-                    : "Enter the email address you want to register with. We'll send a 6-digit verification code."
-                }
+                title="Confirm Your Email"
+                description="Enter the 6-digit code we sent to confirm your email address."
               />
               <ErrorBanner error={error} />
               <div className="space-y-5">
@@ -1138,56 +936,11 @@ function OnboardingContent() {
                   value={otpEmail}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOtpEmail(e.target.value)}
                   placeholder="you@company.com"
-                  disabled={otpEmailSent || emailExists}
+                  disabled={otpEmailSent}
                 />
-                {emailExists ? (
-                  <>
-                    <div className="relative">
-                      <FormInput
-                        label="Password"
-                        icon={Lock}
-                        type={showPassword ? 'text' : 'password'}
-                        value={loginPassword}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                          setLoginPassword(e.target.value)
-                        }
-                        placeholder="Enter your password"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-[42px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-5 w-5" />
-                        ) : (
-                          <Eye className="h-5 w-5" />
-                        )}
-                      </button>
-                    </div>
-                    <ActionButton
-                      onClick={handleExistingUserLogin}
-                      loading={loading}
-                      loadingText="AUTHORIZING ACCESS..."
-                    >
-                      Verify & Login <ChevronRight className="h-5 w-5" />
-                    </ActionButton>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEmailExists(false);
-                        setLoginPassword('');
-                        setError('');
-                      }}
-                      className="w-full flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[var(--text-tertiary)] hover:text-[var(--accent-primary)] transition-colors"
-                    >
-                      Use a different email
-                    </button>
-                  </>
-                ) : !otpEmailSent ? (
-                  <ActionButton onClick={handleEmailSubmit} loading={loading}>
-                    Continue <ChevronRight className="h-5 w-5" />
+                {!otpEmailSent ? (
+                  <ActionButton onClick={handleSendEmailOtp} loading={loading}>
+                    Send Code <ChevronRight className="h-5 w-5" />
                   </ActionButton>
                 ) : (
                   <>
@@ -1231,12 +984,28 @@ function OnboardingContent() {
               transition={{ duration: 0.3 }}
             >
               <StepHeader
-                step="03"
+                step={String(stepSequence.indexOf('phone_verify') + 1).padStart(2, '0')}
                 label="Verify Phone"
                 title="Confirm Your Number"
                 description="We'll send an SMS code to confirm your mobile number. This becomes your verified contact on the platform."
               />
               <ErrorBanner error={error} />
+              {testingBypass && (
+                <div className="mb-6 p-4 rounded-2xl bg-[var(--surface-secondary)] border border-[var(--border-subtle)] flex items-start gap-3">
+                  <Sparkles className="h-5 w-5 text-[var(--accent-primary)] flex-shrink-0" />
+                  <p className="text-[12px] leading-relaxed text-[var(--text-secondary)]">
+                    Testing mode: SMS and reCAPTCHA are skipped. Enter the test number configured
+                    in the Firebase Console (Authentication → Phone → Test phone numbers)
+                    {testPhone
+                      ? ' — pre-filled below.'
+                      : ', e.g. +1 555 555 0100.'}{' '}
+                    Use the exact code configured for that number in the console (not an
+                    arbitrary one).
+                  </p>
+                </div>
+              )}
+              {/* Invisible reCAPTCHA anchor for Firebase's signInWithPhoneNumber — renders nothing visible. */}
+              <div id={PHONE_RECAPTCHA_CONTAINER_ID} />
               <div className="space-y-5">
                 <FormInput
                   label="Mobile Number (with country code)"
@@ -1279,6 +1048,7 @@ function OnboardingContent() {
                         setOtpPhoneSent(false);
                         setError('');
                         setOtpPhoneCode('');
+                        setPhoneConfirmation(null);
                       }}
                       className="w-full flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[var(--text-tertiary)] hover:text-[var(--accent-primary)] transition-colors"
                     >
@@ -1300,7 +1070,7 @@ function OnboardingContent() {
               transition={{ duration: 0.3 }}
             >
               <StepHeader
-                step="04"
+                step={String(stepSequence.indexOf('entity_type') + 1).padStart(2, '0')}
                 label="Entity Type"
                 title="Individual or Business?"
                 description="This determines which verification documents you'll provide after approval."
@@ -1342,7 +1112,7 @@ function OnboardingContent() {
               transition={{ duration: 0.3 }}
             >
               <StepHeader
-                step="01"
+                step={String(stepSequence.indexOf('role') + 1).padStart(2, '0')}
                 label="Select Role"
                 title="Join the Network"
                 description="Select your operational role to begin the onboarding process."
@@ -1373,7 +1143,7 @@ function OnboardingContent() {
               <ActionButton
                 onClick={() => {
                   setError('');
-                  setStep('email_verify');
+                  setStep('signup');
                 }}
               >
                 Continue <ChevronRight className="h-5 w-5" />
@@ -1406,46 +1176,9 @@ function OnboardingContent() {
               <ErrorBanner error={error} onLoginClick={() => router.push('/login')} />
 
               <form onSubmit={handleCreateAccount} className="space-y-8">
-                {/* Credentials section */}
-                {!authUser ? (
-                  <div className="space-y-5">
-                    <SectionTitle title="Account Credentials" />
-                    <div className="p-4 rounded-2xl bg-[var(--state-success-bg)] border border-[var(--state-success)]/20 flex items-center gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-[var(--state-success)] flex-shrink-0" />
-                      <div>
-                        <p className="text-[11px] font-semibold text-[var(--state-success)] uppercase tracking-wider">
-                          Verified Email
-                        </p>
-                        <p className="text-[13px] font-medium text-[var(--text-primary)]">
-                          {otpEmail}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="relative">
-                      <FormInput
-                        label="Create Password"
-                        icon={Lock}
-                        type={showPassword ? 'text' : 'password'}
-                        name="password"
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="Minimum 8 characters"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-[42px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-5 w-5" />
-                        ) : (
-                          <Eye className="h-5 w-5" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
+                {/* Credentials — the account was already created back at the
+                    email_verify step, so this is just a confirmation banner. */}
+                {authUser && (
                   <div className="p-5 rounded-2xl bg-[var(--state-success-bg)] border border-[var(--state-success)]/20 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="h-11 w-11 rounded-xl bg-[var(--state-success)] flex items-center justify-center font-bold text-white text-lg">
@@ -1727,6 +1460,7 @@ function OnboardingContent() {
               {kycError && <ErrorBanner error={kycError} />}
               <KycIdentityForm
                 uid={effectiveUid}
+                requestId={submittedRequestId}
                 initialData={{}}
                 onSubmit={(data) => handleKycStep('kyc_identity', data)}
                 submitting={false}
@@ -1783,6 +1517,7 @@ function OnboardingContent() {
               {kycError && <ErrorBanner error={kycError} />}
               <KycSignatoryForm
                 uid={effectiveUid}
+                requestId={submittedRequestId}
                 initialData={{}}
                 onSubmit={(data) => handleKycStep('kyc_signatory', data)}
                 submitting={false}
@@ -1818,16 +1553,13 @@ function OnboardingContent() {
                     <span className="font-semibold text-[var(--text-primary)]">
                       {formData.name}
                     </span>{' '}
-                    has been approved. Log in to access your dashboard.
+                    has been approved. Continue to your dashboard.
                   </p>
                   <button
-                    onClick={async () => {
-                      if (authUser) await signOut();
-                      router.push('/login');
-                    }}
+                    onClick={() => routeAfterAuth(router)}
                     className="inline-flex items-center gap-3 px-8 py-3.5 rounded-2xl bg-[var(--accent-primary)] text-white font-semibold text-[14px] hover:brightness-110 transition-all shadow-lg shadow-[var(--accent-primary)]/20"
                   >
-                    Go to Login <ChevronRight className="h-4 w-4" />
+                    Go to Dashboard <ChevronRight className="h-4 w-4" />
                   </button>
                 </>
               ) : (
@@ -2132,11 +1864,13 @@ function ErrorBanner({ error, onLoginClick }: { error: string; onLoginClick?: ()
 
 function KycFileZone({
   label,
-  fieldName,
+  fieldName: _fieldName,
   value,
   onChange,
   uid: _uid,
-  stepId,
+  stepId: _stepId,
+  requestId,
+  docLabel,
 }: {
   label: string;
   fieldName: string;
@@ -2144,24 +1878,20 @@ function KycFileZone({
   onChange: (url: string | null) => void;
   uid: string;
   stepId: string;
+  /** The application to attach this document to; required when `docLabel` is set. */
+  requestId: string | null;
+  /**
+   * Real backend document slot for this field — the onboarding document
+   * model only has three: `id_front`/`id_back`/`selfie`. Omit for a field
+   * with no real slot yet (e.g. the business registration certificate),
+   * which falls back to a local-only, never-uploaded placeholder.
+   */
+  docLabel?: 'id_front' | 'id_back' | 'selfie';
 }) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [uploadError, setUploadError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
-
-  async function getToken(): Promise<string> {
-    const auth = getFirebaseAuth();
-    let currentUser = auth.currentUser;
-    if (currentUser) return currentUser.getIdToken();
-    await new Promise((r) => setTimeout(r, 500));
-    currentUser = auth.currentUser;
-    if (currentUser) return currentUser.getIdToken();
-    await new Promise((r) => setTimeout(r, 1500));
-    currentUser = auth.currentUser;
-    if (currentUser) return currentUser.getIdToken(true);
-    throw new Error('Session not ready. Please refresh the page and try again.');
-  }
 
   const handleFile = async (file: File) => {
     if (!file) return;
@@ -2171,37 +1901,35 @@ function KycFileZone({
       return;
     }
 
-    let token: string;
-    try {
-      token = await getToken();
-    } catch (e: any) {
-      setUploadError(e.message);
+    if (!docLabel || !requestId) {
+      // No real document slot for this field yet — kept local-only so the
+      // step can still be filled out, but never durably uploaded anywhere.
+      onChange(URL.createObjectURL(file));
+      return;
+    }
+
+    const contentType = file.type;
+    if (contentType !== 'image/jpeg' && contentType !== 'image/png' && contentType !== 'image/webp') {
+      setUploadError('Please upload a JPG, PNG, or WEBP image.');
       return;
     }
 
     setUploading(true);
-    setProgress(0);
+    setProgress(10);
     try {
-      const form = new FormData();
-      form.append('file', file);
-      form.append('stepId', stepId);
-      form.append('fieldName', fieldName);
+      const uploadUrlDto = await getUploadUrl(requestId, { label: docLabel, contentType });
+      setProgress(40);
 
-      const res = await legacyFetch('/api/kyc/upload', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: form,
-      });
+      await uploadToSignedUrl(uploadUrlDto.uploadUrl, uploadUrlDto.headers, file);
+      setProgress(80);
 
+      await addDocument(
+        requestId,
+        { label: docLabel, storagePath: uploadUrlDto.storagePath },
+        crypto.randomUUID(),
+      );
       setProgress(100);
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(extractError(data, 'Upload failed.'));
-      }
-
-      const { url } = await res.json();
-      onChange(url);
+      onChange(uploadUrlDto.storagePath);
     } catch (e: any) {
       console.error('Upload error:', e);
       setUploadError(e.message || 'Upload failed. Please try again.');
@@ -2336,12 +2064,14 @@ function KycSelectField({
 
 function KycIdentityForm({
   uid,
+  requestId,
   initialData,
   onSubmit,
   submitting,
   submitLabel = 'Continue',
 }: {
   uid: string;
+  requestId: string | null;
   initialData: Record<string, unknown>;
   onSubmit: (data: Record<string, unknown>) => void;
   submitting: boolean;
@@ -2360,7 +2090,11 @@ function KycIdentityForm({
   const [isVerified, setIsVerified] = useState(!!initialData['isVerified']);
   const [verificationError, setVerificationError] = useState('');
 
-  const needsBack = ['aadhaar', 'driving_licence', 'voter_id'].includes(idType);
+  // The real backend requires exactly 3 documents (id_front, id_back, selfie)
+  // to submit, unconditionally by ID type — REQUIRED_DOCUMENT_LABELS has no
+  // per-type variant. A passport holder skipping "back" here would never be
+  // able to clear missingDocuments server-side, so every ID type needs one.
+  const needsBack = true;
 
   const handleVerifyAadhaar = async () => {
     if (!idNumber || idNumber.length !== 12) {
@@ -2370,24 +2104,14 @@ function KycIdentityForm({
     setVerifying(true);
     setVerificationError('');
     try {
-      const auth = getFirebaseAuth();
-      const token = await auth.currentUser?.getIdToken();
-      const res = await legacyFetch('/api/kyc/verify-aadhaar', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-        body: JSON.stringify({ aadhaarId: idNumber }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(extractError(data, 'Verification failed.'));
+      // Format-check only, per D-018 — never rendered as government-verified.
+      const result = await verifyDocument({ documentType: 'aadhaar', documentNumber: idNumber });
+      if (!result.passed) {
+        throw new Error(result.reason || 'Verification failed.');
       }
       setIsVerified(true);
     } catch (err: any) {
-      setVerificationError(err.message);
+      setVerificationError(err.message || 'Verification failed.');
       setIsVerified(false);
     } finally {
       setVerifying(false);
@@ -2476,6 +2200,8 @@ function KycIdentityForm({
           onChange={setDocFront}
           uid={uid}
           stepId="kyc_identity"
+          requestId={requestId}
+          docLabel="id_front"
         />
         {needsBack && (
           <KycFileZone
@@ -2485,6 +2211,8 @@ function KycIdentityForm({
             onChange={setDocBack}
             uid={uid}
             stepId="kyc_identity"
+            requestId={requestId}
+            docLabel="id_back"
           />
         )}
       </div>
@@ -2495,6 +2223,8 @@ function KycIdentityForm({
         onChange={setSelfie}
         uid={uid}
         stepId="kyc_identity"
+        requestId={requestId}
+        docLabel="selfie"
       />
       <button
         type="submit"
@@ -2601,6 +2331,9 @@ function KycBusinessForm({
         onChange={setRegDoc}
         uid={uid}
         stepId="kyc_business"
+        // No real document slot exists yet for a business registration
+        // certificate — local-only placeholder (see KycFileZone's docLabel doc).
+        requestId={null}
       />
       <button
         type="submit"
@@ -2620,12 +2353,14 @@ function KycBusinessForm({
 
 function KycSignatoryForm({
   uid,
+  requestId,
   initialData,
   onSubmit,
   submitting,
   submitLabel = 'Continue',
 }: {
   uid: string;
+  requestId: string | null;
   initialData: Record<string, unknown>;
   onSubmit: (data: Record<string, unknown>) => void;
   submitting: boolean;
@@ -2643,7 +2378,11 @@ function KycSignatoryForm({
   const [docBack, setDocBack] = useState<string | null>((initialData['docBackUrl'] as string) || null);
   const [selfie, setSelfie] = useState<string | null>((initialData['selfieUrl'] as string) || null);
   const [declared, setDeclared] = useState(false);
-  const needsBack = ['aadhaar', 'driving_licence', 'voter_id'].includes(idType);
+  // The real backend requires exactly 3 documents (id_front, id_back, selfie)
+  // to submit, unconditionally by ID type — REQUIRED_DOCUMENT_LABELS has no
+  // per-type variant. A passport holder skipping "back" here would never be
+  // able to clear missingDocuments server-side, so every ID type needs one.
+  const needsBack = true;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -2740,6 +2479,8 @@ function KycSignatoryForm({
           onChange={setDocFront}
           uid={uid}
           stepId="kyc_signatory"
+          requestId={requestId}
+          docLabel="id_front"
         />
         {needsBack && (
           <KycFileZone
@@ -2749,6 +2490,8 @@ function KycSignatoryForm({
             onChange={setDocBack}
             uid={uid}
             stepId="kyc_signatory"
+            requestId={requestId}
+            docLabel="id_back"
           />
         )}
       </div>
@@ -2759,6 +2502,8 @@ function KycSignatoryForm({
         onChange={setSelfie}
         uid={uid}
         stepId="kyc_signatory"
+        requestId={requestId}
+        docLabel="selfie"
       />
       <label className="flex items-start gap-3 cursor-pointer">
         <input
