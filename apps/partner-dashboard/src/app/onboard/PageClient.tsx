@@ -25,58 +25,94 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  type ChangeEvent,
-  type InputHTMLAttributes,
-  type ReactNode,
-} from 'react';
-
 import { isApiClientError } from '@c1rcle/api-client';
-import { useSession } from '@c1rcle/auth';
+import { getClientEnv } from '@c1rcle/config';
 
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 import {
+  addDocument,
   getMine,
+  getUploadUrl,
   saveProgress as saveOnboardingProgress,
   start as startOnboarding,
   submit as submitOnboardingApplication,
-  uploadDocument,
+  verifyDocument,
 } from '@/lib/onboarding/onboarding-repository';
+import { sendOtp, verifyOtp } from '@/lib/onboarding/otp';
+import { uploadToSignedUrl } from '@/lib/onboarding/uploadToSignedUrl';
+import { confirmPhoneOtp, getTestingBypassEnabled, sendPhoneOtp } from '@/lib/firebase/phone-auth';
 import { routeAfterAuth } from '@/lib/org/route-after-auth';
 
-import type { OnboardingRequestDto } from '@c1rcle/contracts/client';
+import type { ConfirmationResult } from 'firebase/auth';
+
+const PHONE_RECAPTCHA_CONTAINER_ID = 'phone-verify-recaptcha';
+
+/** v1's rule, ported: a bare 10-digit number is assumed Indian (+91-prefixed). */
+function toE164(phone: string): string {
+  const digitsOnly = phone.replace(/[^\d+]/g, '');
+  if (digitsOnly.startsWith('+')) return digitsOnly;
+  if (/^\d{10}$/.test(digitsOnly)) return `+91${digitsOnly}`;
+  return `+${digitsOnly}`;
+}
+
+const Instagram = (props: any) => (
+  <svg
+    {...props}
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+  </svg>
+);
 
 // ── Step type ─────────────────────────────────────────────────────────────────
-// Six-step flow per ONBOARDING-FLOW-SPEC-2026-09-01.md: role → sign-in/sign-up →
-// profile(+plan, which creates the application) → documents → review → success.
-// Email/phone OTP steps are dropped (Better Auth email+password only); the phone
-// is a *typed* profile field, never OTP-verified. Entity-type KYC branching is
-// collapsed: every applicant uploads the same 3 documents (id_front, id_back,
-// selfie) — the backend's fixed label enum.
-type OnboardingStep = 'role' | 'signup' | 'details' | 'documents' | 'review' | 'success';
+type OnboardingStep =
+  | 'signup'
+  | 'email_verify'
+  | 'phone_verify'
+  | 'entity_type'
+  | 'role'
+  | 'details'
+  | 'kyc_identity'
+  | 'kyc_business'
+  | 'kyc_signatory'
+  | 'success';
 
 type PartnerType = 'venue' | 'host' | 'promoter';
+type EntityType = 'individual' | 'business';
 
-/** Mirrors `onboardingPlanSchema` (`basic | silver | diamond`) — the contracts
- * index doesn't export a standalone `OnboardingPlan` type, only the enum used
- * inside `StartOnboardingRequest`/`OnboardingRequestDto`. */
-type OnboardingPlan = 'basic' | 'silver' | 'diamond';
-
-const STEP_SEQUENCE: readonly OnboardingStep[] = [
-  'role',
-  'signup',
-  'details',
-  'documents',
-  'review',
-  'success',
-];
+// Dynamic sequence based on entity type (KYC steps vary). `signup` runs
+// before `email_verify` — the real `/onboarding/otp/send` route requires an
+// authenticated session, so the account must exist before the first OTP.
+function getStepSequence(et: EntityType): OnboardingStep[] {
+  const kycSteps: OnboardingStep[] =
+    et === 'business' ? ['kyc_business', 'kyc_signatory'] : ['kyc_identity'];
+  return [
+    'role',
+    'signup',
+    'email_verify',
+    'phone_verify',
+    'entity_type',
+    'details',
+    ...kycSteps,
+    'success',
+  ];
+}
 
 const STEP_LABELS: Record<OnboardingStep, string> = {
+  signup: 'Sign Up',
+  email_verify: 'Email',
+  phone_verify: 'Phone',
+  entity_type: 'Entity',
   role: 'Role',
   signup: 'Sign Up',
   details: 'Details',
@@ -85,68 +121,21 @@ const STEP_LABELS: Record<OnboardingStep, string> = {
   success: 'Done',
 };
 
-const CITIES = [
-  'Pune',
-  'Mumbai',
-  'Goa',
-  'Bengaluru',
-  'Delhi',
-  'Hyderabad',
-  'Chennai',
-  'Kolkata',
-  'Jaipur',
-  'Ahmedabad',
-];
-
-const BUSINESS_TYPES = [
-  { value: 'pvt_ltd', label: 'Private Limited' },
-  { value: 'llp', label: 'LLP' },
-  { value: 'partnership', label: 'Partnership Firm' },
-  { value: 'sole_prop', label: 'Sole Proprietorship' },
-  { value: 'trust', label: 'Trust / Society' },
-];
-
-const PLANS: readonly {
-  readonly value: OnboardingPlan;
-  readonly label: string;
-  readonly fee: string;
-}[] = [
-  { value: 'basic', label: 'Basic', fee: '15% platform fee' },
-  { value: 'silver', label: 'Silver', fee: '12% platform fee' },
-  { value: 'diamond', label: 'Diamond', fee: '10% platform fee' },
-];
-
-/** A draft application counts as "profile started" once its legalName is set. */
-function isProfileStarted(app: OnboardingRequestDto | null): boolean {
-  return app !== null && app.profile.legalName.trim().length > 0;
-}
-
-/** The 3 backend-fixed document labels every applicant must upload. */
-const DOCUMENT_LABELS = ['id_front', 'id_back', 'selfie'] as const;
-type DocLabel = (typeof DOCUMENT_LABELS)[number];
-
-function docLabelCopy(label: DocLabel): { title: string; label: string } {
-  switch (label) {
-    case 'id_front':
-      return { title: 'Government ID — Front', label: 'Front side of your government-issued ID' };
-    case 'id_back':
-      return { title: 'Government ID — Back', label: 'Back side of your government-issued ID' };
-    case 'selfie':
-      return { title: 'Selfie', label: 'A clear selfie for identity confirmation' };
-  }
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 export function OnboardingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const {
+    user: authUser,
     signIn: authSignIn,
     signUp: authSignUp,
     signOut,
     loading: authLoading,
   } = useDashboardAuth();
-  const { user: authUser } = useSession();
+
+  const clientEnv = getClientEnv();
+  const testingBypass = getTestingBypassEnabled();
+  const testPhone = testingBypass ? (clientEnv.NEXT_PUBLIC_FIREBASE_TEST_PHONE ?? '') : '';
 
   const [step, setStep] = useState<OnboardingStep>('role');
   const [partnerType, setPartnerType] = useState<PartnerType>('venue');
@@ -163,34 +152,33 @@ export function OnboardingPage() {
   const [reviewNote, setReviewNote] = useState('');
   const [submittedRequestId, setSubmittedRequestId] = useState<string | null>(null);
 
-  // Existing-user detection on the signup step (duplicate email → sign-in mode).
+  // KYC state — collected during onboarding, submitted with the application
+  const [createdUid, setCreatedUid] = useState<string | null>(null);
+  const [, setKycSubmitting] = useState(false);
+  const [kycError, setKycError] = useState('');
+
+  // Existing user detection state
   const [emailExists, setEmailExists] = useState(false);
   const [loginPassword, setLoginPassword] = useState('');
 
-  // Signup / account fields.
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
+  // OTP state — provider-agnostic; only verification.js changes per provider
+  const [otpEmail, setOtpEmail] = useState('');
+  const [otpEmailCode, setOtpEmailCode] = useState('');
+  const [otpEmailSent, setOtpEmailSent] = useState(false);
+  const [emailCooldown, setEmailCooldown] = useState(0);
 
-  // Business-entity toggle — a *local* reveal, not a backend branch (spec).
-  const [isBusiness, setIsBusiness] = useState(false);
+  const [otpPhone, setOtpPhone] = useState(testPhone || '+91 ');
+  const [otpPhoneCode, setOtpPhoneCode] = useState('');
+  const [otpPhoneSent, setOtpPhoneSent] = useState(false);
+  const [phoneCooldown, setPhoneCooldown] = useState(0);
+  const [phoneConfirmation, setPhoneConfirmation] = useState<ConfirmationResult | null>(null);
 
-  // Profile fields (details step) — the UI speaks the server's
-  // profile-vocabulary (legalName, businessType, …) except `password`, which
-  // is collected on the signup step and never leaves the client.
-  const [formData, setFormData] = useState<{
-    password: string;
-    legalName: string;
-    contactPerson: string;
-    phone: string;
-    city: string;
-    area: string;
-    website: string;
-    capacity: string | number | null;
-    instagram: string;
-    bio: string;
-    businessType: string;
-    registrationNumber: string;
-  }>({
+  const emailCooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const phoneCooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Form data — all existing fields preserved exactly
+  const [formData, setFormData] = useState({
+    email: '',
     password: '',
     legalName: '',
     contactPerson: '',
@@ -205,26 +193,21 @@ export function OnboardingPage() {
     registrationNumber: '',
   });
 
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [docNotice, setDocNotice] = useState('');
-
-  // Uploaded document storage paths, seeded from the application on resume and
-  // updated as each KycFileZone completes. The same 3 labels for everyone.
-  const [documents, setDocuments] = useState<Record<DocLabel, string | null>>({
-    id_front: null,
-    id_back: null,
-    selfie: null,
-  });
-
-  // ── Save onboarding progress (debounced autosave once the application exists) ──
+  // ── Save onboarding progress so the user can resume mid-form ─────────
+  // `currentStep` is UI-only now — the real backend has no step field, it
+  // just stores profile fields; resume position is re-derived from those
+  // fields + document/status state via `getMine()`, not from a stored step.
+  // `plan`/`role`/`association`/`associatedHostId`/`upcomingEventsText`/
+  // `pastEventsText` have no home in `saveOnboardingProgressSchema` (it's
+  // `.strict()`) so they stay purely local UI state, never sent to the server.
   const saveProgress = useCallback(
     async (_currentStep: OnboardingStep) => {
       if (!submittedRequestId) return;
       try {
         await saveOnboardingProgress(submittedRequestId, {
-          legalName: formData.legalName || undefined,
+          legalName: formData.name || undefined,
           contactPerson: formData.contactPerson || undefined,
-          phone: formData.phone || undefined,
+          phone: formData.phone || otpPhone.replace(/\s/g, '') || undefined,
           city: formData.city || undefined,
           area: formData.area || undefined,
           website: formData.website || undefined,
@@ -233,117 +216,35 @@ export function OnboardingPage() {
           bio: formData.bio || undefined,
           businessType: formData.businessType || undefined,
           registrationNumber: formData.registrationNumber || undefined,
-          entityType: isBusiness ? 'business' : undefined,
+          entityType: entityType || undefined,
         });
       } catch {
-        /* silent — non-critical best-effort autosave */
+        /* silent — non-critical, matches the prior best-effort autosave */
       }
     },
-    [submittedRequestId, formData, isBusiness],
+    [submittedRequestId, entityType, formData, otpPhone],
   );
 
-  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (!submittedRequestId || step !== 'details') return;
-    if (autosaveTimer.current !== null) clearTimeout(autosaveTimer.current);
-    autosaveTimer.current = setTimeout(() => {
-      void saveProgress('details');
-    }, 800);
-    return () => {
-      if (autosaveTimer.current !== null) clearTimeout(autosaveTimer.current);
-    };
-  }, [formData, isBusiness, submittedRequestId, step, saveProgress]);
+  // Dynamic sequence depends on entity type chosen at step 4
+  const stepSequence = getStepSequence(entityType);
 
-  // ── Pre-fill role/email from URL params (deep links keep a refresh's place) ──
+  const initialised = useRef(false);
+
+  // Pre-fill from URL params (existing behaviour kept)
   useEffect(() => {
-    const type = searchParams.get('type') as PartnerType | null;
-    const urlEmail = searchParams.get('email');
-    if (type === 'venue' || type === 'host' || type === 'promoter') {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- URL prefill must run post-hydration: useSearchParams is empty during SSR, so lazy state initializers cannot replace this.
-      setPartnerType(type);
+    const type = searchParams.get('type') as PartnerType;
+    const email = searchParams.get('email');
+    const hostId = searchParams.get('hostId');
+    if (type) setPartnerType(type);
+    if (email) {
+      setOtpEmail(email);
+      setFormData((prev) => ({ ...prev, email }));
     }
-    if (urlEmail) {
-      setEmail(urlEmail);
-    }
+    if (hostId) setFormData((prev) => ({ ...prev, associatedHostId: hostId }));
   }, [searchParams]);
 
-  // ── Resume onboarding state from the real backend on load ─────────────────
-  // There is no server-side `onboardingStep` field — the step to resume at is
-  // derived from what the draft application actually has on it (`getMine()` →
-  // `/api/v2/onboarding/me`). No session → step 1 (public). Authenticated with
-  // no application → straight to profile (role re-pickable, account is good).
+  // ── Clean up session and enforce Step 1 on fresh load/reload ──────────
   const initialChecked = useRef(false);
-
-  // Shared by initial load, existing-user login, and post-submit poll: maps a
-  // real application onto wizard state + the correct step.
-  const seedFromApplication = useCallback(
-    (application: OnboardingRequestDto, go: (s: OnboardingStep) => void) => {
-      setSubmittedRequestId(application.id);
-      if (application.status === 'approved') {
-        setApprovalStatus('approved');
-        go('success');
-        return;
-      }
-      if (application.status === 'rejected') {
-        setApprovalStatus('rejected');
-        setReviewNote(application.reviewNote ?? '');
-        go('success');
-        return;
-      }
-      if (application.status === 'changes_requested') {
-        setApprovalStatus('changes_requested');
-        setReviewNote(application.reviewNote ?? '');
-        go('success');
-        return;
-      }
-      if (application.status === 'submitted') {
-        setApprovalStatus('pending');
-        go('success');
-        return;
-      }
-      // draft — continue from where the profile left off.
-      setApprovalStatus('pending');
-      const p = application.profile;
-      setFormData((prev) => ({
-        ...prev,
-        legalName: p.legalName !== '' ? p.legalName : prev.legalName,
-        contactPerson: p.contactPerson !== '' ? p.contactPerson : prev.contactPerson,
-        phone: p.phone !== '' ? p.phone : prev.phone,
-        city: p.city !== '' ? p.city : prev.city,
-        area: p.area ?? prev.area,
-        website: p.website ?? prev.website,
-        capacity: p.capacity != null ? String(p.capacity) : prev.capacity,
-        instagram: p.instagram ?? prev.instagram,
-        bio: p.bio ?? prev.bio,
-        businessType: p.businessType ?? prev.businessType,
-        registrationNumber: p.registrationNumber ?? prev.registrationNumber,
-      }));
-      setIsBusiness(p.entityType === 'business');
-      setPlan(application.plan);
-
-      const seeded: Record<DocLabel, string | null> = {
-        id_front: null,
-        id_back: null,
-        selfie: null,
-      };
-      for (const doc of application.documents) {
-        if (doc.label === 'id_front' || doc.label === 'id_back' || doc.label === 'selfie') {
-          seeded[doc.label] = doc.storagePath;
-        }
-      }
-      setDocuments(seeded);
-
-      const missing = application.missingDocuments.length;
-      if (!isProfileStarted(application)) {
-        go('details');
-      } else if (missing > 0) {
-        go('documents');
-      } else {
-        go('review');
-      }
-    },
-    [],
-  );
 
   useEffect(() => {
     if (authLoading) return;
@@ -351,45 +252,86 @@ export function OnboardingPage() {
 
     const checkInitialState = async () => {
       initialChecked.current = true;
-      if (!authUser) {
-        setStep('role');
-        return;
-      }
+      if (authUser) {
+        try {
+          const application = await getMine();
+          if (application) {
+            setSubmittedRequestId(application.id);
 
-      const application = await getMine();
-      if (!application) {
-        // Signed in but never started an application — begin at the profile
-        // step (the account already exists; the signup step would 409-loop).
-        setStep('details');
-        return;
-      }
+            if (application.status !== 'draft') {
+              // submitted / changes_requested / approved / rejected — the
+              // success screen renders the real status, no further wizard
+              // steps to resume into.
+              setApprovalStatus(application.status === 'approved' ? 'verified' : 'pending');
+              setStep('success');
+              initialised.current = true;
+              return;
+            }
 
-      setSubmittedRequestId(application.id);
-      seedFromApplication(application, (s) => {
-        setStep(s);
-      });
+            // Draft application — resume mid-wizard from its saved profile.
+            // The backend has no stored "step"; missingDocuments tells us
+            // whether they still owe KYC images or are ready to submit.
+            const p = application.profile;
+            const isBusiness = p.entityType === 'business';
+            setEntityType(isBusiness ? 'business' : 'individual');
+            setCreatedUid(authUser.id);
+
+            setFormData((prev) => ({
+              ...prev,
+              email: authUser.email || prev.email,
+              name: p.legalName || prev.name,
+              contactPerson: p.contactPerson || prev.contactPerson,
+              phone: p.phone || prev.phone,
+              city: p.city || prev.city,
+              area: p.area || prev.area,
+              website: p.website || prev.website,
+              capacity: p.capacity != null ? String(p.capacity) : prev.capacity,
+              instagram: p.instagram || prev.instagram,
+              bio: p.bio || prev.bio,
+              businessType: p.businessType || prev.businessType,
+              registrationNumber: p.registrationNumber || prev.registrationNumber,
+            }));
+            if (p.phone) {
+              setOtpPhone(p.phone);
+            }
+
+            const seq = getStepSequence(isBusiness ? 'business' : 'individual');
+            const resumeStep =
+              application.missingDocuments.length > 0
+                ? seq[seq.indexOf('details') + 1]
+                : seq[seq.length - 2];
+            setStep(resumeStep ?? 'details');
+            initialised.current = true;
+            return;
+          }
+
+          // Authenticated but no application on record yet — this account is
+          // already good (they have a live session), so continue the wizard
+          // from the first authed step instead of discarding it. Mirrors the
+          // equivalent branch in `handleExistingUserLogin`.
+          setFormData((prev) => ({ ...prev, email: authUser.email || prev.email }));
+          setOtpEmail(authUser.email || '');
+          initialised.current = true;
+          setStep('phone_verify');
+          return;
+        } catch (err) {
+          console.error('Error checking initial onboarding state:', err);
+        }
+      }
+      setStep('role');
     };
 
-    void checkInitialState();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- seedFromApplication is a stable []-memoized mapper; the probe must run once per auth transition, not per callback identity.
-  }, [authLoading, authUser]);
+    checkInitialState();
+  }, [authLoading, authUser, signOut]);
 
-  // ── Approval polling on the success screen ──────────────────────────────
+  // Approval polling — real application status via getMine()
   useEffect(() => {
     if (step !== 'success' || !submittedRequestId) return;
     const checkApproval = async () => {
       try {
         const application = await getMine();
         if (!application) return;
-        if (application.status === 'approved') {
-          setApprovalStatus('approved');
-        } else if (application.status === 'changes_requested') {
-          setApprovalStatus('changes_requested');
-          setReviewNote(application.reviewNote ?? '');
-        } else if (application.status === 'rejected') {
-          setApprovalStatus('rejected');
-          setReviewNote(application.reviewNote ?? '');
-        }
+        setApprovalStatus(application.status === 'approved' ? 'verified' : 'pending');
       } catch {
         /* silent */
       }
@@ -401,22 +343,43 @@ export function OnboardingPage() {
     };
   }, [step, submittedRequestId]);
 
-  const handleProfileChange = (key: string, value: string | number | null) => {
-    setFormData((prev) => ({ ...prev, [key]: value }));
-    setFieldErrors((prev) => ({ ...prev, [key]: '' }));
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+  ) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ── Step 2: sign up / sign in (public) ─────────────────────────────────────
-  // Better Auth email + password only — no OTP. A duplicate email surfaces as
-  // a 409, switching the screen to sign-in mode (onboarding/me decides where a
-  // returning account continues) rather than a separate enumeration pre-check.
+  function startCooldown(
+    setter: React.Dispatch<React.SetStateAction<number>>,
+    ref: React.MutableRefObject<ReturnType<typeof setInterval> | null>,
+  ) {
+    setter(60);
+    ref.current = setInterval(() => {
+      setter((prev) => {
+        if (prev <= 1) {
+          clearInterval(ref.current!);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }
+
+  // ── Signup ────────────────────────────────────────────────────────────────
+  // Its own step, before email verification (per ONBOARDING-FLOW-SPEC-2026-09-01.md
+  // §Step 2): the real `/onboarding/otp/send` route is a "new-signup gate" —
+  // it requires an authenticated session (requireUserId) — so the account
+  // has to exist before the first OTP send, not folded into that screen.
+  // No real check-email endpoint exists; a duplicate email surfaces as a 409
+  // here, routing to the "Welcome Back" sign-in recovery instead of a
+  // separate enumeration-risk pre-flight check.
   const handleSignup = async () => {
     setError('');
-    if (!name.trim()) {
+    if (!formData.name.trim()) {
       setError('Please enter your name.');
       return;
     }
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!otpEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(otpEmail)) {
       setError('Please enter a valid email address.');
       return;
     }
@@ -426,13 +389,16 @@ export function OnboardingPage() {
     }
     setLoading(true);
     try {
-      await authSignUp(email, formData.password, name.trim());
-      setEmailExists(false);
-      setStep('details');
+      await authSignUp(otpEmail, formData.password, formData.name.trim());
+      await sendOtp(otpEmail);
+      setOtpEmailSent(true);
+      setFormData((prev) => ({ ...prev, email: otpEmail }));
+      startCooldown(setEmailCooldown, emailCooldownRef);
+      setStep('email_verify');
     } catch (err) {
       if (isApiClientError(err) && err.status === 409) {
         setEmailExists(true);
-        setError('This email is already registered. Please sign in to continue.');
+        setError('This email is already registered.');
       } else {
         setError(err instanceof Error ? err.message : 'An error occurred. Please try again.');
       }
@@ -450,42 +416,87 @@ export function OnboardingPage() {
     }
     setLoading(true);
     try {
-      await authSignIn(email, loginPassword);
+      await authSignIn(otpEmail, loginPassword);
+
       const application = await getMine();
-      if (application) {
-        seedFromApplication(application, (s) => {
-          setStep(s);
-        });
-      } else {
-        // Signed in with no application on record — begin a fresh one (role is
-        // kept from step 1), skipping the signup screen.
-        setStep('details');
+
+      if (application && application.status !== 'draft') {
+        setSubmittedRequestId(application.id);
+        setApprovalStatus(application.status === 'approved' ? 'verified' : 'pending');
+        initialised.current = true;
+        setStep('success');
+        setLoading(false);
+        return;
       }
-    } catch (err) {
+
+      if (application) {
+        setSubmittedRequestId(application.id);
+        const p = application.profile;
+        const isBusiness = p.entityType === 'business';
+        setEntityType(isBusiness ? 'business' : 'individual');
+
+        setFormData((prev) => ({
+          ...prev,
+          email: otpEmail,
+          name: p.legalName || prev.name,
+          contactPerson: p.contactPerson || prev.contactPerson,
+          phone: p.phone || prev.phone,
+          city: p.city || prev.city,
+          area: p.area || prev.area,
+          website: p.website || prev.website,
+          capacity: p.capacity != null ? String(p.capacity) : prev.capacity,
+          instagram: p.instagram || prev.instagram,
+          bio: p.bio || prev.bio,
+          businessType: p.businessType || prev.businessType,
+          registrationNumber: p.registrationNumber || prev.registrationNumber,
+        }));
+        if (p.phone) setOtpPhone(p.phone);
+
+        const seq = getStepSequence(isBusiness ? 'business' : 'individual');
+        const nextStep =
+          application.missingDocuments.length > 0
+            ? seq[seq.indexOf('details') + 1]
+            : seq[seq.length - 2];
+
+        initialised.current = true;
+        setStep(nextStep ?? 'details');
+        return;
+      }
+
+      // Account exists but never started an application — resume at
+      // phone_verify, not details: this account has never had its phone
+      // collected/verified, and `handleCreateAccount` requires a valid
+      // phone (min 6 chars) to open the application. Email is already
+      // known-good (they just logged in with it), so email_verify is
+      // skipped, but phone still needs collecting.
+      setFormData((prev) => ({ ...prev, email: otpEmail }));
+      initialised.current = true;
+      setStep('phone_verify');
+    } catch (err: any) {
+      console.error('Existing user login error:', err);
       setError(err instanceof Error ? err.message : 'Verification failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  // ── Step 3: profile + plan → create the application ────────────────────────
-  // The canonical contract creates the application with `requestedType`, `plan`
-  // and the full `profile` in one call (startOnboardingSchema requires all
-  // three), so the plan + profile are collected together here. Resuming a draft
-  // instead PATCHes the changed subset and advances.
-  const validateProfile = (): boolean => {
-    const errors: Record<string, string> = {};
-    if (!formData.legalName.trim()) errors['legalName'] = 'Required';
-    if (!formData.contactPerson.trim()) errors['contactPerson'] = 'Required';
-    const digits = formData.phone.replace(/[^\d]/g, '');
-    if (!formData.phone.trim()) {
-      errors['phone'] = 'Required';
-    } else if (digits.length < 6 || digits.length > 15) {
-      errors['phone'] = 'Enter a valid phone number with country code (e.g. +91 98765 43210).';
+  const handleSendEmailOtp = async () => {
+    setError('');
+    if (!otpEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(otpEmail)) {
+      setError('Please enter a valid email address.');
+      return;
     }
-    if (!formData.city) errors['city'] = 'Select a city';
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
+    setLoading(true);
+    try {
+      await sendOtp(otpEmail);
+      setOtpEmailSent(true);
+      setFormData((prev) => ({ ...prev, email: otpEmail }));
+      startCooldown(setEmailCooldown, emailCooldownRef);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCreateApplication = async () => {
@@ -499,143 +510,230 @@ export function OnboardingPage() {
     if (!validateProfile()) return;
     setLoading(true);
     try {
-      const profile = {
-        legalName: formData.legalName.trim(),
-        contactPerson: formData.contactPerson.trim(),
-        phone: formData.phone.trim(),
-        city: formData.city,
-        area: formData.area || undefined,
-        website: formData.website || undefined,
-        capacity: formData.capacity ? Number(formData.capacity) : undefined,
-        instagram: formData.instagram || undefined,
-        bio: formData.bio || undefined,
-        businessType: formData.businessType || undefined,
-        registrationNumber: formData.registrationNumber || undefined,
-        entityType: isBusiness ? 'business' : undefined,
-      };
-
-      if (submittedRequestId) {
-        // Resume path — the application already exists; PATCH the profile then
-        // advance to whatever is still owed.
-        await saveOnboardingProgress(submittedRequestId, profile);
-        const application = await getMine();
-        const missing = application?.missingDocuments.length ?? 3;
-        setStep(missing > 0 ? 'documents' : 'review');
-        return;
-      }
-
-      const application = await startOnboarding(
-        { requestedType: partnerType, plan, profile },
-        crypto.randomUUID(),
-      );
-      setSubmittedRequestId(application.id);
-      setDocNotice('');
-      setStep('documents');
-    } catch (err) {
-      if (isApiClientError(err) && err.status === 409) {
-        // One live application per person — adopt the existing draft and resume.
-        const existing = await getMine();
-        if (existing) {
-          seedFromApplication(existing, (s) => {
-            setStep(s);
-          });
-          setError('You already have an application in progress — resuming it.');
-          return;
-        }
-        setError('You already have an application in progress.');
-      } else {
-        setError(
-          err instanceof Error ? err.message : 'Failed to create account. Please try again.',
-        );
-        if (isApiClientError(err) && err.fieldErrors) {
-          setFieldErrors(
-            Object.fromEntries(
-              Object.entries(err.fieldErrors as Record<string, string[]>).map(([k, v]) => [
-                k,
-                v.join(' '),
-              ]),
-            ),
-          );
-        }
-      }
+      await verifyOtp(otpEmail, otpEmailCode);
+      setStep('phone_verify');
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // ── Step 4: documents ───────────────────────────────────────────────────────
-  const handleDocumentUploaded = (label: DocLabel, storagePath: string | null) => {
-    setDocuments((prev) => ({ ...prev, [label]: storagePath }));
-    setDocNotice('');
-    // Refresh the truth from the server so missingDocuments stays authoritative,
-    // but never block the UI on it.
-    void getMine().then((application) => {
-      if (!application) return;
-      const seeded: Record<DocLabel, string | null> = {
-        id_front: null,
-        id_back: null,
-        selfie: null,
-      };
-      for (const doc of application.documents) {
-        if (doc.label === 'id_front' || doc.label === 'id_back' || doc.label === 'selfie') {
-          seeded[doc.label] = doc.storagePath;
+  // ── Phone OTP ─────────────────────────────────────────────────────────────
+  const handleSendPhoneOtp = async () => {
+    setError('');
+    const cleanPhone = otpPhone.replace(/\s/g, '');
+    if (!cleanPhone) {
+      setError('Please enter a phone number.');
+      return;
+    }
+
+    // Check for only numbers (with optional leading +)
+    if (!/^\+?[0-9]+$/.test(cleanPhone)) {
+      setError('Phone number must contain only numbers (no letters or special characters).');
+      return;
+    }
+
+    const digitsOnly = cleanPhone.replace(/[^\d]/g, '');
+    if (cleanPhone.startsWith('+')) {
+      if (cleanPhone.startsWith('+91')) {
+        const localNumber = cleanPhone.slice(3);
+        if (localNumber.length !== 10) {
+          setError('Please enter a valid 10-digit Indian mobile number after +91.');
+          return;
+        }
+      } else {
+        if (digitsOnly.length < 8) {
+          setError('Phone number too short. Include your country code (e.g., +919876543210).');
+          return;
         }
       }
-      setDocuments((prev) => ({ ...prev, ...seeded }));
-    });
+    } else {
+      if (digitsOnly.length !== 10) {
+        setError('Please enter a valid 10-digit Indian mobile number.');
+        return;
+      }
+    }
+
+    setLoading(true);
+    try {
+      // No real phone-availability pre-check exists; a duplicate phone has no
+      // enforcement point until the application is saved, same tradeoff as
+      // the dropped email pre-check above.
+      //
+      // GCP Identity Platform owns send/verify/rate-limit/cooldown for phone
+      // entirely client-side (see lib/firebase/phone-auth.ts) — there is no
+      // backend OTP call here, unlike the email step above.
+      const confirmation = await sendPhoneOtp(toE164(cleanPhone), PHONE_RECAPTCHA_CONTAINER_ID);
+      setPhoneConfirmation(confirmation);
+      setOtpPhoneSent(true);
+      setFormData((prev) => ({ ...prev, phone: cleanPhone }));
+      startCooldown(setPhoneCooldown, phoneCooldownRef);
+    } catch (err: any) {
+      setError(err.message || 'Could not send the SMS code. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const allDocumentsUploaded = DOCUMENT_LABELS.every((label) => documents[label] !== null);
-
-  // ── Step 5: review + submit ─────────────────────────────────────────────────
-  const submitApplication = async () => {
+  const handleVerifyPhoneOtp = async () => {
     setError('');
-    setDocNotice('');
-    if (!submittedRequestId) {
-      setError('No application found. Please restart onboarding.');
+    if (otpPhoneCode.length !== 6) {
+      setError('Enter the 6-digit code.');
+      return;
+    }
+    if (!phoneConfirmation) {
+      setError('Please request a new code.');
       return;
     }
     setLoading(true);
     try {
-      const application = await submitOnboardingApplication(
-        submittedRequestId,
+      const cleanPhone = otpPhone.replace(/\s/g, '');
+      // Identity Platform confirming the code only proves the applicant holds
+      // that Firebase-side session, not that it's their number — the ID token
+      // it returns still has to be checked server-side against the applicant's
+      // own entered number via the real onboarding verification endpoint.
+      const idToken = await confirmPhoneOtp(phoneConfirmation, otpPhoneCode);
+      const result = await verifyDocument({
+        documentType: 'phone',
+        documentNumber: cleanPhone,
+        proofToken: idToken,
+      });
+      if (!result.passed) {
+        throw new Error(result.reason || 'Phone verification failed.');
+      }
+      setStep('entity_type');
+    } catch (err: any) {
+      setError(err.message || 'Invalid or expired code.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Step 5: Open the application, advance to KYC ──
+  // The account itself was already created back at the email_verify step
+  // (the real OTP send route requires an existing session) and the phone
+  // was already format-validated there too, so this step only opens the
+  // onboarding application against the now-established session.
+  const handleCreateAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      if (!authUser) {
+        setError('Your session expired. Please verify your email again to continue.');
+        setStep('email_verify');
+        setLoading(false);
+        return;
+      }
+      const createPhone = formData.phone || otpPhone.replace(/\s/g, '');
+
+      // Open the application now that we have a real session — this is the
+      // one call that persists the full profile server-side; the request id
+      // it returns backs every subsequent saveProgress/upload/submit call.
+      const application = await startOnboarding(
+        {
+          requestedType: partnerType,
+          plan: formData.plan as 'basic' | 'silver' | 'diamond',
+          profile: {
+            legalName: formData.name,
+            contactPerson: formData.contactPerson,
+            phone: createPhone,
+            city: formData.city,
+            area: formData.area || undefined,
+            website: formData.website || undefined,
+            capacity: formData.capacity ? Number(formData.capacity) : undefined,
+            instagram: formData.instagram || undefined,
+            bio: formData.bio || undefined,
+            businessType: formData.businessType || undefined,
+            registrationNumber: formData.registrationNumber || undefined,
+            entityType,
+          },
+        },
         crypto.randomUUID(),
       );
       setSubmittedRequestId(application.id);
-      setApprovalStatus('pending');
-      setStep('success');
-    } catch (err) {
-      if (isApiClientError(err) && err.status === 400) {
-        // Missing documents is the common 400 — surface it on the documents
-        // step per spec ("inline notice on step 5, not an error toast").
-        const message = err.fieldErrors
-          ? Object.values(err.fieldErrors).flat().join(' ')
-          : err.message;
-        if (/document/i.test(message)) {
-          setDocNotice(message);
-          setStep('documents');
-          return;
-        }
-        setError(message);
+      setCreatedUid(authUser?.id ?? null);
+
+      // Advance to the first KYC step in the sequence
+      const seq = getStepSequence(entityType);
+      const detailsIdx = seq.indexOf('details');
+      const nextStep = seq[detailsIdx + 1];
+      if (nextStep) {
+        setStep(nextStep);
+      }
+    } catch (err: any) {
+      console.error('Account creation error:', err);
+      if (isApiClientError(err) && err.status === 409) {
+        setError('You already have an application in progress.');
       } else {
-        setError(err instanceof Error ? err.message : 'Failed to submit. Please try again.');
+        setError(err.message || 'Failed to create account. Please try again.');
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const updateStepFromUnauthenticated = () => {
-    // proxy.ts leaves /onboard ungated; the wizard guards itself: authed-only
-    // steps bounce to the sign-in screen.
-    if (!authUser && step !== 'role' && step !== 'signup') {
-      setStep('signup');
-    }
-  };
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- the wizard must bounce to the sign-in step the moment the session drops; this [authUser, step]-driven reconciliation can't be derived during render without duplicating the step-guard logic.
-  useEffect(updateStepFromUnauthenticated, [authUser, step]);
+  // ── KYC step: save data and submit when it's the last step ─────────────
+  // Documents themselves are already uploaded/verified by this point (each
+  // KycFileZone / handleVerifyAadhaar call landed on the application as it
+  // happened) — this only needs to flag the application as submitted.
+  const submitApplication = useCallback(
+    async (_stepId: string, _data: Record<string, unknown>) => {
+      setKycSubmitting(true);
+      setKycError('');
+      try {
+        if (!submittedRequestId) {
+          throw new Error('No application found. Please restart onboarding.');
+        }
+        const application = await submitOnboardingApplication(
+          submittedRequestId,
+          crypto.randomUUID(),
+        );
+        setSubmittedRequestId(application.id);
+        setApprovalStatus('pending');
+        setStep('success');
+      } catch (err: any) {
+        console.error('Final submit error:', err);
+        if (isApiClientError(err) && err.status === 400) {
+          setKycError(
+            err.fieldErrors
+              ? Object.values(err.fieldErrors).flat().join(' ')
+              : 'Please upload all required documents before submitting.',
+          );
+        } else {
+          setKycError(err?.message || 'Failed to submit. Please try again.');
+        }
+      } finally {
+        setKycSubmitting(false);
+      }
+    },
+    [submittedRequestId],
+  );
 
-  const currentStepIndex = STEP_SEQUENCE.indexOf(step);
+  // ── Intermediate KYC step: save data locally and advance or submit ─────
+  const handleKycStep = useCallback(
+    (stepId: string, data: Record<string, unknown>) => {
+      const seq = getStepSequence(entityType);
+      const idx = seq.indexOf(stepId as OnboardingStep);
+      const isLastStep = idx === seq.length - 2; // second-to-last (before "success")
+      if (isLastStep) {
+        submitApplication(stepId, data);
+      } else {
+        if (idx !== -1 && idx < seq.length - 1) {
+          const next = seq[idx + 1];
+          if (next) {
+            setStep(next);
+            saveProgress(next);
+          }
+        }
+      }
+    },
+    [entityType, submitApplication, saveProgress],
+  );
+
+  const currentStepIndex = stepSequence.indexOf(step);
+  const effectiveUid = createdUid || authUser?.id || '';
 
   return (
     <div className="min-h-screen bg-[var(--surface-base)]">
@@ -707,63 +805,7 @@ export function OnboardingPage() {
 
       <main className="max-w-xl mx-auto px-6 pb-24">
         <AnimatePresence mode="wait">
-          {/* ── Step 1: Role (public) ── */}
-          {step === 'role' && (
-            <motion.div
-              key="role"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <StepHeader
-                step={String(STEP_SEQUENCE.indexOf('role') + 1).padStart(2, '0')}
-                label="Select Role"
-                title="Join the Network"
-                description="Select your operational role to begin the onboarding process."
-              />
-              <div className="grid grid-cols-1 gap-4 mb-10">
-                <RoleCard
-                  icon={Building2}
-                  title="Venue Partner"
-                  description="Direct management for nightlife venues, clubs, and lounge spaces."
-                  active={partnerType === 'venue'}
-                  onClick={() => {
-                    setPartnerType('venue');
-                  }}
-                />
-                <RoleCard
-                  icon={Users}
-                  title="Event Host"
-                  description="For organizers, DJs, and collectives hosting independent events."
-                  active={partnerType === 'host'}
-                  onClick={() => {
-                    setPartnerType('host');
-                  }}
-                />
-                <RoleCard
-                  icon={Zap}
-                  title="Promoter"
-                  description="Access tools for ticket distribution and guestlist management."
-                  active={partnerType === 'promoter'}
-                  onClick={() => {
-                    setPartnerType('promoter');
-                  }}
-                />
-              </div>
-              <ActionButton
-                onClick={() => {
-                  setError('');
-                  // Already signed in? Skip the signup screen.
-                  setStep(authUser ? 'details' : 'signup');
-                }}
-              >
-                Continue <ChevronRight className="h-5 w-5" />
-              </ActionButton>
-            </motion.div>
-          )}
-
-          {/* ── Step 2: Sign up / Sign in (public) ── */}
+          {/* ── Sign Up ── */}
           {step === 'signup' && (
             <motion.div
               key="signup"
@@ -773,15 +815,18 @@ export function OnboardingPage() {
               transition={{ duration: 0.3 }}
             >
               <StepHeader
-                step={String(STEP_SEQUENCE.indexOf('signup') + 1).padStart(2, '0')}
+                step={String(stepSequence.indexOf('signup') + 1).padStart(2, '0')}
                 label="Sign Up"
                 title={emailExists ? 'Welcome Back' : 'Create Your Account'}
                 description={
                   emailExists
                     ? 'Log in with your existing account to resume onboarding.'
-                    : 'Enter your email and set a password. No OTP — you will sign in here directly.'
+                    : "Enter your email and set a password. We'll verify your email next."
                 }
               />
+              {/* In-place Sign Up / Log In toggle — switching never leaves /onboard,
+                  so partner-type + progress are kept regardless of which path a
+                  visitor takes. */}
               <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border-subtle)] mb-6">
                 <button
                   type="button"
@@ -812,10 +857,8 @@ export function OnboardingPage() {
                     icon={User}
                     type="text"
                     name="name"
-                    value={name}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                      setName(e.target.value);
-                    }}
+                    value={formData.name}
+                    onChange={handleInputChange}
                     placeholder="Your name"
                     required
                   />
@@ -824,10 +867,8 @@ export function OnboardingPage() {
                   label="Email Address"
                   icon={Mail}
                   type="email"
-                  value={email}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                    setEmail(e.target.value);
-                  }}
+                  value={otpEmail}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOtpEmail(e.target.value)}
                   placeholder="you@company.com"
                 />
                 <div className="relative">
@@ -836,47 +877,279 @@ export function OnboardingPage() {
                     icon={Lock}
                     type={showPassword ? 'text' : 'password'}
                     value={emailExists ? loginPassword : formData.password}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                      if (emailExists) {
-                        setLoginPassword(e.target.value);
-                      } else {
-                        setFormData((prev) => ({ ...prev, password: e.target.value }));
-                      }
-                    }}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      emailExists
+                        ? setLoginPassword(e.target.value)
+                        : setFormData((prev) => ({ ...prev, password: e.target.value }))
+                    }
                     placeholder={emailExists ? 'Enter your password' : 'Minimum 8 characters'}
                     required
                   />
                   <button
                     type="button"
-                    onClick={() => {
-                      setShowPassword(!showPassword);
-                    }}
+                    onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-4 top-[42px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
                   >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
                   </button>
                 </div>
                 {emailExists ? (
                   <ActionButton
-                    onClick={() => {
-                      void handleExistingUserLogin();
-                    }}
+                    onClick={handleExistingUserLogin}
                     loading={loading}
                     loadingText="AUTHORIZING ACCESS..."
                   >
                     Verify & Login <ChevronRight className="h-5 w-5" />
                   </ActionButton>
                 ) : (
-                  <ActionButton
-                    onClick={() => {
-                      void handleSignup();
-                    }}
-                    loading={loading}
-                  >
+                  <ActionButton onClick={handleSignup} loading={loading}>
                     Continue <ChevronRight className="h-5 w-5" />
                   </ActionButton>
                 )}
               </div>
+            </motion.div>
+          )}
+
+          {/* ── Email Verification ── */}
+          {step === 'email_verify' && (
+            <motion.div
+              key="email_verify"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <StepHeader
+                step={String(stepSequence.indexOf('email_verify') + 1).padStart(2, '0')}
+                label="Verify Email"
+                title="Confirm Your Email"
+                description="Enter the 6-digit code we sent to confirm your email address."
+              />
+              <ErrorBanner error={error} />
+              <div className="space-y-5">
+                <FormInput
+                  label="Email Address"
+                  icon={Mail}
+                  type="email"
+                  value={otpEmail}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOtpEmail(e.target.value)}
+                  placeholder="you@company.com"
+                  disabled={otpEmailSent}
+                />
+                {!otpEmailSent ? (
+                  <ActionButton onClick={handleSendEmailOtp} loading={loading}>
+                    Send Code <ChevronRight className="h-5 w-5" />
+                  </ActionButton>
+                ) : (
+                  <>
+                    <OtpInput
+                      label="Enter the 6-digit code sent to your email"
+                      value={otpEmailCode}
+                      onChange={setOtpEmailCode}
+                    />
+                    <ActionButton onClick={handleVerifyEmailOtp} loading={loading}>
+                      Verify Email <ChevronRight className="h-5 w-5" />
+                    </ActionButton>
+                    <ResendButton
+                      cooldown={emailCooldown}
+                      onClick={handleSendEmailOtp}
+                      loading={loading}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOtpEmailSent(false);
+                        setError('');
+                        setOtpEmailCode('');
+                      }}
+                      className="w-full flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[var(--text-tertiary)] hover:text-[var(--accent-primary)] transition-colors"
+                    >
+                      Use a different email
+                    </button>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── Phone Verification ── */}
+          {step === 'phone_verify' && (
+            <motion.div
+              key="phone_verify"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <StepHeader
+                step={String(stepSequence.indexOf('phone_verify') + 1).padStart(2, '0')}
+                label="Verify Phone"
+                title="Confirm Your Number"
+                description="We'll send an SMS code to confirm your mobile number. This becomes your verified contact on the platform."
+              />
+              <ErrorBanner error={error} />
+              {testingBypass && (
+                <div className="mb-6 p-4 rounded-2xl bg-[var(--surface-secondary)] border border-[var(--border-subtle)] flex items-start gap-3">
+                  <Sparkles className="h-5 w-5 text-[var(--accent-primary)] flex-shrink-0" />
+                  <p className="text-[12px] leading-relaxed text-[var(--text-secondary)]">
+                    Testing mode: SMS and reCAPTCHA are skipped. Enter the test number configured
+                    in the Firebase Console (Authentication → Phone → Test phone numbers)
+                    {testPhone
+                      ? ' — pre-filled below.'
+                      : ', e.g. +1 555 555 0100.'}{' '}
+                    Use the exact code configured for that number in the console (not an
+                    arbitrary one).
+                  </p>
+                </div>
+              )}
+              {/* Invisible reCAPTCHA anchor for Firebase's signInWithPhoneNumber — renders nothing visible. */}
+              <div id={PHONE_RECAPTCHA_CONTAINER_ID} />
+              <div className="space-y-5">
+                <FormInput
+                  label="Mobile Number (with country code)"
+                  icon={Phone}
+                  type="tel"
+                  value={otpPhone}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const val = e.target.value;
+                    let sanitized = val.replace(/[^0-9+\s]/g, '');
+                    if (sanitized.indexOf('+') > 0) {
+                      sanitized = sanitized[0] + sanitized.slice(1).replace(/\+/g, '');
+                    }
+                    setOtpPhone(sanitized);
+                  }}
+                  placeholder="+91 98765 43210"
+                  disabled={otpPhoneSent}
+                />
+                {!otpPhoneSent ? (
+                  <ActionButton onClick={handleSendPhoneOtp} loading={loading}>
+                    Send SMS Code <ChevronRight className="h-5 w-5" />
+                  </ActionButton>
+                ) : (
+                  <>
+                    <OtpInput
+                      label="Enter the 6-digit SMS code"
+                      value={otpPhoneCode}
+                      onChange={setOtpPhoneCode}
+                    />
+                    <ActionButton onClick={handleVerifyPhoneOtp} loading={loading}>
+                      Verify Phone <ChevronRight className="h-5 w-5" />
+                    </ActionButton>
+                    <ResendButton
+                      cooldown={phoneCooldown}
+                      onClick={handleSendPhoneOtp}
+                      loading={loading}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOtpPhoneSent(false);
+                        setError('');
+                        setOtpPhoneCode('');
+                        setPhoneConfirmation(null);
+                      }}
+                      className="w-full flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[var(--text-tertiary)] hover:text-[var(--accent-primary)] transition-colors"
+                    >
+                      Use a different number
+                    </button>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── Entity Type ── */}
+          {step === 'entity_type' && (
+            <motion.div
+              key="entity_type"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <StepHeader
+                step={String(stepSequence.indexOf('entity_type') + 1).padStart(2, '0')}
+                label="Entity Type"
+                title="Individual or Business?"
+                description="This determines which verification documents you'll provide after approval."
+              />
+              <div className="grid grid-cols-1 gap-4 mb-10">
+                <RoleCard
+                  icon={User}
+                  title="Individual"
+                  description="Freelancer, independent promoter, solo DJ, or individual host."
+                  active={entityType === 'individual'}
+                  onClick={() => setEntityType('individual')}
+                />
+                <RoleCard
+                  icon={Building}
+                  title="Business"
+                  description="Registered company, club, LLP, partnership firm, or trust."
+                  active={entityType === 'business'}
+                  onClick={() => setEntityType('business')}
+                />
+              </div>
+              <ActionButton
+                onClick={() => {
+                  setError('');
+                  setStep('details');
+                }}
+              >
+                Continue <ChevronRight className="h-5 w-5" />
+              </ActionButton>
+            </motion.div>
+          )}
+
+          {/* ── Role Selection ── */}
+          {step === 'role' && (
+            <motion.div
+              key="role"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <StepHeader
+                step={String(stepSequence.indexOf('role') + 1).padStart(2, '0')}
+                label="Select Role"
+                title="Join the Network"
+                description="Select your operational role to begin the onboarding process."
+              />
+              <div className="grid grid-cols-1 gap-4 mb-10">
+                <RoleCard
+                  icon={Building2}
+                  title="Venue Partner"
+                  description="Direct management for nightlife venues, clubs, and lounge spaces."
+                  active={partnerType === 'venue'}
+                  onClick={() => setPartnerType('venue')}
+                />
+                <RoleCard
+                  icon={Users}
+                  title="Event Host"
+                  description="For organizers, DJs, and collectives hosting independent events."
+                  active={partnerType === 'host'}
+                  onClick={() => setPartnerType('host')}
+                />
+                <RoleCard
+                  icon={Zap}
+                  title="Promoter"
+                  description="Access tools for ticket distribution and guestlist management."
+                  active={partnerType === 'promoter'}
+                  onClick={() => setPartnerType('promoter')}
+                />
+              </div>
+              <ActionButton
+                onClick={() => {
+                  setError('');
+                  setStep('signup');
+                }}
+              >
+                Continue <ChevronRight className="h-5 w-5" />
+              </ActionButton>
             </motion.div>
           )}
 
@@ -899,33 +1172,32 @@ export function OnboardingPage() {
                       ? 'Host Profile'
                       : 'Promoter Enrollment'
                 }
-                description="Choose your plan and tell us about the applicant. You'll upload verification documents next."
-              />
-              <ErrorBanner
-                error={error}
-                onLoginClick={() => {
-                  router.push('/login');
-                }}
+                description="Tell us about your business. You'll upload verification documents in the next steps."
               />
 
-              {authUser && (
-                <div className="p-5 rounded-2xl bg-[var(--state-success-bg)] border border-[var(--state-success)]/20 flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="h-11 w-11 rounded-xl bg-[var(--state-success)] flex items-center justify-center font-bold text-white text-lg">
-                      {authUser.email.charAt(0).toUpperCase()}
+              <ErrorBanner error={error} onLoginClick={() => router.push('/login')} />
+
+              <form onSubmit={handleCreateAccount} className="space-y-8">
+                {/* Credentials — the account was already created back at the
+                    email_verify step, so this is just a confirmation banner. */}
+                {authUser && (
+                  <div className="p-5 rounded-2xl bg-[var(--state-success-bg)] border border-[var(--state-success)]/20 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="h-11 w-11 rounded-xl bg-[var(--state-success)] flex items-center justify-center font-bold text-white text-lg">
+                        {authUser.email?.[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-semibold text-[var(--state-success)] uppercase tracking-wider mb-0.5">
+                          Signed In As
+                        </p>
+                        <p className="text-[14px] font-semibold text-[var(--text-primary)]">
+                          {authUser.email}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-[11px] font-semibold text-[var(--state-success)] uppercase tracking-wider mb-0.5">
-                        Signed In As
-                      </p>
-                      <p className="text-[14px] font-semibold text-[var(--text-primary)]">
-                        {authUser.email}
-                      </p>
-                    </div>
+                    <CheckCircle2 className="h-6 w-6 text-[var(--state-success)]" />
                   </div>
-                  <CheckCircle2 className="h-6 w-6 text-[var(--state-success)]" />
-                </div>
-              )}
+                )}
 
               <form
                 onSubmit={(e) => {
@@ -1157,43 +1429,45 @@ export function OnboardingPage() {
                 title="Verify Your Identity"
                 description="Upload a government-issued ID (front and back) and a selfie. Images only — JPG, PNG or WEBP, up to 5 MB each."
               />
-              {docNotice && <ErrorBanner error={docNotice} />}
-              <div className="space-y-6">
-                {DOCUMENT_LABELS.map((label) => {
-                  const copy = docLabelCopy(label);
-                  return (
-                    <KycFileZone
-                      key={label}
-                      label={copy.title}
-                      fieldName={label}
-                      value={documents[label]}
-                      onChange={(path) => {
-                        handleDocumentUploaded(label, path);
-                      }}
-                      uid={authUser?.id ?? ''}
-                      stepId="documents"
-                      requestId={submittedRequestId}
-                      docLabel={label}
-                    />
-                  );
-                })}
-              </div>
-              <div className="mt-8">
-                <ActionButton
-                  onClick={() => {
-                    setStep('review');
-                  }}
-                  disabled={!allDocumentsUploaded}
-                >
-                  {allDocumentsUploaded ? (
-                    <>
-                      Review & Submit <ChevronRight className="h-5 w-5" />
-                    </>
-                  ) : (
-                    'Upload all 3 documents to continue'
-                  )}
-                </ActionButton>
-              </div>
+              {kycError && <ErrorBanner error={kycError} />}
+              <KycIdentityForm
+                uid={effectiveUid}
+                requestId={submittedRequestId}
+                initialData={{}}
+                onSubmit={(data) => handleKycStep('kyc_identity', data)}
+                submitting={false}
+                submitLabel="Continue"
+              />
+            </motion.div>
+          )}
+
+          {/* ── KYC: Business Documents (Business) ── */}
+          {step === 'kyc_business' && (
+            <motion.div
+              key="kyc_business"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <StepHeader
+                step={String(stepSequence.indexOf('kyc_business') + 1).padStart(2, '0')}
+                label="Business Documents"
+                title="Business Documents"
+                description="PAN, CIN/GST, and registration certificate for your business."
+              />
+              {kycError && <ErrorBanner error={kycError} />}
+              <KycBusinessForm
+                uid={effectiveUid}
+                initialData={{
+                  legalName: formData.name,
+                  businessType: formData.businessType,
+                  cin: formData.registrationNumber,
+                }}
+                onSubmit={(data) => handleKycStep('kyc_business', data)}
+                submitting={false}
+                submitLabel="Continue"
+              />
             </motion.div>
           )}
 
@@ -1207,61 +1481,20 @@ export function OnboardingPage() {
               transition={{ duration: 0.3 }}
             >
               <StepHeader
-                step={String(STEP_SEQUENCE.indexOf('review') + 1).padStart(2, '0')}
-                label="Review & Submit"
-                title="Review Your Application"
-                description="Confirm the details below before submitting for review."
+                step={String(stepSequence.indexOf('kyc_signatory') + 1).padStart(2, '0')}
+                label="Authorized Representative"
+                title="Authorized Representative"
+                description="Identity verification for the person representing the business."
               />
-              <ErrorBanner error={error} />
-              <div className="space-y-6">
-                <div className="p-6 rounded-2xl bg-[var(--surface-secondary)] border border-[var(--border-subtle)] space-y-3">
-                  <SummaryRow
-                    label="Role"
-                    value={partnerType.charAt(0).toUpperCase() + partnerType.slice(1)}
-                  />
-                  <SummaryRow label="Plan" value={plan.charAt(0).toUpperCase() + plan.slice(1)} />
-                  <SummaryRow label="Name" value={formData.legalName} />
-                  <SummaryRow label="Contact" value={formData.contactPerson} />
-                  <SummaryRow label="Phone" value={formData.phone} />
-                  <SummaryRow label="City" value={formData.city} />
-                  <SummaryRow label="Email" value={authUser?.email ?? ''} />
-                </div>
-                <div className="p-6 rounded-2xl bg-[var(--surface-secondary)] border border-[var(--border-subtle)]">
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-tertiary)] mb-3">
-                    Documents
-                  </p>
-                  <div className="space-y-2">
-                    {DOCUMENT_LABELS.map((label) => (
-                      <div key={label} className="flex items-center gap-3">
-                        <CheckCircle2
-                          className={`h-4 w-4 ${documents[label] ? 'text-[var(--state-success)]' : 'text-[var(--text-tertiary)]'}`}
-                        />
-                        <span className="text-[13px] text-[var(--text-secondary)]">
-                          {docLabelCopy(label).title}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    void submitApplication();
-                  }}
-                  disabled={loading || !allDocumentsUploaded}
-                  className="w-full bg-[var(--accent-primary)] text-white h-14 rounded-2xl font-semibold text-[14px] hover:brightness-110 transition-all flex items-center justify-center gap-3 shadow-lg shadow-[var(--accent-primary)]/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? (
-                    <>
-                      <span className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Submitting…
-                    </>
-                  ) : (
-                    <>
-                      Submit Application <ChevronRight className="h-5 w-5" />
-                    </>
-                  )}
-                </button>
-              </div>
+              {kycError && <ErrorBanner error={kycError} />}
+              <KycSignatoryForm
+                uid={effectiveUid}
+                requestId={submittedRequestId}
+                initialData={{}}
+                onSubmit={(data) => handleKycStep('kyc_signatory', data)}
+                submitting={false}
+                submitLabel="Continue"
+              />
             </motion.div>
           )}
 
@@ -1295,38 +1528,10 @@ export function OnboardingPage() {
                     has been approved. Continue to your dashboard.
                   </p>
                   <button
-                    onClick={() => void routeAfterAuth(router)}
+                    onClick={() => routeAfterAuth(router)}
                     className="inline-flex items-center gap-3 px-8 py-3.5 rounded-2xl bg-[var(--accent-primary)] text-white font-semibold text-[14px] hover:brightness-110 transition-all shadow-lg shadow-[var(--accent-primary)]/20"
                   >
                     Go to Dashboard <ChevronRight className="h-4 w-4" />
-                  </button>
-                </>
-              )}
-              {approvalStatus === 'rejected' && (
-                <>
-                  <motion.div
-                    key="rejected"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: 'spring', delay: 0.2 }}
-                    className="h-24 w-24 rounded-3xl bg-[var(--state-error-bg)] text-[var(--state-error)] flex items-center justify-center mx-auto mb-8"
-                  >
-                    <AlertCircle className="h-12 w-12" />
-                  </motion.div>
-                  <h1 className="text-display-sm text-[var(--text-primary)] mb-4">
-                    Application Not Approved
-                  </h1>
-                  <p className="text-body text-[var(--text-secondary)] mb-10 max-w-md mx-auto">
-                    {reviewNote || 'Our team was unable to approve this application.'}
-                  </p>
-                  <button
-                    onClick={() => {
-                      if (authUser) void signOut();
-                      router.push('/login');
-                    }}
-                    className="inline-flex items-center gap-2 text-[var(--accent-primary)] font-semibold text-[14px] hover:underline"
-                  >
-                    Return to Login <ChevronRight className="h-4 w-4" />
                   </button>
                 </>
               )}
@@ -1713,10 +1918,15 @@ function KycFileZone({
   onChange: (storagePath: string | null) => void;
   uid: string;
   stepId: string;
-  /** The application to attach this document to; required. */
+  /** The application to attach this document to; required when `docLabel` is set. */
   requestId: string | null;
-  /** The real backend document slot for this field. */
-  docLabel: 'id_front' | 'id_back' | 'selfie';
+  /**
+   * Real backend document slot for this field — the onboarding document
+   * model only has three: `id_front`/`id_back`/`selfie`. Omit for a field
+   * with no real slot yet (e.g. the business registration certificate),
+   * which falls back to a local-only, never-uploaded placeholder.
+   */
+  docLabel?: 'id_front' | 'id_back' | 'selfie';
 }) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -1734,12 +1944,15 @@ function KycFileZone({
       return;
     }
 
+    if (!docLabel || !requestId) {
+      // No real document slot for this field yet — kept local-only so the
+      // step can still be filled out, but never durably uploaded anywhere.
+      onChange(URL.createObjectURL(file));
+      return;
+    }
+
     const contentType = file.type;
-    if (
-      contentType !== 'image/jpeg' &&
-      contentType !== 'image/png' &&
-      contentType !== 'image/webp'
-    ) {
+    if (contentType !== 'image/jpeg' && contentType !== 'image/png' && contentType !== 'image/webp') {
       setUploadError('Please upload a JPG, PNG, or WEBP image.');
       return;
     }
@@ -1747,11 +1960,22 @@ function KycFileZone({
     setUploading(true);
     setProgress(10);
     try {
-      const updated = await uploadDocument(requestId, docLabel, file, crypto.randomUUID());
+      const uploadUrlDto = await getUploadUrl(requestId, { label: docLabel, contentType });
+      setProgress(40);
+
+      await uploadToSignedUrl(uploadUrlDto.uploadUrl, uploadUrlDto.headers, file);
+      setProgress(80);
+
+      await addDocument(
+        requestId,
+        { label: docLabel, storagePath: uploadUrlDto.storagePath },
+        crypto.randomUUID(),
+      );
       setProgress(100);
-      onChange(updated.documents.find((doc) => doc.label === docLabel)?.storagePath ?? null);
-    } catch (e) {
-      setUploadError(e instanceof Error ? e.message : 'Upload failed. Please try again.');
+      onChange(uploadUrlDto.storagePath);
+    } catch (e: any) {
+      console.error('Upload error:', e);
+      setUploadError(e.message || 'Upload failed. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -1819,5 +2043,550 @@ function KycFileZone({
         onChange={(e) => e.target.files?.[0] && void handleFile(e.target.files[0])}
       />
     </div>
+  );
+}
+
+function KycInputField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = 'text',
+}: {
+  label: string;
+  value: string;
+  onChange?: (v: string) => void;
+  placeholder?: string;
+  type?: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-[11px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">
+        {label}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange?.(e.target.value)}
+        placeholder={placeholder}
+        className="w-full h-12 px-4 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-[14px] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/30 focus:border-[var(--accent-primary)]/50 transition-all"
+      />
+    </div>
+  );
+}
+
+function KycSelectField({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-[11px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">
+        {label}
+      </label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full h-12 px-4 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/30 focus:border-[var(--accent-primary)]/50 transition-all appearance-none"
+      >
+        <option value="">Select…</option>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+// ── KYC Forms ─────────────────────────────────────────────────────────────────
+
+function KycIdentityForm({
+  uid,
+  requestId,
+  initialData,
+  onSubmit,
+  submitting,
+  submitLabel = 'Continue',
+}: {
+  uid: string;
+  requestId: string | null;
+  initialData: Record<string, unknown>;
+  onSubmit: (data: Record<string, unknown>) => void;
+  submitting: boolean;
+  submitLabel?: string;
+}) {
+  const [idType, setIdType] = useState((initialData['idType'] as string) || '');
+  const [idNumber, setIdNumber] = useState((initialData['idNumber'] as string) || '');
+  const [docFront, setDocFront] = useState<string | null>(
+    (initialData['docFrontUrl'] as string) || null,
+  );
+  const [docBack, setDocBack] = useState<string | null>((initialData['docBackUrl'] as string) || null);
+  const [selfie, setSelfie] = useState<string | null>((initialData['selfieUrl'] as string) || null);
+
+  // New state for Aadhaar verification
+  const [verifying, setVerifying] = useState(false);
+  const [isVerified, setIsVerified] = useState(!!initialData['isVerified']);
+  const [verificationError, setVerificationError] = useState('');
+
+  // The real backend requires exactly 3 documents (id_front, id_back, selfie)
+  // to submit, unconditionally by ID type — REQUIRED_DOCUMENT_LABELS has no
+  // per-type variant. A passport holder skipping "back" here would never be
+  // able to clear missingDocuments server-side, so every ID type needs one.
+  const needsBack = true;
+
+  const handleVerifyAadhaar = async () => {
+    if (!idNumber || idNumber.length !== 12) {
+      setVerificationError('Aadhaar number must be 12 digits.');
+      return;
+    }
+    setVerifying(true);
+    setVerificationError('');
+    try {
+      // Format-check only, per D-018 — never rendered as government-verified.
+      const result = await verifyDocument({ documentType: 'aadhaar', documentNumber: idNumber });
+      if (!result.passed) {
+        throw new Error(result.reason || 'Verification failed.');
+      }
+      setIsVerified(true);
+    } catch (err: any) {
+      setVerificationError(err.message || 'Verification failed.');
+      setIsVerified(false);
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  useEffect(() => {
+    setIsVerified(false);
+    setVerificationError('');
+  }, [idNumber, idType]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!idType || !idNumber || !docFront || !selfie) return;
+    if (needsBack && !docBack) return;
+    if (idType === 'aadhaar' && !isVerified) return;
+    onSubmit({
+      idType,
+      idNumber,
+      docFrontUrl: docFront,
+      docBackUrl: docBack,
+      selfieUrl: selfie,
+      isVerified,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <KycSelectField
+        label="ID Type"
+        value={idType}
+        onChange={setIdType}
+        options={[
+          { value: 'aadhaar', label: 'Aadhaar Card' },
+          { value: 'passport', label: 'Passport' },
+          { value: 'driving_licence', label: 'Driving Licence' },
+          { value: 'voter_id', label: 'Voter ID' },
+        ]}
+      />
+
+      <div className="space-y-2">
+        <div className="flex items-end gap-3">
+          <div className="flex-1">
+            <KycInputField
+              label="ID Number"
+              value={idNumber}
+              onChange={setIdNumber}
+              placeholder="Enter your ID number"
+            />
+          </div>
+          {idType === 'aadhaar' && (
+            <button
+              type="button"
+              onClick={handleVerifyAadhaar}
+              disabled={verifying || isVerified || idNumber.length !== 12}
+              className={`h-12 px-6 rounded-xl font-bold text-[11px] uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${isVerified ? 'bg-emerald-500/20 text-emerald-500 cursor-default' : 'bg-[var(--accent-primary)] text-white hover:brightness-110 disabled:opacity-40'}`}
+            >
+              {verifying ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isVerified ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : null}
+              {verifying ? 'Verifying...' : isVerified ? 'Verified' : 'Verify ID'}
+            </button>
+          )}
+        </div>
+        {verificationError && (
+          <p className="text-[11px] font-medium text-red-400 flex items-center gap-1.5 ml-1">
+            <AlertCircle className="h-3.5 w-3.5" />
+            {verificationError}
+          </p>
+        )}
+        {isVerified && idType === 'aadhaar' && (
+          <p className="text-[11px] font-medium text-emerald-400 flex items-center gap-1.5 ml-1">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Aadhaar structurally verified.
+          </p>
+        )}
+      </div>
+
+      <div className={`grid gap-4 ${needsBack ? 'sm:grid-cols-2' : 'grid-cols-1'}`}>
+        <KycFileZone
+          label="Document Front"
+          fieldName="doc_front"
+          value={docFront}
+          onChange={setDocFront}
+          uid={uid}
+          stepId="kyc_identity"
+          requestId={requestId}
+          docLabel="id_front"
+        />
+        {needsBack && (
+          <KycFileZone
+            label="Document Back"
+            fieldName="doc_back"
+            value={docBack}
+            onChange={setDocBack}
+            uid={uid}
+            stepId="kyc_identity"
+            requestId={requestId}
+            docLabel="id_back"
+          />
+        )}
+      </div>
+      <KycFileZone
+        label="Selfie Photo"
+        fieldName="selfie"
+        value={selfie}
+        onChange={setSelfie}
+        uid={uid}
+        stepId="kyc_identity"
+        requestId={requestId}
+        docLabel="selfie"
+      />
+      <button
+        type="submit"
+        disabled={
+          submitting ||
+          !idType ||
+          !idNumber ||
+          !docFront ||
+          !selfie ||
+          (needsBack && !docBack) ||
+          (idType === 'aadhaar' && !isVerified)
+        }
+        className="w-full h-12 rounded-xl bg-[var(--accent-primary)] text-white font-black uppercase tracking-widest text-[11px] hover:brightness-110 disabled:opacity-40 transition-all flex items-center justify-center gap-2"
+      >
+        {submitting ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <ArrowRight className="h-4 w-4" />
+        )}
+        {submitting ? 'Saving…' : submitLabel}
+      </button>
+    </form>
+  );
+}
+
+function KycBusinessForm({
+  uid,
+  initialData,
+  onSubmit,
+  submitting,
+  submitLabel = 'Continue',
+}: {
+  uid: string;
+  initialData: Record<string, unknown>;
+  onSubmit: (data: Record<string, unknown>) => void;
+  submitting: boolean;
+  submitLabel?: string;
+}) {
+  const legalName = (initialData['legalName'] as string) || '';
+  const businessType = (initialData['businessType'] as string) || '';
+  const cin = (initialData['cin'] as string) || '';
+
+  const [pan, setPan] = useState((initialData['pan'] as string) || '');
+  const [gst, setGst] = useState((initialData['gst'] as string) || '');
+  const [address, setAddress] = useState((initialData['address'] as string) || '');
+  const [regDoc, setRegDoc] = useState<string | null>((initialData['regDocUrl'] as string) || null);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pan || !address || !regDoc) return;
+    onSubmit({ legalName, businessType, pan, cin, gst, address, regDocUrl: regDoc });
+  };
+
+  const BUSINESS_TYPE_LABELS: Record<string, string> = {
+    pvt_ltd: 'Private Limited',
+    llp: 'LLP',
+    partnership: 'Partnership Firm',
+    sole_prop: 'Sole Proprietorship',
+    trust: 'Trust / Society',
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="p-4 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border-subtle)] space-y-2">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-tertiary)] mb-3">
+          Confirmed from your details
+        </p>
+        <div className="flex items-center justify-between">
+          <span className="text-[12px] text-[var(--text-tertiary)]">Business Name</span>
+          <span className="text-[13px] font-semibold text-[var(--text-primary)]">
+            {legalName || '—'}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[12px] text-[var(--text-tertiary)]">Business Type</span>
+          <span className="text-[13px] font-semibold text-[var(--text-primary)]">
+            {BUSINESS_TYPE_LABELS[businessType] || businessType || '—'}
+          </span>
+        </div>
+        {cin && (
+          <div className="flex items-center justify-between">
+            <span className="text-[12px] text-[var(--text-tertiary)]">CIN / Reg. No.</span>
+            <span className="text-[13px] font-semibold text-[var(--text-primary)]">{cin}</span>
+          </div>
+        )}
+      </div>
+      <KycInputField label="Business PAN" value={pan} onChange={setPan} placeholder="AAACB1234C" />
+      <KycInputField
+        label="GST Number (optional)"
+        value={gst}
+        onChange={setGst}
+        placeholder="27AAACB1234C1Z5"
+      />
+      <KycInputField
+        label="Registered Address"
+        value={address}
+        onChange={setAddress}
+        placeholder="Full address as on documents"
+      />
+      <KycFileZone
+        label="Registration Certificate"
+        fieldName="reg_doc"
+        value={regDoc}
+        onChange={setRegDoc}
+        uid={uid}
+        stepId="kyc_business"
+        // No real document slot exists yet for a business registration
+        // certificate — local-only placeholder (see KycFileZone's docLabel doc).
+        requestId={null}
+      />
+      <button
+        type="submit"
+        disabled={submitting || !pan || !address || !regDoc}
+        className="w-full h-12 rounded-xl bg-[var(--accent-primary)] text-white font-black uppercase tracking-widest text-[11px] hover:brightness-110 disabled:opacity-40 transition-all flex items-center justify-center gap-2"
+      >
+        {submitting ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <ArrowRight className="h-4 w-4" />
+        )}
+        {submitting ? 'Saving…' : submitLabel}
+      </button>
+    </form>
+  );
+}
+
+function KycSignatoryForm({
+  uid,
+  requestId,
+  initialData,
+  onSubmit,
+  submitting,
+  submitLabel = 'Continue',
+}: {
+  uid: string;
+  requestId: string | null;
+  initialData: Record<string, unknown>;
+  onSubmit: (data: Record<string, unknown>) => void;
+  submitting: boolean;
+  submitLabel?: string;
+}) {
+  const [fullName, setFullName] = useState((initialData['fullName'] as string) || '');
+  const [designation, setDesignation] = useState((initialData['designation'] as string) || '');
+  const [email, setEmail] = useState((initialData['email'] as string) || '');
+  const [phone, setPhone] = useState((initialData['phone'] as string) || '');
+  const [idType, setIdType] = useState((initialData['idType'] as string) || '');
+  const [idNumber, setIdNumber] = useState((initialData['idNumber'] as string) || '');
+  const [docFront, setDocFront] = useState<string | null>(
+    (initialData['docFrontUrl'] as string) || null,
+  );
+  const [docBack, setDocBack] = useState<string | null>((initialData['docBackUrl'] as string) || null);
+  const [selfie, setSelfie] = useState<string | null>((initialData['selfieUrl'] as string) || null);
+  const [declared, setDeclared] = useState(false);
+  // The real backend requires exactly 3 documents (id_front, id_back, selfie)
+  // to submit, unconditionally by ID type — REQUIRED_DOCUMENT_LABELS has no
+  // per-type variant. A passport holder skipping "back" here would never be
+  // able to clear missingDocuments server-side, so every ID type needs one.
+  const needsBack = true;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (
+      !fullName ||
+      !designation ||
+      !email ||
+      !idType ||
+      !idNumber ||
+      !docFront ||
+      !selfie ||
+      !declared
+    )
+      return;
+    if (needsBack && !docBack) return;
+    onSubmit({
+      fullName,
+      designation,
+      email,
+      phone,
+      idType,
+      idNumber,
+      docFrontUrl: docFront,
+      docBackUrl: docBack,
+      selfieUrl: selfie,
+      declared,
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="p-4 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border-subtle)]">
+        <p className="text-[12px] text-[var(--text-tertiary)] leading-relaxed">
+          Provide identity details for the person who is authorized to represent this business on
+          C1RCLE.
+        </p>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-4">
+        <KycInputField
+          label="Full Legal Name"
+          value={fullName}
+          onChange={setFullName}
+          placeholder="As on government ID"
+        />
+        <KycSelectField
+          label="Designation"
+          value={designation}
+          onChange={setDesignation}
+          options={[
+            { value: 'director', label: 'Director' },
+            { value: 'partner', label: 'Partner' },
+            { value: 'proprietor', label: 'Proprietor' },
+            { value: 'authorized_signatory', label: 'Authorized Signatory' },
+          ]}
+        />
+      </div>
+      <div className="grid sm:grid-cols-2 gap-4">
+        <KycInputField
+          label="Email"
+          value={email}
+          onChange={setEmail}
+          type="email"
+          placeholder="representative@company.com"
+        />
+        <KycInputField
+          label="Phone"
+          value={phone}
+          onChange={setPhone}
+          placeholder="+91 9876543210"
+        />
+      </div>
+      <KycSelectField
+        label="ID Type"
+        value={idType}
+        onChange={setIdType}
+        options={[
+          { value: 'aadhaar', label: 'Aadhaar Card' },
+          { value: 'passport', label: 'Passport' },
+          { value: 'driving_licence', label: 'Driving Licence' },
+          { value: 'voter_id', label: 'Voter ID' },
+        ]}
+      />
+      <KycInputField
+        label="ID Number"
+        value={idNumber}
+        onChange={setIdNumber}
+        placeholder="Enter ID number"
+      />
+      <div className={`grid gap-4 ${needsBack ? 'sm:grid-cols-2' : 'grid-cols-1'}`}>
+        <KycFileZone
+          label="Document Front"
+          fieldName="sig_doc_front"
+          value={docFront}
+          onChange={setDocFront}
+          uid={uid}
+          stepId="kyc_signatory"
+          requestId={requestId}
+          docLabel="id_front"
+        />
+        {needsBack && (
+          <KycFileZone
+            label="Document Back"
+            fieldName="sig_doc_back"
+            value={docBack}
+            onChange={setDocBack}
+            uid={uid}
+            stepId="kyc_signatory"
+            requestId={requestId}
+            docLabel="id_back"
+          />
+        )}
+      </div>
+      <KycFileZone
+        label="Selfie Photo"
+        fieldName="sig_selfie"
+        value={selfie}
+        onChange={setSelfie}
+        uid={uid}
+        stepId="kyc_signatory"
+        requestId={requestId}
+        docLabel="selfie"
+      />
+      <label className="flex items-start gap-3 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={declared}
+          onChange={(e) => setDeclared(e.target.checked)}
+          className="mt-0.5 h-4 w-4 rounded border-[var(--border-subtle)] accent-[var(--accent-primary)]"
+        />
+        <span className="text-[12px] text-[var(--text-secondary)] leading-relaxed">
+          I confirm that I am authorized to represent this business and the information provided is
+          accurate.
+        </span>
+      </label>
+      <button
+        type="submit"
+        disabled={
+          submitting ||
+          !fullName ||
+          !designation ||
+          !email ||
+          !idType ||
+          !idNumber ||
+          !docFront ||
+          !selfie ||
+          !declared ||
+          (needsBack && !docBack)
+        }
+        className="w-full h-12 rounded-xl bg-[var(--accent-primary)] text-white font-black uppercase tracking-widest text-[11px] hover:brightness-110 disabled:opacity-40 transition-all flex items-center justify-center gap-2"
+      >
+        {submitting ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <ArrowRight className="h-4 w-4" />
+        )}
+        {submitting ? 'Saving…' : submitLabel}
+      </button>
+    </form>
   );
 }
