@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Breadcrumbs } from '@/components/seo/Breadcrumbs';
 
 import { PublicProfileMotionClient } from './PublicProfileMotionClient';
 
@@ -16,11 +16,15 @@ type ProfileStyle = CSSProperties & {
 export function PublicProfileShell({
   backHref,
   backLabel,
+  currentLabel,
+  currentHref,
   children,
   theme,
 }: {
   backHref: string;
   backLabel: string;
+  currentLabel: string;
+  currentHref: string;
   children: ReactNode;
   theme: PublicProfileTheme;
 }) {
@@ -43,13 +47,13 @@ export function PublicProfileShell({
       </div>
 
       <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8">
-        <Link
-          href={backHref}
-          className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/10 bg-black/45 px-5 text-[9px] font-black uppercase tracking-[0.2em] text-white/55 backdrop-blur-xl transition-colors hover:border-white/25 hover:text-white"
-        >
-          <span aria-hidden="true">←</span>
-          {backLabel}
-        </Link>
+        <Breadcrumbs
+          items={[
+            { label: 'Home', href: '/' },
+            { label: backLabel, href: backHref },
+            { label: currentLabel, href: currentHref },
+          ]}
+        />
         {children}
       </div>
     </div>

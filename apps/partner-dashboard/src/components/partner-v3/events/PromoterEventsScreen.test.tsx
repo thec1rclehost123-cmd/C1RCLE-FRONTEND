@@ -42,8 +42,15 @@ describe('PromoterEventsScreen', () => {
     expect(screen.getByRole('region', { name: 'Discover events' })).toBeInTheDocument();
     expect(screen.getByText('Eclipse Royale')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Request Pending' })).toBeDisabled();
-    expect(screen.getAllByRole('link', { name: 'Request Promotion Access' }).map((link) => link.getAttribute('href'))).toContain('/partner/promoter/events/testing-event');
-    expect(screen.getByRole('link', { name: 'Eclipse Royale event' })).toHaveAttribute('href', '/partner/promoter/events/eclipse-royale');
+    expect(
+      screen
+        .getAllByRole('link', { name: 'Request Promotion Access' })
+        .map((link) => link.getAttribute('href')),
+    ).toContain('/partner/promoter/events/testing-event');
+    expect(screen.getByRole('link', { name: 'Eclipse Royale event' })).toHaveAttribute(
+      'href',
+      '/partner/promoter/events/eclipse-royale',
+    );
     expect(screen.queryByRole('link', { name: /create event/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /slot requests/i })).not.toBeInTheDocument();
   });
@@ -56,18 +63,24 @@ describe('PromoterEventsScreen', () => {
     await user.click(screen.getByRole('tab', { name: /Linked Events/ }));
     expect(screen.getByRole('region', { name: 'Linked events' })).toBeInTheDocument();
     expect(screen.getByText('Nova Nexus')).toBeInTheDocument();
-    expect(replace).toHaveBeenLastCalledWith('/partner/promoter/events?tab=linked', { scroll: false });
+    expect(replace).toHaveBeenLastCalledWith('/partner/promoter/events?tab=linked', {
+      scroll: false,
+    });
 
     await user.type(screen.getByPlaceholderText('Search events, venues, or categories'), 'Nova');
     expect(screen.getByText('Nova Nexus')).toBeInTheDocument();
     expect(screen.queryByText('Event - 297')).not.toBeInTheDocument();
-    expect(replace).toHaveBeenLastCalledWith('/partner/promoter/events?tab=linked&search=Nova', { scroll: false });
+    expect(replace).toHaveBeenLastCalledWith('/partner/promoter/events?tab=linked&search=Nova', {
+      scroll: false,
+    });
 
     await user.click(screen.getByRole('tab', { name: /Discover/ }));
     await user.clear(screen.getByPlaceholderText('Search events, venues, or categories'));
     await user.selectOptions(screen.getByRole('combobox', { name: 'Event city' }), 'Mumbai');
     expect(screen.getByText('Retro Fridays')).toBeInTheDocument();
     expect(screen.queryByText('Eclipse Royale')).not.toBeInTheDocument();
-    expect(replace).toHaveBeenLastCalledWith('/partner/promoter/events?city=Mumbai', { scroll: false });
+    expect(replace).toHaveBeenLastCalledWith('/partner/promoter/events?city=Mumbai', {
+      scroll: false,
+    });
   });
 });

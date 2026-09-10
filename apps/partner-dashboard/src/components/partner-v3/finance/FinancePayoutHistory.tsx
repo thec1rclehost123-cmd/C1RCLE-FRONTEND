@@ -10,7 +10,6 @@ import { PayoutStatusBadge } from './PayoutStatusBadge';
 
 import type { FinanceDateRange, FinancePayout } from '@/data/partner-data-source';
 
-
 function buildUrl(pathname: string, search: string, range: FinanceDateRange): string {
   const params = new URLSearchParams();
   if (search.trim()) params.set('search', search.trim());
@@ -19,7 +18,15 @@ function buildUrl(pathname: string, search: string, range: FinanceDateRange): st
   return query ? `${pathname}?${query}` : pathname;
 }
 
-export function FinancePayoutHistory({ rows, initialSearch = '', initialRange = 'current' }: { readonly rows: readonly FinancePayout[]; readonly initialSearch?: string; readonly initialRange?: FinanceDateRange }) {
+export function FinancePayoutHistory({
+  rows,
+  initialSearch = '',
+  initialRange = 'current',
+}: {
+  readonly rows: readonly FinancePayout[];
+  readonly initialSearch?: string;
+  readonly initialRange?: FinanceDateRange;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const [search, setSearch] = useState(initialSearch);
@@ -29,7 +36,11 @@ export function FinancePayoutHistory({ rows, initialSearch = '', initialRange = 
   const visibleRows = useMemo(() => {
     const normalized = search.trim().toLocaleLowerCase('en-IN');
     return normalized
-      ? rows.filter((row) => `${row.date} ${row.detail} ${row.status} ${row.amount}`.toLocaleLowerCase('en-IN').includes(normalized))
+      ? rows.filter((row) =>
+          `${row.date} ${row.detail} ${row.status} ${row.amount}`
+            .toLocaleLowerCase('en-IN')
+            .includes(normalized),
+        )
       : rows;
   }, [rows, search]);
 
@@ -52,16 +63,48 @@ export function FinancePayoutHistory({ rows, initialSearch = '', initialRange = 
           <label className={styles['financeSearch']}>
             <span className={styles['srOnly']}>Search payout history</span>
             <SearchIcon size={14} aria-hidden="true" />
-            <input value={search} onChange={(event) => { updateSearch(event.target.value); }} placeholder="Search by event" type="search" />
+            <input
+              value={search}
+              onChange={(event) => {
+                updateSearch(event.target.value);
+              }}
+              placeholder="Search by event"
+              type="search"
+            />
           </label>
           <div className={styles['rangeControl']}>
-            <button type="button" aria-expanded={rangeOpen} onClick={() => { setRangeOpen((open) => !open); }}>
-              {range === 'all' ? 'All payout history' : 'Date range'} <ChevronDownIcon size={14} aria-hidden="true" />
+            <button
+              type="button"
+              aria-expanded={rangeOpen}
+              onClick={() => {
+                setRangeOpen((open) => !open);
+              }}
+            >
+              {range === 'all' ? 'All payout history' : 'Date range'}{' '}
+              <ChevronDownIcon size={14} aria-hidden="true" />
             </button>
             {rangeOpen ? (
               <div className={styles['rangeMenu']} role="menu" aria-label="Payout date range">
-                <button type="button" role="menuitemradio" aria-checked={range === 'current'} onClick={() => { updateRange('current'); }}>Current payout history</button>
-                <button type="button" role="menuitemradio" aria-checked={range === 'all'} onClick={() => { updateRange('all'); }}>All payout history</button>
+                <button
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={range === 'current'}
+                  onClick={() => {
+                    updateRange('current');
+                  }}
+                >
+                  Current payout history
+                </button>
+                <button
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={range === 'all'}
+                  onClick={() => {
+                    updateRange('all');
+                  }}
+                >
+                  All payout history
+                </button>
               </div>
             ) : null}
           </div>
@@ -72,18 +115,22 @@ export function FinancePayoutHistory({ rows, initialSearch = '', initialRange = 
         <div className={styles['payoutTimeline']} aria-hidden="true" />
         {visibleRows.length === 0 ? (
           <div className={styles['financeEmpty']}>No payouts match this search.</div>
-        ) : visibleRows.map((row) => (
-          <article className={styles['payoutRow']} key={row.id}>
-            <span className={styles['payoutIcon']} aria-hidden="true"><BankIcon size={18} /></span>
-            <div className={styles['payoutIdentity']}>
-              <strong>{row.date}</strong>
-              <span>{row.detail}</span>
-            </div>
-            <PayoutStatusBadge status={row.status} />
-            <strong className={styles['payoutAmount']}>{row.amount}</strong>
-            <NextIcon className={styles['payoutChevron']} size={18} aria-hidden="true" />
-          </article>
-        ))}
+        ) : (
+          visibleRows.map((row) => (
+            <article className={styles['payoutRow']} key={row.id}>
+              <span className={styles['payoutIcon']} aria-hidden="true">
+                <BankIcon size={18} />
+              </span>
+              <div className={styles['payoutIdentity']}>
+                <strong>{row.date}</strong>
+                <span>{row.detail}</span>
+              </div>
+              <PayoutStatusBadge status={row.status} />
+              <strong className={styles['payoutAmount']}>{row.amount}</strong>
+              <NextIcon className={styles['payoutChevron']} size={18} aria-hidden="true" />
+            </article>
+          ))
+        )}
       </div>
     </section>
   );

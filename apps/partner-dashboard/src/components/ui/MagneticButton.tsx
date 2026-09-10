@@ -10,7 +10,7 @@ interface MagneticButtonProps {
   onClick?: () => void;
 }
 
-export default function MagneticButton({
+export function MagneticButton({
   children,
   className = '',
   href,
@@ -56,14 +56,18 @@ export default function MagneticButton({
     };
   }, [motionX, motionY]);
 
-  const Component = href ? motion.a : motion.button;
+  // The union of motion.a | motion.button accepts different ref/attr shapes,
+  // so declaring the intrinsic type keeps every attribute type-checked without
+  // a forced cast.
+  const Component: React.ElementType = href ? motion.a : motion.button;
 
   return (
     <Component
-      ref={buttonRef as any}
+      ref={buttonRef}
       href={href}
       onClick={onClick}
       className={`cursor-pointer ${className}`}
+      // eslint-disable-next-line no-restricted-syntax -- framer-motion transform deltas (x/y) are spring motion values, not CSS; they are not expressible as Tailwind utilities and must be applied via the style prop.
       style={{ x: springX, y: springY }}
     >
       {children}

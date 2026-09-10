@@ -29,9 +29,8 @@ function DisposablePhoto({ src, rotationClass, index }: DisposablePhotoProps) {
         <div className="disposable-inner">
           <Image
             src={`/home/memories/${src}`}
-            alt={`C1RCLE memory ${String(index + 1)}`}
+            alt=""
             fill
-            unoptimized
             sizes="(max-width: 480px) 110px, (max-width: 768px) 135px, 200px"
             className="disposable-img"
           />
@@ -64,7 +63,9 @@ function ScrollingRow({ photos, direction, rowIndex, speedClass }: ScrollingRowP
           <DisposablePhoto
             key={`${String(rowIndex)}-${String(index)}`}
             src={photo}
-            rotationClass={rotationClasses[rowIndex]?.[index % photos.length] ?? 'photo-rotate-none'}
+            rotationClass={
+              rotationClasses[rowIndex]?.[index % photos.length] ?? 'photo-rotate-none'
+            }
             index={index % photos.length}
           />
         ))}

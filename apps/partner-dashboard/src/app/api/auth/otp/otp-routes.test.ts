@@ -46,9 +46,7 @@ afterEach(() => {
 
 describe('POST /api/auth/otp/send', () => {
   it('forwards to /api/v2/auth/otp/send and passes the ack through', async () => {
-    mockForward.mockResolvedValue(
-      gatewayResponse({ message: 'If valid, a code has been sent.' }),
-    );
+    mockForward.mockResolvedValue(gatewayResponse({ message: 'If valid, a code has been sent.' }));
 
     const res = await otpSend(
       post('/api/auth/otp/send', { origin: APP_ORIGIN }, { email: 'a@b.com' }),
@@ -87,18 +85,11 @@ describe('POST /api/auth/otp/verify', () => {
     mockForward.mockResolvedValue(gatewayResponse({ message: 'Verified.' }));
 
     const res = await otpVerify(
-      post(
-        '/api/auth/otp/verify',
-        { origin: APP_ORIGIN },
-        { email: 'a@b.com', code: '123456' },
-      ),
+      post('/api/auth/otp/verify', { origin: APP_ORIGIN }, { email: 'a@b.com', code: '123456' }),
     );
 
     expect(res.status).toBe(200);
-    const [calledPath, calledInit] = mockForward.mock.calls[0] as [
-      string,
-      { body?: unknown },
-    ];
+    const [calledPath, calledInit] = mockForward.mock.calls[0] as [string, { body?: unknown }];
     expect(calledPath).toBe('/api/v2/auth/otp/verify');
     expect(calledInit.body).toEqual({ email: 'a@b.com', code: '123456' });
   });
@@ -111,11 +102,7 @@ describe('POST /api/auth/otp/verify', () => {
       ),
     );
     const res = await otpVerify(
-      post(
-        '/api/auth/otp/verify',
-        { origin: APP_ORIGIN },
-        { email: 'a@b.com', code: '000000' },
-      ),
+      post('/api/auth/otp/verify', { origin: APP_ORIGIN }, { email: 'a@b.com', code: '000000' }),
     );
     expect(res.status).toBe(400);
   });

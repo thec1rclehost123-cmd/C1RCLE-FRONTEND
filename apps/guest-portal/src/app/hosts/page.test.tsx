@@ -14,7 +14,11 @@ describe('HostsPage', () => {
   it('renders host and venue discovery with real profile destinations', () => {
     render(<HostsPage />);
 
-    expect(screen.getByRole('heading', { level: 1, name: 'DISCOVER VENUES' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'DISCOVER HOSTS & VENUES' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Venues' })).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: 'Search hosts and venues' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Skyline Social/i })).toHaveAttribute(
       'href',
       '/venue/skyline-social',

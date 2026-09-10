@@ -258,9 +258,7 @@ export function CheckoutFlowClient({
                       : 'border-white/10 bg-white/[0.035] text-white/60 hover:border-white/20'
                   }`}
                 >
-                  <p className="text-xs font-black uppercase tracking-[0.16em]">
-                    {method.label}
-                  </p>
+                  <p className="text-xs font-black uppercase tracking-[0.16em]">{method.label}</p>
                 </button>
               ))}
             </div>

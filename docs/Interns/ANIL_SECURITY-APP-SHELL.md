@@ -32,8 +32,9 @@ The frontend shipped without three security controls the auth-foundation spec (�
 - Mints a **CSP nonce per request** (Next's canonical nonce pattern, from `content-security-policy.md:34-133`): sets `x-nonce` on the request headers and the full CSP header on the response, so Next auto-applies the nonce to framework scripts. N
 
 ote: the nonce forces dynamic rendering — pages may need `await connection()`.
+
 - **Auth redirect (UX only):** for `/venue|/host|/promoter|/onboard|/partner|/partner-network`, if the session cookie is absent → `redirect('/login?next=…')`. Real auth is per-request at the gateway; this only prevents the logged-out flash.
-- File header states: "*UX redirect only — real auth is per-request at the gateway.*"
+- File header states: "_UX redirect only — real auth is per-request at the gateway._"
 - Requires the new default-export allowlist entry `src/proxy.ts` in the eslint-config (see §2.3).
 
 ### 2.2 Providers
@@ -57,22 +58,24 @@ ote: the nonce forces dynamic rendering — pages may need `await connection()`.
 ## 3. Files Changed
 
 ### New files
-| File | What |
-| --- | --- |
-| `apps/partner-dashboard/src/proxy.ts` | Next 16 App Bouncer: CSP nonce generator + auth redirect (UX only). |
+
+| File                                                                   | What                                                                                                                    |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `apps/partner-dashboard/src/proxy.ts`                                  | Next 16 App Bouncer: CSP nonce generator + auth redirect (UX only).                                                     |
 | `apps/partner-dashboard/src/components/providers/session-provider.tsx` | `SessionProvider`: seeds store from `initialUser`, one refresh on mount, 30-min idle logout, focus refresh near expiry. |
-| `apps/partner-dashboard/src/lib/api/client.ts` | apiClient composition root (`createApiClient` wiring: `getToken`, `reauth`, `onUnauthorized`). |
+| `apps/partner-dashboard/src/lib/api/client.ts`                         | apiClient composition root (`createApiClient` wiring: `getToken`, `reauth`, `onUnauthorized`).                          |
 
 ### Modified files
-| File | Change |
-| --- | --- |
-| `apps/partner-dashboard/src/app/layout.tsx` | `async`; `getServerSession((await cookies()).toString())`; wraps children in `<SessionProvider initialUser={session}>`. |
-| `apps/partner-dashboard/next.config.ts` | Added `Strict-Transport-Security` header (kept the existing 4; no CSP here). |
-| `packages/eslint-config/src/base.ts` | `firebase`/`firebase/*` in SECURITY restricted-imports; scoped `no-restricted-globals` storage ban for `packages/auth/**`. |
-| `packages/eslint-config/src/next.ts` | `src/proxy.ts` default-export allowlist; `firebase`/`firebase/*` in its SECURITY restricted-imports. |
-| `tooling/scripts/src/check-boundaries.ts` | `'firebase'` added to `FORBIDDEN`. |
-| `apps/partner-dashboard/package.json` | Added `@c1rcle/api-client`, `@c1rcle/auth`, `@c1rcle/contracts` deps. |
-| `pnpm-lock.yaml` | Lockfile entries for the three added workspace deps. |
+
+| File                                        | Change                                                                                                                     |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `apps/partner-dashboard/src/app/layout.tsx` | `async`; `getServerSession((await cookies()).toString())`; wraps children in `<SessionProvider initialUser={session}>`.    |
+| `apps/partner-dashboard/next.config.ts`     | Added `Strict-Transport-Security` header (kept the existing 4; no CSP here).                                               |
+| `packages/eslint-config/src/base.ts`        | `firebase`/`firebase/*` in SECURITY restricted-imports; scoped `no-restricted-globals` storage ban for `packages/auth/**`. |
+| `packages/eslint-config/src/next.ts`        | `src/proxy.ts` default-export allowlist; `firebase`/`firebase/*` in its SECURITY restricted-imports.                       |
+| `tooling/scripts/src/check-boundaries.ts`   | `'firebase'` added to `FORBIDDEN`.                                                                                         |
+| `apps/partner-dashboard/package.json`       | Added `@c1rcle/api-client`, `@c1rcle/auth`, `@c1rcle/contracts` deps.                                                      |
+| `pnpm-lock.yaml`                            | Lockfile entries for the three added workspace deps.                                                                       |
 
 ---
 

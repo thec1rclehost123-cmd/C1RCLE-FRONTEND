@@ -63,33 +63,67 @@ describe('Venue Event Detail feature', () => {
     rerender(views[3]);
     expect(screen.getByRole('heading', { name: 'Crowd & Demographics' })).toBeInTheDocument();
     rerender(views[4]);
-    expect(screen.getByRole('heading', { name: 'Compare against past events' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Compare against past events' }),
+    ).toBeInTheDocument();
   });
 
   it('renders guest, operations, and promoter screens with functional destinations', async () => {
     const data = await fixturePartnerDataSource.getVenueEventDetail('neon-nights-afrobeats');
     if (!data) throw new Error('Expected the primary Venue event fixture');
 
-    const { rerender } = render(<EventGuestsScreen data={data} filter="Checked In" config={{ ...config, eventHref: `${config.detailHref}/guests` }} />);
+    const { rerender } = render(
+      <EventGuestsScreen
+        data={data}
+        filter="Checked In"
+        config={{ ...config, eventHref: `${config.detailHref}/guests` }}
+      />,
+    );
     expect(screen.getByText('Aisha Menon')).toBeInTheDocument();
     expect(screen.queryByText('Devansh Iyer')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Tag' })).toHaveAttribute('href', `${config.detailHref}/guests?filter=checked-in&tag=VIP`);
+    expect(screen.getByRole('link', { name: 'Tag' })).toHaveAttribute(
+      'href',
+      `${config.detailHref}/guests?filter=checked-in&tag=VIP`,
+    );
 
-    rerender(<EventOperationsScreen data={data} config={{ ...config, eventHref: `${config.detailHref}/tonight` }} />);
+    rerender(
+      <EventOperationsScreen
+        data={data}
+        config={{ ...config, eventHref: `${config.detailHref}/tonight` }}
+      />,
+    );
     expect(screen.getByRole('heading', { name: 'How full we are' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Walk-in/ })).toHaveAttribute('href', '/partner/venue/door');
+    expect(screen.getByRole('link', { name: /Walk-in/ })).toHaveAttribute(
+      'href',
+      '/partner/venue/door',
+    );
 
-    rerender(<EventPromotersScreen data={data} search="Arjun" config={{ ...config, eventHref: `${config.detailHref}/promoters`, guestsHref: `${config.detailHref}/guests` }} />);
+    rerender(
+      <EventPromotersScreen
+        data={data}
+        search="Arjun"
+        config={{
+          ...config,
+          eventHref: `${config.detailHref}/promoters`,
+          guestsHref: `${config.detailHref}/guests`,
+        }}
+      />,
+    );
     expect(screen.getByText('Arjun (Pulse Collective)')).toBeInTheDocument();
     expect(screen.queryByText('Zoya (Nightowl)')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'View Guest List & Analytics' })).toHaveAttribute('href', `${config.detailHref}/guests`);
+    expect(screen.getByRole('link', { name: 'View Guest List & Analytics' })).toHaveAttribute(
+      'href',
+      `${config.detailHref}/guests`,
+    );
   });
 
   it('keeps the sales fixture values outside JSX', async () => {
     const data = await fixturePartnerDataSource.getVenueEventDetail('neon-nights-afrobeats');
     if (!data) throw new Error('Expected the primary Venue event fixture');
     render(<EventSalesFunnel data={data.sales.funnel} />);
-    expect(screen.getByText('FUNNEL POPULATES AFTER DISCOVERY & BOOKING ACTIVITY BEGINS')).toBeInTheDocument();
+    expect(
+      screen.getByText('FUNNEL POPULATES AFTER DISCOVERY & BOOKING ACTIVITY BEGINS'),
+    ).toBeInTheDocument();
     render(<EventRevenueBreakdown data={data.sales.revenue} />);
     expect(screen.getByText('₹6,08,400')).toBeInTheDocument();
     render(<EventCrowdBreakdown data={data.sales.crowd} />);

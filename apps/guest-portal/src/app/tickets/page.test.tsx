@@ -1,18 +1,21 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import React from 'react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useSessionStore } from '@c1rcle/auth';
+import { clearSession, useSessionStore } from '@c1rcle/auth';
 
 import TicketsPage from './page';
 
+vi.mock('@/lib/auth/require-session', () => ({
+  requireGuestSession: vi.fn(() => Promise.resolve({ user: { id: 'test-user' } })),
+}));
+
 describe('TicketsPage fixture wallet', () => {
   beforeEach(() => {
-    useSessionStore.getState().clearSession();
+    clearSession();
   });
 
-  it('renders the logged-out guest ticket showcase without wallet passes', () => {
-    render(<TicketsPage />);
+  it('renders the logged-out guest ticket showcase without wallet passes', async () => {
+    render(await TicketsPage());
 
     expect(screen.getByRole('heading', { level: 1, name: 'TICKETS' })).toBeInTheDocument();
     expect(
@@ -24,9 +27,9 @@ describe('TicketsPage fixture wallet', () => {
     expect(screen.queryByText('NEON RITUAL VOL. 3')).not.toBeInTheDocument();
   });
 
-  it('renders the fixture wallet only for an authenticated session', () => {
+  it('renders the fixture wallet only for an authenticated session', async () => {
     useSessionStore.setState({ accessToken: 'fixture-access-token', status: 'authenticated' });
-    render(<TicketsPage />);
+    render(await TicketsPage());
 
     expect(screen.getByRole('button', { name: 'CURRENT PASSES' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'HISTORY' })).toBeInTheDocument();
@@ -34,9 +37,9 @@ describe('TicketsPage fixture wallet', () => {
     expect(screen.getByText('NEON RITUAL VOL. 3')).toBeInTheDocument();
   });
 
-  it('switches to history tab and displays past tickets', () => {
+  it('switches to history tab and displays past tickets', async () => {
     useSessionStore.setState({ accessToken: 'fixture-access-token', status: 'authenticated' });
-    render(<TicketsPage />);
+    render(await TicketsPage());
 
     const historyTab = screen.getByRole('button', { name: 'HISTORY' });
     fireEvent.click(historyTab);
@@ -44,9 +47,9 @@ describe('TicketsPage fixture wallet', () => {
     expect(screen.getByText('KINETIC NIGHTS VOL. 4')).toBeInTheDocument();
   });
 
-  it('opens a deliberately non-scannable ticket preview', () => {
+  it('opens a deliberately non-scannable ticket preview', async () => {
     useSessionStore.setState({ accessToken: 'fixture-access-token', status: 'authenticated' });
-    render(<TicketsPage />);
+    render(await TicketsPage());
 
     const viewPassButtons = screen.getAllByRole('button', { name: 'VIEW PASS PREVIEW' });
     const firstBtn = viewPassButtons[0];

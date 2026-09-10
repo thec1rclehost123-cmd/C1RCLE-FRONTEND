@@ -12,9 +12,10 @@ export default async function PromoterEventDetailPage({
 }) {
   const { eventId } = await params;
   const { tab } = await searchParams;
-  const activeTab = tab === 'performance' || tab === 'orders' || tab === 'links' || tab === 'commission'
-    ? tab
-    : 'summary';
+  const activeTab =
+    tab === 'performance' || tab === 'orders' || tab === 'links' || tab === 'commission'
+      ? tab
+      : 'summary';
   const needsOrders = activeTab === 'summary' || activeTab === 'orders';
   const needsLinks = activeTab === 'summary' || activeTab === 'links';
   const [linked, discover, overview, links] = await Promise.all([

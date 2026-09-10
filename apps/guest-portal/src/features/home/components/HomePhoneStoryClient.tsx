@@ -377,9 +377,7 @@ export function HomePhoneStoryClient() {
               }}
               aria-label={`Jump to ${item.text}`}
               className={`h-2.5 rounded-full transition-all duration-300 ${
-                activeScreen === index
-                  ? 'w-8 bg-[#FF4400]'
-                  : 'w-2.5 bg-white/20 hover:bg-white/50'
+                activeScreen === index ? 'w-8 bg-[#FF4400]' : 'w-2.5 bg-white/20 hover:bg-white/50'
               }`}
             />
           ))}

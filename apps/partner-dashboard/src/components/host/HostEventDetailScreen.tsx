@@ -10,6 +10,7 @@ import { EventDetailLayout } from '../venue/event-detail/EventDetailLayout';
 import layoutStyles from '../venue/event-detail/EventDetailLayout.module.css';
 import { EventInformationAccordion } from '../venue/event-detail/EventInformationAccordion';
 import styles from '../venue/event-detail/VenueEventDetail.module.css';
+
 import { getHostEvent, hostCampaigns, hostGuests, hostPromoters } from './host-studio-model';
 
 import type { ReactNode } from 'react';
@@ -24,7 +25,11 @@ const eventTabs = (id: string) => [
   { label: 'Earnings', href: `/host/events/${id}/earnings` },
 ];
 
-function HostHeaderActions({ event }: { readonly event: NonNullable<ReturnType<typeof getHostEvent>> }) {
+function HostHeaderActions({
+  event,
+}: {
+  readonly event: NonNullable<ReturnType<typeof getHostEvent>>;
+}) {
   const auth = useDashboardAuth();
   const canEdit = auth.canDo('canEditEvent');
   const canManageDoor = auth.canDo('canManageDoorMode');
@@ -66,7 +71,7 @@ function EventFrame({
   const event = getHostEvent(id);
   if (!event) {
     return (
-      <div style={{ padding: '32px', color: '#fff' }}>
+      <div className="p-8 text-white">
         <h1>Event unavailable</h1>
         <p>This event could not be found.</p>
       </div>
@@ -81,7 +86,11 @@ function EventFrame({
     posterSrc: event.poster,
     posterAlt: event.name,
     statusLabel: event.status,
-    statusTone: (event.status === 'Live' ? 'success' : event.status === 'Invitation' ? 'warning' : 'neutral') as 'success' | 'warning' | 'neutral',
+    statusTone: (event.status === 'Live'
+      ? 'success'
+      : event.status === 'Invitation'
+        ? 'warning'
+        : 'neutral') as 'success' | 'warning' | 'neutral',
     roleLabel: 'Lead host',
   };
 
@@ -98,7 +107,7 @@ function EventFrame({
 
 export function HostEventSummaryScreen({ id }: { readonly id: string }) {
   const event = getHostEvent(id);
-  const chartPath = "M 0 160 L 100 140 L 200 110 L 300 95 L 400 65 L 500 50 L 600 30";
+  const chartPath = 'M 0 160 L 100 140 L 200 110 L 300 95 L 400 65 L 500 50 L 600 30';
 
   return (
     <EventFrame id={id} active="summary">
@@ -131,7 +140,12 @@ export function HostEventSummaryScreen({ id }: { readonly id: string }) {
                 <span>50</span>
                 <span>0</span>
               </div>
-              <svg viewBox="0 0 600 180" preserveAspectRatio="none" role="img" aria-label="Guest confirmations line chart">
+              <svg
+                viewBox="0 0 600 180"
+                preserveAspectRatio="none"
+                role="img"
+                aria-label="Guest confirmations line chart"
+              >
                 <g className={s('gridLines')}>
                   <line x1="0" y1="0" x2="600" y2="0" />
                   <line x1="0" y1="45" x2="600" y2="45" />
@@ -153,20 +167,20 @@ export function HostEventSummaryScreen({ id }: { readonly id: string }) {
             </div>
           </section>
 
-          <div style={{ display: 'grid', gap: '16px' }}>
+          <div className="grid gap-4">
             <section className={s('panel')}>
               <h2>Your role</h2>
-              <div style={{ display: 'grid', gap: '12px', marginTop: '16px', fontSize: '14px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--dashboard-text-secondary)' }}>Role</span>
+              <div className="grid gap-3 mt-4 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-[var(--dashboard-text-secondary)]">Role</span>
                   <strong>Lead host</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--dashboard-text-secondary)' }}>Venue contact</span>
+                <div className="flex justify-between">
+                  <span className="text-[var(--dashboard-text-secondary)]">Venue contact</span>
                   <strong>Arjun Mehta</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--dashboard-text-secondary)' }}>Guest allocation</span>
+                <div className="flex justify-between">
+                  <span className="text-[var(--dashboard-text-secondary)]">Guest allocation</span>
                   <strong>250 guests</strong>
                 </div>
               </div>
@@ -196,6 +210,7 @@ export function HostEventGuestsScreen({ id }: { readonly id: string }) {
       <div className={s('guestsPage')}>
         <div className={s('guestToolbar')}>
           <label className={s('guestSearch')}>
+            <span className="sr-only">Search guests</span>
             <input type="search" placeholder="Search guest name or ticket" />
           </label>
         </div>
@@ -207,7 +222,9 @@ export function HostEventGuestsScreen({ id }: { readonly id: string }) {
                 <th scope="col">Ticket type</th>
                 <th scope="col">Qty</th>
                 <th scope="col">Status</th>
-                <th scope="col" style={{ textAlign: 'right' }}>Action</th>
+                <th scope="col" className="text-right">
+                  Action
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -215,7 +232,11 @@ export function HostEventGuestsScreen({ id }: { readonly id: string }) {
                 <tr key={guest[0]}>
                   <td>
                     <div className={s('guestAvatar')}>
-                      {guest[0].split(' ').map((w) => w[0]).join('').slice(0, 2)}
+                      {guest[0]
+                        .split(' ')
+                        .map((w) => w[0])
+                        .join('')
+                        .slice(0, 2)}
                     </div>
                     <div className={s('guestIdentity')}>
                       <strong>{guest[0]}</strong>
@@ -228,8 +249,11 @@ export function HostEventGuestsScreen({ id }: { readonly id: string }) {
                       {guest[3]}
                     </span>
                   </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <button type="button" className="pd-button" style={{ height: '36px', minHeight: '36px', padding: '0 14px', fontSize: '13px' }}>
+                  <td className="text-right">
+                    <button
+                      type="button"
+                      className="pd-button h-9 min-h-9 px-3.5 text-[13px]"
+                    >
                       View
                     </button>
                   </td>
@@ -255,7 +279,9 @@ export function HostEventPromotersScreen({ id }: { readonly id: string }) {
                 <th scope="col">Role</th>
                 <th scope="col">Status</th>
                 <th scope="col">Relationship</th>
-                <th scope="col" style={{ textAlign: 'right' }}>Action</th>
+                <th scope="col" className="text-right">
+                  Action
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -263,7 +289,11 @@ export function HostEventPromotersScreen({ id }: { readonly id: string }) {
                 <tr key={promoter[0]}>
                   <td>
                     <div className={s('guestAvatar')}>
-                      {promoter[0].split(' ').map((w) => w[0]).join('').slice(0, 2)}
+                      {promoter[0]
+                        .split(' ')
+                        .map((w) => w[0])
+                        .join('')
+                        .slice(0, 2)}
                     </div>
                     <div className={s('guestIdentity')}>
                       <strong>{promoter[0]}</strong>
@@ -276,11 +306,10 @@ export function HostEventPromotersScreen({ id }: { readonly id: string }) {
                     </span>
                   </td>
                   <td>{promoter[3]}</td>
-                  <td style={{ textAlign: 'right' }}>
+                  <td className="text-right">
                     <Link
                       href={`/host/partners/promoters/${promoter[0].toLowerCase().replaceAll(' ', '-')}`}
-                      className="pd-button"
-                      style={{ height: '36px', minHeight: '36px', padding: '0 14px', fontSize: '13px', display: 'inline-flex' }}
+                      className="pd-button h-9 min-h-9 px-3.5 text-[13px] inline-flex"
                     >
                       View
                     </Link>
@@ -304,11 +333,20 @@ export function HostEventMarketingScreen({ id }: { readonly id: string }) {
             <h2>Event message</h2>
             <Link href="/host/marketing">Compose</Link>
           </div>
-          <div style={{ marginTop: '16px', padding: '16px', background: 'var(--dashboard-surface)', borderRadius: '12px', border: '1px solid var(--dashboard-border)' }}>
-            <span style={{ fontSize: '12px', color: 'var(--dashboard-text-secondary)' }}>Share link</span>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+          <div
+            className="mt-4 p-4 bg-[var(--dashboard-surface)] rounded-xl border border-[var(--dashboard-border)]"
+          >
+            <span className="text-xs text-[var(--dashboard-text-secondary)]">
+              Share link
+            </span>
+            <div
+              className="flex justify-between items-center mt-1"
+            >
               <strong>thec1rcle.in/e/neon-nights</strong>
-              <button type="button" style={{ padding: '6px 14px', borderRadius: '8px', border: '1px solid var(--dashboard-border)', background: 'transparent', color: '#fff', cursor: 'pointer' }}>
+              <button
+                type="button"
+                className="px-3.5 py-1.5 rounded-lg border border-[var(--dashboard-border)] bg-transparent text-white cursor-pointer"
+              >
                 Copy
               </button>
             </div>
@@ -316,12 +354,15 @@ export function HostEventMarketingScreen({ id }: { readonly id: string }) {
         </section>
         <section className={s('panel')}>
           <h2>Recent messages</h2>
-          <div style={{ display: 'grid', gap: '12px', marginTop: '16px' }}>
+          <div className="grid gap-3 mt-4">
             {hostCampaigns.slice(0, 2).map((campaign) => (
-              <div key={campaign[0]} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderTop: '1px solid var(--dashboard-border)' }}>
+              <div
+                key={campaign[0]}
+                className="flex justify-between items-center py-3 border-t border-[var(--dashboard-border)]"
+              >
                 <div>
-                  <strong style={{ display: 'block', fontSize: '14px' }}>{campaign[0]}</strong>
-                  <span style={{ fontSize: '12px', color: 'var(--dashboard-text-secondary)' }}>
+                  <strong className="block text-sm">{campaign[0]}</strong>
+                  <span className="text-xs text-[var(--dashboard-text-secondary)]">
                     {campaign[1]} · {campaign[2]}
                   </span>
                 </div>
@@ -361,22 +402,24 @@ export function HostEventEarningsScreen({ id }: { readonly id: string }) {
           <div className={s('panelHeading')}>
             <h2>Payment / settlement details</h2>
           </div>
-          <div style={{ display: 'grid', gap: '16px', marginTop: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--dashboard-border)', paddingBottom: '12px' }}>
-              <span style={{ color: 'var(--dashboard-text-secondary)' }}>Event status</span>
+          <div className="grid gap-4 mt-4">
+            <div className="flex justify-between border-b border-[var(--dashboard-border)] pb-3">
+              <span className="text-[var(--dashboard-text-secondary)]">Event status</span>
               <strong>{event?.status ?? 'Upcoming'}</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--dashboard-border)', paddingBottom: '12px' }}>
-              <span style={{ color: 'var(--dashboard-text-secondary)' }}>Expected destination</span>
+            <div className="flex justify-between border-b border-[var(--dashboard-border)] pb-3">
+              <span className="text-[var(--dashboard-text-secondary)]">Expected destination</span>
               <strong>HDFC ••4412</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--dashboard-border)', paddingBottom: '12px' }}>
-              <span style={{ color: 'var(--dashboard-text-secondary)' }}>Terms</span>
+            <div className="flex justify-between border-b border-[var(--dashboard-border)] pb-3">
+              <span className="text-[var(--dashboard-text-secondary)]">Terms</span>
               <strong>Fixed host fee + confirmed bonus</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--dashboard-text-secondary)' }}>Settlement</span>
-              <strong>{isCompleted ? 'Awaiting final venue settlement' : 'After event completion'}</strong>
+            <div className="flex justify-between">
+              <span className="text-[var(--dashboard-text-secondary)]">Settlement</span>
+              <strong>
+                {isCompleted ? 'Awaiting final venue settlement' : 'After event completion'}
+              </strong>
             </div>
           </div>
         </section>
@@ -390,11 +433,13 @@ export function HostLegacyAnalyticsRedirectNotice({ id }: { readonly id: string 
     <EventFrame id={id} active="summary">
       <section className={s('panel')}>
         <h2>Host analytics moved</h2>
-        <p style={{ color: 'var(--dashboard-text-secondary)', margin: '8px 0 16px' }}>
+        <p className="text-[var(--dashboard-text-secondary)] mt-2 mb-4">
           Host-safe guest and earnings information is available in Summary and Earnings. Venue sales
           analytics are not exposed here.
         </p>
-        <Link href={`/host/events/${id}`} className="pd-button">Open summary</Link>
+        <Link href={`/host/events/${id}`} className="pd-button">
+          Open summary
+        </Link>
       </section>
     </EventFrame>
   );

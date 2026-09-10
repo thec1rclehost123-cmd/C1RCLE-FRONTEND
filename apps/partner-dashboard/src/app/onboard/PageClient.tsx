@@ -1,37 +1,39 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Building2,
-  Users,
-  Zap,
-  ChevronRight,
-  CheckCircle2,
-  ArrowLeft,
-  Mail,
-  Lock,
-  User,
-  MapPin,
-  Phone,
-  Briefcase,
-  ShieldCheck,
-  AlertCircle,
-  Eye,
-  EyeOff,
-  Sparkles,
-  RefreshCw,
-  Building,
-  Globe,
-  Loader2,
-  Upload,
-  X,
-  ArrowRight,
-} from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+
 import { isApiClientError } from '@c1rcle/api-client';
 import { login, signup } from '@c1rcle/auth';
+import {
+  AlertIcon as AlertCircle,
+  BackIcon as ArrowLeft,
+  ForwardIcon as ArrowRight,
+  PartnerIcon as Building2,
+  CompanyIcon as Building,
+  BusinessIcon as Briefcase,
+  VerifiedTickIcon as CheckCircle2,
+  NextIcon as ChevronRight,
+  CloseIcon as X,
+  EmailIcon as Mail,
+  LockedIcon as Lock,
+  GuestIcon as User,
+  LocationIcon as MapPin,
+  PhoneIcon as Phone,
+  ComplianceIcon as ShieldCheck,
+  VisibleIcon as Eye,
+  HiddenIcon as EyeOff,
+  InstantIcon as Zap,
+  AssistantIcon as Sparkles,
+  RefreshIcon as RefreshCw,
+  GuestPortalIcon as Globe,
+  SpinnerIcon as Loader2,
+  UploadIcon as Upload,
+  UsersIcon as Users,
+} from '@c1rcle/icons';
 
+import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 import { getFirebaseAuth, RecaptchaVerifier, signInWithPhoneNumber } from '@/lib/firebase/client';
 import {
   addOnboardingDocument,
@@ -42,12 +44,12 @@ import {
   submitOnboardingRequest,
   verifyOnboardingDocument,
 } from '@/lib/onboarding/onboarding-repository';
-import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 
-import type { OnboardingDocumentLabel, OnboardingProfileDto } from '@c1rcle/contracts';
 import type { ConfirmationResult } from '@/lib/firebase/client';
+import type { OnboardingDocumentLabel, OnboardingProfileDto } from '@c1rcle/contracts';
+import type { ComponentType, SVGProps } from 'react';
 
-const Instagram = (props: any) => (
+const Instagram = (props: SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
     xmlns="http://www.w3.org/2000/svg"
@@ -104,10 +106,10 @@ const KYC_FIELD_LABELS: Record<string, OnboardingDocumentLabel> = {
   doc_front: 'id_front',
   doc_back: 'id_back',
   selfie: 'selfie',
-  reg_doc: 'registration_certificate' as OnboardingDocumentLabel,
-  sig_doc_front: 'sig_id_front' as OnboardingDocumentLabel,
-  sig_doc_back: 'sig_id_back' as OnboardingDocumentLabel,
-  sig_selfie: 'sig_selfie' as OnboardingDocumentLabel,
+  reg_doc: 'registration_certificate',
+  sig_doc_front: 'sig_id_front',
+  sig_doc_back: 'sig_id_back',
+  sig_selfie: 'sig_selfie',
 };
 
 const STEP_LABELS: Record<OnboardingStep, string> = {
@@ -123,48 +125,80 @@ const STEP_LABELS: Record<OnboardingStep, string> = {
 };
 
 // ── Error extractor — gateway returns { success: false, error: { message } } ──
+interface GatewayErrorDetail {
+  path?: string;
+  message: string;
+}
+
 function extractError(data: unknown, fallback: string): string {
   if (!data || typeof data !== 'object') return fallback;
-  const obj = data as Record<string, any>;
-  const errorObj = obj['error'] as Record<string, any> | undefined;
+  const obj = data as { error?: unknown; message?: unknown };
+  const errorObj = obj.error;
   if (errorObj && typeof errorObj === 'object') {
-    if (Array.isArray(errorObj['details']) && errorObj['details'].length > 0) {
-      const detailsMsg = errorObj['details']
-        .map((d: any) => {
-          const field = d.path ? d.path.replace(/^(body\.|query\.|params\.)/, '') : '';
-          return field ? `${field}: ${d.message}` : d.message;
+    const err = errorObj as { details?: unknown; message?: unknown };
+    if (Array.isArray(err.details) && err.details.length > 0) {
+      const detailsMsg = err.details
+        .map((d: unknown): string => {
+          if (!d || typeof d !== 'object') return '';
+          const item = d as Partial<GatewayErrorDetail>;
+          const field = item.path ? item.path.replace(/^(body\.|query\.|params\.)/, '') : '';
+          return field ? `${field}: ${item.message ?? ''}` : (item.message ?? '');
         })
+        .filter((msg) => msg.length > 0)
         .join(', ');
-      return `${errorObj['message'] || 'Validation failed'}: ${detailsMsg}`;
+      const msg = typeof err.message === 'string' ? err.message : 'Validation failed';
+      return `${msg}: ${detailsMsg}`;
     }
-    if (typeof errorObj['message'] === 'string') return errorObj['message'];
+    if (typeof err.message === 'string') return err.message;
   }
-  if (typeof obj['message'] === 'string') return obj['message'];
-  if (typeof obj['error'] === 'string') return obj['error'];
+  if (typeof obj.message === 'string') return obj.message;
+  if (typeof obj.error === 'string') return obj.error;
   return fallback;
 }
 
+// Mirrors the old `err.message || fallback` extraction without the `any` — only
+// object errors carry messages; strings/null/undefined falls back (the old code
+// crashed on null/undefined throws; this is strictly safer).
+function errorMessage(err: unknown, fallback: string): string {
+  if (typeof err === 'object' && err !== null) {
+    const message = (err as { message?: unknown }).message;
+    if (typeof message === 'string' && message !== '') return message;
+  }
+  return fallback;
+}
+
+// Some flows (a direct PUT to a pre-signed storage URL) genuinely cannot be
+// issued through ApiClient, which is gateway-scoped. Mirrors
+// src/app/verify/PageClient.tsx.
+const legacyFetch = (...args: Parameters<typeof fetch>) => window.fetch(...args);
+
 // ── OTP API helpers — email only; phone goes through the Firebase SDK ──────────
 async function apiSendOtp(email: string) {
+  // Same-origin call to this app's approved OTP BFF route handler. Raw fetch is
+  // required here because api-client targets the gateway base URL while these
+  // auth flows must hit the local Next route (see src/lib/bff/auth-proxy.ts).
+  // eslint-disable-next-line no-restricted-globals, no-restricted-syntax
   const res = await fetch('/api/auth/otp/send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
   });
   if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
+    const data: unknown = await res.json().catch(() => ({}));
     throw new Error(extractError(data, 'Failed to send code.'));
   }
 }
 
 async function apiVerifyOtp(email: string, code: string) {
+  // Same-origin call to this app's approved OTP BFF route handler — see above.
+  // eslint-disable-next-line no-restricted-globals, no-restricted-syntax
   const res = await fetch('/api/auth/otp/verify', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, code }),
   });
   if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
+    const data: unknown = await res.json().catch(() => ({}));
     throw new Error(extractError(data, 'Incorrect code.'));
   }
 }
@@ -173,7 +207,10 @@ async function apiVerifyOtp(email: string, code: string) {
 function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user: authUser, signOut, loading: authLoading } = useDashboardAuth();
+  const authState = useDashboardAuth();
+  const authUser = authState.user as { id: string; email: string | null } | null;
+  const signOut = authState.signOut;
+  const authLoading = authState.loading;
 
   const [step, setStep] = useState<OnboardingStep>('role');
   const [partnerType, setPartnerType] = useState<PartnerType>('venue');
@@ -253,7 +290,7 @@ function OnboardingContent() {
           bio: formData.bio || undefined,
           businessType: formData.businessType || undefined,
           registrationNumber: formData.registrationNumber || undefined,
-          entityType: entityType || undefined,
+          entityType,
         });
       } catch {
         /* silent — non-critical */
@@ -267,10 +304,12 @@ function OnboardingContent() {
 
   // Pre-fill from URL params (existing behaviour kept)
   useEffect(() => {
-    const type = searchParams.get('type') as PartnerType;
+    const type = searchParams.get('type');
     const email = searchParams.get('email');
     const hostId = searchParams.get('hostId');
-    if (type) setPartnerType(type);
+    if (type)
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- URL type param must pre-fill the selected partner role synchronously on mount; the value is validated by the RoleCard options.
+      setPartnerType(type as PartnerType);
     if (email) {
       setOtpEmail(email);
       setFormData((prev) => ({ ...prev, email }));
@@ -303,8 +342,8 @@ function OnboardingContent() {
         if (!request) {
           try {
             await signOut();
-          } catch (e) {
-            console.error('Error signing out on reload:', e);
+          } catch {
+            // Non-fatal — the wizard restarts from `role` regardless.
           }
           setStep('role');
           return;
@@ -319,19 +358,19 @@ function OnboardingContent() {
         const p = request.profile;
         setFormData((prev) => ({
           ...prev,
-          email: authUser.email || prev.email,
+          email: authUser.email ?? prev.email,
           name: p.legalName || prev.name,
           contactPerson: p.contactPerson || prev.contactPerson,
           phone: p.phone || prev.phone,
           city: p.city || prev.city,
-          area: p.area || prev.area,
-          website: p.website || prev.website,
+          area: p.area ?? prev.area,
+          website: p.website ?? prev.website,
           capacity: p.capacity != null ? String(p.capacity) : prev.capacity,
-          plan: request.plan || prev.plan,
-          instagram: p.instagram || prev.instagram,
-          bio: p.bio || prev.bio,
-          businessType: p.businessType || prev.businessType,
-          registrationNumber: p.registrationNumber || prev.registrationNumber,
+          plan: request.plan,
+          instagram: p.instagram ?? prev.instagram,
+          bio: p.bio ?? prev.bio,
+          businessType: p.businessType ?? prev.businessType,
+          registrationNumber: p.registrationNumber ?? prev.registrationNumber,
         }));
         if (p.phone) setOtpPhone(p.phone);
 
@@ -348,13 +387,13 @@ function OnboardingContent() {
           const kycSteps = seq.filter((s) => s.startsWith('kyc_'));
           setStep(kycSteps[kycSteps.length - 1] ?? 'role');
         }
-      } catch (err) {
-        console.error('Error checking initial onboarding state:', err);
+      } catch {
+        // Non-fatal — a failed state check resumes the wizard at `role`.
         setStep('role');
       }
     };
 
-    checkInitialState();
+    void checkInitialState();
   }, [authLoading, authUser, signOut]);
 
   // Approval polling — reads the real request's `.status` directly.
@@ -368,9 +407,13 @@ function OnboardingContent() {
         /* silent */
       }
     };
-    checkApproval();
-    const interval = setInterval(checkApproval, 10_000);
-    return () => clearInterval(interval);
+    void checkApproval();
+    const interval = setInterval(() => {
+      void checkApproval();
+    }, 10_000);
+    return () => {
+      clearInterval(interval);
+    };
   }, [step, submittedRequestId]);
 
   const handleInputChange = (
@@ -381,18 +424,19 @@ function OnboardingContent() {
 
   function startCooldown(
     setter: React.Dispatch<React.SetStateAction<number>>,
-    ref: React.MutableRefObject<ReturnType<typeof setInterval> | null>,
+    ref: React.RefObject<ReturnType<typeof setInterval> | null>,
   ) {
     setter(60);
-    ref.current = setInterval(() => {
+    const intervalId = setInterval(() => {
       setter((prev) => {
         if (prev <= 1) {
-          clearInterval(ref.current!);
+          clearInterval(intervalId);
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
+    ref.current = intervalId;
   }
 
   // ── Email OTP ─────────────────────────────────────────────────────────────
@@ -413,8 +457,8 @@ function OnboardingContent() {
       setOtpEmailSent(true);
       setFormData((prev) => ({ ...prev, email: otpEmail }));
       startCooldown(setEmailCooldown, emailCooldownRef);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred. Please try again.');
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'An error occurred. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -461,14 +505,14 @@ function OnboardingContent() {
         contactPerson: p.contactPerson || prev.contactPerson,
         phone: p.phone || prev.phone,
         city: p.city || prev.city,
-        area: p.area || prev.area,
-        website: p.website || prev.website,
+        area: p.area ?? prev.area,
+        website: p.website ?? prev.website,
         capacity: p.capacity != null ? String(p.capacity) : prev.capacity,
-        plan: request.plan || prev.plan,
-        instagram: p.instagram || prev.instagram,
-        bio: p.bio || prev.bio,
-        businessType: p.businessType || prev.businessType,
-        registrationNumber: p.registrationNumber || prev.registrationNumber,
+        plan: request.plan,
+        instagram: p.instagram ?? prev.instagram,
+        bio: p.bio ?? prev.bio,
+        businessType: p.businessType ?? prev.businessType,
+        registrationNumber: p.registrationNumber ?? prev.registrationNumber,
       }));
       if (p.phone) setOtpPhone(p.phone);
 
@@ -478,9 +522,8 @@ function OnboardingContent() {
           ? (seq.find((s) => s.startsWith('kyc_')) ?? 'phone_verify')
           : (seq.filter((s) => s.startsWith('kyc_')).pop() ?? 'phone_verify');
       setStep(nextStep);
-    } catch (err: any) {
-      console.error('Existing user login error:', err);
-      setError(err.message || 'Verification failed. Please try again.');
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'Verification failed. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -498,8 +541,8 @@ function OnboardingContent() {
       setOtpEmailSent(true);
       setFormData((prev) => ({ ...prev, email: otpEmail }));
       startCooldown(setEmailCooldown, emailCooldownRef);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(errorMessage(err, ''));
     } finally {
       setLoading(false);
     }
@@ -515,8 +558,8 @@ function OnboardingContent() {
     try {
       await apiVerifyOtp(otpEmail, otpEmailCode);
       setStep('entity_type');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(errorMessage(err, ''));
     } finally {
       setLoading(false);
     }
@@ -565,19 +608,19 @@ function OnboardingContent() {
     setLoading(true);
     try {
       const auth = getFirebaseAuth();
-      recaptchaVerifierRef.current ??= new RecaptchaVerifier(auth as any, 'recaptcha-container', {
+      recaptchaVerifierRef.current ??= new RecaptchaVerifier(auth, 'recaptcha-container', {
         size: 'invisible',
       });
       confirmationResultRef.current = await signInWithPhoneNumber(
-        auth as any,
+        auth,
         dialablePhone,
         recaptchaVerifierRef.current,
       );
       setOtpPhoneSent(true);
       setFormData((prev) => ({ ...prev, phone: dialablePhone }));
       startCooldown(setPhoneCooldown, phoneCooldownRef);
-    } catch (err: any) {
-      setError(err.message || 'Failed to send code.');
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'Failed to send code.'));
     } finally {
       setLoading(false);
     }
@@ -597,30 +640,34 @@ function OnboardingContent() {
     try {
       const credential = await confirmationResultRef.current.confirm(otpPhoneCode);
       const idToken = await credential.user.getIdToken();
+      // eslint-disable-next-line no-restricted-globals, no-restricted-syntax -- same-origin call to this app's approved BFF route handler (mirrors src/lib/bff/auth-proxy.ts).
       const res = await fetch('/api/auth/phone-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber: formData.phone || otpPhone.replace(/\s/g, ''), idToken }),
+        body: JSON.stringify({
+          phoneNumber: formData.phone || otpPhone.replace(/\s/g, ''),
+          idToken,
+        }),
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        const data: unknown = await res.json().catch(() => ({}));
         throw new Error(extractError(data, 'Phone verification failed.'));
       }
       const idx = stepSequence.indexOf('phone_verify');
       const next = stepSequence[idx + 1];
       if (next) {
         setStep(next);
-        saveProgress(next);
+        void saveProgress(next);
       }
-    } catch (err: any) {
-      setError(err.message || 'Incorrect code.');
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'Incorrect code.'));
     } finally {
       setLoading(false);
     }
   };
 
   // ── Step 5: Create the real account, then start the onboarding request ─────
-  const handleCreateAccount = async (e: React.FormEvent) => {
+  const handleCreateAccount = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -681,11 +728,10 @@ function OnboardingContent() {
       const nextStep = stepSequence[stepSequence.indexOf('details') + 1];
       if (nextStep) {
         setStep(nextStep);
-        saveProgress(nextStep);
+        void saveProgress(nextStep);
       }
-    } catch (err: any) {
-      console.error('Account creation error:', err);
-      setError(err.message || 'Failed to create account. Please try again.');
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'Failed to create account. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -702,9 +748,8 @@ function OnboardingContent() {
     try {
       await submitOnboardingRequest(submittedRequestId);
       setStep('success');
-    } catch (err: any) {
-      console.error('Final submit error:', err);
-      setKycError(err.message || 'Failed to submit. Please try again.');
+    } catch (err: unknown) {
+      setKycError(errorMessage(err, 'Failed to submit. Please try again.'));
     } finally {
       setKycSubmitting(false);
     }
@@ -718,12 +763,12 @@ function OnboardingContent() {
       const idx = stepSequence.indexOf(stepId as OnboardingStep);
       const isLastStep = idx === stepSequence.length - 2; // second-to-last (before "success")
       if (isLastStep) {
-        submitApplication();
+        void submitApplication();
       } else if (idx !== -1 && idx < stepSequence.length - 1) {
         const next = stepSequence[idx + 1];
         if (next) {
           setStep(next);
-          saveProgress(next);
+          void saveProgress(next);
         }
       }
     },
@@ -731,7 +776,7 @@ function OnboardingContent() {
   );
 
   const currentStepIndex = stepSequence.indexOf(step);
-  const effectiveUid = createdUid || authUser?.id || '';
+  const effectiveUid = createdUid ?? authUser?.id ?? '';
 
   return (
     <div className="min-h-screen bg-[var(--surface-base)]">
@@ -739,14 +784,16 @@ function OnboardingContent() {
       <header className="sticky top-0 z-50 bg-[var(--surface-base)]/80 backdrop-blur-xl border-b border-[var(--border-subtle)]">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <button
-            onClick={async () => {
-              if (currentStepIndex === 0) {
-                if (authUser) await signOut();
-                router.push('/login');
-              } else {
-                const prevStep = stepSequence[currentStepIndex - 1];
-                if (prevStep) setStep(prevStep);
-              }
+            onClick={() => {
+              void (async () => {
+                if (currentStepIndex === 0) {
+                  if (authUser) await signOut();
+                  router.push('/login');
+                } else {
+                  const prevStep = stepSequence[currentStepIndex - 1];
+                  if (prevStep) setStep(prevStep);
+                }
+              })();
             }}
             className="flex items-center gap-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors text-[11px] font-semibold uppercase tracking-wider"
           >
@@ -779,7 +826,9 @@ function OnboardingContent() {
                     <button
                       type="button"
                       disabled={!isDone}
-                      onClick={() => isDone && setStep(s)}
+                      onClick={() => {
+                        if (isDone) setStep(s);
+                      }}
                       className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-all ${isCurrent ? 'bg-[var(--accent-primary)] text-white' : isDone ? 'bg-[var(--state-success)] text-white cursor-pointer hover:opacity-80' : 'bg-[var(--surface-tertiary)] text-[var(--text-tertiary)] cursor-not-allowed'}`}
                     >
                       {isDone ? '✓' : i + 1}
@@ -829,7 +878,9 @@ function OnboardingContent() {
                   icon={Mail}
                   type="email"
                   value={otpEmail}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOtpEmail(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setOtpEmail(e.target.value);
+                  }}
                   placeholder="you@company.com"
                   disabled={otpEmailSent || emailExists}
                 />
@@ -841,15 +892,17 @@ function OnboardingContent() {
                         icon={Lock}
                         type={showPassword ? 'text' : 'password'}
                         value={loginPassword}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                          setLoginPassword(e.target.value)
-                        }
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          setLoginPassword(e.target.value);
+                        }}
                         placeholder="Enter your password"
                         required
                       />
                       <button
                         type="button"
-                        onClick={() => setShowPassword(!showPassword)}
+                        onClick={() => {
+                          setShowPassword(!showPassword);
+                        }}
                         className="absolute right-4 top-[42px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
                       >
                         {showPassword ? (
@@ -860,7 +913,9 @@ function OnboardingContent() {
                       </button>
                     </div>
                     <ActionButton
-                      onClick={handleExistingUserLogin}
+                      onClick={() => {
+                        void handleExistingUserLogin();
+                      }}
                       loading={loading}
                       loadingText="AUTHORIZING ACCESS..."
                     >
@@ -879,7 +934,12 @@ function OnboardingContent() {
                     </button>
                   </>
                 ) : !otpEmailSent ? (
-                  <ActionButton onClick={handleEmailSubmit} loading={loading}>
+                  <ActionButton
+                    onClick={() => {
+                      void handleEmailSubmit();
+                    }}
+                    loading={loading}
+                  >
                     Continue <ChevronRight className="h-5 w-5" />
                   </ActionButton>
                 ) : (
@@ -889,12 +949,19 @@ function OnboardingContent() {
                       value={otpEmailCode}
                       onChange={setOtpEmailCode}
                     />
-                    <ActionButton onClick={handleVerifyEmailOtp} loading={loading}>
+                    <ActionButton
+                      onClick={() => {
+                        void handleVerifyEmailOtp();
+                      }}
+                      loading={loading}
+                    >
                       Verify Email <ChevronRight className="h-5 w-5" />
                     </ActionButton>
                     <ResendButton
                       cooldown={emailCooldown}
-                      onClick={handleSendEmailOtp}
+                      onClick={() => {
+                        void handleSendEmailOtp();
+                      }}
                       loading={loading}
                     />
                     <button
@@ -941,7 +1008,7 @@ function OnboardingContent() {
                     const val = e.target.value;
                     let sanitized = val.replace(/[^0-9+\s]/g, '');
                     if (sanitized.indexOf('+') > 0) {
-                      sanitized = sanitized[0] + sanitized.slice(1).replace(/\+/g, '');
+                      sanitized = (sanitized[0] ?? '') + sanitized.slice(1).replace(/\+/g, '');
                     }
                     setOtpPhone(sanitized);
                   }}
@@ -949,7 +1016,12 @@ function OnboardingContent() {
                   disabled={otpPhoneSent}
                 />
                 {!otpPhoneSent ? (
-                  <ActionButton onClick={handleSendPhoneOtp} loading={loading}>
+                  <ActionButton
+                    onClick={() => {
+                      void handleSendPhoneOtp();
+                    }}
+                    loading={loading}
+                  >
                     Send SMS Code <ChevronRight className="h-5 w-5" />
                   </ActionButton>
                 ) : (
@@ -959,12 +1031,19 @@ function OnboardingContent() {
                       value={otpPhoneCode}
                       onChange={setOtpPhoneCode}
                     />
-                    <ActionButton onClick={handleVerifyPhoneOtp} loading={loading}>
+                    <ActionButton
+                      onClick={() => {
+                        void handleVerifyPhoneOtp();
+                      }}
+                      loading={loading}
+                    >
                       Verify Phone <ChevronRight className="h-5 w-5" />
                     </ActionButton>
                     <ResendButton
                       cooldown={phoneCooldown}
-                      onClick={handleSendPhoneOtp}
+                      onClick={() => {
+                        void handleSendPhoneOtp();
+                      }}
                       loading={loading}
                     />
                     <button
@@ -1005,14 +1084,18 @@ function OnboardingContent() {
                   title="Individual"
                   description="Freelancer, independent promoter, solo DJ, or individual host."
                   active={entityType === 'individual'}
-                  onClick={() => setEntityType('individual')}
+                  onClick={() => {
+                    setEntityType('individual');
+                  }}
                 />
                 <RoleCard
-                  icon={Building}
+                  icon={Building as ComponentType<SVGProps<SVGSVGElement>>}
                   title="Business"
                   description="Registered company, club, LLP, partnership firm, or trust."
                   active={entityType === 'business'}
-                  onClick={() => setEntityType('business')}
+                  onClick={() => {
+                    setEntityType('business');
+                  }}
                 />
               </div>
               <ActionButton
@@ -1047,21 +1130,27 @@ function OnboardingContent() {
                   title="Venue Partner"
                   description="Direct management for nightlife venues, clubs, and lounge spaces."
                   active={partnerType === 'venue'}
-                  onClick={() => setPartnerType('venue')}
+                  onClick={() => {
+                    setPartnerType('venue');
+                  }}
                 />
                 <RoleCard
                   icon={Users}
                   title="Event Host"
                   description="For organizers, DJs, and collectives hosting independent events."
                   active={partnerType === 'host'}
-                  onClick={() => setPartnerType('host')}
+                  onClick={() => {
+                    setPartnerType('host');
+                  }}
                 />
                 <RoleCard
-                  icon={Zap}
+                  icon={Zap as ComponentType<SVGProps<SVGSVGElement>>}
                   title="Promoter"
                   description="Access tools for ticket distribution and guestlist management."
                   active={partnerType === 'promoter'}
-                  onClick={() => setPartnerType('promoter')}
+                  onClick={() => {
+                    setPartnerType('promoter');
+                  }}
                 />
               </div>
               <ActionButton
@@ -1097,9 +1186,19 @@ function OnboardingContent() {
                 description="Tell us about your business. You'll upload verification documents in the next steps."
               />
 
-              <ErrorBanner error={error} onLoginClick={() => router.push('/login')} />
+              <ErrorBanner
+                error={error}
+                onLoginClick={() => {
+                  router.push('/login');
+                }}
+              />
 
-              <form onSubmit={handleCreateAccount} className="space-y-8">
+              <form
+                onSubmit={(e) => {
+                  void handleCreateAccount(e);
+                }}
+                className="space-y-8"
+              >
                 {/* Credentials section */}
                 {!authUser ? (
                   <div className="space-y-5">
@@ -1128,7 +1227,9 @@ function OnboardingContent() {
                       />
                       <button
                         type="button"
-                        onClick={() => setShowPassword(!showPassword)}
+                        onClick={() => {
+                          setShowPassword(!showPassword);
+                        }}
                         className="absolute right-4 top-[42px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
                       >
                         {showPassword ? (
@@ -1143,7 +1244,7 @@ function OnboardingContent() {
                   <div className="p-5 rounded-2xl bg-[var(--state-success-bg)] border border-[var(--state-success)]/20 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="h-11 w-11 rounded-xl bg-[var(--state-success)] flex items-center justify-center font-bold text-white text-lg">
-                        {authUser.email?.[0].toUpperCase()}
+                        {authUser.email?.slice(0, 1).toUpperCase()}
                       </div>
                       <div>
                         <p className="text-[11px] font-semibold text-[var(--state-success)] uppercase tracking-wider mb-0.5">
@@ -1168,7 +1269,7 @@ function OnboardingContent() {
                     <>
                       <FormInput
                         label="Legal Business Name"
-                        icon={Building}
+                        icon={Building as ComponentType<SVGProps<SVGSVGElement>>}
                         name="name"
                         value={formData.name}
                         onChange={handleInputChange}
@@ -1190,7 +1291,7 @@ function OnboardingContent() {
                       />
                       <FormInput
                         label="Registration / CIN Number (optional)"
-                        icon={Briefcase}
+                        icon={Briefcase as ComponentType<SVGProps<SVGSVGElement>>}
                         name="registrationNumber"
                         value={formData.registrationNumber}
                         onChange={handleInputChange}
@@ -1224,7 +1325,7 @@ function OnboardingContent() {
                   <div className="grid grid-cols-2 gap-4">
                     <FormInput
                       label={entityType === 'business' ? 'Authorized Contact' : 'Contact Person'}
-                      icon={Briefcase}
+                      icon={Briefcase as ComponentType<SVGProps<SVGSVGElement>>}
                       name="contactPerson"
                       value={formData.contactPerson}
                       onChange={handleInputChange}
@@ -1338,8 +1439,11 @@ function OnboardingContent() {
                         placeholder="@yourusername"
                       />
                       <div className="space-y-2">
-                        <label className="input-label">Short Bio</label>
+                        <label htmlFor="bio" className="input-label">
+                          Short Bio
+                        </label>
                         <textarea
+                          id="bio"
                           name="bio"
                           value={formData.bio}
                           onChange={handleInputChange}
@@ -1349,8 +1453,11 @@ function OnboardingContent() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="input-label">Upcoming Events (optional)</label>
+                        <label htmlFor="upcomingEventsText" className="input-label">
+                          Upcoming Events (optional)
+                        </label>
                         <textarea
+                          id="upcomingEventsText"
                           name="upcomingEventsText"
                           value={formData.upcomingEventsText}
                           onChange={handleInputChange}
@@ -1364,8 +1471,11 @@ function OnboardingContent() {
                         </p>
                       </div>
                       <div className="space-y-2">
-                        <label className="input-label">Past Event Highlights (optional)</label>
+                        <label htmlFor="pastEventsText" className="input-label">
+                          Past Event Highlights (optional)
+                        </label>
                         <textarea
+                          id="pastEventsText"
                           name="pastEventsText"
                           value={formData.pastEventsText}
                           onChange={handleInputChange}
@@ -1422,7 +1532,9 @@ function OnboardingContent() {
                 uid={effectiveUid}
                 requestId={submittedRequestId}
                 initialData={{}}
-                onSubmit={(data) => handleKycStep('kyc_identity', data)}
+                onSubmit={(data) => {
+                  handleKycStep('kyc_identity', data);
+                }}
                 submitting={false}
                 submitLabel="Continue"
               />
@@ -1453,7 +1565,9 @@ function OnboardingContent() {
                   businessType: formData.businessType,
                   cin: formData.registrationNumber,
                 }}
-                onSubmit={(data) => handleKycStep('kyc_business', data)}
+                onSubmit={(data) => {
+                  handleKycStep('kyc_business', data);
+                }}
                 submitting={false}
                 submitLabel="Continue"
               />
@@ -1480,7 +1594,9 @@ function OnboardingContent() {
                 uid={effectiveUid}
                 requestId={submittedRequestId}
                 initialData={{}}
-                onSubmit={(data) => handleKycStep('kyc_signatory', data)}
+                onSubmit={(data) => {
+                  handleKycStep('kyc_signatory', data);
+                }}
                 submitting={false}
                 submitLabel="Continue"
               />
@@ -1517,9 +1633,11 @@ function OnboardingContent() {
                     has been approved. Log in to access your dashboard.
                   </p>
                   <button
-                    onClick={async () => {
-                      if (authUser) await signOut();
-                      router.push('/login');
+                    onClick={() => {
+                      void (async () => {
+                        if (authUser) await signOut();
+                        router.push('/login');
+                      })();
                     }}
                     className="inline-flex items-center gap-3 px-8 py-3.5 rounded-2xl bg-[var(--accent-primary)] text-white font-semibold text-[14px] hover:brightness-110 transition-all shadow-lg shadow-[var(--accent-primary)]/20"
                   >
@@ -1560,9 +1678,11 @@ function OnboardingContent() {
                     </div>
                   </div>
                   <button
-                    onClick={async () => {
-                      if (authUser) await signOut();
-                      router.push('/login');
+                    onClick={() => {
+                      void (async () => {
+                        if (authUser) await signOut();
+                        router.push('/login');
+                      })();
                     }}
                     className="inline-flex items-center gap-2 text-[var(--accent-primary)] font-semibold text-[14px] hover:underline"
                   >
@@ -1578,7 +1698,7 @@ function OnboardingContent() {
   );
 }
 
-export default function OnboardingPage() {
+export function OnboardingPage() {
   return (
     <Suspense
       fallback={
@@ -1626,7 +1746,7 @@ function RoleCard({
   active,
   onClick,
 }: {
-  icon: any;
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
   title: string;
   description: string;
   active: boolean;
@@ -1663,7 +1783,14 @@ function RoleCard({
   );
 }
 
-function FormInput({ label, icon: Icon, ...props }: any) {
+function FormInput({
+  label,
+  icon: Icon,
+  ...props
+}: {
+  label: string;
+  icon?: ComponentType<SVGProps<SVGSVGElement>>;
+} & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div className="space-y-2">
       <label className="input-label">{label}</label>
@@ -1680,7 +1807,14 @@ function FormInput({ label, icon: Icon, ...props }: any) {
   );
 }
 
-function FormSelect({ label, options, ...props }: any) {
+function FormSelect({
+  label,
+  options,
+  ...props
+}: {
+  label: string;
+  options: { value: string; label: string }[];
+} & React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <div className="space-y-2">
       <label className="input-label">{label}</label>
@@ -1727,7 +1861,9 @@ function OtpInput({
         inputMode="numeric"
         maxLength={6}
         value={value}
-        onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
+        onChange={(e) => {
+          onChange(e.target.value.replace(/\D/g, '').slice(0, 6));
+        }}
         placeholder="000000"
         className="w-full bg-[var(--surface-secondary)] border border-[var(--border-subtle)] rounded-xl px-4 py-3.5 text-[24px] font-bold tracking-[0.5em] text-center text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] transition-all outline-none focus:bg-[var(--surface-base)] focus:border-[var(--accent-primary)] focus:ring-3 focus:ring-[var(--accent-glow)]"
       />
@@ -1782,7 +1918,7 @@ function ResendButton({
       className="w-full flex items-center justify-center gap-2 text-[13px] font-semibold text-[var(--text-tertiary)] hover:text-[var(--accent-primary)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
     >
       <RefreshCw className="h-4 w-4" />
-      {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend Code'}
+      {cooldown > 0 ? `Resend in ${String(cooldown)}s` : 'Resend Code'}
     </button>
   );
 }
@@ -1849,10 +1985,10 @@ function KycFileZone({
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Real 3-step flow: mint a pre-signed URL, PUT the file straight to
-  // storage (the one legitimate direct `fetch` — not a gateway call), then
-  // confirm the document on the onboarding request.
+  // storage via `legacyFetch` (the one legitimate direct storage call — not a
+  // gateway call; ApiClient is gateway-scoped), then confirm the document on
+  // the onboarding request.
   const handleFile = async (file: File) => {
-    if (!file) return;
     setUploadError('');
     if (!requestId) {
       setUploadError('Your application has not been created yet. Please go back and try again.');
@@ -1874,11 +2010,11 @@ function KycFileZone({
       const { uploadUrl, method, headers, storagePath } = await getDocumentUploadUrl(
         requestId,
         docLabel,
-        file.type as 'image/jpeg' | 'image/png' | 'image/webp',
+        file.type,
       );
       setProgress(50);
 
-      const putRes = await fetch(uploadUrl, { method, headers, body: file });
+      const putRes = await legacyFetch(uploadUrl, { method, headers, body: file });
       if (!putRes.ok) {
         throw new Error('Upload failed. Please try again.');
       }
@@ -1887,9 +2023,8 @@ function KycFileZone({
       await addOnboardingDocument(requestId, docLabel, storagePath);
       setProgress(100);
       onChange(storagePath);
-    } catch (e: any) {
-      console.error('Upload error:', e);
-      setUploadError(e.message || 'Upload failed. Please try again.');
+    } catch (e: unknown) {
+      setUploadError(errorMessage(e, 'Upload failed. Please try again.'));
     } finally {
       setUploading(false);
     }
@@ -1906,7 +2041,9 @@ function KycFileZone({
           <span className="text-[12px] text-emerald-400 font-medium truncate flex-1">Uploaded</span>
           <button
             type="button"
-            onClick={() => onChange(null)}
+            onClick={() => {
+              onChange(null);
+            }}
             className="p-1 rounded-lg hover:bg-red-500/20 text-[var(--text-tertiary)] hover:text-red-400 transition-colors"
           >
             <X className="h-3.5 w-3.5" />
@@ -1921,7 +2058,8 @@ function KycFileZone({
           <div className="h-1 rounded-full bg-[var(--surface-tertiary)] overflow-hidden">
             <div
               className="h-full bg-[var(--accent-primary)] rounded-full transition-all"
-              style={{ width: `${progress}%` }}
+              // eslint-disable-next-line no-restricted-syntax -- runtime upload progress is a dynamic width that Tailwind arbitrary-value utilities cannot express statically
+              style={{ width: `${String(progress)}%` }}
             />
           </div>
         </div>
@@ -1950,7 +2088,10 @@ function KycFileZone({
         type="file"
         accept="image/jpeg,image/png,image/webp"
         className="hidden"
-        onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void handleFile(file);
+        }}
       />
     </div>
   );
@@ -2003,7 +2144,9 @@ function KycSelectField({
       </label>
       <select
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          onChange(e.target.value);
+        }}
         className="w-full h-12 px-4 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/30 focus:border-[var(--accent-primary)]/50 transition-all appearance-none"
       >
         <option value="">Select…</option>
@@ -2039,18 +2182,20 @@ function KycIdentityForm({
   const [docFront, setDocFront] = useState<string | null>(
     (initialData['docFrontUrl'] as string) || null,
   );
-  const [docBack, setDocBack] = useState<string | null>((initialData['docBackUrl'] as string) || null);
+  const [docBack, setDocBack] = useState<string | null>(
+    (initialData['docBackUrl'] as string) || null,
+  );
   const [selfie, setSelfie] = useState<string | null>((initialData['selfieUrl'] as string) || null);
 
   // New state for Aadhaar verification
   const [verifying, setVerifying] = useState(false);
-  const [isVerified, setIsVerified] = useState(!!initialData['isVerified']);
+  const [isVerified, setIsVerified] = useState(Boolean(initialData['isVerified']));
   const [verificationError, setVerificationError] = useState('');
 
   const needsBack = ['aadhaar', 'driving_licence', 'voter_id'].includes(idType);
 
   const handleVerifyAadhaar = async () => {
-    if (!idNumber || idNumber.length !== 12) {
+    if (idNumber.length !== 12) {
       setVerificationError('Aadhaar number must be 12 digits.');
       return;
     }
@@ -2064,11 +2209,11 @@ function KycIdentityForm({
         documentNumber: idNumber,
       });
       if (!result.passed) {
-        throw new Error(result.reason || 'Verification failed.');
+        throw new Error(result.reason ?? 'Verification failed.');
       }
       setIsVerified(true);
-    } catch (err: any) {
-      setVerificationError(err.message);
+    } catch (err: unknown) {
+      setVerificationError(errorMessage(err, ''));
       setIsVerified(false);
     } finally {
       setVerifying(false);
@@ -2076,11 +2221,12 @@ function KycIdentityForm({
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- real UX requirement: switching the selected ID type or number must clear stale verification state before the next render.
     setIsVerified(false);
     setVerificationError('');
   }, [idNumber, idType]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!idType || !idNumber || !docFront || !selfie) return;
     if (needsBack && !docBack) return;
@@ -2122,7 +2268,9 @@ function KycIdentityForm({
           {idType === 'aadhaar' && (
             <button
               type="button"
-              onClick={handleVerifyAadhaar}
+              onClick={() => {
+                void handleVerifyAadhaar();
+              }}
               disabled={verifying || isVerified || idNumber.length !== 12}
               className={`h-12 px-6 rounded-xl font-bold text-[11px] uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${isVerified ? 'bg-emerald-500/20 text-emerald-500 cursor-default' : 'bg-[var(--accent-primary)] text-white hover:brightness-110 disabled:opacity-40'}`}
             >
@@ -2228,7 +2376,7 @@ function KycBusinessForm({
   const [address, setAddress] = useState((initialData['address'] as string) || '');
   const [regDoc, setRegDoc] = useState<string | null>((initialData['regDocUrl'] as string) || null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!pan || !address || !regDoc) return;
     onSubmit({ legalName, businessType, pan, cin, gst, address, regDocUrl: regDoc });
@@ -2257,7 +2405,7 @@ function KycBusinessForm({
         <div className="flex items-center justify-between">
           <span className="text-[12px] text-[var(--text-tertiary)]">Business Type</span>
           <span className="text-[13px] font-semibold text-[var(--text-primary)]">
-            {BUSINESS_TYPE_LABELS[businessType] || businessType || '—'}
+            {(BUSINESS_TYPE_LABELS[businessType] ?? businessType) || '—'}
           </span>
         </div>
         {cin && (
@@ -2329,12 +2477,14 @@ function KycSignatoryForm({
   const [docFront, setDocFront] = useState<string | null>(
     (initialData['docFrontUrl'] as string) || null,
   );
-  const [docBack, setDocBack] = useState<string | null>((initialData['docBackUrl'] as string) || null);
+  const [docBack, setDocBack] = useState<string | null>(
+    (initialData['docBackUrl'] as string) || null,
+  );
   const [selfie, setSelfie] = useState<string | null>((initialData['selfieUrl'] as string) || null);
   const [declared, setDeclared] = useState(false);
   const needsBack = ['aadhaar', 'driving_licence', 'voter_id'].includes(idType);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (
       !fullName ||
@@ -2456,7 +2606,9 @@ function KycSignatoryForm({
         <input
           type="checkbox"
           checked={declared}
-          onChange={(e) => setDeclared(e.target.checked)}
+          onChange={(e) => {
+            setDeclared(e.target.checked);
+          }}
           className="mt-0.5 h-4 w-4 rounded border-[var(--border-subtle)] accent-[var(--accent-primary)]"
         />
         <span className="text-[12px] text-[var(--text-secondary)] leading-relaxed">

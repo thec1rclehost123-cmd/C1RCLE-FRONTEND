@@ -27,8 +27,7 @@ export interface StudioConfig {
   readonly navigation: readonly StudioNavigationItem[];
 }
 
-const studioPath = (role: StudioRole, segment: string): string =>
-  `/partner/${role}/${segment}`;
+const studioPath = (role: StudioRole, segment: string): string => `/partner/${role}/${segment}`;
 
 export const STUDIO_CONFIG: Readonly<Record<StudioRole, StudioConfig>> = {
   venue: {

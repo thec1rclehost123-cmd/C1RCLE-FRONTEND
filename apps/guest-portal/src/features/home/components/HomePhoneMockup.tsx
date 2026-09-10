@@ -30,8 +30,7 @@ export function HomePhoneMockup({
   screen6Ref: RefObject<HTMLDivElement | null>;
   activeScreen: number;
 }) {
-  const shouldMountScreen = (screenIndex: number) =>
-    Math.abs(screenIndex - activeScreen) <= 1;
+  const shouldMountScreen = (screenIndex: number) => Math.abs(screenIndex - activeScreen) <= 1;
 
   const renderScreen = (screenIndex: number) => {
     if (!shouldMountScreen(screenIndex)) return null;
@@ -89,50 +88,32 @@ export function HomePhoneMockup({
           />
 
           {/* Screen 1: Discover New Events */}
-          <div
-            ref={screen1Ref}
-            className="absolute inset-0 translate-x-0"
-          >
+          <div ref={screen1Ref} className="absolute inset-0 translate-x-0">
             {renderScreen(0)}
           </div>
 
           {/* Screen 2: Interested People */}
-          <div
-            ref={screen2Ref}
-            className="absolute inset-0 translate-x-full"
-          >
+          <div ref={screen2Ref} className="absolute inset-0 translate-x-full">
             {renderScreen(1)}
           </div>
 
           {/* Screen 3: Ask Outs */}
-          <div
-            ref={screen3Ref}
-            className="absolute inset-0 translate-x-full"
-          >
+          <div ref={screen3Ref} className="absolute inset-0 translate-x-full">
             {renderScreen(2)}
           </div>
 
           {/* Screen 4: Buy, Share, Transfer Tickets */}
-          <div
-            ref={screen4Ref}
-            className="absolute inset-0 translate-x-full"
-          >
+          <div ref={screen4Ref} className="absolute inset-0 translate-x-full">
             {renderScreen(3)}
           </div>
 
           {/* Screen 5: Event Only Group Chat */}
-          <div
-            ref={screen5Ref}
-            className="absolute inset-0 translate-x-full"
-          >
+          <div ref={screen5Ref} className="absolute inset-0 translate-x-full">
             {renderScreen(4)}
           </div>
 
           {/* Screen 6: Priority Passes */}
-          <div
-            ref={screen6Ref}
-            className="absolute inset-0 translate-x-full"
-          >
+          <div ref={screen6Ref} className="absolute inset-0 translate-x-full">
             {renderScreen(5)}
           </div>
         </div>

@@ -5,7 +5,6 @@ import { HostEventSummaryScreen } from './HostEventDetailScreen';
 
 import type { ReactNode } from 'react';
 
-
 const auth = vi.hoisted(() => ({ canDo: vi.fn((_permission: string) => false) }));
 
 vi.mock('@/components/providers/DashboardAuthProvider', () => ({
@@ -32,8 +31,17 @@ vi.mock('@c1rcle/icons', () => {
 });
 
 vi.mock('next/link', () => ({
-  default: ({ children, href, ...props }: { readonly children: ReactNode; readonly href: string }) => (
-    <a href={href} {...props}>{children}</a>
+  default: ({
+    children,
+    href,
+    ...props
+  }: {
+    readonly children: ReactNode;
+    readonly href: string;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
   ),
 }));
 

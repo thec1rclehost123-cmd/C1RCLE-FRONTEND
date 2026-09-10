@@ -179,7 +179,8 @@ export interface EventDetailTierSummary {
   readonly accent: 'orange' | 'violet' | 'teal';
 }
 
-export type EventSalesTone = 'orange' | 'violet' | 'lavender' | 'teal' | 'pink' | 'yellow' | 'green' | 'red' | 'muted';
+export type EventSalesTone =
+  'orange' | 'violet' | 'lavender' | 'teal' | 'pink' | 'yellow' | 'green' | 'red' | 'muted';
 
 export interface EventSalesFunnelStat {
   readonly label: string;
@@ -436,7 +437,8 @@ export type PartnerSubView = 'connected' | 'discover' | 'requests';
 export type PartnerRelationshipStatus = 'Partnered' | 'Invite sent' | 'Waiting on them';
 export type PartnerRequestDirection = 'incoming' | 'outgoing';
 export type PartnerCardTone = 'orange' | 'violet' | 'teal' | 'pink' | 'gold' | 'indigo' | 'slate';
-export type PartnerPermission = 'Door check-in' | 'Finance view' | 'Event editing' | 'Guest messaging';
+export type PartnerPermission =
+  'Door check-in' | 'Finance view' | 'Event editing' | 'Guest messaging';
 
 export interface PartnerStat {
   readonly label: string;
@@ -697,8 +699,10 @@ export interface PromoterLeaderboardData {
   readonly cities: readonly { readonly value: string; readonly label: string }[];
 }
 
-export type PartnerSearchResultType = 'event' | 'partner' | 'guest' | 'order' | 'request' | 'finance' | 'settings';
-export type PartnerSearchIcon = 'event' | 'partner' | 'guest' | 'order' | 'request' | 'finance' | 'settings';
+export type PartnerSearchResultType =
+  'event' | 'partner' | 'guest' | 'order' | 'request' | 'finance' | 'settings';
+export type PartnerSearchIcon =
+  'event' | 'partner' | 'guest' | 'order' | 'request' | 'finance' | 'settings';
 
 export interface PartnerSearchResult {
   readonly id: string;
@@ -717,7 +721,8 @@ export interface PartnerSearchData {
 }
 
 export type PartnerNotificationType = 'payout' | 'request' | 'marketing' | 'operations' | 'system';
-export type PartnerNotificationIcon = 'finance' | 'partner' | 'marketing' | 'operations' | 'request';
+export type PartnerNotificationIcon =
+  'finance' | 'partner' | 'marketing' | 'operations' | 'request';
 
 export interface PartnerNotification {
   readonly id: string;

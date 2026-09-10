@@ -36,7 +36,15 @@ export const salesWidthClasses: Readonly<Record<number, string>> = {
   100: styles['width100'] ?? '',
 };
 
-export function EventSalesPanel({ title, eyebrow, children }: { readonly title?: string; readonly eyebrow?: string; readonly children: ReactNode }) {
+export function EventSalesPanel({
+  title,
+  eyebrow,
+  children,
+}: {
+  readonly title?: string;
+  readonly eyebrow?: string;
+  readonly children: ReactNode;
+}) {
   return (
     <article className={styles['salesPanel']}>
       {eyebrow ? <div className={styles['salesPanelEyebrow']}>{eyebrow}</div> : null}
@@ -46,6 +54,18 @@ export function EventSalesPanel({ title, eyebrow, children }: { readonly title?:
   );
 }
 
-export function EventSalesBar({ fillPercent, tone }: { readonly fillPercent: number; readonly tone: EventSalesTone }) {
-  return <span className={[styles['salesBar'], salesToneClasses[tone], salesWidthClasses[fillPercent] ?? ''].filter(Boolean).join(' ')} />;
+export function EventSalesBar({
+  fillPercent,
+  tone,
+}: {
+  readonly fillPercent: number;
+  readonly tone: EventSalesTone;
+}) {
+  return (
+    <span
+      className={[styles['salesBar'], salesToneClasses[tone], salesWidthClasses[fillPercent] ?? '']
+        .filter(Boolean)
+        .join(' ')}
+    />
+  );
 }

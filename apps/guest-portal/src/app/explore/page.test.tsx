@@ -23,34 +23,41 @@ vi.mock('next/image', () => ({
 }));
 
 describe('ExplorePage', () => {
-  it('renders the featured experience and fixture-backed event grid', () => {
-    render(<ExplorePage />);
+  it('renders the featured experience and fixture-backed event grid', async () => {
+    render(await ExplorePage());
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Neon Nights' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Discover Events and Experiences' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Neon Nights' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Neon Nights featured poster' })).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { level: 2, name: /What's on in All Cities/i }),
     ).toBeInTheDocument();
     expect(screen.getByText('6 events found')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'View Sunday Soul' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Sunday Soul/i })).toBeInTheDocument();
     expect(screen.getByLabelText('184 people interested')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /pause featured events/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /pause featured events/i }),
+    ).not.toBeInTheDocument();
   });
 
-  it('searches and filters fixtures without backend behavior', () => {
-    render(<ExplorePage />);
+  it('searches and filters fixtures without backend behavior', async () => {
+    render(await ExplorePage());
 
     fireEvent.change(screen.getByPlaceholderText('Events, venues, artists, cities'), {
       target: { value: 'jazz' },
     });
 
     expect(screen.getByText('1 event found')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'View Rooftop Jazz' })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'View Neon Nights' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Rooftop Jazz event poster/i })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /Neon Nights event poster/i }),
+    ).not.toBeInTheDocument();
   });
 
-  it('shows an honest empty state and restores fixtures', () => {
-    render(<ExplorePage />);
+  it('shows an honest empty state and restores fixtures', async () => {
+    render(await ExplorePage());
 
     fireEvent.change(screen.getByPlaceholderText('Events, venues, artists, cities'), {
       target: { value: 'not-a-real-fixture' },
@@ -61,18 +68,18 @@ describe('ExplorePage', () => {
     expect(screen.getByText('6 events found')).toBeInTheDocument();
   });
 
-  it('changes featured events with accessible carousel controls', () => {
-    render(<ExplorePage />);
+  it('changes featured events with accessible carousel controls', async () => {
+    render(await ExplorePage());
 
     fireEvent.click(screen.getByRole('button', { name: 'Next featured event' }));
-    expect(screen.getByRole('heading', { level: 1, name: 'Rooftop Jazz' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Rooftop Jazz' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Show Rooftop Jazz' })).toHaveAttribute(
       'aria-current',
       'true',
     );
   });
 
-  it('does not auto-rotate when reduced motion is requested', () => {
+  it('does not auto-rotate when reduced motion is requested', async () => {
     vi.useFakeTimers();
     vi.stubGlobal(
       'matchMedia',
@@ -83,12 +90,12 @@ describe('ExplorePage', () => {
       })),
     );
 
-    render(<ExplorePage />);
+    render(await ExplorePage());
     act(() => {
       vi.advanceTimersByTime(7000);
     });
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Neon Nights' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Neon Nights' })).toBeInTheDocument();
     vi.unstubAllGlobals();
     vi.useRealTimers();
   });

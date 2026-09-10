@@ -4,7 +4,14 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
-import { CalendarIcon, ForwardIcon, LinkIcon, LocationIcon, SearchIcon, TimeIcon } from '@c1rcle/icons';
+import {
+  CalendarIcon,
+  ForwardIcon,
+  LinkIcon,
+  LocationIcon,
+  SearchIcon,
+  TimeIcon,
+} from '@c1rcle/icons';
 
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 
@@ -17,7 +24,7 @@ import type { PromoterEventsData } from '@/data/partner-data-source';
 type PromoterEventsTab = 'discover' | 'linked';
 
 const cityOptions = ['all', 'Pune', 'Mumbai'] as const;
-type PromoterCity = typeof cityOptions[number];
+type PromoterCity = (typeof cityOptions)[number];
 
 export function PromoterEventsScreen({
   data,
@@ -34,13 +41,25 @@ export function PromoterEventsScreen({
   const pathname = usePathname();
   const [tab, setTab] = useState<PromoterEventsTab>(initialTab);
   const [query, setQuery] = useState(initialSearch);
-  const [city, setCity] = useState<PromoterCity>(cityOptions.includes(initialCity as PromoterCity) ? initialCity as PromoterCity : 'all');
+  const [city, setCity] = useState<PromoterCity>(
+    cityOptions.includes(initialCity as PromoterCity) ? (initialCity as PromoterCity) : 'all',
+  );
 
-  const visibleDiscoverEvents = useMemo(() => filterEvents(data.discoverEvents, query, city), [city, data.discoverEvents, query]);
-  const visibleLinkedEvents = useMemo(() => filterEvents(data.linkedEvents, query, city), [city, data.linkedEvents, query]);
+  const visibleDiscoverEvents = useMemo(
+    () => filterEvents(data.discoverEvents, query, city),
+    [city, data.discoverEvents, query],
+  );
+  const visibleLinkedEvents = useMemo(
+    () => filterEvents(data.linkedEvents, query, city),
+    [city, data.linkedEvents, query],
+  );
   const eventHref = (eventId: string) => `${pathname}/${eventId}`;
 
-  const updateUrl = (next: { readonly tab?: PromoterEventsTab; readonly query?: string; readonly city?: PromoterCity }) => {
+  const updateUrl = (next: {
+    readonly tab?: PromoterEventsTab;
+    readonly query?: string;
+    readonly city?: PromoterCity;
+  }) => {
     const params = new URLSearchParams();
     const nextTab = next.tab ?? tab;
     const nextQuery = next.query ?? query;
@@ -52,9 +71,18 @@ export function PromoterEventsScreen({
     router.replace(search ? `${pathname}?${search}` : pathname, { scroll: false });
   };
 
-  const onTabChange = (nextTab: PromoterEventsTab) => { setTab(nextTab); updateUrl({ tab: nextTab }); };
-  const onQueryChange = (value: string) => { setQuery(value); updateUrl({ query: value }); };
-  const onCityChange = (value: PromoterCity) => { setCity(value); updateUrl({ city: value }); };
+  const onTabChange = (nextTab: PromoterEventsTab) => {
+    setTab(nextTab);
+    updateUrl({ tab: nextTab });
+  };
+  const onQueryChange = (value: string) => {
+    setQuery(value);
+    updateUrl({ query: value });
+  };
+  const onCityChange = (value: PromoterCity) => {
+    setCity(value);
+    updateUrl({ city: value });
+  };
   const visibleEvents = tab === 'discover' ? visibleDiscoverEvents : visibleLinkedEvents;
 
   return (
@@ -63,10 +91,26 @@ export function PromoterEventsScreen({
         <div className={styles['promoterPage']}>
           <h1>Events</h1>
           <div className={styles['promoterTabs']} role="tablist" aria-label="Promoter event views">
-            <button className={styles['promoterTab']} type="button" role="tab" aria-selected={tab === 'discover'} onClick={() => { onTabChange('discover'); }}>
+            <button
+              className={styles['promoterTab']}
+              type="button"
+              role="tab"
+              aria-selected={tab === 'discover'}
+              onClick={() => {
+                onTabChange('discover');
+              }}
+            >
               Discover <span className={styles['promoterTabCount']}>{data.discoverCount}</span>
             </button>
-            <button className={styles['promoterTab']} type="button" role="tab" aria-selected={tab === 'linked'} onClick={() => { onTabChange('linked'); }}>
+            <button
+              className={styles['promoterTab']}
+              type="button"
+              role="tab"
+              aria-selected={tab === 'linked'}
+              onClick={() => {
+                onTabChange('linked');
+              }}
+            >
               Linked Events <span className={styles['promoterTabCount']}>{data.linkedCount}</span>
             </button>
           </div>
@@ -75,33 +119,60 @@ export function PromoterEventsScreen({
             <label className={styles['promoterSearch']}>
               <span className={styles['srOnly']}>Search events, venues, or categories</span>
               <SearchIcon size={15} aria-hidden="true" />
-              <input type="search" value={query} onChange={(event) => { onQueryChange(event.target.value); }} placeholder="Search events, venues, or categories" />
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => {
+                  onQueryChange(event.target.value);
+                }}
+                placeholder="Search events, venues, or categories"
+              />
             </label>
-            <select className={styles['promoterCity']} aria-label="Event city" value={city} onChange={(event) => { onCityChange(event.target.value as PromoterCity); }}>
+            <select
+              className={styles['promoterCity']}
+              aria-label="Event city"
+              value={city}
+              onChange={(event) => {
+                onCityChange(event.target.value as PromoterCity);
+              }}
+            >
               <option value="all">All Cities</option>
               <option value="Pune">Pune</option>
               <option value="Mumbai">Mumbai</option>
             </select>
           </div>
 
-          {visibleEvents.length === 0 ? <EventEmptyState filtered={Boolean(query.trim()) || city !== 'all'} description="Try a different search or city filter." /> : tab === 'discover' ? (
+          {visibleEvents.length === 0 ? (
+            <EventEmptyState
+              filtered={Boolean(query.trim()) || city !== 'all'}
+              description="Try a different search or city filter."
+            />
+          ) : tab === 'discover' ? (
             <section className={styles['promoterGrid']} aria-label="Discover events">
-              {visibleDiscoverEvents.map((event) => <DiscoverEventCard key={event.id} event={event} href={eventHref(event.id)} />)}
+              {visibleDiscoverEvents.map((event) => (
+                <DiscoverEventCard key={event.id} event={event} href={eventHref(event.id)} />
+              ))}
             </section>
           ) : (
             <section className={styles['promoterGrid']} aria-label="Linked events">
-              {visibleLinkedEvents.map((event) => <LinkedEventCard key={event.id} event={event} href={eventHref(event.id)} />)}
+              {visibleLinkedEvents.map((event) => (
+                <LinkedEventCard key={event.id} event={event} href={eventHref(event.id)} />
+              ))}
             </section>
           )}
 
-          <div className={styles['srOnly']} aria-live="polite">{visibleEvents.length} {tab === 'discover' ? 'discoverable' : 'linked'} events shown.</div>
+          <div className={styles['srOnly']} aria-live="polite">
+            {visibleEvents.length} {tab === 'discover' ? 'discoverable' : 'linked'} events shown.
+          </div>
         </div>
       </div>
     </PageContainer>
   );
 }
 
-function filterEvents<T extends { readonly name: string; readonly venue: string; readonly city: string }>(events: readonly T[], query: string, city: PromoterCity): readonly T[] {
+function filterEvents<
+  T extends { readonly name: string; readonly venue: string; readonly city: string },
+>(events: readonly T[], query: string, city: PromoterCity): readonly T[] {
   const search = query.trim().toLowerCase();
   return events.filter((event) => {
     if (city !== 'all' && event.city !== city) return false;
@@ -109,35 +180,81 @@ function filterEvents<T extends { readonly name: string; readonly venue: string;
   });
 }
 
-function DiscoverEventCard({ event, href }: { readonly event: PromoterEventsData['discoverEvents'][number]; readonly href: string }) {
+function DiscoverEventCard({
+  event,
+  href,
+}: {
+  readonly event: PromoterEventsData['discoverEvents'][number];
+  readonly href: string;
+}) {
   const isPending = event.accessState === 'pending';
   return (
     <article className={styles['promoterCard']}>
       <Link className={styles['promoterPosterLink']} href={href} aria-label={`${event.name} event`}>
         <div className={styles['promoterPoster']}>
           <EventPoster artwork={event.artwork} sizes="(max-width: 700px) 100vw, 320px" />
-          <span className={[styles['promoterBadge'], isPending ? styles['promoterBadgePending'] : styles['promoterBadgeAccess']].join(' ')}>{isPending ? 'Request Pending' : 'Access Required'}</span>
+          <span
+            className={[
+              styles['promoterBadge'],
+              isPending ? styles['promoterBadgePending'] : styles['promoterBadgeAccess'],
+            ].join(' ')}
+          >
+            {isPending ? 'Request Pending' : 'Access Required'}
+          </span>
         </div>
       </Link>
       <div className={styles['promoterCardBody']}>
         <Link className={styles['promoterEventLink']} href={href}>
           <div className={styles['promoterEventTitle']}>{event.name}</div>
-          <div className={styles['promoterVenue']}><LocationIcon size={12} aria-hidden="true" />{event.venue}</div>
+          <div className={styles['promoterVenue']}>
+            <LocationIcon size={12} aria-hidden="true" />
+            {event.venue}
+          </div>
           <div className={styles['promoterEventMeta']}>
-            <span><CalendarIcon size={12} aria-hidden="true" />{event.dateLabel}</span>
-            <span><TimeIcon size={12} aria-hidden="true" />{event.timeLabel}</span>
+            <span>
+              <CalendarIcon size={12} aria-hidden="true" />
+              {event.dateLabel}
+            </span>
+            <span>
+              <TimeIcon size={12} aria-hidden="true" />
+              {event.timeLabel}
+            </span>
           </div>
         </Link>
-        {isPending ? <button className={[styles['promoterAction'], styles['promoterActionPending']].join(' ')} type="button" disabled><TimeIcon size={14} aria-hidden="true" />Request Pending</button> : <Link className={styles['promoterAction']} href={href}><ForwardIcon size={14} aria-hidden="true" />Request Promotion Access</Link>}
+        {isPending ? (
+          <button
+            className={[styles['promoterAction'], styles['promoterActionPending']].join(' ')}
+            type="button"
+            disabled
+          >
+            <TimeIcon size={14} aria-hidden="true" />
+            Request Pending
+          </button>
+        ) : (
+          <Link className={styles['promoterAction']} href={href}>
+            <ForwardIcon size={14} aria-hidden="true" />
+            Request Promotion Access
+          </Link>
+        )}
       </div>
     </article>
   );
 }
 
-function LinkedEventCard({ event, href }: { readonly event: PromoterEventsData['linkedEvents'][number]; readonly href: string }) {
+function LinkedEventCard({
+  event,
+  href,
+}: {
+  readonly event: PromoterEventsData['linkedEvents'][number];
+  readonly href: string;
+}) {
   return (
     <article className={styles['promoterCard']}>
-      <Link className={styles['promoterPosterLink']} href={href} aria-label={`${event.name} linked event`}>
+      <Link
+        className={styles['promoterPosterLink']}
+        href={href}
+        aria-label={`${event.name} linked event`}
+      >
         <div className={styles['promoterPoster']}>
           <EventPoster artwork={event.artwork} sizes="(max-width: 700px) 100vw, 320px" />
         </div>
@@ -145,8 +262,14 @@ function LinkedEventCard({ event, href }: { readonly event: PromoterEventsData['
       <div className={styles['promoterCardBody']}>
         <Link className={styles['promoterLinkedCard']} href={href}>
           <div className={styles['promoterEventTitle']}>{event.name}</div>
-          <div className={styles['promoterVenue']}><LocationIcon size={12} aria-hidden="true" />{event.venue}</div>
-          <div className={styles['promoterLinkedMeta']}><LinkIcon size={13} aria-hidden="true" />{event.clicks} clicks · {event.sales} sales</div>
+          <div className={styles['promoterVenue']}>
+            <LocationIcon size={12} aria-hidden="true" />
+            {event.venue}
+          </div>
+          <div className={styles['promoterLinkedMeta']}>
+            <LinkIcon size={13} aria-hidden="true" />
+            {event.clicks} clicks · {event.sales} sales
+          </div>
         </Link>
       </div>
     </article>

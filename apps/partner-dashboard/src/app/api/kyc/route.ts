@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export async function GET() {
+export function GET() {
   return NextResponse.json({
     success: true,
     entityType: 'business',
@@ -18,7 +18,7 @@ export async function GET() {
   });
 }
 
-export async function PATCH() {
+export function PATCH() {
   return NextResponse.json({
     success: true,
     message: 'Verification step updated successfully',

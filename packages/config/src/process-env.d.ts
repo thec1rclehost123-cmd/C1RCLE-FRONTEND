@@ -22,6 +22,9 @@ declare namespace NodeJS {
     NEXT_PUBLIC_FIREBASE_PROJECT_ID?: string;
     NEXT_PUBLIC_FIREBASE_APP_ID?: string;
     NODE_ENV?: string;
+    SITE_URL?: string;
+    VERCEL_ENV?: string;
+    VERCEL_URL?: string;
     ANALYZE?: string;
   }
 }

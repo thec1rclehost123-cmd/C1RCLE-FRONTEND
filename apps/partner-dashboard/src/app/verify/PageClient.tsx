@@ -1,40 +1,57 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Circle, FileText, RefreshCcw } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
 import {
-  CheckCircle2,
-  Circle,
-  Clock,
-  AlertCircle,
-  RefreshCcw,
-  ChevronLeft,
-  ShieldCheck,
-  Building2,
-  User,
-  Landmark,
-  FileText,
-  ArrowRight,
-  Upload,
-  X,
-  Loader2,
-  Sparkles,
-} from 'lucide-react';
+  AlertIcon,
+  AssistantIcon,
+  BankIcon,
+  CloseIcon,
+  ComplianceIcon,
+  ForwardIcon,
+  GuestIcon,
+  PartnerIcon,
+  PreviousIcon,
+  SpinnerIcon,
+  TimeIcon,
+  UploadIcon,
+  VerifiedTickIcon,
+} from '@c1rcle/icons';
+
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 
-
 // Stubs for legacy storage methods being deprecated in V2
+interface UploadSnapshot {
+  bytesTransferred: number;
+  totalBytes: number;
+}
+
+interface UploadTask {
+  on(
+    event: string,
+    progress?: (snapshot: UploadSnapshot) => void,
+    error?: (reason: unknown) => void,
+    complete?: () => void,
+  ): void;
+}
+
 const getFirebaseStorage = () => ({});
-const ref = (..._args: any[]) => ({});
-const uploadBytesResumable = (..._args: any[]): any => ({
-  on: (_evt?: string, _progress?: any, _err?: any, complete?: any) => complete?.(),
+const ref = (..._args: unknown[]) => ({});
+const uploadBytesResumable = (..._args: unknown[]): UploadTask => ({
+  on: (
+    _event?: string,
+    _progress?: (snapshot: UploadSnapshot) => void,
+    _error?: (reason: unknown) => void,
+    complete?: () => void,
+  ) => {
+    complete?.();
+  },
 });
-const getDownloadURL = async (..._args: any[]) => '';
+const getDownloadURL = (..._args: unknown[]): Promise<string> => Promise.resolve('');
 const legacyFetch = (...args: Parameters<typeof fetch>) => window.fetch(...args);
-
-
-
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -62,22 +79,22 @@ interface KycState {
 const STEP_META: Record<string, { label: string; icon: React.ElementType; description: string }> = {
   kyc_identity: {
     label: 'Identity Verification',
-    icon: User,
+    icon: GuestIcon,
     description: 'Government-issued ID and a selfie to confirm your identity.',
   },
   kyc_business: {
     label: 'Business Documents',
-    icon: Building2,
+    icon: PartnerIcon,
     description: 'PAN, CIN/GST, and registration certificate for your business.',
   },
   kyc_signatory: {
     label: 'Authorized Representative',
-    icon: ShieldCheck,
+    icon: ComplianceIcon,
     description: 'Identity verification for the person representing the business.',
   },
   bank_setup: {
     label: 'Bank Account',
-    icon: Landmark,
+    icon: BankIcon,
     description: 'Bank account details for receiving payouts.',
   },
 };
@@ -95,11 +112,11 @@ const STATUS_LABEL: Record<StepStatus, string> = {
 };
 
 function StepStatusIcon({ status }: { status: StepStatus }) {
-  if (status === 'approved') return <CheckCircle2 className="h-5 w-5 text-emerald-500" />;
+  if (status === 'approved') return <VerifiedTickIcon className="h-5 w-5 text-emerald-500" />;
   if (status === 'needs_resubmission' || status === 'rejected')
-    return <AlertCircle className="h-5 w-5 text-red-400" />;
+    return <AlertIcon className="h-5 w-5 text-red-400" />;
   if (status === 'submitted' || status === 'under_review')
-    return <Clock className="h-5 w-5 text-indigo-400" />;
+    return <TimeIcon className="h-5 w-5 text-indigo-400" />;
   if (status === 'in_progress')
     return <RefreshCcw className="h-5 w-5 text-blue-400 animate-spin" />;
   return <Circle className="h-5 w-5 text-text-tertiary" />;
@@ -112,7 +129,6 @@ function stepStatusColor(status: StepStatus): string {
   if (status === 'in_progress') return 'text-blue-400';
   return 'text-text-tertiary';
 }
-
 
 // ── File drop zone ────────────────────────────────────────────────────────────
 
@@ -136,8 +152,8 @@ function FileZone({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = async (file: File) => {
-    if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
+      // eslint-disable-next-line no-alert -- native blocking dialog is the only feedback channel in this legacy stub flow (no toast API present)
       alert('File must be under 5MB.');
       return;
     }
@@ -145,22 +161,24 @@ function FileZone({
     setProgress(0);
     try {
       const storage = getFirebaseStorage();
-      const ext = file.name.split('.').pop();
-      const path = `kyc-documents/${uid}/${stepId}/${fieldName}_${Date.now()}.${ext}`;
-      const storageRef = ref(storage as any, path);
+      const ext = file.name.split('.').pop() ?? '';
+      const path = `kyc-documents/${uid}/${stepId}/${fieldName}_${String(Date.now())}.${ext}`;
+      const storageRef = ref(storage, path);
       const task = uploadBytesResumable(storageRef, file);
       await new Promise<void>((resolve, reject) => {
         task.on(
           'state_changed',
-          (snap: any) => setProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
+          (snap: UploadSnapshot) => {
+            setProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100));
+          },
           reject,
           resolve,
         );
       });
       const url = await getDownloadURL(storageRef);
       onChange(url);
-    } catch (e) {
-      console.error('Upload error:', e);
+    } catch {
+      // eslint-disable-next-line no-alert -- native blocking dialog is the only feedback channel in this legacy stub flow (no toast API present)
       alert('Upload failed. Please try again.');
     } finally {
       setUploading(false);
@@ -174,26 +192,27 @@ function FileZone({
       </label>
       {value ? (
         <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
-          <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+          <VerifiedTickIcon className="h-4 w-4 text-emerald-500 flex-shrink-0" />
           <span className="text-[12px] text-emerald-400 font-medium truncate flex-1">Uploaded</span>
           <button
             type="button"
-            onClick={() => onChange(null)}
+            onClick={() => { onChange(null); }}
             className="p-1 rounded-lg hover:bg-red-500/20 text-text-tertiary hover:text-red-400 transition-colors"
           >
-            <X className="h-3.5 w-3.5" />
+            <CloseIcon className="h-3.5 w-3.5" />
           </button>
         </div>
       ) : uploading ? (
         <div className="p-4 rounded-xl border border-border-subtle bg-surface-secondary">
           <div className="flex items-center gap-2 mb-2">
-            <Loader2 className="h-4 w-4 animate-spin text-text-tertiary" />
+            <SpinnerIcon className="h-4 w-4 animate-spin text-text-tertiary" />
             <span className="text-[12px] text-text-tertiary">Uploading... {progress}%</span>
           </div>
           <div className="h-1 rounded-full bg-surface-tertiary overflow-hidden">
             <div
               className="h-full bg-[#FF5A00] rounded-full transition-all"
-              style={{ width: `${progress}%` }}
+              // eslint-disable-next-line no-restricted-syntax -- runtime upload progress is a dynamic width that Tailwind arbitrary-value utilities cannot express statically
+              style={{ width: `${String(progress)}%` }}
             />
           </div>
         </div>
@@ -203,7 +222,7 @@ function FileZone({
           onClick={() => inputRef.current?.click()}
           className="w-full p-5 rounded-xl border-2 border-dashed border-border-subtle hover:border-[#FF5A00]/40 bg-surface-secondary hover:bg-surface-tertiary transition-all text-center group"
         >
-          <Upload className="h-5 w-5 text-text-tertiary group-hover:text-[#FF5A00] mx-auto mb-1.5 transition-colors" />
+          <UploadIcon className="h-5 w-5 text-text-tertiary group-hover:text-[#FF5A00] mx-auto mb-1.5 transition-colors" />
           <p className="text-[11px] text-text-tertiary group-hover:text-text-secondary transition-colors">
             Click to upload · JPG, PNG or PDF · Max 5MB
           </p>
@@ -214,7 +233,10 @@ function FileZone({
         type="file"
         accept="image/jpeg,image/png,application/pdf"
         className="hidden"
-        onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void handleFile(file);
+        }}
       />
     </div>
   );
@@ -272,7 +294,7 @@ function SelectField({
       </label>
       <select
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => { onChange(e.target.value); }}
         className="w-full h-12 px-4 rounded-xl bg-surface-secondary border border-border-subtle text-text-primary text-[14px] focus:outline-none focus:ring-2 focus:ring-[#FF5A00]/30 focus:border-[#FF5A00]/50 transition-all appearance-none"
       >
         <option value="">Select…</option>
@@ -296,7 +318,7 @@ function KycIdentityForm({
   resubmitReason,
 }: {
   uid: string;
-  initialData: Record<string, any>;
+  initialData: Record<string, unknown>;
   onSubmit: (data: Record<string, unknown>) => void;
   submitting: boolean;
   resubmitReason?: string | undefined;
@@ -306,12 +328,14 @@ function KycIdentityForm({
   const [docFront, setDocFront] = useState<string | null>(
     (initialData['docFrontUrl'] as string) || null,
   );
-  const [docBack, setDocBack] = useState<string | null>((initialData['docBackUrl'] as string) || null);
+  const [docBack, setDocBack] = useState<string | null>(
+    (initialData['docBackUrl'] as string) || null,
+  );
   const [selfie, setSelfie] = useState<string | null>((initialData['selfieUrl'] as string) || null);
 
   const needsBack = ['aadhaar', 'driving_licence', 'voter_id'].includes(idType);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!idType || !idNumber || !docFront || !selfie) return;
     if (needsBack && !docBack) return;
@@ -386,9 +410,9 @@ function KycIdentityForm({
         className="w-full h-12 rounded-xl bg-[#FF5A00] text-white font-black uppercase tracking-widest text-[11px] hover:bg-[#e04e00] disabled:opacity-40 transition-all flex items-center justify-center gap-2"
       >
         {submitting ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <SpinnerIcon className="h-4 w-4 animate-spin" />
         ) : (
-          <ArrowRight className="h-4 w-4" />
+          <ForwardIcon className="h-4 w-4" />
         )}
         {submitting ? 'Submitting…' : 'Submit for Review'}
       </button>
@@ -404,7 +428,7 @@ function KycBusinessForm({
   resubmitReason,
 }: {
   uid: string;
-  initialData: Record<string, any>;
+  initialData: Record<string, unknown>;
   onSubmit: (data: Record<string, unknown>) => void;
   submitting: boolean;
   resubmitReason?: string | undefined;
@@ -417,7 +441,7 @@ function KycBusinessForm({
   const [address, setAddress] = useState((initialData['address'] as string) || '');
   const [regDoc, setRegDoc] = useState<string | null>((initialData['regDocUrl'] as string) || null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!legalName || !businessType || !pan || !cin || !address || !regDoc) return;
     onSubmit({ legalName, businessType, pan, cin, gst, address, regDocUrl: regDoc });
@@ -492,9 +516,9 @@ function KycBusinessForm({
         className="w-full h-12 rounded-xl bg-[#FF5A00] text-white font-black uppercase tracking-widest text-[11px] hover:bg-[#e04e00] disabled:opacity-40 transition-all flex items-center justify-center gap-2"
       >
         {submitting ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <SpinnerIcon className="h-4 w-4 animate-spin" />
         ) : (
-          <ArrowRight className="h-4 w-4" />
+          <ForwardIcon className="h-4 w-4" />
         )}
         {submitting ? 'Submitting…' : 'Submit for Review'}
       </button>
@@ -510,7 +534,7 @@ function KycSignatoryForm({
   resubmitReason,
 }: {
   uid: string;
-  initialData: Record<string, any>;
+  initialData: Record<string, unknown>;
   onSubmit: (data: Record<string, unknown>) => void;
   submitting: boolean;
   resubmitReason?: string | undefined;
@@ -524,13 +548,15 @@ function KycSignatoryForm({
   const [docFront, setDocFront] = useState<string | null>(
     (initialData['docFrontUrl'] as string) || null,
   );
-  const [docBack, setDocBack] = useState<string | null>((initialData['docBackUrl'] as string) || null);
+  const [docBack, setDocBack] = useState<string | null>(
+    (initialData['docBackUrl'] as string) || null,
+  );
   const [selfie, setSelfie] = useState<string | null>((initialData['selfieUrl'] as string) || null);
   const [declared, setDeclared] = useState(false);
 
   const needsBack = ['aadhaar', 'driving_licence', 'voter_id'].includes(idType);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (
       !fullName ||
@@ -660,7 +686,7 @@ function KycSignatoryForm({
         <input
           type="checkbox"
           checked={declared}
-          onChange={(e) => setDeclared(e.target.checked)}
+          onChange={(e) => { setDeclared(e.target.checked); }}
           className="mt-0.5 h-4 w-4 rounded border-border-subtle accent-[#FF5A00]"
         />
         <span className="text-[12px] text-text-secondary leading-relaxed">
@@ -686,9 +712,9 @@ function KycSignatoryForm({
         className="w-full h-12 rounded-xl bg-[#FF5A00] text-white font-black uppercase tracking-widest text-[11px] hover:bg-[#e04e00] disabled:opacity-40 transition-all flex items-center justify-center gap-2"
       >
         {submitting ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <SpinnerIcon className="h-4 w-4 animate-spin" />
         ) : (
-          <ArrowRight className="h-4 w-4" />
+          <ForwardIcon className="h-4 w-4" />
         )}
         {submitting ? 'Submitting…' : 'Submit for Review'}
       </button>
@@ -704,12 +730,14 @@ function BankSetupForm({
   resubmitReason,
 }: {
   uid: string;
-  initialData: Record<string, any>;
+  initialData: Record<string, unknown>;
   onSubmit: (data: Record<string, unknown>) => void;
   submitting: boolean;
   resubmitReason?: string | undefined;
 }) {
-  const [accountHolder, setAccountHolder] = useState((initialData['accountHolder'] as string) || '');
+  const [accountHolder, setAccountHolder] = useState(
+    (initialData['accountHolder'] as string) || '',
+  );
   const [accountNumber, setAccountNumber] = useState('');
   const [confirmNumber, setConfirmNumber] = useState('');
   const [ifsc, setIfsc] = useState((initialData['ifsc'] as string) || '');
@@ -725,9 +753,9 @@ function BankSetupForm({
     try {
       const res = await legacyFetch(`https://ifsc.razorpay.com/${ifsc.toUpperCase()}`);
       if (res.ok) {
-        const data = await res.json();
-        setBankName(data.BANK || '');
-        setBranch(data.BRANCH || '');
+        const data = (await res.json()) as { BANK?: string; BRANCH?: string };
+        setBankName(data.BANK ?? '');
+        setBranch(data.BRANCH ?? '');
       }
     } catch {
       /* silent fail */
@@ -735,12 +763,15 @@ function BankSetupForm({
   }, [ifsc]);
 
   useEffect(() => {
-    if (ifsc.length === 11) lookupIfsc();
+    if (ifsc.length === 11) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- auto-bank-lookup belongs in the effect because it fires the moment a complete IFSC is typed (external sync); its setState calls run inside the async callback, never synchronously
+      void lookupIfsc();
+    }
   }, [ifsc, lookupIfsc]);
 
   const numbersMismatch = confirmNumber.length > 0 && accountNumber !== confirmNumber;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (
       !accountHolder ||
@@ -790,13 +821,17 @@ function BankSetupForm({
           placeholder="Enter account number"
         />
         <div className="space-y-1.5">
-          <label className="text-[11px] font-black uppercase tracking-widest text-text-tertiary">
+          <label
+            htmlFor="confirm-account-number"
+            className="text-[11px] font-black uppercase tracking-widest text-text-tertiary"
+          >
             Confirm Account Number
           </label>
           <input
+            id="confirm-account-number"
             type="text"
             value={confirmNumber}
-            onChange={(e) => setConfirmNumber(e.target.value)}
+            onChange={(e) => { setConfirmNumber(e.target.value); }}
             placeholder="Re-enter account number"
             className={`w-full h-12 px-4 rounded-xl bg-surface-secondary border text-text-primary text-[14px] placeholder:text-text-tertiary focus:outline-none focus:ring-2 transition-all ${numbersMismatch ? 'border-red-500/50 focus:ring-red-500/20' : 'border-border-subtle focus:ring-[#FF5A00]/30 focus:border-[#FF5A00]/50'}`}
           />
@@ -821,7 +856,7 @@ function BankSetupForm({
 
       {bankName && (
         <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+          <VerifiedTickIcon className="h-4 w-4 text-emerald-500" />
           <span className="text-[12px] text-emerald-400 font-medium">
             {bankName} — {branch}
           </span>
@@ -851,9 +886,9 @@ function BankSetupForm({
         className="w-full h-12 rounded-xl bg-[#FF5A00] text-white font-black uppercase tracking-widest text-[11px] hover:bg-[#e04e00] disabled:opacity-40 transition-all flex items-center justify-center gap-2"
       >
         {submitting ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <SpinnerIcon className="h-4 w-4 animate-spin" />
         ) : (
-          <ArrowRight className="h-4 w-4" />
+          <ForwardIcon className="h-4 w-4" />
         )}
         {submitting ? 'Submitting…' : 'Submit Bank Details'}
       </button>
@@ -880,7 +915,7 @@ function CelebrationScreen({ entityType }: { entityType: string }) {
         transition={{ type: 'spring', damping: 15, stiffness: 200, delay: 0.1 }}
         className="w-24 h-24 rounded-[2rem] bg-emerald-500/15 flex items-center justify-center mb-8"
       >
-        <Sparkles className="h-12 w-12 text-emerald-400" />
+        <AssistantIcon className="h-12 w-12 text-emerald-400" />
       </motion.div>
       <h1 className="text-4xl font-black text-text-primary tracking-tight mb-4">
         You're fully verified
@@ -890,7 +925,7 @@ function CelebrationScreen({ entityType }: { entityType: string }) {
         audience, and tracking your finances.
       </p>
       <button
-        onClick={() => router.push(dashPath)}
+        onClick={() => { router.push(dashPath); }}
         className="h-14 px-10 rounded-2xl bg-[#FF5A00] text-white font-black uppercase tracking-widest text-[11px] hover:bg-[#e04e00] transition-all"
       >
         Go to Dashboard
@@ -901,12 +936,16 @@ function CelebrationScreen({ entityType }: { entityType: string }) {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
+interface AuthUser {
+  uid: string;
+  getIdToken: () => Promise<string>;
+}
+
+// eslint-disable-next-line import-x/no-default-export -- page.tsx imports this client component as its default export (App Router client-component convention); switching to a named export would require editing that importer, which is outside this task's file scope
 export default function PageClient() {
-  const {
-    user,
-    isApproved,
-    loading: authLoading,
-  } = useDashboardAuth();
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- AuthContextValue.user is deliberately `any` per DashboardAuthProvider.tsx's documented Firebase-shaped gap; narrowed to that shape (.uid/.getIdToken) on the line below, which is all this page reads off it
+  const { user: authUserRaw, isApproved, loading: authLoading } = useDashboardAuth();
+  const user: AuthUser | null = authUserRaw as AuthUser | null;
   const router = useRouter();
 
   const [kycState, setKycState] = useState<KycState | null>(null);
@@ -930,24 +969,28 @@ export default function PageClient() {
       const token = await user.getIdToken();
       const res = await legacyFetch('/api/kyc', { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) throw new Error('Failed to load verification state.');
-      const data = await res.json();
+      const data = (await res.json()) as KycState;
       setKycState(data);
-      if (!activeStep && data.stepSequence) {
+      if (!activeStep && data.stepSequence.length > 0) {
         const firstActionable = data.stepSequence.find((s: string) => {
-          const st = data.kycStepStatus[s] || 'not_started';
+          const st = data.kycStepStatus[s] ?? 'not_started';
           return st !== 'approved' && st !== 'submitted' && st !== 'under_review';
         });
-        setActiveStep(firstActionable ?? data.stepSequence[0]);
+        setActiveStep(firstActionable ?? data.stepSequence[0] ?? null);
       }
-    } catch (err: any) {
-      console.error(err);
+    } catch {
+      /* fetch failed; keep the KYC state we already have */
     } finally {
       setLoadingKyc(false);
     }
   }, [user, activeStep]);
 
   useEffect(() => {
-    if (user && isApproved) fetchKycState();
+    if (user && isApproved) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- the KYC state must load once when auth unlocks this page; its setState calls run inside the async fetch callback, never synchronously
+      void fetchKycState();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchKycState's identity changes with activeStep, so adding it here would re-fetch on every step selection
   }, [user, isApproved]);
 
   // ── Submit a KYC step ───────────────────────────────────────────────────
@@ -962,11 +1005,11 @@ export default function PageClient() {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ stepId, data }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Submission failed.');
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(json.error ?? 'Submission failed.');
       await fetchKycState();
-    } catch (err: any) {
-      setSubmitError(err.message);
+    } catch (err: unknown) {
+      setSubmitError(err instanceof Error ? err.message : String(err));
     } finally {
       setSubmitting(false);
     }
@@ -976,7 +1019,7 @@ export default function PageClient() {
   if (authLoading || loadingKyc) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface-elevated">
-        <Loader2 className="h-8 w-8 animate-spin text-text-tertiary" />
+        <SpinnerIcon className="h-8 w-8 animate-spin text-text-tertiary" />
       </div>
     );
   }
@@ -1006,10 +1049,10 @@ export default function PageClient() {
       <div className="sticky top-0 z-30 bg-surface-base/90 backdrop-blur-xl border-b border-border-subtle">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <button
-            onClick={() => router.back()}
+            onClick={() => { router.back(); }}
             className="flex items-center gap-2 text-[12px] font-bold text-text-tertiary hover:text-text-primary transition-colors uppercase tracking-widest"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <PreviousIcon className="h-4 w-4" />
             Back
           </button>
           <div className="flex items-center gap-2">
@@ -1043,7 +1086,7 @@ export default function PageClient() {
             <motion.div
               className="h-full bg-[#FF5A00] rounded-full"
               initial={{ width: 0 }}
-              animate={{ width: `${progressPct}%` }}
+              animate={{ width: `${String(progressPct)}%` }}
               transition={{ duration: 0.5 }}
             />
           </div>
@@ -1051,7 +1094,7 @@ export default function PageClient() {
 
         {submitError && (
           <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-start gap-3">
-            <AlertCircle className="h-4 w-4 text-red-400 mt-0.5 flex-shrink-0" />
+            <AlertIcon className="h-4 w-4 text-red-400 mt-0.5 flex-shrink-0" />
             <p className="text-[13px] text-red-400">{submitError}</p>
           </div>
         )}
@@ -1060,7 +1103,7 @@ export default function PageClient() {
           {/* Step list */}
           <div className="space-y-2">
             {stepSequence.map((stepId) => {
-              const status = kycStepStatus[stepId] || 'not_started';
+              const status = kycStepStatus[stepId] ?? 'not_started';
               const meta = STEP_META[stepId];
               const Icon = meta?.icon ?? FileText;
               const isActive = activeStep === stepId;
@@ -1068,7 +1111,7 @@ export default function PageClient() {
               return (
                 <button
                   key={stepId}
-                  onClick={() => setActiveStep(stepId)}
+                  onClick={() => { setActiveStep(stepId); }}
                   className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left transition-all ${
                     isActive
                       ? 'bg-surface-secondary border border-border-subtle shadow-sm'
@@ -1113,7 +1156,7 @@ export default function PageClient() {
                 {(() => {
                   const meta = STEP_META[activeStep];
                   const Icon = meta?.icon ?? FileText;
-                  const status = kycStepStatus[activeStep] || 'not_started';
+                  const status = kycStepStatus[activeStep] ?? 'not_started';
                   return (
                     <div className="mb-6">
                       <div className="flex items-center gap-3 mb-2">
@@ -1139,7 +1182,7 @@ export default function PageClient() {
                 {/* Approved state */}
                 {kycStepStatus[activeStep] === 'approved' && (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <CheckCircle2 className="h-12 w-12 text-emerald-500 mb-4" />
+                    <VerifiedTickIcon className="h-12 w-12 text-emerald-500 mb-4" />
                     <p className="text-[16px] font-black text-text-primary mb-1">Step approved</p>
                     <p className="text-[13px] text-text-tertiary">
                       This step has been reviewed and approved.
@@ -1151,7 +1194,7 @@ export default function PageClient() {
                 {(kycStepStatus[activeStep] === 'submitted' ||
                   kycStepStatus[activeStep] === 'under_review') && (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <Clock className="h-12 w-12 text-indigo-400 mb-4" />
+                    <TimeIcon className="h-12 w-12 text-indigo-400 mb-4" />
                     <p className="text-[16px] font-black text-text-primary mb-1">Under review</p>
                     <p className="text-[13px] text-text-tertiary">
                       We're reviewing your submission. You'll be notified of any updates.
@@ -1168,8 +1211,8 @@ export default function PageClient() {
                     {activeStep === 'kyc_identity' && (
                       <KycIdentityForm
                         uid={user?.uid ?? ''}
-                        initialData={(kycStepData[activeStep] as Record<string, unknown>) || {}}
-                        onSubmit={(data) => handleStepSubmit(activeStep, data)}
+                        initialData={kycStepData[activeStep] ?? {}}
+                        onSubmit={(data) => { void handleStepSubmit(activeStep, data); }}
                         submitting={submitting}
                         resubmitReason={resubmissionReasons[activeStep]}
                       />
@@ -1177,8 +1220,8 @@ export default function PageClient() {
                     {activeStep === 'kyc_business' && (
                       <KycBusinessForm
                         uid={user?.uid ?? ''}
-                        initialData={(kycStepData[activeStep] as Record<string, unknown>) || {}}
-                        onSubmit={(data) => handleStepSubmit(activeStep, data)}
+                        initialData={kycStepData[activeStep] ?? {}}
+                        onSubmit={(data) => { void handleStepSubmit(activeStep, data); }}
                         submitting={submitting}
                         resubmitReason={resubmissionReasons[activeStep]}
                       />
@@ -1186,8 +1229,8 @@ export default function PageClient() {
                     {activeStep === 'kyc_signatory' && (
                       <KycSignatoryForm
                         uid={user?.uid ?? ''}
-                        initialData={(kycStepData[activeStep] as Record<string, unknown>) || {}}
-                        onSubmit={(data) => handleStepSubmit(activeStep, data)}
+                        initialData={kycStepData[activeStep] ?? {}}
+                        onSubmit={(data) => { void handleStepSubmit(activeStep, data); }}
                         submitting={submitting}
                         resubmitReason={resubmissionReasons[activeStep]}
                       />
@@ -1195,8 +1238,8 @@ export default function PageClient() {
                     {activeStep === 'bank_setup' && (
                       <BankSetupForm
                         uid={user?.uid ?? ''}
-                        initialData={(kycStepData[activeStep] as Record<string, unknown>) || {}}
-                        onSubmit={(data) => handleStepSubmit(activeStep, data)}
+                        initialData={kycStepData[activeStep] ?? {}}
+                        onSubmit={(data) => { void handleStepSubmit(activeStep, data); }}
                         submitting={submitting}
                         resubmitReason={resubmissionReasons[activeStep]}
                       />

@@ -18,12 +18,14 @@ Perform a thorough, risk-aware code review using the knowledge graph.
 ### Output Format
 
 Provide findings grouped by risk level (high/medium/low) with:
+
 - What changed and why it matters
 - Test coverage status
 - Suggested improvements
 - Overall merge recommendation
 
 ## Token Efficiency Rules
+
 - Start with `get_minimal_context_tool(task="<your task>")` before other graph tools.
 - Use `detail_level="minimal"` on all calls. Only escalate to "standard" when minimal is insufficient.
 - Target: complete any review/debug/refactor task in ≤5 tool calls and ≤800 total output tokens.

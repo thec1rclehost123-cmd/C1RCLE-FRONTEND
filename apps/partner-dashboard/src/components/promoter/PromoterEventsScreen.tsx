@@ -4,13 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useMemo, useRef, useState } from 'react';
 
-import {
-  ChevronDownIcon,
-  FilterIcon,
-  NextIcon,
-  PreviousIcon,
-  SearchIcon,
-} from '@c1rcle/icons';
+import { ChevronDownIcon, FilterIcon, NextIcon, PreviousIcon, SearchIcon } from '@c1rcle/icons';
 
 import {
   ConfirmationDialog,
@@ -39,7 +33,7 @@ const STATUS_TONE = {
 } as const;
 
 function statusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
-  return STATUS_TONE[status as keyof typeof STATUS_TONE] ?? 'neutral';
+  return (STATUS_TONE as Record<string, 'success' | 'warning' | 'danger' | 'neutral'>)[status] ?? 'neutral';
 }
 
 function statusLabel(status: PromoterEvent['status']): string {
@@ -48,7 +42,6 @@ function statusLabel(status: PromoterEvent['status']): string {
   if (status === 'requested') return 'Requested';
   if (status === 'paused') return 'Paused';
   if (status === 'completed') return 'Completed';
-  if (status === 'declined') return 'Declined';
   return status;
 }
 
@@ -64,10 +57,13 @@ export function PromoterEventsScreen({
   readonly activeTab: string;
 }) {
   const startTab: PromoterTab =
-    initialTab === 'invitations' ? 'invitations'
-    : initialTab === 'available' ? 'available'
-    : initialTab === 'past' ? 'past'
-    : 'linked';
+    initialTab === 'invitations'
+      ? 'invitations'
+      : initialTab === 'available'
+        ? 'available'
+        : initialTab === 'past'
+          ? 'past'
+          : 'linked';
 
   const [tab, setTab] = useState<PromoterTab>(startTab);
   const [query, setQuery] = useState('');
@@ -76,13 +72,23 @@ export function PromoterEventsScreen({
   const [commission, setCommission] = useState('All models');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selected, setSelected] = useState<PromoterEvent | null>(null);
-  const [requestState, setRequestState] = useState<'idle' | 'confirming' | 'submitting' | 'prepared'>('idle');
+  const [requestState, setRequestState] = useState<
+    'idle' | 'confirming' | 'submitting' | 'prepared'
+  >('idle');
 
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const TABS: { key: PromoterTab; label: string; count?: number }[] = [
-    { key: 'linked', label: 'Linked', count: linkedEvents.filter(e => e.status === 'active' || e.status === 'requested').length },
-    { key: 'invitations', label: 'Invitations', count: linkedEvents.filter(e => e.status === 'invited').length },
+    {
+      key: 'linked',
+      label: 'Linked',
+      count: linkedEvents.filter((e) => e.status === 'active' || e.status === 'requested').length,
+    },
+    {
+      key: 'invitations',
+      label: 'Invitations',
+      count: linkedEvents.filter((e) => e.status === 'invited').length,
+    },
     { key: 'available', label: 'Available', count: discoveryEvents.length },
     { key: 'past', label: 'Past' },
   ];
@@ -93,36 +99,54 @@ export function PromoterEventsScreen({
     e.preventDefault();
     const next = (index + dir + TABS.length) % TABS.length;
     tabRefs.current[next]?.focus();
-    setTab(TABS[next]!.key);
+    const nextTab = TABS[next];
+    if (nextTab) setTab(nextTab.key);
   };
 
   const linkedRows = useMemo(() => {
     const q = query.trim().toLowerCase();
     const base =
-      tab === 'invitations' ? linkedEvents.filter(e => e.status === 'invited')
-      : tab === 'past' ? linkedEvents.filter(e => e.status === 'completed' || e.status === 'declined')
-      : linkedEvents.filter(e => e.status === 'active' || e.status === 'requested' || e.status === 'paused');
+      tab === 'invitations'
+        ? linkedEvents.filter((e) => e.status === 'invited')
+        : tab === 'past'
+          ? linkedEvents.filter((e) => e.status === 'completed' || e.status === 'declined')
+          : linkedEvents.filter(
+              (e) => e.status === 'active' || e.status === 'requested' || e.status === 'paused',
+            );
     if (!q) return base;
-    return base.filter(e => `${e.name} ${e.venue} ${e.host} ${e.category}`.toLowerCase().includes(q));
+    return base.filter((e) =>
+      `${e.name} ${e.venue} ${e.host} ${e.category}`.toLowerCase().includes(q),
+    );
   }, [linkedEvents, tab, query]);
 
   const discoveryRows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return discoveryEvents.filter(e => {
-      if (q && !`${e.name} ${e.venue} ${e.host} ${e.category}`.toLowerCase().includes(q)) return false;
+    return discoveryEvents.filter((e) => {
+      if (q && !`${e.name} ${e.venue} ${e.host} ${e.category}`.toLowerCase().includes(q))
+        return false;
       if (city !== 'All cities' && e.city !== city) return false;
-      if (category !== 'All categories' && !e.category.toLowerCase().includes(category.toLowerCase())) return false;
+      if (
+        category !== 'All categories' &&
+        !e.category.toLowerCase().includes(category.toLowerCase())
+      )
+        return false;
       if (commission === 'Per ticket' && !e.commissionLabel.includes('/ ticket')) return false;
       if (commission === 'Percentage' && !e.commissionLabel.includes('%')) return false;
       return true;
     });
   }, [discoveryEvents, query, city, category, commission]);
 
-  const hasFilters = city !== 'All cities' || category !== 'All categories' || commission !== 'All models';
-  const clearFilters = () => { setQuery(''); setCity('All cities'); setCategory('All categories'); setCommission('All models'); };
+  const hasFilters =
+    city !== 'All cities' || category !== 'All categories' || commission !== 'All models';
+  const clearFilters = () => {
+    setQuery('');
+    setCity('All cities');
+    setCategory('All categories');
+    setCommission('All models');
+  };
   const confirmRequest = () => {
     setRequestState('submitting');
-    window.setTimeout(() => setRequestState('prepared'), 550);
+    window.setTimeout(() => { setRequestState('prepared'); }, 550);
   };
 
   return (
@@ -138,13 +162,18 @@ export function PromoterEventsScreen({
             {TABS.map((item, index) => (
               <button
                 key={item.key}
-                ref={el => { tabRefs.current[index] = el; }}
+                ref={(el) => {
+                  tabRefs.current[index] = el;
+                }}
                 type="button"
                 role="tab"
                 aria-selected={tab === item.key}
                 tabIndex={tab === item.key ? 0 : -1}
-                onClick={() => { setTab(item.key); setQuery(''); }}
-                onKeyDown={e => onTabKeyDown(e, index)}
+                onClick={() => {
+                  setTab(item.key);
+                  setQuery('');
+                }}
+                onKeyDown={(e) => { onTabKeyDown(e, index); }}
               >
                 {item.label}
                 {item.count !== undefined ? <span>{item.count}</span> : null}
@@ -162,7 +191,7 @@ export function PromoterEventsScreen({
           <input
             type="search"
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={(e) => { setQuery(e.target.value); }}
             placeholder="Search events"
           />
         </label>
@@ -174,7 +203,7 @@ export function PromoterEventsScreen({
               type="button"
               aria-expanded={filtersOpen}
               aria-controls="promoter-event-filters"
-              onClick={() => setFiltersOpen(o => !o)}
+              onClick={() => { setFiltersOpen((o) => !o); }}
             >
               <FilterIcon size={19} aria-hidden="true" />
               Filters
@@ -188,7 +217,7 @@ export function PromoterEventsScreen({
               >
                 <label>
                   <span>City</span>
-                  <select value={city} onChange={e => setCity(e.target.value)}>
+                  <select value={city} onChange={(e) => { setCity(e.target.value); }}>
                     <option>All cities</option>
                     <option>Mumbai</option>
                     <option>Pune</option>
@@ -197,7 +226,7 @@ export function PromoterEventsScreen({
                 </label>
                 <label>
                   <span>Category</span>
-                  <select value={category} onChange={e => setCategory(e.target.value)}>
+                  <select value={category} onChange={(e) => { setCategory(e.target.value); }}>
                     <option>All categories</option>
                     <option>Techno</option>
                     <option>Indie</option>
@@ -207,7 +236,7 @@ export function PromoterEventsScreen({
                 </label>
                 <label>
                   <span>Commission</span>
-                  <select value={commission} onChange={e => setCommission(e.target.value)}>
+                  <select value={commission} onChange={(e) => { setCommission(e.target.value); }}>
                     <option>All models</option>
                     <option>Per ticket</option>
                     <option>Percentage</option>
@@ -215,8 +244,12 @@ export function PromoterEventsScreen({
                   <ChevronDownIcon size={15} aria-hidden="true" />
                 </label>
                 <div className={s('filterActions')}>
-                  <button type="button" onClick={clearFilters} disabled={!hasFilters}>Clear</button>
-                  <button type="button" onClick={() => setFiltersOpen(false)}>Done</button>
+                  <button type="button" onClick={clearFilters} disabled={!hasFilters}>
+                    Clear
+                  </button>
+                  <button type="button" onClick={() => { setFiltersOpen(false); }}>
+                    Done
+                  </button>
                 </div>
               </div>
             ) : null}
@@ -235,10 +268,7 @@ export function PromoterEventsScreen({
           onClear={clearFilters}
         />
       ) : (
-        <LinkedTable
-          rows={linkedRows}
-          tab={tab}
-        />
+        <LinkedTable rows={linkedRows} tab={tab} />
       )}
 
       {/* ── pagination (non-discovery) ── */}
@@ -262,8 +292,13 @@ export function PromoterEventsScreen({
       <DashboardDrawer
         open={selected !== null}
         title={selected?.name ?? 'Event opportunity'}
-        description={selected ? `${selected.date} · ${selected.time} · ${selected.city}` : undefined}
-        onClose={() => { setSelected(null); setRequestState('idle'); }}
+        description={
+          selected ? `${selected.date} · ${selected.time} · ${selected.city}` : undefined
+        }
+        onClose={() => {
+          setSelected(null);
+          setRequestState('idle');
+        }}
       >
         {selected ? (
           <div className="promoter-opportunity-detail">
@@ -280,7 +315,10 @@ export function PromoterEventsScreen({
             <section>
               <span>Promoter terms</span>
               <strong>{selected.commissionLabel}</strong>
-              <p>Attribution window and refund rules must be confirmed by the backend event agreement.</p>
+              <p>
+                Attribution window and refund rules must be confirmed by the backend event
+                agreement.
+              </p>
             </section>
             <section>
               <span>Application deadline</span>
@@ -290,7 +328,7 @@ export function PromoterEventsScreen({
             <button
               type="button"
               className="pd-button pd-button--primary"
-              onClick={() => setRequestState('confirming')}
+              onClick={() => { setRequestState('confirming'); }}
             >
               Request partnership
             </button>
@@ -304,10 +342,14 @@ export function PromoterEventsScreen({
         confirmLabel="Prepare request"
         busy={requestState === 'submitting'}
         onConfirm={confirmRequest}
-        onCancel={() => setRequestState('idle')}
+        onCancel={() => { setRequestState('idle'); }}
       />
       <DashboardToast
-        message={requestState === 'prepared' ? 'Request preview prepared. Nothing was sent to a live partner.' : null}
+        message={
+          requestState === 'prepared'
+            ? 'Request preview prepared. Nothing was sent to a live partner.'
+            : null
+        }
       />
     </div>
   );
@@ -342,13 +384,13 @@ function LinkedTable({
     <section className={s('eventTable')} aria-label="Promoter events list">
       <table>
         <colgroup>
-          <col style={{ width: isInvitations ? '28%' : '24%' }} />
-          <col style={{ width: isInvitations ? '17%' : '14%' }} />
-          <col style={{ width: isInvitations ? '17%' : '14%' }} />
-          <col style={{ width: isInvitations ? '16%' : '14%' }} />
-          {!isInvitations ? <col style={{ width: '15%' }} /> : null}
-          <col style={{ width: '9%' }} />
-          <col style={{ width: '10%' }} />
+          <col className={isInvitations ? 'w-[28%]' : 'w-[24%]'} />
+          <col className={isInvitations ? 'w-[17%]' : 'w-[14%]'} />
+          <col className={isInvitations ? 'w-[17%]' : 'w-[14%]'} />
+          <col className={isInvitations ? 'w-[16%]' : 'w-[14%]'} />
+          {!isInvitations ? <col className="w-[15%]" /> : null}
+          <col className="w-[9%]" />
+          <col className="w-[10%]" />
         </colgroup>
         <thead>
           <tr>
@@ -358,7 +400,9 @@ function LinkedTable({
             <th scope="col">Commission</th>
             {!isInvitations ? <th scope="col">Performance</th> : null}
             <th scope="col">Status</th>
-            <th scope="col" style={{ textAlign: 'right' }}>Action</th>
+            <th scope="col" className="text-right">
+              Action
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -420,10 +464,10 @@ function LinkedTable({
 // ─── Discovery cards (Available tab) ────────────────────────────────────────
 
 const DISCOVERY_CARD_POSTERS: Record<string, string> = {
-  'bassline': '/venue/events/warehouse-rave.webp',
-  'sunset': '/venue/events/sunset-sessions.webp',
-  'monsoon': '/venue/events/monsoon-sessions.webp',
-  'bollywood': '/venue/events/bollywood-brunch.webp',
+  bassline: '/venue/events/warehouse-rave.webp',
+  sunset: '/venue/events/sunset-sessions.webp',
+  monsoon: '/venue/events/monsoon-sessions.webp',
+  bollywood: '/venue/events/bollywood-brunch.webp',
 };
 
 function resolveDiscoveryPoster(id: string): string | null {
@@ -450,7 +494,11 @@ function DiscoveryGrid({
         <span>No matches</span>
         <h2>Try a wider search.</h2>
         <p>Clear a city, category or commission filter to see more verified opportunities.</p>
-        {hasFilters ? <button type="button" onClick={onClear}>Clear filters</button> : null}
+        {hasFilters ? (
+          <button type="button" onClick={onClear}>
+            Clear filters
+          </button>
+        ) : null}
       </section>
     );
   }
@@ -469,20 +517,11 @@ function DiscoveryGrid({
                 height={180}
                 sizes="(max-width: 640px) 100vw, (max-width: 1000px) 50vw, 33vw"
                 priority={index < 3}
-                style={{ objectFit: 'cover', width: '100%', height: '180px' }}
+                className="object-cover w-full h-[180px]"
               />
             ) : (
               <div
-                style={{
-                  width: '100%',
-                  height: '180px',
-                  background: 'var(--dashboard-surface-elevated)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--dashboard-text-secondary)',
-                  fontSize: '13px',
-                }}
+                className="w-full h-[180px] bg-[var(--dashboard-surface-elevated)] flex items-center justify-center text-[var(--dashboard-text-secondary)] text-[13px]"
               >
                 {event.category}
               </div>
@@ -490,8 +529,12 @@ function DiscoveryGrid({
             <div className={s('gridBody')}>
               <div>
                 <Link href={`/promoter/events/${event.id}`}>{event.name}</Link>
-                <span>{event.venue} · {event.city}</span>
-                <span>{event.date} · {event.time}</span>
+                <span>
+                  {event.venue} · {event.city}
+                </span>
+                <span>
+                  {event.date} · {event.time}
+                </span>
               </div>
               <span className={s('status')} data-tone="warning">
                 <i aria-hidden="true" />
@@ -500,11 +543,7 @@ function DiscoveryGrid({
               <div className={s('ticketCell')}>
                 <strong>{event.commissionLabel}</strong>
               </div>
-              <button
-                type="button"
-                className={s('gridAction')}
-                onClick={() => onSelect(event)}
-              >
+              <button type="button" className={s('gridAction')} onClick={() => { onSelect(event); }}>
                 View opportunity
               </button>
             </div>
@@ -527,38 +566,31 @@ function EventPosterFallback({
   readonly index: number;
 }) {
   const knownPosters: Record<string, string> = {
-    'bassline': '/venue/events/warehouse-rave.webp',
-    'sunset': '/venue/events/sunset-sessions.webp',
-    'monsoon': '/venue/events/monsoon-sessions.webp',
-    'bollywood': '/venue/events/bollywood-brunch.webp',
-    'neon': '/venue/neon-nights-poster.webp',
+    bassline: '/venue/events/warehouse-rave.webp',
+    sunset: '/venue/events/sunset-sessions.webp',
+    monsoon: '/venue/events/monsoon-sessions.webp',
+    bollywood: '/venue/events/bollywood-brunch.webp',
+    neon: '/venue/neon-nights-poster.webp',
   };
   let src: string | null = null;
   for (const [key, path] of Object.entries(knownPosters)) {
-    if (eventId.includes(key)) { src = path; break; }
+    if (eventId.includes(key)) {
+      src = path;
+      break;
+    }
   }
   if (src) {
-    return (
-      <Image src={src} alt="" width={160} height={86} sizes="160px" priority={index < 2} />
-    );
+    return <Image src={src} alt="" width={160} height={86} sizes="160px" priority={index < 2} />;
   }
   return (
     <div
-      style={{
-        width: '160px',
-        height: '86px',
-        background: 'var(--dashboard-surface-elevated)',
-        borderRadius: 'var(--dashboard-radius-control)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'var(--dashboard-text-secondary)',
-        fontSize: '22px',
-        fontWeight: 700,
-        flexShrink: 0,
-      }}
+      className="w-[160px] h-[86px] bg-[var(--dashboard-surface-elevated)] rounded-[var(--dashboard-radius-control)] flex items-center justify-center text-[var(--dashboard-text-secondary)] text-[22px] font-bold flex-shrink-0"
     >
-      {name.split(' ').map(w => w[0]).join('').slice(0, 2)}
+      {name
+        .split(' ')
+        .map((w) => w[0])
+        .join('')
+        .slice(0, 2)}
     </div>
   );
 }

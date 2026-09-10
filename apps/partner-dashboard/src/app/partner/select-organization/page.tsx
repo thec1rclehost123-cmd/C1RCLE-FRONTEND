@@ -25,7 +25,10 @@ export default function SelectOrganizationPage() {
       <section className="partner-v3-organization-panel">
         <span>THE C1RCLE · PARTNER</span>
         <h1>Choose your workspace.</h1>
-        <p>Each organization keeps its own routes, permissions and cached data. You can switch again from the dashboard header.</p>
+        <p>
+          Each organization keeps its own routes, permissions and cached data. You can switch again
+          from the dashboard header.
+        </p>
         <div className="partner-v3-organization-list">
           {memberships.map((membership) => {
             const role = normalizePartnerRole(membership.partnerType);
@@ -40,18 +43,33 @@ export default function SelectOrganizationPage() {
                 className="partner-v3-organization-choice"
                 onClick={() => {
                   if (!role) return;
-                  const lastRoute = window.localStorage.getItem(`partner:last-route:${membership.partnerId}`) ?? fallbackRoute ?? '/partner/select-organization';
+                  const lastRoute =
+                    window.localStorage.getItem(`partner:last-route:${membership.partnerId}`) ??
+                    fallbackRoute ??
+                    '/partner/select-organization';
                   if (selected) router.push(lastRoute);
                   else {
-                    window.localStorage.setItem(`partner:last-route:${membership.partnerId}`, lastRoute);
+                    window.localStorage.setItem(
+                      `partner:last-route:${membership.partnerId}`,
+                      lastRoute,
+                    );
                     void auth.switchPartner(membership.partnerId);
                   }
                 }}
               >
-                <span>{(membership.partnerName ?? roleLabel).split(' ').map((word) => word[0]).join('').slice(0, 2).toUpperCase()}</span>
+                <span>
+                  {(membership.partnerName ?? roleLabel)
+                    .split(' ')
+                    .map((word) => word[0])
+                    .join('')
+                    .slice(0, 2)
+                    .toUpperCase()}
+                </span>
                 <div>
                   <strong>{membership.partnerName ?? `${roleLabel} organization`}</strong>
-                  <small>{roleLabel} · {membership.role}</small>
+                  <small>
+                    {roleLabel} · {membership.role}
+                  </small>
                 </div>
                 <b>{selected ? 'Continue' : 'Switch'}</b>
               </button>

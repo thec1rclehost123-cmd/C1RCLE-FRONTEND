@@ -27,9 +27,7 @@ export function TicketsGuestView({ headline, tagline, items }: TicketsGuestViewP
             {headline}
           </h2>
 
-          <p className="text-sm font-medium text-white/60 leading-relaxed mb-8">
-            {tagline}
-          </p>
+          <p className="text-sm font-medium text-white/60 leading-relaxed mb-8">{tagline}</p>
 
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
             <Link

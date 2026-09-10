@@ -110,7 +110,10 @@ export default function SignupPage() {
             <h3 className="text-headline text-[var(--text-primary)] mb-2">Create an account</h3>
             <p className="text-body text-[var(--text-secondary)]">
               Already have an account?{' '}
-              <Link href="/login" className="text-[var(--accent-primary)] font-semibold hover:underline">
+              <Link
+                href="/login"
+                className="text-[var(--accent-primary)] font-semibold hover:underline"
+              >
                 Sign in
               </Link>
             </p>
@@ -139,7 +142,9 @@ export default function SignupPage() {
                   id="signup-display-name"
                   type="text"
                   value={displayName}
-                  onChange={(e) => { setDisplayName(e.target.value); }}
+                  onChange={(e) => {
+                    setDisplayName(e.target.value);
+                  }}
                   required
                   className="input input-lg pl-12"
                   placeholder="Jane Doe"
@@ -160,7 +165,9 @@ export default function SignupPage() {
                   id="signup-email"
                   type="email"
                   value={email}
-                  onChange={(e) => { setEmail(e.target.value); }}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                  }}
                   required
                   className="input input-lg pl-12"
                   placeholder="you@company.com"
@@ -181,7 +188,9 @@ export default function SignupPage() {
                   id="signup-password"
                   type="password"
                   value={password}
-                  onChange={(e) => { setPassword(e.target.value); }}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                  }}
                   required
                   minLength={8}
                   className="input input-lg pl-12"
@@ -203,7 +212,9 @@ export default function SignupPage() {
                   id="signup-confirm-password"
                   type="password"
                   value={confirmPassword}
-                  onChange={(e) => { setConfirmPassword(e.target.value); }}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                  }}
                   required
                   minLength={8}
                   className="input input-lg pl-12"

@@ -109,9 +109,7 @@ describe('PartnersScreen', () => {
       await user.click(screen.getAllByRole('button', { name: 'Review' })[0]!);
       await user.click(screen.getByRole('button', { name: /Accept/ }));
 
-      expect(
-        screen.getByText(/requires the partnership mutation API/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/requires the partnership mutation API/i)).toBeInTheDocument();
       const confirm = screen.getByRole('button', { name: 'Confirm' });
       expect(confirm).toBeDisabled();
     });

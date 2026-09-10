@@ -38,6 +38,9 @@ export const clientEnvSchema = z.object({
 /** Values that stay on the server. Never import this from a client component. */
 export const serverEnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  SITE_URL: url.optional(),
+  VERCEL_ENV: z.enum(['production', 'preview', 'development']).optional(),
+  VERCEL_URL: z.string().min(1).optional(),
   ANALYZE: z
     .enum(['true', 'false'])
     .default('false')

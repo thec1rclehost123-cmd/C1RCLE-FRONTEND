@@ -5,11 +5,9 @@ import { useState } from 'react';
 
 import type { ReactNode } from 'react';
 
-
 function isApiClientError(_error: unknown) {
   return false;
 }
-
 
 const ONE_MINUTE = 60 * 1000;
 

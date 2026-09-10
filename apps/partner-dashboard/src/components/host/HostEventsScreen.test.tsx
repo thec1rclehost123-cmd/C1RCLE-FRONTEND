@@ -1,12 +1,14 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ComponentProps } from 'react';
-
 import { HostEventsScreen } from './HostEventsScreen';
 
+import type { ComponentProps } from 'react';
+
+
 vi.mock('next/image', () => ({
-  default: (props: ComponentProps<'img'>) => <img {...props} />,
+  // eslint-disable-next-line @next/next/no-img-element -- vitest mock replacing next/image with a plain <img> element; no image optimization is needed in tests
+  default: (props: ComponentProps<'img'>) => <img alt={props.alt ?? ''} {...props} />,
 }));
 
 describe('HostEventsScreen', () => {
