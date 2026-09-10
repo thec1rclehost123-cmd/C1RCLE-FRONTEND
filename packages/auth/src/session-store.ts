@@ -9,9 +9,20 @@ export interface SessionState {
   readonly accessToken: string | null;
   readonly expiresAt: number | null;
   readonly status: SessionStatus;
+  /**
+   * Flips true once `SessionProvider`'s bootstrap has resolved once (its
+   * initial `refresh()` settled, success or failure). Callers that need a
+   * real access token before firing a request should gate on this, NOT on
+   * `accessToken !== null` — a token can legitimately go null again later
+   * (e.g. a later `refresh()` failing), and that must fall through to the
+   * normal request/401/reauth-retry path rather than blocking forever.
+   */
+  readonly hydrated: boolean;
 }
 
-type SessionPatch = Partial<Pick<SessionState, 'session' | 'accessToken' | 'expiresAt' | 'status'>>;
+type SessionPatch = Partial<
+  Pick<SessionState, 'session' | 'accessToken' | 'expiresAt' | 'status' | 'hydrated'>
+>;
 type SessionListener = () => void;
 
 const listeners = new Set<SessionListener>();
@@ -43,11 +54,17 @@ const setSession = (
   updateSession({ accessToken, session, expiresAt, status: 'authenticated' });
 };
 
+/** Marks the one-time bootstrap as settled; never reverts. See `SessionState.hydrated`. */
+const markHydrated = () => {
+  updateSession({ hydrated: true });
+};
+
 let state: SessionState = {
   accessToken: null,
   expiresAt: null,
   session: null,
   status: 'unknown',
+  hydrated: false,
 };
 
 const subscribe = (listener: SessionListener) => {
@@ -82,4 +99,4 @@ export function getAccessToken(): string | null {
   return state.accessToken;
 }
 
-export { clearSession, markAnonymous, setSession };
+export { clearSession, markAnonymous, markHydrated, setSession };

@@ -118,6 +118,11 @@ export const nextConfig = defineConfig(
               ],
               message: 'SECURITY: backend SDKs and database clients are never allowed here.',
             },
+            {
+              group: ['firebase', 'firebase/*'],
+              message:
+                'ARCHITECTURE: firebase is being removed from this application. Auth goes through @c1rcle/auth.',
+            },
           ],
         },
       ],
