@@ -12,15 +12,8 @@ import { Mail, Lock, AlertCircle, ChevronRight, Eye, EyeOff } from 'lucide-react
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, Suspense } from 'react';
 
-import { isApiClientError } from '@c1rcle/api-client';
-import { login, useSessionStore } from '@c1rcle/auth';
-
-import {
-  normalizePartnerRole,
-  resolvePartnerV3Path,
-} from '@/components/partner-shell/partner-role-routing';
-import { setActiveOrg } from '@/lib/org/active-org';
-import { getOrganizations } from '@/lib/org/org-repository';
+import { resolvePartnerV3Path } from '@/components/partner-shell/partner-role-routing';
+import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 
 const RING_SPECS = [
   { deg: 0, sizeClass: 'w-[340px] h-[340px]', duration: 10 },
@@ -76,7 +69,16 @@ function AmbientBg() {
 }
 
 function LoginForm() {
-  const sessionState = useSessionStore();
+  const {
+    signIn,
+    signOut,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- AuthContextValue.user is deliberately `any` (see DashboardAuthProvider.tsx's doc comment); only used here for a truthy/falsy check, never dereferenced.
+    user,
+    profile,
+    isApproved,
+    onboardingStatus,
+    loading: authLoading,
+  } = useDashboardAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -85,65 +87,72 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (sessionState.status === 'authenticated' && sessionState.session?.user) {
-      const next = searchParams.get('next') ?? searchParams.get('callbackUrl');
-      if (next) {
-        router.replace(next);
+    // Wait for DashboardAuthProvider to finish its async fetch before acting.
+    // Without this guard the effect fires while isApproved=false (its default),
+    // which signs the user out before the profile is even loaded — causing the
+    // "page refreshes / fields clear" silent failure.
+    if (authLoading || !user) return;
+
+    if (isApproved && profile?.activeMembership) {
+      // Fully approved with an active partnership — go to dashboard.
+      // `next` is `staging`'s parameter name, `callbackUrl` `codex`'s; both are
+      // still emitted by different redirect sources in the merged tree, so both
+      // are honoured here.
+      const callback = searchParams.get('next') ?? searchParams.get('callbackUrl');
+      if (callback) {
+        router.replace(callback);
+      } else {
+        router.replace(
+          resolvePartnerV3Path(profile.activeMembership.partnerType) ??
+            '/partner/select-organization',
+        );
       }
+    } else if (!isApproved && profile !== null) {
+      // profile is loaded (not null) but user is not approved — safe to reject.
+      // We check profile !== null to avoid acting on the initial null state.
+      void signOut();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- real UX requirement: a definitively-unapproved account must show why immediately, not after another render cycle.
+      setError(
+        onboardingStatus
+          ? "You don't have partner access yet. Your application is pending review."
+          : "This account doesn't have partner access. Please apply or contact support.",
+      );
     }
-  }, [sessionState.status, sessionState.session, searchParams, router]);
+  }, [
+    authLoading,
+    user,
+    isApproved,
+    profile,
+    onboardingStatus,
+    signOut,
+    searchParams,
+    router,
+  ]);
 
   const handleLogin = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
-    setFieldErrors({});
     setLoading(true);
 
     try {
-      await login({ email, password });
-
-      const next = searchParams.get('next') ?? searchParams.get('callbackUrl');
-      if (next) {
-        router.push(next);
-        return;
-      }
-
-      try {
-        const orgs = await getOrganizations();
-        if (orgs.length === 0) {
-          router.push('/onboard');
-        } else if (orgs.length === 1 && orgs[0]) {
-          await setActiveOrg(orgs[0].id);
-          const role = normalizePartnerRole(orgs[0].role);
-          router.push(resolvePartnerV3Path(role) ?? '/venue');
-        } else {
-          router.push('/partner/select-organization');
-        }
-      } catch {
-        router.push('/partner/select-organization');
-      }
-    } catch (err: unknown) {
-      if (isApiClientError(err)) {
-        if (err.fieldErrors) {
-          const formatted: Record<string, string> = {};
-          for (const [key, msgs] of Object.entries(err.fieldErrors)) {
-            if (msgs[0]) {
-              formatted[key] = msgs[0];
-            }
-          }
-          setFieldErrors(formatted);
-        }
-        setError(err.message || 'Invalid email or password.');
-      } else if (err instanceof Error && err.message === 'Authentication failed') {
-        setError('Invalid email or password. Please check your credentials or create a new account.');
-      } else if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unexpected error occurred during login. Please try again.');
-      }
+      // signIn() calls the real /api/v2/auth/login BFF proxy — a successful
+      // call updates the session store, which re-renders this component with
+      // a fresh `user`/`profile`/`isApproved`; the redirect effect above
+      // (reading those same fields) does the actual navigation once
+      // DashboardAuthProvider's own post-login fetch (memberships +
+      // onboarding status) resolves. The server, not anything the client
+      // picked, decides which dashboard they land on (D-024 C-10:
+      // role/partnerType come from the gateway, never client-selected).
+      await signIn(email, password);
+    } catch {
+      // login() already collapses every BFF 4xx into one generic error
+      // (account-existence oracle suppression, D-024's login-path rule) —
+      // there is no further error code to branch on here, which is also why
+      // `staging`'s per-field error rendering is gone: the login path never
+      // returns fieldErrors any more.
+      setError('Invalid email or password. Please try again.');
       setLoading(false);
     }
   };
@@ -227,13 +236,31 @@ function LoginForm() {
                 <AlertCircle className="h-5 w-5 text-[var(--state-error)] flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <p className="text-[14px] text-[var(--state-error)] font-medium">{error}</p>
-                  <button
-                    type="button"
-                    onClick={() => { router.push(`/signup${email ? `?email=${encodeURIComponent(email)}` : ''}`); }}
-                    className="text-[13px] font-semibold text-[var(--accent-primary)] underline mt-2 block hover:no-underline"
-                  >
-                    Don&apos;t have an account? Sign up here →
-                  </button>
+                  {/*
+                   * Two distinct follow-ups, deliberately mutually exclusive: the
+                   * "no partner access yet" case is a real, authenticated account
+                   * (set by the redirect effect) so it can safely point at
+                   * onboarding, while the credentials-failure path must stay
+                   * generic and only offer signup — it must never hint whether an
+                   * email is registered (D-024's anti-account-existence-oracle rule).
+                   */}
+                  {error.includes('partner access') ? (
+                    <button
+                      type="button"
+                      onClick={() => { router.push(`/onboard${email ? `?email=${encodeURIComponent(email)}` : ''}`); }}
+                      className="text-[13px] font-semibold text-[var(--state-error)] underline mt-2 block hover:no-underline"
+                    >
+                      Apply for Access →
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => { router.push(`/signup${email ? `?email=${encodeURIComponent(email)}` : ''}`); }}
+                      className="text-[13px] font-semibold text-[var(--accent-primary)] underline mt-2 block hover:no-underline"
+                    >
+                      Don&apos;t have an account? Sign up here →
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -260,9 +287,6 @@ function LoginForm() {
                     placeholder="you@company.com"
                   />
                 </div>
-                {fieldErrors['email'] && (
-                  <p className="text-xs text-[var(--state-error)]">{fieldErrors['email']}</p>
-                )}
               </div>
 
               <div className="space-y-2">
@@ -288,14 +312,17 @@ function LoginForm() {
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
-                {fieldErrors['password'] && (
-                  <p className="text-xs text-[var(--state-error)]">{fieldErrors['password']}</p>
-                )}
+                {/*
+                 * `codex` had a "Forgot password?" link here; it is intentionally
+                 * not carried over — no `/forgot-password` route exists in this
+                 * app, so the link would have been a 404. Re-add it together with
+                 * the route.
+                 */}
               </div>
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || authLoading}
                 className="btn btn-primary btn-xl w-full group cursor-pointer"
               >
                 {loading ? (
