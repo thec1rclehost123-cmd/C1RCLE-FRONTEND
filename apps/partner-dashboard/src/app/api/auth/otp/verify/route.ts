@@ -12,10 +12,12 @@ import {
 import type { NextRequest } from 'next/server';
 
 /**
- * Pre-session, like login/signup — no CSRF cookie check, `EmailOtpService`
- * has no actor gate either. The gateway collapses every failure reason
- * (no send in progress / wrong code / expired / locked) into one generic
- * 400; pass it through unchanged rather than re-deriving a message here.
+ * Real proxy to the V2 gateway's `POST /api/v2/auth/otp/verify` — replaces
+ * the fixture that accepted `123456` or any 6-character code. Pre-session,
+ * same shape as `otp/send`. Unlike `send`, the gateway DOES surface a
+ * distinct 400 for a wrong/expired/locked code — that specific failure
+ * reason is real UX (the user needs to know to try again vs. request a new
+ * code), passed straight through unchanged.
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const originError = assertSameOrigin(req);

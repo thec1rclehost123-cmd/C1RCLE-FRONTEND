@@ -150,7 +150,8 @@ function OnboardingContent() {
   const [approvalStatus, setApprovalStatus] = useState<'pending' | 'verified'>('pending');
   const [submittedRequestId, setSubmittedRequestId] = useState<string | null>(null);
 
-  // KYC state — collected during onboarding, submitted with the application
+  // KYC step state — documents are uploaded/confirmed server-side as each
+  // KycFileZone completes; kycStepData is local UI bookkeeping only now.
   const [createdUid, setCreatedUid] = useState<string | null>(null);
   const [, setKycSubmitting] = useState(false);
   const [kycError, setKycError] = useState('');
@@ -173,6 +174,9 @@ function OnboardingContent() {
 
   const emailCooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const phoneCooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Phone verification — real Firebase Identity Platform flow.
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+  const confirmationResultRef = useRef<ConfirmationResult | null>(null);
 
   // Form data — all existing fields preserved exactly
   const [formData, setFormData] = useState({
@@ -205,6 +209,8 @@ function OnboardingContent() {
   // `pastEventsText` have no home in `saveOnboardingProgressSchema` (it's
   // `.strict()`) so they stay purely local UI state, never sent to the server.
   const saveProgress = useCallback(
+    async (_currentStep: OnboardingStep) => {
+      if (!submittedRequestId) return;
     async (_currentStep: OnboardingStep) => {
       if (!submittedRequestId) return;
       try {
@@ -247,7 +253,12 @@ function OnboardingContent() {
     if (hostId) setFormData((prev) => ({ ...prev, associatedHostId: hostId }));
   }, [searchParams]);
 
-  // ── Clean up session and enforce Step 1 on fresh load/reload ──────────
+  // ── Resume onboarding state from the real backend on load ────────────────
+  // There is no server-side `onboardingStep` field — the step to resume at is
+  // derived from what the draft request actually has on it, via
+  // `getMyOnboardingRequest()` (`/api/auth/me` never existed on the real
+  // system). If no request exists yet, the account is signed out and the
+  // wizard restarts from `role` — mirrors the old "enforce Step 1" behaviour.
   const initialChecked = useRef(false);
 
   useEffect(() => {
@@ -517,7 +528,9 @@ function OnboardingContent() {
     }
   };
 
-  // ── Phone OTP ─────────────────────────────────────────────────────────────
+  // ── Phone OTP — real Firebase Identity Platform flow ──────────────────────
+  // Runs after account creation (`details`), when a session already exists —
+  // `/api/auth/phone-verification` forwards the session cookie.
   const handleSendPhoneOtp = async () => {
     setError('');
     const cleanPhone = otpPhone.replace(/\s/g, '');
@@ -553,6 +566,8 @@ function OnboardingContent() {
       }
     }
 
+    const dialablePhone = cleanPhone.startsWith('+') ? cleanPhone : `+91${digitsOnly}`;
+
     setLoading(true);
     try {
       // No real phone-availability pre-check exists; a duplicate phone has no
@@ -565,7 +580,7 @@ function OnboardingContent() {
       const confirmation = await sendPhoneOtp(toE164(cleanPhone), PHONE_RECAPTCHA_CONTAINER_ID);
       setPhoneConfirmation(confirmation);
       setOtpPhoneSent(true);
-      setFormData((prev) => ({ ...prev, phone: cleanPhone }));
+      setFormData((prev) => ({ ...prev, phone: dialablePhone }));
       startCooldown(setPhoneCooldown, phoneCooldownRef);
     } catch (err: any) {
       setError(err.message || 'Could not send the SMS code. Please try again.');
@@ -709,12 +724,13 @@ function OnboardingContent() {
     [submittedRequestId],
   );
 
-  // ── Intermediate KYC step: save data locally and advance or submit ─────
+  // ── Intermediate KYC step: advance, or submit on the last one ──────────
+  // Documents are already uploaded/confirmed server-side by KycFileZone as
+  // each field is filled in — this only advances the wizard.
   const handleKycStep = useCallback(
-    (stepId: string, data: Record<string, unknown>) => {
-      const seq = getStepSequence(entityType);
-      const idx = seq.indexOf(stepId as OnboardingStep);
-      const isLastStep = idx === seq.length - 2; // second-to-last (before "success")
+    (stepId: string, _data: Record<string, unknown>) => {
+      const idx = stepSequence.indexOf(stepId as OnboardingStep);
+      const isLastStep = idx === stepSequence.length - 2; // second-to-last (before "success")
       if (isLastStep) {
         submitApplication(stepId, data);
       } else {
@@ -727,10 +743,11 @@ function OnboardingContent() {
         }
       }
     },
-    [entityType, submitApplication, saveProgress],
+    [stepSequence, submitApplication, saveProgress],
   );
 
   const currentStepIndex = stepSequence.indexOf(step);
+  const effectiveUid = createdUid || authUser?.id || '';
   const effectiveUid = createdUid || authUser?.id || '';
 
   return (
@@ -985,6 +1002,7 @@ function OnboardingContent() {
             >
               <StepHeader
                 step={String(stepSequence.indexOf('phone_verify') + 1).padStart(2, '0')}
+                step={String(stepSequence.indexOf('phone_verify') + 1).padStart(2, '0')}
                 label="Verify Phone"
                 title="Confirm Your Number"
                 description="We'll send an SMS code to confirm your mobile number. This becomes your verified contact on the platform."
@@ -1070,6 +1088,7 @@ function OnboardingContent() {
               transition={{ duration: 0.3 }}
             >
               <StepHeader
+                step={String(stepSequence.indexOf('entity_type') + 1).padStart(2, '0')}
                 step={String(stepSequence.indexOf('entity_type') + 1).padStart(2, '0')}
                 label="Entity Type"
                 title="Individual or Business?"
@@ -1270,20 +1289,19 @@ function OnboardingContent() {
                       required
                       placeholder="Primary contact"
                     />
-                    {/* Phone read-only — verified in step 2 */}
-                    <div className="space-y-2">
-                      <label className="input-label">Phone Number</label>
-                      <div className="relative">
-                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--state-success)]" />
-                        <input
-                          type="tel"
-                          value={formData.phone || otpPhone}
-                          readOnly
-                          className="w-full bg-[var(--state-success-bg)] border border-[var(--state-success)]/30 rounded-xl pl-12 pr-10 py-3.5 text-[14px] text-[var(--text-primary)] cursor-not-allowed"
-                        />
-                        <CheckCircle2 className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--state-success)]" />
-                      </div>
-                    </div>
+                    {/* Phone is now verified in a later step (after account
+                        creation, since /api/auth/phone-verification requires
+                        a session) — collected here as plain text instead. */}
+                    <FormInput
+                      label="Phone Number"
+                      icon={Phone}
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      required
+                      placeholder="+91 98765 43210"
+                    />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -1461,6 +1479,7 @@ function OnboardingContent() {
               <KycIdentityForm
                 uid={effectiveUid}
                 requestId={submittedRequestId}
+                requestId={submittedRequestId}
                 initialData={{}}
                 onSubmit={(data) => handleKycStep('kyc_identity', data)}
                 submitting={false}
@@ -1487,6 +1506,7 @@ function OnboardingContent() {
               {kycError && <ErrorBanner error={kycError} />}
               <KycBusinessForm
                 uid={effectiveUid}
+                requestId={submittedRequestId}
                 initialData={{
                   legalName: formData.name,
                   businessType: formData.businessType,
@@ -1517,6 +1537,7 @@ function OnboardingContent() {
               {kycError && <ErrorBanner error={kycError} />}
               <KycSignatoryForm
                 uid={effectiveUid}
+                requestId={submittedRequestId}
                 requestId={submittedRequestId}
                 initialData={{}}
                 onSubmit={(data) => handleKycStep('kyc_signatory', data)}
@@ -1875,7 +1896,7 @@ function KycFileZone({
   label: string;
   fieldName: string;
   value: string | null;
-  onChange: (url: string | null) => void;
+  onChange: (storagePath: string | null) => void;
   uid: string;
   stepId: string;
   /** The application to attach this document to; required when `docLabel` is set. */
@@ -1896,6 +1917,10 @@ function KycFileZone({
   const handleFile = async (file: File) => {
     if (!file) return;
     setUploadError('');
+    if (!requestId) {
+      setUploadError('Your application has not been created yet. Please go back and try again.');
+      return;
+    }
     if (file.size > 5 * 1024 * 1024) {
       setUploadError('File must be under 5MB.');
       return;
@@ -1977,7 +2002,7 @@ function KycFileZone({
           >
             <Upload className="h-5 w-5 text-[var(--text-tertiary)] group-hover:text-[var(--accent-primary)] mx-auto mb-1.5 transition-colors" />
             <p className="text-[11px] text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)] transition-colors">
-              Click to upload · JPG, PNG or PDF · Max 5MB
+              Click to upload · JPG, PNG or WEBP · Max 5MB
             </p>
           </button>
           {uploadError && (
@@ -1991,7 +2016,7 @@ function KycFileZone({
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,application/pdf"
+        accept="image/jpeg,image/png,image/webp"
         className="hidden"
         onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
       />
@@ -2065,12 +2090,14 @@ function KycSelectField({
 function KycIdentityForm({
   uid,
   requestId,
+  requestId,
   initialData,
   onSubmit,
   submitting,
   submitLabel = 'Continue',
 }: {
   uid: string;
+  requestId: string | null;
   requestId: string | null;
   initialData: Record<string, unknown>;
   onSubmit: (data: Record<string, unknown>) => void;
@@ -2252,12 +2279,14 @@ function KycIdentityForm({
 
 function KycBusinessForm({
   uid,
+  requestId,
   initialData,
   onSubmit,
   submitting,
   submitLabel = 'Continue',
 }: {
   uid: string;
+  requestId: string | null;
   initialData: Record<string, unknown>;
   onSubmit: (data: Record<string, unknown>) => void;
   submitting: boolean;
@@ -2354,12 +2383,14 @@ function KycBusinessForm({
 function KycSignatoryForm({
   uid,
   requestId,
+  requestId,
   initialData,
   onSubmit,
   submitting,
   submitLabel = 'Continue',
 }: {
   uid: string;
+  requestId: string | null;
   requestId: string | null;
   initialData: Record<string, unknown>;
   onSubmit: (data: Record<string, unknown>) => void;

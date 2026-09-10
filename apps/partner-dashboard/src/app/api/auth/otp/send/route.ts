@@ -12,9 +12,12 @@ import {
 import type { NextRequest } from 'next/server';
 
 /**
- * Pre-session, like login/signup — no CSRF cookie check, `EmailOtpService`
- * has no actor gate either. The gateway's ack is deliberately identical
- * whether or not the address is mid-signup; pass it through unchanged.
+ * Real proxy to the V2 gateway's `POST /api/v2/auth/otp/send` — replaces
+ * the fixture that always returned `Dummy Code: 123456`. Pre-session, like
+ * `login`/`signup`: no cookie to re-scope, no CSRF token to mint (nothing
+ * yet exists to protect). The gateway itself returns the same generic ack
+ * regardless of outcome (its own anti-enumeration design), so there is
+ * nothing this proxy needs to normalize on top of that.
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const originError = assertSameOrigin(req);

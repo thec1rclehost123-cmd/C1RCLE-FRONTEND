@@ -55,6 +55,7 @@ interface AuthContextValue {
   /** Returns true if owner (null) or the specific action is permitted */
   canDo: (action: string) => boolean;
   /** Returns the current access token, or empty string if not signed in */
+  /** Returns the current access token, or empty string if not signed in */
   getIdToken: () => Promise<string>;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
@@ -64,6 +65,12 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+/** V2's org roles are `owner|admin|manager|member`; the frontend's staff-role
+ * vocabulary has no `member` — `staff` is the closest existing label. */
+function toStaffRole(role: string): StaffRole {
+  return role === 'member' ? 'staff' : (role as StaffRole);
+}
 
 export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   const sessionState = useSessionStore();
@@ -78,9 +85,11 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     await login({ email, password });
+    await login({ email, password });
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, displayName: string) => {
+    await signup({ email, password, displayName });
     await signup({ email, password, displayName });
   }, []);
 
@@ -89,6 +98,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    await logout();
     await logout();
   }, []);
 
