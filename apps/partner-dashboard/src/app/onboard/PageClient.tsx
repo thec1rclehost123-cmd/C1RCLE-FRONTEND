@@ -152,7 +152,8 @@ export function OnboardingPage() {
   const [reviewNote, setReviewNote] = useState('');
   const [submittedRequestId, setSubmittedRequestId] = useState<string | null>(null);
 
-  // KYC state — collected during onboarding, submitted with the application
+  // KYC step state — documents are uploaded/confirmed server-side as each
+  // KycFileZone completes; kycStepData is local UI bookkeeping only now.
   const [createdUid, setCreatedUid] = useState<string | null>(null);
   const [, setKycSubmitting] = useState(false);
   const [kycError, setKycError] = useState('');
@@ -175,6 +176,9 @@ export function OnboardingPage() {
 
   const emailCooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const phoneCooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Phone verification — real Firebase Identity Platform flow.
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+  const confirmationResultRef = useRef<ConfirmationResult | null>(null);
 
   // Form data — all existing fields preserved exactly
   const [formData, setFormData] = useState({
@@ -201,6 +205,8 @@ export function OnboardingPage() {
   // `pastEventsText` have no home in `saveOnboardingProgressSchema` (it's
   // `.strict()`) so they stay purely local UI state, never sent to the server.
   const saveProgress = useCallback(
+    async (_currentStep: OnboardingStep) => {
+      if (!submittedRequestId) return;
     async (_currentStep: OnboardingStep) => {
       if (!submittedRequestId) return;
       try {
@@ -243,7 +249,12 @@ export function OnboardingPage() {
     if (hostId) setFormData((prev) => ({ ...prev, associatedHostId: hostId }));
   }, [searchParams]);
 
-  // ── Clean up session and enforce Step 1 on fresh load/reload ──────────
+  // ── Resume onboarding state from the real backend on load ────────────────
+  // There is no server-side `onboardingStep` field — the step to resume at is
+  // derived from what the draft request actually has on it, via
+  // `getMyOnboardingRequest()` (`/api/auth/me` never existed on the real
+  // system). If no request exists yet, the account is signed out and the
+  // wizard restarts from `role` — mirrors the old "enforce Step 1" behaviour.
   const initialChecked = useRef(false);
 
   useEffect(() => {
@@ -519,7 +530,9 @@ export function OnboardingPage() {
     }
   };
 
-  // ── Phone OTP ─────────────────────────────────────────────────────────────
+  // ── Phone OTP — real Firebase Identity Platform flow ──────────────────────
+  // Runs after account creation (`details`), when a session already exists —
+  // `/api/auth/phone-verification` forwards the session cookie.
   const handleSendPhoneOtp = async () => {
     setError('');
     const cleanPhone = otpPhone.replace(/\s/g, '');
@@ -555,6 +568,8 @@ export function OnboardingPage() {
       }
     }
 
+    const dialablePhone = cleanPhone.startsWith('+') ? cleanPhone : `+91${digitsOnly}`;
+
     setLoading(true);
     try {
       // No real phone-availability pre-check exists; a duplicate phone has no
@@ -567,7 +582,7 @@ export function OnboardingPage() {
       const confirmation = await sendPhoneOtp(toE164(cleanPhone), PHONE_RECAPTCHA_CONTAINER_ID);
       setPhoneConfirmation(confirmation);
       setOtpPhoneSent(true);
-      setFormData((prev) => ({ ...prev, phone: cleanPhone }));
+      setFormData((prev) => ({ ...prev, phone: dialablePhone }));
       startCooldown(setPhoneCooldown, phoneCooldownRef);
     } catch (err: any) {
       setError(err.message || 'Could not send the SMS code. Please try again.');
@@ -711,12 +726,13 @@ export function OnboardingPage() {
     [submittedRequestId],
   );
 
-  // ── Intermediate KYC step: save data locally and advance or submit ─────
+  // ── Intermediate KYC step: advance, or submit on the last one ──────────
+  // Documents are already uploaded/confirmed server-side by KycFileZone as
+  // each field is filled in — this only advances the wizard.
   const handleKycStep = useCallback(
-    (stepId: string, data: Record<string, unknown>) => {
-      const seq = getStepSequence(entityType);
-      const idx = seq.indexOf(stepId as OnboardingStep);
-      const isLastStep = idx === seq.length - 2; // second-to-last (before "success")
+    (stepId: string, _data: Record<string, unknown>) => {
+      const idx = stepSequence.indexOf(stepId as OnboardingStep);
+      const isLastStep = idx === stepSequence.length - 2; // second-to-last (before "success")
       if (isLastStep) {
         submitApplication(stepId, data);
       } else {
@@ -729,10 +745,11 @@ export function OnboardingPage() {
         }
       }
     },
-    [entityType, submitApplication, saveProgress],
+    [stepSequence, submitApplication, saveProgress],
   );
 
   const currentStepIndex = stepSequence.indexOf(step);
+  const effectiveUid = createdUid || authUser?.id || '';
   const effectiveUid = createdUid || authUser?.id || '';
 
   return (
@@ -987,6 +1004,7 @@ export function OnboardingPage() {
             >
               <StepHeader
                 step={String(stepSequence.indexOf('phone_verify') + 1).padStart(2, '0')}
+                step={String(stepSequence.indexOf('phone_verify') + 1).padStart(2, '0')}
                 label="Verify Phone"
                 title="Confirm Your Number"
                 description="We'll send an SMS code to confirm your mobile number. This becomes your verified contact on the platform."
@@ -1072,6 +1090,7 @@ export function OnboardingPage() {
               transition={{ duration: 0.3 }}
             >
               <StepHeader
+                step={String(stepSequence.indexOf('entity_type') + 1).padStart(2, '0')}
                 step={String(stepSequence.indexOf('entity_type') + 1).padStart(2, '0')}
                 label="Entity Type"
                 title="Individual or Business?"
@@ -1270,55 +1289,20 @@ export function OnboardingPage() {
                       }}
                       placeholder="Primary contact"
                     />
-                    {/* Phone is a typed, unverified profile field (spec) — no OTP. */}
-                    <FormField
+                    {/* Phone is now verified in a later step (after account
+                        creation, since /api/auth/phone-verification requires
+                        a session) — collected here as plain text instead. */}
+                    <FormInput
                       label="Phone Number"
                       icon={Phone}
                       type="tel"
+                      name="phone"
                       value={formData.phone}
-                      error={fieldErrors['phone']}
-                      onChange={(v) => {
-                        handleProfileChange('phone', v);
-                      }}
+                      onChange={handleInputChange}
+                      required
                       placeholder="+91 98765 43210"
                     />
                   </div>
-
-                  {/* Local "business" toggle — reveals optional fields, no backend branch. */}
-                  <label className="flex items-center gap-3 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={isBusiness}
-                      onChange={(e) => {
-                        setIsBusiness(e.target.checked);
-                      }}
-                      className="h-4 w-4 rounded accent-[var(--accent-primary)]"
-                    />
-                    <span className="text-[13px] text-[var(--text-secondary)]">
-                      I'm registering as a business / company
-                    </span>
-                  </label>
-                  {isBusiness && (
-                    <div className="grid grid-cols-1 gap-4 p-4 rounded-2xl bg-[var(--surface-secondary)] border border-[var(--border-subtle)]">
-                      <FormSelect
-                        label="Business Type"
-                        value={formData.businessType}
-                        onChange={(v) => {
-                          handleProfileChange('businessType', v);
-                        }}
-                        options={[{ value: '', label: 'Select business type' }, ...BUSINESS_TYPES]}
-                      />
-                      <FormField
-                        label="Registration / CIN Number (optional)"
-                        icon={Briefcase}
-                        value={formData.registrationNumber}
-                        onChange={(v) => {
-                          handleProfileChange('registrationNumber', v);
-                        }}
-                        placeholder="e.g. U74999MH2020PTC123456"
-                      />
-                    </div>
-                  )}
 
                   <div className="grid grid-cols-2 gap-4">
                     <FormSelect
@@ -1433,6 +1417,7 @@ export function OnboardingPage() {
               <KycIdentityForm
                 uid={effectiveUid}
                 requestId={submittedRequestId}
+                requestId={submittedRequestId}
                 initialData={{}}
                 onSubmit={(data) => handleKycStep('kyc_identity', data)}
                 submitting={false}
@@ -1459,6 +1444,7 @@ export function OnboardingPage() {
               {kycError && <ErrorBanner error={kycError} />}
               <KycBusinessForm
                 uid={effectiveUid}
+                requestId={submittedRequestId}
                 initialData={{
                   legalName: formData.name,
                   businessType: formData.businessType,
@@ -1489,6 +1475,7 @@ export function OnboardingPage() {
               {kycError && <ErrorBanner error={kycError} />}
               <KycSignatoryForm
                 uid={effectiveUid}
+                requestId={submittedRequestId}
                 requestId={submittedRequestId}
                 initialData={{}}
                 onSubmit={(data) => handleKycStep('kyc_signatory', data)}
@@ -2112,12 +2099,14 @@ function KycSelectField({
 function KycIdentityForm({
   uid,
   requestId,
+  requestId,
   initialData,
   onSubmit,
   submitting,
   submitLabel = 'Continue',
 }: {
   uid: string;
+  requestId: string | null;
   requestId: string | null;
   initialData: Record<string, unknown>;
   onSubmit: (data: Record<string, unknown>) => void;
@@ -2299,12 +2288,14 @@ function KycIdentityForm({
 
 function KycBusinessForm({
   uid,
+  requestId,
   initialData,
   onSubmit,
   submitting,
   submitLabel = 'Continue',
 }: {
   uid: string;
+  requestId: string | null;
   initialData: Record<string, unknown>;
   onSubmit: (data: Record<string, unknown>) => void;
   submitting: boolean;
@@ -2401,12 +2392,14 @@ function KycBusinessForm({
 function KycSignatoryForm({
   uid,
   requestId,
+  requestId,
   initialData,
   onSubmit,
   submitting,
   submitLabel = 'Continue',
 }: {
   uid: string;
+  requestId: string | null;
   requestId: string | null;
   initialData: Record<string, unknown>;
   onSubmit: (data: Record<string, unknown>) => void;
