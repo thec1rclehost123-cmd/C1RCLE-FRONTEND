@@ -29,14 +29,27 @@ import type { NextRequest } from 'next/server';
  */
 const SESSION_COOKIE = 'better-auth.session_token';
 
-/** Paths that demand a session. Host/path-char gating is done in the handler. */
-const AUTH_GATED_PREFIXES = ['/venue', '/host', '/promoter', '/onboard', '/partner', '/partner-network'];
+/**
+ * Paths that demand a session. Host/path-char gating is done in the handler.
+ * `/onboard` is deliberately absent — it's the pre-signup entry point for
+ * brand-new partners (role → OTP → account creation happens mid-wizard), so
+ * gating it behind an existing session would bounce anonymous applicants
+ * straight back to `/login` before they ever see the wizard.
+ */
+const AUTH_GATED_PREFIXES = ['/venue', '/host', '/promoter', '/partner', '/partner-network'];
 
 /** Gateway origin for `connect-src`, read once via @c1rcle/config at module load. */
 const GATEWAY_ORIGIN = getClientEnv().NEXT_PUBLIC_API_BASE_URL.replace(/\/$/, '');
 
 /** Development-mode CSP needs `'unsafe-eval'` for React's dev error stacks. */
 const IS_DEV = getClientEnv().NEXT_PUBLIC_ENVIRONMENT === 'development';
+
+/**
+ * Only relax the CSP for GCP Identity Platform / reCAPTCHA when the phone-
+ * verification step is actually configured (see `lib/firebase/phone-auth.ts`)
+ * — an environment with no Firebase project shouldn't get the wider allowlist.
+ */
+const FIREBASE_ENABLED = Boolean(getClientEnv().NEXT_PUBLIC_FIREBASE_API_KEY);
 
 function isAuthGated(pathname: string): boolean {
   return AUTH_GATED_PREFIXES.some(
@@ -51,7 +64,8 @@ function buildContentSecurityPolicy(nonce: string): string {
     style-src 'self' 'unsafe-inline';
     img-src 'self' data: https:;
     font-src 'self';
-    connect-src 'self' ${GATEWAY_ORIGIN};
+    connect-src 'self' ${GATEWAY_ORIGIN}${FIREBASE_ENABLED ? ' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com' : ''};
+    ${FIREBASE_ENABLED ? "frame-src 'self' https://www.google.com https://recaptcha.google.com;" : ''}
     object-src 'none';
     base-uri 'self';
     form-action 'self';

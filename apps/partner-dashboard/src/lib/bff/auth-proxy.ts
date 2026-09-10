@@ -187,7 +187,21 @@ function parseSetCookie(raw: string): ParsedSetCookie | null {
     }
   }
 
-  return { name: pair.slice(0, eq).trim(), value: pair.slice(eq + 1).trim(), path, maxAge, expires };
+  const rawValue = pair.slice(eq + 1).trim();
+  // The gateway's `Set-Cookie` value is already percent-encoded (Better Auth's
+  // session token contains raw `/`/`=` from base64). `res.cookies.set()` below
+  // percent-encodes whatever value it's given, so passing this through as-is
+  // double-encodes it — the browser then stores and replays a token that never
+  // matches the original, and every `/refresh` 401s. Decode once here so the
+  // round trip nets out to exactly one layer of encoding.
+  let value: string;
+  try {
+    value = decodeURIComponent(rawValue);
+  } catch {
+    value = rawValue;
+  }
+
+  return { name: pair.slice(0, eq).trim(), value, path, maxAge, expires };
 }
 
 /**

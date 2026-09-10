@@ -102,6 +102,32 @@ describe('rescopeSessionCookies', () => {
     expect(setCookie.toLowerCase()).toContain('samesite=lax');
     expect(setCookie.toLowerCase()).not.toContain('domain=');
   });
+
+  it('does not double-encode a value containing reserved characters (regression: this broke every /refresh with a real Better Auth token)', () => {
+    // A real Better Auth session token is base64 — it contains `/` and `=`, which
+    // the gateway's own `Set-Cookie` already percent-encodes once. Passing that
+    // encoded string straight into `res.cookies.set()` (which encodes again) is
+    // exactly the bug: the browser ends up storing/replaying a token that never
+    // matches the original, so `POST /api/auth/refresh` 401s every time.
+    const rawToken = 'AcdMb7pFISI1UyXTcorZLBeXYwURG1At.TJZdUTST1bVFtrlsvP7EYKlqcRTk/u/4t32xhZM26LI=';
+    const gatewayResponse = new Response(null, { status: 200 });
+    gatewayResponse.headers.append(
+      'set-cookie',
+      `better-auth.session_token=${encodeURIComponent(rawToken)}; Path=/; HttpOnly; Max-Age=604800`,
+    );
+
+    const out = new NextResponse(null, { status: 200 });
+    rescopeSessionCookies(gatewayResponse, out);
+
+    const setCookie = out.headers.get('set-cookie') ?? '';
+    const match = /better-auth\.session_token=([^;]+)/.exec(setCookie);
+    const emitted = match?.[1] ?? '';
+
+    // Exactly one layer of encoding: decoding once must recover the original token...
+    expect(decodeURIComponent(emitted)).toBe(rawToken);
+    // ...and decoding it a second time must be a no-op — proof it wasn't encoded twice.
+    expect(decodeURIComponent(decodeURIComponent(emitted))).toBe(rawToken);
+  });
 });
 
 describe('passThroughGatewayError', () => {
