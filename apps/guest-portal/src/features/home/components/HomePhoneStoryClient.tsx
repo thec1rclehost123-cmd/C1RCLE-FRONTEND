@@ -227,7 +227,11 @@ export function HomePhoneStoryClient() {
               measureSection();
               scheduleRender();
             },
-            { rootMargin: '50% 0px' },
+            // Start preparing shortly before the story reaches the viewport,
+            // but release compositor layers soon after it leaves. The old
+            // 50% margin kept several large transformed layers promoted for
+            // much longer than the user could see them.
+            { rootMargin: '20% 0px' },
           )
         : null;
 
@@ -279,9 +283,9 @@ export function HomePhoneStoryClient() {
       id="story"
       ref={sectionRef}
       aria-label="The C1RCLE app experience"
-      className="relative z-10 h-[540vh] bg-black text-white md:h-[480vh] motion-reduce:h-auto"
+      className="relative z-10 h-[420vh] bg-black text-white md:h-[380vh] motion-reduce:h-auto"
     >
-      <div className="sticky top-0 flex h-[100svh] min-h-[660px] flex-col items-center justify-between overflow-hidden px-4 pb-6 pt-16 md:px-8 motion-reduce:relative motion-reduce:h-auto motion-reduce:min-h-[760px]">
+      <div className="sticky top-0 flex h-[100svh] min-h-[560px] flex-col items-center justify-between overflow-hidden px-4 pb-6 pt-16 sm:min-h-[660px] md:px-8 motion-reduce:relative motion-reduce:h-auto motion-reduce:min-h-[760px]">
         {/* Background Gradients */}
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_48%,rgba(244,74,34,0.2),transparent_34%),linear-gradient(180deg,#000_0%,#070707_46%,#000_100%)]" />
         <div className="nightlife-grain pointer-events-none absolute inset-0 opacity-10 mix-blend-overlay" />
