@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 
-import { logout, markAnonymous, refresh, setSession, useSessionStore } from '@c1rcle/auth';
+import { logout, markAnonymous, markHydrated, refresh, setSession, useSessionStore } from '@c1rcle/auth';
 
 import type { User } from '@c1rcle/contracts';
 
@@ -43,9 +43,11 @@ export function SessionProvider({ initialUser, children }: SessionProviderProps)
         if (!recovered) {
           markAnonymous();
         }
+        markHydrated();
       });
     } else {
       markAnonymous();
+      markHydrated();
     }
   }, [initialUser]);
 

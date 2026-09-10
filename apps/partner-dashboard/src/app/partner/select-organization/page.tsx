@@ -3,12 +3,12 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import {
-  normalizePartnerRole,
-  resolvePartnerV3Path,
-} from '@/components/partner-shell/partner-role-routing';
+import { useSessionStore } from '@c1rcle/auth';
+
+import { normalizePartnerRole } from '@/components/partner-shell/partner-role-routing';
 import { getActiveOrgId, setActiveOrg } from '@/lib/org/active-org';
 import { getOrganizations } from '@/lib/org/org-repository';
+import { resolveOrgOverviewPath } from '@/lib/org/route-after-auth';
 
 import type { OrganizationDto } from '@c1rcle/contracts';
 
@@ -18,8 +18,17 @@ export default function SelectOrganizationPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const activeOrgId = getActiveOrgId();
+  // Same token-hydration gate as useOrgAccess: on a fresh page load the session
+  // starts authenticated with a null access token until `refresh()` resolves one
+  // in the background (session-provider.tsx) — firing this any earlier 401s.
+  // Gated on `hydrated` (settles once, either way) rather than `accessToken`
+  // itself, so a later token loss falls through to the normal retry path
+  // instead of blocking this effect forever.
+  const hydrated = useSessionStore().hydrated;
 
   useEffect(() => {
+    if (!hydrated) return;
+
     let isMounted = true;
     getOrganizations()
       .then((orgs) => {
@@ -31,11 +40,9 @@ export default function SelectOrganizationPage() {
           router.replace('/onboard');
         } else if (orgs.length === 1 && orgs[0]) {
           const singleOrg = orgs[0];
-          void setActiveOrg(singleOrg.id).then(() => {
-            const role = normalizePartnerRole(singleOrg.role);
-            const target = resolvePartnerV3Path(role, 'overview') ?? '/venue';
-            router.replace(target);
-          });
+          void setActiveOrg(singleOrg.id)
+            .then(() => resolveOrgOverviewPath(singleOrg.id))
+            .then((target) => router.replace(target));
         }
 
       })
@@ -48,12 +55,15 @@ export default function SelectOrganizationPage() {
     return () => {
       isMounted = false;
     };
-  }, [router]);
+  }, [router, hydrated]);
 
   const handleSelectOrg = async (org: OrganizationDto) => {
     await setActiveOrg(org.id);
-    const role = normalizePartnerRole(org.role);
-    const fallbackRoute = resolvePartnerV3Path(role, 'overview') ?? '/venue';
+    // `org.role` is the caller's *staff* role (owner/admin/manager/member),
+    // never the partner type — resolveOrgOverviewPath asks the real
+    // per-org /access endpoint instead (same helper /login and the
+    // onboarding approval hop use, so all three never drift apart).
+    const fallbackRoute = await resolveOrgOverviewPath(org.id);
     const lastRoute =
       typeof window !== 'undefined'
         ? window.localStorage.getItem(`partner:last-route:${org.id}`) ?? fallbackRoute

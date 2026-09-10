@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiClientError } from '@c1rcle/api-client';
+import { markHydrated } from '@c1rcle/auth';
 
 import { useOrgAccess } from './use-org-access';
 
@@ -12,6 +13,11 @@ const getMock = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/api/client', () => ({
   apiClient: { get: getMock },
 }));
+
+// The hook now gates its fetch on the session store's one-time `hydrated`
+// flag (see use-org-access.ts) — these tests exercise steady-state fetch
+// behavior post-bootstrap, so mark it settled once for the whole file.
+markHydrated();
 
 const ACCESS_FIXTURE: PartnerAccessDto = {
   organizationId: 'org-1',

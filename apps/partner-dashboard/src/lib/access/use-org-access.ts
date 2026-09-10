@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { isApiClientError } from '@c1rcle/api-client';
+import { useSessionStore } from '@c1rcle/auth';
 import { partnerAccessDtoSchema } from '@c1rcle/contracts';
 
 import { apiClient } from '@/lib/api/client';
@@ -36,11 +37,19 @@ const IDLE_RESULT: FetchResult = { orgId: null, access: null, error: null, isSus
 
 export function useOrgAccess(orgIdOverride?: string | null): OrgAccessState {
   const orgId = orgIdOverride !== undefined ? orgIdOverride : getActiveOrgId();
+  // `SessionProvider` hydrates the session with a null token before its background
+  // `refresh()` resolves a real one (see session-provider.tsx). Firing this request
+  // any earlier sends it with no Authorization header and 401s against the gateway.
+  // Gate on `hydrated`, NOT on `accessToken !== null` — the token can legitimately
+  // go null again later (e.g. a subsequent `refresh()` failing), and that case must
+  // still fire the request and let the normal 401/reauth-retry path handle it,
+  // rather than getting stuck waiting for a token that may never come back.
+  const hydrated = useSessionStore().hydrated;
 
   const [result, setResult] = useState<FetchResult>(IDLE_RESULT);
 
   useEffect(() => {
-    if (!orgId) return;
+    if (!orgId || !hydrated) return;
 
     let isMounted = true;
 
@@ -48,6 +57,7 @@ export function useOrgAccess(orgIdOverride?: string | null): OrgAccessState {
       .get({
         path: `/api/v2/organizations/${orgId}/access`,
         schema: partnerAccessDtoSchema,
+        headers: { 'x-organization-id': orgId },
       })
       .then((data) => {
         if (isMounted) {
@@ -71,7 +81,7 @@ export function useOrgAccess(orgIdOverride?: string | null): OrgAccessState {
     return () => {
       isMounted = false;
     };
-  }, [orgId]);
+  }, [orgId, hydrated]);
 
   // A result fetched for a different (or no) org is stale — treat it as still loading
   // rather than flashing the previous org's access while the new request is in flight.
