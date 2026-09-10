@@ -29,15 +29,15 @@ import type { NextRequest } from 'next/server';
  */
 const SESSION_COOKIE = 'better-auth.session_token';
 
-/** Paths that demand a session. Host/path-char gating is done in the handler. */
-const AUTH_GATED_PREFIXES = [
-  '/venue',
-  '/host',
-  '/promoter',
-  '/onboard',
-  '/partner',
-  '/partner-network',
-];
+/**
+ * Paths that demand a session. Host/path-char gating is done in the handler.
+ *
+ * `/onboard` is deliberately NOT here: it is the public application wizard
+ * for prospective partners who have no account yet — its own `email_verify`
+ * step calls `signup()` to create the session mid-flow. Gating the page
+ * itself would make it impossible for a new applicant to ever reach it.
+ */
+const AUTH_GATED_PREFIXES = ['/venue', '/host', '/promoter', '/partner', '/partner-network'];
 
 /** Gateway origin for `connect-src`, read once via @c1rcle/config at module load. */
 const GATEWAY_ORIGIN = getClientEnv().NEXT_PUBLIC_API_BASE_URL.replace(/\/$/, '');
