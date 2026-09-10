@@ -19,6 +19,20 @@ export const clientEnvSchema = z.object({
   NEXT_PUBLIC_APP_NAME: z.string().min(1),
   NEXT_PUBLIC_ENVIRONMENT: z.enum(['development', 'preview', 'production']),
   NEXT_PUBLIC_SENTRY_DSN: url.optional(),
+  /**
+   * GCP Identity Platform (Firebase Auth), scoped to ONE use: the
+   * onboarding wizard's phone-verification step (`signInWithPhoneNumber`).
+   * Same GCP project as the backend's `FIREBASE_PROJECT_ID` — these are the
+   * public web-app config values, safe in a browser bundle by design (not
+   * secrets; Firebase Auth's actual security boundary is server-side
+   * `verifyIdToken`, not hiding this config). Optional so environments that
+   * never touch the phone-verification step don't need them configured;
+   * `getFirebaseAuth()` throws a clear error if called without them.
+   */
+  NEXT_PUBLIC_FIREBASE_API_KEY: z.string().min(1).optional(),
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: z.string().min(1).optional(),
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID: z.string().min(1).optional(),
+  NEXT_PUBLIC_FIREBASE_APP_ID: z.string().min(1).optional(),
 });
 
 /** Values that stay on the server. Never import this from a client component. */
