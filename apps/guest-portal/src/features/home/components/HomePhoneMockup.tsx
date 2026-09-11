@@ -44,7 +44,8 @@ export function HomePhoneMockup({
         fill
         sizes="(max-width: 768px) 52vw, 330px"
         className="object-cover"
-        priority={screenIndex === 0}
+        fetchPriority={screenIndex === 0 ? 'high' : 'auto'}
+        preload={screenIndex === 0}
       />
     );
   };
