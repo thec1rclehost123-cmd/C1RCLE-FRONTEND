@@ -342,6 +342,13 @@ export type {
   LeaderboardPeriodType,
   LeaderboardQuery,
   LeaderboardStatResponse,
+  RequestRefundInput,
+  RejectRefundRequestInput,
+  AdminRefundRequestStatus,
+  AdminRefundRequestDto,
+  AdminPayoutStatus,
+  RunPayoutBatchInput,
+  PayoutBatchResult,
 } from './contracts/phase6.js';
 
 export {
@@ -351,6 +358,9 @@ export {
   payoutRequestSchema,
   payoutResponseSchema,
   payoutListResponseSchema,
+  adminPayoutStatusSchema,
+  runPayoutBatchSchema,
+  payoutBatchResultSchema,
   bankAccountRequestSchema,
   bankAccountResponseSchema,
   bankAccountListResponseSchema,
@@ -362,6 +372,12 @@ export {
   leaderboardQuerySchema,
   leaderboardStatResponseSchema,
   leaderboardTopResponseSchema,
+  requestRefundSchema,
+  rejectRefundRequestSchema,
+  adminRefundApprovalDtoSchema,
+  adminRefundRequestStatusSchema,
+  adminRefundRequestDtoSchema,
+  adminRefundRequestListResponseSchema,
 } from './contracts/phase6.js';
 
 // Public / discovery (Phase 4 PR1)
