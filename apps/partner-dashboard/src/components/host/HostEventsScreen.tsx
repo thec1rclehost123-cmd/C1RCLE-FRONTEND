@@ -10,7 +10,6 @@ import styles from '../venue/screens/VenueEvents.module.css';
 
 import { hostEvents, hostSlotRequests } from './host-studio-model';
 
-
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 const s = (name: string) => styles[name] ?? name;
@@ -30,7 +29,10 @@ const STATUS_TONE = {
 } as const satisfies Record<string, 'success' | 'warning' | 'danger' | 'neutral'>;
 
 function statusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
-  return (STATUS_TONE as Record<string, 'success' | 'warning' | 'danger' | 'neutral'>)[status] ?? 'neutral';
+  return (
+    (STATUS_TONE as Record<string, 'success' | 'warning' | 'danger' | 'neutral'>)[status] ??
+    'neutral'
+  );
 }
 
 // ─── main component ────────────────────────────────────────────────────────
@@ -115,9 +117,12 @@ export function HostEventsScreen({ tab = 'upcoming' }: { readonly tab?: string }
                 aria-selected={activeTab === item.key}
                 tabIndex={activeTab === item.key ? 0 : -1}
                 onClick={() => {
+                  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- hard navigation intentionally refetches event counts on tab switch; router.push would leave stale tab data.
                   window.location.href = `/host/events?tab=${item.key}`;
                 }}
-                onKeyDown={(e) => { onTabKeyDown(e, index); }}
+                onKeyDown={(e) => {
+                  onTabKeyDown(e, index);
+                }}
               >
                 {item.label}
                 {item.count !== undefined ? <span>{item.count}</span> : null}
@@ -135,7 +140,9 @@ export function HostEventsScreen({ tab = 'upcoming' }: { readonly tab?: string }
           <input
             type="search"
             value={query}
-            onChange={(e) => { setQuery(e.target.value); }}
+            onChange={(e) => {
+              setQuery(e.target.value);
+            }}
             placeholder="Search events"
           />
         </label>
@@ -422,9 +429,7 @@ function RequestsTable({ rows }: { readonly rows: typeof hostSlotRequests }) {
               <td data-label="Event">
                 <div className={s('whenCell')}>
                   <strong>{request.eventName}</strong>
-                  <span className="font-mono text-xs opacity-[0.55]">
-                    {request.id}
-                  </span>
+                  <span className="font-mono text-xs opacity-[0.55]">{request.id}</span>
                 </div>
               </td>
               <td data-label="Venue">

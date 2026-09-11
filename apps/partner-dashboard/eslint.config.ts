@@ -5,7 +5,7 @@ import { nextConfig } from '@c1rcle/eslint-config/next';
 export default defineConfig(
   ...nextConfig,
   {
-    ignores: ['.next/**', 'next-env.d.ts'],
+    ignores: ['.next/**', 'next-env.d.ts', 'tailwind.config.js'],
   },
   {
     // The one sanctioned exception to the repo-wide firebase/* ban: GCP

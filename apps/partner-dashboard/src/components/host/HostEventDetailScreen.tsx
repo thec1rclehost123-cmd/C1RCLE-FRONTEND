@@ -6,7 +6,10 @@ import { DoorModeIcon, EditIcon } from '@c1rcle/icons';
 
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 
-import { EventDetailLayout } from '../venue/event-detail/EventDetailLayout';
+import {
+  EventDetailLayout,
+  type SharedEventDetailHeaderModel,
+} from '../venue/event-detail/EventDetailLayout';
 import layoutStyles from '../venue/event-detail/EventDetailLayout.module.css';
 import { EventInformationAccordion } from '../venue/event-detail/EventInformationAccordion';
 import styles from '../venue/event-detail/VenueEventDetail.module.css';
@@ -78,7 +81,7 @@ function EventFrame({
     );
   }
 
-  const headerModel = {
+  const headerModel: SharedEventDetailHeaderModel = {
     id: event.id,
     name: event.name,
     venue: `${event.venue} · ${event.city}`,
@@ -86,11 +89,8 @@ function EventFrame({
     posterSrc: event.poster,
     posterAlt: event.name,
     statusLabel: event.status,
-    statusTone: (event.status === 'Live'
-      ? 'success'
-      : event.status === 'Invitation'
-        ? 'warning'
-        : 'neutral') as 'success' | 'warning' | 'neutral',
+    statusTone:
+      event.status === 'Live' ? 'success' : event.status === 'Invitation' ? 'warning' : 'neutral',
     roleLabel: 'Lead host',
   };
 
@@ -250,10 +250,7 @@ export function HostEventGuestsScreen({ id }: { readonly id: string }) {
                     </span>
                   </td>
                   <td className="text-right">
-                    <button
-                      type="button"
-                      className="pd-button h-9 min-h-9 px-3.5 text-[13px]"
-                    >
+                    <button type="button" className="pd-button h-9 min-h-9 px-3.5 text-[13px]">
                       View
                     </button>
                   </td>
@@ -333,15 +330,9 @@ export function HostEventMarketingScreen({ id }: { readonly id: string }) {
             <h2>Event message</h2>
             <Link href="/host/marketing">Compose</Link>
           </div>
-          <div
-            className="mt-4 p-4 bg-[var(--dashboard-surface)] rounded-xl border border-[var(--dashboard-border)]"
-          >
-            <span className="text-xs text-[var(--dashboard-text-secondary)]">
-              Share link
-            </span>
-            <div
-              className="flex justify-between items-center mt-1"
-            >
+          <div className="mt-4 p-4 bg-[var(--dashboard-surface)] rounded-xl border border-[var(--dashboard-border)]">
+            <span className="text-xs text-[var(--dashboard-text-secondary)]">Share link</span>
+            <div className="flex justify-between items-center mt-1">
               <strong>thec1rcle.in/e/neon-nights</strong>
               <button
                 type="button"
