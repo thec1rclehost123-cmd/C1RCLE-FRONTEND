@@ -328,6 +328,29 @@ export {
   phase5ErrorCodeSchema,
 } from './contracts/phase5.js';
 
+// Phase 7: Admin directory (venues / events / hosts / users)
+export type {
+  AdminVenueDto,
+  AdminVenueListResponse,
+  AdminEventDto,
+  AdminEventListResponse,
+  AdminHostDto,
+  AdminHostListResponse,
+  AdminUserDto,
+  AdminUserListResponse,
+} from './contracts/admin.js';
+
+export {
+  adminVenueDtoSchema,
+  adminVenueListResponseSchema,
+  adminEventDtoSchema,
+  adminEventListResponseSchema,
+  adminHostDtoSchema,
+  adminHostListResponseSchema,
+  adminUserDtoSchema,
+  adminUserListResponseSchema,
+} from './contracts/admin.js';
+
 // Phase 6: Finance / Ledger / Payouts
 export type {
   LedgerEntryDto,
@@ -339,6 +362,9 @@ export type {
   RaiseDisputeRequest,
   ResolveDisputeRequest,
   DisputeResponse,
+  DisputeResolutionOutcome,
+  AdminDisputeStatus,
+  AdminResolveDisputeInput,
   LeaderboardPeriodType,
   LeaderboardQuery,
   LeaderboardStatResponse,
@@ -366,8 +392,11 @@ export {
   bankAccountListResponseSchema,
   raiseDisputeRequestSchema,
   resolveDisputeRequestSchema,
+  disputeResolutionOutcomeSchema,
   disputeResponseSchema,
   disputeListResponseSchema,
+  adminDisputeStatusSchema,
+  adminResolveDisputeSchema,
   leaderboardPeriodTypeSchema,
   leaderboardQuerySchema,
   leaderboardStatResponseSchema,
