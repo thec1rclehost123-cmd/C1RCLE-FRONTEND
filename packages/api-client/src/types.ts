@@ -49,3 +49,16 @@ export interface RequestOptions<TResponse> {
   readonly timeoutMs?: number;
   readonly retries?: number;
 }
+
+/**
+ * Options for a raw-text GET (e.g. a CSV export). Deliberately schema-less:
+ * the caller wants the exact bytes, not a validated object.
+ */
+export interface TextRequestOptions {
+  readonly path: string;
+  readonly query?: Readonly<Record<string, string | number | boolean | undefined>>;
+  readonly signal?: AbortSignal;
+  /** Overrides the client default for this call. */
+  readonly timeoutMs?: number;
+  readonly retries?: number;
+}
