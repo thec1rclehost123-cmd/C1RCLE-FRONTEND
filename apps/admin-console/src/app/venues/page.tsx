@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Button, EmptyState, ErrorState, LoadingState } from '@c1rcle/ui';
 
 import { PageHeader } from '@/components/admin/page-header';
-import { listVenues, suspendVenue } from '@/lib/admin/admin-api';
+import { listVenues, reinstateVenue, suspendVenue } from '@/lib/admin/admin-api';
 import {
   formatDateTime,
   shortId,
@@ -44,6 +44,11 @@ export default function VenuesDesk() {
       setSuspending(null);
       invalidate();
     },
+  });
+
+  const reinstateMutation = useMutation({
+    mutationFn: (venueId: string) => reinstateVenue(venueId),
+    onSuccess: invalidate,
   });
 
   return (
@@ -153,7 +158,19 @@ export default function VenuesDesk() {
                         )}
                       </div>
                     ) : (
-                      <p className="text-right text-xs text-muted-foreground">—</p>
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={reinstateMutation.isPending}
+                          onClick={() => {
+                            reinstateMutation.mutate(venue.id);
+                          }}
+                          aria-busy={reinstateMutation.isPending}
+                        >
+                          {reinstateMutation.isPending ? 'Reinstating…' : 'Reinstate'}
+                        </Button>
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -166,6 +183,11 @@ export default function VenuesDesk() {
       {suspendMutation.isError ? (
         <p role="alert" className="text-sm text-destructive">
           The venue could not be suspended. It is safe to retry — the request is idempotency-keyed.
+        </p>
+      ) : null}
+      {reinstateMutation.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          The venue could not be reinstated. It is safe to retry — the request is idempotency-keyed.
         </p>
       ) : null}
     </div>

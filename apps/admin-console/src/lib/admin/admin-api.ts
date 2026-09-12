@@ -10,6 +10,7 @@ import { z } from 'zod';
 
 import {
   adminEventListResponseSchema,
+  adminHostDtoSchema,
   adminHostListResponseSchema,
   adminRefundRequestDtoSchema,
   adminRefundRequestListResponseSchema,
@@ -298,6 +299,9 @@ export function listAudit(limit = 100, targetId?: string): Promise<AdminAuditPag
 export const ADMIN_AUDIT_ACTIONS = [
   'ONBOARDING_APPROVE',
   'VENUE_SUSPEND',
+  'VENUE_REINSTATE',
+  'ORGANIZATION_SUSPEND',
+  'ORGANIZATION_REINSTATE',
   'FINANCIAL_REFUND',
   'PAYOUT_BATCH_RUN',
   'DISPUTE_RESOLVE',
@@ -359,6 +363,15 @@ export function suspendVenue(venueId: string): Promise<z.infer<typeof adminVenue
   });
 }
 
+/** Reinstates a suspended venue — VENUE_REINSTATE is a TIER2 command (no proposal). */
+export function reinstateVenue(venueId: string): Promise<z.infer<typeof adminVenueDtoSchema>> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/venues/${venueId}/reinstate`,
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: adminVenueDtoSchema,
+  });
+}
+
 export type AdminEventPage = z.infer<typeof adminEventListResponseSchema>;
 
 export function listEvents(limit = 100): Promise<AdminEventPage> {
@@ -376,6 +389,31 @@ export function listHosts(limit = 100): Promise<AdminHostPage> {
     path: '/api/v2/admin/hosts',
     query: { limit },
     schema: adminHostListResponseSchema,
+  });
+}
+
+/**
+ * Suspend/reinstate an organization — host/venue/promoter are capabilities
+ * on an org's members in v2, not separate entity types, so this single pair
+ * of TIER2 commands covers what v1 called host-suspend/promoter-suspend.
+ */
+export function suspendOrganization(
+  organizationId: string,
+): Promise<z.infer<typeof adminHostDtoSchema>> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/organizations/${organizationId}/suspend`,
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: adminHostDtoSchema,
+  });
+}
+
+export function reinstateOrganization(
+  organizationId: string,
+): Promise<z.infer<typeof adminHostDtoSchema>> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/organizations/${organizationId}/reinstate`,
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: adminHostDtoSchema,
   });
 }
 

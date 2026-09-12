@@ -43,6 +43,9 @@ export const ADMIN_ROLE_LABELS: Record<AdminRole, string> = {
 export const ADMIN_ACTION_LABELS: Record<AdminAction, string> = {
   ONBOARDING_APPROVE: 'Approve onboarding',
   VENUE_SUSPEND: 'Suspend venue',
+  VENUE_REINSTATE: 'Reinstate venue',
+  ORGANIZATION_SUSPEND: 'Suspend organization',
+  ORGANIZATION_REINSTATE: 'Reinstate organization',
   FINANCIAL_REFUND: 'Refund',
   PAYOUT_BATCH_RUN: 'Run payout batch',
   DISPUTE_RESOLVE: 'Resolve dispute',
