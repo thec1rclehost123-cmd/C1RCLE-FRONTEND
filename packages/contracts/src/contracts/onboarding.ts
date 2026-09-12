@@ -256,9 +256,11 @@ export const adminActionSchema = z.enum([
   'VENUE_SUSPEND',
   'FINANCIAL_REFUND',
   'PAYOUT_BATCH_RUN',
+  'DISPUTE_RESOLVE',
   'ADMIN_PROVISION',
   'COMMISSION_ADJUST',
   'PAYOUT_FREEZE',
+  'PAYOUT_RELEASE',
 ]);
 
 export const proposalStatusSchema = z.enum(['pending', 'approved', 'rejected', 'cancelled']);

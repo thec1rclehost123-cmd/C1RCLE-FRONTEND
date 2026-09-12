@@ -19,6 +19,7 @@
     "@c1rcle/api-client": "workspace:*",
     "@c1rcle/auth": "workspace:*",
     "@c1rcle/config": "workspace:*",
+    "@c1rcle/contracts": "workspace:*",
     "@c1rcle/design-system": "workspace:*",
     "@c1rcle/hooks": "workspace:*",
     "@c1rcle/icons": "workspace:*",

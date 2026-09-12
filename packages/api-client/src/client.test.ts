@@ -196,4 +196,49 @@ describe('ApiClient', () => {
       vi.useRealTimers();
     }
   });
+
+  describe('fetchText', () => {
+    it('returns the raw response body for a CSV-style GET', async () => {
+      const fetchImpl = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response('adminId,action\nuser_1,PAYOUT_FREEZE', { status: 200 }));
+
+      const body = await clientWith(fetchImpl).fetchText({ path: '/export.csv' });
+
+      expect(body).toBe('adminId,action\nuser_1,PAYOUT_FREEZE');
+    });
+
+    it('serialises query params like the JSON calls', async () => {
+      const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response('a', { status: 200 }));
+
+      await clientWith(fetchImpl).fetchText({ path: '/export.csv', query: { limit: 500 } });
+
+      expect(fetchImpl.mock.calls[0]?.[0]).toBe('https://api.c1rcle.test/export.csv?limit=500');
+    });
+
+    it('maps a non-ok response to a typed error', async () => {
+      const fetchImpl = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response('nope', { status: 403 }));
+
+      await expect(clientWith(fetchImpl).fetchText({ path: '/export.csv' })).rejects.toMatchObject({
+        code: 'forbidden',
+        status: 403,
+      });
+    });
+
+    it('replays once when reauth recovers a 401', async () => {
+      const fetchImpl = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(new Response('', { status: 401 }))
+        .mockResolvedValueOnce(new Response('a,b\n1,2', { status: 200 }));
+      const reauth = vi.fn<() => Promise<boolean>>().mockResolvedValue(true);
+
+      const body = await clientWith(fetchImpl, { reauth }).fetchText({ path: '/export.csv' });
+
+      expect(body).toBe('a,b\n1,2');
+      expect(reauth).toHaveBeenCalledTimes(1);
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+  });
 });

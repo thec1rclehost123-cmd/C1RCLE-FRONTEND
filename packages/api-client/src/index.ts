@@ -14,6 +14,7 @@ export type {
   HttpMethod,
   ReauthHandler,
   RequestOptions,
+  TextRequestOptions,
   TokenProvider,
   UnauthorizedHandler,
 } from './types.js';
