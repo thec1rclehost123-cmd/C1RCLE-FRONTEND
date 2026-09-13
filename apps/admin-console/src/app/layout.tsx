@@ -1,6 +1,10 @@
+import { cookies } from 'next/headers';
+
+import { getServerSession } from '@c1rcle/auth/server-session';
 import { AppProviders, themeInitScript } from '@c1rcle/providers';
 
 import { AppShell } from '@/components/app-shell';
+import { SessionProvider } from '@/components/providers/session-provider';
 
 import './globals.css';
 
@@ -25,7 +29,9 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: { readonly children: ReactNode }) {
+export default async function RootLayout({ children }: { readonly children: ReactNode }) {
+  const session = await getServerSession((await cookies()).toString());
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -44,9 +50,11 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
           Skip to content
         </a>
 
-        <AppProviders>
-          <AppShell>{children}</AppShell>
-        </AppProviders>
+        <SessionProvider initialUser={session}>
+          <AppProviders>
+            <AppShell>{children}</AppShell>
+          </AppProviders>
+        </SessionProvider>
       </body>
     </html>
   );

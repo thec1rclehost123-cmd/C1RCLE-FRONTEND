@@ -14,6 +14,14 @@ export interface NavItem {
 
 export const NAV_ITEMS: readonly NavItem[] = [
   { label: 'Overview', href: '/' },
+  { label: 'Proposals', href: '/proposals' },
+  { label: 'Onboarding', href: '/onboarding' },
+  { label: 'Refunds', href: '/refunds' },
+  { label: 'Payouts', href: '/payouts' },
+  { label: 'Venues', href: '/venues' },
+  { label: 'Events', href: '/events' },
   { label: 'Users', href: '/users' },
-  { label: 'Partners', href: '/partners' },
+  { label: 'Hosts', href: '/hosts' },
+  { label: 'Admins', href: '/admins' },
+  { label: 'Audit', href: '/audit' },
 ];
