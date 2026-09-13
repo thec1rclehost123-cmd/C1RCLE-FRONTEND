@@ -591,7 +591,21 @@ export async function exportAuditCsv(fileName = 'admin-audit.csv'): Promise<void
   const csv = await getAdminApiClient().fetchText({
     path: '/api/v2/admin/audit/export.csv',
   });
+  downloadCsv(csv, fileName);
+}
 
+/**
+ * User directory CSV export — email is redacted server-side for
+ * non-super/non-finance admins, same rule v1 used.
+ */
+export async function exportUsersCsv(fileName = 'users.csv'): Promise<void> {
+  const csv = await getAdminApiClient().fetchText({
+    path: '/api/v2/admin/users/export.csv',
+  });
+  downloadCsv(csv, fileName);
+}
+
+function downloadCsv(csv: string, fileName: string): void {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');

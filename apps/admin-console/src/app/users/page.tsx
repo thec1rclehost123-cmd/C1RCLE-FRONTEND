@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Button, EmptyState, ErrorState, LoadingState, TextField } from '@c1rcle/ui';
 
 import { PageHeader } from '@/components/admin/page-header';
-import { banUser, listUsers, unbanUser } from '@/lib/admin/admin-api';
+import { banUser, exportUsersCsv, listUsers, unbanUser } from '@/lib/admin/admin-api';
 import { formatEpochMs, StatusBadge } from '@/lib/admin/format';
 
 interface Banning {
@@ -46,12 +46,30 @@ export default function UsersDesk() {
     onSuccess: invalidate,
   });
 
+  const exportMutation = useMutation({
+    mutationFn: () => exportUsersCsv(),
+  });
+
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Users"
-        description="Registered platform users. Ban/unban is a Tier-2 command — a single ops/admin decision, recorded to the audit trail with the reason given."
-      />
+      <div className="flex items-start justify-between gap-4">
+        <PageHeader
+          title="Users"
+          description="Registered platform users. Ban/unban is a Tier-2 command — a single ops/admin decision, recorded to the audit trail with the reason given."
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={exportMutation.isPending}
+          onClick={() => {
+            exportMutation.mutate();
+          }}
+          aria-busy={exportMutation.isPending}
+        >
+          {exportMutation.isPending ? 'Exporting…' : 'Export CSV'}
+        </Button>
+      </div>
 
       {list.isPending ? (
         <LoadingState label="Loading users…" />
@@ -192,6 +210,11 @@ export default function UsersDesk() {
       {unbanMutation.isError ? (
         <p role="alert" className="text-sm text-destructive">
           The user could not be unbanned. It is safe to retry — the request is idempotency-keyed.
+        </p>
+      ) : null}
+      {exportMutation.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          The CSV could not be generated. Please retry.
         </p>
       ) : null}
     </div>
