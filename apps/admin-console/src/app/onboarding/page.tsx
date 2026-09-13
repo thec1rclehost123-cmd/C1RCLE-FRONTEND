@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/admin/page-header';
 import { StatusFilter } from '@/components/admin/status-filter';
 import {
   approveOnboardingApplication,
+  getOnboardingDocumentReadUrl,
   listOnboardingApplications,
   ONBOARDING_STATUSES,
   rejectOnboardingApplication,
@@ -73,6 +74,14 @@ export default function OnboardingDesk() {
     },
   });
 
+  const viewDocumentMutation = useMutation({
+    mutationFn: ({ applicationId, label }: { applicationId: string; label: string }) =>
+      getOnboardingDocumentReadUrl(applicationId, label),
+    onSuccess: (grant) => {
+      window.open(grant.readUrl, '_blank', 'noopener,noreferrer');
+    },
+  });
+
   const anyPending = approveMutation.isPending || rejectMutation.isPending || changesMutation.isPending;
 
   const confirmReview = () => {
@@ -133,6 +142,9 @@ export default function OnboardingDesk() {
                 <th scope="col" className="px-4 py-3">
                   Submitted
                 </th>
+                <th scope="col" className="px-4 py-3">
+                  Documents
+                </th>
                 <th scope="col" className="px-4 py-3 text-right">
                   Actions
                 </th>
@@ -158,6 +170,30 @@ export default function OnboardingDesk() {
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {application.submittedAt === null ? '—' : formatDateTime(application.submittedAt)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {application.documents.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">None uploaded</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {application.documents.map((document) => (
+                            <Button
+                              key={document.label}
+                              size="sm"
+                              variant="ghost"
+                              disabled={viewDocumentMutation.isPending}
+                              onClick={() => {
+                                viewDocumentMutation.mutate({
+                                  applicationId: application.id,
+                                  label: document.label,
+                                });
+                              }}
+                            >
+                              {document.label}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       {isReviewing ? (
@@ -242,6 +278,11 @@ export default function OnboardingDesk() {
       {approveMutation.isError || rejectMutation.isError || changesMutation.isError ? (
         <p role="alert" className="text-sm text-destructive">
           The review could not be saved. It is safe to retry.
+        </p>
+      ) : null}
+      {viewDocumentMutation.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          The document could not be opened. It is safe to retry.
         </p>
       ) : null}
     </div>

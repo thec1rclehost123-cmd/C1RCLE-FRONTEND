@@ -20,6 +20,7 @@ import {
   adminVenueDtoSchema,
   adminVenueListResponseSchema,
   approveOnboardingResultSchema,
+  documentReadUrlDtoSchema,
   onboardingRequestDtoSchema,
   paginatedSchema,
   payoutBatchResultSchema,
@@ -211,6 +212,21 @@ export function requestOnboardingChanges(
     }),
     headers: { 'idempotency-key': newIdempotencyKey() },
     schema: onboardingRequestDtoSchema,
+  });
+}
+
+/**
+ * Mints a short-lived signed URL so an admin can actually view one uploaded
+ * KYC image before deciding on the application. Any admin may call this —
+ * viewing isn't itself a decision, so it isn't gated the way approve is.
+ */
+export function getOnboardingDocumentReadUrl(
+  applicationId: string,
+  label: string,
+): Promise<z.infer<typeof documentReadUrlDtoSchema>> {
+  return getAdminApiClient().get({
+    path: `/api/v2/admin/onboarding/applications/${applicationId}/documents/${label}/read-url`,
+    schema: documentReadUrlDtoSchema,
   });
 }
 
