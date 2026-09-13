@@ -9,6 +9,7 @@
 import { z } from 'zod';
 
 import {
+  adminEventDtoSchema,
   adminEventListResponseSchema,
   adminHostDtoSchema,
   adminHostListResponseSchema,
@@ -297,6 +298,8 @@ export function listAudit(limit = 100, targetId?: string): Promise<AdminAuditPag
 }
 
 export const ADMIN_AUDIT_ACTIONS = [
+  'EVENT_PAUSE',
+  'EVENT_RESUME',
   'ONBOARDING_APPROVE',
   'VENUE_SUSPEND',
   'VENUE_REINSTATE',
@@ -379,6 +382,27 @@ export function listEvents(limit = 100): Promise<AdminEventPage> {
     path: '/api/v2/admin/events',
     query: { limit },
     schema: adminEventListResponseSchema,
+  });
+}
+
+/**
+ * Admin pause/resume override — EVENT_PAUSE/EVENT_RESUME are TIER1 (any
+ * active admin, merely logged). `pauseEvent` sets `adminOverride: true`
+ * so the partner UI can tell an admin halt apart from a self-pause.
+ */
+export function pauseEvent(eventId: string): Promise<z.infer<typeof adminEventDtoSchema>> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/events/${eventId}/pause`,
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: adminEventDtoSchema,
+  });
+}
+
+export function resumeEvent(eventId: string): Promise<z.infer<typeof adminEventDtoSchema>> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/events/${eventId}/resume`,
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: adminEventDtoSchema,
   });
 }
 

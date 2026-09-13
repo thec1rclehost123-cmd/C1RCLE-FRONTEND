@@ -1,11 +1,11 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { EmptyState, ErrorState, LoadingState } from '@c1rcle/ui';
+import { Button, EmptyState, ErrorState, LoadingState } from '@c1rcle/ui';
 
 import { PageHeader } from '@/components/admin/page-header';
-import { listEvents } from '@/lib/admin/admin-api';
+import { listEvents, pauseEvent, resumeEvent } from '@/lib/admin/admin-api';
 import {
   formatDateTime,
   formatPaise,
@@ -15,17 +15,36 @@ import {
   eventStatusTone,
 } from '@/lib/admin/format';
 
+const PAUSABLE = new Set(['published', 'sales_paused']);
+
 export default function EventsDesk() {
+  const queryClient = useQueryClient();
+
   const list = useQuery({
     queryKey: ['admin', 'events'],
     queryFn: () => listEvents(),
+  });
+
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: ['admin', 'events'] });
+    void queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] });
+  };
+
+  const pauseMutation = useMutation({
+    mutationFn: (eventId: string) => pauseEvent(eventId),
+    onSuccess: invalidate,
+  });
+
+  const resumeMutation = useMutation({
+    mutationFn: (eventId: string) => resumeEvent(eventId),
+    onSuccess: invalidate,
   });
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Events"
-        description="Every event across the platform. Lifecycle and pricing at a glance; sales pausing is deferred until the force-pause control lands."
+        description="Every event across the platform. Pause/resume is a Tier-1 admin override — any active admin, recorded to the audit trail, distinguishable from a partner's own self-pause."
       />
 
       {list.isPending ? (
@@ -60,6 +79,9 @@ export default function EventsDesk() {
                 <th scope="col" className="px-4 py-3">
                   Created
                 </th>
+                <th scope="col" className="px-4 py-3 text-right">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -77,6 +99,9 @@ export default function EventsDesk() {
                       label={EVENT_STATUS_LABELS[event.status]}
                       tone={eventStatusTone(event.status)}
                     />
+                    {event.adminOverride ? (
+                      <p className="mt-1 text-xs text-muted-foreground">Admin override</p>
+                    ) : null}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {event.isPublic ? 'Public' : 'Private'}
@@ -94,12 +119,56 @@ export default function EventsDesk() {
                   <td className="px-4 py-3 text-muted-foreground">
                     {formatDateTime(event.createdAt)}
                   </td>
+                  <td className="px-4 py-3">
+                    {!PAUSABLE.has(event.status) ? (
+                      <p className="text-right text-xs text-muted-foreground">—</p>
+                    ) : event.status === 'sales_paused' ? (
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={resumeMutation.isPending}
+                          onClick={() => {
+                            resumeMutation.mutate(event.id);
+                          }}
+                          aria-busy={resumeMutation.isPending}
+                        >
+                          {resumeMutation.isPending ? 'Resuming…' : 'Resume'}
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={pauseMutation.isPending}
+                          onClick={() => {
+                            pauseMutation.mutate(event.id);
+                          }}
+                          aria-busy={pauseMutation.isPending}
+                        >
+                          {pauseMutation.isPending ? 'Pausing…' : 'Pause'}
+                        </Button>
+                      </div>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+
+      {pauseMutation.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          The event could not be paused. It is safe to retry — the request is idempotency-keyed.
+        </p>
+      ) : null}
+      {resumeMutation.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          The event could not be resumed. It is safe to retry — the request is idempotency-keyed.
+        </p>
+      ) : null}
     </div>
   );
 }

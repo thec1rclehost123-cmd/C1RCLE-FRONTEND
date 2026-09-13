@@ -41,6 +41,8 @@ export const ADMIN_ROLE_LABELS: Record<AdminRole, string> = {
 };
 
 export const ADMIN_ACTION_LABELS: Record<AdminAction, string> = {
+  EVENT_PAUSE: 'Pause event (admin override)',
+  EVENT_RESUME: 'Resume event',
   ONBOARDING_APPROVE: 'Approve onboarding',
   VENUE_SUSPEND: 'Suspend venue',
   VENUE_REINSTATE: 'Reinstate venue',
