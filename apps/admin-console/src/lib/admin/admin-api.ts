@@ -13,6 +13,7 @@ import {
   adminEventListResponseSchema,
   adminHostDtoSchema,
   adminHostListResponseSchema,
+  adminLookupResponseSchema,
   adminRefundRequestDtoSchema,
   adminRefundRequestListResponseSchema,
   adminAuditRecordDtoSchema,
@@ -362,6 +363,15 @@ export function statusFilterOptions<T extends string>(
   values: readonly T[],
 ): { value: T; label: string }[] {
   return values.map((value) => ({ value, label: labels[value] }));
+}
+
+/** Global entity lookup (the "omnibox") — parallel doc-id fetches, not a scan. */
+export function globalLookup(query: string): Promise<z.infer<typeof adminLookupResponseSchema>> {
+  return getAdminApiClient().get({
+    path: '/api/v2/admin/lookup',
+    query: { q: query },
+    schema: adminLookupResponseSchema,
+  });
 }
 
 /* ─── Directory (venues / events / hosts / users) ─────────────────────────── */

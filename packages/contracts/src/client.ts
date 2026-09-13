@@ -189,6 +189,8 @@ export type {
   ProposeActionRequest,
   ResolveProposalRequest,
   AdminAuditRecordDto,
+  AdminLookupResultItem,
+  AdminLookupResponse,
 } from './contracts/onboarding.js';
 
 export {
@@ -217,6 +219,8 @@ export {
   proposeActionSchema,
   resolveProposalSchema,
   adminAuditRecordDtoSchema,
+  adminLookupResultItemSchema,
+  adminLookupResponseSchema,
 } from './contracts/onboarding.js';
 
 // Checkout / Orders / Payments / Entitlements
