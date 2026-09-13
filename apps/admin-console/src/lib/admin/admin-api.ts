@@ -162,6 +162,23 @@ export function isProvisionAction(action: AdminAction): boolean {
   return action === AUTHORIZED_ACTION;
 }
 
+const ROLE_UPDATE_ACTION: AdminAction = 'ADMIN_ROLE_UPDATE';
+
+/** Completes an approved ADMIN_ROLE_UPDATE proposal by applying the new role. */
+export function updateAdminRoleFromProposal(
+  proposalId: string,
+): Promise<z.infer<typeof platformAdminDtoSchema>> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/proposals/${proposalId}/update-admin-role`,
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: platformAdminDtoSchema,
+  });
+}
+
+export function isRoleUpdateAction(action: AdminAction): boolean {
+  return action === ROLE_UPDATE_ACTION;
+}
+
 /* ─── Onboarding queue ─────────────────────────────────────────────────────── */
 
 export function listOnboardingApplications(
@@ -331,6 +348,7 @@ export const ADMIN_AUDIT_ACTIONS = [
   'PAYOUT_FREEZE',
   'PAYOUT_RELEASE',
   'ADMIN_PROVISION',
+  'ADMIN_ROLE_UPDATE',
   'COMMISSION_ADJUST',
 ] satisfies AdminAction[];
 

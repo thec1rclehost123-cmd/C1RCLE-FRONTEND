@@ -3,10 +3,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { Button, EmptyState, ErrorState, LoadingState } from '@c1rcle/ui';
+import { Button, EmptyState, ErrorState, LoadingState, TextField } from '@c1rcle/ui';
 
 import { PageHeader } from '@/components/admin/page-header';
-import { listAdmins, revokeAdmin } from '@/lib/admin/admin-api';
+import { ADMIN_ROLES, listAdmins, raiseProposal, revokeAdmin } from '@/lib/admin/admin-api';
 import { ADMIN_ROLE_LABELS, formatDateTime, shortId, StatusBadge } from '@/lib/admin/format';
 
 import type { AdminRole } from '@/lib/admin/contract-types';
@@ -24,21 +24,50 @@ function roleTone(role: AdminRole): 'default' | 'destructive' | 'warning' | 'suc
   }
 }
 
+interface RoleChange {
+  readonly adminId: string;
+  role: AdminRole;
+}
+
 export default function AdminsDesk() {
   const queryClient = useQueryClient();
   const [confirmingRevokeId, setConfirmingRevokeId] = useState<string | null>(null);
+  const [changingRole, setChangingRole] = useState<RoleChange | null>(null);
+  const [roleChangeReason, setRoleChangeReason] = useState('');
 
   const list = useQuery({
     queryKey: ['admin', 'admins'],
     queryFn: () => listAdmins(),
   });
 
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: ['admin', 'admins'] });
+    void queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] });
+  };
+
   const revokeMutation = useMutation({
     mutationFn: (adminId: string) => revokeAdmin(adminId),
     onSuccess: () => {
       setConfirmingRevokeId(null);
-      void queryClient.invalidateQueries({ queryKey: ['admin', 'admins'] });
-      void queryClient.invalidateQueries({ queryKey: ['admin', 'overview'] });
+      invalidate();
+    },
+  });
+
+  const roleChangeMutation = useMutation({
+    mutationFn: () => {
+      if (changingRole === null) {
+        throw new Error('No admin selected');
+      }
+      return raiseProposal({
+        action: 'ADMIN_ROLE_UPDATE',
+        reason: roleChangeReason.trim(),
+        payload: { targetUserId: changingRole.adminId, role: changingRole.role },
+      });
+    },
+    onSuccess: () => {
+      setChangingRole(null);
+      setRoleChangeReason('');
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'proposals'] });
     },
   });
 
@@ -46,7 +75,7 @@ export default function AdminsDesk() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Admins"
-        description="Platform admin roster. Provisioning happens through the Proposals desk (ADMIN_PROVISION); here you can audit roles and revoke access."
+        description="Platform admin roster. Provisioning and role changes happen through the Proposals desk (Tier-3, dual control); here you can audit roles, raise a role-change proposal, and revoke access."
       />
 
       {list.isPending ? (
@@ -95,32 +124,99 @@ export default function AdminsDesk() {
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{formatDateTime(admin.createdAt)}</td>
                   <td className="px-4 py-3">
-                    {admin.isActive ? (
-                      confirmingRevokeId === admin.id ? (
-                        <div className="flex justify-end gap-2">
+                    {!admin.isActive ? (
+                      <p className="text-right text-xs text-muted-foreground">—</p>
+                    ) : confirmingRevokeId === admin.id ? (
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => { setConfirmingRevokeId(null); }}
+                        >
+                          Keep
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          disabled={revokeMutation.isPending}
+                          onClick={() => { revokeMutation.mutate(admin.id); }}
+                        >
+                          {revokeMutation.isPending ? 'Revoking…' : 'Confirm revoke'}
+                        </Button>
+                      </div>
+                    ) : changingRole?.adminId === admin.id ? (
+                      <div className="flex flex-col items-end gap-2">
+                        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                          New role
+                          <select
+                            value={changingRole.role}
+                            onChange={(event) => {
+                              setChangingRole({
+                                adminId: admin.id,
+                                role: event.target.value as AdminRole,
+                              });
+                            }}
+                            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
+                          >
+                            {ADMIN_ROLES.map((role) => (
+                              <option key={role} value={role}>
+                                {ADMIN_ROLE_LABELS[role]}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <TextField
+                          label="Reason (required)"
+                          value={roleChangeReason}
+                          onChange={(event) => {
+                            setRoleChangeReason(event.target.value);
+                          }}
+                          placeholder="Why is this role changing?"
+                          className="w-72"
+                        />
+                        <div className="flex gap-2">
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => { setConfirmingRevokeId(null); }}
+                            onClick={() => {
+                              setChangingRole(null);
+                              setRoleChangeReason('');
+                            }}
                           >
-                            Keep
+                            Cancel
                           </Button>
                           <Button
                             size="sm"
-                            variant="destructive"
-                            disabled={revokeMutation.isPending}
-                            onClick={() => { revokeMutation.mutate(admin.id); }}
+                            variant="primary"
+                            disabled={
+                              roleChangeMutation.isPending ||
+                              roleChangeReason.trim() === '' ||
+                              changingRole.role === admin.role
+                            }
+                            onClick={() => {
+                              roleChangeMutation.mutate();
+                            }}
                           >
-                            {revokeMutation.isPending ? 'Revoking…' : 'Confirm revoke'}
+                            {roleChangeMutation.isPending ? 'Raising…' : 'Raise proposal'}
                           </Button>
                         </div>
-                      ) : (
+                      </div>
+                    ) : (
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setChangingRole({ adminId: admin.id, role: admin.role });
+                            setRoleChangeReason('');
+                          }}
+                        >
+                          Change role
+                        </Button>
                         <Button size="sm" variant="outline" onClick={() => { setConfirmingRevokeId(admin.id); }}>
                           Revoke
                         </Button>
-                      )
-                    ) : (
-                      <p className="text-right text-xs text-muted-foreground">—</p>
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -133,6 +229,17 @@ export default function AdminsDesk() {
       {revokeMutation.isError ? (
         <p role="alert" className="text-sm text-destructive">
           Revocation failed. It is safe to retry.
+        </p>
+      ) : null}
+      {roleChangeMutation.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          Raising the role-change proposal failed. It is safe to retry.
+        </p>
+      ) : null}
+      {roleChangeMutation.isSuccess ? (
+        <p className="text-sm text-muted-foreground">
+          Proposal raised — a second admin must approve it on the Proposals desk before the role
+          change applies.
         </p>
       ) : null}
     </div>

@@ -275,6 +275,7 @@ export const adminActionSchema = z.enum([
   'USER_BAN',
   'USER_UNBAN',
   'ADMIN_PROVISION',
+  'ADMIN_ROLE_UPDATE',
   'COMMISSION_ADJUST',
   'PAYOUT_FREEZE',
   'PAYOUT_RELEASE',

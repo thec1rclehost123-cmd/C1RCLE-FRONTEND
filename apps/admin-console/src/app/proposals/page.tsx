@@ -13,11 +13,13 @@ import {
   executePayoutProposal,
   isPayoutProposalAction,
   isProvisionAction,
+  isRoleUpdateAction,
   listProposals,
   PROPOSAL_STATUSES,
   provisionAdminFromProposal,
   rejectProposal,
   statusFilterOptions,
+  updateAdminRoleFromProposal,
 } from '@/lib/admin/admin-api';
 import {
   StatusBadge,
@@ -87,6 +89,14 @@ export default function ProposalsDesk() {
 
   const provisionMutation = useMutation({
     mutationFn: (proposalId: string) => provisionAdminFromProposal(proposalId),
+    onSuccess: () => {
+      invalidate();
+    },
+  });
+
+  const [roleUpdatingId, setRoleUpdatingId] = useState<string | null>(null);
+  const roleUpdateMutation = useMutation({
+    mutationFn: (proposalId: string) => updateAdminRoleFromProposal(proposalId),
     onSuccess: () => {
       invalidate();
     },
@@ -272,6 +282,24 @@ export default function ProposalsDesk() {
                                 : 'Provision admin'}
                             </Button>
                           ) : proposal.status === 'approved' &&
+                            isRoleUpdateAction(proposal.action) ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={roleUpdateMutation.isPending}
+                              onClick={() => {
+                                setRoleUpdatingId(proposal.id);
+                                roleUpdateMutation.mutate(proposal.id);
+                              }}
+                              aria-busy={
+                                roleUpdateMutation.isPending && roleUpdatingId === proposal.id
+                              }
+                            >
+                              {roleUpdateMutation.isPending && roleUpdatingId === proposal.id
+                                ? 'Updating…'
+                                : 'Apply role update'}
+                            </Button>
+                          ) : proposal.status === 'approved' &&
                             isPayoutProposalAction(proposal.action) ? (
                             <Button
                               size="sm"
@@ -300,7 +328,7 @@ export default function ProposalsDesk() {
         </div>
       )}
 
-      {resolveMutation.isError || payoutExecutionMutation.isError ? (
+      {resolveMutation.isError || payoutExecutionMutation.isError || roleUpdateMutation.isError ? (
         <p role="alert" className="text-sm text-destructive">
           The action could not be completed. It is safe to retry — the request is idempotency-keyed.
         </p>

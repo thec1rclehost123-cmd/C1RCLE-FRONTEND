@@ -56,6 +56,7 @@ export const ADMIN_ACTION_LABELS: Record<AdminAction, string> = {
   PAYOUT_FREEZE: 'Freeze payout',
   PAYOUT_RELEASE: 'Release payout',
   ADMIN_PROVISION: 'Provision admin',
+  ADMIN_ROLE_UPDATE: 'Update admin role',
   COMMISSION_ADJUST: 'Adjust commission',
 };
 
