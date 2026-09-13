@@ -51,6 +51,8 @@ export const ADMIN_ACTION_LABELS: Record<AdminAction, string> = {
   FINANCIAL_REFUND: 'Refund',
   PAYOUT_BATCH_RUN: 'Run payout batch',
   DISPUTE_RESOLVE: 'Resolve dispute',
+  USER_BAN: 'Ban user',
+  USER_UNBAN: 'Unban user',
   PAYOUT_FREEZE: 'Freeze payout',
   PAYOUT_RELEASE: 'Release payout',
   ADMIN_PROVISION: 'Provision admin',

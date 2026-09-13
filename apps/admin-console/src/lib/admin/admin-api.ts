@@ -16,6 +16,7 @@ import {
   adminRefundRequestDtoSchema,
   adminRefundRequestListResponseSchema,
   adminAuditRecordDtoSchema,
+  adminUserDtoSchema,
   adminUserListResponseSchema,
   adminVenueDtoSchema,
   adminVenueListResponseSchema,
@@ -324,6 +325,8 @@ export const ADMIN_AUDIT_ACTIONS = [
   'FINANCIAL_REFUND',
   'PAYOUT_BATCH_RUN',
   'DISPUTE_RESOLVE',
+  'USER_BAN',
+  'USER_UNBAN',
   'PAYOUT_FREEZE',
   'PAYOUT_RELEASE',
   'ADMIN_PROVISION',
@@ -464,6 +467,28 @@ export function listUsers(limit = 100): Promise<AdminUserPage> {
     path: '/api/v2/admin/users',
     query: { limit },
     schema: adminUserListResponseSchema,
+  });
+}
+
+/** Bans a user outright — USER_BAN is a TIER2 command (no proposal). */
+export function banUser(
+  userId: string,
+  reason?: string,
+): Promise<z.infer<typeof adminUserDtoSchema>> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/users/${userId}/ban`,
+    body: reason === undefined || reason === '' ? undefined : { reason },
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: adminUserDtoSchema,
+  });
+}
+
+/** Reverses `banUser` — USER_UNBAN is a TIER2 command (no proposal). */
+export function unbanUser(userId: string): Promise<z.infer<typeof adminUserDtoSchema>> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/users/${userId}/unban`,
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: adminUserDtoSchema,
   });
 }
 
