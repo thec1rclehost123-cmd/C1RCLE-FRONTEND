@@ -1,9 +1,6 @@
-import { partnerAccessDtoSchema } from '@c1rcle/contracts';
-
 import { resolvePartnerV3Path } from '@/components/partner-shell/partner-role-routing';
-import { apiClient } from '@/lib/api/client';
 import { setActiveOrg } from '@/lib/org/active-org';
-import { getOrganizations } from '@/lib/org/org-repository';
+import { getOrganizations, getPartnerAccess } from '@/lib/org/org-repository';
 
 import type { OrganizationDto, PartnerAccessDto } from '@c1rcle/contracts';
 import type { useRouter } from 'next/navigation';
@@ -17,11 +14,7 @@ export type WorkspaceType = PartnerAccessDto['partnerType'];
  */
 export async function resolveOrgOverviewPath(orgId: string): Promise<string> {
   try {
-    const access = await apiClient.get({
-      path: `/api/v2/organizations/${orgId}/access`,
-      schema: partnerAccessDtoSchema,
-      headers: { 'x-organization-id': orgId },
-    });
+    const access = await getPartnerAccess(orgId);
     return resolvePartnerV3Path(access.partnerType, 'overview') ?? '/partner/select-organization';
   } catch {
     return '/partner/select-organization';
@@ -42,11 +35,7 @@ export async function filterOrgsByPartnerType(
   const results = await Promise.all(
     orgs.map(async (org) => {
       try {
-        const access = await apiClient.get({
-          path: `/api/v2/organizations/${org.id}/access`,
-          schema: partnerAccessDtoSchema,
-          headers: { 'x-organization-id': org.id },
-        });
+        const access = await getPartnerAccess(org.id);
         return access.partnerType === partnerType ? org : null;
       } catch {
         return null;

@@ -4,10 +4,9 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { isApiClientError } from '@c1rcle/api-client';
 import { useSessionStore } from '@c1rcle/auth';
-import { partnerAccessDtoSchema } from '@c1rcle/contracts';
 
-import { apiClient } from '@/lib/api/client';
 import { getActiveOrgId } from '@/lib/org/active-org';
+import { getPartnerAccess } from '@/lib/org/org-repository';
 
 import type { PartnerAccessDto } from '@c1rcle/contracts';
 
@@ -37,13 +36,12 @@ const IDLE_RESULT: FetchResult = { orgId: null, access: null, error: null, isSus
 
 export function useOrgAccess(orgIdOverride?: string | null): OrgAccessState {
   const orgId = orgIdOverride !== undefined ? orgIdOverride : getActiveOrgId();
-  // `SessionProvider` hydrates the session with a null token before its background
-  // `refresh()` resolves a real one (see session-provider.tsx). Firing this request
-  // any earlier sends it with no Authorization header and 401s against the gateway.
-  // Gate on `hydrated`, NOT on `accessToken !== null` — the token can legitimately
-  // go null again later (e.g. a subsequent `refresh()` failing), and that case must
-  // still fire the request and let the normal 401/reauth-retry path handle it,
-  // rather than getting stuck waiting for a token that may never come back.
+  // `SessionProvider` hydrates the session before its background `refresh()`
+  // re-scopes the gateway session cookie to this origin (see
+  // session-provider.tsx). Firing the request earlier means the BFF has no
+  // cookie to forward and the gateway 401s. Gate on `hydrated` — the flag
+  // flips once bootstrap settles, signed in or not — so the first access
+  // read always rides a real session.
   const hydrated = useSessionStore().hydrated;
 
   const [result, setResult] = useState<FetchResult>(IDLE_RESULT);
@@ -53,12 +51,7 @@ export function useOrgAccess(orgIdOverride?: string | null): OrgAccessState {
 
     let isMounted = true;
 
-    apiClient
-      .get({
-        path: `/api/v2/organizations/${orgId}/access`,
-        schema: partnerAccessDtoSchema,
-        headers: { 'x-organization-id': orgId },
-      })
+    getPartnerAccess(orgId)
       .then((data) => {
         if (isMounted) {
           setResult({ orgId, access: data, error: null, isSuspended: false });

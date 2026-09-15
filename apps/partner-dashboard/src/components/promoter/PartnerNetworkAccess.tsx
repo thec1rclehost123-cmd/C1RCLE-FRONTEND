@@ -14,10 +14,10 @@ export function PartnerNetworkAccess({ children }: { readonly children: ReactNod
 
   useEffect(() => {
     if (auth.loading) return;
-    if (!auth.user || !auth.isApproved || auth.isBanned) router.replace('/login');
-  }, [auth.isApproved, auth.isBanned, auth.loading, auth.user, router]);
+    if (!auth.user || !auth.isApproved) router.replace('/login');
+  }, [auth.isApproved, auth.loading, auth.user, router]);
 
-  if (auth.loading || !auth.user || !auth.isApproved || auth.isBanned) return <div className="partner-auth-splash" role="status">Authorizing Partner Network access</div>;
+  if (auth.loading || !auth.user || !auth.isApproved) return <div className="partner-auth-splash" role="status">Authorizing Partner Network access</div>;
 
   return <div className={`partner-dashboard partner-network-page partner-network-page--${activeRole ?? 'partner'}`}><main className="partner-dashboard-content">{children}</main></div>;
 }

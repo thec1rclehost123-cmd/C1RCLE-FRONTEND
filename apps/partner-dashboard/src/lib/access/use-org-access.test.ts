@@ -8,10 +8,10 @@ import { useOrgAccess } from './use-org-access';
 
 import type { PartnerAccessDto } from '@c1rcle/contracts';
 
-const getMock = vi.hoisted(() => vi.fn());
+const getPartnerAccessMock = vi.hoisted(() => vi.fn());
 
-vi.mock('@/lib/api/client', () => ({
-  apiClient: { get: getMock },
+vi.mock('@/lib/org/org-repository', () => ({
+  getPartnerAccess: getPartnerAccessMock,
 }));
 
 // The hook now gates its fetch on the session store's one-time `hydrated`
@@ -29,21 +29,21 @@ const ACCESS_FIXTURE: PartnerAccessDto = {
 };
 
 afterEach(() => {
-  getMock.mockReset();
+  getPartnerAccessMock.mockReset();
 });
 
 describe('useOrgAccess', () => {
   it('returns idle state and issues no request when there is no org id', () => {
     const { result } = renderHook(() => useOrgAccess(null));
 
-    expect(getMock).not.toHaveBeenCalled();
+    expect(getPartnerAccessMock).not.toHaveBeenCalled();
     expect(result.current.isLoading).toBe(false);
     expect(result.current.partnerType).toBeNull();
     expect(result.current.permissions).toEqual([]);
   });
 
   it('maps a partnerAccessDtoSchema fixture to partnerType, permissions, and tabVisibility', async () => {
-    getMock.mockResolvedValue(ACCESS_FIXTURE);
+    getPartnerAccessMock.mockResolvedValue(ACCESS_FIXTURE);
 
     const { result } = renderHook(() => useOrgAccess('org-1'));
 
@@ -56,13 +56,11 @@ describe('useOrgAccess', () => {
     expect(result.current.partnerType).toBe('venue');
     expect(result.current.permissions).toEqual(['VIEW_FINANCIALS', 'MANAGE_EVENTS']);
     expect(result.current.tabVisibility).toEqual({ finance: false });
-    expect(getMock).toHaveBeenCalledWith(
-      expect.objectContaining({ path: '/api/v2/organizations/org-1/access' }),
-    );
+    expect(getPartnerAccessMock).toHaveBeenCalledWith('org-1');
   });
 
   it('hasPermission reflects the granted permission list', async () => {
-    getMock.mockResolvedValue(ACCESS_FIXTURE);
+    getPartnerAccessMock.mockResolvedValue(ACCESS_FIXTURE);
 
     const { result } = renderHook(() => useOrgAccess('org-1'));
     await waitFor(() => {
@@ -74,7 +72,7 @@ describe('useOrgAccess', () => {
   });
 
   it('tabVisible defaults to true for every tab when tabVisibility is null', async () => {
-    getMock.mockResolvedValue({ ...ACCESS_FIXTURE, tabVisibility: null });
+    getPartnerAccessMock.mockResolvedValue({ ...ACCESS_FIXTURE, tabVisibility: null });
 
     const { result } = renderHook(() => useOrgAccess('org-1'));
     await waitFor(() => {
@@ -85,7 +83,7 @@ describe('useOrgAccess', () => {
   });
 
   it('tabVisible is false only for a tab explicitly set to false', async () => {
-    getMock.mockResolvedValue(ACCESS_FIXTURE);
+    getPartnerAccessMock.mockResolvedValue(ACCESS_FIXTURE);
 
     const { result } = renderHook(() => useOrgAccess('org-1'));
     await waitFor(() => {
@@ -97,7 +95,7 @@ describe('useOrgAccess', () => {
   });
 
   it('maps a 403 to isSuspended, not error', async () => {
-    getMock.mockRejectedValue(
+    getPartnerAccessMock.mockRejectedValue(
       new ApiClientError({
         code: 'forbidden',
         message: 'Suspended',
@@ -117,7 +115,7 @@ describe('useOrgAccess', () => {
   });
 
   it('maps a non-403 failure to error, not isSuspended', async () => {
-    getMock.mockRejectedValue(
+    getPartnerAccessMock.mockRejectedValue(
       new ApiClientError({
         code: 'server',
         message: 'boom',
@@ -137,7 +135,7 @@ describe('useOrgAccess', () => {
   });
 
   it('re-fetches and re-enters loading when the org id changes', async () => {
-    getMock.mockResolvedValue(ACCESS_FIXTURE);
+    getPartnerAccessMock.mockResolvedValue(ACCESS_FIXTURE);
 
     const { result, rerender } = renderHook(({ orgId }) => useOrgAccess(orgId), {
       initialProps: { orgId: 'org-1' },
@@ -146,7 +144,7 @@ describe('useOrgAccess', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    getMock.mockResolvedValue({ ...ACCESS_FIXTURE, organizationId: 'org-2', partnerType: 'host' });
+    getPartnerAccessMock.mockResolvedValue({ ...ACCESS_FIXTURE, organizationId: 'org-2', partnerType: 'host' });
     act(() => {
       rerender({ orgId: 'org-2' });
     });
