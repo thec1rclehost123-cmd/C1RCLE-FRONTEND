@@ -1,49 +1,48 @@
-'use client';
+﻿'use client';
 
-import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Building2,
-  Users,
-  Zap,
-  ChevronRight,
-  CheckCircle2,
-  ArrowLeft,
-  Mail,
-  Lock,
-  User,
-  MapPin,
-  Phone,
-  Briefcase,
-  ShieldCheck,
   AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  AtSign,
+  Building,
+  Building2,
+  Briefcase,
+  CheckCircle2,
+  ChevronRight,
   Eye,
   EyeOff,
-  Sparkles,
-  RefreshCw,
-  Building,
   Globe,
   Loader2,
+  Lock,
+  Mail,
+  Phone,
+  RefreshCw,
+  ShieldCheck,
+  Sparkles,
   Upload,
+  User,
+  Users,
   X,
-  ArrowRight,
+  Zap,
+  type LucideIcon,
 } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { isApiClientError } from '@c1rcle/api-client';
 import { getClientEnv } from '@c1rcle/config';
 
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 import {
-  addDocument,
   getMine,
-  getUploadUrl,
   saveProgress as saveOnboardingProgress,
   start as startOnboarding,
   submit as submitOnboardingApplication,
+  uploadDocument,
   verifyDocument,
 } from '@/lib/onboarding/onboarding-repository';
 import { sendOtp, verifyOtp } from '@/lib/onboarding/otp';
-import { uploadToSignedUrl } from '@/lib/onboarding/uploadToSignedUrl';
 import { confirmPhoneOtp, getTestingBypassEnabled, sendPhoneOtp } from '@/lib/firebase/phone-auth';
 import { routeAfterAuth } from '@/lib/org/route-after-auth';
 
@@ -58,25 +57,6 @@ function toE164(phone: string): string {
   if (/^\d{10}$/.test(digitsOnly)) return `+91${digitsOnly}`;
   return `+${digitsOnly}`;
 }
-
-const Instagram = (props: any) => (
-  <svg
-    {...props}
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
-    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
-  </svg>
-);
 
 // ── Step type ─────────────────────────────────────────────────────────────────
 type OnboardingStep =
@@ -125,8 +105,29 @@ const STEP_LABELS: Record<OnboardingStep, string> = {
   success: 'Done',
 };
 
+const CITIES = [
+  'Pune',
+  'Mumbai',
+  'Goa',
+  'Bengaluru',
+  'Delhi',
+  'Hyderabad',
+  'Chennai',
+  'Kolkata',
+  'Jaipur',
+  'Ahmedabad',
+];
+
+const BUSINESS_TYPES = [
+  { value: 'pvt_ltd', label: 'Private Limited' },
+  { value: 'llp', label: 'LLP' },
+  { value: 'partnership', label: 'Partnership Firm' },
+  { value: 'sole_prop', label: 'Sole Proprietorship' },
+  { value: 'trust', label: 'Trust / Society' },
+];
+
 // ── Main component ────────────────────────────────────────────────────────────
-function OnboardingContent() {
+export default function PageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const {
@@ -174,12 +175,23 @@ function OnboardingContent() {
 
   const emailCooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const phoneCooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Phone verification — real Firebase Identity Platform flow.
-  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
-  const confirmationResultRef = useRef<ConfirmationResult | null>(null);
 
   // Form data — all existing fields preserved exactly
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    email: string;
+    password: string;
+    name: string;
+    contactPerson: string;
+    phone: string;
+    city: string;
+    area: string;
+    website: string;
+    capacity: string | number | null;
+    instagram: string;
+    bio: string;
+    businessType: string;
+    registrationNumber: string;
+  }>({
     email: '',
     password: '',
     name: '',
@@ -189,17 +201,16 @@ function OnboardingContent() {
     area: '',
     website: '',
     capacity: '',
-    plan: 'silver',
-    role: 'organizer',
-    association: '',
-    associatedHostId: '',
     instagram: '',
     bio: '',
-    upcomingEventsText: '',
-    pastEventsText: '',
-    businessType: 'pvt_ltd',
+    businessType: '',
     registrationNumber: '',
   });
+
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [hostCategory, setHostCategory] = useState('organizer');
+  const [upcomingEventsText, setUpcomingEventsText] = useState('');
+  const [pastEventsText, setPastEventsText] = useState('');
 
   // ── Save onboarding progress so the user can resume mid-form ─────────
   // `currentStep` is UI-only now — the real backend has no step field, it
@@ -209,8 +220,6 @@ function OnboardingContent() {
   // `pastEventsText` have no home in `saveOnboardingProgressSchema` (it's
   // `.strict()`) so they stay purely local UI state, never sent to the server.
   const saveProgress = useCallback(
-    async (_currentStep: OnboardingStep) => {
-      if (!submittedRequestId) return;
     async (_currentStep: OnboardingStep) => {
       if (!submittedRequestId) return;
       try {
@@ -360,6 +369,34 @@ function OnboardingContent() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
   ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // Details-step profile fields — the UI speaks the server's profile-vocabulary
+  // (legalName, businessType, …), backed by the form-state fields below.
+  const PROFILE_KEY_MAP: Record<string, keyof typeof formData> = {
+    legalName: 'name',
+    businessType: 'businessType',
+    registrationNumber: 'registrationNumber',
+    contactPerson: 'contactPerson',
+    city: 'city',
+    area: 'area',
+    website: 'website',
+    capacity: 'capacity',
+    instagram: 'instagram',
+    bio: 'bio',
+  };
+
+  const fieldValue = (key: string): string => {
+    const mapped = PROFILE_KEY_MAP[key];
+    if (!mapped) return '';
+    return String(formData[mapped] ?? '');
+  };
+
+  const handleProfileChange = (key: string, value: string | number | null) => {
+    const mapped = PROFILE_KEY_MAP[key];
+    if (!mapped) return;
+    setFormData((prev) => ({ ...prev, [mapped]: value }));
+    setFieldErrors((prev) => ({ ...prev, [key]: '' }));
   };
 
   function startCooldown(
@@ -647,7 +684,7 @@ function OnboardingContent() {
       const application = await startOnboarding(
         {
           requestedType: partnerType,
-          plan: formData.plan as 'basic' | 'silver' | 'diamond',
+          plan: 'basic',
           profile: {
             legalName: formData.name,
             contactPerson: formData.contactPerson,
@@ -667,6 +704,7 @@ function OnboardingContent() {
       );
       setSubmittedRequestId(application.id);
       setCreatedUid(authUser?.id ?? null);
+      setFieldErrors({});
 
       // Advance to the first KYC step in the sequence
       const seq = getStepSequence(entityType);
@@ -681,6 +719,16 @@ function OnboardingContent() {
         setError('You already have an application in progress.');
       } else {
         setError(err.message || 'Failed to create account. Please try again.');
+        if (err?.fieldErrors) {
+          setFieldErrors(
+            Object.fromEntries(
+              Object.entries(err.fieldErrors as Record<string, string[]>).map(([k, v]) => [
+                k,
+                (v ?? []).join(' '),
+              ]),
+            ),
+          );
+        }
       }
     } finally {
       setLoading(false);
@@ -732,10 +780,10 @@ function OnboardingContent() {
       const idx = stepSequence.indexOf(stepId as OnboardingStep);
       const isLastStep = idx === stepSequence.length - 2; // second-to-last (before "success")
       if (isLastStep) {
-        submitApplication(stepId, data);
+        submitApplication(stepId, _data);
       } else {
-        if (idx !== -1 && idx < seq.length - 1) {
-          const next = seq[idx + 1];
+        if (idx !== -1 && idx < stepSequence.length - 1) {
+          const next = stepSequence[idx + 1];
           if (next) {
             setStep(next);
             saveProgress(next);
@@ -748,21 +796,19 @@ function OnboardingContent() {
 
   const currentStepIndex = stepSequence.indexOf(step);
   const effectiveUid = createdUid || authUser?.id || '';
-  const effectiveUid = createdUid || authUser?.id || '';
+  const requestedType = partnerType;
 
   return (
     <div className="min-h-screen bg-[var(--surface-base)]">
-      {/* Header */}
       <header className="sticky top-0 z-50 bg-[var(--surface-base)]/80 backdrop-blur-xl border-b border-[var(--border-subtle)]">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <button
-            onClick={async () => {
+            onClick={() => {
               if (currentStepIndex === 0) {
-                if (authUser) await signOut();
-                router.push('/login');
+                router.replace('/login');
               } else {
                 const prevStep = stepSequence[currentStepIndex - 1];
-                if (prevStep) setStep(prevStep);
+                if (prevStep !== undefined) setStep(prevStep);
               }
             }}
             className="flex items-center gap-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors text-[11px] font-semibold uppercase tracking-wider"
@@ -781,22 +827,23 @@ function OnboardingContent() {
         </div>
       </header>
 
-      {/* Progress bar — auto-driven by stepSequence */}
-      <div className="max-w-5xl mx-auto px-6 py-6">
-        <div className="flex items-center">
-          {stepSequence
-            .filter((s) => s !== 'success')
-            .map((s, i) => {
-              const isDone = currentStepIndex > i;
-              const isCurrent = currentStepIndex === i;
-              const isLast = i === stepSequence.filter((s) => s !== 'success').length - 1;
+      {step !== 'success' && (
+        <div className="max-w-5xl mx-auto px-6 py-6">
+          <div className="flex items-center">
+            {stepSequence.filter((s) => s !== 'success').map((s, i) => {
+              const isDone = currentStepIndex > stepSequence.indexOf(s);
+              const isCurrent = step === s;
+              const filteredSteps = stepSequence.filter((x) => x !== 'success');
+              const isLast = i === filteredSteps.length - 1;
               return (
                 <div key={s} className="flex items-center flex-1">
                   <div className="flex flex-col items-center gap-1 flex-shrink-0">
                     <button
                       type="button"
                       disabled={!isDone}
-                      onClick={() => isDone && setStep(s)}
+                      onClick={() => {
+                        if (isDone) setStep(s);
+                      }}
                       className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-all ${isCurrent ? 'bg-[var(--accent-primary)] text-white' : isDone ? 'bg-[var(--state-success)] text-white cursor-pointer hover:opacity-80' : 'bg-[var(--surface-tertiary)] text-[var(--text-tertiary)] cursor-not-allowed'}`}
                     >
                       {isDone ? '✓' : i + 1}
@@ -815,8 +862,9 @@ function OnboardingContent() {
                 </div>
               );
             })}
+          </div>
         </div>
-      </div>
+      )}
 
       <main className="max-w-xl mx-auto px-6 pb-24">
         <AnimatePresence mode="wait">
@@ -1002,7 +1050,6 @@ function OnboardingContent() {
             >
               <StepHeader
                 step={String(stepSequence.indexOf('phone_verify') + 1).padStart(2, '0')}
-                step={String(stepSequence.indexOf('phone_verify') + 1).padStart(2, '0')}
                 label="Verify Phone"
                 title="Confirm Your Number"
                 description="We'll send an SMS code to confirm your mobile number. This becomes your verified contact on the platform."
@@ -1025,16 +1072,16 @@ function OnboardingContent() {
               {/* Invisible reCAPTCHA anchor for Firebase's signInWithPhoneNumber — renders nothing visible. */}
               <div id={PHONE_RECAPTCHA_CONTAINER_ID} />
               <div className="space-y-5">
-                <FormInput
+                <FormField
                   label="Mobile Number (with country code)"
                   icon={Phone}
                   type="tel"
                   value={otpPhone}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    const val = e.target.value;
-                    let sanitized = val.replace(/[^0-9+\s]/g, '');
+                  onChange={(v) => {
+                    let sanitized = v.replace(/[^0-9+\s]/g, '');
                     if (sanitized.indexOf('+') > 0) {
-                      sanitized = sanitized[0] + sanitized.slice(1).replace(/\+/g, '');
+                      const firstChar = sanitized[0] ?? '';
+                      sanitized = firstChar + sanitized.slice(1).replace(/\+/g, '');
                     }
                     setOtpPhone(sanitized);
                   }}
@@ -1078,10 +1125,9 @@ function OnboardingContent() {
             </motion.div>
           )}
 
-          {/* ── Entity Type ── */}
           {step === 'entity_type' && (
             <motion.div
-              key="entity_type"
+              key="s3"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -1089,10 +1135,9 @@ function OnboardingContent() {
             >
               <StepHeader
                 step={String(stepSequence.indexOf('entity_type') + 1).padStart(2, '0')}
-                step={String(stepSequence.indexOf('entity_type') + 1).padStart(2, '0')}
                 label="Entity Type"
                 title="Individual or Business?"
-                description="This determines which verification documents you'll provide after approval."
+                description="This determines which fields you'll complete in your profile."
               />
               <div className="grid grid-cols-1 gap-4 mb-10">
                 <RoleCard
@@ -1100,7 +1145,9 @@ function OnboardingContent() {
                   title="Individual"
                   description="Freelancer, independent promoter, solo DJ, or individual host."
                   active={entityType === 'individual'}
-                  onClick={() => setEntityType('individual')}
+                  onClick={() => {
+                    setEntityType('individual');
+                  }}
                 />
                 <RoleCard
                   icon={Building}
@@ -1180,12 +1227,12 @@ function OnboardingContent() {
               transition={{ duration: 0.3 }}
             >
               <StepHeader
-                step={String(stepSequence.indexOf('details') + 1).padStart(2, '0')}
+                step="05"
                 label="Your Details"
                 title={
-                  partnerType === 'venue'
+                  requestedType === 'venue'
                     ? 'Venue Registration'
-                    : partnerType === 'host'
+                    : requestedType === 'host'
                       ? 'Host Profile'
                       : 'Promoter Enrollment'
                 }
@@ -1224,55 +1271,53 @@ function OnboardingContent() {
 
                   {entityType === 'business' ? (
                     <>
-                      <FormInput
+                      <FormField
                         label="Legal Business Name"
                         icon={Building}
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        required
+                        value={fieldValue('legalName')}
+                        error={fieldErrors['legalName']}
+                        onChange={(v) => {
+                          handleProfileChange('legalName', v);
+                        }}
                         placeholder="e.g. Eclipse Nightlife Pvt. Ltd."
                       />
                       <FormSelect
                         label="Business Type"
-                        name="businessType"
-                        value={formData.businessType}
-                        onChange={handleInputChange}
-                        options={[
-                          { value: 'pvt_ltd', label: 'Private Limited' },
-                          { value: 'llp', label: 'LLP' },
-                          { value: 'partnership', label: 'Partnership Firm' },
-                          { value: 'sole_prop', label: 'Sole Proprietorship' },
-                          { value: 'trust', label: 'Trust / Society' },
-                        ]}
+                        value={fieldValue('businessType')}
+                        onChange={(v) => {
+                          handleProfileChange('businessType', v);
+                        }}
+                        options={[{ value: '', label: 'Select business type' }, ...BUSINESS_TYPES]}
                       />
-                      <FormInput
+                      <FormField
                         label="Registration / CIN Number (optional)"
                         icon={Briefcase}
-                        name="registrationNumber"
-                        value={formData.registrationNumber}
-                        onChange={handleInputChange}
+                        value={fieldValue('registrationNumber')}
+                        onChange={(v) => {
+                          handleProfileChange('registrationNumber', v);
+                        }}
                         placeholder="e.g. U74999MH2020PTC123456"
                       />
                     </>
                   ) : (
-                    <FormInput
+                    <FormField
                       label={
-                        partnerType === 'venue'
+                        requestedType === 'venue'
                           ? 'Venue Name'
-                          : partnerType === 'host'
+                          : requestedType === 'host'
                             ? 'Brand / Collective Name'
                             : 'Your Full Name'
                       }
-                      icon={partnerType === 'venue' ? Building2 : User}
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      required
+                      icon={requestedType === 'venue' ? Building2 : User}
+                      value={fieldValue('legalName')}
+                      error={fieldErrors['legalName']}
+                      onChange={(v) => {
+                        handleProfileChange('legalName', v);
+                      }}
                       placeholder={
-                        partnerType === 'venue'
+                        requestedType === 'venue'
                           ? 'e.g. Club Eclipse'
-                          : partnerType === 'host'
+                          : requestedType === 'host'
                             ? 'e.g. Midnight Collective'
                             : 'Your name'
                       }
@@ -1280,13 +1325,14 @@ function OnboardingContent() {
                   )}
 
                   <div className="grid grid-cols-2 gap-4">
-                    <FormInput
+                    <FormField
                       label={entityType === 'business' ? 'Authorized Contact' : 'Contact Person'}
                       icon={Briefcase}
-                      name="contactPerson"
-                      value={formData.contactPerson}
-                      onChange={handleInputChange}
-                      required
+                      value={fieldValue('contactPerson')}
+                      error={fieldErrors['contactPerson']}
+                      onChange={(v) => {
+                        handleProfileChange('contactPerson', v);
+                      }}
                       placeholder="Primary contact"
                     />
                     {/* Phone is now verified in a later step (after account
@@ -1307,134 +1353,118 @@ function OnboardingContent() {
                   <div className="grid grid-cols-2 gap-4">
                     <FormSelect
                       label="City"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      required
+                      value={fieldValue('city')}
+                      error={fieldErrors['city']}
+                      onChange={(v) => {
+                        handleProfileChange('city', v);
+                      }}
                       options={[
                         { value: '', label: 'Select a city' },
-                        { value: 'Pune', label: 'Pune' },
-                        { value: 'Mumbai', label: 'Mumbai' },
-                        { value: 'Goa', label: 'Goa' },
-                        { value: 'Bengaluru', label: 'Bengaluru' },
-                        { value: 'Delhi', label: 'Delhi' },
-                        { value: 'Hyderabad', label: 'Hyderabad' },
-                        { value: 'Chennai', label: 'Chennai' },
-                        { value: 'Kolkata', label: 'Kolkata' },
-                        { value: 'Jaipur', label: 'Jaipur' },
-                        { value: 'Ahmedabad', label: 'Ahmedabad' },
+                        ...CITIES.map((c) => ({ value: c, label: c })),
                       ]}
                     />
-                    <FormInput
+                    <FormField
                       label="Area / Locality"
-                      icon={MapPin}
-                      name="area"
-                      value={formData.area}
-                      onChange={handleInputChange}
-                      required
+                      value={fieldValue('area')}
+                      error={fieldErrors['area']}
+                      onChange={(v) => {
+                        handleProfileChange('area', v);
+                      }}
                       placeholder="e.g. Bandra"
                     />
                   </div>
 
-                  <FormInput
+                  <FormField
                     label="Website (optional)"
                     icon={Globe}
-                    name="website"
-                    value={formData.website}
-                    onChange={handleInputChange}
+                    value={fieldValue('website')}
+                    onChange={(v) => {
+                      handleProfileChange('website', v);
+                    }}
                     placeholder="https://yourbrand.com"
                   />
 
-                  {/* Role-specific fields */}
-                  {partnerType === 'venue' && (
-                    <>
-                      <FormInput
-                        label="Approximate Capacity"
-                        icon={Users}
-                        name="capacity"
-                        value={formData.capacity}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="e.g. 500"
-                      />
-                      <FormSelect
-                        label="Subscription Tier"
-                        name="plan"
-                        value={formData.plan}
-                        onChange={handleInputChange}
-                        options={[
-                          { value: 'basic', label: 'Basic Access' },
-                          { value: 'silver', label: 'Silver Tier' },
-                          { value: 'gold', label: 'Gold Premium' },
-                          { value: 'diamond', label: 'Diamond Private' },
-                        ]}
-                      />
-                    </>
+                  {requestedType === 'venue' && (
+                    <FormField
+                      label="Approximate Capacity"
+                      icon={Users}
+                      value={fieldValue('capacity')}
+                      onChange={(v) => {
+                        handleProfileChange('capacity', v === '' ? null : Number(v));
+                      }}
+                      placeholder="e.g. 500"
+                    />
                   )}
-                  {partnerType === 'host' && (
+
+                  {requestedType === 'host' && (
                     <FormSelect
                       label="Host Category"
-                      name="role"
-                      value={formData.role}
-                      onChange={handleInputChange}
+                      value={hostCategory}
+                      onChange={setHostCategory}
                       options={[
-                        { value: 'dj', label: 'Individual DJ / Artist' },
                         { value: 'organizer', label: 'Event Organizer' },
+                        { value: 'dj', label: 'Individual DJ / Artist' },
                         { value: 'collective', label: 'Collective / Label' },
                       ]}
                     />
                   )}
-                  {partnerType === 'promoter' && (
+
+                  {requestedType === 'promoter' && (
                     <>
-                      <FormInput
+                      <FormField
                         label="Instagram Handle"
-                        icon={Instagram}
-                        name="instagram"
-                        value={formData.instagram}
-                        onChange={handleInputChange}
-                        required
+                        icon={AtSign}
+                        value={fieldValue('instagram')}
+                        onChange={(v) => {
+                          handleProfileChange('instagram', v);
+                        }}
                         placeholder="@yourusername"
                       />
                       <div className="space-y-2">
-                        <label className="input-label">Short Bio</label>
+                        <label className="input-label" htmlFor="promoter-bio">
+                          Short Bio
+                        </label>
                         <textarea
-                          name="bio"
-                          value={formData.bio}
-                          onChange={handleInputChange}
+                          id="promoter-bio"
+                          value={fieldValue('bio')}
+                          onChange={(e) => {
+                            handleProfileChange('bio', e.target.value);
+                          }}
                           placeholder="Tell us about your reach, experience, and what you're looking for..."
                           className="w-full bg-[var(--surface-secondary)] border border-[var(--border-subtle)] rounded-xl px-4 py-3 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] focus:bg-[var(--surface-base)] focus:border-[var(--accent-primary)] focus:ring-3 focus:ring-[var(--accent-glow)] transition-all outline-none min-h-[120px] resize-none"
-                          required
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="input-label">Upcoming Events (optional)</label>
+                        <label className="input-label" htmlFor="promoter-upcoming">
+                          Upcoming Events (optional)
+                        </label>
                         <textarea
-                          name="upcomingEventsText"
-                          value={formData.upcomingEventsText}
-                          onChange={handleInputChange}
+                          id="promoter-upcoming"
+                          value={upcomingEventsText}
+                          onChange={(e) => {
+                            setUpcomingEventsText(e.target.value);
+                          }}
                           placeholder={
                             'One event per line\nSummer Fridays | Jun 14 2026 | Toy Room | Mumbai\nCampus Heatwave | Jul 05 2026 | Kitty Su | Delhi'
                           }
                           className="w-full bg-[var(--surface-secondary)] border border-[var(--border-subtle)] rounded-xl px-4 py-3 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] focus:bg-[var(--surface-base)] focus:border-[var(--accent-primary)] focus:ring-3 focus:ring-[var(--accent-glow)] transition-all outline-none min-h-[120px] resize-none"
                         />
-                        <p className="text-[12px] leading-5 text-[var(--text-tertiary)]">
-                          Format each line as: event name | date | venue | city
-                        </p>
                       </div>
                       <div className="space-y-2">
-                        <label className="input-label">Past Event Highlights (optional)</label>
+                        <label className="input-label" htmlFor="promoter-past">
+                          Past Event Highlights (optional)
+                        </label>
                         <textarea
-                          name="pastEventsText"
-                          value={formData.pastEventsText}
-                          onChange={handleInputChange}
+                          id="promoter-past"
+                          value={pastEventsText}
+                          onChange={(e) => {
+                            setPastEventsText(e.target.value);
+                          }}
                           placeholder={
                             'One event per line\nNeon Saturdays | Jan 20 2026 | Soho House | Mumbai\nWarehouse Takeover | Dec 28 2025 | AntiSocial | Pune'
                           }
                           className="w-full bg-[var(--surface-secondary)] border border-[var(--border-subtle)] rounded-xl px-4 py-3 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] focus:bg-[var(--surface-base)] focus:border-[var(--accent-primary)] focus:ring-3 focus:ring-[var(--accent-glow)] transition-all outline-none min-h-[120px] resize-none"
                         />
-                        <p className="text-[12px] leading-5 text-[var(--text-tertiary)]">
-                          These appear on your partner profile until real event history is linked.
-                        </p>
                       </div>
                     </>
                   )}
@@ -1478,7 +1508,6 @@ function OnboardingContent() {
               {kycError && <ErrorBanner error={kycError} />}
               <KycIdentityForm
                 uid={effectiveUid}
-                requestId={submittedRequestId}
                 requestId={submittedRequestId}
                 initialData={{}}
                 onSubmit={(data) => handleKycStep('kyc_identity', data)}
@@ -1537,7 +1566,6 @@ function OnboardingContent() {
               {kycError && <ErrorBanner error={kycError} />}
               <KycSignatoryForm
                 uid={effectiveUid}
-                requestId={submittedRequestId}
                 requestId={submittedRequestId}
                 initialData={{}}
                 onSubmit={(data) => handleKycStep('kyc_signatory', data)}
@@ -1635,25 +1663,6 @@ function OnboardingContent() {
   );
 }
 
-export default function OnboardingPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[var(--surface-base)]">
-          <div className="flex flex-col items-center gap-4">
-            <div className="h-10 w-10 border-3 border-[var(--accent-primary)]/30 border-t-[var(--accent-primary)] rounded-full animate-spin" />
-            <p className="text-[14px] font-medium text-[var(--text-tertiary)]">Loading...</p>
-          </div>
-        </div>
-      }
-    >
-      <OnboardingContent />
-    </Suspense>
-  );
-}
-
-// ── UI primitives ─────────────────────────────────────────────────────────────
-
 function StepHeader({
   step,
   label,
@@ -1676,6 +1685,15 @@ function StepHeader({
   );
 }
 
+function SectionTitle({ title }: { title: string }) {
+  return (
+    <div className="flex items-center gap-4">
+      <span className="text-label text-[var(--text-tertiary)] whitespace-nowrap">{title}</span>
+      <div className="h-px bg-[var(--border-subtle)] flex-1" />
+    </div>
+  );
+}
+
 function RoleCard({
   icon: Icon,
   title,
@@ -1683,7 +1701,7 @@ function RoleCard({
   active,
   onClick,
 }: {
-  icon: any;
+  icon: LucideIcon;
   title: string;
   description: string;
   active: boolean;
@@ -1703,7 +1721,7 @@ function RoleCard({
           <Icon className="h-6 w-6" />
         </div>
         <div className="flex-1">
-          <h3 className={`text-[16px] font-semibold mb-1 text-[var(--text-primary)]`}>{title}</h3>
+          <h3 className="text-[16px] font-semibold mb-1 text-[var(--text-primary)]">{title}</h3>
           <p
             className={`text-[13px] leading-relaxed ${active ? 'text-[var(--text-secondary)]' : 'text-[var(--text-tertiary)]'}`}
           >
@@ -1737,32 +1755,48 @@ function FormInput({ label, icon: Icon, ...props }: any) {
   );
 }
 
-function FormSelect({ label, options, ...props }: any) {
+function FormField({
+  label,
+  icon: Icon,
+  value,
+  error,
+  onChange,
+  placeholder,
+  type = 'text',
+  disabled = false,
+}: {
+  label: string;
+  icon?: LucideIcon;
+  value: string | number | null;
+  error?: string | undefined;
+  onChange?: (value: string) => void;
+  placeholder?: string;
+  type?: string;
+  disabled?: boolean;
+}) {
   return (
     <div className="space-y-2">
       <label className="input-label">{label}</label>
-      <div className="relative">
-        <select
-          className="w-full bg-[var(--surface-secondary)] border border-[var(--border-subtle)] rounded-xl px-4 py-3.5 text-[14px] text-[var(--text-primary)] appearance-none cursor-pointer transition-all outline-none hover:border-[var(--border-default)] focus:bg-[var(--surface-base)] focus:border-[var(--accent-primary)] focus:ring-3 focus:ring-[var(--accent-glow)]"
-          {...props}
-        >
-          {options.map((opt: { value: string; label: string }) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--text-tertiary)] rotate-90 pointer-events-none" />
+      <div className="relative group">
+        {Icon && (
+          <Icon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--text-placeholder)] group-focus-within:text-[var(--accent-primary)] transition-colors" />
+        )}
+        <input
+          type={type}
+          value={value ?? ''}
+          onChange={
+            onChange
+              ? (e) => {
+                  onChange(e.target.value);
+                }
+              : undefined
+          }
+          placeholder={placeholder}
+          disabled={disabled}
+          className={`w-full bg-[var(--surface-secondary)] border border-[var(--border-subtle)] rounded-xl text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] transition-all outline-none ${Icon ? 'pl-12 pr-4' : 'px-4'} py-3.5 hover:border-[var(--border-default)] focus:bg-[var(--surface-base)] focus:border-[var(--accent-primary)] focus:ring-3 focus:ring-[var(--accent-glow)] disabled:opacity-60 disabled:cursor-not-allowed ${error ? 'border-[var(--state-error)]' : ''}`}
+        />
       </div>
-    </div>
-  );
-}
-
-function SectionTitle({ title }: { title: string }) {
-  return (
-    <div className="flex items-center gap-4">
-      <span className="text-label text-[var(--text-tertiary)] whitespace-nowrap">{title}</span>
-      <div className="h-px bg-[var(--border-subtle)] flex-1" />
+      {error && <p className="text-xs text-[var(--state-error)]">{error}</p>}
     </div>
   );
 }
@@ -1784,10 +1818,52 @@ function OtpInput({
         inputMode="numeric"
         maxLength={6}
         value={value}
-        onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
+        onChange={(e) => {
+          onChange(e.target.value.replace(/\D/g, '').slice(0, 6));
+        }}
         placeholder="000000"
         className="w-full bg-[var(--surface-secondary)] border border-[var(--border-subtle)] rounded-xl px-4 py-3.5 text-[24px] font-bold tracking-[0.5em] text-center text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] transition-all outline-none focus:bg-[var(--surface-base)] focus:border-[var(--accent-primary)] focus:ring-3 focus:ring-[var(--accent-glow)]"
       />
+    </div>
+  );
+}
+
+function FormSelect({
+  label,
+  value,
+  error,
+  onChange,
+  options,
+  disabled = false,
+}: {
+  label: string;
+  value: string;
+  error?: string | undefined;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  disabled?: boolean;
+}) {
+  return (
+    <div className="space-y-2">
+      <label className="input-label">{label}</label>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+          }}
+          disabled={disabled}
+          className={`w-full bg-[var(--surface-secondary)] border rounded-xl px-4 py-3.5 text-[14px] text-[var(--text-primary)] appearance-none cursor-pointer transition-all outline-none hover:border-[var(--border-default)] focus:bg-[var(--surface-base)] focus:border-[var(--accent-primary)] focus:ring-3 focus:ring-[var(--accent-glow)] ${error ? 'border-[var(--state-error)]' : 'border-[var(--border-subtle)]'}`}
+        >
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--text-tertiary)] rotate-90 pointer-events-none" />
+      </div>
+      {error && <p className="text-xs text-[var(--state-error)]">{error}</p>}
     </div>
   );
 }
@@ -1796,18 +1872,20 @@ function ActionButton({
   onClick,
   loading = false,
   loadingText = 'Processing...',
+  disabled = false,
   children,
 }: {
   onClick?: () => void;
   loading?: boolean;
   loadingText?: string;
-  children: React.ReactNode;
+  disabled?: boolean;
+  children: ReactNode;
 }) {
   return (
     <button
-      type={onClick ? 'button' : 'submit'}
+      type="button"
       onClick={onClick}
-      disabled={loading}
+      disabled={disabled || loading}
       className="w-full bg-[var(--accent-primary)] text-white h-14 rounded-2xl font-semibold text-[14px] hover:brightness-110 transition-all flex items-center justify-center gap-3 shadow-lg shadow-[var(--accent-primary)]/20 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {loading ? (
@@ -1942,19 +2020,9 @@ function KycFileZone({
     setUploading(true);
     setProgress(10);
     try {
-      const uploadUrlDto = await getUploadUrl(requestId, { label: docLabel, contentType });
-      setProgress(40);
-
-      await uploadToSignedUrl(uploadUrlDto.uploadUrl, uploadUrlDto.headers, file);
-      setProgress(80);
-
-      await addDocument(
-        requestId,
-        { label: docLabel, storagePath: uploadUrlDto.storagePath },
-        crypto.randomUUID(),
-      );
+      const updated = await uploadDocument(requestId, docLabel, file, crypto.randomUUID());
       setProgress(100);
-      onChange(uploadUrlDto.storagePath);
+      onChange(updated.documents.find((doc) => doc.label === docLabel)?.storagePath ?? null);
     } catch (e: any) {
       console.error('Upload error:', e);
       setUploadError(e.message || 'Upload failed. Please try again.');
@@ -2090,14 +2158,12 @@ function KycSelectField({
 function KycIdentityForm({
   uid,
   requestId,
-  requestId,
   initialData,
   onSubmit,
   submitting,
   submitLabel = 'Continue',
 }: {
   uid: string;
-  requestId: string | null;
   requestId: string | null;
   initialData: Record<string, unknown>;
   onSubmit: (data: Record<string, unknown>) => void;
@@ -2362,7 +2428,7 @@ function KycBusinessForm({
         stepId="kyc_business"
         // No real document slot exists yet for a business registration
         // certificate — local-only placeholder (see KycFileZone's docLabel doc).
-        requestId={null}
+        requestId={requestId}
       />
       <button
         type="submit"
@@ -2383,14 +2449,12 @@ function KycBusinessForm({
 function KycSignatoryForm({
   uid,
   requestId,
-  requestId,
   initialData,
   onSubmit,
   submitting,
   submitLabel = 'Continue',
 }: {
   uid: string;
-  requestId: string | null;
   requestId: string | null;
   initialData: Record<string, unknown>;
   onSubmit: (data: Record<string, unknown>) => void;
