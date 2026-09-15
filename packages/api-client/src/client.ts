@@ -142,7 +142,9 @@ export class ApiClient {
       : timeoutSignal;
 
     const token = await this.#config.getToken?.();
-    const hasBody = options.body !== undefined;
+    const isRaw = options.rawBody !== undefined;
+    const hasBody = options.body !== undefined || isRaw;
+    const requestBody = isRaw ? options.rawBody : hasBody ? JSON.stringify(options.body) : undefined;
 
     let response: Response;
 
@@ -153,11 +155,17 @@ export class ApiClient {
         headers: {
           accept: 'application/json',
           'x-request-id': requestId,
-          ...(hasBody ? { 'content-type': 'application/json' } : {}),
+          ...(hasBody
+            ? {
+                'content-type': isRaw
+                  ? (options.contentType ?? 'application/octet-stream')
+                  : 'application/json',
+              }
+            : {}),
           ...(token !== null && token !== undefined ? { authorization: `Bearer ${token}` } : {}),
           ...options.headers,
         },
-        ...(hasBody ? { body: JSON.stringify(options.body) } : {}),
+        ...(requestBody !== undefined ? { body: requestBody } : {}),
       });
     } catch (cause) {
       if (options.signal?.aborted === true) {

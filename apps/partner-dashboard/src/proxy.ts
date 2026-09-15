@@ -14,6 +14,12 @@
  * `Content-Security-Policy` header with the spec §11.3 directives (Next 16
  * nonce pattern). Nonces require dynamic rendering: a fresh nonce is generated
  * on every render, so static optimisation, ISR and PPR are disabled app-wide.
+ *
+ * `/onboard` is intentionally NOT in the redirect list: the wizard is the
+ * signup entry point and must render anonymously at its ROLE step (inline
+ * signup happens at AUTH). Authentication is still enforced per request — the
+ * gateway re-validates the session for every onboarding BFF call, and the
+ * wizard itself routes unauthenticated users at DETAILS+ to `/login`.
  */
 
 import { NextResponse } from 'next/server';
@@ -23,11 +29,14 @@ import { getClientEnv } from '@c1rcle/config';
 import type { NextRequest } from 'next/server';
 
 /**
- * Better Auth's default httpOnly session cookie, re-scoped to the frontend
- * origin by the auth BFF (`src/lib/bff/auth-proxy.ts`). Absence here is the
- * only signal the edge can read; the gateway re-validates at every call.
+ * Better Auth's httpOnly session cookie, re-scoped to the frontend origin by
+ * the auth BFF (`src/lib/bff/auth-proxy.ts`). The BFF always stores the
+ * unprefixed name, but the production gateway's `__Secure-` variant is also
+ * honoured defensively. Absence of both is the only signal the edge can read;
+ * the gateway re-validates at every call.
  */
 const SESSION_COOKIE = 'better-auth.session_token';
+const SECURE_SESSION_COOKIE = '__Secure-better-auth.session_token';
 
 /**
  * Paths that demand a session. Host/path-char gating is done in the handler.
@@ -86,7 +95,8 @@ export function proxy(request: NextRequest): NextResponse {
   if (
     request.method === 'GET' &&
     isAuthGated(request.nextUrl.pathname) &&
-    !request.cookies.has(SESSION_COOKIE)
+    !request.cookies.has(SESSION_COOKIE) &&
+    !request.cookies.has(SECURE_SESSION_COOKIE)
   ) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('next', request.nextUrl.pathname);
@@ -106,8 +116,9 @@ export function proxy(request: NextRequest): NextResponse {
 export const config = {
   matcher: [
     /*
-     * The specific paths drive the auth redirect; the negative pattern is for
-     * the CSP nonce (skip API routes and static assets, per the docs).
+     * The gated prefixes drive the auth redirect (`isAuthGated`); the negative
+     * pattern plus the explicit page prefixes are for the CSP nonce (skip API
+     * routes and static assets, per the docs).
      */
     '/venue/:path*',
     '/host/:path*',

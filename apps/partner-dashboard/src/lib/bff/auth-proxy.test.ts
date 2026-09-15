@@ -1,16 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   assertCsrf,
   assertSameOrigin,
+  forwardToGateway,
   mintCsrfToken,
   passThroughGatewayError,
   rescopeSessionCookies,
   stripProtoKeys,
 } from './auth-proxy';
 
+vi.mock('@c1rcle/config', () => ({
+  getClientEnv: () => ({
+    NEXT_PUBLIC_API_BASE_URL: 'https://circle-v2-backend.onrender.com',
+    NEXT_PUBLIC_APP_NAME: 'partner-dashboard',
+    NEXT_PUBLIC_ENVIRONMENT: 'development',
+    NEXT_PUBLIC_SENTRY_DSN: null,
+  }),
+  resetEnvCacheForTests: vi.fn(),
+}));
+
 const APP_ORIGIN = 'http://localhost:3001';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 function request(headers: Record<string, string>): NextRequest {
   return new NextRequest(`${APP_ORIGIN}/api/auth/refresh`, { method: 'POST', headers });
@@ -127,6 +143,48 @@ describe('rescopeSessionCookies', () => {
     expect(decodeURIComponent(emitted)).toBe(rawToken);
     // ...and decoding it a second time must be a no-op — proof it wasn't encoded twice.
     expect(decodeURIComponent(decodeURIComponent(emitted))).toBe(rawToken);
+  });
+
+  it('strips the __Secure- prefix so the browser stores the cookie on an http dev origin', () => {
+    const gatewayResponse = new Response(null, { status: 200 });
+    gatewayResponse.headers.append(
+      'set-cookie',
+      '__Secure-better-auth.session_token=abc123; Max-Age=604800; Path=/; HttpOnly; Secure; SameSite=Lax',
+    );
+
+    const out = new NextResponse(null, { status: 200 });
+    const names = rescopeSessionCookies(gatewayResponse, out);
+
+    expect(names).toEqual(['better-auth.session_token']);
+    const setCookie = out.headers.get('set-cookie') ?? '';
+    expect(setCookie).toContain('better-auth.session_token=abc123');
+    expect(setCookie).not.toContain('__Secure-');
+  });
+});
+
+describe('forwardToGateway', () => {
+  it('re-adds the __Secure- twin of the session cookie for production gateways', async () => {
+    const sent = { cookie: '' };
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+        sent.cookie = (init?.headers as Record<string, string> | undefined)?.['cookie'] ?? '';
+        return Promise.resolve(
+          new Response(JSON.stringify({ status: 200, code: 'ok', message: 'ok', requestId: 'r' }), {
+            status: 200,
+          }),
+        );
+      }),
+    );
+
+    await forwardToGateway('/api/v2/auth/session', {
+      method: 'GET',
+      cookie: 'c1rcle.csrf=tok; better-auth.session_token=sess_abc',
+    });
+
+    expect(sent.cookie).toContain('better-auth.session_token=sess_abc');
+    expect(sent.cookie).toContain('__Secure-better-auth.session_token=sess_abc');
   });
 });
 
