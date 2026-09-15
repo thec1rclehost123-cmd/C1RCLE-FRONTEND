@@ -9,6 +9,7 @@ import { type z } from 'zod';
 
 import {
   type adminActionSchema,
+  type adminOrderDtoSchema,
   type adminPayoutStatusSchema,
   type adminRefundRequestStatusSchema,
   type adminRoleSchema,
@@ -28,3 +29,6 @@ export type AdminPayoutStatus = z.infer<typeof adminPayoutStatusSchema>;
 export type EventStatus = z.infer<typeof eventStatusSchema>;
 export type HostStatus = z.infer<typeof organizationStatusSchema>;
 export type VenueStatus = z.infer<typeof adminVenueDtoSchema>['status'];
+export type DisputeStatus = 'open' | 'under_review' | 'resolved';
+export type DisputeResolutionOutcome = 'upheld' | 'denied';
+export type OrderStatus = z.infer<typeof adminOrderDtoSchema>['status'];

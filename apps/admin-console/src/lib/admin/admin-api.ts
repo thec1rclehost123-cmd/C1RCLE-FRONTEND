@@ -14,6 +14,8 @@ import {
   adminHostDtoSchema,
   adminHostListResponseSchema,
   adminLookupResponseSchema,
+  adminOrderDtoSchema,
+  adminOrderListResponseSchema,
   adminRefundRequestDtoSchema,
   adminRefundRequestListResponseSchema,
   adminAuditRecordDtoSchema,
@@ -22,6 +24,9 @@ import {
   adminVenueDtoSchema,
   adminVenueListResponseSchema,
   approveOnboardingResultSchema,
+  adminResolveDisputeSchema,
+  disputeListResponseSchema,
+  disputeResponseSchema,
   documentReadUrlDtoSchema,
   onboardingRequestDtoSchema,
   paginatedSchema,
@@ -45,7 +50,10 @@ import type {
   AdminPayoutStatus,
   AdminRefundRequestStatus,
   AdminRole,
+  DisputeResolutionOutcome,
+  DisputeStatus,
   OnboardingStatus,
+  OrderStatus,
   ProposalStatus,
 } from '@/lib/admin/contract-types';
 
@@ -298,6 +306,62 @@ export function requestRefund(input: RequestRefundInput): Promise<RefundOutcome>
 }
 
 export type { AdminRefundRequestStatus };
+
+/* ─── Disputes ─────────────────────────────────────────────────────────────── */
+
+export type AdminDisputePage = z.infer<typeof disputeListResponseSchema>;
+export type AdminDispute = z.infer<typeof disputeResponseSchema>;
+
+export function listDisputes(
+  status: DisputeStatus | 'all',
+  limit = 100,
+): Promise<AdminDisputePage> {
+  return getAdminApiClient().get({
+    path: '/api/v2/admin/disputes',
+    query: {
+      ...(status === 'all' ? {} : { status }),
+      limit,
+    },
+    schema: disputeListResponseSchema,
+  });
+}
+
+export interface ResolveDisputeInput {
+  readonly disputeId: string;
+  readonly outcome: DisputeResolutionOutcome;
+  readonly resolutionNote: string;
+}
+
+/** Resolves a dispute — TIER2, writes a correcting ledger entry when upheld. */
+export function resolveDispute(input: ResolveDisputeInput): Promise<AdminDispute> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/disputes/${input.disputeId}/resolve`,
+    body: adminResolveDisputeSchema.parse({
+      outcome: input.outcome,
+      resolutionNote: input.resolutionNote,
+    }),
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: disputeResponseSchema,
+  });
+}
+
+export const DISPUTE_STATUSES = ['open', 'under_review', 'resolved'] satisfies DisputeStatus[];
+
+/* ─── Orders (platform-wide order list) ───────────────────────────────────── */
+
+export type AdminOrderPage = z.infer<typeof adminOrderListResponseSchema>;
+export type AdminOrder = z.infer<typeof adminOrderDtoSchema>;
+
+export function listOrders(limit = 100): Promise<AdminOrderPage> {
+  return getAdminApiClient().get({
+    path: '/api/v2/admin/orders',
+    query: { limit },
+    schema: adminOrderListResponseSchema,
+  });
+}
+
+/** Order statuses, derived from the wire schema so the enum can never drift. */
+export const ORDER_STATUSES: readonly OrderStatus[] = adminOrderDtoSchema.shape.status.options;
 
 /* ─── Admins ───────────────────────────────────────────────────────────────── */
 

@@ -3,6 +3,9 @@ import type {
   AdminRole,
   AdminAction,
   AdminPayoutStatus,
+  DisputeStatus,
+  DisputeResolutionOutcome,
+  OrderStatus,
   ProposalStatus,
   OnboardingStatus,
   EventStatus,
@@ -262,4 +265,57 @@ export function auditActionTone(action: string): Tone {
 
 export function shortId(id: string): string {
   return id.length > 12 ? `${id.slice(0, 12)}…` : id;
+}
+
+export const DISPUTE_STATUS_LABELS: Record<DisputeStatus, string> = {
+  open: 'Open',
+  under_review: 'Under review',
+  resolved: 'Resolved',
+};
+
+export const DISPUTE_RESOLUTION_LABELS: Record<DisputeResolutionOutcome, string> = {
+  upheld: 'Upheld',
+  denied: 'Denied',
+};
+
+export function disputeStatusTone(status: DisputeStatus): Tone {
+  switch (status) {
+    case 'open':
+      return 'warning';
+    case 'under_review':
+      return 'default';
+    case 'resolved':
+      return 'success';
+  }
+}
+
+export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  pending: 'Pending',
+  awaiting_payment: 'Awaiting payment',
+  paid: 'Paid',
+  expired: 'Expired',
+  cancelled: 'Cancelled',
+  failed: 'Failed',
+  refund_requested: 'Refund requested',
+  refunded: 'Refunded',
+};
+
+export function orderStatusTone(status: OrderStatus): Tone {
+  switch (status) {
+    case 'paid':
+      return 'success';
+    case 'refunded':
+      return 'muted';
+    case 'refund_requested':
+      return 'warning';
+    case 'awaiting_payment':
+      return 'warning';
+    case 'pending':
+      return 'default';
+    case 'expired':
+    case 'cancelled':
+      return 'muted';
+    case 'failed':
+      return 'destructive';
+  }
 }
