@@ -42,7 +42,9 @@ export default function SelectOrganizationPage() {
           const singleOrg = orgs[0];
           void setActiveOrg(singleOrg.id)
             .then(() => resolveOrgOverviewPath(singleOrg.id))
-            .then((target) => router.replace(target));
+            .then((target) => {
+              router.replace(target);
+            });
         }
 
       })
@@ -68,7 +70,12 @@ export default function SelectOrganizationPage() {
       typeof window !== 'undefined'
         ? window.localStorage.getItem(`partner:last-route:${org.id}`) ?? fallbackRoute
         : fallbackRoute;
-    router.push(lastRoute);
+    // Full page load, not `router.push`: the auth provider initializes its
+    // active-org state once from the cookie (`getActiveOrgId()` in its lazy
+    // state init), so a client-side push after writing the cookie here would
+    // leave it stale and every studio guard redirects straight back to this
+    // picker. A reload remounts the provider and it picks up the new cookie.
+    window.location.assign(lastRoute);
   };
 
   if (loading) {
