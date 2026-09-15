@@ -101,6 +101,7 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
   useEffect(() => {
     if (auth.loading) return;
     if (!user) {
+    if (!user) {
       router.replace('/login');
       return;
     }

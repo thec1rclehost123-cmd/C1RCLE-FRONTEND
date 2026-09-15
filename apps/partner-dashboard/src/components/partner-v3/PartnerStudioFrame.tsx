@@ -30,7 +30,7 @@ export function PartnerStudioFrame({
 
   useEffect(() => {
     if (auth.loading) return;
-    if (!auth.user || auth.isBanned) {
+    if (!auth.user) {
       router.replace(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
       return;
     }
@@ -39,7 +39,7 @@ export function PartnerStudioFrame({
       return;
     }
     if (!activeRole) router.replace('/partner/select-organization');
-  }, [activeRole, auth.isApproved, auth.isBanned, auth.loading, auth.user, pathname, router]);
+  }, [activeRole, auth.isApproved, auth.loading, auth.user, pathname, router]);
 
   if (auth.loading) {
     return (
@@ -49,7 +49,7 @@ export function PartnerStudioFrame({
     );
   }
 
-  if (!auth.user || auth.isBanned || !auth.isApproved || !activeRole) {
+  if (!auth.user || !auth.isApproved || !activeRole) {
     return <LoadingState label="Redirecting to your workspace" />;
   }
 

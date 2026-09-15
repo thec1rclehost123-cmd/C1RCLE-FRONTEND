@@ -60,7 +60,7 @@ interface SessionAuthContextValue {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signOut: () => Promise<void>;
-  switchPartner: (partnerId: string) => void;
+  switchPartner: (partnerId: string) => Promise<void>;
   /**
    * Linkage from the pre-Phase-7 surface. The V2 auth has no Google identity
    * provider, so this always rejects — the legacy login page's Google button
@@ -110,8 +110,8 @@ export function SessionAuthProvider({ children }: { children: ReactNode }) {
     await logout();
   }, []);
 
-  const switchPartner = useCallback((partnerId: string) => {
-    setActiveOrg(partnerId);
+  const switchPartner = useCallback(async (partnerId: string) => {
+    await setActiveOrg(partnerId);
   }, []);
 
   const signInWithGoogle = useCallback((): Promise<void> => {
@@ -127,7 +127,10 @@ export function SessionAuthProvider({ children }: { children: ReactNode }) {
     [orgAccess],
   );
 
-  const canDo = useCallback((action: string) => orgAccess.hasPermission(action), [orgAccess]);
+  const canDo = useCallback(
+    (action: string) => orgAccess.hasPermission(action),
+    [orgAccess],
+  );
 
   const profile = useMemo<DashboardProfile | null>(() => {
     if (!user) return null;
@@ -188,9 +191,7 @@ export function SessionAuthProvider({ children }: { children: ReactNode }) {
     ],
   );
 
-  return (
-    <SessionAuthContext.Provider value={authContextValue}>{children}</SessionAuthContext.Provider>
-  );
+  return <SessionAuthContext.Provider value={authContextValue}>{children}</SessionAuthContext.Provider>;
 }
 
 export function useSessionContext() {

@@ -31,9 +31,6 @@ const ACCESS_FIXTURE: PartnerAccessDto = {
 
 afterEach(() => {
   getPartnerAccessMock.mockReset();
-  // `getCachedPartnerAccess` shares completed reads at module scope; without
-  // clearing it, later tests hit the previous test's cached resolution.
-  clearPartnerAccessCache();
 });
 
 describe('useOrgAccess', () => {
@@ -148,11 +145,7 @@ describe('useOrgAccess', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    getPartnerAccessMock.mockResolvedValue({
-      ...ACCESS_FIXTURE,
-      organizationId: 'org-2',
-      partnerType: 'host',
-    });
+    getPartnerAccessMock.mockResolvedValue({ ...ACCESS_FIXTURE, organizationId: 'org-2', partnerType: 'host' });
     act(() => {
       rerender({ orgId: 'org-2' });
     });
