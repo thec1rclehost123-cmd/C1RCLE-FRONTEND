@@ -53,16 +53,37 @@ const roleConfig = {
   },
 } as const satisfies Record<WorkspaceType, { icon: typeof Building2; label: string; description: string }>;
 
-const bgPalette: Record<WorkspaceType, { primary: string; ring: string; blob: string }> = {
-  venue: { primary: '#F44A22', ring: 'rgba(244,74,34,VAL)', blob: 'rgba(244,74,34,0.12)' },
-  host: { primary: '#FFFFFF', ring: 'rgba(255,255,255,VAL)', blob: 'rgba(255,255,255,0.08)' },
-  promoter: { primary: '#22C55E', ring: 'rgba(34,197,94,VAL)', blob: 'rgba(34,197,94,0.12)' },
+/* Per-workspace ambient styling as static Tailwind classes — inline `style=` objects are banned
+ * by the design-system lint rule (no-restricted-syntax), and Tailwind's JIT needs literals. */
+const BLOB_CLASS: Record<WorkspaceType, string> = {
+  venue: 'w-[420px] h-[420px] bg-[rgba(244,74,34,0.22)] blur-[60px]',
+  host: 'w-[500px] h-[500px] bg-[rgba(255,255,255,0.08)] blur-[80px]',
+  promoter: 'w-[500px] h-[500px] bg-[rgba(34,197,94,0.12)] blur-[80px]',
 };
+
+const RING_BORDER: Record<WorkspaceType, string> = {
+  venue:
+    'border-t-[rgba(244,74,34,0.75)] border-r-transparent border-b-[rgba(244,74,34,0.25)] border-l-transparent',
+  host:
+    'border-t-[rgba(255,255,255,0.75)] border-r-transparent border-b-[rgba(255,255,255,0.25)] border-l-transparent',
+  promoter:
+    'border-t-[rgba(34,197,94,0.75)] border-r-transparent border-b-[rgba(34,197,94,0.25)] border-l-transparent',
+};
+
+const SPARK_DOT_BG: Record<WorkspaceType, string> = {
+  venue: 'bg-[#F44A22]',
+  host: 'bg-white',
+  promoter: 'bg-[#22C55E]',
+};
+
+const RING_SPECS = [
+  { deg: 0, sizeClass: 'w-[340px] h-[340px]', duration: 8 },
+  { deg: 120, sizeClass: 'w-[420px] h-[420px]', duration: 11 },
+  { deg: 240, sizeClass: 'w-[500px] h-[500px]', duration: 14 },
+] as const;
 
 /** Role-tinted ambient background — swaps colour with the selected workspace, ported from login-legacy. */
 function WorkspaceBg({ type }: { type: WorkspaceType | null }) {
-  const p = type ? bgPalette[type] : null;
-  const r = (a: number) => p?.ring.replace('VAL', String(a)) ?? 'transparent';
   const reduceMotion = useReducedMotion();
   const [compactViewport, setCompactViewport] = useState(false);
 
@@ -82,7 +103,7 @@ function WorkspaceBg({ type }: { type: WorkspaceType | null }) {
 
   return (
     <AnimatePresence mode="wait">
-      {type && p && (
+      {type && (
         <motion.div
           key={type}
           initial={{ opacity: 0 }}
@@ -92,17 +113,8 @@ function WorkspaceBg({ type }: { type: WorkspaceType | null }) {
           className="absolute inset-0 overflow-hidden pointer-events-none"
         >
           <motion.div
-            className="absolute rounded-full"
-            style={{
-              background: type === 'venue' ? 'rgba(244,74,34,0.22)' : p.blob,
-              filter: type === 'venue' ? 'blur(60px)' : 'blur(80px)',
-              width: type === 'venue' ? 420 : 500,
-              height: type === 'venue' ? 420 : 500,
-              top: '50%',
-              left: '50%',
-              x: '-50%',
-              y: '-50%',
-            }}
+            className={`absolute rounded-full top-1/2 left-1/2 ${BLOB_CLASS[type]}`}
+            initial={{ x: '-50%', y: '-50%' }}
             {...(animateBackground
               ? {
                   animate:
@@ -124,41 +136,22 @@ function WorkspaceBg({ type }: { type: WorkspaceType | null }) {
               : {})}
           />
 
-          {[0, 120, 240].map((deg, i) => (
+          {RING_SPECS.map(({ deg, sizeClass, duration }) => (
             <motion.div
-              key={i}
-              className="absolute"
-              style={{
-                width: 340 + i * 80,
-                height: 340 + i * 80,
-                top: '50%',
-                left: '50%',
-                x: '-50%',
-                y: '-50%',
-                borderTopWidth: 1,
-                borderRightWidth: 1,
-                borderBottomWidth: 1,
-                borderLeftWidth: 1,
-                borderStyle: 'solid',
-                borderRadius: '50%',
-                borderTopColor: r(0.75),
-                borderRightColor: 'transparent',
-                borderBottomColor: r(0.25),
-                borderLeftColor: r(0.25),
-                rotate: deg,
-              }}
+              key={deg}
+              className={`absolute top-1/2 left-1/2 rounded-full border ${RING_BORDER[type]} ${sizeClass}`}
+              initial={{ x: '-50%', y: '-50%', rotate: deg }}
               {...(animateBackground
                 ? {
                     animate: { rotate: [deg, deg + 360] },
-                    transition: { duration: 8 + i * 3, repeat: Infinity, ease: 'linear' as const },
+                    transition: { duration, repeat: Infinity, ease: 'linear' as const },
                   }
                 : {})}
             />
           ))}
 
           <motion.div
-            className="absolute bottom-8 right-8 rounded-full"
-            style={{ width: 6, height: 6, background: p.primary }}
+            className={`absolute bottom-8 right-8 rounded-full w-[6px] h-[6px] ${SPARK_DOT_BG[type]}`}
             {...(animateBackground
               ? {
                   animate: { opacity: [1, 0.2, 1] },
@@ -173,37 +166,58 @@ function WorkspaceBg({ type }: { type: WorkspaceType | null }) {
 }
 
 const SPARKLE_SPECS = [
-  { x: 5, size: 3, dur: 9, delay: 0, ci: 0 },
-  { x: 12, size: 4, dur: 13, delay: 1.5, ci: 1 },
-  { x: 18, size: 5, dur: 11, delay: 0.8, ci: 2 },
-  { x: 25, size: 3, dur: 15, delay: 2.2, ci: 0 },
-  { x: 31, size: 4, dur: 10, delay: 0.4, ci: 1 },
-  { x: 38, size: 3, dur: 14, delay: 3.0, ci: 2 },
-  { x: 44, size: 5, dur: 12, delay: 1.8, ci: 0 },
-  { x: 50, size: 3, dur: 16, delay: 0.6, ci: 1 },
-  { x: 56, size: 4, dur: 8, delay: 2.5, ci: 2 },
-  { x: 62, size: 3, dur: 13, delay: 1.1, ci: 0 },
-  { x: 68, size: 5, dur: 11, delay: 3.5, ci: 1 },
-  { x: 74, size: 3, dur: 14, delay: 0.9, ci: 2 },
-  { x: 80, size: 4, dur: 10, delay: 2.8, ci: 0 },
-  { x: 86, size: 3, dur: 17, delay: 1.3, ci: 1 },
-  { x: 92, size: 5, dur: 9, delay: 0.2, ci: 2 },
-  { x: 8, size: 3, dur: 15, delay: 4.0, ci: 1 },
-  { x: 15, size: 4, dur: 12, delay: 2.0, ci: 2 },
-  { x: 22, size: 3, dur: 11, delay: 3.2, ci: 0 },
-  { x: 29, size: 5, dur: 13, delay: 0.7, ci: 1 },
-  { x: 35, size: 3, dur: 16, delay: 1.6, ci: 2 },
+  { leftClass: 'left-[5%]', size: 3, sizeClass: 'w-[3px] h-[3px]', dur: 9, delay: 0, ci: 0 },
+  { leftClass: 'left-[12%]', size: 4, sizeClass: 'w-[4px] h-[4px]', dur: 13, delay: 1.5, ci: 1 },
+  { leftClass: 'left-[18%]', size: 5, sizeClass: 'w-[5px] h-[5px]', dur: 11, delay: 0.8, ci: 2 },
+  { leftClass: 'left-[25%]', size: 3, sizeClass: 'w-[3px] h-[3px]', dur: 15, delay: 2.2, ci: 0 },
+  { leftClass: 'left-[31%]', size: 4, sizeClass: 'w-[4px] h-[4px]', dur: 10, delay: 0.4, ci: 1 },
+  { leftClass: 'left-[38%]', size: 3, sizeClass: 'w-[3px] h-[3px]', dur: 14, delay: 3.0, ci: 2 },
+  { leftClass: 'left-[44%]', size: 5, sizeClass: 'w-[5px] h-[5px]', dur: 12, delay: 1.8, ci: 0 },
+  { leftClass: 'left-[50%]', size: 3, sizeClass: 'w-[3px] h-[3px]', dur: 16, delay: 0.6, ci: 1 },
+  { leftClass: 'left-[56%]', size: 4, sizeClass: 'w-[4px] h-[4px]', dur: 8, delay: 2.5, ci: 2 },
+  { leftClass: 'left-[62%]', size: 3, sizeClass: 'w-[3px] h-[3px]', dur: 13, delay: 1.1, ci: 0 },
+  { leftClass: 'left-[68%]', size: 5, sizeClass: 'w-[5px] h-[5px]', dur: 11, delay: 3.5, ci: 1 },
+  { leftClass: 'left-[74%]', size: 3, sizeClass: 'w-[3px] h-[3px]', dur: 14, delay: 0.9, ci: 2 },
+  { leftClass: 'left-[80%]', size: 4, sizeClass: 'w-[4px] h-[4px]', dur: 10, delay: 2.8, ci: 0 },
+  { leftClass: 'left-[86%]', size: 3, sizeClass: 'w-[3px] h-[3px]', dur: 17, delay: 1.3, ci: 1 },
+  { leftClass: 'left-[92%]', size: 5, sizeClass: 'w-[5px] h-[5px]', dur: 9, delay: 0.2, ci: 2 },
+  { leftClass: 'left-[8%]', size: 3, sizeClass: 'w-[3px] h-[3px]', dur: 15, delay: 4.0, ci: 1 },
+  { leftClass: 'left-[15%]', size: 4, sizeClass: 'w-[4px] h-[4px]', dur: 12, delay: 2.0, ci: 2 },
+  { leftClass: 'left-[22%]', size: 3, sizeClass: 'w-[3px] h-[3px]', dur: 11, delay: 3.2, ci: 0 },
+  { leftClass: 'left-[29%]', size: 5, sizeClass: 'w-[5px] h-[5px]', dur: 13, delay: 0.7, ci: 1 },
+  { leftClass: 'left-[35%]', size: 3, sizeClass: 'w-[3px] h-[3px]', dur: 16, delay: 1.6, ci: 2 },
 ] as const;
 
+const SPARK_BG: Record<WorkspaceType, string> = {
+  venue: 'bg-[rgba(244,74,34,0.8)]',
+  host: 'bg-[rgba(255,255,255,0.8)]',
+  promoter: 'bg-[rgba(34,197,94,0.8)]',
+};
+
+const SPARK_SHADOW: Record<WorkspaceType, readonly [string, string, string]> = {
+  venue: [
+    'shadow-[0_0_9px_3px_rgba(244,74,34,0.3)]',
+    'shadow-[0_0_12px_4px_rgba(244,74,34,0.3)]',
+    'shadow-[0_0_15px_5px_rgba(244,74,34,0.3)]',
+  ],
+  host: [
+    'shadow-[0_0_9px_3px_rgba(255,255,255,0.3)]',
+    'shadow-[0_0_12px_4px_rgba(255,255,255,0.3)]',
+    'shadow-[0_0_15px_5px_rgba(255,255,255,0.3)]',
+  ],
+  promoter: [
+    'shadow-[0_0_9px_3px_rgba(34,197,94,0.3)]',
+    'shadow-[0_0_12px_4px_rgba(34,197,94,0.3)]',
+    'shadow-[0_0_15px_5px_rgba(34,197,94,0.3)]',
+  ],
+};
+
 /** Per-role ring colours for the sparkle field — tri-colour default, single colour once a workspace is picked. */
-function useRingColors(type: WorkspaceType | null): [string, string, string] {
-  const venue = 'rgba(244,74,34,VAL)';
-  const host = 'rgba(255,255,255,VAL)';
-  const promoter = 'rgba(34,197,94,VAL)';
-  if (type === 'venue') return [venue, venue, venue];
-  if (type === 'host') return [host, host, host];
-  if (type === 'promoter') return [promoter, promoter, promoter];
-  return [venue, host, promoter];
+function useRingColors(type: WorkspaceType | null): readonly [WorkspaceType, WorkspaceType, WorkspaceType] {
+  if (type === 'venue') return ['venue', 'venue', 'venue'];
+  if (type === 'host') return ['host', 'host', 'host'];
+  if (type === 'promoter') return ['promoter', 'promoter', 'promoter'];
+  return ['venue', 'host', 'promoter'];
 }
 
 function SparkleField({ type }: { type: WorkspaceType | null }) {
@@ -213,23 +227,13 @@ function SparkleField({ type }: { type: WorkspaceType | null }) {
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {SPARKLE_SPECS.map(({ x, size, dur, delay, ci }, i) => {
-        const ringCol = ringColors[ci];
-        const col = ringCol.replace('VAL', '0.8');
-        const glow = ringCol.replace('VAL', '0.3');
+      {SPARKLE_SPECS.map(({ leftClass, size, sizeClass, dur, delay, ci }, i) => {
+        const colorKey = ringColors[ci];
+        const sizeIdx = size - 3;
         return (
           <motion.div
-            key={i}
-            className="absolute rounded-full"
-            style={{
-              width: size,
-              height: size,
-              left: `${String(x)}%`,
-              bottom: '-2%',
-              background: col,
-              boxShadow: `0 0 ${String(size * 3)}px ${String(size)}px ${glow}`,
-              transition: 'background 0.6s ease, box-shadow 0.6s ease',
-            }}
+            key={leftClass}
+            className={`absolute rounded-full bottom-[-2%] ${leftClass} ${sizeClass} ${SPARK_BG[colorKey]} ${SPARK_SHADOW[colorKey][sizeIdx] ?? ''} transition-[background-color,box-shadow] duration-[600ms] ease-[cubic-bezier(0.25,0.1,0.25,1)]`}
             animate={{
               y: [0, -(typeof window !== 'undefined' ? window.innerHeight * 1.1 : 900)],
               x: [0, (i % 2 === 0 ? 1 : -1) * (20 + (i % 4) * 10)],
