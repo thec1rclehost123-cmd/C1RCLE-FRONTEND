@@ -14,7 +14,6 @@ import {
 vi.mock('@c1rcle/config', () => ({
   getClientEnv: () => ({
     NEXT_PUBLIC_API_BASE_URL: 'https://circle-v2-backend.onrender.com',
-    NEXT_PUBLIC_APP_ID: 'partner',
     NEXT_PUBLIC_APP_NAME: 'partner-dashboard',
     NEXT_PUBLIC_ENVIRONMENT: 'development',
     NEXT_PUBLIC_SENTRY_DSN: null,

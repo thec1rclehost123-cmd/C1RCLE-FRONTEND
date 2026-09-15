@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import {
   assertSameOrigin,
-  csrfCookieName,
+  CSRF_COOKIE,
   gatewayAuthInit,
   mintCsrfToken,
   parseJson,
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   // The CSRF cookie is set by login/signup, so a returning (already-signed-in)
   // applicant has none. Mint one here so the wizard's state-changing steps pass
   // the double-submit check without forcing a fresh login.
-  if (!req.cookies.has(csrfCookieName())) {
+  if (!req.cookies.has(CSRF_COOKIE)) {
     setCsrfCookie(res, mintCsrfToken());
   }
   return res;

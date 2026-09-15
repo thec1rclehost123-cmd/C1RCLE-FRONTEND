@@ -84,22 +84,15 @@ function newRequestId(): string {
  * `getSession` accepts either. Authorization is relayed verbatim and never
  * read or logged.
  */
-export function gatewayAuthInit(req: NextRequest): {
-  readonly cookie: string | null;
-  readonly headers?: Readonly<Record<string, string>>;
-} {
+export function gatewayAuthInit(
+  req: NextRequest,
+): { readonly cookie: string | null; readonly headers?: Readonly<Record<string, string>> } {
   const authorization = req.headers.get('authorization');
-  const requestId = req.headers.get('x-request-id');
-  const headers: Record<string, string> = {};
-  if (authorization !== null && authorization.length > 0) {
-    headers['Authorization'] = authorization;
-  }
-  if (requestId !== null && requestId.length > 0) {
-    headers['x-request-id'] = requestId;
-  }
   return {
     cookie: req.headers.get('cookie'),
-    ...(Object.keys(headers).length > 0 ? { headers } : {}),
+    ...(authorization !== null && authorization.length > 0
+      ? { headers: { Authorization: authorization } }
+      : {}),
   };
 }
 

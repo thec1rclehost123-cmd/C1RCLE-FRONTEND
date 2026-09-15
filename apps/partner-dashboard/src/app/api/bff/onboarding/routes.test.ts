@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { csrfCookieName, forwardToGateway, putToStorage } from '@/lib/bff/auth-proxy';
+import { forwardToGateway, putToStorage } from '@/lib/bff/auth-proxy';
 
 import { POST as upload } from './applications/[id]/documents/upload/route';
 import { PATCH as autosave } from './applications/[id]/route';
@@ -39,7 +39,11 @@ function gatewayResponse(
   });
 }
 
-function jsonRequest(path: string, headers: Record<string, string>, body?: unknown): NextRequest {
+function jsonRequest(
+  path: string,
+  headers: Record<string, string>,
+  body?: unknown,
+): NextRequest {
   return new NextRequest(`${APP_ORIGIN}${path}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...headers },
@@ -51,7 +55,7 @@ function authedHeaders(overrides: Record<string, string> = {}): Record<string, s
   return {
     origin: APP_ORIGIN,
     'x-csrf-token': 'tok',
-    cookie: `${csrfCookieName()}=tok; better-auth.session_token=sess_abc`,
+    cookie: 'c1rcle.csrf=tok; better-auth.session_token=sess_abc',
     ...overrides,
   };
 }
@@ -98,7 +102,7 @@ describe('GET /api/bff/onboarding/me', () => {
       new NextRequest(`${APP_ORIGIN}/api/bff/onboarding/me`, {
         headers: {
           origin: APP_ORIGIN,
-          cookie: `${csrfCookieName()}=existing`,
+          cookie: 'c1rcle.csrf=existing',
           authorization: 'Bearer fe_session_tok_123',
         },
       }),
@@ -107,7 +111,7 @@ describe('GET /api/bff/onboarding/me', () => {
     expect(res.status).toBe(200);
     expect(mockForward).toHaveBeenCalledWith('/api/v2/onboarding/me', {
       method: 'GET',
-      cookie: `${csrfCookieName()}=existing`,
+      cookie: 'c1rcle.csrf=existing',
       headers: { Authorization: 'Bearer fe_session_tok_123' },
     });
   });
@@ -119,7 +123,7 @@ describe('GET /api/bff/onboarding/me', () => {
       new NextRequest(`${APP_ORIGIN}/api/bff/onboarding/me`, {
         headers: {
           origin: APP_ORIGIN,
-          cookie: `${csrfCookieName()}=existing; better-auth.session_token=sess_abc`,
+          cookie: 'c1rcle.csrf=existing; better-auth.session_token=sess_abc',
         },
       }),
     );
@@ -140,10 +144,7 @@ describe('GET /api/bff/onboarding/me', () => {
 
   it('passes a gateway error through', async () => {
     mockForward.mockResolvedValue(
-      gatewayResponse(
-        { code: 'unauthorized', message: 'No session', status: 401 },
-        { status: 401 },
-      ),
+      gatewayResponse({ code: 'unauthorized', message: 'No session', status: 401 }, { status: 401 }),
     );
 
     const res = await me(
@@ -182,11 +183,7 @@ describe('POST /api/bff/onboarding/applications', () => {
 
   it('rejects without a CSRF token', async () => {
     const res = await apply(
-      jsonRequest(
-        '/api/bff/onboarding/applications',
-        { origin: APP_ORIGIN },
-        { requestedType: 'venue' },
-      ),
+      jsonRequest('/api/bff/onboarding/applications', { origin: APP_ORIGIN }, { requestedType: 'venue' }),
     );
     expect(res.status).toBe(403);
     expect(mockForward).not.toHaveBeenCalled();
@@ -194,10 +191,7 @@ describe('POST /api/bff/onboarding/applications', () => {
 
   it('rejects a cross-origin request', async () => {
     const res = await apply(
-      jsonRequest(
-        '/api/bff/onboarding/applications',
-        authedHeaders({ origin: 'http://evil.example' }),
-      ),
+      jsonRequest('/api/bff/onboarding/applications', authedHeaders({ origin: 'http://evil.example' })),
     );
     expect(res.status).toBe(403);
     expect(mockForward).not.toHaveBeenCalled();
@@ -205,10 +199,7 @@ describe('POST /api/bff/onboarding/applications', () => {
 
   it('passes a 409 through so the client can recover an existing draft', async () => {
     mockForward.mockResolvedValue(
-      gatewayResponse(
-        { code: 'conflict', message: 'Already started', status: 409 },
-        { status: 409 },
-      ),
+      gatewayResponse({ code: 'conflict', message: 'Already started', status: 409 }, { status: 409 }),
     );
 
     const res = await apply(
@@ -241,9 +232,11 @@ describe('PATCH /api/bff/onboarding/applications/[id]', () => {
     mockForward.mockResolvedValue(gatewayResponse({ request: {} }));
 
     const res = await autosave(
-      jsonRequest('/api/bff/onboarding/applications/app_1', authedHeaders({ 'if-match': '3' }), {
-        capacity: 400,
-      }),
+      jsonRequest(
+        '/api/bff/onboarding/applications/app_1',
+        authedHeaders({ 'if-match': '3' }),
+        { capacity: 400 },
+      ),
       { params: Promise.resolve({ id: 'app_1' }) },
     );
 
@@ -255,9 +248,11 @@ describe('PATCH /api/bff/onboarding/applications/[id]', () => {
     mockForward.mockResolvedValue(gatewayResponse({ request: {} }));
 
     const res = await autosave(
-      jsonRequest('/api/bff/onboarding/applications/app_1', authedHeaders({ 'if-match': 'abc' }), {
-        capacity: 400,
-      }),
+      jsonRequest(
+        '/api/bff/onboarding/applications/app_1',
+        authedHeaders({ 'if-match': 'abc' }),
+        { capacity: 400 },
+      ),
       { params: Promise.resolve({ id: 'app_1' }) },
     );
 
@@ -284,10 +279,7 @@ describe('POST /api/bff/onboarding/applications/[id]/submit', () => {
     mockForward.mockResolvedValue(gatewayResponse({ request: {} }));
 
     const res = await submit(
-      jsonRequest(
-        '/api/bff/onboarding/applications/app_1/submit',
-        authedHeaders({ 'idempotency-key': 'uuid-2' }),
-      ),
+      jsonRequest('/api/bff/onboarding/applications/app_1/submit', authedHeaders({ 'idempotency-key': 'uuid-2' })),
       { params: Promise.resolve({ id: 'app_1' }) },
     );
 
@@ -335,10 +327,11 @@ describe('POST /api/bff/onboarding/verify-document', () => {
     );
 
     const res = await verifyDocument(
-      jsonRequest('/api/bff/onboarding/verify-document', authedHeaders(), {
-        documentType: 'id_front',
-        documentNumber: 'XYZ123',
-      }),
+      jsonRequest(
+        '/api/bff/onboarding/verify-document',
+        authedHeaders(),
+        { documentType: 'id_front', documentNumber: 'XYZ123' },
+      ),
     );
 
     expect(res.status).toBe(200);
@@ -381,10 +374,7 @@ describe('POST /api/bff/onboarding/applications/[id]/documents/upload', () => {
       }
       if (path.endsWith('/documents')) {
         const forwarded = (init.headers ?? {}) as Record<string, string>;
-        if (
-          forwarded['Idempotency-Key'] === undefined ||
-          forwarded['Idempotency-Key'].length === 0
-        ) {
+        if (forwarded['Idempotency-Key'] === undefined || forwarded['Idempotency-Key'].length === 0) {
           return Promise.resolve(
             gatewayResponse(
               { code: 'validation', message: 'Idempotency-Key is required', status: 422 },
@@ -405,18 +395,9 @@ describe('POST /api/bff/onboarding/applications/[id]/documents/upload', () => {
     const res = await upload(uploadRequest('app_1'), { params: Promise.resolve({ id: 'app_1' }) });
 
     expect(res.status).toBe(200);
-    expect(mockForward.mock.calls[0]?.[0]).toBe(
-      '/api/v2/onboarding/applications/app_1/documents/upload-url',
-    );
-    expect(mockForward.mock.calls[0]?.[1].body).toEqual({
-      label: 'id_front',
-      contentType: 'image/jpeg',
-    });
-    expect(mockPut).toHaveBeenCalledWith(
-      UPLOAD_DTO.uploadUrl,
-      UPLOAD_DTO.headers,
-      expect.any(ArrayBuffer),
-    );
+    expect(mockForward.mock.calls[0]?.[0]).toBe('/api/v2/onboarding/applications/app_1/documents/upload-url');
+    expect(mockForward.mock.calls[0]?.[1].body).toEqual({ label: 'id_front', contentType: 'image/jpeg' });
+    expect(mockPut).toHaveBeenCalledWith(UPLOAD_DTO.uploadUrl, UPLOAD_DTO.headers, expect.any(ArrayBuffer));
     expect(mockForward.mock.calls[1]?.[0]).toBe('/api/v2/onboarding/applications/app_1/documents');
     expect(mockForward.mock.calls[1]?.[1].body).toEqual({
       label: 'id_front',
@@ -433,9 +414,9 @@ describe('POST /api/bff/onboarding/applications/[id]/documents/upload', () => {
     const res = await upload(uploadRequest('app_1'), { params: Promise.resolve({ id: 'app_1' }) });
 
     expect(res.status).toBe(200);
-    const confirmKey = (
-      mockForward.mock.calls[1]?.[1].headers as Record<string, string> | undefined
-    )?.['Idempotency-Key'];
+    const confirmKey = (mockForward.mock.calls[1]?.[1].headers as Record<string, string> | undefined)?.[
+      'Idempotency-Key'
+    ];
     expect(confirmKey).toMatch(/^[A-Za-z0-9_-]{1,128}$/);
     const urlKey = (mockForward.mock.calls[0]?.[1].headers as Record<string, string> | undefined)?.[
       'Idempotency-Key'
@@ -447,20 +428,13 @@ describe('POST /api/bff/onboarding/applications/[id]/documents/upload', () => {
     gatewayWithConfirmIdempotency();
     mockPut.mockResolvedValueOnce(true);
 
-    const res = await upload(
-      uploadRequest('app_1', 'image/jpeg', { 'idempotency-key': 'client-key-1' }),
-      {
-        params: Promise.resolve({ id: 'app_1' }),
-      },
-    );
+    const res = await upload(uploadRequest('app_1', 'image/jpeg', { 'idempotency-key': 'client-key-1' }), {
+      params: Promise.resolve({ id: 'app_1' }),
+    });
 
     expect(res.status).toBe(200);
-    expect(mockForward.mock.calls[0]?.[1].headers).toMatchObject({
-      'Idempotency-Key': 'client-key-1',
-    });
-    expect(mockForward.mock.calls[1]?.[1].headers).toMatchObject({
-      'Idempotency-Key': 'client-key-1',
-    });
+    expect(mockForward.mock.calls[0]?.[1].headers).toMatchObject({ 'Idempotency-Key': 'client-key-1' });
+    expect(mockForward.mock.calls[1]?.[1].headers).toMatchObject({ 'Idempotency-Key': 'client-key-1' });
   });
 
   it('forwards the If-Match version header to both the upload-url and confirm steps', async () => {
@@ -492,11 +466,7 @@ describe('POST /api/bff/onboarding/applications/[id]/documents/upload', () => {
   it('rejects an unknown label', async () => {
     const req = new NextRequest(
       `${APP_ORIGIN}/api/bff/onboarding/applications/app_1/documents/upload?label=nope`,
-      {
-        method: 'POST',
-        headers: { ...authedHeaders(), 'content-type': 'image/jpeg' },
-        body: RAW_BODY,
-      },
+      { method: 'POST', headers: { ...authedHeaders(), 'content-type': 'image/jpeg' }, body: RAW_BODY },
     );
     const res = await upload(req, { params: Promise.resolve({ id: 'app_1' }) });
 
@@ -518,11 +488,7 @@ describe('POST /api/bff/onboarding/applications/[id]/documents/upload', () => {
     const res = await upload(
       new NextRequest(
         `${APP_ORIGIN}/api/bff/onboarding/applications/app_1/documents/upload?label=id_front`,
-        {
-          method: 'POST',
-          headers: { ...authedHeaders(), 'content-type': 'image/jpeg' },
-          body: big,
-        },
+        { method: 'POST', headers: { ...authedHeaders(), 'content-type': 'image/jpeg' }, body: big },
       ),
       { params: Promise.resolve({ id: 'app_1' }) },
     );
@@ -543,10 +509,7 @@ describe('POST /api/bff/onboarding/applications/[id]/documents/upload', () => {
 
   it('passes a gateway error on upload-url through', async () => {
     mockForward.mockResolvedValue(
-      gatewayResponse(
-        { code: 'validation', message: 'Plan limitation', status: 422 },
-        { status: 422 },
-      ),
+      gatewayResponse({ code: 'validation', message: 'Plan limitation', status: 422 }, { status: 422 }),
     );
 
     const res = await upload(uploadRequest('app_1'), { params: Promise.resolve({ id: 'app_1' }) });
