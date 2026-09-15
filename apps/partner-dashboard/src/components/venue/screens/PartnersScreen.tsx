@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   CalendarIcon,
@@ -18,23 +18,23 @@ import {
 } from '@c1rcle/icons';
 
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
+import { useOptimisticMutation } from '@/hooks/useOptimisticMutation';
+import { partnershipApi, promoterConnectionApi } from '@/lib/api/partner-connections';
 
 import { useOverlayFocus } from '../useOverlayFocus';
 import {
-  getDiscoverablePartners,
-  getPartnershipRequests,
-  getVenuePartners,
-} from '../venue-partners-model';
+  fetchVenuePartners,
+  fetchDiscoverablePartners,
+  fetchPartnershipRequests,
+  clearCache,
+  type VenuePartner,
+  type DiscoverablePartner,
+  type VenuePartnerKind,
+  type VenuePartnershipRequest,
+  type PartnershipRequestDirection,
+} from '../venue-partners-api';
 
 import styles from './VenuePartners.module.css';
-
-import type {
-  DiscoverablePartner,
-  PartnershipRequestDirection,
-  VenuePartner,
-  VenuePartnerKind,
-  VenuePartnershipRequest,
-} from '../venue-partners-model';
 
 const classNames = (...values: readonly (string | undefined)[]): string =>
   values.filter((value): value is string => Boolean(value)).join(' ');
@@ -62,6 +62,114 @@ export function PartnersScreen({
     auth.grantedPermissions.includes('*') ||
     auth.hasPermission('VIEW_PARTNERS');
 
+  const [hostPartners, setHostPartners] = useState<VenuePartner[]>([]);
+  const [promoterPartners, setPromoterPartners] = useState<VenuePartner[]>([]);
+  const [discoverableHosts, setDiscoverableHosts] = useState<DiscoverablePartner[]>([]);
+  const [discoverablePromoters, setDiscoverablePromoters] = useState<DiscoverablePartner[]>([]);
+  const [partnershipRequests, setPartnershipRequests] = useState<VenuePartnershipRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadData() {
+      setIsLoading(true);
+      try {
+        const [hosts, promoters, discoverHosts, discoverPromoters, receivedRequests, sentRequests] = await Promise.all([
+          fetchVenuePartners('host'),
+          fetchVenuePartners('promoter'),
+          fetchDiscoverablePartners('host'),
+          fetchDiscoverablePartners('promoter'),
+          fetchPartnershipRequests('received'),
+          fetchPartnershipRequests('sent'),
+        ]);
+        if (mounted) {
+          setHostPartners(hosts);
+          setPromoterPartners(promoters);
+          setDiscoverableHosts(discoverHosts);
+          setDiscoverablePromoters(discoverPromoters);
+          setPartnershipRequests([...receivedRequests, ...sentRequests]);
+        }
+      } catch {
+        // Backend unavailable: the tabs below render their empty states.
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    }
+    void loadData();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const pendingReceived = partnershipRequests.filter(
+    (item) => item.status === 'pending' && item.direction === 'received',
+  ).length;
+
+  const connectMutation = useOptimisticMutation({
+    mutationFn: async ({ partnerId, kind, message }: { partnerId: string; kind: VenuePartnerKind; message?: string }) => {
+      if (kind === 'host') {
+        const { fetchOwnVenueId } = await import('../venue-partners-api');
+        const venueId = await fetchOwnVenueId();
+        if (!venueId) throw new Error('Create a venue before inviting hosts');
+        return partnershipApi.request({
+          venueId,
+          initiatedBy: 'venue',
+          hostOrganizationId: partnerId,
+          ...(message ? { message } : {}),
+        });
+      } else {
+        return promoterConnectionApi.request({
+          counterpartyId: partnerId,
+          targetType: 'venue',
+          initiatedBy: 'target',
+          ...(message ? { message } : {}),
+        });
+      }
+    },
+    onSuccess: () => {
+      clearCache();
+    },
+  });
+
+  const acceptMutation = useOptimisticMutation({
+    mutationFn: async ({ requestId, kind }: { requestId: string; kind: VenuePartnerKind }) => {
+      if (kind === 'host') {
+        return partnershipApi.approve(requestId);
+      } else {
+        return promoterConnectionApi.approve(requestId);
+      }
+    },
+    onSuccess: () => {
+      clearCache();
+    },
+  });
+
+  const declineMutation = useOptimisticMutation({
+    mutationFn: async ({ requestId, kind, reason }: { requestId: string; kind: VenuePartnerKind; reason?: string }) => {
+      if (kind === 'host') {
+        return partnershipApi.reject(requestId, reason);
+      } else {
+        return promoterConnectionApi.reject(requestId, reason);
+      }
+    },
+    onSuccess: () => {
+      clearCache();
+    },
+  });
+
+  const removeMutation = useOptimisticMutation({
+    mutationFn: async ({ connectionId, kind }: { connectionId: string; kind: VenuePartnerKind }) => {
+      if (kind === 'host') {
+        return partnershipApi.end(connectionId);
+      } else {
+        return promoterConnectionApi.revoke(connectionId);
+      }
+    },
+    onSuccess: () => {
+      clearCache();
+    },
+  });
+
   if (!canView) {
     return (
       <section className={styles['unavailable']} role="alert">
@@ -70,10 +178,6 @@ export function PartnersScreen({
       </section>
     );
   }
-
-  const pendingReceived = getPartnershipRequests('received').filter(
-    (item) => item.status === 'pending',
-  ).length;
 
   return (
     <section className={styles['page']}>
@@ -142,12 +246,30 @@ export function PartnersScreen({
         )}
       </div>
 
-      {tab === 'discover' ? (
-        <DiscoverPartners kind={segment} />
+      {isLoading ? (
+        <p className={styles['muted']} role="status">
+          Loading partners…
+        </p>
+      ) : tab === 'discover' ? (
+        <DiscoverPartners
+          kind={segment}
+          partners={segment === 'host' ? discoverableHosts : discoverablePromoters}
+          connectMutation={connectMutation}
+        />
       ) : tab === 'requests' ? (
-        <PartnershipRequests direction={requestView} />
+        <PartnershipRequests
+          direction={requestView}
+          requests={partnershipRequests.filter((r) => r.direction === requestView)}
+          acceptMutation={acceptMutation}
+          declineMutation={declineMutation}
+          cancelMutation={removeMutation}
+        />
       ) : (
-        <ConnectedPartners kind={segment} />
+        <ConnectedPartners
+          kind={segment}
+          partners={segment === 'host' ? hostPartners : promoterPartners}
+          removeMutation={removeMutation}
+        />
       )}
     </section>
   );
@@ -196,13 +318,13 @@ const matchesCount = (value: number, bucket: string): boolean => {
   return true;
 };
 
-function DiscoverPartners({ kind }: { readonly kind: VenuePartnerKind }) {
+function DiscoverPartners({ kind, partners: partnersProp, connectMutation }: { readonly kind: VenuePartnerKind; readonly partners: DiscoverablePartner[]; readonly connectMutation: ConnectMutation }) {
   const [query, setQuery] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState<DiscoverFilterState>(DEFAULT_FILTERS);
   const [selected, setSelected] = useState<DiscoverablePartner | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const partners = getDiscoverablePartners(kind);
+  const partners = partnersProp;
   const isHost = kind === 'host';
 
   const cities = ['All cities', ...new Set(partners.map((item) => item.city))];
@@ -467,6 +589,7 @@ function DiscoverPartners({ kind }: { readonly kind: VenuePartnerKind }) {
         onClose={() => {
           setSelected(null);
         }}
+        connectMutation={connectMutation}
       />
     </>
   );
@@ -474,11 +597,18 @@ function DiscoverPartners({ kind }: { readonly kind: VenuePartnerKind }) {
 
 // ── Requests ────────────────────────────────────────────────────────────
 
-function PartnershipRequests({ direction }: { readonly direction: PartnershipRequestDirection }) {
+interface PartnershipRequestsProps {
+  readonly direction: PartnershipRequestDirection;
+  readonly requests: VenuePartnershipRequest[];
+  readonly acceptMutation: ReturnType<typeof useOptimisticMutation<unknown, { requestId: string; kind: VenuePartnerKind }>>;
+  readonly declineMutation: ReturnType<typeof useOptimisticMutation<unknown, { requestId: string; kind: VenuePartnerKind; reason?: string }>>;
+  readonly cancelMutation: ReturnType<typeof useOptimisticMutation<unknown, { connectionId: string; kind: VenuePartnerKind }>>;
+}
+
+function PartnershipRequests({ direction, requests, acceptMutation, declineMutation, cancelMutation }: PartnershipRequestsProps) {
   const [selected, setSelected] = useState<VenuePartnershipRequest | null>(null);
   const [confirmAction, setConfirmAction] = useState<'accept' | 'decline' | 'cancel' | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const requests = getPartnershipRequests(direction);
 
   return (
     <>
@@ -563,6 +693,9 @@ function PartnershipRequests({ direction }: { readonly direction: PartnershipReq
         onClose={() => {
           setConfirmAction(null);
         }}
+        acceptMutation={acceptMutation}
+        declineMutation={declineMutation}
+        cancelMutation={cancelMutation}
       />
     </>
   );
@@ -671,10 +804,16 @@ function RequestConfirmDialog({
   request,
   action,
   onClose,
+  acceptMutation,
+  declineMutation,
+  cancelMutation,
 }: {
   readonly request: VenuePartnershipRequest | null;
   readonly action: 'accept' | 'decline' | 'cancel' | null;
   readonly onClose: () => void;
+  readonly acceptMutation: ReturnType<typeof useOptimisticMutation<unknown, { requestId: string; kind: VenuePartnerKind }>>;
+  readonly declineMutation: ReturnType<typeof useOptimisticMutation<unknown, { requestId: string; kind: VenuePartnerKind; reason?: string }>>;
+  readonly cancelMutation: ReturnType<typeof useOptimisticMutation<unknown, { connectionId: string; kind: VenuePartnerKind }>>;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useOverlayFocus({ containerRef: ref, open: Boolean(action), onClose, lockScroll: true });
@@ -683,8 +822,24 @@ function RequestConfirmDialog({
     action === 'accept'
       ? { title: 'Accept this request?', body: `${request.partnerName} will be added to Connected.` }
       : action === 'decline'
-        ? { title: 'Decline this request?', body: 'They will be notified this request was declined.' }
-        : { title: 'Cancel this request?', body: 'Your pending request will be withdrawn.' };
+      ? { title: 'Decline this request?', body: 'They will be notified this request was declined.' }
+      : { title: 'Cancel this request?', body: 'Your pending request will be withdrawn.' };
+
+  const isPending = action === 'accept' ? acceptMutation.isPending
+    : action === 'decline' ? declineMutation.isPending
+    : cancelMutation.isPending;
+
+  const handleConfirm = () => {
+    if (action === 'accept') {
+      void acceptMutation.mutate({ requestId: request.id, kind: request.kind });
+    } else if (action === 'decline') {
+      void declineMutation.mutate({ requestId: request.id, kind: request.kind });
+    } else {
+      void cancelMutation.mutate({ connectionId: request.id, kind: request.kind });
+    }
+    onClose();
+  };
+
   return (
     <div className={styles['modalBackdrop']}>
       <div
@@ -700,15 +855,12 @@ function RequestConfirmDialog({
         </button>
         <h2 id="request-confirm-title">{copy.title}</h2>
         <p>{copy.body}</p>
-        <p className={styles['unsupported']}>
-          This action requires the partnership mutation API, which is not connected yet.
-        </p>
         <footer>
           <button type="button" onClick={onClose}>
             Close
           </button>
-          <button type="button" className={styles['primary']} disabled title="Requires the partnership mutation API.">
-            Confirm
+          <button type="button" className={styles['primary']} disabled={isPending} onClick={handleConfirm}>
+            {isPending ? 'Processing...' : 'Confirm'}
           </button>
         </footer>
       </div>
@@ -718,11 +870,17 @@ function RequestConfirmDialog({
 
 // ── Connected ───────────────────────────────────────────────────────────
 
-function ConnectedPartners({ kind }: { readonly kind: VenuePartnerKind }) {
+interface ConnectedPartnersProps {
+  readonly kind: VenuePartnerKind;
+  readonly partners: VenuePartner[];
+  readonly removeMutation: ReturnType<typeof useOptimisticMutation<unknown, { connectionId: string; kind: VenuePartnerKind }>>;
+}
+
+function ConnectedPartners({ kind, partners: partnersProp, removeMutation }: ConnectedPartnersProps) {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<VenuePartner | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const partners = getVenuePartners(kind);
+  const partners = partnersProp;
   const filtered = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase('en-IN');
     return normalized
@@ -743,11 +901,12 @@ function ConnectedPartners({ kind }: { readonly kind: VenuePartnerKind }) {
           placeholder={`Search connected ${kind === 'host' ? 'hosts' : 'promoters'}`}
         />
       </label>
-      <div
-        className={classNames(styles['partnerTable'], styles['relationshipTable'])}
-        role="table"
-        aria-label={`Connected ${kind === 'host' ? 'hosts' : 'promoters'}`}
-      >
+      {filtered.length ? (
+        <div
+          className={classNames(styles['partnerTable'], styles['relationshipTable'])}
+          role="table"
+          aria-label={`Connected ${kind === 'host' ? 'hosts' : 'promoters'}`}
+        >
         <div className={styles['tableHead']} role="row">
           <span role="columnheader">{kind === 'host' ? 'Host' : 'Promoter'}</span>
           <span role="columnheader">City</span>
@@ -793,7 +952,14 @@ function ConnectedPartners({ kind }: { readonly kind: VenuePartnerKind }) {
             </span>
           </div>
         ))}
-      </div>
+        </div>
+      ) : (
+        <p className={styles['muted']}>
+          {query
+            ? `No connected ${kind === 'host' ? 'hosts' : 'promoters'} match this search.`
+            : `No connected ${kind === 'host' ? 'hosts' : 'promoters'} yet.`}
+        </p>
+      )}
       <PartnerProfileDrawer
         key={selected?.id ?? 'closed-connected'}
         partner={selected}
@@ -802,6 +968,7 @@ function ConnectedPartners({ kind }: { readonly kind: VenuePartnerKind }) {
         onClose={() => {
           setSelected(null);
         }}
+        removeMutation={removeMutation}
       />
     </>
   );
@@ -809,16 +976,30 @@ function ConnectedPartners({ kind }: { readonly kind: VenuePartnerKind }) {
 
 // ── Shared profile drawer (Discover + Connected) ───────────────────────
 
+interface ConnectMutation {
+  mutate: (variables: { partnerId: string; kind: VenuePartnerKind; message?: string }) => void;
+  isPending: boolean;
+}
+
+interface RemoveMutation {
+  mutate: (variables: { connectionId: string; kind: VenuePartnerKind }) => void;
+  isPending: boolean;
+}
+
 function PartnerProfileDrawer({
   partner,
   mode,
   triggerRef,
   onClose,
+  connectMutation,
+  removeMutation,
 }: {
   readonly partner: VenuePartner | null;
   readonly mode: 'discover' | 'connected';
   readonly triggerRef: React.RefObject<HTMLButtonElement | null>;
   readonly onClose: () => void;
+  readonly connectMutation?: ConnectMutation;
+  readonly removeMutation?: RemoveMutation;
 }) {
   const [showEvents, setShowEvents] = useState(false);
   const drawerRef = useRef<HTMLElement>(null);
@@ -986,10 +1167,15 @@ function PartnerProfileDrawer({
             <button
               type="button"
               className={styles['primary']}
-              disabled
-              title="Sending connection requests requires the partnership mutation API."
+              disabled={connectMutation?.isPending}
+              onClick={() => {
+                if (connectMutation) {
+                  connectMutation.mutate({ partnerId: partner.id, kind: partner.kind });
+                }
+              }}
             >
-              <SendIcon size={18} aria-hidden="true" /> Connect
+              <SendIcon size={18} aria-hidden="true" />
+              {connectMutation?.isPending ? 'Connecting...' : 'Connect'}
             </button>
           ) : (
             <>
@@ -1013,10 +1199,15 @@ function PartnerProfileDrawer({
               <button
                 type="button"
                 className={styles['dangerAction']}
-                disabled
-                title="Removing a connection requires the partner mutation API."
+                disabled={removeMutation?.isPending}
+                onClick={() => {
+                  if (removeMutation) {
+                    removeMutation.mutate({ connectionId: partner.id, kind: partner.kind });
+                  }
+                }}
               >
-                <DeleteIcon size={18} aria-hidden="true" /> Remove connection
+                <DeleteIcon size={18} aria-hidden="true" />
+                {removeMutation?.isPending ? 'Removing...' : 'Remove connection'}
               </button>
             </>
           )}

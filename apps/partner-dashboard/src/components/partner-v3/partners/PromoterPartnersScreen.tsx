@@ -19,7 +19,7 @@ interface PromoterPartnersQuery {
 
 const tabs: readonly { readonly value: PromoterPartnerTab; readonly label: string }[] = [
   { value: 'discover', label: 'Discover' },
-  { value: 'active', label: 'Active 3' },
+  { value: 'active', label: 'Active' },
   { value: 'incoming', label: 'Incoming' },
   { value: 'pending', label: 'Pending' },
   { value: 'declined', label: 'Declined' },
@@ -43,7 +43,22 @@ const requestFilter = (records: readonly PartnerRequest[], search: string) => {
 
 const requestsForTab = (data: PromoterPartnersData, tab: PromoterPartnerTab): readonly PartnerRequest[] => tab === 'incoming' ? data.incoming : tab === 'pending' ? data.pending : tab === 'declined' ? data.declined : [];
 
-export function PromoterPartnersScreen({ data, tab = 'discover', filter = 'all', search = '' }: { readonly data: PromoterPartnersData; readonly tab?: PromoterPartnerTab; readonly filter?: PromoterPartnerFilter; readonly search?: string }) {
+export function PromoterPartnersScreen({ data, tab = 'discover', filter = 'all', search = '', pendingRequestId = null, pendingRequestAction = null, requestErrorId = null, requestError = null, connectingPartnerId = null, connectErrorId = null, connectError = null, onApproveRequest, onRejectRequest, onConnectPartner }: {
+  readonly data: PromoterPartnersData;
+  readonly tab?: PromoterPartnerTab;
+  readonly filter?: PromoterPartnerFilter;
+  readonly search?: string;
+  readonly pendingRequestId?: string | null;
+  readonly pendingRequestAction?: 'approve' | 'reject' | null;
+  readonly requestErrorId?: string | null;
+  readonly requestError?: string | null;
+  readonly connectingPartnerId?: string | null;
+  readonly connectErrorId?: string | null;
+  readonly connectError?: string | null;
+  readonly onApproveRequest?: ((request: PartnerRequest) => void) | undefined;
+  readonly onRejectRequest?: ((request: PartnerRequest) => void) | undefined;
+  readonly onConnectPartner?: ((partner: PromoterPartnerRecord) => void) | undefined;
+}) {
   const state: PromoterPartnersQuery = { tab, filter, search };
   const hrefFor = (overrides: Partial<PromoterPartnersQuery> = {}) => {
     const next = { ...state, ...overrides };
@@ -57,7 +72,7 @@ export function PromoterPartnersScreen({ data, tab = 'discover', filter = 'all',
   const sourceRecords: readonly PromoterPartnerRecord[] = tab === 'active' ? data.active : tab === 'discover' ? data.discover : [];
   const records = filterRecords(sourceRecords, filter, search);
   const requests = requestFilter(requestsForTab(data, tab), search);
-  const emptyTitle = tab === 'incoming' ? 'No incoming requests' : tab === 'pending' ? 'No pending requests' : 'No declined requests';
+  const emptyTitle = tab === 'incoming' ? 'No incoming requests' : tab === 'pending' ? 'No pending requests' : 'Declined partner requests will appear here.';
   const emptyDescription = tab === 'incoming' ? 'Requests from venues and hosts will appear here.' : tab === 'pending' ? 'Partner requests you send will appear here.' : 'Declined partner requests will appear here.';
 
   return (
@@ -74,14 +89,14 @@ export function PromoterPartnersScreen({ data, tab = 'discover', filter = 'all',
         </header>
         <div className={styles['promoterPartnerToolbar']}>
           <nav className={styles['promoterPartnerTabs']} aria-label="Partner relationship state">
-            {tabs.map((item) => <Link key={item.value} href={hrefFor({ tab: item.value, filter: 'all' })} className={tab === item.value ? styles['promoterPartnerTabActive'] : ''} aria-current={tab === item.value ? 'page' : undefined}>{item.label}</Link>)}
+            {tabs.map((item) => <Link key={item.value} href={hrefFor({ tab: item.value, filter: 'all' })} className={tab === item.value ? styles['promoterPartnerTabActive'] : ''} aria-current={tab === item.value ? 'page' : undefined}>{item.value === 'active' ? `${item.label} ${String(data.activePartnersCount)}` : item.label}</Link>)}
           </nav>
           <form className={styles['promoterPartnerSearch']} action="/partner/promoter/partners" method="get"><input type="hidden" name="tab" value={tab} /><input type="hidden" name="filter" value={filter} /><SearchInput name="search" defaultValue={search} placeholder="Search venues & hosts..." aria-label="Search venues and hosts" /><Button type="submit" variant="secondary">Search</Button>{search ? <Link href={hrefFor({ search: '' })} className={styles['clearSearch']}>Clear</Link> : null}</form>
           <nav className={styles['promoterPartnerFilters']} aria-label="Partner type filter">
             {filters.map((item) => <Link key={item.value} href={hrefFor({ filter: item.value })} className={filter === item.value ? styles['promoterPartnerFilterActive'] : ''} aria-current={filter === item.value ? 'page' : undefined}>{item.label}</Link>)}
           </nav>
         </div>
-        {tab === 'active' || tab === 'discover' ? records.length ? <div className={styles['promoterPartnerGrid']}>{records.map((partner) => <PromoterPartnerCard key={partner.id} partner={partner} />)}</div> : <EmptyState title="No partners found" description="Try a different search or partner type." /> : requests.length ? <div className={styles['requestList']}>{requests.map((request) => <PartnerRequestCard key={`${request.direction}-${request.id}`} request={request} />)}</div> : <EmptyState title={emptyTitle} description={emptyDescription} />}
+        {tab === 'active' || tab === 'discover' ? records.length ? <div className={styles['promoterPartnerGrid']}>{records.map((partner) => <PromoterPartnerCard key={partner.id} partner={partner} connecting={connectingPartnerId === partner.id} connectError={connectErrorId === partner.id ? connectError : null} onConnect={tab === 'discover' ? onConnectPartner : undefined} />)}</div> : <EmptyState title="No partners found" description={tab === 'discover' ? 'No new venues or hosts match right now. Real partners from the backend will appear here as they join.' : 'Try a different search or partner type.'} /> : requests.length ? <div className={styles['requestList']}>{requests.map((request) => <PartnerRequestCard key={`${request.direction}-${request.id}`} request={request} pendingAction={pendingRequestId === request.id ? pendingRequestAction : null} error={requestErrorId === request.id ? requestError : null} onApprove={onApproveRequest} onReject={onRejectRequest} />)}</div> : <EmptyState title={emptyTitle} description={emptyDescription} />}
       </div>
     </PageContainer>
   );

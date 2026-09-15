@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { CheckIcon, LocationIcon } from '@c1rcle/icons';
 
@@ -15,9 +15,14 @@ import {
 
 import styles from '../venue/screens/VenuePartners.module.css';
 
-import { hostEvents, hostPartners, hostSlotRequests } from './host-studio-model';
-
-import type { HostPartnerRecord } from './host-studio-model';
+import {
+  fetchHostVenuePartners,
+  fetchHostPromoterPartners,
+  fetchHostVenueRequests,
+  fetchHostPromoterRequests,
+  type HostPartner,
+  type HostPartnerRequest,
+} from './host-partners-api';
 
 const s = (name: string) => styles[name] ?? name;
 
@@ -40,35 +45,82 @@ export function HostPartnersScreen({
 
   const [query, setQuery] = useState('');
   const [city, setCity] = useState('All cities');
-  const [subTab, setSubTab] = useState<'incoming' | 'sent'>('sent');
-  const [selected, setSelected] = useState<HostPartnerRecord | null>(null);
+  const [subTab, setSubTab] = useState<'incoming' | 'sent'>('incoming');
+  const [selected, setSelected] = useState<HostPartner | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+
+  const [venuePartners, setVenuePartners] = useState<HostPartner[]>([]);
+  const [promoterPartners, setPromoterPartners] = useState<HostPartner[]>([]);
+  const [venueRequests, setVenueRequests] = useState<HostPartnerRequest[]>([]);
+  const [promoterRequests, setPromoterRequests] = useState<HostPartnerRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadData() {
+      setIsLoading(true);
+      try {
+        const [venues, promoters, venueReqs, promoterReqs] = await Promise.all([
+          fetchHostVenuePartners(),
+          fetchHostPromoterPartners(),
+          fetchHostVenueRequests(),
+          fetchHostPromoterRequests(),
+        ]);
+        if (mounted) {
+          setVenuePartners(venues);
+          setPromoterPartners(promoters);
+          setVenueRequests(venueReqs);
+          setPromoterRequests(promoterReqs);
+        }
+      } catch (error) {
+        console.error('Failed to load partner data:', error);
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    }
+    loadData();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const kind = tab === 'promoters' ? 'promoter' : 'venue';
 
   const myPartners = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const base = hostPartners.filter(p => p.kind === kind && p.status !== 'Discover');
+    const base = kind === 'venue' 
+      ? venuePartners.filter(p => p.status !== 'Discover')
+      : promoterPartners.filter(p => p.status !== 'Discover');
     if (!q) return base;
     return base.filter(p => `${p.name} ${p.city}`.toLowerCase().includes(q));
-  }, [kind, query]);
+  }, [kind, query, venuePartners, promoterPartners]);
 
   const findPartners = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const base = hostPartners.filter(p => p.kind === kind && p.status === 'Discover');
+    const base = kind === 'venue'
+      ? venuePartners.filter(p => p.status === 'Discover')
+      : promoterPartners.filter(p => p.status === 'Discover');
     return base.filter(p => {
       if (q && !`${p.name} ${p.city}`.toLowerCase().includes(q)) return false;
       if (city !== 'All cities' && p.city !== city) return false;
       return true;
     });
-  }, [kind, query, city]);
+  }, [kind, query, city, venuePartners, promoterPartners]);
 
-  const cities = ['All cities', ...new Set(hostPartners.map(p => p.city))];
-  const selectedLastEvent = selected
-    ? hostEvents
-        .filter(event => event.venue === selected.name && event.status === 'Completed')
-        .at(-1)
-    : null;
+  const cities = ['All cities', ...new Set([...venuePartners, ...promoterPartners].map(p => p.city))];
+
+  const allRequests = [...venueRequests, ...promoterRequests];
+  const incomingRequests = allRequests.filter((r) => r.direction === 'incoming');
+  const sentRequests = allRequests.filter((r) => r.direction === 'sent');
+  const selectedRequests = subTab === 'sent' ? sentRequests : incomingRequests;
+
+  if (isLoading) {
+    return (
+      <div className={s('page')}>
+        <div className={s('loading')}>Loading partners...</div>
+      </div>
+    );
+  }
 
   return (
     <div className={s('page')}>
@@ -162,19 +214,7 @@ export function HostPartnersScreen({
                     <strong>{p.eventsTogether} events</strong>
                   </span>
                   <span role="cell" className={s('eventCell')}>
-                    {(() => {
-                      const lastEvent = hostEvents
-                        .filter(event => event.venue === p.name && event.status === 'Completed')
-                        .at(-1);
-                      return lastEvent ? (
-                        <>
-                          <strong>{lastEvent.name}</strong>
-                          <small>{lastEvent.date}</small>
-                        </>
-                      ) : (
-                        <strong>—</strong>
-                      );
-                    })()}
+                    <strong>—</strong>
                   </span>
                   <span role="cell" className={p.status === 'Active' ? s('positive') : s('pending')}>
                     {p.status}
@@ -266,7 +306,7 @@ export function HostPartnersScreen({
                 setSubTab('sent');
               }}
             >
-              Sent {hostSlotRequests.length}
+              Sent {sentRequests.length}
             </button>
             <button
               type="button"
@@ -275,77 +315,52 @@ export function HostPartnersScreen({
                 setSubTab('incoming');
               }}
             >
-              Incoming 1
+              Incoming {incomingRequests.length}
             </button>
           </div>
 
+          {selectedRequests.length ? (
           <PartnerTable styles={styles} variant="requestTable" ariaLabel="Requests table">
             <PartnerTableHeader
               styles={styles}
               columns={['Partner', 'Type', 'Request', 'Date', 'Status', 'Action']}
             />
-            {subTab === 'sent' ? (
-              hostSlotRequests.map(r => (
-                <div key={r.id} className={s('partnerRow')} role="row">
-                  <div role="cell" className={s('identity')}>
-                    <span>
-                      <strong>{r.venue}</strong>
-                      <small>Venue</small>
-                    </span>
-                  </div>
-                  <span role="cell" className={s('eventCell')}>
-                    <strong>Venue</strong>
-                    <small>Partner type</small>
-                  </span>
-                  <span role="cell" className={s('eventCell')}>
-                    <strong>{r.eventName}</strong>
-                    <small>Slot request</small>
-                  </span>
-                  <span role="cell" className={s('eventCell')}>
-                    <strong>{r.date}</strong>
-                    <small>Updated {r.updatedAt}</small>
-                  </span>
-                  <span role="cell" className={r.status === 'Accepted' ? s('positive') : s('pending')}>
-                    {r.status}
-                  </span>
-                  <span role="cell">
-                    <Link href={`/host/events/requests/${r.id}`} className={s('secondaryAction')}>
-                      View
-                    </Link>
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className={s('partnerRow')} role="row">
+            {selectedRequests.map(r => (
+              <div key={r.id} className={s('partnerRow')} role="row">
                 <div role="cell" className={s('identity')}>
                   <span>
-                    <strong>Monsoon Sessions Invite</strong>
-                    <small>Sat, 16 Aug · 8:00 PM</small>
+                    <strong>{r.partnerName}</strong>
+                    <small>{r.partnerCity}</small>
                   </span>
                 </div>
                 <span role="cell" className={s('eventCell')}>
-                  <strong>Harbour Room</strong>
-                  <small>Venue</small>
+                  <strong>{r.kind === 'venue' ? 'Venue' : 'Promoter'}</strong>
+                  <small>{r.direction === 'sent' ? 'Sent' : 'Incoming'}</small>
                 </span>
                 <span role="cell" className={s('eventCell')}>
-                  <strong>Monsoon Sessions Invite</strong>
-                  <small>Event invitation</small>
+                  <strong>{r.eventName}</strong>
+                  <small>{r.direction === 'sent' ? 'Slot request' : 'Connection request'}</small>
                 </span>
                 <span role="cell" className={s('eventCell')}>
-                  <strong>Sat, 16 Aug 2026</strong>
-                  <small>Incoming</small>
+                  <strong>{r.eventDate}</strong>
+                  <small>Updated {r.updatedAt}</small>
                 </span>
-                <span role="cell" className={s('pending')}>
-                  Pending review
+                <span role="cell" className={r.status === 'Accepted' ? s('positive') : s('pending')}>
+                  {r.status}
                 </span>
                 <span role="cell">
-                  <Link href="/host/events/invitations" className={s('secondaryAction')}>
-                    Review
+                  <Link href={`/host/events/requests/${r.id}`} className={s('secondaryAction')}>
+                    View
                   </Link>
                 </span>
               </div>
-            )}
+            ))}
           </PartnerTable>
+          ) : (
+            <p className={s('muted')}>
+              {subTab === 'incoming' ? 'No requests received yet.' : 'No requests sent yet.'}
+            </p>
+          )}
         </>
       )}
 
@@ -385,8 +400,7 @@ export function HostPartnersScreen({
               <div>
                 <dt>Latest shared event</dt>
                 <dd>
-                  {selectedLastEvent?.name ?? '—'}
-                  {selectedLastEvent ? <small>{selectedLastEvent.date}</small> : null}
+                  —
                 </dd>
               </div>
             </dl>
