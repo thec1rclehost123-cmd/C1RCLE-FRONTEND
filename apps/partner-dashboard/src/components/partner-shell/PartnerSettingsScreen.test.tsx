@@ -26,14 +26,16 @@ vi.mock('@c1rcle/icons', () => {
 
 const tabs = [
   { id: 'profile', label: 'Promoter profile', icon: AccountIcon },
+  { id: 'identity', label: 'Link identity', icon: AccountIcon },
   { id: 'payout', label: 'Payout account', icon: BankIcon },
   { id: 'security', label: 'Security', icon: LockedIcon },
 ] as const;
 
 describe('PartnerSettingsScreen', () => {
-  it('keeps Promoter settings read-only and preserves tracking identity', () => {
+  it('keeps Promoter tracking identity separate from the public profile', () => {
     render(
       <PartnerSettingsScreen
+        tab="identity"
         config={{
           roleLabel: 'Promoter',
           basePath: '/promoter/settings',
@@ -43,15 +45,14 @@ describe('PartnerSettingsScreen', () => {
             handle: '@zoya',
             city: 'Mumbai',
             verified: true,
-            linkIdentity: 'zoya',
           },
+          presence: { profileHref: '/public/promoter/promoter-nightowl' },
+          trackingIdentity: 'zoya',
           payout: { bankName: 'HDFC Bank', maskedAccount: '••4421', nextPayout: 'Fri, 25 Jul' },
         }}
       />,
     );
 
-    expect(screen.getByDisplayValue('Zoya Mehta')).toHaveAttribute('readonly');
-    expect(screen.getByDisplayValue('@zoya')).toHaveAttribute('readonly');
     expect(screen.getByDisplayValue('zoya')).toHaveAttribute('readonly');
     expect(screen.queryByRole('button', { name: /save|manage/i })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Payout account' })).toHaveAttribute(
@@ -72,6 +73,7 @@ describe('PartnerSettingsScreen', () => {
             { id: 'payout', label: 'Payout account', icon: BankIcon },
           ],
           profile: { name: 'Rhea Kapoor', city: 'Mumbai', verified: true },
+          presence: { profileHref: '/public/host/rhea-kapoor' },
           payout: { bankName: 'HDFC Bank', maskedAccount: '••4421', nextPayout: 'Fri, 25 Jul' },
         }}
       />,

@@ -1,7 +1,7 @@
 import { AccountIcon, BankIcon, CalendarIcon, LockedIcon } from '@c1rcle/icons';
 
 import { mapHostPayoutAccount } from '@/components/host/host-finance-mapping';
-import { hostAvailability, hostProfile } from '@/components/host/host-studio-model';
+import { hostAvailability, hostEvents, hostPartners, hostProfile } from '@/components/host/host-studio-model';
 import { PartnerSettingsScreen } from '@/components/partner-shell/PartnerSettingsScreen';
 import { partnerRepositories } from '@/lib/partner/repositories';
 
@@ -12,7 +12,7 @@ export default async function HostSettingsPage({
 }) {
   const params = await searchParams;
   const requestedTab = params['tab'];
-  const tab = requestedTab === 'account' || requestedTab === 'availability' || requestedTab === 'payout' || requestedTab === 'security'
+  const tab = requestedTab === 'presence' || requestedTab === 'availability' || requestedTab === 'payout' || requestedTab === 'security'
     ? requestedTab
     : 'profile';
   const finance = tab === 'payout' ? await partnerRepositories.host.getFinance() : null;
@@ -22,7 +22,7 @@ export default async function HostSettingsPage({
     basePath: '/host/settings',
     tabs: [
       { id: 'profile', label: 'Host profile', icon: AccountIcon },
-      { id: 'account', label: 'Account', icon: AccountIcon },
+      { id: 'presence', label: 'Presence', icon: AccountIcon },
       { id: 'availability', label: 'Availability', icon: CalendarIcon },
       { id: 'payout', label: 'Payout account', icon: BankIcon },
       { id: 'security', label: 'Security', icon: LockedIcon },
@@ -35,6 +35,13 @@ export default async function HostSettingsPage({
       email: hostProfile.email,
       bio: hostProfile.bio,
       verified: hostProfile.verified,
+    },
+    presence: {
+      tagline: 'Music-led rooms across Mumbai.',
+      profileHref: `/public/host/${hostProfile.id}`,
+      events: hostEvents.map((event) => ({ id: event.id, name: event.name, date: event.date, time: event.time, venue: `${event.venue} · ${event.city}`, status: event.status, image: event.poster })),
+      partners: hostPartners.filter((partner) => partner.status === 'Active').map((partner) => ({ id: partner.id, name: partner.name, role: partner.kind === 'venue' ? 'Venue' : 'Promoter' })),
+      details: hostProfile.categories.map((value) => ({ label: 'Event style', value })),
     },
     account: { email: hostProfile.email, phone: hostProfile.phone },
     availability: hostAvailability.slots.map((slot) => ({ label: slot.label, time: slot.time, venue: hostAvailability.venueName })),

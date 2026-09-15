@@ -1,12 +1,14 @@
 import Link from 'next/link';
 
-import { AccountIcon, BankIcon, CalendarIcon, CheckIcon, LockedIcon } from '@c1rcle/icons';
+import { type AccountIcon, BankIcon, CalendarIcon, CheckIcon, LockedIcon } from '@c1rcle/icons';
 
 import styles from '../venue/screens/VenueSettings.module.css';
 
+import { PartnerPresenceScreen, type PartnerPublicPresence } from './PartnerPresenceScreen';
+
 import type { ReactNode } from 'react';
 
-export type PartnerSettingsTab = 'profile' | 'account' | 'availability' | 'payout' | 'security';
+export type PartnerSettingsTab = 'profile' | 'presence' | 'identity' | 'account' | 'availability' | 'payout' | 'security';
 
 export interface PartnerSettingsConfig {
   readonly roleLabel: 'Host' | 'Promoter';
@@ -20,8 +22,9 @@ export interface PartnerSettingsConfig {
     readonly email?: string | undefined;
     readonly bio?: string | undefined;
     readonly verified: boolean;
-    readonly linkIdentity?: string | undefined;
   };
+  readonly presence: Omit<PartnerPublicPresence, 'role' | 'name' | 'handle' | 'bio' | 'city'>;
+  readonly trackingIdentity?: string | undefined;
   readonly account?: {
     readonly email?: string | undefined;
     readonly phone?: string | undefined;
@@ -54,6 +57,8 @@ export function PartnerSettingsScreen({ config, tab = 'profile' }: { readonly co
         </nav>
         <main className={styles['content']}>
           {activeTab === 'profile' ? <ProfileSection config={config} /> : null}
+          {activeTab === 'presence' ? <PartnerPresenceScreen presence={{ role: config.roleLabel, name: config.profile.name, handle: config.profile.handle, city: config.profile.city, bio: config.profile.bio, ...config.presence }} /> : null}
+          {activeTab === 'identity' && config.trackingIdentity ? <TrackingIdentitySection identity={config.trackingIdentity} /> : null}
           {activeTab === 'account' && config.account ? <AccountSection account={config.account} /> : null}
           {activeTab === 'availability' && config.availability ? <AvailabilitySection roleLabel={config.roleLabel} availability={config.availability} /> : null}
           {activeTab === 'payout' && config.payout ? <PayoutSection roleLabel={config.roleLabel} payout={config.payout} /> : null}
@@ -86,9 +91,12 @@ function ProfileSection({ config }: { readonly config: PartnerSettingsConfig }) 
         </div>
         {profile.bio ? <Field label="Bio"><textarea value={profile.bio} readOnly rows={4} /></Field> : null}
       </section>
-      {profile.linkIdentity ? <section className={styles['panel']}><h2>Promoter link identity</h2><p className={styles['note']}>This existing identity is used by tracked links. It is read-only here.</p><Field label="Tracked link reference"><input value={profile.linkIdentity} readOnly /></Field></section> : null}
     </div>
   );
+}
+
+function TrackingIdentitySection({ identity }: { readonly identity: string }) {
+  return <section className={styles['panel']}><div className={styles['sectionHeader']}><div><h2>Tracking identity</h2><p>Used only to attribute Promoter links. It is not a public handle.</p></div><span className={styles['readOnly']}>Read-only</span></div><Field label="Tracked link reference"><input value={identity} readOnly /></Field></section>;
 }
 
 function AccountSection({ account }: { readonly account: NonNullable<PartnerSettingsConfig['account']> }) {

@@ -9,8 +9,9 @@ import {
   TicketIcon,
 } from '@c1rcle/icons';
 
+import styles from '../venue/screens/OverviewScreen.module.css';
+
 import { hostEvents, hostSlotRequests } from './host-studio-model';
-import styles from './HostOverviewScreen.module.css';
 
 const className = (name: string): string => styles[name] ?? name;
 
@@ -237,7 +238,7 @@ export function HostOverviewScreen() {
           </div>
         </section>
 
-        <div className={className('rightColumn')}>
+        <div className={`${className('rightColumn')} ${className('singlePanel')}`}>
           <section className={`${className('panel')} ${className('upcoming')}`} aria-labelledby="upcoming-title">
             <div className={className('sectionHeading')}>
               <h2 id="upcoming-title">Upcoming events</h2>

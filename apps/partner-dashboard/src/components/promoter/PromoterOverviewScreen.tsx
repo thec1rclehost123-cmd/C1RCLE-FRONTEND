@@ -4,10 +4,10 @@ import { BankIcon, EmailIcon, LocationIcon, NextIcon, TicketIcon } from '@c1rcle
 
 import { partnerRepositories } from '@/lib/partner/repositories';
 
-import styles from '../host/HostOverviewScreen.module.css';
+import styles from '../venue/screens/OverviewScreen.module.css';
 
-import type { ComponentType } from 'react';
 import type { IconProps } from '@c1rcle/icons';
+import type { ComponentType } from 'react';
 
 const className = (name: string): string => styles[name] ?? name;
 
@@ -41,7 +41,7 @@ export async function PromoterOverviewScreen() {
   const activity = [
     ...overview.recentOrders.slice(0, 2).map((order) => ({
       icon: 'order' as const,
-      label: `${order.ticketCount} ${order.ticketCount === 1 ? 'ticket' : 'tickets'} attributed for ${order.eventName}`,
+      label: `${String(order.ticketCount)} ${order.ticketCount === 1 ? 'ticket' : 'tickets'} attributed for ${order.eventName}`,
       time: order.createdAt,
       href: '/promoter/finance/orders',
     })),
@@ -91,16 +91,18 @@ export async function PromoterOverviewScreen() {
       <div className={className('lowerGrid')}>
         <section className={`${className('panel')} ${className('sales')}`} aria-labelledby="promoter-performance-title">
           <div className={className('sectionHeading')}><div className={className('performanceCopy')}><h2 id="promoter-performance-title">Performance</h2><p>Tickets attributed · Last 7 days</p></div><div className={className('chartTotal')}><span>TICKETS ATTRIBUTED</span><strong>{currentTotal}</strong></div></div>
-          <div className={className('chart')}><div className={className('yLabels')} aria-hidden="true"><span>200</span><span>150</span><span>100</span><span>50</span><span>0</span></div><svg viewBox="0 0 650 182" preserveAspectRatio="none" role="img" aria-label="Tickets attributed over the last seven days compared with the previous seven days"><defs><linearGradient id="promoter-attributed-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#f44a22" stopOpacity=".23" /><stop offset="1" stopColor="#f44a22" stopOpacity="0" /></linearGradient></defs><g className={className('gridLines')}><line x1="0" y1="0" x2="650" y2="0" /><line x1="0" y1="45.5" x2="650" y2="45.5" /><line x1="0" y1="91" x2="650" y2="91" /><line x1="0" y1="136.5" x2="650" y2="136.5" /><line x1="0" y1="182" x2="650" y2="182" /></g><path d={`${chartPath(currentPerformance)} L 650 182 L 0 182 Z`} fill="url(#promoter-attributed-fill)" /><path className={className('previousLine')} d={chartPath(previousPerformance)} /><path className={className('currentLine')} d={chartPath(currentPerformance)} />{currentPerformance.map((value, index) => { const point = chartPoint(value, index, currentPerformance.length); return <circle key={`promoter-point-${index}`} className={className('currentPoint')} cx={point.x} cy={point.y} r={index === currentPerformance.length - 1 ? 4.5 : 3} aria-hidden="true" />; })}</svg><div className={className('xLabels')} aria-hidden="true">{['6d ago', '5d ago', '4d ago', '3d ago', '2d ago', 'Yesterday', 'Today'].map((label) => <span key={label}>{label}</span>)}</div></div>
+          <div className={className('chart')}><div className={className('yLabels')} aria-hidden="true"><span>200</span><span>150</span><span>100</span><span>50</span><span>0</span></div><svg viewBox="0 0 650 182" preserveAspectRatio="none" role="img" aria-label="Tickets attributed over the last seven days compared with the previous seven days"><defs><linearGradient id="promoter-attributed-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#f44a22" stopOpacity=".23" /><stop offset="1" stopColor="#f44a22" stopOpacity="0" /></linearGradient></defs><g className={className('gridLines')}><line x1="0" y1="0" x2="650" y2="0" /><line x1="0" y1="45.5" x2="650" y2="45.5" /><line x1="0" y1="91" x2="650" y2="91" /><line x1="0" y1="136.5" x2="650" y2="136.5" /><line x1="0" y1="182" x2="650" y2="182" /></g><path d={`${chartPath(currentPerformance)} L 650 182 L 0 182 Z`} fill="url(#promoter-attributed-fill)" /><path className={className('previousLine')} d={chartPath(previousPerformance)} /><path className={className('currentLine')} d={chartPath(currentPerformance)} />{currentPerformance.map((value, index) => { const point = chartPoint(value, index, currentPerformance.length); return <circle key={`promoter-point-${String(index)}`} className={className('currentPoint')} cx={point.x} cy={point.y} r={index === currentPerformance.length - 1 ? 4.5 : 3} aria-hidden="true" />; })}</svg><div className={className('xLabels')} aria-hidden="true">{['6d ago', '5d ago', '4d ago', '3d ago', '2d ago', 'Yesterday', 'Today'].map((label) => <span key={label}>{label}</span>)}</div></div>
           <div className={className('legend')}><span className={className('currentLegend')}>Current 7 days</span><span className={className('previousLegend')}>Previous 7 days</span></div>
         </section>
 
-        <section className={`${className('panel')} ${className('upcoming')}`} aria-labelledby="promoter-upcoming-title">
-          <div className={className('sectionHeading')}><h2 id="promoter-upcoming-title">Upcoming events</h2><Link href="/promoter/events">View all</Link></div>
-          <div className={className('upcomingList')}>
-            {upcoming.map((item) => { const order = linkedOrders.get(item.label); const event = nextEvent?.name === item.label ? nextEvent : undefined; const status = event ? (event.tickets > 0 ? `${String(event.tickets)} tickets` : event.status) : order ? `${String(order.ticketCount)} tickets` : 'Linked'; return <Link href="/promoter/events" key={`${item.date}-${item.label}`} className={className('upcomingItem')}><span className={className('eventArtwork')} aria-hidden="true">{initials(item.label)}</span><span className={className('eventCopy')}><strong>{item.label}</strong><span>{event?.venue ?? 'Linked event'}</span></span><span className={className('statusTag')}><strong className={className('confirmed')}>{status}</strong></span></Link>; })}
-          </div>
-        </section>
+        <div className={`${className('rightColumn')} ${className('singlePanel')}`}>
+          <section className={`${className('panel')} ${className('upcoming')}`} aria-labelledby="promoter-upcoming-title">
+            <div className={className('sectionHeading')}><h2 id="promoter-upcoming-title">Upcoming events</h2><Link href="/promoter/events">View all</Link></div>
+            <div className={className('upcomingList')}>
+              {upcoming.map((item) => { const order = linkedOrders.get(item.label); const event = nextEvent?.name === item.label ? nextEvent : undefined; const status = event ? (event.tickets > 0 ? `${String(event.tickets)} tickets` : event.status) : order ? `${String(order.ticketCount)} tickets` : 'Linked'; return <Link href="/promoter/events" key={`${item.date}-${item.label}`} className={className('upcomingItem')}><span className={className('eventArtwork')} aria-hidden="true">{initials(item.label)}</span><span className={className('eventCopy')}><strong>{item.label}</strong><span>{event?.venue ?? 'Linked event'}</span></span><span className={className('statusTag')}><strong className={className('confirmed')}>{status}</strong></span></Link>; })}
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   );

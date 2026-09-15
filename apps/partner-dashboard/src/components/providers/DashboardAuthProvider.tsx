@@ -76,6 +76,8 @@ interface AuthContextValue {
   profile: DashboardProfile | null;
   memberships: PartnerMembership[];
   loading: boolean;
+  /** Human-readable failure from the profile bootstrap after a successful sign-in. */
+  bootstrapError: string | null;
   isApproved: boolean;
   isBanned: boolean;
   isPartnerSuspended: boolean;
@@ -113,6 +115,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<DashboardProfile | null>(null);
   const [memberships, setMemberships] = useState<PartnerMembership[]>([]);
   const [loading, setLoading] = useState(true);
+  const [bootstrapError, setBootstrapError] = useState<string | null>(null);
   const [isApproved, setIsApproved] = useState(false);
   const [isBanned, setIsBanned] = useState(false);
   const [isPartnerSuspended, setIsPartnerSuspended] = useState(false);
@@ -158,6 +161,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
       if (!firebaseUser) {
         setProfile(null);
         setMemberships([]);
+        setBootstrapError(null);
         setIsApproved(false);
         setIsBanned(false);
         setIsPartnerSuspended(false);
@@ -177,6 +181,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
         // /api/auth/me fetch is in-flight — causing the wrong account to render.
         setProfile(null);
         setMemberships([]);
+        setBootstrapError(null);
         setIsApproved(false);
         setIsBanned(false);
         setIsPartnerSuspended(false);
@@ -215,6 +220,9 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
         });
 
         if (!res.ok) {
+          if (!controller.signal.aborted) {
+            setBootstrapError('Unable to load your workspace. Please try again.');
+          }
           if (!controller.signal.aborted) setLoading(false);
           return;
         }
@@ -227,6 +235,9 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
         const onboardingRequest = data.onboarding?.onboardingRequest || null;
 
         if (!userData) {
+          if (!controller.signal.aborted) {
+            setBootstrapError('Unable to load your workspace. Please try again.');
+          }
           if (!controller.signal.aborted) setLoading(false);
           return;
         }
@@ -337,10 +348,14 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
           activeMembership,
           mustChangePassword: userData.mustChangePassword ?? false,
         });
+        setBootstrapError(null);
         lastProfileFetchRef.current = Date.now();
       } catch (err: any) {
         if (err?.name === 'AbortError') return; // expected — user changed mid-fetch
         console.error('Error fetching user data in auth provider:', err);
+        if (!controller.signal.aborted) {
+          setBootstrapError('Unable to load your workspace. Please try again.');
+        }
         if (!controller.signal.aborted) setLoading(false);
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -551,6 +566,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     profile,
     memberships,
     loading,
+    bootstrapError,
     isApproved,
     isBanned,
     isPartnerSuspended,
@@ -570,7 +586,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     signInWithGoogle,
     signOut,
     switchPartner,
-  }), [canDo, entityType, getIdToken, grantedPermissions, hasPermission, isApproved, isBanned, isPartnerSuspended, kycStatus, loading, memberships, onboardingStatus, permissions.actionPermissions, permissions.piiPolicy, permissions.tabVisibility, profile, serverDefaultTabVisibility, signIn, signInWithGoogle, signOut, signUp, subscriptionPlan, switchPartner, user]);
+  }), [bootstrapError, canDo, entityType, getIdToken, grantedPermissions, hasPermission, isApproved, isBanned, isPartnerSuspended, kycStatus, loading, memberships, onboardingStatus, permissions.actionPermissions, permissions.piiPolicy, permissions.tabVisibility, profile, serverDefaultTabVisibility, signIn, signInWithGoogle, signOut, signUp, subscriptionPlan, switchPartner, user]);
 
   const isDashboardPath = pathname
     ? pathname.startsWith('/venue') ||

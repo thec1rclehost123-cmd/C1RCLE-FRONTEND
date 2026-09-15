@@ -392,11 +392,12 @@ export function HostPartnersScreen({
             </dl>
             <footer>
               <Link
-                href={`/host/partners/${selected.kind === 'venue' ? 'venues' : 'promoters'}/${selected.id}`}
+                href={`/public/${selected.kind}/${selected.id}`}
                 className={s('primaryAction')}
               >
-                View full profile
+                View public profile
               </Link>
+              <Link href={`/host/partners/${selected.kind === 'venue' ? 'venues' : 'promoters'}/${selected.id}`} className={s('secondaryAction')}>View relationship</Link>
             </footer>
           </>
         ) : null}

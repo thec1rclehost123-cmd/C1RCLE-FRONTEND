@@ -1,10 +1,26 @@
 .overview {
   --overview-panel: var(--dashboard-surface);
+  position: relative;
+  isolation: isolate;
   display: grid;
   gap: 16px;
   width: 100%;
   padding-bottom: 96px;
   color: var(--dashboard-text);
+}
+
+.overview::before {
+  position: absolute;
+  z-index: -1;
+  inset: -32px -28px 22%;
+  background: radial-gradient(
+    ellipse at 34% 9%,
+    rgb(244 74 34 / 10%),
+    rgb(244 74 34 / 3%) 34%,
+    transparent 66%
+  );
+  content: '';
+  pointer-events: none;
 }
 
 .overview a {
@@ -41,6 +57,26 @@
   margin: 3px 0 0;
   color: var(--dashboard-text-secondary);
   font-size: 13px;
+}
+
+.availabilityButton {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--dashboard-border-strong);
+  border-radius: var(--dashboard-radius-control);
+  color: var(--dashboard-text);
+  background: var(--dashboard-control);
+  padding: 0 15px;
+  font-size: 12px;
+  font-weight: 550;
+  text-decoration: none;
+}
+
+.availabilityButton:hover {
+  border-color: rgb(255 255 255 / 20%);
+  background: var(--dashboard-hover);
 }
 
 .panel {
@@ -159,6 +195,20 @@
   font-size: 13px;
 }
 
+.roleBadge {
+  display: inline-flex;
+  flex: none;
+  min-height: 22px;
+  align-items: center;
+  border: 1px solid var(--dashboard-border);
+  border-radius: var(--dashboard-radius-control);
+  color: var(--dashboard-text-secondary);
+  background: var(--dashboard-surface-elevated);
+  padding: 0 7px;
+  font-size: 10px;
+  font-weight: 550;
+}
+
 .tonightStats {
   display: grid;
   grid-template-columns: 142px minmax(0, 1fr);
@@ -262,6 +312,26 @@
   background: #ff5b36;
 }
 
+.openEventButton {
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 14px;
+  border-radius: var(--dashboard-radius-control);
+  color: #fff !important;
+  background: var(--dashboard-accent);
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 550;
+  text-decoration: none;
+}
+
+.openEventButton:hover {
+  background: #ff5b36;
+}
+
 .activity {
   min-height: 326px;
   padding: 16px 20px 10px;
@@ -356,6 +426,11 @@
 .activityIcon.neutral {
   color: #cbd5e1;
   background: rgb(255 255 255 / 6%);
+}
+.activityIcon.warning {
+  border-color: rgb(245 158 11 / 20%);
+  color: #fbbf24;
+  background: rgb(245 158 11 / 10%);
 }
 .activityCopy {
   display: flex;
@@ -616,6 +691,35 @@
 .eventCopy i {
   font-style: normal;
 }
+
+.eventCopy > span {
+  overflow: hidden;
+  color: var(--dashboard-text-secondary);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statusTag {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+}
+
+.statusTag strong {
+  color: var(--dashboard-text);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.statusTag strong.confirmed {
+  color: var(--dashboard-success);
+}
+
+.statusTag strong.warning {
+  color: var(--dashboard-warning);
+}
 .network {
   display: flex;
   flex-direction: column;
@@ -855,6 +959,7 @@
   .network {
     padding-inline: 14px;
   }
+
   .networkList {
     grid-template-columns: 1fr 1fr;
   }
@@ -914,6 +1019,15 @@
     height: 100%;
     flex-direction: column;
     min-height: 0;
+  }
+
+  .rightColumn.singlePanel {
+    display: contents;
+  }
+
+  .rightColumn.singlePanel .upcoming {
+    grid-column: 2 / 4;
+    grid-row: 3;
   }
 
   .activityList,

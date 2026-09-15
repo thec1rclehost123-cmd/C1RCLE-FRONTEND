@@ -388,6 +388,7 @@ export function PromoterPartnersScreen({
         tone="violet"
       >
         {selected ? (
+          <>
           <dl>
             <div>
               <dt>Relationship</dt>
@@ -406,6 +407,10 @@ export function PromoterPartnersScreen({
               <dd>—</dd>
             </div>
           </dl>
+          <footer>
+            <Link href={`/public/${selected.kind}/${selected.id}`} className={s('primaryAction')}>View public profile</Link>
+          </footer>
+          </>
         ) : null}
       </PartnerDrawerShell>
     </div>

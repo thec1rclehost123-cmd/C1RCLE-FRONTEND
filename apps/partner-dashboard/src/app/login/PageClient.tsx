@@ -14,7 +14,6 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
-import { getFirebaseAuth } from '@/lib/firebase/client';
 import {
   normalizePartnerRole,
   resolvePartnerDashboardPath,
@@ -175,6 +174,7 @@ function LoginForm() {
     isApproved,
     onboardingStatus,
     loading: authLoading,
+    bootstrapError,
   } = useDashboardAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -194,11 +194,8 @@ function LoginForm() {
   useEffect(() => {
     const callbackUrl = searchParams.get('callbackUrl');
     if (callbackUrl) return;
-    const auth = getFirebaseAuth();
-    if (auth.currentUser) {
-      auth.signOut();
-    }
-  }, [searchParams]);
+    void signOut();
+  }, [searchParams, signOut]);
 
   // Per-ring colours: default = tri-colour, selected = single colour
   const ringColors = [
@@ -233,44 +230,74 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const isSigningIn = loading || (authLoading && Boolean(user));
 
   useEffect(() => {
     // Wait for DashboardAuthProvider to finish its async fetch before acting.
     // Without this guard the effect fires while isApproved=false (its default),
     // which signs the user out before the profile is even loaded — causing the
     // "page refreshes / fields clear" silent failure.
-    if (authLoading || !user) return;
+    if (authLoading) return;
+
+    if (bootstrapError) {
+      setLoading(false);
+      setError(bootstrapError);
+      return;
+    }
+
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     if (isApproved && profile?.activeMembership) {
+      const assignedType = normalizePartnerRole(profile.activeMembership.partnerType);
+      if (!assignedType) {
+        void signOut();
+        setLoading(false);
+        setError('Your partner workspace could not be identified. Please contact support.');
+        return;
+      }
+
+      if (userType && assignedType !== userType) {
+        const typeLabel =
+          assignedType === 'venue' ? 'Venue' : assignedType === 'host' ? 'Host' : 'Promoter';
+        void signOut();
+        setLoading(false);
+        setError(
+          `This account is registered as ${typeLabel}. Please select the correct workspace.`,
+        );
+        return;
+      }
+
       // Fully approved with an active partnership — go to dashboard.
       const callback = searchParams.get('callbackUrl');
       if (callback) {
         router.replace(callback);
       } else {
         router.replace(
-          resolvePartnerDashboardPath(profile.activeMembership.partnerType, 'overview') ??
-            '/partner/select-organization',
+          resolvePartnerDashboardPath(assignedType, 'overview') ?? '/partner/select-organization',
         );
       }
     } else if (!isApproved && profile !== null) {
       // profile is loaded (not null) but user is not approved — safe to reject.
       // We check profile !== null to avoid acting on the initial null state.
-      const auth = getFirebaseAuth();
-      auth.signOut();
+      void signOut();
       setError(
         onboardingStatus
           ? "You don't have partner access yet. Your application is pending review."
           : "This account doesn't have partner access. Please apply or contact support.",
       );
     }
-    // If isApproved=true but activeMembership is null, do nothing — handleLogin
-    // will navigate directly via router.push once its own fetch completes.
+    // If isApproved=true but activeMembership is null, wait for the provider's
+    // canonical profile bootstrap to complete rather than making a second request.
   }, [
     user,
     authLoading,
     isApproved,
     profile,
     onboardingStatus,
+    bootstrapError,
     router,
     userType,
     searchParams,
@@ -287,114 +314,9 @@ function LoginForm() {
     try {
       await signIn(email, password);
 
-      const auth = getFirebaseAuth();
-      const currentUser = auth.currentUser;
-
-      if (currentUser) {
-        // Force-refresh the token so the admin-set custom claims
-        // (partnerId, partnerType, partnerRole) are included immediately
-        // after the first login following admin approval.
-        const token = await currentUser.getIdToken(true);
-
-        // Read claims from the freshly-minted token — this is the most
-        // authoritative source and works even if the gateway membership
-        // query hasn't picked up the Firestore doc yet.
-        const tokenResult = await currentUser.getIdTokenResult();
-        const claims = tokenResult.claims as Record<string, any>;
-
-        const res = await fetch('/api/auth/me', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'x-user-type': userType || 'venue',
-          },
-        });
-
-        if (!res.ok) {
-          setError('Failed to fetch user profile.');
-          await auth.signOut();
-          setLoading(false);
-          return;
-        }
-
-        const data = await res.json();
-        const userData = data.user || {};
-        const onboardingRequest = data.onboarding?.onboardingRequest || null;
-
-        let assignedType: ReturnType<typeof normalizePartnerRole> = null;
-
-        // Priority 1: JWT custom claims set by admin approval — available immediately
-        // after admin sets them, no Firestore membership query needed.
-        if (claims['partnerType']) {
-          assignedType = normalizePartnerRole(claims['partnerType']);
-        }
-
-        // Priority 2: activeMembership.partnerType from the /me response — comes from
-        // the partner_memberships collection, more reliable than the users.role field.
-        if (!assignedType && userData.activeMembership?.partnerType) {
-          assignedType = normalizePartnerRole(userData.activeMembership.partnerType);
-        } else if (data.activeMembership?.partnerType) {
-          assignedType = normalizePartnerRole(data.activeMembership.partnerType);
-        } else if (userData.role === 'host') {
-          assignedType = 'host';
-        } else if (userData.role === 'promoter') {
-          assignedType = 'promoter';
-        } else if (userData.role === 'partner' || userData.venueId) {
-          assignedType = 'venue';
-        }
-
-        // Priority 3: legacy role/venueId fields on the users doc — kept as fallback
-        // but may be stale (e.g. role='partner' for a host approved on an older path).
-        if (!assignedType) {
-          if (userData.role === 'host') assignedType = 'host';
-          else if (userData.role === 'promoter') assignedType = 'promoter';
-          else if (userData.role === 'partner' || userData.role === 'staff' || userData.venueId)
-            assignedType = 'venue';
-        }
-
-        // Do NOT grant access based solely on a pending onboarding request —
-        // only users with an active approved account (activeMembership/role/venueId) pass.
-        if (!assignedType) {
-          if (onboardingRequest) {
-            if (
-              onboardingRequest.status === 'verified' ||
-              onboardingRequest.status === 'approved'
-            ) {
-              // Approved but missing role/activeMembership — rare edge.
-              // Let the user through so they land on their partner dashboard.
-              assignedType = normalizePartnerRole(onboardingRequest.type);
-              if (!assignedType) {
-                setError('Application approved, but workspace type unknown. Contact support.');
-                await auth.signOut();
-                setLoading(false);
-                return;
-              }
-            } else {
-              setError("You don't have partner access yet. Your application is pending review.");
-              await auth.signOut();
-              setLoading(false);
-              return;
-            }
-          } else {
-            setError('This account is not registered. Please apply for access.');
-            await auth.signOut();
-            setLoading(false);
-            return;
-          }
-        }
-
-        if (userType && assignedType !== userType) {
-          const typeLabel =
-            assignedType === 'venue' ? 'Venue' : assignedType === 'host' ? 'Host' : 'Promoter';
-          setError(
-            `This account is registered as ${typeLabel}. Please select the correct workspace.`,
-          );
-          await auth.signOut();
-          setLoading(false);
-          return;
-        }
-      }
-
-      router.push(resolvePartnerDashboardPath(userType) ?? '/partner/select-organization');
+      // The provider owns token refresh, profile loading, permissions, and routing.
+      // Keeping this handler to credential submission avoids a second `/api/auth/me` call.
+      setLoading(false);
     } catch (err: any) {
       console.error('Login error:', err);
       if (err.code === 'auth/user-not-found') {
@@ -415,84 +337,7 @@ function LoginForm() {
     setLoading(true);
     try {
       await signInWithGoogle();
-
-      const auth = getFirebaseAuth();
-      const currentUser = auth.currentUser;
-
-      if (currentUser) {
-        const token = await currentUser.getIdToken(true);
-        const tokenResult = await currentUser.getIdTokenResult();
-        const claims = tokenResult.claims as Record<string, any>;
-
-        const res = await fetch('/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!res.ok) {
-          setError('Failed to fetch user profile.');
-          await auth.signOut();
-          setLoading(false);
-          return;
-        }
-
-        const data = await res.json();
-        const userData = data.user || {};
-        const onboardingRequest = data.onboarding?.onboardingRequest || null;
-
-        let assignedType: ReturnType<typeof normalizePartnerRole> = null;
-
-        if (claims['partnerType']) {
-          assignedType = normalizePartnerRole(claims['partnerType']);
-        }
-
-        if (!assignedType && userData.activeMembership?.partnerType) {
-          assignedType = normalizePartnerRole(userData.activeMembership.partnerType);
-        } else if (data.activeMembership?.partnerType) {
-          assignedType = normalizePartnerRole(data.activeMembership.partnerType);
-        } else if (userData.role === 'host') {
-          assignedType = 'host';
-        } else if (userData.role === 'promoter') {
-          assignedType = 'promoter';
-        } else if (userData.role === 'partner' || userData.venueId) {
-          assignedType = 'venue';
-        }
-
-        if (!assignedType) {
-          if (userData.role === 'host') assignedType = 'host';
-          else if (userData.role === 'promoter') assignedType = 'promoter';
-          else if (userData.role === 'partner' || userData.role === 'staff' || userData.venueId)
-            assignedType = 'venue';
-        }
-
-        if (!assignedType) {
-          if (onboardingRequest) {
-            if (
-              onboardingRequest.status === 'verified' ||
-              onboardingRequest.status === 'approved'
-            ) {
-              assignedType = normalizePartnerRole(onboardingRequest.type);
-              if (!assignedType) {
-                setError('Application approved, but workspace type unknown. Contact support.');
-                await auth.signOut();
-                setLoading(false);
-                return;
-              }
-            } else {
-              setError("You don't have partner access yet. Your application is pending review.");
-              await auth.signOut();
-              setLoading(false);
-              return;
-            }
-          } else {
-            setError('This account is not registered. Please apply for access.');
-            await auth.signOut();
-            setLoading(false);
-            return;
-          }
-        }
-
-        router.push(resolvePartnerDashboardPath(assignedType) ?? '/partner/select-organization');
-      }
+      setLoading(false);
     } catch (err: any) {
       console.error('Google login error:', err);
       if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
@@ -835,10 +680,10 @@ function LoginForm() {
 
                   <button
                     type="submit"
-                    disabled={loading || authLoading}
+                    disabled={isSigningIn}
                     className="btn btn-primary btn-xl w-full group"
                   >
-                    {loading ? (
+                    {isSigningIn ? (
                       <span className="flex items-center gap-2">
                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         Signing in...
@@ -856,7 +701,7 @@ function LoginForm() {
                 <button
                   type="button"
                   onClick={handleGoogleLogin}
-                  disabled={loading || authLoading}
+                  disabled={isSigningIn}
                   className="btn btn-secondary w-full flex items-center justify-center gap-3 mt-4"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">

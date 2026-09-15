@@ -15,13 +15,16 @@ import {
   UsersIcon,
 } from '@c1rcle/icons';
 
+import { PartnerPresenceScreen } from '@/components/partner-shell/PartnerPresenceScreen';
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 
+import { EVENTS } from '../venue-events-model';
+import { getVenuePartners } from '../venue-partners-model';
 import { resolveVenueSettingsPermissions, venueSettingsSource } from '../venue-settings-model';
 
 import styles from './VenueSettings.module.css';
 
-export type SettingsTab = 'profile' | 'payout' | 'team' | 'security';
+export type SettingsTab = 'profile' | 'presence' | 'details' | 'payout' | 'team' | 'security';
 
 const TABS: readonly {
   readonly id: SettingsTab;
@@ -29,6 +32,8 @@ const TABS: readonly {
   readonly icon: typeof AccountIcon;
 }[] = [
   { id: 'profile', label: 'Venue profile', icon: AccountIcon },
+  { id: 'presence', label: 'Presence', icon: AccountIcon },
+  { id: 'details', label: 'Venue details', icon: SettingsIcon },
   { id: 'payout', label: 'Payout account', icon: BankIcon },
   { id: 'team', label: 'Team access', icon: UsersIcon },
   { id: 'security', label: 'Security', icon: LockedIcon },
@@ -67,7 +72,9 @@ export function SettingsScreen({ tab = 'profile' }: { readonly tab?: SettingsTab
           })}
         </nav>
         <main className={styles['content']}>
-          {tab === 'profile' ? <VenueProfile canManage={permissions.canManageVenue} /> : null}
+          {tab === 'profile' ? <VenueProfileSummary /> : null}
+          {tab === 'presence' ? <PartnerPresenceScreen presence={{ role: 'Venue', name: venueSettingsSource.profile.name, city: venueSettingsSource.profile.address, instagram: venueSettingsSource.profile.instagram, tagline: venueSettingsSource.profile.type, profileHref: '/public/venue/skyline-rooftop', details: [{ label: 'Venue type', value: venueSettingsSource.profile.type }, { label: 'Capacity', value: `${String(venueSettingsSource.profile.capacity)} guests` }, { label: 'Location', value: venueSettingsSource.profile.address }], events: EVENTS.map((event) => ({ id: event.id, name: event.name, date: event.dateLabel, time: event.time, venue: event.venue, category: event.category, status: event.status, image: event.artworkSrc })), partners: [...getVenuePartners('host'), ...getVenuePartners('promoter')].filter((partner) => partner.status === 'Active').map((partner) => ({ id: partner.id, name: partner.name, role: partner.kind === 'host' ? 'Host' : 'Promoter' })) }} /> : null}
+          {tab === 'details' ? <VenueDetails canManage={permissions.canManageVenue} /> : null}
           {tab === 'payout' ? (
             <PayoutAccount canManage={permissions.canChangePayoutAccount} />
           ) : null}
@@ -81,7 +88,16 @@ export function SettingsScreen({ tab = 'profile' }: { readonly tab?: SettingsTab
   );
 }
 
-function VenueProfile({ canManage }: { readonly canManage: boolean }) {
+function VenueProfileSummary() {
+  const profile = venueSettingsSource.profile;
+  return <section className={styles['panel']}>
+    <div className={styles['sectionHeader']}><div><h2>Venue profile</h2><p>Business identity used inside Venue Studio.</p></div><span className={styles['readOnly']}>Read-only</span></div>
+    <div className={styles['identityGrid']}><div className={styles['avatar']} aria-hidden="true">{profile.logoText.split('\n').map((line) => line[0]).join('').slice(0, 2)}</div><div><dl className={styles['presenceList']}><div><dt>Venue name</dt><dd>{profile.name}</dd></div><div><dt>Primary contact</dt><dd>{profile.publicEmail}</dd></div><div><dt>Public profile</dt><dd><Link href="/public/venue/skyline-rooftop">Open public profile</Link></dd></div></dl></div></div>
+    <p className={styles['note']}>Venue identity changes require the settings mutation API.</p>
+  </section>;
+}
+
+function VenueDetails({ canManage }: { readonly canManage: boolean }) {
   const initial = venueSettingsSource.profile;
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [form, setForm] = useState(initial);

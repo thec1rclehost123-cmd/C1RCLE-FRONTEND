@@ -15,6 +15,7 @@ vi.mock('@c1rcle/icons', () => {
   const Icon = () => <svg aria-hidden="true" />;
   return {
     AddIcon: Icon,
+    AdvancedSetupIcon: Icon,
     BackIcon: Icon,
     BankIcon: Icon,
     CalendarIcon: Icon,
@@ -38,6 +39,7 @@ vi.mock('@c1rcle/icons', () => {
     TicketIcon: Icon,
     TimeIcon: Icon,
     TrendUpIcon: Icon,
+    UsersIcon: Icon,
     WhatsAppIcon: Icon,
   };
 });
@@ -96,7 +98,7 @@ describe('Venue operations interactions', () => {
     );
   });
 
-  it('keeps data across all three Create Event steps and publishes through the supplied mutation', async () => {
+  it('keeps event data in one continuous editor and publishes through the supplied mutation', async () => {
     mocks.actions = new Map([
       ['canEditEvent', true],
       ['canPublishEvent', true],
@@ -112,10 +114,9 @@ describe('Venue operations interactions', () => {
     const name = screen.getByLabelText('Event name');
     await user.clear(name);
     await user.type(name, 'Friday Frequency');
-    await user.click(screen.getByRole('button', { name: /Continue to tickets/ }));
-    expect(screen.getByRole('heading', { name: 'Tickets' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /Continue to review/ }));
-    expect(screen.getByText(/Friday Frequency · Thu, 24 Sep 2026/)).toBeInTheDocument();
+    expect(screen.getByText('Tickets')).toBeInTheDocument();
+    expect(screen.getByText('Guest experience')).toBeInTheDocument();
+    expect(screen.getAllByText(/Friday Frequency/)).toHaveLength(1);
     await user.click(screen.getByRole('button', { name: 'Publish event' }));
     expect(publish).toHaveBeenCalledWith(expect.objectContaining({ name: 'Friday Frequency' }));
   });

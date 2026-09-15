@@ -982,6 +982,9 @@ function PartnerProfileDrawer({
         </section>
 
         <footer>
+          <Link href={`/public/${partner.kind}/${partner.id}`} className={styles['primary']}>
+            View public profile
+          </Link>
           {mode === 'discover' ? (
             <button
               type="button"
@@ -1039,4 +1042,3 @@ function Avatar({
     </span>
   );
 }
-

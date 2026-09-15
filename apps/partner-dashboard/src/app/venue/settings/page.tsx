@@ -6,7 +6,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = { title: 'Settings · Venue Studio' };
 
 const parseTab = (value: string | string[] | undefined): SettingsTab =>
-  value === 'payout' || value === 'team' || value === 'security' ? value : 'profile';
+  value === 'presence' || value === 'details' || value === 'payout' || value === 'team' || value === 'security' ? value : 'profile';
 
 export default async function VenueSettingsPage({
   searchParams,

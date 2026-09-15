@@ -1,467 +1,386 @@
 'use client';
 
-import Image from 'next/image';
-import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useState } from 'react';
 
-import { hostAvailability } from './host-studio-model';
-import { HostButton, HostStatus, HostUnavailable } from './HostStudioUi';
+import {
+  BackIcon,
+  CalendarIcon,
+  CheckIcon,
+  ForwardIcon,
+  LocationIcon,
+  SearchIcon,
+  TimeIcon,
+} from '@c1rcle/icons';
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  TextField,
+} from '@c1rcle/ui';
 
-interface Ticket {
-  readonly id: string;
-  name: string;
-  price: string;
-  capacity: string;
-}
+import { createComposerDraft } from '@/components/events/event-composer-model';
+import { EventComposer } from '@/components/events/EventComposer';
+import { initialCreateEventDraft } from '@/components/venue/create-event-model';
+
+import { hostAvailability, hostPartners } from './host-studio-model';
+import styles from './HostEventBrief.module.css';
+
+import type { EventComposerDraft } from '@/components/events/event-composer-model';
+
+type Stage = 'venue' | 'time' | 'compose';
+type Fit = 'waiting' | 'fits' | 'partial' | 'unavailable';
+
+const authoritativeSlots = [
+  { id: 'slot-jul-24', date: '2026-07-24', start: '21:00', end: '03:00' },
+  { id: 'slot-jul-25', date: '2026-07-25', start: '20:00', end: '02:00' },
+  { id: 'slot-aug-01', date: '2026-08-01', start: '21:00', end: '03:00' },
+] as const;
+const activeVenues = hostPartners.filter(
+  (partner) => partner.kind === 'venue' && partner.status === 'Active',
+);
+const minutes = (value: string) => {
+  const [hour = 0, minute = 0] = value.split(':').map(Number);
+  return hour * 60 + minute;
+};
+const overnightEnd = (start: number, end: number) => (end <= start ? end + 1440 : end);
+const dateLabel = (value: string) =>
+  value
+    ? new Intl.DateTimeFormat('en-IN', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      }).format(new Date(`${value}T12:00:00`))
+    : '';
+const submitUnavailable = (): Promise<void> =>
+  Promise.reject(new Error('Host request adapter unavailable.'));
 
 export function HostCreateEventScreen() {
-  const [preflight, setPreflight] = useState(true);
-  const [slot, setSlot] = useState('');
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [preview, setPreview] = useState<'web' | 'phone'>('web');
-  const [name, setName] = useState('Neon Nights: Afrobeats');
-  const [description, setDescription] = useState(
-    'A warm, high-energy Afrobeats night hosted by Rhea Kapoor.',
+  const [stage, setStage] = useState<Stage>('venue');
+  const [venueId, setVenueId] = useState<string>(hostAvailability.venueId);
+  const [query, setQuery] = useState('');
+  const [date, setDate] = useState('');
+  const [start, setStart] = useState('');
+  const [end, setEnd] = useState('');
+  const [draft, setDraft] = useState<EventComposerDraft>(() =>
+    createComposerDraft({ ...initialCreateEventDraft, name: '', description: '' }),
   );
-  const [tickets, setTickets] = useState<readonly Ticket[]>([
-    { id: 'early', name: 'Early Bird', price: '799', capacity: '150' },
-    { id: 'general', name: 'General Entry', price: '1299', capacity: '100' },
-  ]);
-  const [notice, setNotice] = useState(false);
+  const venue = activeVenues.find((item) => item.id === venueId) ?? null;
+  const slots = venueId === hostAvailability.venueId ? authoritativeSlots : [];
+  const selectedSlot = slots.find((slot) => slot.date === date);
+  const fit: Fit = (() => {
+    if (!date || !start || !end) return 'waiting';
+    if (!selectedSlot) return 'unavailable';
+    const availableStart = minutes(selectedSlot.start);
+    const availableEnd = overnightEnd(availableStart, minutes(selectedSlot.end));
+    const requestedStart = minutes(start);
+    const requestedEnd = overnightEnd(requestedStart, minutes(end));
+    return requestedStart >= availableStart && requestedEnd <= availableEnd ? 'fits' : 'partial';
+  })();
 
-  const ticketErrors = useMemo(() => {
-    const names = tickets.map((ticket) => ticket.name.trim().toLowerCase());
-    const duplicate = names.some((value, index) => value && names.indexOf(value) !== index);
-    const invalid = tickets.some(
-      (ticket) => Number(ticket.price) <= 0 || Number(ticket.capacity) <= 0,
-    );
-    const total = tickets.reduce((sum, ticket) => sum + (Number(ticket.capacity) || 0), 0);
-    return { duplicate, invalid, total, overCapacity: total > 400 };
-  }, [tickets]);
-  const validTickets =
-    !ticketErrors.duplicate && !ticketErrors.invalid && !ticketErrors.overCapacity;
-
-  const updateTicket = (id: string, key: 'name' | 'price' | 'capacity', value: string) => {
-    setTickets((current) =>
-      current.map((ticket) => (ticket.id === id ? { ...ticket, [key]: value } : ticket)),
-    );
+  const enterComposer = () => {
+    if (!venue || fit !== 'fits') return;
+    const capacity = Number(/(\d+) capacity/.exec(venue.detail)?.[1] ?? 400);
+    setDraft((current) => ({
+      ...current,
+      venueId: venue.id,
+      venueName: venue.name,
+      venueAddress: venue.city,
+      venueCapacity: capacity,
+      date,
+      dateLabel: dateLabel(date),
+      startTime: start,
+      endTime: end,
+      guestCutoff: `${date}T18:00`,
+    }));
+    setStage('compose');
   };
 
-  if (preflight)
+  if (stage === 'compose' && venue) {
     return (
-      <div className="host-page host-create-page">
-        <header className="host-page-header">
-          <div>
-            <h1>Start an event request</h1>
-            <p>Choose an active venue partnership and an available venue slot.</p>
-          </div>
-        </header>
-        <section className="host-preflight host-panel">
-          <div className="host-preflight-title">
-            <span>Before you begin</span>
-            <h2>Confirm venue availability</h2>
-            <p>Hosts request a venue slot. The venue reviews and publishes the event.</p>
-          </div>
-          <div className="host-preflight-check">
-            <span>1</span>
-            <div>
-              <label htmlFor="host-venue">Partner venue</label>
-              <select id="host-venue" defaultValue={hostAvailability.venueId}>
-                <option value={hostAvailability.venueId}>{hostAvailability.venueName}</option>
-              </select>
-              <HostStatus tone="success">Active partnership</HostStatus>
-            </div>
-          </div>
-          <div className="host-preflight-check">
-            <span>2</span>
-            <fieldset>
-              <legend>Authoritative available slot</legend>
-              {hostAvailability.slots.map((item) => (
-                <label key={item.id} className={slot === item.id ? 'is-selected' : undefined}>
-                  <input
-                    type="radio"
-                    name="slot"
-                    value={item.id}
-                    checked={slot === item.id}
-                    onChange={() => {
-                      setSlot(item.id);
-                    }}
-                  />
-                  <strong>{item.label}</strong>
-                  <small>{item.time}</small>
-                </label>
-              ))}
-            </fieldset>
-          </div>
-          <footer>
-            <HostButton href="/host/events">Cancel</HostButton>
-            <button
-              className="host-button is-primary"
-              type="button"
-              disabled={!slot}
-              onClick={() => {
-                setPreflight(false);
-              }}
-            >
-              Continue to details
-            </button>
-          </footer>
-        </section>
-      </div>
+      <EventComposer
+        actor="host"
+        eyebrow="Host Studio / Event Request"
+        title="Create the event brief"
+        draft={draft}
+        onChange={setDraft}
+        canEdit
+        canFinalize
+        finalLabel="Submit request"
+        onFinalize={submitUnavailable}
+        context={{
+          venue: venue.name,
+          date: dateLabel(date),
+          start,
+          end,
+          onChange: () => {
+            setStage('time');
+          },
+        }}
+      />
     );
+  }
 
   return (
-    <div className="host-page host-create-page">
-      <div className="host-stepper" aria-label="Event request progress">
-        {[1, 2, 3].map((value) => (
-          <div
-            key={value}
-            className={step === value ? 'is-active' : step > value ? 'is-done' : undefined}
-          >
-            <span>{step > value ? '✓' : value}</span>
-            <strong>{value === 1 ? 'Details' : value === 2 ? 'Tickets' : 'Review'}</strong>
-          </div>
-        ))}
-      </div>
-      <div className="host-create-layout">
-        <section className="host-panel host-create-form">
-          {step === 1 ? (
-            <>
-              <div className="host-section-head">
-                <div>
-                  <h1>Event details</h1>
-                  <p>Tell guests what they need to see.</p>
-                </div>
+    <section className={styles['page']}>
+      <header className={styles['pageHeader']}>
+        <div>
+          <span>Host Studio / Event Request</span>
+          <h1>Start an event request</h1>
+          <p>
+            Choose a partner venue and confirm an exact available window before building the event.
+          </p>
+        </div>
+        <div className={styles['steps']}>
+          <span data-active={stage === 'venue' || undefined}>
+            <b>1</b> Venue
+          </span>
+          <i />
+          <span data-active={stage === 'time' || undefined}>
+            <b>2</b> Date & time
+          </span>
+          <i />
+          <span>
+            <b>3</b> Event details
+          </span>
+        </div>
+      </header>
+
+      {stage === 'venue' ? (
+        <div className={styles['selectionLayout']}>
+          <Card className={styles['selectionCard']}>
+            <CardHeader className={styles['cardHeader']}>
+              <div className={styles['icon']}>
+                <LocationIcon size={18} aria-hidden="true" />
               </div>
-              <div className="host-poster-row">
-                <Image
-                  src="/venue/neon-nights-poster.webp"
-                  width={112}
-                  height={112}
-                  alt="Event poster preview"
+              <div>
+                <CardTitle>Choose an active venue</CardTitle>
+                <CardDescription>
+                  Only current venue partnerships can receive requests.
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className={styles['cardContent']}>
+              <div className={styles['search']}>
+                <SearchIcon size={16} aria-hidden="true" />
+                <TextField
+                  label="Search venues"
+                  labelHidden
+                  placeholder="Search active venues"
+                  value={query}
+                  onChange={(event) => {
+                    setQuery(event.target.value);
+                  }}
                 />
-                <div>
-                  <strong>Event poster</strong>
-                  <p>JPG, PNG, or WebP · max 5 MB</p>
+              </div>
+              <div className={styles['venueList']}>
+                {activeVenues
+                  .filter((item) => item.name.toLowerCase().includes(query.toLowerCase()))
+                  .map((item) => {
+                    const selected = item.id === venueId;
+                    const connected = item.id === hostAvailability.venueId;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        data-selected={selected || undefined}
+                        onClick={() => {
+                          setVenueId(item.id);
+                        }}
+                      >
+                        <div className={styles['venueAvatar']}>
+                          <LocationIcon size={18} aria-hidden="true" />
+                        </div>
+                        <div>
+                          <strong>{item.name}</strong>
+                          <span>
+                            {item.city} · {item.detail}
+                          </span>
+                          <small data-connected={connected || undefined}>
+                            {connected ? 'Availability connected' : 'Availability unavailable'}
+                          </small>
+                        </div>
+                        {selected ? (
+                          <CheckIcon size={17} aria-hidden="true" />
+                        ) : (
+                          <ForwardIcon size={17} aria-hidden="true" />
+                        )}
+                      </button>
+                    );
+                  })}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className={styles['summaryCard']}>
+            <CardHeader>
+              <CardTitle>Your request starts here</CardTitle>
+              <CardDescription>
+                The venue and timing stay attached while you complete the event details.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className={styles['summaryContent']}>
+              <div>
+                <span>Selected venue</span>
+                <strong>{venue?.name ?? 'None'}</strong>
+                <small>{venue?.detail ?? 'Choose an active partner'}</small>
+              </div>
+              <Button
+                fullWidth
+                disabled={!venue}
+                onClick={() => {
+                  setStage('time');
+                }}
+              >
+                Open availability <ForwardIcon size={15} aria-hidden="true" />
+              </Button>
+              <Link href="/host/events">
+                <BackIcon size={14} aria-hidden="true" /> Cancel request
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className={styles['selectionLayout']}>
+          <Card className={styles['selectionCard']}>
+            <CardHeader className={styles['cardHeader']}>
+              <div className={styles['icon']}>
+                <CalendarIcon size={18} aria-hidden="true" />
+              </div>
+              <div>
+                <CardTitle>Choose the date and time</CardTitle>
+                <CardDescription>
+                  Enter the exact range you want within the venue’s connected availability.
+                </CardDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setStage('venue');
+                }}
+              >
+                Change venue
+              </Button>
+            </CardHeader>
+            <CardContent className={styles['cardContent']}>
+              <label className={styles['nativeField']}>
+                <span>Requested date</span>
+                <input
+                  aria-label="Requested date"
+                  type="date"
+                  value={date}
+                  onChange={(event) => {
+                    setDate(event.target.value);
+                  }}
+                />
+              </label>
+              <div className={styles['dateOptions']}>
+                {slots.map((slot) => (
                   <button
+                    key={slot.id}
                     type="button"
-                    className="host-button"
-                    disabled
-                    title="Poster upload is unavailable until the upload adapter is connected"
+                    aria-label={hostAvailability.slots.find((item) => item.id === slot.id)?.label}
+                    data-selected={date === slot.date || undefined}
+                    onClick={() => {
+                      setDate(slot.date);
+                      setStart('');
+                      setEnd('');
+                    }}
                   >
-                    Change image
+                    <strong>{dateLabel(slot.date).replace(/,? 2026/, '')}</strong>
+                    <span>
+                      {slot.start} – {slot.end}
+                    </span>
                   </button>
-                </div>
-              </div>
-              <div className="host-form-grid">
-                <label className="is-wide">
-                  Event name
-                  <input
-                    value={name}
-                    onChange={(event) => {
-                      setName(event.target.value);
-                    }}
-                    maxLength={100}
-                  />
-                </label>
-                <label className="is-wide">
-                  Venue
-                  <input value={hostAvailability.venueName} readOnly />
-                </label>
-                <label>
-                  Date
-                  <input
-                    value={hostAvailability.slots.find((item) => item.id === slot)?.label ?? ''}
-                    readOnly
-                  />
-                </label>
-                <label>
-                  Start time
-                  <input value="9:00 PM" readOnly />
-                </label>
-                <label>
-                  End time
-                  <input value="3:00 AM" readOnly />
-                </label>
-                <label>
-                  Genre and vibe
-                  <select defaultValue="Afrobeats / Club">
-                    <option>Afrobeats / Club</option>
-                    <option>House / Club</option>
-                    <option>R&amp;B / Lounge</option>
-                  </select>
-                </label>
-                <label className="is-wide">
-                  Short description
-                  <textarea
-                    rows={4}
-                    value={description}
-                    onChange={(event) => {
-                      setDescription(event.target.value);
-                    }}
-                    maxLength={200}
-                  />
-                </label>
-                <label>
-                  Age limit
-                  <select defaultValue="21+">
-                    <option>18+</option>
-                    <option>21+</option>
-                  </select>
-                </label>
-              </div>
-              <details>
-                <summary>More details</summary>
-                <p>
-                  Additional event details are managed by the venue after the request is accepted.
-                </p>
-              </details>
-            </>
-          ) : null}
-          {step === 2 ? (
-            <>
-              <div className="host-section-head">
-                <div>
-                  <h1>Tickets</h1>
-                  <p>Propose the ticket types guests can buy.</p>
-                </div>
-              </div>
-              <div className="host-ticket-editor">
-                {tickets.map((ticket) => (
-                  <article key={ticket.id}>
-                    <label>
-                      Ticket name
-                      <input
-                        value={ticket.name}
-                        onChange={(event) => {
-                          updateTicket(ticket.id, 'name', event.target.value);
-                        }}
-                      />
-                    </label>
-                    <label>
-                      Price (₹)
-                      <input
-                        inputMode="numeric"
-                        value={ticket.price}
-                        onChange={(event) => {
-                          updateTicket(ticket.id, 'price', event.target.value);
-                        }}
-                      />
-                    </label>
-                    <label>
-                      Capacity
-                      <input
-                        inputMode="numeric"
-                        value={ticket.capacity}
-                        onChange={(event) => {
-                          updateTicket(ticket.id, 'capacity', event.target.value);
-                        }}
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      className="host-link-button"
-                      onClick={() => {
-                        setTickets((current) => current.filter((item) => item.id !== ticket.id));
-                      }}
-                    >
-                      Remove
-                    </button>
-                  </article>
                 ))}
               </div>
-              <button
-                type="button"
-                className="host-button"
-                onClick={() => {
-                  setTickets((current) => [
-                    ...current,
-                    {
-                      id: `ticket-${String(current.length + 1)}`,
-                      name: '',
-                      price: '',
-                      capacity: '',
-                    },
-                  ]);
-                }}
-              >
-                + Add ticket type
-              </button>
-              <div className="host-info-list host-ticket-summary">
+              {!slots.length ? (
+                <p className={styles['empty']}>
+                  No authoritative availability is connected for this venue.
+                </p>
+              ) : null}
+              <div className={styles['timeInputs']}>
+                <label className={styles['nativeField']}>
+                  <span>Start time</span>
+                  <input
+                    aria-label="Start time"
+                    type="time"
+                    value={start}
+                    onChange={(event) => {
+                      setStart(event.target.value);
+                    }}
+                  />
+                </label>
+                <label className={styles['nativeField']}>
+                  <span>End time</span>
+                  <input
+                    aria-label="End time"
+                    type="time"
+                    value={end}
+                    onChange={(event) => {
+                      setEnd(event.target.value);
+                    }}
+                  />
+                </label>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className={styles['summaryCard']}>
+            <CardHeader>
+              <CardTitle>Availability check</CardTitle>
+              <CardDescription>{venue?.name}</CardDescription>
+            </CardHeader>
+            <CardContent className={styles['summaryContent']}>
+              <div className={styles['availability']} data-fit={fit}>
+                <TimeIcon size={18} aria-hidden="true" />
                 <div>
-                  <span>Guest fees</span>
-                  <strong>Set by venue</strong>
+                  <strong>
+                    {fit === 'fits'
+                      ? 'Good to go'
+                      : fit === 'partial'
+                        ? 'Partially available'
+                        : fit === 'unavailable'
+                          ? 'Unavailable'
+                          : 'Choose a range'}
+                  </strong>
+                  <small>
+                    {fit === 'fits'
+                      ? 'The full range fits the venue window.'
+                      : fit === 'partial'
+                        ? 'Adjust the range inside venue availability.'
+                        : fit === 'unavailable'
+                          ? 'No connected availability exists on this date.'
+                          : 'Overnight ranges are supported.'}
+                  </small>
                 </div>
-                <div>
-                  <span>Total capacity</span>
-                  <strong>{ticketErrors.total} / 400</strong>
-                </div>
               </div>
-              {ticketErrors.invalid ? (
-                <p className="host-error">Price and capacity must be positive.</p>
-              ) : null}
-              {ticketErrors.duplicate ? (
-                <p className="host-error">Ticket names must be unique.</p>
-              ) : null}
-              {ticketErrors.overCapacity ? (
-                <p className="host-error">Total ticket capacity cannot exceed venue capacity.</p>
-              ) : null}
-            </>
-          ) : null}
-          {step === 3 ? (
-            <>
-              <div className="host-review-title">
-                <HostStatus tone="success">Ready to request</HostStatus>
-                <h1>Review your slot request</h1>
-                <p>The venue will review these details before anything goes live.</p>
+              <div>
+                <span>Venue window</span>
+                <strong>
+                  {selectedSlot ? `${selectedSlot.start} – ${selectedSlot.end}` : 'Not selected'}
+                </strong>
+                <small>Your request: {start && end ? `${start} – ${end}` : '—'}</small>
               </div>
-              <div className="host-review-rows">
-                <article>
-                  <span>✓</span>
-                  <div>
-                    <strong>Event details</strong>
-                    <p>
-                      {name} · {description.slice(0, 48)}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStep(1);
-                    }}
-                  >
-                    Edit
-                  </button>
-                </article>
-                <article>
-                  <span>✓</span>
-                  <div>
-                    <strong>Venue and time</strong>
-                    <p>{hostAvailability.venueName} · 9:00 PM</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStep(1);
-                    }}
-                  >
-                    Edit
-                  </button>
-                </article>
-                <article>
-                  <span>✓</span>
-                  <div>
-                    <strong>Tickets</strong>
-                    <p>
-                      {tickets.length} ticket types · From ₹
-                      {Math.min(...tickets.map((ticket) => Number(ticket.price) || Infinity))}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStep(2);
-                    }}
-                  >
-                    Edit
-                  </button>
-                </article>
-                <article>
-                  <span>✓</span>
-                  <div>
-                    <strong>Request</strong>
-                    <p>Venue approval required before publication</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPreflight(true);
-                    }}
-                  >
-                    Edit
-                  </button>
-                </article>
-              </div>
-              {notice ? <HostUnavailable label="Send slot request unavailable" /> : null}
-            </>
-          ) : null}
-        </section>
-        <aside className={`host-panel host-guest-preview is-${preview}`}>
-          <div className="host-preview-head">
-            <h2>Guest preview</h2>
-            <div>
-              <button
-                type="button"
-                className={preview === 'web' ? 'is-active' : undefined}
+              <Button fullWidth disabled={fit !== 'fits'} onClick={enterComposer}>
+                Build event brief <ForwardIcon size={15} aria-hidden="true" />
+              </Button>
+              <Button
+                variant="ghost"
+                fullWidth
                 onClick={() => {
-                  setPreview('web');
+                  setStage('venue');
                 }}
               >
-                Web
-              </button>
-              <button
-                type="button"
-                className={preview === 'phone' ? 'is-active' : undefined}
-                onClick={() => {
-                  setPreview('phone');
-                }}
-              >
-                Phone
-              </button>
-            </div>
-          </div>
-          <div className="host-preview-card">
-            <Image src="/venue/neon-nights-poster.webp" width={560} height={320} alt="" />
-            <div>
-              <h2>{name || 'Untitled event'}</h2>
-              <p>{hostAvailability.venueName} · Mumbai</p>
-              <p>{hostAvailability.slots.find((item) => item.id === slot)?.label} · 9:00 PM</p>
-              {step > 1 && tickets[0] ? <strong>From ₹{tickets[0].price || '—'}</strong> : null}
-            </div>
-          </div>
-        </aside>
-      </div>
-      <footer className="host-sticky-actions">
-        <button
-          className="host-button"
-          type="button"
-          onClick={() => {
-            if (step === 1) setPreflight(true);
-            else setStep((step - 1) as 1 | 2);
-          }}
-        >
-          Back
-        </button>
-        <button
-          className="host-button"
-          type="button"
-          disabled
-          title="Draft persistence is unavailable until the host request adapter is connected"
-        >
-          Save draft
-        </button>
-        {step < 3 ? (
-          <button
-            className="host-button is-primary"
-            type="button"
-            disabled={step === 1 ? name.trim().length < 3 : !validTickets}
-            onClick={() => {
-              setStep((step + 1) as 2 | 3);
-            }}
-          >
-            Continue to {step === 1 ? 'tickets' : 'review'}
-          </button>
-        ) : (
-          <button
-            className="host-button is-primary"
-            type="button"
-            onClick={() => {
-              setNotice(true);
-            }}
-          >
-            Send slot request
-          </button>
-        )}
-      </footer>
-    </div>
+                <BackIcon size={14} aria-hidden="true" /> Back
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </section>
   );
 }
