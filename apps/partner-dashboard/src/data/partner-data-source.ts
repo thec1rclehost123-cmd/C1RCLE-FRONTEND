@@ -433,7 +433,7 @@ export interface PromoterEventsData {
 export type PartnerKind = 'host' | 'promoter' | 'venue';
 export type PartnerSegment = 'hosts' | 'venues' | 'promoters' | 'staff';
 export type PartnerSubView = 'connected' | 'discover' | 'requests';
-export type PartnerRelationshipStatus = 'Partnered' | 'Invite sent' | 'Waiting on them';
+export type PartnerRelationshipStatus = 'Partnered' | 'Invite sent' | 'Waiting on them' | 'Action needed';
 export type PartnerRequestDirection = 'incoming' | 'outgoing';
 export type PartnerCardTone = 'orange' | 'violet' | 'teal' | 'pink' | 'gold' | 'indigo' | 'slate';
 export type PartnerPermission = 'Door check-in' | 'Finance view' | 'Event editing' | 'Guest messaging';
@@ -464,7 +464,10 @@ export interface PartnerProfile {
 }
 
 export interface PartnerRelationship extends PartnerProfile {
-  readonly status?: PartnerRelationshipStatus;
+  readonly status?: PartnerRelationshipStatus | undefined;
+  /** Real backend ids for connection requests (never dummy). */
+  readonly organizationId?: string | null;
+  readonly venueId?: string | null;
 }
 
 export interface PartnerRequest {
@@ -516,6 +519,9 @@ export interface PromoterPartnerRecord extends Omit<PartnerProfile, 'kind'> {
   readonly kind: 'venue' | 'host';
   readonly state: PromoterPartnerState;
   readonly actionLabel: 'Connected' | 'Send Request';
+  /** Real backend ids for connection requests (never dummy). */
+  readonly organizationId?: string | null;
+  readonly venueId?: string | null;
 }
 
 export interface PromoterPartnersData {
