@@ -22,7 +22,7 @@ export function PartnerStudioFrame({ studio, interactionData, children }: { read
 
   useEffect(() => {
     if (auth.loading) return;
-    if (!auth.user || auth.isBanned) {
+    if (!auth.user) {
       router.replace(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
       return;
     }
@@ -31,13 +31,13 @@ export function PartnerStudioFrame({ studio, interactionData, children }: { read
       return;
     }
     if (!activeRole) router.replace('/partner/select-organization');
-  }, [activeRole, auth.isApproved, auth.isBanned, auth.loading, auth.user, pathname, router]);
+  }, [activeRole, auth.isApproved, auth.loading, auth.user, pathname, router]);
 
   if (auth.loading) {
     return <PartnerShell studio={studio} interactionData={interactionData}><LoadingState label="Authorizing Partner V3" /></PartnerShell>;
   }
 
-  if (!auth.user || auth.isBanned || !auth.isApproved || !activeRole) {
+  if (!auth.user || !auth.isApproved || !activeRole) {
     return <LoadingState label="Redirecting to your workspace" />;
   }
 

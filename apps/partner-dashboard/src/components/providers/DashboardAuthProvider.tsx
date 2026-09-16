@@ -185,7 +185,12 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- activeOrgId is read, not a trigger; re-running per active-org change would refetch the whole membership list for no reason.
   }, [session.isLoading, session.isAuthenticated, session.user?.id]);
 
-  const isApproved = onboardingRequest?.status === 'approved';
+  // An approved account stops appearing in `/onboarding/me` (approved requests
+  // are excluded from OPEN_STATUSES server-side), so `status === 'approved'`
+  // alone can never flip this true for a fully provisioned user — they'd be
+  // bounced back to `/onboard` forever. A resolved membership list is the
+  // reliable signal that onboarding already succeeded.
+  const isApproved = onboardingRequest?.status === 'approved' || memberships.length > 0;
   // No `isBanned` concept exists in V2 yet — see the file-level comment.
   const isBanned = false;
   const onboardingStatus = onboardingRequest?.status ?? null;
@@ -232,7 +237,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     [orgAccess],
   );
 
-  const loading = session.isLoading || (session.isAuthenticated && dataLoading);
+  const loading = session.isLoading || (session.isAuthenticated && (dataLoading || orgAccess.isLoading));
 
   const authContextValue = useMemo<AuthContextValue>(() => {
     const activeMembership: PartnerMembership | null =

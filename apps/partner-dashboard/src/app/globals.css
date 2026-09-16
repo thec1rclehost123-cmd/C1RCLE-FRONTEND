@@ -1,4 +1,6 @@
+/* Updated Tailwind CSS globals */
 @tailwind base;
+
 @tailwind components;
 @tailwind utilities;
 
@@ -897,6 +899,21 @@ select option {
   padding: 18px 20px;
   font-size: 16px;
   border-radius: var(--radius-xl);
+}
+
+/*
+ * `.input`/`.input-lg` set `padding` as a shorthand, which — since both
+ * classes are declared after `@tailwind utilities` above — always wins over
+ * a same-specificity `pl-*`/`pr-*` utility class in source order, no matter
+ * which comes later in the element's className. An input with a leading or
+ * trailing icon needs these instead of `pl-*`/`pr-*` to actually clear it.
+ */
+.input-icon-left {
+  padding-left: 3rem;
+}
+
+.input-icon-right {
+  padding-right: 3rem;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

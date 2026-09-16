@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { isApiClientError } from '@c1rcle/api-client';
-import { partnerAccessDtoSchema } from '@c1rcle/contracts';
+import { useSessionStore } from '@c1rcle/auth';
 
-import { apiClient } from '@/lib/api/client';
 import { getActiveOrgId } from '@/lib/org/active-org';
+import { getPartnerAccess } from '@/lib/org/org-repository';
 
 import type { PartnerAccessDto } from '@c1rcle/contracts';
 
@@ -36,19 +36,22 @@ const IDLE_RESULT: FetchResult = { orgId: null, access: null, error: null, isSus
 
 export function useOrgAccess(orgIdOverride?: string | null): OrgAccessState {
   const orgId = orgIdOverride !== undefined ? orgIdOverride : getActiveOrgId();
+  // `SessionProvider` hydrates the session before its background `refresh()`
+  // re-scopes the gateway session cookie to this origin (see
+  // session-provider.tsx). Firing the request earlier means the BFF has no
+  // cookie to forward and the gateway 401s. Gate on `hydrated` — the flag
+  // flips once bootstrap settles, signed in or not — so the first access
+  // read always rides a real session.
+  const hydrated = useSessionStore().hydrated;
 
   const [result, setResult] = useState<FetchResult>(IDLE_RESULT);
 
   useEffect(() => {
-    if (!orgId) return;
+    if (!orgId || !hydrated) return;
 
     let isMounted = true;
 
-    apiClient
-      .get({
-        path: `/api/v2/organizations/${orgId}/access`,
-        schema: partnerAccessDtoSchema,
-      })
+    getPartnerAccess(orgId)
       .then((data) => {
         if (isMounted) {
           setResult({ orgId, access: data, error: null, isSuspended: false });
@@ -71,7 +74,7 @@ export function useOrgAccess(orgIdOverride?: string | null): OrgAccessState {
     return () => {
       isMounted = false;
     };
-  }, [orgId]);
+  }, [orgId, hydrated]);
 
   // A result fetched for a different (or no) org is stale — treat it as still loading
   // rather than flashing the previous org's access while the new request is in flight.

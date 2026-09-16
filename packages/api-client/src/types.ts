@@ -38,6 +38,13 @@ export interface RequestOptions<TResponse> {
   readonly path: string;
   readonly query?: Readonly<Record<string, string | number | boolean | undefined>>;
   readonly body?: unknown;
+  /**
+   * Sends `rawBody` verbatim as the fetch body (no `JSON.stringify`). Used for
+   * same-origin file uploads where the BFF reads the raw bytes server-side.
+   */
+  readonly rawBody?: BodyInit | null;
+  /** Content-Type for a `rawBody` request. Defaults to `application/octet-stream`. */
+  readonly contentType?: string;
   readonly headers?: Readonly<Record<string, string>>;
   /**
    * Zod schema the response is parsed against. Required — an unvalidated

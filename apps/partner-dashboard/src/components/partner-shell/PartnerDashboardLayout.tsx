@@ -111,7 +111,7 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
 
   useEffect(() => {
     if (auth.loading) return;
-    if (!user || auth.isBanned) {
+    if (!user) {
       router.replace('/login');
       return;
     }
@@ -137,7 +137,6 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
   }, [
     activeRole,
     auth.isApproved,
-    auth.isBanned,
     auth.loading,
     membership?.partnerId,
     partnerRole,
@@ -205,7 +204,7 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
   }, [query, visibleNavigation]);
 
   if (auth.loading) return <AuthorizationSplash label="Authorizing access" />;
-  if (!user || auth.isBanned || !auth.isApproved || (activeRole && activeRole !== partnerRole)) {
+  if (!user || !auth.isApproved || (activeRole && activeRole !== partnerRole)) {
     return <AuthorizationSplash label="Redirecting" />;
   }
 

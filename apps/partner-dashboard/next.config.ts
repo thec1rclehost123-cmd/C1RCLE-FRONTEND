@@ -43,6 +43,14 @@ const nextConfig: NextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          /*
+           * The Content-Security-Policy header lives in src/proxy.ts — it
+           * needs a fresh per-request nonce, which only the proxy can mint.
+           * Do not add a CSP header here: two CSP headers on one response
+           * merge as the *intersection* of both policies, silently breaking
+           * whichever directive is narrower.
+           */
+          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
         ],
       },
     ]);

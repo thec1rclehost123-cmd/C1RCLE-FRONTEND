@@ -1,12 +1,12 @@
 import { Archivo, Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
 import { cookies } from 'next/headers';
 
-import './globals.css';
-import '@/styles/partner-v3.css';
-
 import { getServerSession } from '@c1rcle/auth/server-session';
 
 import { SessionProvider } from '@/components/providers/session-provider';
+
+import './globals.css';
+import '@/styles/partner-v3.css';
 
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';

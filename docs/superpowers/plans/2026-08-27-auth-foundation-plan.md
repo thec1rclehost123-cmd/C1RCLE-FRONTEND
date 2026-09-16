@@ -526,7 +526,7 @@ Everything in tasks 2–4 passes. The E2E journey is green against a real Firest
 
 ## Deferred / follow-up (NOT this plan)
 
-- **Backend:** signed-URL issuing for onboarding documents (`POST /onboarding/applications/:id/documents/upload-url`) — unblocks the real document-upload step.
+- ~~**Backend:** signed-URL issuing for onboarding documents (`POST /onboarding/applications/:id/documents/upload-url`)~~ — **DONE** `C1RCLE-BACKEND` `2a9a4b3` / contracts `fb45fc1`. `ObjectStoragePort` + Firebase Storage v4 signed PUT; `EchoObjectStorage` on the memory driver. The real document-upload step is unblocked.
 - **Password reset** — `/forgot-password` + Better Auth reset endpoints.
 - **TanStack Query migration** for partner-dashboard server-state — spec C.
 - **Studio screen de-mock** (venue/host/promoter dashboards) — spec C.

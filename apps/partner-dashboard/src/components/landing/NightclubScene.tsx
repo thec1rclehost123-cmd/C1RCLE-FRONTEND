@@ -800,7 +800,7 @@ export default function NightclubScene() {
     });
 
     // ── Animation loop ────────────────────────────────────────────────
-    const clock = new THREE.Clock();
+    const timer = new THREE.Timer();
     let animId = 0;
     let frameCount = 0;
     let running = true;
@@ -812,13 +812,15 @@ export default function NightclubScene() {
       if (!running) return;
       animId = requestAnimationFrame(animate);
 
+      timer.update(frameTime);
+      const elapsed = timer.getElapsed();
+
       // Once the nine-second camera reveal is complete, 30fps keeps the
       // ambience alive while cutting long-session main-thread/GPU work.
-      if (clock.elapsedTime >= 9 && frameTime - lastRenderedAt < 32) return;
+      if (elapsed >= 9 && frameTime - lastRenderedAt < 32) return;
       lastRenderedAt = frameTime;
 
-      const delta = Math.min(clock.getDelta(), 0.033);
-      const elapsed = clock.elapsedTime;
+      const delta = Math.min(timer.getDelta(), 0.033);
       frameCount++;
 
       // ── Camera: tight on DJ → smooth zoom-out to reveal full party ──
@@ -969,7 +971,7 @@ export default function NightclubScene() {
 
       running = shouldRun;
       if (running) {
-        clock.getDelta();
+        timer.reset();
         animId = requestAnimationFrame(animate);
       } else {
         cancelAnimationFrame(animId);

@@ -178,6 +178,11 @@ export const baseConfig = defineConfig(
               message:
                 'SECURITY: this is a frontend-only repository. Backend SDKs and database clients are never allowed here.',
             },
+            {
+              group: ['firebase', 'firebase/*'],
+              message:
+                'ARCHITECTURE: firebase is being removed from this repository. Auth goes through @c1rcle/auth.',
+            },
           ],
         },
       ],
@@ -288,6 +293,36 @@ export const baseConfig = defineConfig(
     rules: {
       'import-x/no-default-export': 'off',
       'no-restricted-syntax': 'off',
+    },
+  },
+
+  /*
+   * SECURITY: an access token in localStorage/sessionStorage is readable by
+   * any injected script — @c1rcle/auth keeps the token in memory only, and
+   * must never regress to Web Storage. Scoped to that package only.
+   *
+   * `files` globs resolve relative to the *consuming* project's own
+   * eslint.config.ts. `packages/auth/eslint.config.ts` imports `reactConfig`
+   * (which spreads `baseConfig`, defined here), so a per-package `eslint .`
+   * run there addresses its own files as `packages/auth/**` when invoked
+   * from the repo root, and this stays inert (never over-broad) for every
+   * other package or app that also consumes `baseConfig`.
+   */
+  {
+    files: ['packages/auth/**/*.ts', 'packages/auth/**/*.tsx'],
+    ignores: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        {
+          name: 'localStorage',
+          message: 'SECURITY: no access token or session data may be kept in localStorage.',
+        },
+        {
+          name: 'sessionStorage',
+          message: 'SECURITY: no access token or session data may be kept in sessionStorage.',
+        },
+      ],
     },
   },
 

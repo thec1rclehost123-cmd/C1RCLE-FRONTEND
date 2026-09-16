@@ -1,6 +1,13 @@
 'use client';
 
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+/*
+ * @c1rcle/icons does not exist yet in this monorepo (no packages/icons directory); lucide-react
+ * is the pre-existing choice shared by every auth/onboarding screen (signup, onboard, verify).
+ * Tracked as repo-wide debt, not introduced here — swap all four call sites together once the
+ * package lands.
+ */
+// eslint-disable-next-line no-restricted-imports
 import {
   Mail,
   Lock,
@@ -15,43 +22,68 @@ import {
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, Suspense } from 'react';
 
-import { resolvePartnerV3Path } from '@/components/partner-shell/partner-role-routing';
-import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
+import { isApiClientError } from '@c1rcle/api-client';
+import { login, logout, useSessionStore } from '@c1rcle/auth';
 
+import {
+  normalizePartnerRole,
+  resolvePartnerV3Path,
+} from '@/components/partner-shell/partner-role-routing';
+import { setActiveOrg } from '@/lib/org/active-org';
+import { getOrganizations } from '@/lib/org/org-repository';
+import { filterOrgsByPartnerType } from '@/lib/org/route-after-auth';
 
-
-type UserType = 'venue' | 'host' | 'promoter';
+import type { WorkspaceType } from '@/lib/org/route-after-auth';
 
 const roleConfig = {
   venue: {
     icon: Building2,
     label: 'Venue',
     description: 'Full venue operations',
-    color: 'from-orange-500/20 to-orange-600/10',
   },
   host: {
     icon: Users,
     label: 'Host',
     description: 'Event management',
-    color: 'from-indigo-500/20 to-indigo-600/10',
   },
   promoter: {
     icon: Zap,
     label: 'Promoter',
     description: 'Sales & outreach',
-    color: 'from-emerald-500/20 to-emerald-600/10',
   },
+} as const satisfies Record<WorkspaceType, { icon: typeof Building2; label: string; description: string }>;
+
+/* Per-workspace ambient styling as static Tailwind classes — inline `style=` objects are banned
+ * by the design-system lint rule (no-restricted-syntax), and Tailwind's JIT needs literals. */
+const BLOB_CLASS: Record<WorkspaceType, string> = {
+  venue: 'w-[420px] h-[420px] bg-[rgba(244,74,34,0.22)] blur-[60px]',
+  host: 'w-[500px] h-[500px] bg-[rgba(255,255,255,0.08)] blur-[80px]',
+  promoter: 'w-[500px] h-[500px] bg-[rgba(34,197,94,0.12)] blur-[80px]',
 };
 
-const bgPalette = {
-  venue: { primary: '#F44A22', ring: 'rgba(244,74,34,VAL)', blob: 'rgba(244,74,34,0.12)' },
-  host: { primary: '#FFFFFF', ring: 'rgba(255,255,255,VAL)', blob: 'rgba(255,255,255,0.08)' },
-  promoter: { primary: '#22C55E', ring: 'rgba(34,197,94,VAL)', blob: 'rgba(34,197,94,0.12)' },
+const RING_BORDER: Record<WorkspaceType, string> = {
+  venue:
+    'border-t-[rgba(244,74,34,0.75)] border-r-transparent border-b-[rgba(244,74,34,0.25)] border-l-transparent',
+  host:
+    'border-t-[rgba(255,255,255,0.75)] border-r-transparent border-b-[rgba(255,255,255,0.25)] border-l-transparent',
+  promoter:
+    'border-t-[rgba(34,197,94,0.75)] border-r-transparent border-b-[rgba(34,197,94,0.25)] border-l-transparent',
 };
 
-function WorkspaceBg({ type }: { type: UserType | null }) {
-  const p = type ? bgPalette[type] : null;
-  const r = (a: number) => p?.ring.replace('VAL', String(a)) ?? 'transparent';
+const SPARK_DOT_BG: Record<WorkspaceType, string> = {
+  venue: 'bg-[#F44A22]',
+  host: 'bg-white',
+  promoter: 'bg-[#22C55E]',
+};
+
+const RING_SPECS = [
+  { deg: 0, sizeClass: 'w-[340px] h-[340px]', duration: 8 },
+  { deg: 120, sizeClass: 'w-[420px] h-[420px]', duration: 11 },
+  { deg: 240, sizeClass: 'w-[500px] h-[500px]', duration: 14 },
+] as const;
+
+/** Role-tinted ambient background — swaps colour with the selected workspace, ported from login-legacy. */
+function WorkspaceBg({ type }: { type: WorkspaceType | null }) {
   const reduceMotion = useReducedMotion();
   const [compactViewport, setCompactViewport] = useState(false);
 
@@ -71,7 +103,7 @@ function WorkspaceBg({ type }: { type: UserType | null }) {
 
   return (
     <AnimatePresence mode="wait">
-      {type && p && (
+      {type && (
         <motion.div
           key={type}
           initial={{ opacity: 0 }}
@@ -80,19 +112,9 @@ function WorkspaceBg({ type }: { type: UserType | null }) {
           transition={{ duration: 0.3 }}
           className="absolute inset-0 overflow-hidden pointer-events-none"
         >
-          {/* Radial glow blob */}
           <motion.div
-            className="absolute rounded-full"
-            style={{
-              background: type === 'venue' ? 'rgba(244,74,34,0.22)' : p.blob,
-              filter: type === 'venue' ? 'blur(60px)' : 'blur(80px)',
-              width: type === 'venue' ? 420 : 500,
-              height: type === 'venue' ? 420 : 500,
-              top: '50%',
-              left: '50%',
-              x: '-50%',
-              y: '-50%',
-            }}
+            className={`absolute rounded-full top-1/2 left-1/2 ${BLOB_CLASS[type]}`}
+            initial={{ x: '-50%', y: '-50%' }}
             {...(animateBackground
               ? {
                   animate:
@@ -114,43 +136,22 @@ function WorkspaceBg({ type }: { type: UserType | null }) {
               : {})}
           />
 
-          {/* All — same rotating arc style, different colours */}
-          {[0, 120, 240].map((deg, i) => (
+          {RING_SPECS.map(({ deg, sizeClass, duration }) => (
             <motion.div
-              key={i}
-              className="absolute"
-              style={{
-                width: 340 + i * 80,
-                height: 340 + i * 80,
-                top: '50%',
-                left: '50%',
-                x: '-50%',
-                y: '-50%',
-                borderTopWidth: 1,
-                borderRightWidth: 1,
-                borderBottomWidth: 1,
-                borderLeftWidth: 1,
-                borderStyle: 'solid',
-                borderRadius: '50%',
-                borderTopColor: r(0.75),
-                borderRightColor: 'transparent',
-                borderBottomColor: r(0.25),
-                borderLeftColor: r(0.25),
-                rotate: deg,
-              }}
+              key={deg}
+              className={`absolute top-1/2 left-1/2 rounded-full border ${RING_BORDER[type]} ${sizeClass}`}
+              initial={{ x: '-50%', y: '-50%', rotate: deg }}
               {...(animateBackground
                 ? {
                     animate: { rotate: [deg, deg + 360] },
-                    transition: { duration: 8 + i * 3, repeat: Infinity, ease: 'linear' as const },
+                    transition: { duration, repeat: Infinity, ease: 'linear' as const },
                   }
                 : {})}
             />
           ))}
 
-          {/* Corner accent dot */}
           <motion.div
-            className="absolute bottom-8 right-8 rounded-full"
-            style={{ width: 6, height: 6, background: p.primary }}
+            className={`absolute bottom-8 right-8 rounded-full w-[6px] h-[6px] ${SPARK_DOT_BG[type]}`}
             {...(animateBackground
               ? {
                   animate: { opacity: [1, 0.2, 1] },
@@ -164,222 +165,194 @@ function WorkspaceBg({ type }: { type: UserType | null }) {
   );
 }
 
+const SPARKLE_SPECS = [
+  { leftClass: 'left-[5%]', size: 3, sizeClass: 'w-[3px] h-[3px]', dur: 9, delay: 0, ci: 0 },
+  { leftClass: 'left-[12%]', size: 4, sizeClass: 'w-[4px] h-[4px]', dur: 13, delay: 1.5, ci: 1 },
+  { leftClass: 'left-[18%]', size: 5, sizeClass: 'w-[5px] h-[5px]', dur: 11, delay: 0.8, ci: 2 },
+  { leftClass: 'left-[25%]', size: 3, sizeClass: 'w-[3px] h-[3px]', dur: 15, delay: 2.2, ci: 0 },
+  { leftClass: 'left-[31%]', size: 4, sizeClass: 'w-[4px] h-[4px]', dur: 10, delay: 0.4, ci: 1 },
+  { leftClass: 'left-[38%]', size: 3, sizeClass: 'w-[3px] h-[3px]', dur: 14, delay: 3.0, ci: 2 },
+  { leftClass: 'left-[44%]', size: 5, sizeClass: 'w-[5px] h-[5px]', dur: 12, delay: 1.8, ci: 0 },
+  { leftClass: 'left-[50%]', size: 3, sizeClass: 'w-[3px] h-[3px]', dur: 16, delay: 0.6, ci: 1 },
+  { leftClass: 'left-[56%]', size: 4, sizeClass: 'w-[4px] h-[4px]', dur: 8, delay: 2.5, ci: 2 },
+  { leftClass: 'left-[62%]', size: 3, sizeClass: 'w-[3px] h-[3px]', dur: 13, delay: 1.1, ci: 0 },
+  { leftClass: 'left-[68%]', size: 5, sizeClass: 'w-[5px] h-[5px]', dur: 11, delay: 3.5, ci: 1 },
+  { leftClass: 'left-[74%]', size: 3, sizeClass: 'w-[3px] h-[3px]', dur: 14, delay: 0.9, ci: 2 },
+  { leftClass: 'left-[80%]', size: 4, sizeClass: 'w-[4px] h-[4px]', dur: 10, delay: 2.8, ci: 0 },
+  { leftClass: 'left-[86%]', size: 3, sizeClass: 'w-[3px] h-[3px]', dur: 17, delay: 1.3, ci: 1 },
+  { leftClass: 'left-[92%]', size: 5, sizeClass: 'w-[5px] h-[5px]', dur: 9, delay: 0.2, ci: 2 },
+  { leftClass: 'left-[8%]', size: 3, sizeClass: 'w-[3px] h-[3px]', dur: 15, delay: 4.0, ci: 1 },
+  { leftClass: 'left-[15%]', size: 4, sizeClass: 'w-[4px] h-[4px]', dur: 12, delay: 2.0, ci: 2 },
+  { leftClass: 'left-[22%]', size: 3, sizeClass: 'w-[3px] h-[3px]', dur: 11, delay: 3.2, ci: 0 },
+  { leftClass: 'left-[29%]', size: 5, sizeClass: 'w-[5px] h-[5px]', dur: 13, delay: 0.7, ci: 1 },
+  { leftClass: 'left-[35%]', size: 3, sizeClass: 'w-[3px] h-[3px]', dur: 16, delay: 1.6, ci: 2 },
+] as const;
+
+const SPARK_BG: Record<WorkspaceType, string> = {
+  venue: 'bg-[rgba(244,74,34,0.8)]',
+  host: 'bg-[rgba(255,255,255,0.8)]',
+  promoter: 'bg-[rgba(34,197,94,0.8)]',
+};
+
+const SPARK_SHADOW: Record<WorkspaceType, readonly [string, string, string]> = {
+  venue: [
+    'shadow-[0_0_9px_3px_rgba(244,74,34,0.3)]',
+    'shadow-[0_0_12px_4px_rgba(244,74,34,0.3)]',
+    'shadow-[0_0_15px_5px_rgba(244,74,34,0.3)]',
+  ],
+  host: [
+    'shadow-[0_0_9px_3px_rgba(255,255,255,0.3)]',
+    'shadow-[0_0_12px_4px_rgba(255,255,255,0.3)]',
+    'shadow-[0_0_15px_5px_rgba(255,255,255,0.3)]',
+  ],
+  promoter: [
+    'shadow-[0_0_9px_3px_rgba(34,197,94,0.3)]',
+    'shadow-[0_0_12px_4px_rgba(34,197,94,0.3)]',
+    'shadow-[0_0_15px_5px_rgba(34,197,94,0.3)]',
+  ],
+};
+
+/** Per-role ring colours for the sparkle field — tri-colour default, single colour once a workspace is picked. */
+function useRingColors(type: WorkspaceType | null): readonly [WorkspaceType, WorkspaceType, WorkspaceType] {
+  if (type === 'venue') return ['venue', 'venue', 'venue'];
+  if (type === 'host') return ['host', 'host', 'host'];
+  if (type === 'promoter') return ['promoter', 'promoter', 'promoter'];
+  return ['venue', 'host', 'promoter'];
+}
+
+function SparkleField({ type }: { type: WorkspaceType | null }) {
+  const reduceMotion = useReducedMotion();
+  const ringColors = useRingColors(type);
+  if (reduceMotion) return null;
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {SPARKLE_SPECS.map(({ leftClass, size, sizeClass, dur, delay, ci }, i) => {
+        const colorKey = ringColors[ci];
+        const sizeIdx = size - 3;
+        return (
+          <motion.div
+            key={leftClass}
+            className={`absolute rounded-full bottom-[-2%] ${leftClass} ${sizeClass} ${SPARK_BG[colorKey]} ${SPARK_SHADOW[colorKey][sizeIdx] ?? ''} transition-[background-color,box-shadow] duration-[600ms] ease-[cubic-bezier(0.25,0.1,0.25,1)]`}
+            animate={{
+              y: [0, -(typeof window !== 'undefined' ? window.innerHeight * 1.1 : 900)],
+              x: [0, (i % 2 === 0 ? 1 : -1) * (20 + (i % 4) * 10)],
+              opacity: [0, 0.9, 0.9, 0],
+            }}
+            transition={{
+              duration: dur,
+              delay: delay * 0.25,
+              repeat: Infinity,
+              ease: 'easeInOut',
+              times: [0, 0.1, 0.85, 1],
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 function LoginForm() {
-  const {
-    signIn,
-    signOut,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- AuthContextValue.user is deliberately `any` (see DashboardAuthProvider.tsx's doc comment); only used here for a truthy/falsy check, never dereferenced.
-    user,
-    profile,
-    isApproved,
-    onboardingStatus,
-    loading: authLoading,
-  } = useDashboardAuth();
+  const sessionState = useSessionStore();
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const [step, setStep] = useState<'select' | 'credentials'>(
     searchParams.get('type') ? 'credentials' : 'select',
   );
-  const [userType, setUserType] = useState<UserType | null>(
-    (searchParams.get('type') as UserType) || null,
+  const [userType, setUserType] = useState<WorkspaceType | null>(
+    normalizePartnerRole(searchParams.get('type')),
   );
 
-  // Per-ring colours: default = tri-colour, selected = single colour
-  const ringColors = [
-    userType === 'host'
-      ? 'rgba(255,255,255,VAL)'
-      : userType === 'promoter'
-        ? 'rgba(34,197,94,VAL)'
-        : 'rgba(244,74,34,VAL)',
-    userType === 'venue'
-      ? 'rgba(244,74,34,VAL)'
-      : userType === 'promoter'
-        ? 'rgba(34,197,94,VAL)'
-        : 'rgba(255,255,255,VAL)',
-    userType === 'venue'
-      ? 'rgba(244,74,34,VAL)'
-      : userType === 'host'
-        ? 'rgba(255,255,255,VAL)'
-        : 'rgba(34,197,94,VAL)',
-    userType === 'host'
-      ? 'rgba(255,255,255,VAL)'
-      : userType === 'promoter'
-        ? 'rgba(34,197,94,VAL)'
-        : 'rgba(244,74,34,VAL)',
-    userType === 'venue'
-      ? 'rgba(244,74,34,VAL)'
-      : userType === 'host'
-        ? 'rgba(255,255,255,VAL)'
-        : 'rgba(34,197,94,VAL)',
-  ];
-  const [email, setEmail] = useState(searchParams.get('email') || '');
+  const [email, setEmail] = useState(searchParams.get('email') ?? '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    // Wait for DashboardAuthProvider to finish its async fetch before acting.
-    // Without this guard the effect fires while isApproved=false (its default),
-    // which signs the user out before the profile is even loaded — causing the
-    // "page refreshes / fields clear" silent failure.
-    if (authLoading || !user) return;
-
-    if (isApproved && profile?.activeMembership) {
-      // Fully approved with an active partnership — go to dashboard.
-      const callback = searchParams.get('callbackUrl');
-      if (callback) {
-        router.replace(callback);
-      } else {
-        router.replace(
-          resolvePartnerV3Path(profile.activeMembership.partnerType) ??
-            '/partner/select-organization',
-        );
+    if (sessionState.status === 'authenticated' && sessionState.session?.user) {
+      const next = searchParams.get('next') ?? searchParams.get('callbackUrl');
+      if (next) {
+        router.replace(next);
       }
-    } else if (!isApproved && profile !== null) {
-      // profile is loaded (not null) but user is not approved — safe to reject.
-      // We check profile !== null to avoid acting on the initial null state.
-      void signOut();
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- real UX requirement: a definitively-unapproved account must show why immediately, not after another render cycle.
-      setError(
-        onboardingStatus
-          ? "You don't have partner access yet. Your application is pending review."
-          : "This account doesn't have partner access. Please apply or contact support.",
-      );
     }
-    // If isApproved=true but activeMembership is null, do nothing — handleLogin
-    // will navigate directly via router.push once its own fetch completes.
-  }, [
-    user,
-    authLoading,
-    isApproved,
-    profile,
-    onboardingStatus,
-    router,
-    userType,
-    searchParams,
-    step,
-    signOut,
-  ]);
+  }, [sessionState.status, sessionState.session, searchParams, router]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!userType) return;
     setError('');
+    setFieldErrors({});
     setLoading(true);
 
     try {
-      // signIn() calls the real /api/v2/auth/login BFF proxy — a successful
-      // call updates the session store, which re-renders this component with
-      // a fresh `user`/`profile`/`isApproved`; the redirect effect above
-      // (reading those same fields) does the actual navigation once
-      // DashboardAuthProvider's own post-login fetch (memberships +
-      // onboarding status) resolves. Workspace type is a UI hint only — the
-      // server, not the tile the user clicked, decides which dashboard they
-      // land on (D-024 C-10: role/partnerType come from the gateway, never
-      // client-selected).
-      await signIn(email, password);
-    } catch {
-      // login() already collapses every BFF 4xx into one generic error
-      // (account-existence oracle suppression, D-024's login-path rule) —
-      // there is no further error code to branch on here.
-      setError('Invalid email or password. Please try again.');
+      await login({ email, password });
+
+      const next = searchParams.get('next') ?? searchParams.get('callbackUrl');
+      if (next) {
+        router.push(next);
+        return;
+      }
+
+      const orgs = await getOrganizations();
+      if (orgs.length === 0) {
+        router.push(`/onboard?type=${userType}`);
+        return;
+      }
+
+      const matches = await filterOrgsByPartnerType(orgs, userType);
+
+      if (matches.length === 0) {
+        await logout();
+        setError(
+          `This account is not registered as a ${roleConfig[userType].label} workspace. Please select the correct workspace, or apply for access.`,
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (matches.length === 1 && matches[0]) {
+        await setActiveOrg(matches[0].id);
+        router.push(resolvePartnerV3Path(userType) ?? '/partner/select-organization');
+        return;
+      }
+
+      router.push(`/partner/select-organization?type=${userType}`);
+    } catch (err: unknown) {
+      if (isApiClientError(err)) {
+        if (err.fieldErrors) {
+          const formatted: Record<string, string> = {};
+          for (const [key, msgs] of Object.entries(err.fieldErrors)) {
+            if (msgs[0]) {
+              formatted[key] = msgs[0];
+            }
+          }
+          setFieldErrors(formatted);
+        }
+        setError(err.message || 'Invalid email or password.');
+      } else if (err instanceof Error && err.message === 'Authentication failed') {
+        setError('Invalid email or password. Please check your credentials or create a new account.');
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unexpected error occurred during login. Please try again.');
+      }
       setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen flex bg-[var(--surface-base)]">
-      {/* Left Panel - Premium Branding */}
+      {/* Left Panel - Branding */}
       <div className="hidden lg:flex lg:w-[55%] relative flex-col justify-between p-12 overflow-hidden bg-[var(--surface-secondary)]">
-        {/* Background dot grid */}
         <div className="absolute inset-0 opacity-[0.03]">
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: `radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)`,
-              backgroundSize: '32px 32px',
-            }}
-          />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_2px_2px,currentColor_1px,transparent_0)] bg-[length:32px_32px]" />
         </div>
+        <SparkleField type={userType} />
 
-        {/* Floating particles — tri-colour by default, single colour on selection */}
-        {[
-          { x: 5, size: 3, dur: 9, delay: 0, ci: 0 },
-          { x: 12, size: 4, dur: 13, delay: 1.5, ci: 1 },
-          { x: 18, size: 5, dur: 11, delay: 0.8, ci: 2 },
-          { x: 25, size: 3, dur: 15, delay: 2.2, ci: 0 },
-          { x: 31, size: 4, dur: 10, delay: 0.4, ci: 1 },
-          { x: 38, size: 3, dur: 14, delay: 3.0, ci: 2 },
-          { x: 44, size: 5, dur: 12, delay: 1.8, ci: 0 },
-          { x: 50, size: 3, dur: 16, delay: 0.6, ci: 1 },
-          { x: 56, size: 4, dur: 8, delay: 2.5, ci: 2 },
-          { x: 62, size: 3, dur: 13, delay: 1.1, ci: 0 },
-          { x: 68, size: 5, dur: 11, delay: 3.5, ci: 1 },
-          { x: 74, size: 3, dur: 14, delay: 0.9, ci: 2 },
-          { x: 80, size: 4, dur: 10, delay: 2.8, ci: 0 },
-          { x: 86, size: 3, dur: 17, delay: 1.3, ci: 1 },
-          { x: 92, size: 5, dur: 9, delay: 0.2, ci: 2 },
-          { x: 8, size: 3, dur: 15, delay: 4.0, ci: 1 },
-          { x: 15, size: 4, dur: 12, delay: 2.0, ci: 2 },
-          { x: 22, size: 3, dur: 11, delay: 3.2, ci: 0 },
-          { x: 29, size: 5, dur: 13, delay: 0.7, ci: 1 },
-          { x: 35, size: 3, dur: 16, delay: 1.6, ci: 2 },
-          { x: 41, size: 4, dur: 9, delay: 2.4, ci: 0 },
-          { x: 47, size: 3, dur: 14, delay: 0.3, ci: 1 },
-          { x: 53, size: 5, dur: 11, delay: 3.8, ci: 2 },
-          { x: 59, size: 3, dur: 15, delay: 1.0, ci: 0 },
-          { x: 65, size: 4, dur: 10, delay: 2.6, ci: 1 },
-          { x: 71, size: 3, dur: 13, delay: 0.5, ci: 2 },
-          { x: 77, size: 5, dur: 12, delay: 3.3, ci: 0 },
-          { x: 83, size: 3, dur: 16, delay: 1.7, ci: 1 },
-          { x: 89, size: 4, dur: 8, delay: 2.1, ci: 2 },
-          { x: 95, size: 3, dur: 14, delay: 4.5, ci: 0 },
-          { x: 3, size: 4, dur: 11, delay: 1.2, ci: 2 },
-          { x: 10, size: 3, dur: 15, delay: 3.6, ci: 0 },
-          { x: 17, size: 5, dur: 9, delay: 0.1, ci: 1 },
-          { x: 24, size: 3, dur: 13, delay: 2.9, ci: 2 },
-          { x: 48, size: 4, dur: 10, delay: 1.4, ci: 0 },
-          { x: 63, size: 3, dur: 17, delay: 3.1, ci: 1 },
-          { x: 76, size: 5, dur: 12, delay: 0.6, ci: 2 },
-          { x: 88, size: 3, dur: 14, delay: 2.3, ci: 0 },
-          { x: 33, size: 4, dur: 11, delay: 4.2, ci: 1 },
-          { x: 57, size: 3, dur: 16, delay: 1.9, ci: 2 },
-        ].map(({ x, size, dur, delay, ci }, i) => {
-          const ringCol = ringColors[ci] || 'rgba(244,74,34,VAL)';
-          const col = ringCol.replace('VAL', '0.8');
-          const glow = ringCol.replace('VAL', '0.3');
-          return (
-            <motion.div
-              key={i}
-              className="absolute rounded-full pointer-events-none"
-              style={{
-                width: size,
-                height: size,
-                left: `${x}%`,
-                bottom: '-2%',
-                background: col,
-                boxShadow: `0 0 ${size * 3}px ${size}px ${glow}`,
-                transition: 'background 0.6s ease, box-shadow 0.6s ease',
-              }}
-              animate={{
-                y: [0, -(typeof window !== 'undefined' ? window.innerHeight * 1.1 : 900)],
-                x: [0, (i % 2 === 0 ? 1 : -1) * (20 + (i % 4) * 10)],
-                opacity: [0, 0.9, 0.9, 0],
-              }}
-              transition={{
-                duration: dur,
-                delay: delay * 0.25,
-                repeat: Infinity,
-                ease: 'easeInOut',
-                times: [0, 0.1, 0.85, 1],
-              }}
-            />
-          );
-        })}
-
-        {/* Top - Logo & Theme Toggle */}
         <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="h-12 w-12 rounded-2xl bg-[var(--text-primary)] flex items-center justify-center shadow-lg">
@@ -396,7 +369,6 @@ function LoginForm() {
           </div>
         </div>
 
-        {/* Middle - Hero Content */}
         <div className="relative z-10 max-w-lg">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -416,7 +388,6 @@ function LoginForm() {
           </motion.div>
         </div>
 
-        {/* Bottom - Footer */}
         <div className="relative z-10">
           <p className="text-caption text-[var(--text-tertiary)]">
             Secure access for authorized partners only. Protected by enterprise-grade encryption.
@@ -433,7 +404,6 @@ function LoginForm() {
           transition={{ duration: 0.5 }}
           className="relative z-10 w-full max-w-md"
         >
-          {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-between mb-10">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-[var(--text-primary)] flex items-center justify-center">
@@ -443,7 +413,6 @@ function LoginForm() {
             </div>
           </div>
 
-          {/* Single AnimatePresence — swaps the entire block (header + content) at once */}
           <AnimatePresence mode="wait" initial={false}>
             {step === 'select' ? (
               <motion.div
@@ -454,7 +423,6 @@ function LoginForm() {
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
                 className="space-y-8"
               >
-                {/* Header */}
                 <div>
                   <h3 className="text-headline text-[var(--text-primary)] mb-2">Welcome back</h3>
                   <p className="text-body text-[var(--text-secondary)]">
@@ -462,22 +430,21 @@ function LoginForm() {
                   </p>
                 </div>
 
-                {/* Workspace tiles */}
                 <div className="grid grid-cols-3 gap-3">
-                  {(['venue', 'host', 'promoter'] as UserType[]).map((type) => {
+                  {(Object.keys(roleConfig) as WorkspaceType[]).map((type) => {
                     const config = roleConfig[type];
                     const Icon = config.icon;
                     const isActive = userType === type;
                     return (
                       <button
-                      key={type}
-                      type="button"
-                      onClick={() => {
-                        setUserType(type);
-                        const params = new URLSearchParams(searchParams.toString());
-                        params.set('type', type);
-                        router.replace(`/login?${params.toString()}`);
-                      }}
+                        key={type}
+                        type="button"
+                        onClick={() => {
+                          setUserType(type);
+                          const params = new URLSearchParams(searchParams.toString());
+                          params.set('type', type);
+                          router.replace(`/login?${params.toString()}`);
+                        }}
                         className={`relative p-5 rounded-2xl border-2 transition-all duration-200 text-center group ${
                           isActive
                             ? 'border-[var(--accent-primary)] bg-[var(--accent-glow)]'
@@ -505,7 +472,9 @@ function LoginForm() {
                 <button
                   type="button"
                   disabled={!userType}
-                  onClick={() => userType && setStep('credentials')}
+                  onClick={() => {
+                    if (userType) setStep('credentials');
+                  }}
                   className="btn btn-primary btn-xl w-full group disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <span className="flex items-center gap-2">
@@ -523,10 +492,10 @@ function LoginForm() {
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
                 className="space-y-8"
               >
-                {/* Header with back button */}
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
+                    aria-label="Back to workspace selection"
                     onClick={() => {
                       setStep('select');
                       setError('');
@@ -539,84 +508,99 @@ function LoginForm() {
                     <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--accent-primary)]">
                       {userType ? roleConfig[userType].label : ''} Workspace
                     </span>
-                    <h3 className="text-headline text-[var(--text-primary)] leading-tight">
-                      Sign in
-                    </h3>
+                    <h3 className="text-headline text-[var(--text-primary)] leading-tight">Sign in</h3>
                   </div>
                 </div>
 
-                {/* Error */}
                 {error && (
                   <div className="p-4 bg-[var(--state-error-bg)] border border-red-500/20 rounded-2xl flex items-start gap-3">
                     <AlertCircle className="h-5 w-5 text-[var(--state-error)] flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
                       <p className="text-[14px] text-[var(--state-error)] font-medium">{error}</p>
-                      {/* Only the "no partner access yet" case (a real, authenticated
-                          account) offers this — the login failure path is
-                          deliberately generic (D-024's anti-account-existence-oracle
-                          rule) and must never hint whether an email is registered. */}
-                      {error.includes('partner access') && (
-                        <button
-                          onClick={() => { router.push(`/onboard?email=${email}&type=${userType}`); }}
-                          className="text-[13px] font-semibold text-[var(--state-error)] underline mt-2 hover:no-underline"
-                        >
-                          Apply for Access →
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const params = new URLSearchParams();
+                          if (email) params.set('email', email);
+                          if (userType) params.set('type', userType);
+                          const query = params.toString();
+                          router.push(query ? `/signup?${query}` : '/signup');
+                        }}
+                        className="text-[13px] font-semibold text-[var(--accent-primary)] underline mt-2 block hover:no-underline"
+                      >
+                        Don&apos;t have an account? Sign up here →
+                      </button>
                     </div>
                   </div>
                 )}
 
-                {/* Form */}
-                <form onSubmit={handleLogin} className="space-y-6">
+                <form
+                  onSubmit={(e) => {
+                    void handleLogin(e);
+                  }}
+                  className="space-y-6"
+                >
                   <div className="space-y-2">
-                    <label className="input-label">Email Address</label>
+                    <label htmlFor="login-email" className="input-label">
+                      Email Address
+                    </label>
                     <div className="relative group">
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--text-placeholder)] group-focus-within:text-[var(--accent-primary)] transition-colors" />
                       <input
+                        id="login-email"
                         type="email"
                         value={email}
-                        onChange={(e) => { setEmail(e.target.value); }}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                        }}
                         required
-                        autoFocus
-                        className="input input-lg pl-12"
+                        className="input input-lg input-icon-left"
                         placeholder="you@company.com"
                       />
                     </div>
+                    {fieldErrors['email'] && (
+                      <p className="text-xs text-[var(--state-error)]">{fieldErrors['email']}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <label className="input-label">Password</label>
+                    <label htmlFor="login-password" className="input-label">
+                      Password
+                    </label>
                     <div className="relative group">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--text-placeholder)] group-focus-within:text-[var(--accent-primary)] transition-colors" />
                       <input
+                        id="login-password"
                         type={showPassword ? 'text' : 'password'}
                         value={password}
-                        onChange={(e) => { setPassword(e.target.value); }}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                        }}
                         required
-                        className="input input-lg pl-12 pr-12"
+                        className="input input-lg input-icon-left input-icon-right"
                         placeholder="Enter your password"
                       />
                       <button
                         type="button"
-                        onClick={() => { setShowPassword(!showPassword); }}
+                        onClick={() => {
+                          setShowPassword(!showPassword);
+                        }}
                         className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-placeholder)] hover:text-[var(--text-secondary)] transition-colors"
                       >
-                        {showPassword ? (
-                          <EyeOff className="h-5 w-5" />
-                        ) : (
-                          <Eye className="h-5 w-5" />
-                        )}
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
+                    {fieldErrors['password'] && (
+                      <p className="text-xs text-[var(--state-error)]">{fieldErrors['password']}</p>
+                    )}
                     <div className="flex justify-end">
                       <button
                         type="button"
-                        onClick={() =>
-                          { router.push(
+                        onClick={() => {
+                          router.push(
                             `/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ''}`,
-                          ); }
-                        }
+                          );
+                        }}
                         className="text-[12px] font-medium text-[var(--accent-primary)] hover:underline"
                       >
                         Forgot password?
@@ -626,8 +610,8 @@ function LoginForm() {
 
                   <button
                     type="submit"
-                    disabled={loading || authLoading}
-                    className="btn btn-primary btn-xl w-full group"
+                    disabled={loading}
+                    className="btn btn-primary btn-xl w-full group cursor-pointer"
                   >
                     {loading ? (
                       <span className="flex items-center gap-2">
@@ -646,19 +630,22 @@ function LoginForm() {
             )}
           </AnimatePresence>
 
-          {/* Divider */}
           <div className="my-8 flex items-center gap-4">
             <div className="flex-1 h-px bg-[var(--border-subtle)]" />
             <span className="text-caption text-[var(--text-tertiary)]">New to C1RCLE?</span>
             <div className="flex-1 h-px bg-[var(--border-subtle)]" />
           </div>
 
-          {/* Apply CTA */}
           <div className="card p-6 text-center">
             <p className="text-body-sm text-[var(--text-secondary)] mb-4">
               Join our network of premium nightlife venues, hosts, and promoters.
             </p>
-            <button onClick={() => { router.push('/onboard'); }} className="btn btn-secondary w-full">
+            <button
+              onClick={() => {
+                router.push(userType ? `/onboard?type=${userType}` : '/onboard');
+              }}
+              className="btn btn-secondary w-full"
+            >
               Apply for Partner Access
             </button>
           </div>
@@ -668,7 +655,6 @@ function LoginForm() {
   );
 }
 
-// Loading Skeleton
 function LoginSkeleton() {
   return (
     <div className="min-h-screen flex bg-[var(--surface-base)]">
@@ -686,6 +672,11 @@ function LoginSkeleton() {
   );
 }
 
+/*
+ * Next.js `page.tsx` requires a default export; this `PageClient.tsx` split is the pre-existing
+ * pattern shared by every route in this app (onboard, verify) and predates this change.
+ */
+// eslint-disable-next-line import-x/no-default-export
 export default function LoginPage() {
   return (
     <Suspense fallback={<LoginSkeleton />}>

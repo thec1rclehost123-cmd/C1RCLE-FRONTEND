@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import {
+  assertCsrf,
   assertSameOrigin,
   errorEnvelope,
   forwardToGateway,
@@ -13,16 +14,22 @@ import type { NextRequest } from 'next/server';
 
 /**
  * Real proxy to the V2 gateway's `POST /api/v2/auth/otp/send` — replaces
- * the fixture that always returned `Dummy Code: 123456`. Pre-session, like
- * `login`/`signup`: no cookie to re-scope, no CSRF token to mint (nothing
- * yet exists to protect). The gateway itself returns the same generic ack
- * regardless of outcome (its own anti-enumeration design), so there is
- * nothing this proxy needs to normalize on top of that.
+ * the fixture that always returned `Dummy Code: 123456`. Session-scoped,
+ * same as `phone-verification`: the gateway's EmailOtpService resolves the
+ * recipient from the authenticated session, so the account has to exist and
+ * the session + CSRF cookies must be present (the wizard's signup step
+ * creates the account before the first send). The gateway itself returns the
+ * same generic ack regardless of outcome (its own anti-enumeration design),
+ * so there is nothing this proxy needs to normalize on top of that.
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const originError = assertSameOrigin(req);
   if (originError !== null) {
     return originError;
+  }
+  const csrfError = assertCsrf(req);
+  if (csrfError !== null) {
+    return csrfError;
   }
 
   let body: unknown;
@@ -35,6 +42,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const gatewayResponse = await forwardToGateway('/api/v2/auth/otp/send', {
     method: 'POST',
     body,
+    cookie: req.headers.get('cookie'),
   });
   const bodyText = await gatewayResponse.text();
 

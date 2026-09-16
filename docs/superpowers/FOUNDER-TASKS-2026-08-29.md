@@ -1,19 +1,46 @@
 # Founder Tasks — Backend Phase 5 completion + unblock the frontend interns
 
-**Who:** you + co-founder. Two tasks, one each. **Repo: `C1RCLE-BACKEND` @ `main`.**
-(The 3 interns are on `C1RCLE-FRONTEND` — see `INTERN-TASKS-2026-08-27.md`. They
-never touch the backend; you own it.)
+> **▶ 2026-08-31 UPDATE.** A full doc audit changed the backend priority. `SPRINT-2026-08-31.md`
+> is now the authority for this front — read it first. Summary of what's new since 2026-08-29:
+> - **P0-A (new, blocks everything): green `pnpm check`.** lint fails (~900 core `no-explicit-any`),
+>   boundaries fails (razorpay `fetch()` — this doc's Task B3), one test fails (`compare-and-set.test.ts`
+>   — Shriyash root-causes it). Land P0-A before any Phase 4 PR merges.
+> - **P0-B (new): docs reconciliation** — ROADMAP + phase-04/05 files + stale-plan banners (Shriyash).
+> - **P1-A (new, the big item): Phase 4 HTTP route rebuild.** Phase 4's routes (checkout / payments /
+>   orders / tickets / wallet / webhooks / public) were **never committed** — lost in the 2026-08-28
+>   incident, `a1bd2e7` only committed `v2-services.ts`. Domain/services/adapters/contracts are
+>   intact. Split: PR1 public/discovery (Ayush) → PR2 checkout/payments/webhook (Shriyash) ∥ PR3
+>   orders/tickets/wallet (Ayush; Sagar helps wk2). See `SPRINT-2026-08-31.md` §P1-A.
+> - **P1-C: Phase 5 close-out** = Task A2 + Task B1 + Task B2 below, unchanged, **plus** 5
+>   domain-model unit test files (Sagar, wk2).
+> - Task B4 (any-ratchet) is folded into P0-A. Task B3 (razorpay boundary) is folded into P0-A.
+>
+> **▶ 2026-09-01 — done since:**
+> - **Backend deployed** — `https://circle-v2-backend.onrender.com` (Render, Docker, firestore).
+>   `C1RCLE-BACKEND` `dc7bb79` added `Dockerfile` + `.dockerignore`. Interns hit it directly.
+> - **Auth "org-less user" bug fixed** (`dc7bb79`) — session-only actor in `plugins/auth.ts`;
+>   `X-Organization-Id` optional on `GET/POST /organizations`. A fresh signup can now reach
+>   onboarding + org routes on the real driver. 133/133 gateway tests + live chain verified.
+>   `plugins/auth.test.ts` added.
+> - **Onboarding flow specced** for the interns — `ONBOARDING-FLOW-SPEC-2026-09-01.md`.
+> - **Still open (P0-A):** core `any` ratchet, razorpay boundary, `compare-and-set.test.ts` root-cause.
+>   Phase 4 route rebuild — not started.
+>
+> Original 2026-08-29 text below stands for the per-task detail.
 
-**Why these two:** the frontend auth slice (Phases 3–8) has exactly one hard
-backend dependency — onboarding document upload — and backend Phase 5 still has
-six honest-501 routes + two boundary/debt items ("Track G"). Founder A clears the
-frontend blocker then takes the scanner-side gaps; Founder B takes the
-wallet/stats/payments side. The two task sets touch different domains, so you
-don't collide.
+**Who:** Task A = **Shriyash**, Task B = **Ayush**. **Repo: `C1RCLE-BACKEND` @
+`main`.** (Sagar/Keshvi/Anil/Majid are on `C1RCLE-FRONTEND` — see
+`INTERN-TASKS-2026-08-27.md`. They never touch the backend; the founders own it.)
 
-**Priority:** Founder A **Task A1 first** — it is the only thing blocking an
-intern (Track 3, onboarding wizard step 3). Everything else is Phase 5 cleanup
-that does not block the frontend slice; do it in parallel, any order.
+**Why this split:** the frontend auth slice had exactly one hard backend
+dependency — onboarding document upload (**A1, now DONE**) — and backend Phase 5
+still has six honest-501 routes + two boundary/debt items ("Track G"). Shriyash
+(Task A) took the blocker then the scanner-side gaps; Ayush (Task B) takes the
+wallet/stats/payments side. Different domains, no collision.
+
+**Status:** **A1 shipped** (`2a9a4b3`). Nothing else here blocks a frontend
+person — do it in parallel, any order. Shriyash also owns Phase 8 E2E and
+reviews every frontend PR, so Task A2 fits around that.
 
 ---
 
@@ -56,9 +83,20 @@ that does not block the frontend slice; do it in parallel, any order.
 
 ---
 
-## FOUNDER A — Onboarding document upload, then scanner-side Phase 5 gaps
+## TASK A (Shriyash) — Onboarding document upload, then scanner-side Phase 5 gaps
 
-### Task A1 — Signed-URL issuing for onboarding KYC documents  ⟵ do this first
+### Task A1 — Signed-URL issuing for onboarding KYC documents  ✅ DONE (`C1RCLE-BACKEND` `2a9a4b3`, contracts `fb45fc1` on FE `staging`)
+
+`ObjectStoragePort` + `EchoObjectStorage` (memory) + `FirebaseObjectStorage`
+(v4 signed PUT, jpeg/png/webp, ≤5 MiB, 10-min TTL) + `OnboardingService.issueDocumentUploadUrl`
++ `POST /api/v2/onboarding/applications/:requestId/documents/upload-url` +
+`documentUploadUrlRequestSchema` / `documentUploadUrlDtoSchema`. 4 new
+integration tests. `FIREBASE_STORAGE_BUCKET` env (defaults `<project>.firebasestorage.app`).
+Intern 3's onboarding wizard is unblocked. Original brief kept below for reference.
+
+---
+
+<details><summary>Original A1 brief</summary>
 
 **The gap:** `POST /api/v2/onboarding/applications/:requestId/documents` already
 exists and takes `{ label, storagePath }` — but a browser has no way to *get* a
@@ -135,6 +173,8 @@ stubbed purely because of this.
 type → profile → upload-url → PUT (memory: skip) → documents → submit → approved
 entirely through `/api/v2`.
 
+</details>
+
 ### Task A2 — `POST /door/override` + `GET /door/offline-manifest`  (Track G)
 
 Both are honest 501s in `apps/api-gateway/src/routes/v2/door/scanner-routes.ts`
@@ -161,7 +201,7 @@ green; `door` suite green.
 
 ---
 
-## FOUNDER B — Cover-wallet freeze/unfreeze, door stats, payment boundary, lint debt
+## TASK B (Ayush) — Cover-wallet freeze/unfreeze, door stats, payment boundary, lint debt
 
 ### Task B1 — Cover-wallet `freeze` / `unfreeze`  (Track G)
 
