@@ -12,6 +12,7 @@ import type {
   HostStatus,
   VenueStatus,
   TicketStatus,
+  PromoterAssignmentStatus,
 } from '@/lib/admin/contract-types';
 
 export function formatPaise(paise: number): string {
@@ -336,4 +337,13 @@ export function ticketStatusTone(status: TicketStatus): Tone {
     case 'void':
       return 'muted';
   }
+}
+
+export const PROMOTER_ASSIGNMENT_STATUS_LABELS: Record<PromoterAssignmentStatus, string> = {
+  active: 'Active',
+  ended: 'Ended',
+};
+
+export function promoterAssignmentStatusTone(status: PromoterAssignmentStatus): Tone {
+  return status === 'active' ? 'success' : 'muted';
 }

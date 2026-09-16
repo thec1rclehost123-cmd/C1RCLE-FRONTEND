@@ -11,6 +11,9 @@ import {
   type adminActionSchema,
   type adminOrderDtoSchema,
   type adminPayoutStatusSchema,
+  type adminPromoterAssignmentStatusSchema,
+  type adminPromoDiscountTypeSchema,
+  type adminPromoTypeSchema,
   type adminRefundRequestStatusSchema,
   type adminRoleSchema,
   type adminTicketStatusSchema,
@@ -34,3 +37,6 @@ export type DisputeStatus = 'open' | 'under_review' | 'resolved';
 export type DisputeResolutionOutcome = 'upheld' | 'denied';
 export type OrderStatus = z.infer<typeof adminOrderDtoSchema>['status'];
 export type TicketStatus = z.infer<typeof adminTicketStatusSchema>;
+export type PromoType = z.infer<typeof adminPromoTypeSchema>;
+export type PromoDiscountType = z.infer<typeof adminPromoDiscountTypeSchema>;
+export type PromoterAssignmentStatus = z.infer<typeof adminPromoterAssignmentStatusSchema>;

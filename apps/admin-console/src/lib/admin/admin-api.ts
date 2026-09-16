@@ -17,6 +17,8 @@ import {
   adminLookupResponseSchema,
   adminOrderDtoSchema,
   adminOrderListResponseSchema,
+  adminPromoListResponseSchema,
+  adminPromoterAssignmentListResponseSchema,
   adminRefundRequestDtoSchema,
   adminRefundRequestListResponseSchema,
   adminAuditRecordDtoSchema,
@@ -59,7 +61,9 @@ import type {
   OrderStatus,
   ProposalStatus,
   TicketStatus,
+  PromoterAssignmentStatus,
 } from '@/lib/admin/contract-types';
+import type { adminPromoDtoSchema, adminPromoterAssignmentDtoSchema } from '@c1rcle/contracts';
 
 /* ─── Local response schemas ───────────────────────────────────────────────── */
 
@@ -381,6 +385,37 @@ export function listTickets(limit = 100): Promise<AdminTicketPage> {
 }
 
 export const TICKET_STATUSES: readonly TicketStatus[] = adminTicketDtoSchema.shape.status.options;
+
+/* ─── Promotions (cross-event promo code list) ─────────────────────────────── */
+
+export type AdminPromoPage = z.infer<typeof adminPromoListResponseSchema>;
+export type AdminPromo = z.infer<typeof adminPromoDtoSchema>;
+
+export function listPromotions(limit = 100): Promise<AdminPromoPage> {
+  return getAdminApiClient().get({
+    path: '/api/v2/admin/promotions',
+    query: { limit },
+    schema: adminPromoListResponseSchema,
+  });
+}
+
+/* ─── Promoters (cross-event commission assignment list) ───────────────────── */
+
+export type AdminPromoterAssignmentPage = z.infer<typeof adminPromoterAssignmentListResponseSchema>;
+export type AdminPromoterAssignment = z.infer<typeof adminPromoterAssignmentDtoSchema>;
+
+export function listPromoterAssignments(limit = 100): Promise<AdminPromoterAssignmentPage> {
+  return getAdminApiClient().get({
+    path: '/api/v2/admin/promoters',
+    query: { limit },
+    schema: adminPromoterAssignmentListResponseSchema,
+  });
+}
+
+export const PROMOTER_ASSIGNMENT_STATUSES: readonly PromoterAssignmentStatus[] = [
+  'active',
+  'ended',
+];
 
 /* ─── Admins ───────────────────────────────────────────────────────────────── */
 
