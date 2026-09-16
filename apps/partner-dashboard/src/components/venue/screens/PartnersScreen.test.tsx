@@ -1,11 +1,22 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { clearCache } from '../venue-partners-api';
 
 import { PartnersScreen } from './PartnersScreen';
 
 const mocks = vi.hoisted(() => ({
   canDo: vi.fn(() => true),
+  partnershipList: vi.fn(),
+  promoterConnectionList: vi.fn(),
+  partnershipApprove: vi.fn(),
+  partnershipReject: vi.fn(),
+  partnershipEnd: vi.fn(),
+  promoterApprove: vi.fn(),
+  promoterReject: vi.fn(),
+  promoterRevoke: vi.fn(),
+  getActiveOrgId: vi.fn((): string | null => 'org_test'),
 }));
 
 vi.mock('@c1rcle/icons', () => {
@@ -33,87 +44,177 @@ vi.mock('@/components/providers/DashboardAuthProvider', () => ({
   }),
 }));
 
-describe('PartnersScreen', () => {
-  describe('Connected', () => {
-    it('traps the profile drawer and restores focus to the View profile trigger on Escape', async () => {
-      const user = userEvent.setup();
-      render(<PartnersScreen tab="connected" segment="host" />);
-      const trigger = screen.getAllByRole('button', { name: 'View profile' })[0]!;
-      await user.click(trigger);
-      expect(
-        screen.getByRole('dialog', { name: /Rhea Kapoor partner details/ }),
-      ).toBeInTheDocument();
-      await user.keyboard('{Escape}');
-      await waitFor(() => expect(trigger).toHaveFocus());
-    });
+vi.mock('@/lib/api/partner-connections', () => ({
+  partnershipApi: {
+    list: mocks.partnershipList,
+    request: vi.fn(),
+    approve: mocks.partnershipApprove,
+    reject: mocks.partnershipReject,
+    block: vi.fn(),
+    end: mocks.partnershipEnd,
+  },
+  promoterConnectionApi: {
+    list: mocks.promoterConnectionList,
+    request: vi.fn(),
+    approve: mocks.promoterApprove,
+    reject: mocks.promoterReject,
+    block: vi.fn(),
+    revoke: mocks.promoterRevoke,
+  },
+}));
 
-    it('shows host performance stats and expands hosted event history', async () => {
-      const user = userEvent.setup();
-      render(<PartnersScreen tab="connected" segment="host" />);
-      await user.click(screen.getAllByRole('button', { name: 'View profile' })[0]!);
+vi.mock('@/lib/org/active-org', () => ({
+  getActiveOrgId: mocks.getActiveOrgId,
+}));
 
-      const dialog = screen.getByRole('dialog', { name: /Rhea Kapoor partner details/ });
-      expect(within(dialog).getByRole('heading', { name: 'Performance' })).toBeInTheDocument();
-      expect(within(dialog).getByText('Events hosted')).toBeInTheDocument();
-      expect(within(dialog).getByText('Average tickets sold')).toBeInTheDocument();
-      const history = within(dialog).getByRole('button', { name: /See hosted events/ });
-      expect(history).toHaveAttribute('aria-expanded', 'false');
+vi.mock('@/lib/api/partner-discover', () => ({
+  fetchDiscoverPartners: vi.fn(() => Promise.resolve([])),
+  fetchOwnVenues: vi.fn(() => Promise.resolve([{ id: 'venue-1', status: 'active' }])),
+}));
 
-      await user.click(history);
-      expect(history).toHaveAttribute('aria-expanded', 'true');
-      expect(within(dialog).getByText('Saturday Sessions')).toBeInTheDocument();
-    });
+const partnershipDto = (overrides: Record<string, unknown>) => ({
+  id: 'partnership-1',
+  hostOrganizationId: 'xxHOST01',
+  venueOrganizationId: 'org_test',
+  venueId: 'venue-1',
+  initiatedBy: 'host',
+  status: 'active',
+  message: null,
+  resolutionReason: null,
+  resolvedAt: null,
+  version: 1,
+  createdAt: '2026-08-01T10:00:00.000Z',
+  updatedAt: '2026-08-02T10:00:00.000Z',
+  ...overrides,
+});
 
-    it('keeps quick actions honestly disabled with no fake success', async () => {
-      const user = userEvent.setup();
-      render(<PartnersScreen tab="connected" segment="host" />);
-      await user.click(screen.getAllByRole('button', { name: 'View profile' })[0]!);
+const connectionDto = (overrides: Record<string, unknown>) => ({
+  id: 'connection-1',
+  promoterId: 'xxPROM01',
+  targetId: 'org_test',
+  targetType: 'venue',
+  initiatedBy: 'promoter',
+  status: 'active',
+  message: null,
+  resolutionReason: null,
+  resolvedAt: null,
+  version: 1,
+  createdAt: '2026-08-03T10:00:00.000Z',
+  updatedAt: '2026-08-04T10:00:00.000Z',
+  ...overrides,
+});
 
-      const removeButton = screen.getByRole('button', { name: /Remove connection/ });
-      expect(removeButton).toBeDisabled();
-      expect(screen.queryByText(/removed successfully/i)).not.toBeInTheDocument();
+function mockPopulatedBackend() {
+  mocks.partnershipList.mockResolvedValue({
+    items: [
+      partnershipDto({ id: 'partnership-active' }),
+      partnershipDto({
+        id: 'partnership-pending-in',
+        status: 'pending',
+        initiatedBy: 'host',
+        message: 'Would love a July slot.',
+      }),
+      partnershipDto({
+        id: 'partnership-pending-out',
+        status: 'pending',
+        initiatedBy: 'venue',
+        message: 'Inviting you to our August series.',
+      }),
+    ],
+  });
+  mocks.promoterConnectionList.mockResolvedValue({
+    items: [
+      connectionDto({ id: 'connection-active' }),
+      connectionDto({
+        id: 'connection-pending-in',
+        status: 'pending',
+        initiatedBy: 'promoter',
+        message: 'Happy to share reach numbers.',
+      }),
+    ],
+  });
+  mocks.partnershipApprove.mockResolvedValue(partnershipDto({ id: 'partnership-pending-in', status: 'active' }));
+}
+
+beforeEach(() => {
+  clearCache();
+  vi.clearAllMocks();
+  mocks.getActiveOrgId.mockReturnValue('org_test');
+  mockPopulatedBackend();
+});
+
+describe('PartnersScreen (backend-only)', () => {
+  it('shows a loading state before backend data resolves', () => {
+    render(<PartnersScreen tab="connected" segment="host" />);
+    expect(screen.getByRole('status')).toHaveTextContent('Loading partners…');
+  });
+
+  it('renders connected hosts from the backend and opens the profile drawer', async () => {
+    const user = userEvent.setup();
+    render(<PartnersScreen tab="connected" segment="host" />);
+
+    // Backend-derived label (host org id suffix), never a fabricated profile.
+    const row = await screen.findByText('Host HOST01');
+    expect(row).toBeInTheDocument();
+    expect(screen.queryByText('Rhea Kapoor')).not.toBeInTheDocument();
+    expect(screen.queryByText('Kabir Malhotra')).not.toBeInTheDocument();
+
+    const trigger = screen.getAllByRole('button', { name: 'View profile' })[0]!;
+    await user.click(trigger);
+    expect(
+      screen.getByRole('dialog', { name: /Host HOST01 partner details/ }),
+    ).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
+  it('renders connected promoters from the backend', async () => {
+    render(<PartnersScreen tab="connected" segment="promoter" />);
+    expect(await screen.findByText('Promoter PROM01')).toBeInTheDocument();
+    expect(screen.queryByText('Karan Shah')).not.toBeInTheDocument();
+  });
+
+  it('shows an empty state when the backend has no connected hosts', async () => {
+    mocks.partnershipList.mockResolvedValue({ items: [] });
+    mocks.promoterConnectionList.mockResolvedValue({ items: [] });
+    render(<PartnersScreen tab="connected" segment="host" />);
+
+    expect(await screen.findByText('No connected hosts yet.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'View profile' })).not.toBeInTheDocument();
+  });
+
+  it('renders discover from the real backend browse endpoint (never dummy profiles)', async () => {
+    render(<PartnersScreen tab="discover" segment="host" />);
+    expect(await screen.findByText('No hosts match these filters.')).toBeInTheDocument();
+    expect(screen.queryByText('Rhea Kapoor')).not.toBeInTheDocument();
+  });
+
+  it('derives requests from non-active backend rows with a pending badge', async () => {
+    render(<PartnersScreen tab="discover" segment="host" />);
+    const requestsTab = await screen.findByRole('link', { name: /Requests/ });
+    // One pending received partnership + one pending received promoter connection.
+    expect(within(requestsTab).getByText('2')).toBeInTheDocument();
+  });
+
+  it('reviews a backend request and approves it through the partnership API', async () => {
+    const user = userEvent.setup();
+    render(<PartnersScreen tab="requests" requestView="received" />);
+
+    const reviews = await screen.findAllByRole('button', { name: 'Review' });
+    expect(reviews).toHaveLength(2);
+    expect(screen.getByText('Would love a July slot.')).toBeInTheDocument();
+
+    await user.click(reviews[0]!);
+    await user.click(screen.getByRole('button', { name: /Accept/ }));
+    await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+    await waitFor(() => {
+      expect(mocks.partnershipApprove).toHaveBeenCalledWith('partnership-pending-in');
     });
   });
 
-  describe('Discover', () => {
-    it('uses promoter-specific performance labels and keeps Connect honestly disabled', async () => {
-      const user = userEvent.setup();
-      render(<PartnersScreen tab="discover" segment="promoter" />);
-      await user.click(screen.getAllByRole('button', { name: 'View profile' })[0]!);
-
-      expect(screen.getByRole('button', { name: /See promoted events/ })).toBeInTheDocument();
-      const connect = screen.getByRole('button', { name: /Connect/ });
-      expect(connect).toBeDisabled();
-    });
-
-    it('filters results by verified status', async () => {
-      const user = userEvent.setup();
-      render(<PartnersScreen tab="discover" segment="host" />);
-      await user.click(screen.getByRole('button', { name: /Filters/ }));
-      await user.click(screen.getByLabelText('Verified status only'));
-      expect(screen.queryByText('Kabir Malhotra')).not.toBeInTheDocument();
-      expect(screen.getByText('Rhea Kapoor')).toBeInTheDocument();
-    });
-  });
-
-  describe('Requests', () => {
-    it('shows a pending-count badge on the Requests tab', () => {
-      render(<PartnersScreen tab="discover" segment="host" />);
-      const requestsTab = screen.getByRole('link', { name: /Requests/ });
-      expect(within(requestsTab).getByText('2')).toBeInTheDocument();
-    });
-
-    it('keeps accept/decline honestly disabled behind a confirm dialog', async () => {
-      const user = userEvent.setup();
-      render(<PartnersScreen tab="requests" requestView="received" />);
-      await user.click(screen.getAllByRole('button', { name: 'Review' })[0]!);
-      await user.click(screen.getByRole('button', { name: /Accept/ }));
-
-      expect(
-        screen.getByText(/requires the partnership mutation API/i),
-      ).toBeInTheDocument();
-      const confirm = screen.getByRole('button', { name: 'Confirm' });
-      expect(confirm).toBeDisabled();
-    });
+  it('shows sent requests derived from backend rows initiated by the venue', async () => {
+    render(<PartnersScreen tab="requests" requestView="sent" />);
+    expect(await screen.findByText('Inviting you to our August series.')).toBeInTheDocument();
   });
 });
