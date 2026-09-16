@@ -1,4 +1,5 @@
 import type {
+  PromoterConnectionDto,
   PromoterEvent,
   PromoterFinanceSummary,
   PromoterOverview,
@@ -7,6 +8,7 @@ import type {
   PromoterProfile,
   PromoterRepository,
   PromoterTrackingLink,
+  RequestConnectionRequest,
 } from './contracts';
 
 const profile: PromoterProfile = {
@@ -128,4 +130,61 @@ export const fixturePromoterRepository: PromoterRepository = {
     };
     return Promise.resolve(link);
   },
+  requestConnection(input) { return Promise.resolve().then(() => createFixtureConnection(input)); },
+  resolveConnection(connectionId, action, reason) {
+    return Promise.resolve().then(() => transitionFixtureConnection(connectionId, action, reason));
+  },
+  getPromoterConnections() {
+    return Promise.resolve({
+      items: [...fixtureConnections],
+      pageInfo: { hasNextPage: false },
+    });
+  },
 };
+
+/* ── In-memory promoter↔host/venue request lifecycle (fixture only) ────────── */
+
+const fixtureConnections: PromoterConnectionDto[] = [];
+
+let fixtureConnectionSeq = 0;
+
+function createFixtureConnection(input: RequestConnectionRequest): PromoterConnectionDto {
+  fixtureConnectionSeq += 1;
+  const now = new Date().toISOString();
+  const connection: PromoterConnectionDto = {
+    id: `fixture-connection-${fixtureConnectionSeq}`,
+    promoterId: input.initiatedBy === 'promoter' ? 'fixture-promoter-org' : input.counterpartyId,
+    targetId: input.initiatedBy === 'promoter' ? input.counterpartyId : 'fixture-promoter-org',
+    targetType: input.targetType,
+    initiatedBy: input.initiatedBy,
+    status: 'pending',
+    message: input.message ?? null,
+    resolutionReason: null,
+    resolvedAt: null,
+    version: 1,
+    createdAt: now,
+    updatedAt: now,
+  };
+  fixtureConnections.push(connection);
+  return connection;
+}
+
+function transitionFixtureConnection(
+  connectionId: string,
+  action: 'approve' | 'reject' | 'block' | 'revoke',
+  reason?: string,
+): PromoterConnectionDto {
+  const connection = fixtureConnections.find((candidate) => candidate.id === connectionId);
+  if (!connection) throw new Error(`Connection ${connectionId} not found`);
+  const status = action === 'approve' ? 'active' : action === 'reject' ? 'rejected' : action === 'block' ? 'blocked' : 'revoked';
+  const transitioned: PromoterConnectionDto = {
+    ...connection,
+    status,
+    resolutionReason: reason ?? null,
+    resolvedAt: new Date().toISOString(),
+    version: connection.version + 1,
+    updatedAt: new Date().toISOString(),
+  };
+  fixtureConnections.splice(fixtureConnections.indexOf(connection), 1, transitioned);
+  return transitioned;
+}
