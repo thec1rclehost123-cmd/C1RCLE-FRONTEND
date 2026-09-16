@@ -33,4 +33,5 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: 'Admins', href: '/admins' },
   { label: 'Audit', href: '/audit' },
   { label: 'Health', href: '/health' },
+  { label: 'Settings', href: '/settings' },
 ];
