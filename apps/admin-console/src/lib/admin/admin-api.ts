@@ -465,6 +465,42 @@ export function getAnalyticsSummary(): Promise<z.infer<typeof adminAnalyticsSumm
   });
 }
 
+/* ─── System health ───────────────────────────────────────────────────────────
+ * Not part of the frozen `@c1rcle/contracts` wire — `/internal/*` are ops/probe
+ * endpoints (unauthenticated by design, same ones a load balancer polls), not
+ * business contract routes, so their schemas live here rather than in the
+ * generated contracts package. Real checks only: v1's health screen claimed a
+ * "Vision AI Node" and "CDN Edge" status that didn't exist anywhere in the
+ * codebase (see the V1 audit doc) — this surfaces exactly what
+ * `createReadinessChecks` actually checks (Firestore, storage, Redis, payment
+ * provider config), nothing invented for the UI.
+ */
+const readinessResponseSchema = z.object({
+  ok: z.boolean(),
+  checks: z.record(z.string(), z.enum(['up', 'down'])),
+});
+
+const versionResponseSchema = z.object({
+  version: z.string(),
+  buildSha: z.string(),
+  commit: z.string(),
+  startedAt: z.string(),
+});
+
+export function getSystemReadiness(): Promise<z.infer<typeof readinessResponseSchema>> {
+  return getAdminApiClient().get({
+    path: '/api/v2/internal/readiness',
+    schema: readinessResponseSchema,
+  });
+}
+
+export function getSystemVersion(): Promise<z.infer<typeof versionResponseSchema>> {
+  return getAdminApiClient().get({
+    path: '/api/v2/internal/version',
+    schema: versionResponseSchema,
+  });
+}
+
 /* ─── Directory (venues / events / hosts / users) ─────────────────────────── */
 
 export type AdminVenuePage = z.infer<typeof adminVenueListResponseSchema>;
