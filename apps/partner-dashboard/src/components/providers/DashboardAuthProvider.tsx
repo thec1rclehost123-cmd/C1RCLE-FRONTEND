@@ -87,11 +87,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-/** V2's org roles are `owner|admin|manager|member`; the frontend's staff-role
- * vocabulary has no `member` — `staff` is the closest existing label. */
-function toStaffRole(role: string): StaffRole {
-  return role === 'member' ? 'staff' : (role as StaffRole);
-}
+
 
 export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();

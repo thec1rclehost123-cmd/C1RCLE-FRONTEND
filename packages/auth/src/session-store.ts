@@ -1,3 +1,5 @@
+"use client";
+
 import { useSyncExternalStore } from 'react';
 
 import type { User } from '@c1rcle/contracts';
