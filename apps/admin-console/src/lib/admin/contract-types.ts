@@ -13,6 +13,7 @@ import {
   type adminPayoutStatusSchema,
   type adminRefundRequestStatusSchema,
   type adminRoleSchema,
+  type adminTicketStatusSchema,
   type adminVenueDtoSchema,
   type eventStatusSchema,
   type onboardingStatusSchema,
@@ -32,3 +33,4 @@ export type VenueStatus = z.infer<typeof adminVenueDtoSchema>['status'];
 export type DisputeStatus = 'open' | 'under_review' | 'resolved';
 export type DisputeResolutionOutcome = 'upheld' | 'denied';
 export type OrderStatus = z.infer<typeof adminOrderDtoSchema>['status'];
+export type TicketStatus = z.infer<typeof adminTicketStatusSchema>;

@@ -20,6 +20,8 @@ import {
   adminRefundRequestDtoSchema,
   adminRefundRequestListResponseSchema,
   adminAuditRecordDtoSchema,
+  adminTicketDtoSchema,
+  adminTicketListResponseSchema,
   adminUserDtoSchema,
   adminUserListResponseSchema,
   adminVenueDtoSchema,
@@ -56,6 +58,7 @@ import type {
   OnboardingStatus,
   OrderStatus,
   ProposalStatus,
+  TicketStatus,
 } from '@/lib/admin/contract-types';
 
 /* ─── Local response schemas ───────────────────────────────────────────────── */
@@ -363,6 +366,21 @@ export function listOrders(limit = 100): Promise<AdminOrderPage> {
 
 /** Order statuses, derived from the wire schema so the enum can never drift. */
 export const ORDER_STATUSES: readonly OrderStatus[] = adminOrderDtoSchema.shape.status.options;
+
+/* ─── Tickets (platform-wide entitlement ledger) ──────────────────────────── */
+
+export type AdminTicketPage = z.infer<typeof adminTicketListResponseSchema>;
+export type AdminTicket = z.infer<typeof adminTicketDtoSchema>;
+
+export function listTickets(limit = 100): Promise<AdminTicketPage> {
+  return getAdminApiClient().get({
+    path: '/api/v2/admin/tickets',
+    query: { limit },
+    schema: adminTicketListResponseSchema,
+  });
+}
+
+export const TICKET_STATUSES: readonly TicketStatus[] = adminTicketDtoSchema.shape.status.options;
 
 /* ─── Admins ───────────────────────────────────────────────────────────────── */
 

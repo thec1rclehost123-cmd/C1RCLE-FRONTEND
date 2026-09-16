@@ -20,6 +20,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: 'Onboarding', href: '/onboarding' },
   { label: 'KYC review', href: '/kyc-review' },
   { label: 'Orders', href: '/orders' },
+  { label: 'Tickets', href: '/tickets' },
   { label: 'Refunds', href: '/refunds' },
   { label: 'Disputes', href: '/disputes' },
   { label: 'Payouts', href: '/payouts' },

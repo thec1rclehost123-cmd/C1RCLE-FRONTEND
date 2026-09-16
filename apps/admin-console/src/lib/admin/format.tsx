@@ -11,6 +11,7 @@ import type {
   EventStatus,
   HostStatus,
   VenueStatus,
+  TicketStatus,
 } from '@/lib/admin/contract-types';
 
 export function formatPaise(paise: number): string {
@@ -317,5 +318,22 @@ export function orderStatusTone(status: OrderStatus): Tone {
       return 'muted';
     case 'failed':
       return 'destructive';
+  }
+}
+
+export const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
+  valid: 'Valid',
+  redeemed: 'Redeemed',
+  void: 'Void',
+};
+
+export function ticketStatusTone(status: TicketStatus): Tone {
+  switch (status) {
+    case 'valid':
+      return 'success';
+    case 'redeemed':
+      return 'default';
+    case 'void':
+      return 'muted';
   }
 }
