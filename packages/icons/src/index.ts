@@ -108,6 +108,7 @@ export {
   StickyNote as NoteIcon,
   Ticket as TicketIcon,
   TrendingUp as TrendUpIcon,
+  Upload as UploadIcon,
   User as GuestIcon,
   UserPlus as InviteIcon,
   Video as VideoIcon,
