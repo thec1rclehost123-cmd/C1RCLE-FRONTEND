@@ -9,6 +9,7 @@
 import { z } from 'zod';
 
 import {
+  adminAnalyticsSummaryDtoSchema,
   adminEventDtoSchema,
   adminEventListResponseSchema,
   adminHostDtoSchema,
@@ -453,6 +454,14 @@ export function globalLookup(query: string): Promise<z.infer<typeof adminLookupR
     path: '/api/v2/admin/lookup',
     query: { q: query },
     schema: adminLookupResponseSchema,
+  });
+}
+
+/** Platform-wide revenue/ticket/event summary. Bounded scan — see backend doc comment. */
+export function getAnalyticsSummary(): Promise<z.infer<typeof adminAnalyticsSummaryDtoSchema>> {
+  return getAdminApiClient().get({
+    path: '/api/v2/admin/analytics',
+    schema: adminAnalyticsSummaryDtoSchema,
   });
 }
 
