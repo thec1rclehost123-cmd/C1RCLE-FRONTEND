@@ -45,6 +45,8 @@
 .partnerCardActions .button { min-height: 34px; padding-inline: 11px; font-size: 11px; }
 .profileLink, .emptyLink { color: #ff8a55; font-size: 11px; font-weight: 800; text-decoration: none; }
 .profileLink:hover, .emptyLink:hover { color: #ffb078; }
+.requestSections { display: flex; flex-direction: column; gap: 28px; }
+.requestSectionHeading { margin: 0 0 10px; color: var(--partner-v3-ink-muted); font: 700 11px/1 var(--font-display), sans-serif; letter-spacing: .1em; text-transform: uppercase; }
 .requestList { display: grid; gap: 10px; }
 .requestCard { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px; border: 1px solid var(--partner-v3-border); border-radius: 12px; background: var(--partner-v3-surface); }
 .requestCard .partnerIdentity { flex: 1; }
