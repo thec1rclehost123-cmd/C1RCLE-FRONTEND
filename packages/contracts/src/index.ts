@@ -31,6 +31,7 @@ export type {
   InviteMemberInput,
   VenueProfileDto,
   VenueSlotDto,
+  CreateVenueBlockInput,
   SlotRequestDto,
   CreateSlotRequestInput,
 } from './contracts/organization.js';
@@ -47,6 +48,7 @@ export {
   inviteMemberSchema,
   venueProfileDtoSchema,
   venueSlotDtoSchema,
+  createVenueBlockSchema,
   slotRequestDtoSchema,
   createSlotRequestSchema,
 } from './contracts/organization.js';
@@ -59,6 +61,8 @@ export type {
   CreateEventInput,
   UpdateEventInput,
   CancelEventInput,
+  PosterUploadUrlRequest,
+  PosterUploadUrlDto,
   TicketTierDto,
   CreateTicketTierRequest,
   PromoCodeDto,
@@ -76,6 +80,8 @@ export {
   createEventSchema,
   updateEventSchema,
   cancelEventSchema,
+  posterUploadUrlRequestSchema,
+  posterUploadUrlDtoSchema,
   ticketTierStatusSchema,
   ticketTierDtoSchema,
   createTicketTierSchema,
