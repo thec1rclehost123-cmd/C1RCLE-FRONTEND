@@ -1,4 +1,3 @@
-import { refresh } from '@c1rcle/auth';
 import { getClientEnv } from '@c1rcle/config';
 
 const ACTIVE_ORG_COOKIE_NAME = 'c1rcle.active-org';
@@ -50,9 +49,18 @@ function parseActiveOrgCookie(cookieHeader: string): string | null {
 }
 
 /**
- * Sets or clears the active organization ID cookie, and triggers token refresh for token rotation.
+ * Sets or clears the active organization ID cookie.
  * `c1rcle.active-org` is an id hint, not a credential — it is intentionally readable by
  * both client and server, unlike the access token (memory-only) or the session cookie (httpOnly).
+ *
+ * Deliberately does NOT call `auth.refresh()` here: the gateway derives the
+ * actor's org per request from `x-organization-id` + membership lookup
+ * (`plugins/auth.ts`), so the Bearer token carries no org claim to rotate.
+ * The previous refresh call was actively harmful — `refresh()` wipes the
+ * in-memory session (`clearSession()`) on ANY failure, so a single spurious
+ * `401` from the speculative post-switch refresh signed a just-logged-in user
+ * straight back out (login 200 → org/access 200s → refresh 401 → anonymous
+ * with a stale "no partner access" error on screen).
  */
 export async function setActiveOrg(orgId: string | null): Promise<void> {
   if (typeof document === 'undefined') {
@@ -65,14 +73,5 @@ export async function setActiveOrg(orgId: string | null): Promise<void> {
     document.cookie = `${ACTIVE_ORG_COOKIE_NAME}=${encodeURIComponent(orgId)}; path=/; SameSite=Lax; max-age=31536000${secure}`;
   } else {
     document.cookie = `${ACTIVE_ORG_COOKIE_NAME}=; path=/; SameSite=Lax; max-age=0${secure}`;
-  }
-
-  // Trigger token refresh to issue a token stamped with the new active org context.
-  // A failure here is not fatal — the next gateway call will 401 and go through
-  // the normal reauth path in the api-client composition root — so it is swallowed.
-  try {
-    await refresh();
-  } catch {
-    // Intentionally swallowed; see comment above.
   }
 }
