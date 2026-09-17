@@ -1,8 +1,9 @@
+import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 
-import { HostAvailabilityScreen } from '@/components/partner-v3/calendar/HostAvailabilityScreen';
-import { VenueCalendarScreen } from '@/components/partner-v3/calendar/VenueCalendarScreen';
-import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
+import { HostAvailabilityRoute } from '@/components/partner-v3/calendar/HostAvailabilityRoute';
+import { VenueCalendarRoute } from '@/components/partner-v3/calendar/VenueCalendarRoute';
+import { getActiveOrgIdFromCookieHeader } from '@/lib/org/active-org-cookie';
 
 export default async function StudioCalendarPage({
   params,
@@ -16,27 +17,26 @@ export default async function StudioCalendarPage({
   const query = await searchParams;
   const getValue = (value: string | string[] | undefined) =>
     Array.isArray(value) ? value[0] : value;
+  const organizationId = getActiveOrgIdFromCookieHeader((await cookies()).toString());
   if (studio === 'venue') {
-    const data = await fixturePartnerDataSource.getVenueCalendar();
     const month = getValue(query['month']);
     const date = getValue(query['date']);
     return (
-      <VenueCalendarScreen
-        data={data}
+      <VenueCalendarRoute
+        organizationId={organizationId}
         {...(month ? { initialMonth: month } : {})}
         {...(date ? { initialDate: date } : {})}
         initialDialog={getValue(query['dialog']) === 'block'}
       />
     );
   }
-  const data = await fixturePartnerDataSource.getHostAvailability();
   const month = getValue(query['month']);
   const date = getValue(query['date']);
   const venue = getValue(query['venue']);
   const slot = getValue(query['slot']);
   return (
-    <HostAvailabilityScreen
-      data={data}
+    <HostAvailabilityRoute
+      organizationId={organizationId}
       {...(month ? { initialMonth: month } : {})}
       {...(date ? { initialDate: date } : {})}
       {...(venue ? { initialVenue: venue } : {})}

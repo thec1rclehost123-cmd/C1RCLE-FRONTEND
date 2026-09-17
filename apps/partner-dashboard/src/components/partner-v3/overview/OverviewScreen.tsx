@@ -5,7 +5,6 @@ import {
   AddIcon,
   BankIcon,
   BottleServiceIcon,
-  ExpandIcon,
   ForwardIcon,
   RefundIcon,
   TicketIcon,
@@ -13,6 +12,7 @@ import {
 } from '@c1rcle/icons';
 
 import styles from './overview.module.css';
+import { OverviewCalendarCard } from './OverviewCalendarCard';
 import { OverviewTrendCard } from './OverviewTrendCard';
 
 import type {
@@ -99,17 +99,8 @@ function SectionHeader({
   );
 }
 
-export function OverviewScreen({
-  data,
-  links,
-  accent = 'orange',
-}: {
-  readonly data: OverviewData;
-  readonly links: OverviewLinks;
-  readonly accent?: OverviewAccent;
-}) {
+export function OverviewScreen({ data, links, accent = 'orange', studio, organizationId }: { readonly data: OverviewData; readonly links: OverviewLinks; readonly accent?: OverviewAccent; readonly studio?: 'venue' | 'host'; readonly organizationId?: string | null }) {
   const soldPercent = Math.round((data.nextEvent.sold / data.nextEvent.capacity) * 100);
-  const weekdays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   return (
     <div
@@ -215,55 +206,7 @@ export function OverviewScreen({
       </div>
 
       <div className={styles['secondaryGrid']}>
-        <section
-          className={classNames(styles['card'], styles['calendarCard'])}
-          aria-labelledby="calendar-title"
-        >
-          <div className={styles['calendarHeader']}>
-            <h2 id="calendar-title">{data.calendar.monthLabel}</h2>
-            <Link href={links.calendar}>
-              <span>See all events</span>
-              <i>
-                <ExpandIcon size={14} aria-hidden="true" />
-              </i>
-            </Link>
-          </div>
-          <div className={styles['calendarWeekdays']} aria-hidden="true">
-            {weekdays.map((day, index) => (
-              <span key={[day, String(index)].join('-')}>{day}</span>
-            ))}
-          </div>
-          <div className={styles['calendarGrid']}>
-            {Array.from({ length: data.calendar.firstDayOffset }, (_, index) => (
-              <span key={['empty', String(index)].join('-')} aria-hidden="true" />
-            ))}
-            {data.calendar.days.map((day) => {
-              const eventLabel = day.eventCount
-                ? [String(day.eventCount), day.eventCount > 1 ? 'events' : 'event'].join(' ')
-                : '';
-              const ariaLabel = [
-                data.calendar.monthLabel,
-                String(day.day),
-                eventLabel,
-                day.isToday ? 'today' : '',
-              ]
-                .filter(Boolean)
-                .join(', ');
-              return (
-                <span
-                  key={day.day}
-                  className={classNames(
-                    day.eventCount ? styles['eventDay'] : false,
-                    day.isToday ? styles['today'] : false,
-                  )}
-                  aria-label={ariaLabel}
-                >
-                  {day.day}
-                </span>
-              );
-            })}
-          </div>
-        </section>
+        <OverviewCalendarCard fallback={data.calendar} href={links.calendar} {...(studio ? { studio } : {})} {...(organizationId !== undefined ? { organizationId } : {})} />
 
         <section
           className={classNames(styles['card'], styles['upcomingCard'])}

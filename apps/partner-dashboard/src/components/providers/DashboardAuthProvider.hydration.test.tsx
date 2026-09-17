@@ -6,11 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DashboardAuthProvider, useDashboardAuth } from './DashboardAuthProvider';
 
-import type { User } from '@c1rcle/contracts';
+import type { SessionState } from '@c1rcle/auth';
 
 const mocks = vi.hoisted(() => ({
   getActiveOrgId: vi.fn<() => string | null>(),
-  useSession: vi.fn<() => { isAuthenticated: boolean; isLoading: boolean; user: User | null }>(),
+  useSession: vi.fn<() => { isAuthenticated: boolean; isLoading: boolean; user: any }>(),
   orgAccess: {
     partnerType: 'venue',
     role: 'owner',
