@@ -33,9 +33,7 @@ export function PartnerStudioFrame({ studio, interactionData, children }: { read
     if (!activeRole) router.replace('/partner/select-organization');
   }, [activeRole, auth.isApproved, auth.loading, auth.user, pathname, router]);
 
-  if (auth.loading) {
-    return <PartnerShell studio={studio} interactionData={interactionData}><LoadingState label="Authorizing Partner V3" /></PartnerShell>;
-  }
+  if (auth.loading) return null;
 
   if (!auth.user || !auth.isApproved || !activeRole) {
     return <LoadingState label="Redirecting to your workspace" />;

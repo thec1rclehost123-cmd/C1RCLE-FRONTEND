@@ -1,8 +1,8 @@
 import Image from 'next/image';
 import { useState } from 'react';
 
+import { canSelectEventDate } from './event-date-selection';
 import styles from './event-editor.module.css';
-
 
 import type { CalendarDay, CalendarMonth, EventEditorData, EventEditorDraft, EventEditorTicketTier, PartnerEventArtwork } from '@/data/partner-data-source';
 import type { ChangeEvent, ReactNode } from 'react';
@@ -11,32 +11,165 @@ type DraftUpdate = (values: Partial<EventEditorDraft>) => void;
 
 export function EventPosterUploader({ artwork, artworkOptions, onArtwork, onUpload }: { readonly artwork: PartnerEventArtwork; readonly artworkOptions: readonly PartnerEventArtwork[]; readonly onArtwork: (artwork: PartnerEventArtwork) => void; readonly onUpload: (event: ChangeEvent<HTMLInputElement>) => void }) {
   const isImage = artwork.type === 'image';
-  return <section className={styles['card']} aria-labelledby="poster-heading"><div id="poster-heading" className={styles['cardTitle']}>Poster</div><div className={styles['posterEditor']}><div className={styles['posterUpload']}>{isImage ? <Image fill sizes="132px" src={artwork.value} alt={artwork.alt ?? 'Event artwork'} /> : <div className={[styles['posterGradient'], gradientClass(artwork.value)].join(' ')} data-gradient={artwork.value} />}<span className={styles['posterOverlay']}>4:5 poster</span></div><div className={styles['posterCopy']}><strong>Drag & drop or click to upload</strong><span>Used as the blurred background wherever this event appears — gallery, event page, and Overview.</span><label className={styles['uploadButton']}>Replace poster<input type="file" accept="image/*" onChange={onUpload} /></label><div className={styles['artworkChoices']} aria-label="Artwork choices">{artworkOptions.map((option, index) => <button className={styles['artworkChoice']} key={`${option.type}-${option.value}-${String(index)}`} type="button" aria-label={`Use artwork ${String(index + 1)}`} onClick={() => { onArtwork(option); }}>{option.type === 'image' ? <Image fill sizes="34px" src={option.value} alt="" /> : <span className={gradientClass(option.value)} />}</button>)}</div><span>Uploaded artwork is a local draft preview only and is not saved until a backend publish flow is available.</span></div></div></section>;
+  return <section className={styles['card']} aria-labelledby="poster-heading"><div id="poster-heading" className={styles['cardTitle']}>Poster</div><div className={styles['posterEditor']}><div className={styles['posterUpload']}>{isImage ? <Image fill sizes="132px" src={artwork.value} alt={artwork.alt ?? 'Event artwork'} /> : <div className={[styles['posterGradient'], gradientClass(artwork.value)].join(' ')} data-gradient={artwork.value} />}<span className={styles['posterOverlay']}>4:5 poster</span></div><div className={styles['posterCopy']}><strong>Drag & drop or click to upload</strong><span>Used as the blurred background wherever this event appears — gallery, event page, and Overview.</span><label className={styles['uploadButton']}>Replace poster<input type="file" accept="image/*" onChange={onUpload} /></label><div className={styles['artworkChoices']} aria-label="Artwork choices">{artworkOptions.map((option, index) => <button className={styles['artworkChoice']} key={`${option.type}-${option.value}-${String(index)}`} type="button" aria-label={`Use artwork ${String(index + 1)}`} onClick={() => { onArtwork(option); }}>{option.type === 'image' ? <Image fill sizes="34px" src={option.value} alt="" /> : <span className={gradientClass(option.value)} />}</button>)}</div><span>Uploaded posters are saved to the event when you publish it.</span></div></div></section>;
 }
 
 export function EventBasicDetails({ draft, data, editMode, update, onArtistAdd, onArtistRemove, genrePickerOpen, onToggleGenres }: { readonly draft: EventEditorDraft; readonly data: EventEditorData; readonly editMode: boolean; readonly update: DraftUpdate; readonly onArtistAdd: (name: string) => void; readonly onArtistRemove: (name: string) => void; readonly genrePickerOpen: boolean; readonly onToggleGenres: () => void }) {
   const [artistInput, setArtistInput] = useState('');
-  return <section className={styles['card']} aria-labelledby="basics-heading"><div id="basics-heading" className={styles['cardTitle']}>The basics</div><div className={styles['fieldStack']}><div className={styles['field']}><label htmlFor="event-name">Event name</label><input id="event-name" value={draft.name} onChange={(event) => { update({ name: event.target.value }); }} placeholder="e.g. Neon Nights: Afrobeats Edition" /></div><div className={styles['twoColumns']}><div className={styles['field']}><label htmlFor="event-date">Date {editMode ? <span aria-label="Date locked"> · locked</span> : null}</label><input id="event-date" value={draft.dateLabel} readOnly disabled={editMode} /></div><div className={styles['field']}><label htmlFor="event-time">Start time {editMode ? <span aria-label="Time locked"> · locked</span> : null}</label><input id="event-time" value={draft.time} onChange={(event) => { update({ time: event.target.value }); }} disabled={editMode} /></div></div>{editMode ? <div className={styles['muted']}>Date and time can’t be changed after publishing.</div> : null}<div className={styles['field']}><div className={styles['fieldLabel']}>Genre / vibe</div><div className={styles['chips']}>{data.genres.map((genre) => <button className={[styles['chip'], draft.genres.includes(genre) ? styles['chipSelected'] : ''].filter(Boolean).join(' ')} key={genre} type="button" onClick={() => { update({ genres: draft.genres.includes(genre) ? draft.genres.filter((item) => item !== genre) : [...draft.genres, genre] }); }}>{genre}</button>)}<button className={styles['chip']} type="button" onClick={onToggleGenres}>{genrePickerOpen ? 'Hide more' : '+ Add genre'}</button></div>{genrePickerOpen ? <div className={[styles['chips'], styles['moreGenres']].join(' ')}>{data.extraGenres.map((genre) => <button className={[styles['chip'], draft.genres.includes(genre) ? styles['chipSelected'] : ''].filter(Boolean).join(' ')} key={genre} type="button" onClick={() => { update({ genres: draft.genres.includes(genre) ? draft.genres.filter((item) => item !== genre) : [...draft.genres, genre] }); }}>{genre}</button>)}</div> : null}</div><div className={styles['field']}><label htmlFor="artist-input">Mentioned artists</label>{draft.artists.length ? <div className={styles['artistList']}>{draft.artists.map((artist) => <div className={styles['artistRow']} key={artist}><span className={styles['artistAvatar']}>{initialsFor(artist)}</span><span className={styles['artistName']}>{artist}</span><button className={styles['removeButton']} type="button" aria-label={`Remove ${artist}`} onClick={() => { onArtistRemove(artist); }}>×</button></div>)}</div> : null}<div className={styles['inlineInput']}><input id="artist-input" value={artistInput} onChange={(event) => { setArtistInput(event.target.value); }} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); onArtistAdd(artistInput); setArtistInput(''); } }} placeholder="Search or type an artist name, press Enter" /><button className={styles['outlineButton']} type="button" onClick={() => { onArtistAdd(artistInput); setArtistInput(''); }}>Add</button></div></div></div></section>;
+  return <section className={styles['card']} aria-labelledby="basics-heading"><div id="basics-heading" className={styles['cardTitle']}>The basics</div><div className={styles['fieldStack']}><div className={styles['field']}><label htmlFor="event-name">Event name</label><input id="event-name" value={draft.name} onChange={(event) => { update({ name: event.target.value }); }} placeholder="e.g. Neon Nights: Afrobeats Edition" /></div><div className={styles['threeColumns']}><div className={styles['field']}><label htmlFor="event-date">Date {editMode ? <span aria-label="Date locked"> · locked</span> : null}</label><input id="event-date" value={draft.dateLabel} readOnly disabled={editMode} /></div><div className={styles['field']}><label htmlFor="event-time">Start time {editMode ? <span aria-label="Time locked"> · locked</span> : null}</label><input id="event-time" value={draft.time} onChange={(event) => { update({ time: event.target.value }); }} disabled={editMode} placeholder="e.g. 9:00 PM" /></div><div className={styles['field']}><label htmlFor="event-end-time">End time {editMode ? <span aria-label="Time locked"> · locked</span> : null}</label><input id="event-end-time" value={draft.endTime ?? ''} onChange={(event) => { update({ endTime: event.target.value }); }} disabled={editMode} placeholder="e.g. 3:00 AM" /></div></div>{editMode ? <div className={styles['muted']}>Date and time can’t be changed after publishing.</div> : null}<div className={styles['field']}><div className={styles['fieldLabel']}>Genre / vibe</div><div className={styles['chips']}>{data.genres.map((genre) => <button className={[styles['chip'], draft.genres.includes(genre) ? styles['chipSelected'] : ''].filter(Boolean).join(' ')} key={genre} type="button" onClick={() => { update({ genres: draft.genres.includes(genre) ? draft.genres.filter((item) => item !== genre) : [...draft.genres, genre] }); }}>{genre}</button>)}<button className={styles['chip']} type="button" onClick={onToggleGenres}>{genrePickerOpen ? 'Hide more' : '+ Add genre'}</button></div>{genrePickerOpen ? <div className={[styles['chips'], styles['moreGenres']].join(' ')}>{data.extraGenres.map((genre) => <button className={[styles['chip'], draft.genres.includes(genre) ? styles['chipSelected'] : ''].filter(Boolean).join(' ')} key={genre} type="button" onClick={() => { update({ genres: draft.genres.includes(genre) ? draft.genres.filter((item) => item !== genre) : [...draft.genres, genre] }); }}>{genre}</button>)}</div> : null}</div><div className={styles['field']}><label htmlFor="artist-input">Mentioned artists</label>{draft.artists.length ? <div className={styles['artistList']}>{draft.artists.map((artist) => <div className={styles['artistRow']} key={artist}><span className={styles['artistAvatar']}>{initialsFor(artist)}</span><span className={styles['artistName']}>{artist}</span><button className={styles['removeButton']} type="button" aria-label={`Remove ${artist}`} onClick={() => { onArtistRemove(artist); }}>×</button></div>)}</div> : null}<div className={styles['inlineInput']}><input id="artist-input" value={artistInput} onChange={(event) => { setArtistInput(event.target.value); }} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); onArtistAdd(artistInput); setArtistInput(''); } }} placeholder="Search or type an artist name, press Enter" /><button className={styles['outlineButton']} type="button" onClick={() => { onArtistAdd(artistInput); setArtistInput(''); }}>Add</button></div></div></div></section>;
 }
 
-export function EventDateTimeSection({ months, selectedDate, selectedSlotId, editorRole, onDate, onSlot }: { readonly months: readonly CalendarMonth[]; readonly selectedDate: string; readonly selectedSlotId?: string; readonly editorRole: 'venue' | 'host'; readonly onDate: (day: CalendarDay) => void; readonly onSlot: (slotId: string, label: string) => void }) {
+export function EventDateTimeSection({ months, selectedDate, selectedSlotId, editorRole, onDate, onSlot }: { readonly months: readonly CalendarMonth[]; readonly selectedDate: string; readonly selectedSlotId?: string; readonly editorRole: 'venue' | 'host'; readonly onDate: (day: { readonly date: string; readonly day: number }) => void; readonly onSlot?: (id: string, label: string) => void }) {
   const selectedMonthIndex = months.findIndex((month) => month.days.some((day) => day.date === selectedDate));
   const referenceMonthIndex = months.findIndex((month) => month.key === '2026-08');
   const [monthIndex, setMonthIndex] = useState(Math.max(0, selectedMonthIndex >= 0 ? selectedMonthIndex : referenceMonthIndex));
   const month = months[monthIndex] ?? months[0];
   if (!month) return null;
   const cells: (CalendarDay | null)[] = [...Array.from({ length: month.firstDayOffset }, () => null), ...month.days];
-  return <section className={styles['card']} aria-labelledby="date-heading"><div className={styles['calendarHeader']}><div><div id="date-heading" className={styles['cardTitle']}>Pick a date</div><div className={styles['muted']}>{editorRole === 'host' ? 'Partnered venue availability — grey dates are already taken.' : 'Your venue’s open nights — grey dates are already taken.'}</div></div><div className={styles['calendarControls']}><button type="button" aria-label="Previous month" disabled={monthIndex === 0} onClick={() => { setMonthIndex(Math.max(0, monthIndex - 1)); }}>‹</button><span>{month.label.toUpperCase()}</span><button type="button" aria-label="Next month" disabled={monthIndex === months.length - 1} onClick={() => { setMonthIndex(Math.min(months.length - 1, monthIndex + 1)); }}>›</button></div></div><div className={styles['weekdays']}>{['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((day) => <span key={day}>{day}</span>)}</div><div className={styles['calendarGrid']}>{cells.map((day, index) => day ? <button className={[styles['calendarDay'], day.date === selectedDate ? styles['calendarDaySelected'] : '', day.state !== 'available' ? styles['calendarDayBooked'] : ''].filter(Boolean).join(' ')} key={day.date} type="button" disabled={day.state !== 'available'} onClick={() => { onDate(day); }}>{day.day}{day.state === 'confirmed' || day.state === 'pending' ? <i className={[styles['calendarDot'], day.state === 'pending' ? styles['calendarDotPending'] : ''].filter(Boolean).join(' ')} /> : null}</button> : <span aria-hidden="true" key={`empty-${String(index)}`} />)}</div><div className={styles['calendarLegend']}><span><i />Available</span><span><i className={styles['booked']} />Booked</span><span><i className={styles['pending']} />Pending</span></div>{editorRole === 'host' && selectedDate ? <div className={styles['slotList']}><div className={styles['muted']}>Available time slots</div>{(month.days.find((day) => day.date === selectedDate)?.slots ?? []).map((slot) => <button className={[styles['slotButton'], slot.id === selectedSlotId ? styles['slotButtonSelected'] : ''].filter(Boolean).join(' ')} key={slot.id} type="button" onClick={() => { onSlot(slot.id, slot.label); }}><span>{slot.label}</span><span>{slot.id === selectedSlotId ? 'Selected' : 'Choose'}</span></button>)}</div> : null}</section>;
+  return <section className={styles['card']} aria-labelledby="date-heading"><div className={styles['calendarHeader']}><div><div id="date-heading" className={styles['cardTitle']}>Pick a date</div><div className={styles['muted']}>{editorRole === 'host' ? 'Partnered venue availability — grey dates are already taken.' : 'Your venue’s open nights — grey dates are already taken.'}</div></div><div className={styles['calendarControls']}><button type="button" aria-label="Previous month" disabled={monthIndex === 0} onClick={() => { setMonthIndex(Math.max(0, monthIndex - 1)); }}>‹</button><span>{month.label.toUpperCase()}</span><button type="button" aria-label="Next month" disabled={monthIndex === months.length - 1} onClick={() => { setMonthIndex(Math.min(months.length - 1, monthIndex + 1)); }}>›</button></div></div><div className={styles['weekdays']}>{['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((day) => <span key={day}>{day}</span>)}</div><div className={styles['calendarGrid']}>{cells.map((day, index) => day ? <button className={[styles['calendarDay'], day.date === selectedDate ? styles['calendarDaySelected'] : '', !canSelectEventDate(day.state, editorRole) ? styles['calendarDayBooked'] : ''].filter(Boolean).join(' ')} key={day.date} type="button" disabled={!canSelectEventDate(day.state, editorRole)} onClick={() => { onDate(day); }}>{day.day}{day.state === 'confirmed' || day.state === 'pending' ? <i className={[styles['calendarDot'], day.state === 'pending' ? styles['calendarDotPending'] : ''].filter(Boolean).join(' ')} /> : null}</button> : <span aria-hidden="true" key={`empty-${String(index)}`} />)}</div><div className={styles['calendarLegend']}><span><i />Available</span><span><i className={styles['booked']} />Booked</span><span><i className={styles['pending']} />Pending</span></div>{editorRole === 'host' && selectedDate && onSlot ? <div className={styles['slotList']}><div className={styles['muted']}>Available time slots</div>{(month.days.find((day) => day.date === selectedDate)?.slots ?? []).map((slot) => <button className={[styles['slotButton'], slot.id === selectedSlotId ? styles['slotButtonSelected'] : ''].filter(Boolean).join(' ')} key={slot.id} type="button" onClick={() => { onSlot(slot.id, slot.label); }}><span>{slot.label}</span><span>{slot.id === selectedSlotId ? 'Selected' : 'Choose'}</span></button>)}</div> : null}</section>;
 }
 
 export function TicketTierEditor({ tiers, onChange }: { readonly tiers: readonly EventEditorTicketTier[]; readonly onChange: (tiers: readonly EventEditorTicketTier[]) => void }) {
   const soldOut = tiers.reduce((total, tier) => total + tier.price * tier.quantity, 0);
   const updateTier = (id: string, values: Partial<EventEditorTicketTier>) => { onChange(tiers.map((tier) => tier.id === id ? { ...tier, ...values } : tier)); };
-  return <section className={styles['card']} aria-labelledby="tickets-heading"><div className={styles['cardTitleRow']}><div id="tickets-heading" className={styles['cardTitle']}>Ticket tiers</div><span className={styles['totalLabel']}>{formatMoney(soldOut)} if sold out</span></div><div className={styles['ticketList']}>{tiers.map((tier) => <div className={styles['ticketRow']} key={tier.id}><input aria-label={`${tier.name} name`} value={tier.name} onChange={(event) => { updateTier(tier.id, { name: event.target.value }); }} placeholder="Tier name" /><input aria-label={`${tier.name} price`} inputMode="numeric" value={String(tier.price)} onChange={(event) => { updateTier(tier.id, { price: numberValue(event.target.value) }); }} /><input aria-label={`${tier.name} quantity`} inputMode="numeric" value={String(tier.quantity)} onChange={(event) => { updateTier(tier.id, { quantity: numberValue(event.target.value) }); }} /><span className={styles['ticketGross']}>{formatMoney(tier.price * tier.quantity)}</span><button className={styles['ticketRemove']} type="button" aria-label={`Remove ${tier.name}`} onClick={() => { onChange(tiers.filter((item) => item.id !== tier.id)); }}>×</button></div>)}</div><button className={styles['outlineButton']} type="button" onClick={() => { onChange([...tiers, { id: `tier-${String(tiers.length + 1)}`, name: 'New tier', price: 1000, quantity: 50 }]); }}>+ Add tier</button></section>;
+  return (
+    <section className={styles['card']} aria-labelledby="tickets-heading">
+      <div className={styles['cardTitleRow']}>
+        <div id="tickets-heading" className={styles['cardTitle']}>Ticket tiers</div>
+        <span className={styles['totalLabel']}>{formatMoney(soldOut)} if sold out</span>
+      </div>
+      <div className={styles['ticketList']}>
+        {tiers.length > 0 ? (
+          <div className={styles['ticketHeader']}>
+            <span>Type</span>
+            <span>Price</span>
+            <span>Capacity</span>
+            <span>Min</span>
+            <span>Max</span>
+            <span aria-hidden="true" />
+            <span aria-hidden="true" />
+          </div>
+        ) : null}
+        {tiers.map((tier) => (
+          <div className={styles['ticketRow']} key={tier.id}>
+            <input
+              aria-label={`${tier.name} type of ticket`}
+              value={tier.name}
+              onChange={(event) => { updateTier(tier.id, { name: event.target.value }); }}
+              placeholder="Type"
+            />
+            <input
+              aria-label={`${tier.name} price`}
+              inputMode="numeric"
+              value={String(tier.price)}
+              onChange={(event) => { updateTier(tier.id, { price: numberValue(event.target.value) }); }}
+              placeholder="Price"
+            />
+            <input
+              aria-label={`${tier.name} capacity`}
+              inputMode="numeric"
+              value={String(tier.quantity)}
+              onChange={(event) => { updateTier(tier.id, { quantity: numberValue(event.target.value) }); }}
+              placeholder="Capacity"
+            />
+            <input
+              aria-label={`${tier.name} minimum tickets per order`}
+              inputMode="numeric"
+              value={tier.minPerOrder != null ? String(tier.minPerOrder) : ''}
+              onChange={(event) => { updateTier(tier.id, { minPerOrder: event.target.value !== '' ? numberValue(event.target.value) : undefined }); }}
+              placeholder="Min"
+            />
+            <input
+              aria-label={`${tier.name} maximum tickets per order`}
+              inputMode="numeric"
+              value={tier.maxPerOrder != null ? String(tier.maxPerOrder) : ''}
+              onChange={(event) => { updateTier(tier.id, { maxPerOrder: event.target.value !== '' ? numberValue(event.target.value) : undefined }); }}
+              placeholder="Max"
+            />
+            <span className={styles['ticketGross']}>{formatMoney(tier.price * tier.quantity)}</span>
+            <button
+              className={styles['ticketRemove']}
+              type="button"
+              aria-label={`Remove ${tier.name}`}
+              onClick={() => { onChange(tiers.filter((item) => item.id !== tier.id)); }}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        className={styles['outlineButton']}
+        type="button"
+        onClick={() => { onChange([...tiers, { id: `tier-${String(tiers.length + 1)}`, name: 'New tier', price: 1000, quantity: 50 }]); }}
+      >
+        + Add tier
+      </button>
+    </section>
+  );
 }
 
 export function EventAdvancedSettings({ draft, update }: { readonly draft: EventEditorDraft; readonly update: DraftUpdate }) {
-  return <details className={[styles['card'], styles['details']].join(' ')}><summary>⚙ Advanced setup <span className={styles['muted']}>Promoters, tables & promo codes</span></summary><div className={styles['detailsBody']}><div><div className={styles['cardTitle']}>Tables</div><div className={styles['optionGrid']}>{[['none', 'No tables', 'Ticket-only event'], ['low', 'Low tables', 'Up to 4 tables'], ['high', 'High tables', 'Bottle service']].map(([value, label, sub]) => <button className={[styles['optionButton'], draft.tableType === value ? styles['optionSelected'] : ''].filter(Boolean).join(' ')} key={value} type="button" onClick={() => { update({ tableType: value as EventEditorDraft['tableType'] }); }}>{label}<span>{sub}</span></button>)}</div></div><div><div className={styles['cardTitle']}>Promo codes</div><div className={styles['promoRows']}>{draft.promoCodes.map((code, index) => <div className={styles['promoRow']} key={`${code}-${String(index)}`}><input value={code} onChange={(event) => { update({ promoCodes: draft.promoCodes.map((item, itemIndex) => itemIndex === index ? event.target.value.toUpperCase() : item) }); }} aria-label={`Promo code ${String(index + 1)}`} /><small>Limited uses</small><button className={styles['removeButton']} type="button" aria-label={`Remove promo code ${code}`} onClick={() => { update({ promoCodes: draft.promoCodes.filter((_, itemIndex) => itemIndex !== index) }); }}>×</button></div>)}</div><button className={styles['outlineButton']} type="button" onClick={() => { update({ promoCodes: [...draft.promoCodes, 'NEWCODE'] }); }}>+ Add code</button></div><div><div className={styles['cardTitle']}>Dynamic pricing</div><div className={styles['muted']}>Auto-adjust price by inventory position — reward early buyers, capture last-call demand.</div><div className={styles['selectedContext']}><span>{draft.pricingRule}</span><span>Read-only rule preview</span></div></div></div></details>;
+  return (
+    <details className={[styles['card'], styles['details']].join(' ')}>
+      <summary>⚙ Advanced setup <span className={styles['muted']}>Promoters, tables & promo codes</span></summary>
+      <div className={styles['detailsBody']}>
+        <div>
+          <div className={styles['cardTitle']}>Tables</div>
+          <div className={styles['optionGrid']}>{[['none', 'No tables', 'Ticket-only event'], ['low', 'Low tables', 'Up to 4 tables'], ['high', 'High tables', 'Bottle service']].map(([value, label, sub]) => <button className={[styles['optionButton'], draft.tableType === value ? styles['optionSelected'] : ''].filter(Boolean).join(' ')} key={value} type="button" onClick={() => { update({ tableType: value as EventEditorDraft['tableType'] }); }}>{label}<span>{sub}</span></button>)}</div>
+        </div>
+        <div>
+          <div className={styles['cardTitle']}>Promo codes</div>
+          <div className={styles['promoRows']}>{draft.promoCodes.map((code, index) => <div className={styles['promoRow']} key={`${code}-${String(index)}`}><input value={code} onChange={(event) => { update({ promoCodes: draft.promoCodes.map((item, itemIndex) => itemIndex === index ? event.target.value.toUpperCase() : item) }); }} aria-label={`Promo code ${String(index + 1)}`} /><small>Limited uses</small><button className={styles['removeButton']} type="button" aria-label={`Remove promo code ${code}`} onClick={() => { update({ promoCodes: draft.promoCodes.filter((_, itemIndex) => itemIndex !== index) }); }}>×</button></div>)}</div>
+          <button className={styles['outlineButton']} type="button" onClick={() => { update({ promoCodes: [...draft.promoCodes, 'NEWCODE'] }); }}>+ Add code</button>
+        </div>
+        <div>
+          <div className={styles['cardTitle']}>Dynamic pricing & timed entry charges</div>
+          <div className={styles['muted']}>Auto-adjust prices by inventory position — configure early bird discounts and late arrival door surcharges.</div>
+          <div className={styles['dynamicPricingGrid']}>
+            <div className={styles['pricingOptionCard']}>
+              <div className={styles['pricingOptionHeader']}>
+                <strong>Early bird discount</strong>
+                <span>Reward early ticket buyers with tier price reductions</span>
+              </div>
+              <div className={styles['rateField']}>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  inputMode="decimal"
+                  value={String(draft.earlyBirdDiscountPercent ?? 0)}
+                  onChange={(event) => { update({ earlyBirdDiscountPercent: numberValue(event.target.value) }); }}
+                  placeholder="e.g. 15"
+                  aria-label="Early bird discount percentage"
+                />
+                <span>% off</span>
+              </div>
+            </div>
+            <div className={styles['pricingOptionCard']}>
+              <div className={styles['pricingOptionHeader']}>
+                <strong>Late arrival charges</strong>
+                <span>Percentage surcharge for entry after cut-off time</span>
+              </div>
+              <div className={styles['rateField']}>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  inputMode="decimal"
+                  value={String(draft.lateArrivalChargePercent ?? 0)}
+                  onChange={(event) => { update({ lateArrivalChargePercent: numberValue(event.target.value) }); }}
+                  placeholder="e.g. 10"
+                  aria-label="Late arrival surcharge percentage"
+                />
+                <span>% surcharge</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
+  );
 }
 
 export function EventPromoterSelector({ data, draft, update }: { readonly data: EventEditorData; readonly draft: EventEditorDraft; readonly update: DraftUpdate }) {

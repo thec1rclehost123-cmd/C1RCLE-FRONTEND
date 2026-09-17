@@ -1,6 +1,8 @@
 import { getClientEnv } from '@c1rcle/config';
 
-const ACTIVE_ORG_COOKIE_NAME = 'c1rcle.active-org';
+import { ACTIVE_ORG_COOKIE_NAME, parseActiveOrgCookie } from './active-org-cookie';
+
+export { getActiveOrgIdFromCookieHeader } from './active-org-cookie';
 
 function isProduction(): boolean {
   return getClientEnv().NEXT_PUBLIC_ENVIRONMENT === 'production';
@@ -20,36 +22,7 @@ export function getActiveOrgId(): string | null {
 }
 
 /**
- * Reads `c1rcle.active-org` out of a raw `Cookie` header string. Framework-agnostic
- * (no `next/*` import) so it can be called from a Server Component or layout via
- * `getActiveOrgIdFromCookieHeader((await cookies()).toString())` — mirrors
- * `getServerSession`'s cookie-header-in pattern in `@c1rcle/auth`.
- */
-export function getActiveOrgIdFromCookieHeader(cookieHeader: string): string | null {
-  return parseActiveOrgCookie(cookieHeader);
-}
-
-function parseActiveOrgCookie(cookieHeader: string): string | null {
-  if (!cookieHeader) {
-    return null;
-  }
-
-  const cookies = cookieHeader.split(';');
-  for (const cookie of cookies) {
-    const separatorIndex = cookie.indexOf('=');
-    if (separatorIndex === -1) continue;
-    const key = cookie.slice(0, separatorIndex).trim();
-    const value = cookie.slice(separatorIndex + 1).trim();
-    if (key === ACTIVE_ORG_COOKIE_NAME && value) {
-      return decodeURIComponent(value);
-    }
-  }
-
-  return null;
-}
-
-/**
- * Sets or clears the active organization ID cookie.
+ * Sets or clears the active organization ID cookie, and triggers token refresh for token rotation.
  * `c1rcle.active-org` is an id hint, not a credential — it is intentionally readable by
  * both client and server, unlike the access token (memory-only) or the session cookie (httpOnly).
  *
