@@ -8,6 +8,8 @@ import type {
   PartnerOrganizationSummary,
   PartnerProfile,
   PartnerRelationship,
+  PartnershipDto,
+  RequestPartnershipRequest,
 } from './contracts';
 
 const profile: PartnerProfile = {
@@ -102,4 +104,61 @@ export const fixtureHostRepository: HostRepository = {
   getPartners() { return Promise.resolve(relationships); },
   getFinance() { return Promise.resolve(finance); },
   getProfile() { return Promise.resolve(profile); },
+  requestPartnership(input) { return Promise.resolve().then(() => createFixturePartnership(input)); },
+  resolvePartnership(partnershipId, action, reason) {
+    return Promise.resolve().then(() => transitionFixturePartnership(partnershipId, action, reason));
+  },
+  getPartnerships() {
+    return Promise.resolve({
+      items: [...fixturePartnerships],
+      pageInfo: { hasNextPage: false },
+    });
+  },
 };
+
+/* ── In-memory venue↔host request lifecycle (fixture only) ─────────────────── */
+
+const fixturePartnerships: PartnershipDto[] = [];
+
+let fixturePartnershipSeq = 0;
+
+function createFixturePartnership(input: RequestPartnershipRequest): PartnershipDto {
+  fixturePartnershipSeq += 1;
+  const now = new Date().toISOString();
+  const partnership: PartnershipDto = {
+    id: `fixture-partnership-${fixturePartnershipSeq}`,
+    hostOrganizationId: input.initiatedBy === 'host' ? 'fixture-host-org' : (input.hostOrganizationId ?? 'fixture-host-org'),
+    venueOrganizationId: 'fixture-venue-org',
+    venueId: input.venueId,
+    initiatedBy: input.initiatedBy,
+    status: 'pending',
+    message: input.message ?? null,
+    resolutionReason: null,
+    resolvedAt: null,
+    version: 1,
+    createdAt: now,
+    updatedAt: now,
+  };
+  fixturePartnerships.push(partnership);
+  return partnership;
+}
+
+function transitionFixturePartnership(
+  partnershipId: string,
+  action: 'approve' | 'reject' | 'block' | 'end',
+  reason?: string,
+): PartnershipDto {
+  const partnership = fixturePartnerships.find((candidate) => candidate.id === partnershipId);
+  if (!partnership) throw new Error(`Partnership ${partnershipId} not found`);
+  const status = action === 'approve' ? 'active' : action === 'reject' ? 'rejected' : action === 'block' ? 'blocked' : 'ended';
+  const transitioned: PartnershipDto = {
+    ...partnership,
+    status,
+    resolutionReason: reason ?? null,
+    resolvedAt: new Date().toISOString(),
+    version: partnership.version + 1,
+    updatedAt: new Date().toISOString(),
+  };
+  fixturePartnerships.splice(fixturePartnerships.indexOf(partnership), 1, transitioned);
+  return transitioned;
+}

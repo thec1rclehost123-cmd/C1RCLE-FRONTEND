@@ -13,7 +13,7 @@ import { PartnerRequestCard } from './PartnerRequestCard';
 import styles from './partners.module.css';
 import { AddStaffButton } from './PartnerStaffInviteDialog';
 
-import type { PartnerRelationship, PartnerRelationshipSet, PartnerSegment, PartnerSubView, StaffMember } from '@/data/partner-data-source';
+import type { PartnerRelationship, PartnerRelationshipSet, PartnerRequest, PartnerSegment, PartnerSubView, StaffMember } from '@/data/partner-data-source';
 
 export interface PartnerNetworkData {
   readonly primary: PartnerRelationshipSet;
@@ -33,6 +33,16 @@ export interface PartnerNetworkScreenProps {
   readonly profileId?: string;
   readonly showSearch?: boolean;
   readonly hostAccent?: boolean;
+  readonly pendingRequestId?: string | null;
+  readonly pendingRequestAction?: 'approve' | 'reject' | null;
+  readonly requestErrorId?: string | null;
+  readonly requestError?: string | null;
+  readonly connectingPartnerId?: string | null;
+  readonly connectErrorId?: string | null;
+  readonly connectError?: string | null;
+  readonly onApproveRequest?: ((request: PartnerRequest) => void) | undefined;
+  readonly onRejectRequest?: ((request: PartnerRequest) => void) | undefined;
+  readonly onConnectPartner?: ((partner: PartnerRelationship) => void) | undefined;
 }
 
 interface QueryState {
@@ -52,14 +62,15 @@ const relationshipRecords = (data: PartnerNetworkData, segment: 'hosts' | 'venue
 function StaffList({ staff, search }: { readonly staff: readonly StaffMember[]; readonly search: string }) {
   const records = filterBySearch(staff, search);
   if (!records.length) return <EmptyState title="No staff found" description="Try a different name or clear the search." />;
-  return <div className={styles['staffGrid']}>{records.map((member) => <article className={styles['staffCard']} key={member.id}><div className={styles['staffCardHeader']}><div className={styles['partnerIdentity']}><Avatar name={member.name} /><div><h3>{member.name}</h3><p>{member.role}</p></div></div><Badge tone="success">{member.status}</Badge></div><div className={styles['permissionChips']}>{member.permissions.map((permission) => <span key={permission}>{permission}</span>)}</div><Button type="button" variant="secondary" disabled title="Staff access changes are unavailable in fixture mode">Manage access</Button></article>)}</div>;
+  return <div className={styles['staffGrid']}>{records.map((member) => <article className={styles['staffCard']} key={member.id}><div className={styles['staffCardHeader']}><div className={styles['partnerIdentity']}><Avatar name={member.name} /><div><h3>{member.name}</h3><p>{member.role}</p></div></div><Badge tone="success">{member.status}</Badge></div><div className={styles['permissionChips']}>{member.permissions.map((permission) => <span key={permission}>{permission}</span>)}</div><Button type="button" variant="secondary" disabled title="Staff access changes are not available yet">Manage access</Button></article>)}</div>;
 }
 
-export function PartnerNetworkScreen({ data, baseHref, primarySegment, primaryLabel, primarySubLabel, segment = primarySegment, subView = 'connected', search = '', profileId, showSearch = true, hostAccent = false }: PartnerNetworkScreenProps) {
+export function PartnerNetworkScreen({ data, baseHref, primarySegment, primaryLabel, primarySubLabel, segment = primarySegment, subView = 'connected', search = '', profileId, showSearch = true, hostAccent = false, pendingRequestId = null, pendingRequestAction = null, requestErrorId = null, requestError = null, connectingPartnerId = null, connectErrorId = null, connectError = null, onApproveRequest, onRejectRequest, onConnectPartner }: PartnerNetworkScreenProps) {
   const state: QueryState = { segment, subView, search, profileId };
   const partnerSet = segment === 'staff' ? null : segment === primarySegment ? data.primary : data.promoters;
   const records = segment === 'hosts' || segment === 'venues' || segment === 'promoters' ? filterBySearch(relationshipRecords(data, segment, subView), search) : [];
-  const requests = partnerSet && subView === 'requests' ? [...filterBySearch(partnerSet.requests.incoming, search), ...filterBySearch(partnerSet.requests.outgoing, search)] : [];
+  const incomingRequests = partnerSet && subView === 'requests' ? filterBySearch(partnerSet.requests.incoming, search) : [];
+  const outgoingRequests = partnerSet && subView === 'requests' ? filterBySearch(partnerSet.requests.outgoing, search) : [];
   const profile = partnerSet ? [...partnerSet.connected, ...partnerSet.discover].find((item) => item.id === profileId) : undefined;
   const rootClass = hostAccent ? styles['hostPartners'] : '';
   const hrefFor = (overrides: Partial<QueryState> = {}) => {
@@ -87,8 +98,51 @@ export function PartnerNetworkScreen({ data, baseHref, primarySegment, primaryLa
         </nav>
         {segment !== 'staff' ? <nav className={styles['subTabs']} aria-label={`${segment} partner views`}>{subViewItems.map((item) => <Link key={item.value} href={hrefFor({ subView: item.value, profileId: undefined })} className={subView === item.value ? styles['subTabActive'] : ''} aria-current={subView === item.value ? 'page' : undefined}>{item.label}</Link>)}</nav> : null}
         {showSearch ? <form className={styles['partnerToolbar']} action={baseHref} method="get"><input type="hidden" name="tab" value={segment} />{segment !== 'staff' ? <input type="hidden" name="view" value={subView} /> : null}<SearchInput name="search" defaultValue={search} placeholder="Search partners" aria-label="Search partners" /><Button type="submit" variant="secondary">Search</Button>{search ? <Link className={styles['clearSearch']} href={hrefFor({ search: '', profileId: undefined })}>Clear</Link> : null}</form> : null}
-        {subView === 'requests' && segment !== 'staff' ? requests.length ? <div className={styles['requestList']}>{requests.map((request) => <PartnerRequestCard key={`${request.direction}-${request.id}`} request={request} hostAccent={hostAccent} />)}</div> : <EmptyState title="No requests found" description="Incoming and outgoing partner requests will appear here." /> : segment === 'staff' ? <StaffList staff={data.staff} search={search} /> : records.length ? <div className={styles['partnerGrid']}>{records.map((partner) => <PartnerCard key={partner.id} partner={partner} href={hrefFor({ profileId: partner.id })} hostAccent={hostAccent} />)}</div> : <EmptyState title="No partners found" description="Try a different search or explore the discover view." action={<Link className={styles['emptyLink']} href={hrefFor({ search: '', subView: 'discover', profileId: undefined })}>Browse discover</Link>} />}
-        {profile ? <PartnerProfilePanel partner={profile} closeHref={hrefFor({ profileId: undefined })} {...(hostAccent ? { primaryButtonClassName: styles['hostPrimaryButton'] } : {})} hostAccent={hostAccent} /> : null}
+        {subView === 'requests' && segment !== 'staff' ? (
+          incomingRequests.length === 0 && outgoingRequests.length === 0 ? (
+            <EmptyState title="No requests found" description="Incoming and sent partner requests will appear here." />
+          ) : (
+            <div className={styles['requestSections']}>
+              {incomingRequests.length > 0 ? (
+                <section>
+                  <h2 className={styles['requestSectionHeading']}>Incoming</h2>
+                  <div className={styles['requestList']}>
+                    {incomingRequests.map((request) => (
+                      <PartnerRequestCard
+                        key={`incoming-${request.id}`}
+                        request={request}
+                        hostAccent={hostAccent}
+                        pendingAction={pendingRequestId === request.id ? pendingRequestAction : null}
+                        error={requestErrorId === request.id ? requestError : null}
+                        onApprove={onApproveRequest}
+                        onReject={onRejectRequest}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+              {outgoingRequests.length > 0 ? (
+                <section>
+                  <h2 className={styles['requestSectionHeading']}>Sent</h2>
+                  <div className={styles['requestList']}>
+                    {outgoingRequests.map((request) => (
+                      <PartnerRequestCard
+                        key={`outgoing-${request.id}`}
+                        request={request}
+                        hostAccent={hostAccent}
+                        pendingAction={pendingRequestId === request.id ? pendingRequestAction : null}
+                        error={requestErrorId === request.id ? requestError : null}
+                        onApprove={onApproveRequest}
+                        onReject={onRejectRequest}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+            </div>
+          )
+        ) : segment === 'staff' ? <StaffList staff={data.staff} search={search} /> : records.length ? <div className={styles['partnerGrid']}>{records.map((partner) => <PartnerCard key={partner.id} partner={partner} href={hrefFor({ profileId: partner.id })} hostAccent={hostAccent} connecting={connectingPartnerId === partner.id} connectError={connectErrorId === partner.id ? connectError : null} onConnect={subView === 'discover' ? onConnectPartner : undefined} />)}</div> : subView === 'discover' ? <EmptyState title="No partners found" description="No new partners match right now. Real venues, hosts and promoters from the backend will appear here as they join." /> : <EmptyState title="No partners found" description="Try a different search or explore the discover view." action={<Link className={styles['emptyLink']} href={hrefFor({ search: '', subView: 'discover', profileId: undefined })}>Browse discover</Link>} />}
+        {profile ? <PartnerProfilePanel partner={profile} closeHref={hrefFor({ profileId: undefined })} {...(hostAccent ? { primaryButtonClassName: styles['hostPrimaryButton'] } : {})} hostAccent={hostAccent} connecting={connectingPartnerId === profile.id} connectError={connectErrorId === profile.id ? connectError : null} onConnect={!profile.status ? onConnectPartner : undefined} /> : null}
       </div>
     </PageContainer>
   );

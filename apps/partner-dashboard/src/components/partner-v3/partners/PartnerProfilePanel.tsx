@@ -8,7 +8,16 @@ import { PartnerStatusBadge } from './PartnerStatusBadge';
 
 import type { PartnerRelationship } from '@/data/partner-data-source';
 
-export function PartnerProfilePanel({ partner, closeHref, primaryButtonClassName, hostAccent = false }: { readonly partner: PartnerRelationship; readonly closeHref: string; readonly primaryButtonClassName?: string; readonly hostAccent?: boolean }) {
+export function PartnerProfilePanel({ partner, closeHref, primaryButtonClassName, hostAccent = false, connecting = false, connectError = null, onConnect }: {
+  readonly partner: PartnerRelationship;
+  readonly closeHref: string;
+  readonly primaryButtonClassName?: string;
+  readonly hostAccent?: boolean;
+  readonly connecting?: boolean;
+  readonly connectError?: string | null;
+  readonly onConnect?: ((partner: PartnerRelationship) => void) | undefined;
+}) {
+  const isDiscover = !partner.status;
   const actionLabel = partner.status === 'Partnered' ? (partner.kind === 'promoter' ? 'Assign to event' : 'Request a date') : 'Invite to partner';
   return (
     <aside className={styles['profilePanel']} aria-label={`${partner.name} profile`}>
@@ -23,7 +32,7 @@ export function PartnerProfilePanel({ partner, closeHref, primaryButtonClassName
             <h2>{partner.name}</h2>
             {partner.verified ? <span className={styles['verified']} aria-label="Verified partner">✓</span> : null}
           </div>
-          <p>{partner.kind === 'host' ? 'Host' : 'Promoter'} · {partner.location}</p>
+          <p>{partner.kind === 'host' ? 'Host' : partner.kind === 'venue' ? 'Venue' : 'Promoter'} · {partner.location}</p>
         </div>
             {partner.status ? <PartnerStatusBadge status={partner.status} hostAccent={hostAccent} /> : null}
       </div>
@@ -34,7 +43,25 @@ export function PartnerProfilePanel({ partner, closeHref, primaryButtonClassName
         <div><span>Genres</span><strong>{partner.genres.join(' · ')}</strong></div>
         <div><span>Upcoming events</span><div className={styles['upcomingEvents']}>{partner.upcomingEvents.map((event) => <span key={event.id}><strong>{event.name}</strong><small>{event.dateLabel}</small></span>)}</div></div>
       </div>
-      <Button type="button" variant="primary" className={primaryButtonClassName} disabled title="Partner actions are unavailable in fixture mode">{actionLabel}</Button>
+      {connectError ? (
+        <p role="alert" className={styles['requestError'] ?? ''}>
+          {connectError}
+        </p>
+      ) : null}
+      {isDiscover && onConnect ? (
+        <Button
+          type="button"
+          variant="primary"
+          className={primaryButtonClassName}
+          disabled={connecting}
+          title={`Send a connection request to ${partner.name}`}
+          onClick={() => onConnect(partner)}
+        >
+          {connecting ? 'Connecting…' : actionLabel}
+        </Button>
+      ) : (
+        <Button type="button" variant="primary" className={primaryButtonClassName} disabled title="Partner actions are not available yet">{actionLabel}</Button>
+      )}
     </aside>
   );
 }
