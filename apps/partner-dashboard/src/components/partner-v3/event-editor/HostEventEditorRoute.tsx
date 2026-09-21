@@ -81,7 +81,7 @@ export function HostEventEditorRoute({
   const artwork = data.artworkOptions[0] ?? data.defaultDraft.artwork;
   const liveData: EventEditorData = {
     ...data,
-    promoters: promoters.data,
+    promoters: promoters.data.length ? promoters.data : data.promoters,
     venues: state.data.venues.map((item, index) => ({
       id: item.venue.id,
       name: item.venue.name,
@@ -96,11 +96,7 @@ export function HostEventEditorRoute({
   };
 
   const submitHostEvent = async (draft: EventEditorDraft) => {
-    try {
-      await submitHostEventRequest(organizationId, draft);
-    } catch (cause) {
-      console.warn('Backend host event request submission fallback:', cause);
-    }
+    await submitHostEventRequest(organizationId, draft);
     const params = new URLSearchParams({ requested: 'true' });
     router.push(`/partner/host/slot-requests?${params.toString()}`);
   };

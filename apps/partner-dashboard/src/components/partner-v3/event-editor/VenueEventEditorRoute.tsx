@@ -81,7 +81,7 @@ export function VenueEventEditorRoute({
   const artwork = data.artworkOptions[0] ?? data.defaultDraft.artwork;
   const liveData: EventEditorData = {
     ...data,
-    promoters: promoters.data,
+    promoters: promoters.data.length ? promoters.data : data.promoters,
     venues: state.data.venues.map((venue, index) => ({
       id: venue.id,
       name: venue.name,
