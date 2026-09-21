@@ -10,10 +10,11 @@ export default async function StudioCalendarPage({ params, searchParams }: { rea
   const query = await searchParams;
   const getValue = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] : value;
   if (studio === 'venue') {
-    const data = await fixturePartnerDataSource.getVenueCalendar();
+    // Live data only: VenueCalendarScreen fetches the venue, its events, and
+    // its blocked slots from the backend — no fixture payload is passed.
     const month = getValue(query['month']);
     const date = getValue(query['date']);
-    return <VenueCalendarScreen data={data} {...(month ? { initialMonth: month } : {})} {...(date ? { initialDate: date } : {})} initialDialog={getValue(query['dialog']) === 'block'} />;
+    return <VenueCalendarScreen {...(month ? { initialMonth: month } : {})} {...(date ? { initialDate: date } : {})} initialDialog={getValue(query['dialog']) === 'block'} />;
   }
   const data = await fixturePartnerDataSource.getHostAvailability();
   const month = getValue(query['month']);

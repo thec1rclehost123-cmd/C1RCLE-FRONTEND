@@ -807,9 +807,17 @@ export interface CalendarEvent {
 
 export interface CalendarBlock {
   readonly id: string;
+  /** Start date (YYYY-MM-DD) of the blocked window. */
   readonly date: string;
+  /**
+   * Inclusive end date (YYYY-MM-DD) for multi-day / overnight blocks.
+   * Absent (or equal to `date`) means the block starts and ends the same day.
+   */
+  readonly endDate?: string | undefined;
   readonly reason: string;
+  /** Zero-padded 24-hour HH:MM on `date`. */
   readonly from: string;
+  /** Zero-padded 24-hour HH:MM on `endDate` (or `date` when single-day). */
   readonly to: string;
 }
 
