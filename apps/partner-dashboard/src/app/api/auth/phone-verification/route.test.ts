@@ -45,7 +45,7 @@ afterEach(() => {
 const CSRF_HEADERS = {
   origin: APP_ORIGIN,
   'x-csrf-token': 'tok',
-  cookie: 'c1rcle.csrf=tok; better-auth.session_token=sess_abc',
+  cookie: 'partner.c1rcle.csrf=tok; better-auth.session_token=sess_abc',
 };
 
 describe('POST /api/auth/phone-verification', () => {

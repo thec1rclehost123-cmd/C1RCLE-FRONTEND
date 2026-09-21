@@ -6,7 +6,12 @@ import { useState } from 'react';
 import { Button, EmptyState, ErrorState, LoadingState } from '@c1rcle/ui';
 
 import { PageHeader } from '@/components/admin/page-header';
-import { listHosts, reinstateOrganization, suspendOrganization } from '@/lib/admin/admin-api';
+import {
+  exportHostsCsv,
+  listHosts,
+  reinstateOrganization,
+  suspendOrganization,
+} from '@/lib/admin/admin-api';
 import {
   formatDateTime,
   shortId,
@@ -51,12 +56,30 @@ export default function HostsDesk() {
     onSuccess: invalidate,
   });
 
+  const exportMutation = useMutation({
+    mutationFn: () => exportHostsCsv(),
+  });
+
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Hosts"
-        description="Organizer organizations and their platform fee. Suspend/reinstate are Tier-2 commands — a single ops/admin decision, recorded to the audit trail. Commission adjustments are a separate Tier-3 proposal action, not a direct edit."
-      />
+      <div className="flex items-start justify-between gap-4">
+        <PageHeader
+          title="Hosts"
+          description="Organizer organizations and their platform fee. Suspend/reinstate are Tier-2 commands — a single ops/admin decision, recorded to the audit trail. Commission adjustments are a separate Tier-3 proposal action, not a direct edit."
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={exportMutation.isPending}
+          onClick={() => {
+            exportMutation.mutate();
+          }}
+          aria-busy={exportMutation.isPending}
+        >
+          {exportMutation.isPending ? 'Exporting…' : 'Export CSV'}
+        </Button>
+      </div>
 
       {list.isPending ? (
         <LoadingState label="Loading hosts…" />
@@ -188,6 +211,11 @@ export default function HostsDesk() {
         <p role="alert" className="text-sm text-destructive">
           The organization could not be reinstated. It is safe to retry — the request is
           idempotency-keyed.
+        </p>
+      ) : null}
+      {exportMutation.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          The CSV could not be generated. Please retry.
         </p>
       ) : null}
     </div>

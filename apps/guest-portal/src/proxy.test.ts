@@ -9,6 +9,7 @@ import { proxy } from './proxy';
 function configure(environment: 'development' | 'preview' | 'production') {
   vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'https://api.c1rcle.test');
   vi.stubEnv('NEXT_PUBLIC_APP_NAME', 'C1RCLE Guest Portal');
+  vi.stubEnv('NEXT_PUBLIC_APP_ID', 'guest');
   vi.stubEnv('NEXT_PUBLIC_ENVIRONMENT', environment);
   resetEnvCacheForTests();
 }

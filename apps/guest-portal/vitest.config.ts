@@ -19,6 +19,7 @@ export default defineConfig({
     env: {
       NEXT_PUBLIC_API_BASE_URL: 'https://api.c1rcle.test',
       NEXT_PUBLIC_APP_NAME: 'C1RCLE Guest Portal',
+      NEXT_PUBLIC_APP_ID: 'guest',
       NEXT_PUBLIC_ENVIRONMENT: 'development',
     },
     coverage: {

@@ -19,6 +19,7 @@ import {
 import { formatDateTime, onboardingStatusTone, ONBOARDING_STATUS_LABELS, shortId, StatusBadge } from '@/lib/admin/format';
 
 import type { OnboardingStatus } from '@/lib/admin/contract-types';
+import type { OnboardingRequestDto } from '@c1rcle/contracts';
 
 type Filter = OnboardingStatus;
 
@@ -28,6 +29,30 @@ interface Reviewing {
 }
 
 const IN_REVIEWABLE: readonly OnboardingStatus[] = ['submitted', 'changes_requested'];
+
+const REQUIRED_DOCUMENT_LABELS = ['id_front', 'id_back', 'selfie'];
+const REQUIRED_DOCUMENT_LABELS_BUSINESS = [
+  'registration_certificate',
+  'sig_id_front',
+  'sig_id_back',
+  'sig_selfie',
+];
+
+/**
+ * Mirrors the backend's KYC gate (`allRequiredDocumentsVerified` in
+ * `packages/core/src/domain/models/onboarding.ts`) so the Approve button
+ * can be disabled client-side with a clear reason, rather than just
+ * bouncing off a 400 after the admin clicks it.
+ */
+function allRequiredDocumentsVerified(application: OnboardingRequestDto): boolean {
+  const required =
+    application.profile.entityType === 'business'
+      ? REQUIRED_DOCUMENT_LABELS_BUSINESS
+      : REQUIRED_DOCUMENT_LABELS;
+  return required.every((label) =>
+    application.documents.some((document) => document.label === label && document.status === 'verified'),
+  );
+}
 
 export default function OnboardingDesk() {
   const queryClient = useQueryClient();
@@ -106,7 +131,7 @@ export default function OnboardingDesk() {
       <div className="flex items-start justify-between gap-4">
         <PageHeader
           title="Onboarding"
-          description="Applicant submissions queued for KYC review. Approving a venue provisions its organization; a rejection or changes request returns it to the applicant."
+          description="The application decision — approve, reject, or request changes. Approving provisions the organization; it's blocked until every required document is verified on the KYC desk."
         />
         <StatusFilter
           id="onboarding-status"
@@ -154,6 +179,7 @@ export default function OnboardingDesk() {
               {list.data.items.map((application) => {
                 const isReviewing = reviewing?.applicationId === application.id;
                 const reviewable = IN_REVIEWABLE.includes(application.status);
+                const docsVerified = allRequiredDocumentsVerified(application);
                 return (
                   <tr key={application.id}>
                     <td className="px-4 py-3">
@@ -227,37 +253,48 @@ export default function OnboardingDesk() {
                           </div>
                         </div>
                       ) : reviewable ? (
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            onClick={() => {
-                              setReviewing({ applicationId: application.id, mode: 'approve' });
-                              setNote('');
-                            }}
-                          >
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setReviewing({ applicationId: application.id, mode: 'changes' });
-                              setNote('');
-                            }}
-                          >
-                            Request changes
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => {
-                              setReviewing({ applicationId: application.id, mode: 'reject' });
-                              setNote('');
-                            }}
-                          >
-                            Reject
-                          </Button>
+                        <div className="flex flex-col items-end gap-1">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              disabled={!docsVerified}
+                              title={
+                                docsVerified
+                                  ? undefined
+                                  : 'All required documents must be verified on the KYC desk first'
+                              }
+                              onClick={() => {
+                                setReviewing({ applicationId: application.id, mode: 'approve' });
+                                setNote('');
+                              }}
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setReviewing({ applicationId: application.id, mode: 'changes' });
+                                setNote('');
+                              }}
+                            >
+                              Request changes
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => {
+                                setReviewing({ applicationId: application.id, mode: 'reject' });
+                                setNote('');
+                              }}
+                            >
+                              Reject
+                            </Button>
+                          </div>
+                          {docsVerified ? null : (
+                            <p className="text-xs text-muted-foreground">Needs KYC verification</p>
+                          )}
                         </div>
                       ) : (
                         <p className="text-right text-xs text-muted-foreground">

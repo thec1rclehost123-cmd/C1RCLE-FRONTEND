@@ -19,6 +19,7 @@ import {
   type adminTicketStatusSchema,
   type adminVenueDtoSchema,
   type eventStatusSchema,
+  type onboardingDocumentStatusSchema,
   type onboardingStatusSchema,
   type organizationStatusSchema,
   type proposalStatusSchema,
@@ -31,6 +32,7 @@ export type AdminRole = z.infer<typeof adminRoleSchema>;
 export type AdminAction = z.infer<typeof adminActionSchema>;
 export type ProposalStatus = z.infer<typeof proposalStatusSchema>;
 export type OnboardingStatus = z.infer<typeof onboardingStatusSchema>;
+export type OnboardingDocumentStatus = z.infer<typeof onboardingDocumentStatusSchema>;
 export type AdminRefundRequestStatus = z.infer<typeof adminRefundRequestStatusSchema>;
 export type AdminPayoutStatus = z.infer<typeof adminPayoutStatusSchema>;
 export type EventStatus = z.infer<typeof eventStatusSchema>;

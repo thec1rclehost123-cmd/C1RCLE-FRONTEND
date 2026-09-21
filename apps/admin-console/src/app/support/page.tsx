@@ -432,7 +432,7 @@ export default function SupportDesk() {
                       {ticket.assignee === null ? 'Unassigned' : ticket.assignee.name}
                     </td>
                     <td
-                      className={`px-4 py-3 text-xs ${responseBreached ? 'text-destructive' : 'text-muted-foreground'}`}
+                      className={`px-4 py-3 text-xs ${responseBreached ? 'text-urgent' : 'text-muted-foreground'}`}
                     >
                       {overdueLabel(ticket.sla.responseDueAt, ticket.sla.responseBreachedAt)}
                     </td>
@@ -786,7 +786,7 @@ function TicketDetail({
               <dt className="text-muted-foreground">Response SLA</dt>
               <dd
                 className={`text-right text-xs ${
-                  ticket.sla.responseBreachedAt !== null ? 'text-destructive' : ''
+                  ticket.sla.responseBreachedAt !== null ? 'text-urgent' : ''
                 }`}
               >
                 {overdueLabel(ticket.sla.responseDueAt, ticket.sla.responseBreachedAt)}
@@ -796,7 +796,7 @@ function TicketDetail({
               <dt className="text-muted-foreground">Resolution SLA</dt>
               <dd
                 className={`text-right text-xs ${
-                  ticket.sla.resolutionBreachedAt !== null ? 'text-destructive' : ''
+                  ticket.sla.resolutionBreachedAt !== null ? 'text-urgent' : ''
                 }`}
               >
                 {overdueLabel(ticket.sla.resolutionDueAt, ticket.sla.resolutionBreachedAt)}

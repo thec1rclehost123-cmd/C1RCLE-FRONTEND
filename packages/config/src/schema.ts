@@ -18,6 +18,14 @@ export const clientEnvSchema = z.object({
   NEXT_PUBLIC_API_BASE_URL: url,
   NEXT_PUBLIC_APP_NAME: z.string().min(1),
   NEXT_PUBLIC_ENVIRONMENT: z.enum(['development', 'preview', 'production']),
+  /**
+   * Stable per-app slug (not the human-readable `NEXT_PUBLIC_APP_NAME`),
+   * used to namespace browser-scoped state — e.g. the CSRF cookie name — so
+   * guest-portal/partner-dashboard/admin-console don't collide when run
+   * together on shared-host dev ports (browsers key cookies by host only,
+   * not port).
+   */
+  NEXT_PUBLIC_APP_ID: z.enum(['guest', 'partner', 'admin']),
   NEXT_PUBLIC_SENTRY_DSN: url.optional(),
   /**
    * GCP Identity Platform (Firebase Auth), scoped to ONE use: the

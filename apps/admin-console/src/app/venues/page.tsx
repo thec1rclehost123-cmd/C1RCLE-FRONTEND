@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Button, EmptyState, ErrorState, LoadingState } from '@c1rcle/ui';
 
 import { PageHeader } from '@/components/admin/page-header';
-import { listVenues, reinstateVenue, suspendVenue } from '@/lib/admin/admin-api';
+import { exportVenuesCsv, listVenues, reinstateVenue, suspendVenue } from '@/lib/admin/admin-api';
 import {
   formatDateTime,
   shortId,
@@ -51,6 +51,10 @@ export default function VenuesDesk() {
     onSuccess: invalidate,
   });
 
+  const exportMutation = useMutation({
+    mutationFn: () => exportVenuesCsv(),
+  });
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
@@ -58,6 +62,18 @@ export default function VenuesDesk() {
           title="Venues"
           description="All registered venues. Suspending is a Tier-2 command — a single ops/admin decision, recorded to the audit trail, and idempotent (a repeat suspend is a no-op)."
         />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={exportMutation.isPending}
+          onClick={() => {
+            exportMutation.mutate();
+          }}
+          aria-busy={exportMutation.isPending}
+        >
+          {exportMutation.isPending ? 'Exporting…' : 'Export CSV'}
+        </Button>
       </div>
 
       {list.isPending ? (
@@ -188,6 +204,11 @@ export default function VenuesDesk() {
       {reinstateMutation.isError ? (
         <p role="alert" className="text-sm text-destructive">
           The venue could not be reinstated. It is safe to retry — the request is idempotency-keyed.
+        </p>
+      ) : null}
+      {exportMutation.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          The CSV could not be generated. Please retry.
         </p>
       ) : null}
     </div>

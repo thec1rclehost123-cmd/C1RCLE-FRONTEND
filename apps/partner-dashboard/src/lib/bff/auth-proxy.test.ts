@@ -38,17 +38,17 @@ describe('assertSameOrigin', () => {
 
 describe('assertCsrf', () => {
   it('passes when the cookie and header match', () => {
-    const req = request({ 'x-csrf-token': 'tok-123', cookie: 'c1rcle.csrf=tok-123' });
+    const req = request({ 'x-csrf-token': 'tok-123', cookie: 'partner.c1rcle.csrf=tok-123' });
     expect(assertCsrf(req)).toBeNull();
   });
 
   it('rejects a mismatch', () => {
-    const req = request({ 'x-csrf-token': 'tok-123', cookie: 'c1rcle.csrf=different' });
+    const req = request({ 'x-csrf-token': 'tok-123', cookie: 'partner.c1rcle.csrf=different' });
     expect(assertCsrf(req)?.status).toBe(403);
   });
 
   it('rejects a missing token', () => {
-    expect(assertCsrf(request({ cookie: 'c1rcle.csrf=tok-123' }))?.status).toBe(403);
+    expect(assertCsrf(request({ cookie: 'partner.c1rcle.csrf=tok-123' }))?.status).toBe(403);
     expect(assertCsrf(request({ 'x-csrf-token': 'tok-123' }))?.status).toBe(403);
     expect(assertCsrf(request({}))?.status).toBe(403);
   });

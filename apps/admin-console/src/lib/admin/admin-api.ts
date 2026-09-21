@@ -18,6 +18,7 @@ import {
   adminOrderDtoSchema,
   adminOrderListResponseSchema,
   adminPromoListResponseSchema,
+  adminPromoterActionResponseSchema,
   adminPromoterAssignmentListResponseSchema,
   adminRefundRequestDtoSchema,
   adminRefundRequestListResponseSchema,
@@ -44,6 +45,7 @@ import {
   platformAdminDtoSchema,
   proposedActionDtoSchema,
   proposeActionSchema,
+  rejectKycDocumentSchema,
   rejectRefundRequestSchema,
   resolveProposalSchema,
   resolveSupportTicketSchema,
@@ -278,6 +280,37 @@ export function getOnboardingDocumentReadUrl(
   });
 }
 
+/**
+ * KYC desk: marks one uploaded document legitimate. Distinct from
+ * approve/reject/request-changes above — this never decides the
+ * application, only one document's own review state (see the KYC desk's
+ * page-level doc comment for why the two are split).
+ */
+export function verifyOnboardingDocument(
+  applicationId: string,
+  label: string,
+): Promise<z.infer<typeof onboardingRequestDtoSchema>> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/onboarding/applications/${applicationId}/documents/${label}/verify`,
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: onboardingRequestDtoSchema,
+  });
+}
+
+/** KYC desk: marks one uploaded document illegitimate/unreadable — reason required. */
+export function rejectOnboardingDocument(
+  applicationId: string,
+  label: string,
+  reason: string,
+): Promise<z.infer<typeof onboardingRequestDtoSchema>> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/onboarding/applications/${applicationId}/documents/${label}/reject`,
+    body: rejectKycDocumentSchema.parse({ reason }),
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: onboardingRequestDtoSchema,
+  });
+}
+
 /* ─── Refunds ──────────────────────────────────────────────────────────────── */
 
 export function listRefunds(
@@ -430,6 +463,30 @@ export const PROMOTER_ASSIGNMENT_STATUSES: readonly PromoterAssignmentStatus[] =
   'ended',
   'suspended',
 ];
+
+export type AdminPromoterActionResponse = z.infer<typeof adminPromoterActionResponseSchema>;
+
+/**
+ * Suspends every assignment a promoter (an org member) currently holds —
+ * PROMOTER_SUSPEND is a TIER2 direct command, idempotent (a repeat suspend
+ * is a no-op returning `affectedAssignments: 0`).
+ */
+export function suspendPromoter(promoterId: string): Promise<AdminPromoterActionResponse> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/promoters/${promoterId}/suspend`,
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: adminPromoterActionResponseSchema,
+  });
+}
+
+/** Reverses `suspendPromoter` — PROMOTER_REINSTATE is a TIER2 direct command. */
+export function reinstatePromoter(promoterId: string): Promise<AdminPromoterActionResponse> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/promoters/${promoterId}/reinstate`,
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: adminPromoterActionResponseSchema,
+  });
+}
 
 /* ─── Admins ───────────────────────────────────────────────────────────────── */
 
@@ -1062,6 +1119,62 @@ export async function exportAuditCsv(fileName = 'admin-audit.csv'): Promise<void
 export async function exportUsersCsv(fileName = 'users.csv'): Promise<void> {
   const csv = await getAdminApiClient().fetchText({
     path: '/api/v2/admin/users/export.csv',
+  });
+  downloadCsv(csv, fileName);
+}
+
+export async function exportVenuesCsv(fileName = 'venues.csv'): Promise<void> {
+  const csv = await getAdminApiClient().fetchText({
+    path: '/api/v2/admin/venues/export.csv',
+  });
+  downloadCsv(csv, fileName);
+}
+
+export async function exportEventsCsv(fileName = 'events.csv'): Promise<void> {
+  const csv = await getAdminApiClient().fetchText({
+    path: '/api/v2/admin/events/export.csv',
+  });
+  downloadCsv(csv, fileName);
+}
+
+export async function exportHostsCsv(fileName = 'hosts.csv'): Promise<void> {
+  const csv = await getAdminApiClient().fetchText({
+    path: '/api/v2/admin/hosts/export.csv',
+  });
+  downloadCsv(csv, fileName);
+}
+
+export async function exportPromotersCsv(fileName = 'promoters.csv'): Promise<void> {
+  const csv = await getAdminApiClient().fetchText({
+    path: '/api/v2/admin/promoters/export.csv',
+  });
+  downloadCsv(csv, fileName);
+}
+
+export async function exportOrdersCsv(fileName = 'orders.csv'): Promise<void> {
+  const csv = await getAdminApiClient().fetchText({
+    path: '/api/v2/admin/orders/export.csv',
+  });
+  downloadCsv(csv, fileName);
+}
+
+export async function exportTicketsCsv(fileName = 'tickets.csv'): Promise<void> {
+  const csv = await getAdminApiClient().fetchText({
+    path: '/api/v2/admin/tickets/export.csv',
+  });
+  downloadCsv(csv, fileName);
+}
+
+export async function exportPromotionsCsv(fileName = 'promotions.csv'): Promise<void> {
+  const csv = await getAdminApiClient().fetchText({
+    path: '/api/v2/admin/promotions/export.csv',
+  });
+  downloadCsv(csv, fileName);
+}
+
+export async function exportRefundsCsv(fileName = 'refunds.csv'): Promise<void> {
+  const csv = await getAdminApiClient().fetchText({
+    path: '/api/v2/admin/refunds/export.csv',
   });
   downloadCsv(csv, fileName);
 }

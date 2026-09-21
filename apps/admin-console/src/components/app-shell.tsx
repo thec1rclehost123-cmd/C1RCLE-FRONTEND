@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { logout, useSession } from '@c1rcle/auth';
 import {
@@ -39,6 +39,7 @@ import { useTheme } from '@c1rcle/providers';
 
 import { NAV_SECTIONS, APP_TITLE, APP_SHORT_TITLE } from '@/lib/app-meta';
 
+import type { User } from '@c1rcle/contracts';
 import type { IconProps } from '@c1rcle/icons';
 import type { ComponentType, ReactNode } from 'react';
 
@@ -77,7 +78,22 @@ function initials(value: string): string {
   return letters.filter((letter): letter is string => Boolean(letter)).join('').toUpperCase() || 'C1';
 }
 
-export function AppShell({ children }: { readonly children: ReactNode }) {
+export function AppShell({
+  children,
+  initialUser,
+}: {
+  readonly children: ReactNode;
+  /**
+   * The server's own read of the httpOnly session cookie (see
+   * `getServerSession` in layout.tsx) — real proof of a session, not the
+   * client-side store, which starts empty on every fresh load and would
+   * otherwise let the full sidebar/nav render for a beat (or indefinitely,
+   * for a visitor with no session at all) before any auth check catches up.
+   * Server and first client render always agree on this value, so gating on
+   * it here can never itself cause a hydration mismatch.
+   */
+  readonly initialUser: { user: User } | null;
+}) {
   const { theme, setTheme } = useTheme();
   const isDark = theme === 'dark';
   const pathname = usePathname();
@@ -90,8 +106,24 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
     setMobileOpen(false);
   };
 
+  const unauthenticated = !hideChrome && initialUser === null;
+
+  useEffect(() => {
+    if (unauthenticated) {
+      router.replace('/login');
+    }
+  }, [router, unauthenticated]);
+
   if (hideChrome) {
     return <>{children}</>;
+  }
+
+  if (unauthenticated) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center text-sm text-muted-foreground">
+        Redirecting to sign in…
+      </div>
+    );
   }
 
   const activeItem = NAV_SECTIONS.flatMap((section) => section.items).find((item) =>
@@ -119,7 +151,9 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
       >
         <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-4">
           <Link href="/" onClick={closeMobileNav} className="flex items-center gap-2.5">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
+            <span
+              className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground shadow-[0_0_20px_-4px_var(--color-primary)]"
+            >
               C1
             </span>
             <span className="flex flex-col leading-none">

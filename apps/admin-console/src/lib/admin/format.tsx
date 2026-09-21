@@ -135,7 +135,7 @@ export const ONBOARDING_STATUS_LABELS: Record<OnboardingStatus, string> = {
   rejected: 'Rejected',
 };
 
-type Tone = 'default' | 'success' | 'warning' | 'destructive' | 'muted';
+type Tone = 'default' | 'success' | 'warning' | 'destructive' | 'muted' | 'urgent';
 
 const TONE_CLASSES: Record<Tone, string> = {
   default: 'bg-muted text-foreground',
@@ -143,6 +143,9 @@ const TONE_CLASSES: Record<Tone, string> = {
   warning: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
   destructive: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
   muted: 'bg-muted text-muted-foreground',
+  // Reserved for the handful of states that mean "act on this now" —
+  // SLA-urgent tickets, not just anything red/destructive.
+  urgent: 'bg-urgent/15 text-urgent',
 };
 
 export function StatusBadge({
@@ -397,7 +400,7 @@ export const SUPPORT_TICKET_PRIORITY_LABELS: Record<SupportTicketPriority, strin
 export function supportTicketPriorityTone(priority: SupportTicketPriority): Tone {
   switch (priority) {
     case 'urgent':
-      return 'destructive';
+      return 'urgent';
     case 'high':
       return 'warning';
     case 'medium':

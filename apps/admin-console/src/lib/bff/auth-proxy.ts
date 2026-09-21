@@ -14,8 +14,18 @@ import { getClientEnv } from '@c1rcle/config';
 
 import type { NextRequest } from 'next/server';
 
-/** Non-httpOnly double-submit token cookie. Readable by `@c1rcle/auth` so it can echo the header. */
-export const CSRF_COOKIE = 'c1rcle.csrf';
+/**
+ * Non-httpOnly double-submit token cookie. Readable by `@c1rcle/auth` so it
+ * can echo the header. Namespaced by `NEXT_PUBLIC_APP_ID` (must match
+ * `@c1rcle/auth`'s `csrfCookieName()`) so this doesn't collide with
+ * partner-dashboard's/guest-portal's own CSRF cookie on shared-host dev
+ * ports. Resolved lazily (a function, not a module-level const) so
+ * `getClientEnv()`'s validation runs at first call, not at import time —
+ * important for tests that stub env vars in `beforeEach`.
+ */
+export function csrfCookieName(): string {
+  return `${getClientEnv().NEXT_PUBLIC_APP_ID}.c1rcle.csrf`;
+}
 export const CSRF_HEADER = 'x-csrf-token';
 
 function gatewayBaseUrl(): string {
@@ -65,7 +75,7 @@ function timingSafeEqual(a: string, b: string): boolean {
 
 /** Double-submit: the `c1rcle.csrf` cookie must equal the `x-csrf-token` header. */
 export function assertCsrf(req: NextRequest): NextResponse | null {
-  const cookie = req.cookies.get(CSRF_COOKIE)?.value ?? '';
+  const cookie = req.cookies.get(csrfCookieName())?.value ?? '';
   const header = req.headers.get(CSRF_HEADER) ?? '';
   if (!timingSafeEqual(cookie, header)) {
     return errorEnvelope('forbidden', 'CSRF check failed.', 403);
@@ -107,7 +117,7 @@ export function mintCsrfToken(): string {
 }
 
 export function setCsrfCookie(res: NextResponse, token: string): void {
-  res.cookies.set(CSRF_COOKIE, token, {
+  res.cookies.set(csrfCookieName(), token, {
     httpOnly: false,
     sameSite: 'strict',
     secure: isProduction(),
@@ -116,7 +126,7 @@ export function setCsrfCookie(res: NextResponse, token: string): void {
 }
 
 export function clearCsrfCookie(res: NextResponse): void {
-  res.cookies.set(CSRF_COOKIE, '', { path: '/', maxAge: 0 });
+  res.cookies.set(csrfCookieName(), '', { path: '/', maxAge: 0 });
 }
 
 interface ForwardInit {

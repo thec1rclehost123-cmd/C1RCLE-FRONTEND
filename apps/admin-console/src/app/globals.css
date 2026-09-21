@@ -1,1 +1,13 @@
 @import '@c1rcle/tailwind-config/base.css';
+
+/*
+ * Admin-console-only tokens. The shared @c1rcle/tailwind-config palette is
+ * common to all three apps and stays untouched — this adds one extra signal
+ * color scoped to this app, for "needs attention now" states (SLA breach,
+ * open disputes, pending TIER3 approvals) that the shared destructive/danger
+ * token already means something more general.
+ */
+@theme {
+  --color-urgent: oklch(0.68 0.24 340);
+  --color-urgent-foreground: oklch(0.99 0.01 340);
+}
