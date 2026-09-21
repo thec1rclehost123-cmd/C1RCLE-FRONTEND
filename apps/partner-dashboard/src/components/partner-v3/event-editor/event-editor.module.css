@@ -123,7 +123,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 }
 .cardTitleRow .cardTitle {
   margin: 0;
@@ -190,6 +190,11 @@
 .twoColumns {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.threeColumns {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 14px;
 }
 .chips {
@@ -577,33 +582,203 @@
 
 .ticketList {
   display: grid;
-  gap: 10px;
+  gap: 14px;
+}
+.ticketCard {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 16px;
+  background: #0e0e0e;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.ticketCard:hover {
+  border-color: rgb(255 255 255 / 16%);
+}
+.ticketCard:focus-within {
+  border-color: var(--editor-accent-border);
+  box-shadow: 0 0 0 1px var(--editor-accent-soft);
 }
 .ticketRow {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) 118px 105px 90px 28px;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 11px;
-  border: 1px solid rgb(255 255 255 / 8%);
-  border-radius: 13px;
-  background: #0d0d0d;
+  grid-template-columns:
+    minmax(140px, 1.8fr) minmax(90px, 1fr) minmax(90px, 1fr) minmax(100px, 1.1fr)
+    28px;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 4px 0;
 }
-.ticketRow input {
+.tierFieldLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  color: #a9a9a5;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.tierFieldLabel input {
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 9px;
+  outline: 0;
+  background: #161616;
+  color: #f5f5f3;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 10px;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.tierFieldLabel input:focus {
+  border-color: var(--editor-accent);
+  box-shadow: 0 0 0 3px var(--editor-accent-soft);
+}
+.ticketOptions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 12px;
+  background: #121212;
+}
+.ticketOptions label {
+  display: grid;
+  gap: 5px;
+  color: #a9a9a5;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.ticketOptions input,
+.ticketOptions select {
+  width: 100%;
+  box-sizing: border-box;
   min-width: 0;
   border: 1px solid rgb(255 255 255 / 9%);
   border-radius: 8px;
   outline: 0;
-  background: #141414;
+  background: #181818;
   color: #f5f5f3;
   font: inherit;
   font-size: 12.5px;
-  padding: 8px 9px;
+  padding: 8px 10px;
+  transition: border-color 0.15s ease;
 }
-.ticketRow input:focus {
+.ticketOptions select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a8a86' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+  cursor: pointer;
+}
+.ticketOptions input:focus,
+.ticketOptions select:focus {
+  border-color: var(--editor-accent);
+}
+.ticketOptions input::placeholder {
+  color: #6a6a66;
+}
+.tableOptions {
+  border-color: var(--editor-accent-border);
+  background: var(--editor-accent-soft);
+}
+.tableOptions label {
+  color: #d1c4e9;
+}
+.pricingPhasesBlock {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 12px;
+  background: #121212;
+}
+.pricingPhasesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.pricingPhasesHeader .cardTitle {
+  margin: 0;
+  color: #a9a9a5;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.pricingPhasesSub {
+  color: #6a6a66;
+  font-size: 11.5px;
+}
+.phaseList {
+  display: grid;
+  gap: 10px;
+}
+.phaseRow {
+  display: grid;
+  grid-template-columns: minmax(130px, 1.2fr) minmax(90px, 0.8fr) minmax(160px, 1.5fr) minmax(
+      160px,
+      1.5fr
+    );
+  align-items: flex-end;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 10px;
+  background: #161616;
+}
+.phaseField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.phaseLabel {
+  display: block;
+  color: #a9a9a5;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.phaseField input {
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 8px;
+  outline: 0;
+  background: #1c1c1c;
+  color: #f5f5f3;
+  font: inherit;
+  font-size: 12.5px;
+  padding: 8px 10px;
+  transition: border-color 0.15s ease;
+}
+.phaseField input:focus {
   border-color: var(--editor-accent);
 }
 .ticketGross {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgb(110 231 155 / 10%);
   color: #6ee79b;
   font-size: 12.5px;
   font-weight: 800;
@@ -611,22 +786,32 @@
   white-space: nowrap;
 }
 .ticketRemove {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
   border: 0;
-  background: transparent;
-  color: #6a6a66;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 5%);
+  color: #8a8a86;
   cursor: pointer;
   font-size: 18px;
+  line-height: 1;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 .ticketRemove:hover {
-  color: #fff;
+  background: rgb(240 133 122 / 20%);
+  color: #f0857a;
 }
 .outlineButton {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   width: fit-content;
-  margin-top: 11px;
-  padding: 8px 13px;
+  margin-top: 6px;
+  padding: 8px 14px;
   border: 1px solid var(--editor-accent-border);
   border-radius: 999px;
   background: var(--editor-accent-soft);
@@ -635,6 +820,13 @@
   font: inherit;
   font-size: 12px;
   font-weight: 700;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.outlineButton:hover {
+  border-color: var(--editor-accent);
+  background: rgb(255 90 31 / 22%);
 }
 .totalLabel {
   color: #6ee79b;
@@ -643,89 +835,194 @@
   white-space: nowrap;
 }
 
-.details summary {
+.page input[type='number']::-webkit-inner-spin-button,
+.page input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.page input[type='number'] {
+  -moz-appearance: textfield;
+}
+.page input[type='datetime-local'],
+.page input[type='date'],
+.page input[type='time'] {
+  color-scheme: dark;
+}
+.page input[type='datetime-local']::-webkit-calendar-picker-indicator,
+.page input[type='date']::-webkit-calendar-picker-indicator,
+.page input[type='time']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.65;
+  filter: invert(0.85);
+  transition: opacity 0.15s ease;
+}
+.page input[type='datetime-local']::-webkit-calendar-picker-indicator:hover,
+.page input[type='date']::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+.details {
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 12px;
+  background: #111111;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  margin-top: 10px;
+}
+.summary {
   display: flex;
   align-items: center;
-  gap: 9px;
+  justify-content: space-between;
   cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  color: #f5f5f3;
+  user-select: none;
   list-style: none;
-  font-size: 14px;
-  font-weight: 800;
+  padding: 12px 14px;
+  background: #141414;
+  transition: background 0.15s ease;
 }
-.details summary::-webkit-details-marker {
+.summary:hover {
+  background: #1a1a1a;
+}
+.summary::-webkit-details-marker,
+.summary::marker {
   display: none;
 }
-.detailsBody {
-  display: grid;
-  gap: 21px;
-  margin-top: 18px;
-  padding-top: 18px;
-  border-top: 1px solid rgb(255 255 255 / 7%);
+.summaryHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
+.summaryBadge {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #a9a9a5;
+  background: rgb(255 255 255 / 6%);
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid rgb(255 255 255 / 6%);
+}
+.summaryIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 6%);
+  color: #8a8a86;
+  font-size: 9px;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease;
+}
+.details[open] .summaryIcon {
+  transform: rotate(180deg);
+  background: var(--editor-accent-soft);
+  color: var(--editor-accent);
+}
+.details[open] .summary {
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+.detailsBody {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
 .optionGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 9px;
+  gap: 12px;
+  margin-top: 10px;
 }
 .optionButton {
-  min-height: 66px;
-  padding: 10px;
-  border: 1px solid rgb(255 255 255 / 10%);
-  border-radius: 11px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  padding: 13px 15px;
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 12px;
   background: #0d0d0d;
   color: #c9c9c6;
   cursor: pointer;
   font: inherit;
-  font-size: 12px;
-  font-weight: 700;
   text-align: left;
+  transition: all 0.15s ease;
+}
+.optionButton strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #f5f5f3;
 }
 .optionButton span {
   display: block;
-  margin-top: 4px;
-  color: #6a6a66;
-  font-size: 11px;
-  font-weight: 500;
+  color: #8a8a86;
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+.optionButton:hover {
+  border-color: rgb(255 255 255 / 18%);
+  background: #141414;
 }
 .optionSelected {
   border-color: var(--editor-accent-border);
   background: var(--editor-accent-soft);
   color: #fff;
 }
+.optionSelected strong {
+  color: #fff;
+}
+.optionSelected span {
+  color: rgb(255 255 255 / 75%);
+}
+
 .promoRows {
   display: grid;
-  gap: 8px;
+  gap: 10px;
+  margin-top: 10px;
+  margin-bottom: 12px;
 }
 .promoRow {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 9px 11px;
-  border: 1px solid rgb(255 255 255 / 8%);
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid rgb(255 255 255 / 9%);
   border-radius: 11px;
   background: #0d0d0d;
 }
 .promoRow input {
-  min-width: 0;
   flex: 1;
-  border: 0;
-  outline: 0;
+  min-width: 0;
+  border: none;
   background: transparent;
   color: #f5f5f3;
-  font: inherit;
-  font-size: 12.5px;
+  font-family: monospace, var(--font-mono), sans-serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  outline: none;
+  padding: 4px 0;
+}
+.promoRow input:focus {
+  color: var(--editor-accent);
 }
 .promoRow small {
   color: #8a8a86;
   font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
 }
-
-.dynamicPricingGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin-top: 12px; }
-.pricingOptionCard { display: flex; flex-direction: column; justify-content: space-between; gap: 10px; padding: 12px 14px; border: 1px solid rgb(255 255 255 / 8%); border-radius: 12px; background: #0d0d0d; }
-.pricingOptionHeader strong { display: block; color: #f5f5f3; font-size: 12.5px; font-weight: 700; }
-.pricingOptionHeader span { display: block; margin-top: 3px; color: #6a6a66; font-size: 11px; line-height: 1.35; }
-.pricingOptionCard input { width: 100%; box-sizing: border-box; border: 1px solid rgb(255 255 255 / 9%); border-radius: 9px; outline: 0; background: #141414; color: #f5f5f3; font: inherit; font-size: 12px; padding: 8px 10px; }
-.pricingOptionCard input:focus { border-color: var(--editor-accent); }
 
 .promoterList {
   display: grid;
@@ -760,26 +1057,43 @@
   border-color: var(--editor-accent);
   background: var(--editor-accent);
 }
+.promoterAvatar {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--editor-accent), #3c2d55);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
 .promoterIdentity {
   flex: 1;
+  min-width: 0;
 }
 .promoterIdentity strong {
   display: block;
-  font-size: 13px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f5f5f3;
 }
-.promoterIdentity span {
-  display: block;
-  margin-top: 3px;
-  color: #6a6a66;
-  font-size: 11px;
+.overrideIdentity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .compGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 9px;
+  gap: 10px;
+  margin-top: 10px;
+  margin-bottom: 20px;
 }
 .compChoice {
-  padding: 12px;
+  padding: 12px 14px;
   border: 1px solid rgb(255 255 255 / 10%);
   border-radius: 11px;
   background: #0d0d0d;
@@ -787,6 +1101,7 @@
   cursor: pointer;
   font: inherit;
   text-align: left;
+  transition: all 0.15s ease;
 }
 .compChoice strong {
   display: block;
@@ -803,6 +1118,184 @@
   border-color: var(--editor-accent-border);
   background: var(--editor-accent-soft);
   color: #fff;
+}
+.overrideSection {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px dashed rgb(255 255 255 / 10%);
+}
+.overrideSection .cardTitle {
+  margin-bottom: 4px;
+}
+.overrideSection .muted {
+  margin-bottom: 12px;
+}
+.overrideList {
+  display: grid;
+  gap: 8px;
+  margin-top: 0;
+}
+.overrideCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 12px;
+  background: #0d0d0d;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.overrideCard:hover {
+  border-color: rgb(255 255 255 / 14%);
+}
+.overrideCardActive {
+  border-color: var(--editor-accent-border);
+  background: #111111;
+}
+.overrideHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.overrideBadge {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #8a8a86;
+  margin-top: 2px;
+}
+.overrideCardActive .overrideBadge {
+  color: var(--editor-accent);
+}
+.overrideControls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 10px;
+  background: #161616;
+}
+.overrideControls label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #a9a9a5;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.overrideControls input {
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 8px;
+  outline: 0;
+  background: #1d1d1d;
+  color: #f5f5f3;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 10px;
+}
+.overrideControls input:focus {
+  border-color: var(--editor-accent);
+}
+.overrideSubhead {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #a9a9a5;
+  margin-bottom: 8px;
+}
+.overrideRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 12px;
+  background: #0d0d0d;
+  transition: border-color 0.15s ease;
+}
+.overrideRow:hover {
+  border-color: rgb(255 255 255 / 14%);
+  background: #121212;
+}
+.overrideRow strong {
+  color: #f5f5f3;
+  font-size: 13px;
+  font-weight: 700;
+}
+.customTierSubtext {
+  margin: 0 0 10px;
+  color: #8a8a86;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.customTierList {
+  display: grid;
+  gap: 8px;
+  margin-top: 0;
+}
+.customTierRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 12px;
+  background: #0d0d0d;
+  transition: border-color 0.15s ease;
+}
+.customTierRow:hover {
+  border-color: rgb(255 255 255 / 14%);
+  background: #121212;
+}
+.customTierName {
+  color: #f5f5f3;
+  font-size: 13px;
+  font-weight: 700;
+}
+.customRateField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 140px;
+  flex: none;
+}
+.customRateField input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 9px;
+  outline: 0;
+  background: #141414;
+  color: #f5f5f3;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 10px;
+  text-align: right;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.customRateField input:focus {
+  border-color: var(--editor-accent);
+  box-shadow: 0 0 0 3px var(--editor-accent-soft);
+}
+.customRateField span {
+  color: #8a8a86;
+  font-size: 12.5px;
+  font-weight: 700;
 }
 .rateField {
   display: flex;
@@ -1035,6 +1528,20 @@
   font-size: 11px;
   text-align: center;
 }
+.previewOpenButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+  padding: 9px 14px;
+  border: 1px solid rgb(255 255 255 / 22%);
+  border-radius: 999px;
+  background: rgb(0 0 0 / 52%);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
 .overlay {
   position: fixed;
   z-index: 40;
@@ -1076,15 +1583,11 @@
 .deviceFrame {
   display: grid;
   width: min(900px, 100%);
-  height: min(600px, 70vh);
+  min-height: min(600px, 78vh);
   place-items: center;
   border: 1px solid rgb(255 255 255 / 12%);
   border-radius: 16px;
-  background: #141414;
-  color: #6a6a66;
-  font-size: 15px;
-  font-weight: 600;
-  text-align: center;
+  background: #090909;
 }
 .mobileFrame {
   width: min(330px, 80vw);
@@ -1095,17 +1598,12 @@
   background: #000;
 }
 .mobileFrame > div {
-  display: grid;
   width: 100%;
   height: 100%;
-  place-items: center;
+  overflow: auto;
   border-radius: 37px;
   background: #141414;
-  color: #6a6a66;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 30px;
-  text-align: center;
+  padding: 18px;
 }
 .overlayClose {
   margin-top: 20px;
@@ -1124,6 +1622,78 @@
   flex-direction: column;
   align-items: center;
 }
+.guestPreviewShell,
+.mobilePreviewShell {
+  width: 100%;
+  padding: 22px;
+}
+.guestPreviewShell > .previewLabel,
+.mobilePreviewShell > .previewLabel {
+  display: block;
+  margin-bottom: 12px;
+  color: #8a8a86;
+}
+.fullPreview {
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 22px;
+  background: #141414;
+  text-align: left;
+}
+.fullPreviewArtwork {
+  position: relative;
+  height: 230px;
+  background: linear-gradient(158deg, #b8860b, #241a04);
+}
+.fullPreviewArtwork img {
+  object-fit: cover;
+}
+.fullPreviewBody {
+  display: grid;
+  gap: 10px;
+  padding: 22px;
+}
+.fullPreviewBody h2 {
+  margin: 0;
+  color: #fff;
+  font:
+    800 28px/1.1 var(--font-display),
+    sans-serif;
+}
+.fullPreviewBody p {
+  margin: 0;
+  color: #a4a4a0;
+  font-size: 13px;
+}
+.fullPreviewTickets {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+}
+.fullPreviewTickets > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 10px;
+  color: #d8d8d4;
+  font-size: 13px;
+}
+.fullPreviewTickets strong {
+  color: #fff;
+}
+.fullPreviewBuy {
+  margin-top: 4px;
+  padding: 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--editor-accent);
+  color: #0a0a0a;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+}
 
 @media (max-width: 1050px) {
   .layout {
@@ -1131,10 +1701,10 @@
     gap: 20px;
   }
   .ticketRow {
-    grid-template-columns: minmax(120px, 1fr) 100px 86px 78px 24px;
+    grid-template-columns: minmax(100px, 1fr) 80px 70px 75px 24px;
   }
 }
-@media (max-width: 820px) {
+@media (max-width: 700px) {
   .page {
     padding: 22px 20px 50px;
   }
@@ -1172,8 +1742,10 @@
     border-radius: 15px;
   }
   .twoColumns,
+  .threeColumns,
   .optionGrid,
-  .compGrid {
+  .compGrid,
+  .dynamicPricingGrid {
     grid-template-columns: 1fr;
   }
   .posterEditor {
@@ -1204,6 +1776,15 @@
   }
   .ticketRemove {
     justify-self: end;
+  }
+  .ticketOptions {
+    grid-template-columns: 1fr 1fr;
+    margin-right: 0;
+    margin-left: 0;
+  }
+  .ticketOptions + .fieldStack {
+    margin-right: 0;
+    margin-left: 0;
   }
   .actions {
     flex-direction: column-reverse;

@@ -101,7 +101,9 @@ describe('PartnerEventEditor', () => {
     const availableDate = availability.months
       .find((month) => month.key === '2026-08')
       ?.days.find((day) => day.state === 'available');
-    const onSubmit = vi.fn<(draft: EventEditorDraft) => Promise<void>>().mockResolvedValue(undefined);
+    const onSubmit = vi
+      .fn<(draft: EventEditorDraft) => Promise<void>>()
+      .mockResolvedValue(undefined);
 
     expect(availableDate).toBeDefined();
     if (!availableDate) return;
@@ -135,7 +137,9 @@ describe('PartnerEventEditor', () => {
     const user = userEvent.setup();
     const data = await fixturePartnerDataSource.getVenueEventEditor();
     const availability = await fixturePartnerDataSource.getVenueCalendar();
-    const onSubmit = vi.fn<(draft: EventEditorDraft) => Promise<void>>().mockResolvedValue(undefined);
+    const onSubmit = vi
+      .fn<(draft: EventEditorDraft) => Promise<void>>()
+      .mockResolvedValue(undefined);
 
     render(
       <PartnerEventEditor
@@ -173,7 +177,7 @@ describe('PartnerEventEditor', () => {
     expect(screen.getByText('Choose a venue')).toBeInTheDocument();
     expect(screen.queryByText('Block date')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /8:00 PM – 11:00 PM/ }));
-    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    await user.click(screen.getByRole('button', { name: /Create event/ }));
     expect(screen.getByRole('alert')).toHaveTextContent('Add an event name.');
     expect(push).not.toHaveBeenCalledWith(
       expect.stringContaining('step=basics'),
@@ -190,10 +194,11 @@ describe('PartnerEventEditor', () => {
     await user.click(screen.getByRole('button', { name: /Your event name/ }));
     expect(screen.getByRole('dialog', { name: 'Preview destination' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /Guest portal/i }));
-    expect(screen.getByText('This is how it will look in the guest portal')).toBeInTheDocument();
+    expect(screen.getByText('Guest portal')).toBeInTheDocument();
+    expect(screen.getAllByText('Your event name').length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: /Back to editing/i }));
     await user.click(screen.getByRole('button', { name: /Your event name/ }));
     await user.click(screen.getByRole('button', { name: /Mobile app/i }));
-    expect(screen.getByText('This is how it will look in the mobile app')).toBeInTheDocument();
+    expect(screen.getByText('Mobile app')).toBeInTheDocument();
   });
 });
