@@ -1,11 +1,11 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 
-import { EmptyState, ErrorState, LoadingState } from '@c1rcle/ui';
+import { Button, EmptyState, ErrorState, LoadingState } from '@c1rcle/ui';
 
 import { PageHeader } from '@/components/admin/page-header';
-import { listPromotions } from '@/lib/admin/admin-api';
+import { exportPromotionsCsv, listPromotions } from '@/lib/admin/admin-api';
 import { formatDateTime, shortId, StatusBadge } from '@/lib/admin/format';
 
 export default function PromotionsDesk() {
@@ -14,12 +14,30 @@ export default function PromotionsDesk() {
     queryFn: () => listPromotions(100),
   });
 
+  const exportMutation = useMutation({
+    mutationFn: () => exportPromotionsCsv(),
+  });
+
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Promotions"
-        description="Platform-wide promo codes, across every event. Read-only — codes are created by partners on their own event. Discount value is a percent when the type is percent, paise otherwise."
-      />
+      <div className="flex items-start justify-between gap-4">
+        <PageHeader
+          title="Promotions"
+          description="Platform-wide promo codes, across every event. Read-only — codes are created by partners on their own event. Discount value is a percent when the type is percent, paise otherwise."
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={exportMutation.isPending}
+          onClick={() => {
+            exportMutation.mutate();
+          }}
+          aria-busy={exportMutation.isPending}
+        >
+          {exportMutation.isPending ? 'Exporting…' : 'Export CSV'}
+        </Button>
+      </div>
 
       {list.isPending ? (
         <LoadingState label="Loading promotions…" />
@@ -92,6 +110,12 @@ export default function PromotionsDesk() {
           </table>
         </div>
       )}
+
+      {exportMutation.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          The CSV could not be generated. Please retry.
+        </p>
+      ) : null}
     </div>
   );
 }

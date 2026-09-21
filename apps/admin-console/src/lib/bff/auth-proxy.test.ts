@@ -10,6 +10,7 @@ import { rescopeSessionCookies } from './auth-proxy.js';
 beforeEach(() => {
   vi.stubEnv('NEXT_PUBLIC_API_BASE_URL', 'http://localhost:8080');
   vi.stubEnv('NEXT_PUBLIC_APP_NAME', 'C1RCLE Admin Console');
+  vi.stubEnv('NEXT_PUBLIC_APP_ID', 'admin');
   vi.stubEnv('NEXT_PUBLIC_ENVIRONMENT', 'development');
   resetEnvCacheForTests();
 });

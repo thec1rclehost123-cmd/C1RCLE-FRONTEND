@@ -1,13 +1,18 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { EmptyState, ErrorState, LoadingState } from '@c1rcle/ui';
+import { Button, EmptyState, ErrorState, LoadingState } from '@c1rcle/ui';
 
 import { PageHeader } from '@/components/admin/page-header';
 import { StatusFilter } from '@/components/admin/status-filter';
-import { listOrders, ORDER_STATUSES, statusFilterOptions } from '@/lib/admin/admin-api';
+import {
+  exportOrdersCsv,
+  listOrders,
+  ORDER_STATUSES,
+  statusFilterOptions,
+} from '@/lib/admin/admin-api';
 import {
   formatDateTime,
   formatPaise,
@@ -31,6 +36,10 @@ export default function OrdersDesk() {
       filter === 'all' ? page.items : page.items.filter((order) => order.status === filter),
   });
 
+  const exportMutation = useMutation({
+    mutationFn: () => exportOrdersCsv(),
+  });
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
@@ -38,15 +47,29 @@ export default function OrdersDesk() {
           title="Orders"
           description="Platform-wide orders, newest first. Read-only — refunding happens on the Refunds desk; the order's refund state (refundedPaise and the refund_requested/refunded status) is carried on the order itself."
         />
-        <StatusFilter
-          id="order-status"
-          value={filter}
-          onChange={setFilter}
-          options={[
-            { value: 'all', label: 'All' },
-            ...statusFilterOptions(ORDER_STATUS_LABELS, ORDER_STATUSES),
-          ]}
-        />
+        <div className="flex items-center gap-2">
+          <StatusFilter
+            id="order-status"
+            value={filter}
+            onChange={setFilter}
+            options={[
+              { value: 'all', label: 'All' },
+              ...statusFilterOptions(ORDER_STATUS_LABELS, ORDER_STATUSES),
+            ]}
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={exportMutation.isPending}
+            onClick={() => {
+              exportMutation.mutate();
+            }}
+            aria-busy={exportMutation.isPending}
+          >
+            {exportMutation.isPending ? 'Exporting…' : 'Export CSV'}
+          </Button>
+        </div>
       </div>
 
       {list.isPending ? (
@@ -124,6 +147,12 @@ export default function OrdersDesk() {
           </table>
         </div>
       )}
+
+      {exportMutation.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          The CSV could not be generated. Please retry.
+        </p>
+      ) : null}
     </div>
   );
 }

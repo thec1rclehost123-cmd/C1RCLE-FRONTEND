@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/admin/page-header';
 import { StatusFilter } from '@/components/admin/status-filter';
 import {
   approveRefund,
+  exportRefundsCsv,
   listRefunds,
   REFUND_STATUSES,
   rejectRefund,
@@ -61,6 +62,10 @@ export default function RefundsDesk() {
 
   const stagedAmount = (total: number) => formatPaise(total);
 
+  const exportMutation = useMutation({
+    mutationFn: () => exportRefundsCsv(),
+  });
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
@@ -68,12 +73,26 @@ export default function RefundsDesk() {
           title="Refunds"
           description="Refund requests follow the v1 thresholds — under ₹500 auto-settles, under ₹5,000 needs one finance admin, above that needs two. Decisions here execute the actual money movement."
         />
-        <StatusFilter
-          id="refund-status"
-          value={filter}
-          onChange={setFilter}
-          options={[{ value: 'all', label: 'All' }, ...statusFilterOptions(REFUND_STATUS_LABELS, REFUND_STATUSES)]}
-        />
+        <div className="flex items-center gap-2">
+          <StatusFilter
+            id="refund-status"
+            value={filter}
+            onChange={setFilter}
+            options={[{ value: 'all', label: 'All' }, ...statusFilterOptions(REFUND_STATUS_LABELS, REFUND_STATUSES)]}
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={exportMutation.isPending}
+            onClick={() => {
+              exportMutation.mutate();
+            }}
+            aria-busy={exportMutation.isPending}
+          >
+            {exportMutation.isPending ? 'Exporting…' : 'Export CSV'}
+          </Button>
+        </div>
       </div>
 
       {list.isPending ? (
@@ -210,6 +229,11 @@ export default function RefundsDesk() {
       {approveMutation.isError || rejectMutation.isError ? (
         <p role="alert" className="text-sm text-destructive">
           The decision could not be saved. It is safe to retry — the request is idempotency-keyed.
+        </p>
+      ) : null}
+      {exportMutation.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          The CSV could not be generated. Please retry.
         </p>
       ) : null}
     </div>

@@ -1,13 +1,18 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { EmptyState, ErrorState, LoadingState } from '@c1rcle/ui';
+import { Button, EmptyState, ErrorState, LoadingState } from '@c1rcle/ui';
 
 import { PageHeader } from '@/components/admin/page-header';
 import { StatusFilter } from '@/components/admin/status-filter';
-import { listTickets, statusFilterOptions, TICKET_STATUSES } from '@/lib/admin/admin-api';
+import {
+  exportTicketsCsv,
+  listTickets,
+  statusFilterOptions,
+  TICKET_STATUSES,
+} from '@/lib/admin/admin-api';
 import {
   formatDateTime,
   shortId,
@@ -30,6 +35,10 @@ export default function TicketsDesk() {
       filter === 'all' ? page.items : page.items.filter((ticket) => ticket.status === filter),
   });
 
+  const exportMutation = useMutation({
+    mutationFn: () => exportTicketsCsv(),
+  });
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
@@ -37,15 +46,29 @@ export default function TicketsDesk() {
           title="Tickets"
           description="Platform-wide ticket ledger, newest first. The entitlement a guest presents at the door — distinct from a support ticket. Read-only."
         />
-        <StatusFilter
-          id="ticket-status"
-          value={filter}
-          onChange={setFilter}
-          options={[
-            { value: 'all', label: 'All' },
-            ...statusFilterOptions(TICKET_STATUS_LABELS, TICKET_STATUSES),
-          ]}
-        />
+        <div className="flex items-center gap-2">
+          <StatusFilter
+            id="ticket-status"
+            value={filter}
+            onChange={setFilter}
+            options={[
+              { value: 'all', label: 'All' },
+              ...statusFilterOptions(TICKET_STATUS_LABELS, TICKET_STATUSES),
+            ]}
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={exportMutation.isPending}
+            onClick={() => {
+              exportMutation.mutate();
+            }}
+            aria-busy={exportMutation.isPending}
+          >
+            {exportMutation.isPending ? 'Exporting…' : 'Export CSV'}
+          </Button>
+        </div>
       </div>
 
       {list.isPending ? (
@@ -119,6 +142,12 @@ export default function TicketsDesk() {
           </table>
         </div>
       )}
+
+      {exportMutation.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          The CSV could not be generated. Please retry.
+        </p>
+      ) : null}
     </div>
   );
 }
