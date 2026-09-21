@@ -1,0 +1,199 @@
+# ─── CI ───────────────────────────────────────────────────────────────────────
+# PR gate (lint/typecheck/test/build) runs on every pull request. A push to
+# main/staging is always a merge of a PR that already ran the gate — it does
+# NOT re-run the same checks. Instead it runs a different, merge-only
+# pipeline: build+serve Playwright e2e for all three apps, plus a live
+# post-deploy smoke check against the real Vercel URLs once Vercel's own
+# Git integration has deployed the new commit.
+name: CI
+
+on:
+  pull_request:
+    branches: [main, staging]
+  push:
+    branches: [main, staging]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # ── PR gate ─────────────────────────────────────────────────────────────────
+  # One runner: format, lint (type-aware ESLint), typecheck, boundaries, unit
+  # tests, build — across every workspace via turbo. `if: always()` on each
+  # step so one run reports every failure instead of stopping at the first.
+  gate:
+    name: Lint, typecheck, test, build
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+
+      - name: Format
+        id: format
+        run: pnpm format:check
+
+      - name: Lint
+        id: lint
+        if: always()
+        run: pnpm lint
+
+      - name: Typecheck
+        id: typecheck
+        if: always()
+        run: pnpm typecheck
+
+      - name: Architecture boundaries
+        id: boundaries
+        if: always()
+        run: pnpm boundaries
+
+      - name: Test
+        id: test
+        if: always()
+        run: pnpm test:coverage
+
+      # Each app validates its own env at build time (`@c1rcle/config`). CI has
+      # no real secrets to build against, so each app's own `.env.example`
+      # (placeholder values, safe to commit) stands in — same convention the
+      # `dev:staging` / `dev:prod` scripts already use locally, just pointed
+      # at the example file instead of a real one.
+      - name: Seed placeholder env for build
+        id: seed-env
+        if: always()
+        run: |
+          for app in guest-portal partner-dashboard admin-console; do
+            if [ -f "apps/$app/.env.example" ]; then
+              cp "apps/$app/.env.example" "apps/$app/.env.local"
+            fi
+          done
+
+      - name: Build
+        id: build
+        if: always()
+        run: pnpm build
+
+      - name: Summarize
+        if: always()
+        run: |
+          {
+            echo "| Check | Result |"
+            echo "| --- | :--- |"
+            echo "| Format | ${{ steps.format.outcome }} |"
+            echo "| Lint | ${{ steps.lint.outcome }} |"
+            echo "| Typecheck | ${{ steps.typecheck.outcome }} |"
+            echo "| Boundaries | ${{ steps.boundaries.outcome }} |"
+            echo "| Test | ${{ steps.test.outcome }} |"
+            echo "| Build | ${{ steps.build.outcome }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ── Merge-only: local e2e ───────────────────────────────────────────────────
+  # Builds each app and runs its Playwright suite against a locally-served
+  # instance (turbo's `test:e2e` task already wires build -> serve -> test).
+  # This is NOT re-running the PR gate — it is the one check that only makes
+  # sense once code has actually merged, because it exercises full page loads
+  # end-to-end rather than unit-level assertions.
+  e2e:
+    name: End-to-end (local build)
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [guest-portal, partner-dashboard, admin-console]
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+
+      - name: Seed placeholder env for build
+        run: |
+          if [ -f "apps/${{ matrix.app }}/.env.example" ]; then
+            cp "apps/${{ matrix.app }}/.env.example" "apps/${{ matrix.app }}/.env.local"
+          fi
+
+      - name: Install Playwright browsers
+        working-directory: apps/${{ matrix.app }}
+        run: pnpm exec playwright install --with-deps chromium webkit
+
+      - name: Run e2e suite
+        env:
+          CI: 'true'
+        run: pnpm turbo run test:e2e --filter=./apps/${{ matrix.app }}
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: playwright-report-${{ matrix.app }}
+          path: apps/${{ matrix.app }}/playwright-report/
+          retention-days: 14
+
+  # ── Merge-only: post-deploy smoke ───────────────────────────────────────────
+  # Vercel's own Git integration deploys on push, out of band from this
+  # workflow (same relationship the backend has with Render). This waits a
+  # short grace period for that deploy to land, then hits each app's real
+  # public URL and asserts it actually serves a page — catches the class of
+  # bug a local `pnpm build` cannot: a broken env var or alias on the
+  # platform itself.
+  post-deploy-smoke:
+    name: Post-deploy smoke (live URLs)
+    needs: e2e
+    if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Wait for Vercel to deploy
+        run: sleep 90
+
+      - name: Smoke-check live apps
+        run: |
+          set -euo pipefail
+          fail=0
+          for url in \
+            https://c1rcle-v2-guest-portal.vercel.app \
+            https://c1rcle-v2-admin-console.vercel.app \
+            https://c1-rcle-frontend-partner-dashboard.vercel.app \
+            ; do
+            status=$(curl -s -o /dev/null -w '%{http_code}' "$url")
+            if [ "$status" -ge 200 ] && [ "$status" -lt 400 ]; then
+              echo "  OK  $url -> $status"
+            else
+              echo "::error::$url returned $status"
+              fail=1
+            fi
+          done
+          exit $fail
+
+  # ── The single required status check for PRs ───────────────────────────────
+  ci-ok:
+    name: CI OK
+    if: always() && github.event_name == 'pull_request'
+    needs: [gate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Assert the gate passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key)\t\(.value.result)"'
+          bad=$(echo "$NEEDS" | jq -r 'to_entries[]
+            | select(.value.result != "success" and .value.result != "skipped")
+            | .key')
+          if [ -n "$bad" ]; then
+            echo "::error::These gates did not pass: $(echo "$bad" | tr '\n' ' ')"
+            exit 1
+          fi
+          echo "All gates green."
