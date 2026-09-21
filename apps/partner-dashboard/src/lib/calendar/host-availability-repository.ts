@@ -161,8 +161,8 @@ function buildHostMonths(
     eventsByDate.set(date, [...(eventsByDate.get(date) ?? []), item]);
   }
 
-  const hasAnySlotsInWindow = availability.slots.length > 0;
-
+  // Cancelled slots are historical records, not a configured venue schedule.
+  // Counting them here makes every other date appear unavailable to hosts.
   return monthKeys.flatMap((key): CalendarMonth[] => {
     const parsed = parseMonthKey(key);
     if (!parsed) return [];
@@ -175,9 +175,9 @@ function buildHostMonths(
       return {
         date,
         day,
-        state: hostDayState(dayEvents, daySlots, hasAnySlotsInWindow),
+        state: hostDayState(dayEvents, daySlots),
         events: dayEvents,
-        slots: openSlots(date, daySlots, hasAnySlotsInWindow),
+        slots: openSlots(date, daySlots),
       };
     });
     return [
@@ -199,19 +199,22 @@ function buildHostMonths(
 function hostDayState(
   events: readonly CalendarEvent[],
   slots: VenueAvailabilityDto['slots'],
-  hasAnySlotsInWindow: boolean,
 ): CalendarDayState {
+  // A day can contain a booked/pending event and still have another open
+  // venue slot. Availability is slot-granular, so an open slot must keep the
+  // day selectable for hosts instead of being masked by the day's events.
+  if (slots.some((slot) => slot.status === 'open')) return 'available';
   if (events.some((event) => event.status === 'pending')) return 'pending';
   if (events.length > 0 || slots.some((slot) => slot.status === 'booked')) return 'confirmed';
-  if (slots.some((slot) => slot.status === 'open')) return 'available';
-  if (!hasAnySlotsInWindow && events.length === 0) return 'available';
+  // No venue slot record means the date has not been explicitly closed. Host
+  // requests use the default windows below until the venue books/blocks it.
+  if (slots.length === 0 && events.length === 0) return 'available';
   return 'unavailable';
 }
 
 function openSlots(
   date: string,
   slots: VenueAvailabilityDto['slots'],
-  hasAnySlotsInWindow: boolean,
 ): readonly AvailabilitySlot[] {
   const explicitOpen = slots
     .filter((slot) => slot.status === 'open')
@@ -222,7 +225,7 @@ function openSlots(
     }));
   if (explicitOpen.length > 0) return explicitOpen;
 
-  if (!hasAnySlotsInWindow && slots.length === 0) {
+  if (slots.length === 0) {
     return [
       { id: `${date}-late`, label: '8:00 PM – 11:00 PM', status: 'available' },
       { id: `${date}-night`, label: '11:00 PM – 3:00 AM', status: 'available' },

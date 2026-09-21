@@ -436,7 +436,8 @@ export interface PromoterEventsData {
 export type PartnerKind = 'host' | 'promoter' | 'venue';
 export type PartnerSegment = 'hosts' | 'venues' | 'promoters' | 'staff';
 export type PartnerSubView = 'connected' | 'discover' | 'requests';
-export type PartnerRelationshipStatus = 'Partnered' | 'Invite sent' | 'Waiting on them' | 'Action needed';
+export type PartnerRelationshipStatus =
+  'Partnered' | 'Invite sent' | 'Waiting on them' | 'Action needed';
 export type PartnerRequestDirection = 'incoming' | 'outgoing';
 export type PartnerCardTone = 'orange' | 'violet' | 'teal' | 'pink' | 'gold' | 'indigo' | 'slate';
 export type PartnerPermission =
@@ -814,9 +815,17 @@ export interface CalendarEvent {
 
 export interface CalendarBlock {
   readonly id: string;
+  /** Start date (YYYY-MM-DD) of the blocked window. */
   readonly date: string;
+  /**
+   * Inclusive end date (YYYY-MM-DD) for multi-day / overnight blocks.
+   * Absent (or equal to `date`) means the block starts and ends the same day.
+   */
+  readonly endDate?: string | undefined;
   readonly reason: string;
+  /** Zero-padded 24-hour HH:MM on `date`. */
   readonly from: string;
+  /** Zero-padded 24-hour HH:MM on `endDate` (or `date` when single-day). */
   readonly to: string;
 }
 
@@ -889,8 +898,31 @@ export interface EventEditorTicketTier {
   readonly name: string;
   readonly price: number;
   readonly quantity: number;
-  readonly minPerOrder?: number | undefined;
   readonly maxPerOrder?: number | undefined;
+  readonly accessType?: 'ENTRY' | 'VIP' | 'VVIP' | 'TABLE' | 'PACKAGE' | 'RSVP' | undefined;
+  readonly audienceType?: 'GENERAL' | 'MALE' | 'FEMALE' | 'COUPLE' | 'GROUP' | undefined;
+  readonly guestCount?: number;
+  readonly doorPrice?: number | undefined;
+  readonly pricingPhases?: readonly {
+    readonly id: string;
+    readonly name: string;
+    readonly priceInPaise: number;
+    readonly startsAt: string;
+    readonly endsAt: string;
+    readonly quantity: number | null;
+  }[];
+  readonly benefits?: readonly string[];
+  readonly minAge?: number;
+  readonly maxAge?: number;
+  readonly minPerOrder?: number | undefined;
+  readonly maxPerUser?: number | undefined;
+  readonly tableConfig?: {
+    readonly capacity: number;
+    readonly minimumSpendPaise: number;
+    readonly redeemableAmountPaise: number;
+    readonly tableCount: number;
+  };
+  readonly commissionEligible?: boolean;
 }
 
 export interface EventEditorDraft {
@@ -913,6 +945,11 @@ export interface EventEditorDraft {
   readonly lateArrivalNotes?: string;
   readonly compensation: 'standard' | 'custom' | 'salary';
   readonly commissionRate: number;
+  readonly tierCommissions?: Readonly<Record<string, number>>;
+  readonly promoterOverrides?: Readonly<Record<string, Readonly<Record<string, number>>>>;
+  /** Salary amount in rupees in the editor; the API receives integer paise. */
+  readonly salaryAmount: number;
+  readonly salaryPeriod: 'per_event' | 'per_day' | 'per_month';
   readonly salaryNotes: string;
 }
 

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { useSessionStore } from '@c1rcle/auth';
 
+import type { PromoterConnectionDto } from '@c1rcle/contracts';
 import type { EventEditorPromoterOption } from '@/data/partner-data-source';
 
 import { loadConnectedPromoterConnections } from './promoter-connection-repository';
@@ -23,12 +24,12 @@ interface Result {
 
 const IDLE_RESULT: Result = { requestKey: null, data: [], error: null };
 
-function promoterOption(promoterId: string): EventEditorPromoterOption {
-  const label = promoterId.length > 2 ? promoterId.slice(-8) : promoterId;
+function promoterOption(connection: PromoterConnectionDto): EventEditorPromoterOption {
+  const name = connection.promoterName?.trim() || `Promoter ${connection.promoterId.slice(-8)}`;
   return {
-    id: promoterId,
-    name: `Promoter ${label}`,
-    initials: promoterId.slice(0, 2).toUpperCase(),
+    id: connection.promoterId,
+    name,
+    initials: name.slice(0, 2).toUpperCase(),
     role: 'Connected promoter',
   };
 }
@@ -54,7 +55,7 @@ export function useConnectedPromoters(
         if (!controller.signal.aborted) {
           setResult({
             requestKey,
-            data: connections.map((connection) => promoterOption(connection.promoterId)),
+            data: connections.map((connection) => promoterOption(connection)),
             error: null,
           });
         }

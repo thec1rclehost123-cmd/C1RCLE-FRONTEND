@@ -54,6 +54,7 @@ function event(id: string, day: number, status: EventDto['status']): EventDto {
     startingPricePaise: null,
     isFree: false,
     cancellationReason: null,
+    compensation: null,
     version: 1,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -81,6 +82,7 @@ describe('host availability repository mapping', () => {
       monthKeys: ['2026-09'],
       venues: [{ venue, availability }],
       events: [
+        event('same-day', 3, 'published'),
         event('pending', 6, 'review'),
         event('published', 7, 'published'),
         event('cancelled', 8, 'cancelled'),
@@ -98,6 +100,7 @@ describe('host availability repository mapping', () => {
     });
     expect(days[2]).toMatchObject({
       state: 'available',
+      events: [{ id: 'same-day' }],
       slots: [{ id: 'open-slot', label: '8:00 PM – 11:00 PM', status: 'available' }],
     });
     expect(days[3]?.state).toBe('confirmed');
@@ -107,6 +110,40 @@ describe('host availability repository mapping', () => {
       state: 'confirmed',
       events: [{ id: 'published', href: '/partner/host/events/published' }],
     });
-    expect(days[7]).toMatchObject({ state: 'unavailable', events: [] });
+    expect(days[7]).toMatchObject({
+      state: 'available',
+      events: [],
+      slots: [
+        { id: '2026-09-08-late', status: 'available' },
+        { id: '2026-09-08-night', status: 'available' },
+      ],
+    });
+  });
+
+  it('does not block the whole host calendar when the range only has cancelled slots', () => {
+    const cancelledAvailability: VenueAvailabilityDto = {
+      venueId: venue.id,
+      from: timestamp,
+      to: '2026-09-30T23:59:59.999Z',
+      openSlots: 0,
+      bookedSlots: 0,
+      blockedSlots: 0,
+      openMinutes: 0,
+      fullyBooked: false,
+      slots: [availabilitySlot('cancelled-slot', 3, 'cancelled')],
+    };
+    const result = mapHostAvailability({
+      monthKeys: ['2026-09'],
+      venues: [{ venue, availability: cancelledAvailability }],
+      events: [],
+    });
+
+    expect(result.venues[0]?.months[0]?.days[0]).toMatchObject({
+      state: 'available',
+      slots: [
+        { id: '2026-09-01-late', status: 'available' },
+        { id: '2026-09-01-night', status: 'available' },
+      ],
+    });
   });
 });
