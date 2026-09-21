@@ -30,9 +30,12 @@ import {
   adminVenueListResponseSchema,
   approveOnboardingResultSchema,
   adminResolveDisputeSchema,
+  assignSupportTicketSchema,
+  changeSupportTicketPrioritySchema,
   disputeListResponseSchema,
   disputeResponseSchema,
   documentReadUrlDtoSchema,
+  mergeSupportTicketSchema,
   onboardingRequestDtoSchema,
   paginatedSchema,
   payoutBatchResultSchema,
@@ -43,9 +46,16 @@ import {
   proposeActionSchema,
   rejectRefundRequestSchema,
   resolveProposalSchema,
+  resolveSupportTicketSchema,
   requestRefundSchema,
   reviewOnboardingSchema,
   runPayoutBatchSchema,
+  supportTicketDtoSchema,
+  supportTicketLinkSchema,
+  supportTicketListResponseSchema,
+  supportTicketMessageSchema,
+  platformSettingsDtoSchema,
+  platformSettingsUpdateRequestSchema,
 } from '@c1rcle/contracts';
 
 import { getAdminApiClient, newIdempotencyKey } from '@/lib/api';
@@ -62,6 +72,9 @@ import type {
   ProposalStatus,
   TicketStatus,
   PromoterAssignmentStatus,
+  SupportTicketStatus,
+  SupportTicketPriority,
+  SupportTicketCategory,
 } from '@/lib/admin/contract-types';
 import type { adminPromoDtoSchema, adminPromoterAssignmentDtoSchema } from '@c1rcle/contracts';
 
@@ -415,6 +428,7 @@ export function listPromoterAssignments(limit = 100): Promise<AdminPromoterAssig
 export const PROMOTER_ASSIGNMENT_STATUSES: readonly PromoterAssignmentStatus[] = [
   'active',
   'ended',
+  'suspended',
 ];
 
 /* ─── Admins ───────────────────────────────────────────────────────────────── */
@@ -468,6 +482,8 @@ export const ADMIN_AUDIT_ACTIONS = [
   'ADMIN_PROVISION',
   'ADMIN_ROLE_UPDATE',
   'COMMISSION_ADJUST',
+  'PROMOTER_SUSPEND',
+  'PROMOTER_REINSTATE',
 ] satisfies AdminAction[];
 
 export const ADMIN_ROLES = ['super', 'admin', 'ops', 'finance', 'support'] satisfies AdminRole[];
@@ -515,6 +531,29 @@ export function getAnalyticsSummary(): Promise<z.infer<typeof adminAnalyticsSumm
   return getAdminApiClient().get({
     path: '/api/v2/admin/analytics',
     schema: adminAnalyticsSummaryDtoSchema,
+  });
+}
+
+/* ─── Platform settings (Phase 7 editor) ───────────────────────────────────── */
+
+export type PlatformSettings = z.infer<typeof platformSettingsDtoSchema>;
+
+export function getPlatformSettings(): Promise<PlatformSettings> {
+  return getAdminApiClient().get({
+    path: '/api/v2/admin/settings/platform',
+    schema: platformSettingsDtoSchema,
+  });
+}
+
+/** Merge-update: only supplied fields are overwritten (idempotency-keyed). */
+export function updatePlatformSettings(
+  patch: z.infer<typeof platformSettingsUpdateRequestSchema>,
+): Promise<PlatformSettings> {
+  return getAdminApiClient().put({
+    path: '/api/v2/admin/settings/platform',
+    body: platformSettingsUpdateRequestSchema.parse(patch),
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: platformSettingsDtoSchema,
   });
 }
 
@@ -610,6 +649,20 @@ export function pauseEvent(eventId: string): Promise<z.infer<typeof adminEventDt
 export function resumeEvent(eventId: string): Promise<z.infer<typeof adminEventDtoSchema>> {
   return getAdminApiClient().post({
     path: `/api/v2/admin/events/${eventId}/resume`,
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: adminEventDtoSchema,
+  });
+}
+
+/**
+ * Admin force-complete — EVENT_FORCE_PAUSE is TIER1 (any active admin, merely
+ * logged). The admin-only FSM edge that force-ends a past event whose lifecycle
+ * never transitioned on its own (a `published` event whose sales window closed,
+ * a `started` event that never hit `ended`). Stamps `adminOverride: true`.
+ */
+export function forceCompleteEvent(eventId: string): Promise<z.infer<typeof adminEventDtoSchema>> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/events/${eventId}/force-complete`,
     headers: { 'idempotency-key': newIdempotencyKey() },
     schema: adminEventDtoSchema,
   });
@@ -760,6 +813,234 @@ export const PAYOUT_STATUSES = [
   'failed',
   'frozen',
 ] satisfies AdminPayoutStatus[];
+
+/* ─── Support desk (Phase 7 tickets) ──────────────────────────────────────── */
+
+export type AdminSupportTicketPage = z.infer<typeof supportTicketListResponseSchema>;
+export type AdminSupportTicket = z.infer<typeof supportTicketDtoSchema>;
+
+export interface SupportTicketListFilter {
+  readonly status?: SupportTicketStatus;
+  readonly priority?: SupportTicketPriority;
+  readonly category?: SupportTicketCategory;
+  readonly assigneeUserId?: string;
+  readonly requesterUserId?: string;
+  readonly search?: string;
+  readonly includeDeleted?: boolean;
+}
+
+/** Ticket queues, derived from the wire schema so the enum can never drift. */
+export const SUPPORT_TICKET_STATUSES: readonly SupportTicketStatus[] =
+  supportTicketDtoSchema.shape.status.options;
+export const SUPPORT_TICKET_PRIORITIES: readonly SupportTicketPriority[] =
+  supportTicketDtoSchema.shape.priority.options;
+export const SUPPORT_TICKET_CATEGORIES: readonly SupportTicketCategory[] =
+  supportTicketDtoSchema.shape.category.options;
+
+export function listSupportTickets(
+  filter: SupportTicketListFilter = {},
+  limit = 100,
+): Promise<AdminSupportTicketPage> {
+  return getAdminApiClient().get({
+    path: '/api/v2/admin/support/tickets',
+    query: {
+      ...(filter.status === undefined ? {} : { status: filter.status }),
+      ...(filter.priority === undefined ? {} : { priority: filter.priority }),
+      ...(filter.category === undefined ? {} : { category: filter.category }),
+      ...(filter.assigneeUserId === undefined ? {} : { assigneeUserId: filter.assigneeUserId }),
+      ...(filter.requesterUserId === undefined ? {} : { requesterUserId: filter.requesterUserId }),
+      ...(filter.search === undefined || filter.search === '' ? {} : { search: filter.search }),
+      ...(filter.includeDeleted === true ? { includeDeleted: 'true' } : {}),
+      limit,
+    },
+    schema: supportTicketListResponseSchema,
+  });
+}
+
+export function getSupportTicket(ticketId: string): Promise<AdminSupportTicket> {
+  return getAdminApiClient().get({
+    path: `/api/v2/admin/support/tickets/${ticketId}`,
+    schema: supportTicketDtoSchema,
+  });
+}
+
+/** Every desk mutation is idempotency-keyed — a retry replays, never double-executes. */
+
+export function assignSupportTicket(
+  ticketId: string,
+  userId: string,
+  name: string,
+): Promise<AdminSupportTicket> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/support/tickets/${ticketId}/assign`,
+    body: assignSupportTicketSchema.parse({ userId, name }),
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: supportTicketDtoSchema,
+  });
+}
+
+export function changeSupportTicketPriority(
+  ticketId: string,
+  priority: SupportTicketPriority,
+): Promise<AdminSupportTicket> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/support/tickets/${ticketId}/priority`,
+    body: changeSupportTicketPrioritySchema.parse({ priority }),
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: supportTicketDtoSchema,
+  });
+}
+
+export function sendAdminSupportReply(
+  ticketId: string,
+  content: string,
+): Promise<AdminSupportTicket> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/support/tickets/${ticketId}/reply`,
+    body: supportTicketMessageSchema.parse({ content }),
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: supportTicketDtoSchema,
+  });
+}
+
+export function addSupportInternalNote(
+  ticketId: string,
+  content: string,
+): Promise<AdminSupportTicket> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/support/tickets/${ticketId}/notes`,
+    body: supportTicketMessageSchema.parse({ content }),
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: supportTicketDtoSchema,
+  });
+}
+
+export interface SupportTicketLinkInput {
+  readonly venueId?: string;
+  readonly eventId?: string;
+  readonly orderId?: string;
+  readonly organizationId?: string;
+  readonly userId?: string;
+}
+
+export function linkSupportTicket(
+  ticketId: string,
+  links: SupportTicketLinkInput,
+): Promise<AdminSupportTicket> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/support/tickets/${ticketId}/link`,
+    body: supportTicketLinkSchema.parse(links),
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: supportTicketDtoSchema,
+  });
+}
+
+export function resolveSupportTicket(
+  ticketId: string,
+  reason: string,
+): Promise<AdminSupportTicket> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/support/tickets/${ticketId}/resolve`,
+    body: resolveSupportTicketSchema.parse({ reason }),
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: supportTicketDtoSchema,
+  });
+}
+
+export function mergeSupportTicket(
+  ticketId: string,
+  duplicateTicketId: string,
+): Promise<AdminSupportTicket> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/support/tickets/${ticketId}/merge`,
+    body: mergeSupportTicketSchema.parse({ duplicateTicketId }),
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: supportTicketDtoSchema,
+  });
+}
+
+export function escalateSupportTicket(ticketId: string): Promise<AdminSupportTicket> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/support/tickets/${ticketId}/escalate`,
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: supportTicketDtoSchema,
+  });
+}
+
+export function closeSupportTicket(ticketId: string): Promise<AdminSupportTicket> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/support/tickets/${ticketId}/close`,
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: supportTicketDtoSchema,
+  });
+}
+
+export function reopenSupportTicket(ticketId: string): Promise<AdminSupportTicket> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/support/tickets/${ticketId}/reopen`,
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: supportTicketDtoSchema,
+  });
+}
+
+export function restoreSupportTicket(ticketId: string): Promise<AdminSupportTicket> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/support/tickets/${ticketId}/restore`,
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: supportTicketDtoSchema,
+  });
+}
+
+/** Soft-deletes a ticket (kept for audit). Deleted tickets are hidden unless `includeDeleted`. */
+export function deleteSupportTicket(ticketId: string): Promise<AdminSupportTicket> {
+  return getAdminApiClient().delete({
+    path: `/api/v2/admin/support/tickets/${ticketId}`,
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: supportTicketDtoSchema,
+  });
+}
+
+/* ─── Commissions (platform fee per organization, TIER3 dual control) ─────── */
+
+/**
+ * `platformFeePercent` is a whole-number percent (0–100) — the domain model's
+ * only constraint (see `adjustPlatformFeePercent`). The desk raises a
+ * COMMISSION_ADJUST proposal, a second admin approves it on the Proposals
+ * desk, then execution applies the new rate from the proposal payload.
+ */
+export interface CommissionAdjustInput {
+  readonly organizationId: string;
+  readonly newRatePercent: number;
+  readonly reason: string;
+}
+
+export function raiseCommissionAdjustProposal(
+  input: CommissionAdjustInput,
+): Promise<z.infer<typeof proposedActionDtoSchema>> {
+  return raiseProposal({
+    action: 'COMMISSION_ADJUST',
+    reason: input.reason,
+    payload: {
+      organizationId: input.organizationId,
+      platformFeePercent: input.newRatePercent,
+    },
+  });
+}
+
+export function isCommissionAction(action: AdminAction): boolean {
+  return action === 'COMMISSION_ADJUST';
+}
+
+/** Executes an approved COMMISSION_ADJUST proposal — the second admin step. */
+export function adjustCommissionFromProposal(
+  proposalId: string,
+): Promise<z.infer<typeof adminHostDtoSchema>> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/proposals/${proposalId}/adjust-commission`,
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: adminHostDtoSchema,
+  });
+}
 
 /* ─── Audit CSV export ─────────────────────────────────────────────────────── */
 

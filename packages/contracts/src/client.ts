@@ -144,6 +144,7 @@ export type {
   PartnershipDto,
   RequestPartnershipRequest,
   ResolvePartnershipRequest,
+  SetVenueShareRequest,
   PartnerAccessDto,
   OrganizationOverviewDto,
   EventAnalyticsDto,
@@ -158,6 +159,7 @@ export {
   partnershipDtoSchema,
   requestPartnershipSchema,
   resolvePartnershipSchema,
+  setVenueShareRequestSchema,
   partnerPermissionSchema,
   partnerAccessDtoSchema,
   organizationOverviewDtoSchema,
@@ -414,13 +416,28 @@ export type {
   AdminPromoterAssignmentStatus,
   AdminPromoterAssignmentDto,
   AdminPromoterAssignmentListResponse,
+  AdminPromoterSuspendRequest,
+  AdminPromoterActionResponse,
 } from './contracts/admin-promoters.js';
 
 export {
   adminPromoterAssignmentStatusSchema,
   adminPromoterAssignmentDtoSchema,
   adminPromoterAssignmentListResponseSchema,
+  adminPromoterSuspendRequestSchema,
+  adminPromoterActionResponseSchema,
 } from './contracts/admin-promoters.js';
+
+// Phase 7: Admin platform settings
+export type {
+  PlatformSettingsDto,
+  PlatformSettingsUpdateRequest,
+} from './contracts/admin-settings.js';
+
+export {
+  platformSettingsDtoSchema,
+  platformSettingsUpdateRequestSchema,
+} from './contracts/admin-settings.js';
 
 // Phase 6: Finance / Ledger / Payouts
 export type {
@@ -479,6 +496,53 @@ export {
   adminRefundRequestDtoSchema,
   adminRefundRequestListResponseSchema,
 } from './contracts/phase6.js';
+
+// Phase 7: Trust & safety + admin desks
+export type {
+  SupportTicketStatus,
+  SupportTicketPriority,
+  SupportTicketCategory,
+  SupportTicketMessageDto,
+  SupportInternalNoteDto,
+  SupportTimelineEventDto,
+  SupportTicketLinksDto,
+  SupportSlaDto,
+  SupportTicketRequesterDto,
+  SupportTicketDto,
+  SubmitSupportTicketInput,
+  SupportTicketMessageInput,
+  AssignSupportTicketInput,
+  ChangeSupportTicketPriorityInput,
+  SupportTicketLinkInput,
+  ResolveSupportTicketInput,
+  MergeSupportTicketInput,
+  SupportTicketQuery,
+  SupportTicketIdParam,
+} from './contracts/phase7.js';
+
+export {
+  supportTicketStatusSchema,
+  supportTicketPrioritySchema,
+  supportTicketCategorySchema,
+  supportTicketMessageDtoSchema,
+  supportInternalNoteDtoSchema,
+  supportTimelineEventDtoSchema,
+  supportTicketLinksDtoSchema,
+  supportSlaDtoSchema,
+  supportTicketRequesterDtoSchema,
+  supportTicketAssigneeDtoSchema,
+  supportTicketDtoSchema,
+  supportTicketListResponseSchema,
+  submitSupportTicketSchema,
+  supportTicketMessageSchema,
+  assignSupportTicketSchema,
+  changeSupportTicketPrioritySchema,
+  supportTicketLinkSchema,
+  resolveSupportTicketSchema,
+  mergeSupportTicketSchema,
+  supportTicketQuerySchema,
+  supportTicketIdParamSchema,
+} from './contracts/phase7.js';
 
 // Public / discovery (Phase 4 PR1)
 export type {

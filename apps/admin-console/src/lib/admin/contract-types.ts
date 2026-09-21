@@ -22,6 +22,9 @@ import {
   type onboardingStatusSchema,
   type organizationStatusSchema,
   type proposalStatusSchema,
+  type supportTicketCategorySchema,
+  type supportTicketPrioritySchema,
+  type supportTicketStatusSchema,
 } from '@c1rcle/contracts';
 
 export type AdminRole = z.infer<typeof adminRoleSchema>;
@@ -40,3 +43,6 @@ export type TicketStatus = z.infer<typeof adminTicketStatusSchema>;
 export type PromoType = z.infer<typeof adminPromoTypeSchema>;
 export type PromoDiscountType = z.infer<typeof adminPromoDiscountTypeSchema>;
 export type PromoterAssignmentStatus = z.infer<typeof adminPromoterAssignmentStatusSchema>;
+export type SupportTicketStatus = z.infer<typeof supportTicketStatusSchema>;
+export type SupportTicketPriority = z.infer<typeof supportTicketPrioritySchema>;
+export type SupportTicketCategory = z.infer<typeof supportTicketCategorySchema>;

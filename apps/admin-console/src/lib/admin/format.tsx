@@ -13,6 +13,9 @@ import type {
   VenueStatus,
   TicketStatus,
   PromoterAssignmentStatus,
+  SupportTicketStatus,
+  SupportTicketPriority,
+  SupportTicketCategory,
 } from '@/lib/admin/contract-types';
 
 export function formatPaise(paise: number): string {
@@ -48,6 +51,7 @@ export const ADMIN_ROLE_LABELS: Record<AdminRole, string> = {
 export const ADMIN_ACTION_LABELS: Record<AdminAction, string> = {
   EVENT_PAUSE: 'Pause event (admin override)',
   EVENT_RESUME: 'Resume event',
+  EVENT_FORCE_PAUSE: 'Force-pause event (admin override)',
   ONBOARDING_APPROVE: 'Approve onboarding',
   VENUE_SUSPEND: 'Suspend venue',
   VENUE_REINSTATE: 'Reinstate venue',
@@ -63,6 +67,8 @@ export const ADMIN_ACTION_LABELS: Record<AdminAction, string> = {
   ADMIN_PROVISION: 'Provision admin',
   ADMIN_ROLE_UPDATE: 'Update admin role',
   COMMISSION_ADJUST: 'Adjust commission',
+  PROMOTER_SUSPEND: 'Suspend promoter',
+  PROMOTER_REINSTATE: 'Reinstate promoter',
 };
 
 /**
@@ -342,8 +348,70 @@ export function ticketStatusTone(status: TicketStatus): Tone {
 export const PROMOTER_ASSIGNMENT_STATUS_LABELS: Record<PromoterAssignmentStatus, string> = {
   active: 'Active',
   ended: 'Ended',
+  suspended: 'Suspended',
 };
 
 export function promoterAssignmentStatusTone(status: PromoterAssignmentStatus): Tone {
-  return status === 'active' ? 'success' : 'muted';
+  switch (status) {
+    case 'active':
+      return 'success';
+    case 'suspended':
+      return 'warning';
+    case 'ended':
+      return 'muted';
+  }
 }
+
+export const SUPPORT_TICKET_STATUS_LABELS: Record<SupportTicketStatus, string> = {
+  open: 'Open',
+  in_progress: 'In progress',
+  waiting_on_customer: 'Waiting on customer',
+  escalated: 'Escalated',
+  resolved: 'Resolved',
+  closed: 'Closed',
+};
+
+export function supportTicketStatusTone(status: SupportTicketStatus): Tone {
+  switch (status) {
+    case 'open':
+      return 'warning';
+    case 'in_progress':
+    case 'waiting_on_customer':
+      return 'default';
+    case 'escalated':
+      return 'destructive';
+    case 'resolved':
+      return 'success';
+    case 'closed':
+      return 'muted';
+  }
+}
+
+export const SUPPORT_TICKET_PRIORITY_LABELS: Record<SupportTicketPriority, string> = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+  urgent: 'Urgent',
+};
+
+export function supportTicketPriorityTone(priority: SupportTicketPriority): Tone {
+  switch (priority) {
+    case 'urgent':
+      return 'destructive';
+    case 'high':
+      return 'warning';
+    case 'medium':
+      return 'default';
+    case 'low':
+      return 'muted';
+  }
+}
+
+export const SUPPORT_TICKET_CATEGORY_LABELS: Record<SupportTicketCategory, string> = {
+  account: 'Account',
+  billing: 'Billing',
+  order: 'Order',
+  event: 'Event',
+  technical: 'Technical',
+  other: 'Other',
+};

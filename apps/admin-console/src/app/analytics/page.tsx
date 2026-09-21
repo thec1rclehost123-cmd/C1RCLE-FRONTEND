@@ -41,7 +41,10 @@ export default function AnalyticsDesk() {
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <StatCard label="Net revenue" value={formatPaise(summary.data.totalRevenuePaise)} />
-            <StatCard label="Tickets sold" value={summary.data.ticketsSold.toLocaleString('en-IN')} />
+            <StatCard
+              label="Tickets sold"
+              value={summary.data.ticketsSold.toLocaleString('en-IN')}
+            />
             <StatCard
               label="Active events"
               value={summary.data.activeEventsCount.toLocaleString('en-IN')}
@@ -87,6 +90,13 @@ export default function AnalyticsDesk() {
             Scanned {summary.data.scannedOrders.toLocaleString('en-IN')} orders and{' '}
             {summary.data.scannedEvents.toLocaleString('en-IN')} events for this summary.
           </p>
+
+          {summary.data.truncated && (
+            <p className="rounded-md border border-amber-300/40 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+              The scan hit the per-collection limit, so these figures are a lower-bound snapshot of
+              the most recent activity — not the full platform ledger.
+            </p>
+          )}
         </>
       )}
     </div>
