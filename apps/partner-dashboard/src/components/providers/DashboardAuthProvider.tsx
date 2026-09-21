@@ -5,10 +5,11 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { getAccessToken, login, logout, signup, useSession } from '@c1rcle/auth';
 
+import { clearPartnerAccessCache, getCachedPartnerAccess } from '@/lib/access/org-access-cache';
 import { useOrgAccess } from '@/lib/access/use-org-access';
 import { getMyOnboardingRequest } from '@/lib/onboarding/onboarding-repository';
 import { getActiveOrgId, setActiveOrg } from '@/lib/org/active-org';
-import { getOrganizations, getPartnerAccess } from '@/lib/org/org-repository';
+import { getOrganizations } from '@/lib/org/org-repository';
 
 import type { DashboardProfile, PartnerMembership, PartnerType, StaffRole } from '@/lib/rbac/types';
 import type { OnboardingRequestDto } from '@c1rcle/contracts';
@@ -98,6 +99,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   // effect would add here except an extra render.
   const [activeOrgId, setActiveOrgIdState] = useState<string | null>(() => getActiveOrgId());
   const [memberships, setMemberships] = useState<PartnerMembership[]>([]);
+  const [organizationIds, setOrganizationIds] = useState<string[]>([]);
   const [onboardingRequest, setOnboardingRequest] = useState<OnboardingRequestDto | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
 
@@ -125,7 +127,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   // It also requires the `x-organization-id` header fix in `use-org-access.ts`:
   // without the header the gateway answers 422, never 200/403.
   const validatedActiveOrgId =
-    activeOrgId !== null && memberships.some((m) => m.partnerId === activeOrgId)
+    activeOrgId !== null && organizationIds.includes(activeOrgId)
       ? activeOrgId
       : null;
   const orgAccess = useOrgAccess(session.isAuthenticated ? validatedActiveOrgId : null);
@@ -147,13 +149,15 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
       if (session.isLoading) return;
       const currentUser = session.user;
       if (!session.isAuthenticated || !currentUser) {
+        clearPartnerAccessCache();
+        setOrganizationIds([]);
         setMemberships([]);
         setOnboardingRequest(null);
         if (activeOrgId !== null) {
           // Session is gone but in-memory + cookie org hints may remain (e.g.
           // logout failed mid-flight). Clear both so the next login never
           // queries the previous account's org.
-          await setActiveOrg(null as unknown as string).catch(() => undefined);
+          await setActiveOrg(null).catch(() => undefined);
           if (!lifecycle.cancelled) setActiveOrgIdState(null);
         }
         setDataLoading(false);
@@ -164,58 +168,81 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
       try {
         const [orgs, request] = await Promise.all([getOrganizations(), getMyOnboardingRequest()]);
         if (lifecycle.cancelled) return;
-
-        const resolved = await Promise.all(
-          orgs.map(async (org): Promise<PartnerMembership | null> => {
-            try {
-              const access = await getPartnerAccess(org.id);
-              return {
-                uid: currentUser.id,
-                partnerId: org.id,
-                partnerType: access.partnerType as PartnerType,
-                role: toStaffRole(org.role),
-                isActive: org.id === activeOrgId,
-                partnerName: org.name,
-              };
-            } catch {
-              // A member the caller can list but not yet resolve access for
-              // (e.g. a suspended org) is dropped from the switcher rather
-              // than shown broken.
-              return null;
-            }
-          }),
-        );
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- real unmount-race guard; the linter can't see the cleanup function's mutation of `lifecycle.cancelled` from here.
-        if (lifecycle.cancelled) return;
-
-        const resolvedMemberships = resolved.filter((m): m is PartnerMembership => m !== null);
-        setMemberships(resolvedMemberships);
+        clearPartnerAccessCache();
+        setOrganizationIds(orgs.map((org) => org.id));
         setOnboardingRequest(request);
 
-        const validOrgIds = new Set(resolvedMemberships.map((m) => m.partnerId));
-        const activeOrgIsValid = activeOrgId !== null && validOrgIds.has(activeOrgId);
-
-        if (!activeOrgIsValid) {
-          // Stale or missing activeOrgId (e.g. from a different account's session).
-          // Clear storage and auto-pick if there is exactly one membership.
-          const [only, ...rest] = resolvedMemberships;
-          if (only && rest.length === 0) {
-            await setActiveOrg(only.partnerId);
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- real unmount-race guard; see the comment on `lifecycle` above.
-            if (!lifecycle.cancelled) setActiveOrgIdState(only.partnerId);
-          } else {
-            await setActiveOrg(null as unknown as string);
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- real unmount-race guard; see the comment on `lifecycle` above.
-            if (!lifecycle.cancelled) setActiveOrgIdState(null);
+        const resolveMembership = async (org: (typeof orgs)[number]): Promise<PartnerMembership | null> => {
+          try {
+            const access = await getCachedPartnerAccess(org.id);
+            return {
+              uid: currentUser.id,
+              partnerId: org.id,
+              partnerType: access.partnerType as PartnerType,
+              role: toStaffRole(org.role),
+              isActive: org.id === activeOrgId,
+              partnerName: org.name,
+            };
+          } catch {
+            // A member whose access cannot be resolved is omitted from the switcher.
+            return null;
           }
+        };
+
+        const activeOrg = activeOrgId === null
+          ? undefined
+          : orgs.find((org) => org.id === activeOrgId);
+
+        if (activeOrg) {
+          // Only the active workspace is on the critical path. Other
+          // organizations are resolved after the page is unblocked.
+          const activeMembership = await resolveMembership(activeOrg);
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- lifecycle is mutated by the effect cleanup while this request is pending.
+          if (lifecycle.cancelled) return;
+          setMemberships(activeMembership ? [activeMembership] : []);
+          setDataLoading(false);
+
+          void Promise.all(
+            orgs.filter((org) => org.id !== activeOrg.id).map(resolveMembership),
+          ).then((resolved) => {
+            if (lifecycle.cancelled) return;
+            setMemberships((current) => [
+              ...current.filter((membership) => membership.partnerId === activeOrg.id),
+              ...resolved.filter((membership): membership is PartnerMembership => membership !== null),
+            ]);
+          });
+          return;
         }
+
+        // No valid active organization exists. Resolve all organizations so
+        // the organization picker can auto-select a single option or display
+        // multiple options.
+        const resolved = await Promise.all(orgs.map(resolveMembership));
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- lifecycle is mutated by the effect cleanup while these requests are pending.
+        if (lifecycle.cancelled) return;
+        const resolvedMemberships = resolved.filter((m): m is PartnerMembership => m !== null);
+        setMemberships(resolvedMemberships);
+
+        // Stale or missing activeOrgId (e.g. from a different account's session).
+        // Clear storage and auto-pick if there is exactly one membership.
+        const [only, ...rest] = resolvedMemberships;
+        if (only && rest.length === 0) {
+          await setActiveOrg(only.partnerId);
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- real unmount-race guard; see the comment on `lifecycle` above.
+          if (!lifecycle.cancelled) setActiveOrgIdState(only.partnerId);
+        } else {
+          await setActiveOrg(null);
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- real unmount-race guard; see the comment on `lifecycle` above.
+          if (!lifecycle.cancelled) setActiveOrgIdState(null);
+        }
+        setDataLoading(false);
       } catch {
         if (!lifecycle.cancelled) {
+          setOrganizationIds([]);
           setMemberships([]);
           setOnboardingRequest(null);
+          setDataLoading(false);
         }
-      } finally {
-        if (!lifecycle.cancelled) setDataLoading(false);
       }
     }
 

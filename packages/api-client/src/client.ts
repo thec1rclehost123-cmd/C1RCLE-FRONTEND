@@ -107,7 +107,10 @@ export class ApiClient {
   }
 
   public async request<T>(options: RequestOptions<T>): Promise<T> {
-    const attempts = (options.retries ?? this.#maxRetries) + 1;
+    // Reads may retry once, but writes must not be replayed implicitly: a
+    // timeout can happen after the server has already committed the write.
+    const defaultRetries = options.method === 'GET' ? Math.min(this.#maxRetries, 1) : 0;
+    const attempts = (options.retries ?? defaultRetries) + 1;
     let lastError: ApiClientError | undefined;
 
     for (let attempt = 0; attempt < attempts; attempt += 1) {
@@ -135,6 +138,7 @@ export class ApiClient {
 
   async #attempt<T>(options: RequestOptions<T>, isReauthRetry = false): Promise<T> {
     const requestId = newRequestId();
+    const startedAt = Date.now();
     const timeoutMs = options.timeoutMs ?? this.#timeoutMs;
     const timeoutSignal = AbortSignal.timeout(timeoutMs);
     const signal = options.signal
@@ -168,6 +172,7 @@ export class ApiClient {
         ...(requestBody !== undefined ? { body: requestBody } : {}),
       });
     } catch (cause) {
+      this.#logTiming(options, requestId, 0, startedAt);
       if (options.signal?.aborted === true) {
         throw this.#error('aborted', 'Request was cancelled.', { requestId, cause });
       }
@@ -198,10 +203,13 @@ export class ApiClient {
           return this.#attempt(options, true);
         }
       }
-      throw await this.#toHttpError(response, correlationId);
+      const error = await this.#toHttpError(response, correlationId);
+      this.#logTiming(options, correlationId, response.status, startedAt);
+      throw error;
     }
 
     if (response.status === 204) {
+      this.#logTiming(options, requestId, response.status, startedAt);
       return this.#parse(options.schema, undefined, correlationId);
     }
 
@@ -216,7 +224,23 @@ export class ApiClient {
       });
     }
 
+    this.#logTiming(options, correlationId, response.status, startedAt);
     return this.#parse(options.schema, payload, correlationId);
+  }
+
+  #logTiming<T>(
+    options: RequestOptions<T>,
+    requestId: RequestId,
+    status: number,
+    startedAt: number,
+  ): void {
+    this.#config.onTiming?.({
+      method: options.method ?? 'GET',
+      path: options.path,
+      status,
+      requestId,
+      durationMs: Date.now() - startedAt,
+    });
   }
 
   #parse<T>(schema: RequestOptions<T>['schema'], payload: unknown, requestId: RequestId): T {

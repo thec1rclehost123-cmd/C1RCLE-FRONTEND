@@ -20,6 +20,18 @@ export const eventStatusSchema = z.enum([
 ]);
 export type EventStatusDto = z.infer<typeof eventStatusSchema>;
 
+export const compensationModelSchema = z.enum(['standard', 'custom', 'salary']);
+export const salaryPeriodSchema = z.enum(['per_event', 'per_day', 'per_month']);
+export const eventCompensationSchema = z.object({
+  model: compensationModelSchema,
+  globalRatePercent: z.number().int().min(0).max(100).nullable(),
+  tierRates: z.record(z.string(), z.number().int().min(0).max(100)),
+  salaryAmountPaise: z.number().int().positive().nullable(),
+  salaryPeriod: salaryPeriodSchema.nullable(),
+  salaryNotes: z.string().max(2000).nullable(),
+});
+export type EventCompensation = z.infer<typeof eventCompensationSchema>;
+
 export const eventDtoSchema = z.object({
   id: opaqueIdSchema,
   organizationId: opaqueIdSchema,
@@ -44,6 +56,7 @@ export const eventDtoSchema = z.object({
   earlyBirdDiscountPercent: z.number().int().min(0).max(100).nullable().optional(),
   lateArrivalChargePercent: z.number().int().min(0).max(100).nullable().optional(),
   cancellationReason: z.string().max(1000).nullable(),
+  compensation: eventCompensationSchema.nullable(),
   version: z.number().int().positive(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
@@ -65,6 +78,7 @@ export const createEventSchema = z.object({
   startAt: z.iso.datetime(),
   endAt: z.iso.datetime().nullable(),
   tags: z.array(z.string().min(1)).max(50).default([]),
+  compensation: eventCompensationSchema.nullable().optional(),
   earlyBirdDiscountPercent: z.number().int().min(0).max(100).nullable().optional(),
   lateArrivalChargePercent: z.number().int().min(0).max(100).nullable().optional(),
 });
@@ -116,6 +130,7 @@ export const updateEventSchema = z
     tags: z.array(z.string().min(1).max(40)).max(50).optional(),
     startingPricePaise: z.number().int().nonnegative().optional(),
     isFree: z.boolean().optional(),
+    compensation: eventCompensationSchema.nullable().optional(),
   })
   .strict();
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
@@ -130,6 +145,16 @@ export type CancelEventInput = z.infer<typeof cancelEventSchema>;
 /* ─── Event catalog (ticket tiers / promos / tables / promoter assignments) ─── */
 
 export const ticketTierStatusSchema = z.enum(['active', 'paused', 'sold_out']);
+export const ticketAccessTypeSchema = z.enum(['ENTRY', 'VIP', 'VVIP', 'TABLE', 'PACKAGE', 'RSVP']);
+export const ticketAudienceTypeSchema = z.enum(['GENERAL', 'MALE', 'FEMALE', 'COUPLE', 'GROUP']);
+export const ticketPricingPhaseSchema = z.object({
+  id: z.string().min(1).max(64),
+  name: z.string().min(1).max(80),
+  priceInPaise: z.number().int().nonnegative(),
+  startsAt: z.iso.datetime(),
+  endsAt: z.iso.datetime(),
+  quantity: z.number().int().nonnegative().nullable(),
+});
 
 export const ticketTierDtoSchema = z.object({
   id: opaqueIdSchema,
@@ -145,8 +170,27 @@ export const ticketTierDtoSchema = z.object({
   status: ticketTierStatusSchema,
   salesStartAt: z.iso.datetime().nullable(),
   salesEndAt: z.iso.datetime().nullable(),
-  minPerOrder: z.number().int().positive().nullable(),
   maxPerOrder: z.number().int().positive().nullable(),
+  accessType: ticketAccessTypeSchema.optional(),
+  audienceType: ticketAudienceTypeSchema.optional(),
+  guestCount: z.number().int().positive().optional(),
+  pricingPhases: z.array(ticketPricingPhaseSchema).max(20).optional(),
+  doorPriceInPaise: z.number().int().nonnegative().nullable().optional(),
+  benefits: z.array(z.string().min(1).max(200)).max(20).optional(),
+  minAge: z.number().int().min(0).max(100).nullable().optional(),
+  maxAge: z.number().int().min(0).max(100).nullable().optional(),
+  minPerOrder: z.number().int().positive().nullable().optional(),
+  maxPerUser: z.number().int().positive().nullable().optional(),
+  tableConfig: z
+    .object({
+      capacity: z.number().int().positive(),
+      minimumSpendPaise: z.number().int().nonnegative(),
+      redeemableAmountPaise: z.number().int().nonnegative(),
+      tableCount: z.number().int().positive(),
+    })
+    .nullable()
+    .optional(),
+  commissionEligible: z.boolean().optional(),
   version: z.number().int().positive(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
@@ -163,8 +207,27 @@ export const createTicketTierSchema = z
     quantity: z.number().int().nonnegative(),
     salesStartAt: z.iso.datetime().nullable().optional(),
     salesEndAt: z.iso.datetime().nullable().optional(),
-    minPerOrder: z.number().int().positive().nullable().optional(),
     maxPerOrder: z.number().int().positive().nullable().optional(),
+    accessType: ticketAccessTypeSchema.optional(),
+    audienceType: ticketAudienceTypeSchema.optional(),
+    guestCount: z.number().int().positive().optional(),
+    pricingPhases: z.array(ticketPricingPhaseSchema).max(20).optional(),
+    doorPriceInPaise: z.number().int().nonnegative().nullable().optional(),
+    benefits: z.array(z.string().min(1).max(200)).max(20).optional(),
+    minAge: z.number().int().min(0).max(100).nullable().optional(),
+    maxAge: z.number().int().min(0).max(100).nullable().optional(),
+    minPerOrder: z.number().int().positive().nullable().optional(),
+    maxPerUser: z.number().int().positive().nullable().optional(),
+    tableConfig: z
+      .object({
+        capacity: z.number().int().positive(),
+        minimumSpendPaise: z.number().int().nonnegative(),
+        redeemableAmountPaise: z.number().int().nonnegative(),
+        tableCount: z.number().int().positive(),
+      })
+      .nullable()
+      .optional(),
+    commissionEligible: z.boolean().optional(),
   })
   .strict();
 export type CreateTicketTierRequest = z.infer<typeof createTicketTierSchema>;
@@ -241,6 +304,10 @@ export const commissionTermsSchema = z.object({
   version: z.number().int().positive(),
   ratePercent: z.number().int().nonnegative(),
   flatPaise: z.number().int().nonnegative(),
+  tierRates: z.record(z.string(), z.object({
+    ratePercent: z.number().int().min(0).max(100),
+    flatPaise: z.number().int().nonnegative(),
+  })).optional(),
 });
 
 export const promoterAssignmentDtoSchema = z.object({
@@ -262,6 +329,10 @@ export const assignPromoterSchema = z
     promoterId: opaqueIdSchema,
     ratePercent: z.number().int().min(0).max(100).optional(),
     flatPaise: z.number().int().nonnegative().optional(),
+    tierRates: z.record(z.string(), z.object({
+      ratePercent: z.number().int().min(0).max(100),
+      flatPaise: z.number().int().nonnegative(),
+    })).optional(),
   })
   .strict();
 export type AssignPromoterRequest = z.infer<typeof assignPromoterSchema>;
