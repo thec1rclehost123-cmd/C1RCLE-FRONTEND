@@ -8,16 +8,20 @@ import { Button, EmptyState, ErrorState, LoadingState, TextField } from '@c1rcle
 import { PageHeader } from '@/components/admin/page-header';
 import { StatusFilter } from '@/components/admin/status-filter';
 import {
+  adjustCommissionFromProposal,
   approveProposal,
   cancelProposal,
   executePayoutProposal,
+  isCommissionAction,
   isPayoutProposalAction,
   isProvisionAction,
+  isRoleUpdateAction,
   listProposals,
   PROPOSAL_STATUSES,
   provisionAdminFromProposal,
   rejectProposal,
   statusFilterOptions,
+  updateAdminRoleFromProposal,
 } from '@/lib/admin/admin-api';
 import {
   StatusBadge,
@@ -89,6 +93,25 @@ export default function ProposalsDesk() {
     mutationFn: (proposalId: string) => provisionAdminFromProposal(proposalId),
     onSuccess: () => {
       invalidate();
+    },
+  });
+
+  const [roleUpdatingId, setRoleUpdatingId] = useState<string | null>(null);
+  const roleUpdateMutation = useMutation({
+    mutationFn: (proposalId: string) => updateAdminRoleFromProposal(proposalId),
+    onSuccess: () => {
+      invalidate();
+    },
+  });
+
+  const [commissionExecutingId, setCommissionExecutingId] = useState<string | null>(null);
+  const commissionMutation = useMutation({
+    mutationFn: (proposalId: string) => adjustCommissionFromProposal(proposalId),
+    onSuccess: () => {
+      invalidate();
+      // The commissions desk caches the org table under this key — refresh it so
+      // the live platformFeePercent column updates without a manual reload.
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'hosts', 'commissions'] });
     },
   });
 
@@ -272,6 +295,42 @@ export default function ProposalsDesk() {
                                 : 'Provision admin'}
                             </Button>
                           ) : proposal.status === 'approved' &&
+                            isRoleUpdateAction(proposal.action) ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={roleUpdateMutation.isPending}
+                              onClick={() => {
+                                setRoleUpdatingId(proposal.id);
+                                roleUpdateMutation.mutate(proposal.id);
+                              }}
+                              aria-busy={
+                                roleUpdateMutation.isPending && roleUpdatingId === proposal.id
+                              }
+                            >
+                              {roleUpdateMutation.isPending && roleUpdatingId === proposal.id
+                                ? 'Updating…'
+                                : 'Apply role update'}
+                            </Button>
+                          ) : proposal.status === 'approved' &&
+                            isCommissionAction(proposal.action) ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={commissionMutation.isPending}
+                              onClick={() => {
+                                setCommissionExecutingId(proposal.id);
+                                commissionMutation.mutate(proposal.id);
+                              }}
+                              aria-busy={
+                                commissionMutation.isPending && commissionExecutingId === proposal.id
+                              }
+                            >
+                              {commissionMutation.isPending && commissionExecutingId === proposal.id
+                                ? 'Adjusting…'
+                                : 'Adjust commission'}
+                            </Button>
+                          ) : proposal.status === 'approved' &&
                             isPayoutProposalAction(proposal.action) ? (
                             <Button
                               size="sm"
@@ -300,7 +359,10 @@ export default function ProposalsDesk() {
         </div>
       )}
 
-      {resolveMutation.isError || payoutExecutionMutation.isError ? (
+      {resolveMutation.isError ||
+      payoutExecutionMutation.isError ||
+      roleUpdateMutation.isError ||
+      commissionMutation.isError ? (
         <p role="alert" className="text-sm text-destructive">
           The action could not be completed. It is safe to retry — the request is idempotency-keyed.
         </p>

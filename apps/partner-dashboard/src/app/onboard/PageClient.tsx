@@ -34,6 +34,7 @@ import {
 } from '@c1rcle/icons';
 
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
+import { sendOtpEmail, verifyOtpEmail, verifyPhoneNumber } from '@/lib/bff/auth-otp';
 import { getFirebaseAuth, RecaptchaVerifier, signInWithPhoneNumber } from '@/lib/firebase/client';
 import {
   addOnboardingDocument,
@@ -124,41 +125,9 @@ const STEP_LABELS: Record<OnboardingStep, string> = {
   success: 'Done',
 };
 
-// ── Error extractor — gateway returns { success: false, error: { message } } ──
-interface GatewayErrorDetail {
-  path?: string;
-  message: string;
-}
-
-function extractError(data: unknown, fallback: string): string {
-  if (!data || typeof data !== 'object') return fallback;
-  const obj = data as { error?: unknown; message?: unknown };
-  const errorObj = obj.error;
-  if (errorObj && typeof errorObj === 'object') {
-    const err = errorObj as { details?: unknown; message?: unknown };
-    if (Array.isArray(err.details) && err.details.length > 0) {
-      const detailsMsg = err.details
-        .map((d: unknown): string => {
-          if (!d || typeof d !== 'object') return '';
-          const item = d as Partial<GatewayErrorDetail>;
-          const field = item.path ? item.path.replace(/^(body\.|query\.|params\.)/, '') : '';
-          return field ? `${field}: ${item.message ?? ''}` : (item.message ?? '');
-        })
-        .filter((msg) => msg.length > 0)
-        .join(', ');
-      const msg = typeof err.message === 'string' ? err.message : 'Validation failed';
-      return `${msg}: ${detailsMsg}`;
-    }
-    if (typeof err.message === 'string') return err.message;
-  }
-  if (typeof obj.message === 'string') return obj.message;
-  if (typeof obj.error === 'string') return obj.error;
-  return fallback;
-}
-
-// Mirrors the old `err.message || fallback` extraction without the `any` — only
-// object errors carry messages; strings/null/undefined falls back (the old code
-// crashed on null/undefined throws; this is strictly safer).
+// BFF routes ship with their own extracted error message; this is the generic
+// fallback for everything else (mirrors the old `err.message || fallback` logic
+// without the `any` — strings/null/undefined falls back; strictly safer).
 function errorMessage(err: unknown, fallback: string): string {
   if (typeof err === 'object' && err !== null) {
     const message = (err as { message?: unknown }).message;
@@ -171,37 +140,6 @@ function errorMessage(err: unknown, fallback: string): string {
 // issued through ApiClient, which is gateway-scoped. Mirrors
 // src/app/verify/PageClient.tsx.
 const legacyFetch = (...args: Parameters<typeof fetch>) => window.fetch(...args);
-
-// ── OTP API helpers — email only; phone goes through the Firebase SDK ──────────
-async function apiSendOtp(email: string) {
-  // Same-origin call to this app's approved OTP BFF route handler. Raw fetch is
-  // required here because api-client targets the gateway base URL while these
-  // auth flows must hit the local Next route (see src/lib/bff/auth-proxy.ts).
-  // eslint-disable-next-line no-restricted-globals, no-restricted-syntax
-  const res = await fetch('/api/auth/otp/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email }),
-  });
-  if (!res.ok) {
-    const data: unknown = await res.json().catch(() => ({}));
-    throw new Error(extractError(data, 'Failed to send code.'));
-  }
-}
-
-async function apiVerifyOtp(email: string, code: string) {
-  // Same-origin call to this app's approved OTP BFF route handler — see above.
-  // eslint-disable-next-line no-restricted-globals, no-restricted-syntax
-  const res = await fetch('/api/auth/otp/verify', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, code }),
-  });
-  if (!res.ok) {
-    const data: unknown = await res.json().catch(() => ({}));
-    throw new Error(extractError(data, 'Incorrect code.'));
-  }
-}
 
 // ── Main component ────────────────────────────────────────────────────────────
 function OnboardingContent() {
@@ -453,7 +391,7 @@ function OnboardingContent() {
     }
     setLoading(true);
     try {
-      await apiSendOtp(otpEmail);
+      await sendOtpEmail(otpEmail);
       setOtpEmailSent(true);
       setFormData((prev) => ({ ...prev, email: otpEmail }));
       startCooldown(setEmailCooldown, emailCooldownRef);
@@ -537,7 +475,7 @@ function OnboardingContent() {
     }
     setLoading(true);
     try {
-      await apiSendOtp(otpEmail);
+      await sendOtpEmail(otpEmail);
       setOtpEmailSent(true);
       setFormData((prev) => ({ ...prev, email: otpEmail }));
       startCooldown(setEmailCooldown, emailCooldownRef);
@@ -556,7 +494,7 @@ function OnboardingContent() {
     }
     setLoading(true);
     try {
-      await apiVerifyOtp(otpEmail, otpEmailCode);
+      await verifyOtpEmail(otpEmail, otpEmailCode);
       setStep('entity_type');
     } catch (err: unknown) {
       setError(errorMessage(err, ''));
@@ -640,19 +578,10 @@ function OnboardingContent() {
     try {
       const credential = await confirmationResultRef.current.confirm(otpPhoneCode);
       const idToken = await credential.user.getIdToken();
-      // eslint-disable-next-line no-restricted-globals, no-restricted-syntax -- same-origin call to this app's approved BFF route handler (mirrors src/lib/bff/auth-proxy.ts).
-      const res = await fetch('/api/auth/phone-verification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phoneNumber: formData.phone || otpPhone.replace(/\s/g, ''),
-          idToken,
-        }),
+      await verifyPhoneNumber({
+        phoneNumber: formData.phone || otpPhone.replace(/\s/g, ''),
+        idToken,
       });
-      if (!res.ok) {
-        const data: unknown = await res.json().catch(() => ({}));
-        throw new Error(extractError(data, 'Phone verification failed.'));
-      }
       const idx = stepSequence.indexOf('phone_verify');
       const next = stepSequence[idx + 1];
       if (next) {

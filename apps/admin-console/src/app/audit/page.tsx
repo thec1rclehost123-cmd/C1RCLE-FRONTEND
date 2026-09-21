@@ -110,9 +110,17 @@ export default function AuditDesk() {
                       tone={auditActionTone(record.action)}
                     />
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                    {record.targetType}
-                    <span className="text-muted-foreground/70"> / {shortId(record.targetId)}</span>
+                  <td className="px-4 py-3">
+                    {record.targetName !== null ? (
+                      <p className="font-medium">{record.targetName}</p>
+                    ) : null}
+                    <p className="font-mono text-xs text-muted-foreground">
+                      {record.targetType}
+                      <span className="text-muted-foreground/70">
+                        {' '}
+                        / {shortId(record.targetId)}
+                      </span>
+                    </p>
                   </td>
                   <td className="px-4 py-3">
                     <p className="font-mono text-xs">{shortId(record.adminId)}</p>

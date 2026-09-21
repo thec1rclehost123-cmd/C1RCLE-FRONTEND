@@ -9,14 +9,22 @@ import { type z } from 'zod';
 
 import {
   type adminActionSchema,
+  type adminOrderDtoSchema,
   type adminPayoutStatusSchema,
+  type adminPromoterAssignmentStatusSchema,
+  type adminPromoDiscountTypeSchema,
+  type adminPromoTypeSchema,
   type adminRefundRequestStatusSchema,
   type adminRoleSchema,
+  type adminTicketStatusSchema,
   type adminVenueDtoSchema,
   type eventStatusSchema,
   type onboardingStatusSchema,
   type organizationStatusSchema,
   type proposalStatusSchema,
+  type supportTicketCategorySchema,
+  type supportTicketPrioritySchema,
+  type supportTicketStatusSchema,
 } from '@c1rcle/contracts';
 
 export type AdminRole = z.infer<typeof adminRoleSchema>;
@@ -28,3 +36,13 @@ export type AdminPayoutStatus = z.infer<typeof adminPayoutStatusSchema>;
 export type EventStatus = z.infer<typeof eventStatusSchema>;
 export type HostStatus = z.infer<typeof organizationStatusSchema>;
 export type VenueStatus = z.infer<typeof adminVenueDtoSchema>['status'];
+export type DisputeStatus = 'open' | 'under_review' | 'resolved';
+export type DisputeResolutionOutcome = 'upheld' | 'denied';
+export type OrderStatus = z.infer<typeof adminOrderDtoSchema>['status'];
+export type TicketStatus = z.infer<typeof adminTicketStatusSchema>;
+export type PromoType = z.infer<typeof adminPromoTypeSchema>;
+export type PromoDiscountType = z.infer<typeof adminPromoDiscountTypeSchema>;
+export type PromoterAssignmentStatus = z.infer<typeof adminPromoterAssignmentStatusSchema>;
+export type SupportTicketStatus = z.infer<typeof supportTicketStatusSchema>;
+export type SupportTicketPriority = z.infer<typeof supportTicketPrioritySchema>;
+export type SupportTicketCategory = z.infer<typeof supportTicketCategorySchema>;

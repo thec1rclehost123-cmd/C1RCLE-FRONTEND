@@ -14,6 +14,7 @@ export const navLinks: NavLinkItem[] = [
   { label: 'Explore', href: '/explore' },
   { label: 'Hosts', href: '/hosts' },
   { label: 'Tickets', href: '/tickets' },
+  { label: 'Help', href: '/help' },
   { label: 'App', href: '/app' },
 ];
 
@@ -21,7 +22,7 @@ export function DesktopNavLinks() {
   const pathname = usePathname();
 
   return (
-    <div className="relative hidden grid-cols-4 items-center rounded-full border border-white/15 bg-black/65 p-1.5 shadow-[0_10px_35px_rgba(0,0,0,0.5)] backdrop-blur-xl lg:grid">
+    <div className="relative hidden grid-cols-5 items-center rounded-full border border-white/15 bg-black/65 p-1.5 shadow-[0_10px_35px_rgba(0,0,0,0.5)] backdrop-blur-xl lg:grid">
       {navLinks.map((link) => {
         const isActive =
           link.href === '/'

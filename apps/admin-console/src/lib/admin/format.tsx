@@ -3,11 +3,19 @@ import type {
   AdminRole,
   AdminAction,
   AdminPayoutStatus,
+  DisputeStatus,
+  DisputeResolutionOutcome,
+  OrderStatus,
   ProposalStatus,
   OnboardingStatus,
   EventStatus,
   HostStatus,
   VenueStatus,
+  TicketStatus,
+  PromoterAssignmentStatus,
+  SupportTicketStatus,
+  SupportTicketPriority,
+  SupportTicketCategory,
 } from '@/lib/admin/contract-types';
 
 export function formatPaise(paise: number): string {
@@ -41,6 +49,9 @@ export const ADMIN_ROLE_LABELS: Record<AdminRole, string> = {
 };
 
 export const ADMIN_ACTION_LABELS: Record<AdminAction, string> = {
+  EVENT_PAUSE: 'Pause event (admin override)',
+  EVENT_RESUME: 'Resume event',
+  EVENT_FORCE_PAUSE: 'Force-pause event (admin override)',
   ONBOARDING_APPROVE: 'Approve onboarding',
   VENUE_SUSPEND: 'Suspend venue',
   VENUE_REINSTATE: 'Reinstate venue',
@@ -49,10 +60,15 @@ export const ADMIN_ACTION_LABELS: Record<AdminAction, string> = {
   FINANCIAL_REFUND: 'Refund',
   PAYOUT_BATCH_RUN: 'Run payout batch',
   DISPUTE_RESOLVE: 'Resolve dispute',
+  USER_BAN: 'Ban user',
+  USER_UNBAN: 'Unban user',
   PAYOUT_FREEZE: 'Freeze payout',
   PAYOUT_RELEASE: 'Release payout',
   ADMIN_PROVISION: 'Provision admin',
+  ADMIN_ROLE_UPDATE: 'Update admin role',
   COMMISSION_ADJUST: 'Adjust commission',
+  PROMOTER_SUSPEND: 'Suspend promoter',
+  PROMOTER_REINSTATE: 'Reinstate promoter',
 };
 
 /**
@@ -258,3 +274,144 @@ export function auditActionTone(action: string): Tone {
 export function shortId(id: string): string {
   return id.length > 12 ? `${id.slice(0, 12)}…` : id;
 }
+
+export const DISPUTE_STATUS_LABELS: Record<DisputeStatus, string> = {
+  open: 'Open',
+  under_review: 'Under review',
+  resolved: 'Resolved',
+};
+
+export const DISPUTE_RESOLUTION_LABELS: Record<DisputeResolutionOutcome, string> = {
+  upheld: 'Upheld',
+  denied: 'Denied',
+};
+
+export function disputeStatusTone(status: DisputeStatus): Tone {
+  switch (status) {
+    case 'open':
+      return 'warning';
+    case 'under_review':
+      return 'default';
+    case 'resolved':
+      return 'success';
+  }
+}
+
+export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  pending: 'Pending',
+  awaiting_payment: 'Awaiting payment',
+  paid: 'Paid',
+  expired: 'Expired',
+  cancelled: 'Cancelled',
+  failed: 'Failed',
+  refund_requested: 'Refund requested',
+  refunded: 'Refunded',
+};
+
+export function orderStatusTone(status: OrderStatus): Tone {
+  switch (status) {
+    case 'paid':
+      return 'success';
+    case 'refunded':
+      return 'muted';
+    case 'refund_requested':
+      return 'warning';
+    case 'awaiting_payment':
+      return 'warning';
+    case 'pending':
+      return 'default';
+    case 'expired':
+    case 'cancelled':
+      return 'muted';
+    case 'failed':
+      return 'destructive';
+  }
+}
+
+export const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
+  valid: 'Valid',
+  redeemed: 'Redeemed',
+  void: 'Void',
+};
+
+export function ticketStatusTone(status: TicketStatus): Tone {
+  switch (status) {
+    case 'valid':
+      return 'success';
+    case 'redeemed':
+      return 'default';
+    case 'void':
+      return 'muted';
+  }
+}
+
+export const PROMOTER_ASSIGNMENT_STATUS_LABELS: Record<PromoterAssignmentStatus, string> = {
+  active: 'Active',
+  ended: 'Ended',
+  suspended: 'Suspended',
+};
+
+export function promoterAssignmentStatusTone(status: PromoterAssignmentStatus): Tone {
+  switch (status) {
+    case 'active':
+      return 'success';
+    case 'suspended':
+      return 'warning';
+    case 'ended':
+      return 'muted';
+  }
+}
+
+export const SUPPORT_TICKET_STATUS_LABELS: Record<SupportTicketStatus, string> = {
+  open: 'Open',
+  in_progress: 'In progress',
+  waiting_on_customer: 'Waiting on customer',
+  escalated: 'Escalated',
+  resolved: 'Resolved',
+  closed: 'Closed',
+};
+
+export function supportTicketStatusTone(status: SupportTicketStatus): Tone {
+  switch (status) {
+    case 'open':
+      return 'warning';
+    case 'in_progress':
+    case 'waiting_on_customer':
+      return 'default';
+    case 'escalated':
+      return 'destructive';
+    case 'resolved':
+      return 'success';
+    case 'closed':
+      return 'muted';
+  }
+}
+
+export const SUPPORT_TICKET_PRIORITY_LABELS: Record<SupportTicketPriority, string> = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+  urgent: 'Urgent',
+};
+
+export function supportTicketPriorityTone(priority: SupportTicketPriority): Tone {
+  switch (priority) {
+    case 'urgent':
+      return 'destructive';
+    case 'high':
+      return 'warning';
+    case 'medium':
+      return 'default';
+    case 'low':
+      return 'muted';
+  }
+}
+
+export const SUPPORT_TICKET_CATEGORY_LABELS: Record<SupportTicketCategory, string> = {
+  account: 'Account',
+  billing: 'Billing',
+  order: 'Order',
+  event: 'Event',
+  technical: 'Technical',
+  other: 'Other',
+};
