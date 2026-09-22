@@ -23,6 +23,7 @@ export function EventPosterPanel({ event }: { event: EventDetailFixture }) {
           src={event.image}
           alt={`${event.title} event poster`}
           fill
+          unoptimized
           preload
           sizes="(max-width: 1024px) 100vw, 420px"
           className="object-cover brightness-[1.08] contrast-[1.03] saturate-[1.1]"

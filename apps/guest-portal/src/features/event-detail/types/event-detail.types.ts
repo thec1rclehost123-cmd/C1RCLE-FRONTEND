@@ -44,4 +44,9 @@ export interface EventDetailFixture {
   guests: readonly EventDetailGuest[];
   interestedCount: number;
   ticketTiers: readonly EventDetailTicketTier[];
+  /**
+   * Ticket section header note. Fixtures omit it (renders the legacy
+   * 'Fixture preview'); real backend-mapped events set 'Live pricing'.
+   */
+  ticketNote?: string;
 }

@@ -18,11 +18,13 @@ export function EventTicketSelectorClient({
   eventId,
   initialVisibleCount = 3,
   tiers,
+  headerNote = 'Fixture preview',
 }: {
   accentTone: EventAccentTone;
   eventId: string;
   initialVisibleCount?: number;
   tiers: readonly EventDetailTicketTier[];
+  headerNote?: string;
 }) {
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -41,7 +43,7 @@ export function EventTicketSelectorClient({
           Get on the list
         </h2>
         <span className={`text-[9px] font-black uppercase tracking-[0.18em] ${accent.text}`}>
-          Fixture preview
+          {headerNote}
         </span>
       </div>
 

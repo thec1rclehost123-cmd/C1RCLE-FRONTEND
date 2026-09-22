@@ -56,6 +56,7 @@ export function ConfirmationView({
                 src={event.image}
                 alt={event.title}
                 fill
+                unoptimized
                 priority
                 className="object-cover"
               />

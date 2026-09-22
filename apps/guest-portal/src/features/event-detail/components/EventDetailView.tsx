@@ -85,6 +85,7 @@ export function EventDetailView({ event }: { event: EventDetailFixture }) {
               eventId={event.slug}
               tiers={event.ticketTiers}
               initialVisibleCount={3}
+              headerNote={event.ticketNote ?? 'Fixture preview'}
             />
           </aside>
 
@@ -172,11 +173,13 @@ export function EventDetailView({ event }: { event: EventDetailFixture }) {
               </div>
             </EventPanel>
 
-            <GuestlistPreviewClient
-              accentTone={event.accentTone}
-              guests={event.guests}
-              interestedCount={event.interestedCount}
-            />
+            {event.guests.length > 0 && (
+              <GuestlistPreviewClient
+                accentTone={event.accentTone}
+                guests={event.guests}
+                interestedCount={event.interestedCount}
+              />
+            )}
 
             <EventPanel accentTone={event.accentTone} label="Location" title={event.venue}>
               <p className="text-sm text-white/50">{event.address}</p>

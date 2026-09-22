@@ -68,6 +68,7 @@ export type {
   InviteMemberInput,
   VenueProfileDto,
   VenueSlotDto,
+  CreateVenueBlockInput,
   SlotRequestDto,
   CreateSlotRequestInput,
   InvitationStatus,
@@ -90,6 +91,7 @@ export {
   inviteMemberSchema,
   venueProfileDtoSchema,
   venueSlotDtoSchema,
+  createVenueBlockSchema,
   slotRequestDtoSchema,
   createSlotRequestSchema,
   invitationStatusSchema,
@@ -111,6 +113,8 @@ export type {
   CreateEventInput,
   UpdateEventInput,
   CancelEventInput,
+  PosterUploadUrlRequest,
+  PosterUploadUrlDto,
   TicketTierDto,
   CreateTicketTierRequest,
   PromoCodeDto,
@@ -128,6 +132,8 @@ export {
   createEventSchema,
   updateEventSchema,
   cancelEventSchema,
+  posterUploadUrlRequestSchema,
+  posterUploadUrlDtoSchema,
   ticketTierStatusSchema,
   ticketTierDtoSchema,
   createTicketTierSchema,
@@ -371,19 +377,9 @@ export {
 } from './contracts/phase6.js';
 
 // Public / discovery (Phase 4 PR1)
-export type {
-  HostPublicDto,
-  VenuePublicDetailDto,
-  EventVenuePublicDto,
-  EventOrganizerPublicDto,
-  EventPublicDetailDto,
-  DiscoveryFeedDto,
-} from './contracts/public.js';
-export {
-  hostPublicDtoSchema,
-  venuePublicDetailDtoSchema,
-  eventVenuePublicDtoSchema,
-  eventOrganizerPublicDtoSchema,
-  eventPublicDetailDtoSchema,
-  discoveryFeedDtoSchema,
-} from './contracts/public.js';
+export type { HostPublicDto, DiscoveryFeedDto } from './contracts/public.js';
+export { hostPublicDtoSchema, discoveryFeedDtoSchema } from './contracts/public.js';
+
+// Guest profile (guest-portal signup onboarding)
+export type { GuestProfileDto, UpsertGuestProfileRequest } from './contracts/guest-profile.js';
+export { guestProfileDtoSchema, upsertGuestProfileSchema } from './contracts/guest-profile.js';

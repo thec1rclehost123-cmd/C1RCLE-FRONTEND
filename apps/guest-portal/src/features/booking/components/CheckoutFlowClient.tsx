@@ -292,6 +292,7 @@ export function CheckoutFlowClient({
             src={event.image}
             alt={event.title}
             fill
+            unoptimized
             sizes="(max-width: 1024px) 100vw, 390px"
             className="object-cover"
           />
