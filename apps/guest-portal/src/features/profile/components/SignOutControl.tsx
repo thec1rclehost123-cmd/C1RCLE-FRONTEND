@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
-import { clearSession } from '@c1rcle/auth';
+import { logout } from '@c1rcle/auth';
 
 export function SignOutControl() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -24,9 +24,10 @@ export function SignOutControl() {
   }, [dialogOpen]);
 
   const signOut = () => {
-    clearSession();
-    setDialogOpen(false);
-    router.replace('/login?next=/profile');
+    void logout().finally(() => {
+      setDialogOpen(false);
+      router.replace('/login?next=/profile');
+    });
   };
 
   return (

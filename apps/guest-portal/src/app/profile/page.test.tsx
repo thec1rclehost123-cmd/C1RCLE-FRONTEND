@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useSessionStore } from '@c1rcle/auth';
@@ -85,7 +85,9 @@ describe('ProfilePage', () => {
     expect(screen.getByRole('dialog', { name: 'End this session?' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Confirm sign out' }));
 
-    expect(useSessionStore.getState().status).toBe('anonymous');
+    await waitFor(() => {
+      expect(useSessionStore.getState().status).toBe('anonymous');
+    });
     expect(replace).toHaveBeenCalledWith('/login?next=/profile');
   });
 

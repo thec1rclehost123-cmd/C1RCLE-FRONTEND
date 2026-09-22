@@ -33,10 +33,24 @@ vi.mock('@c1rcle/auth', () => ({
     mockSessionState.clearSession();
   },
   getAccessToken: () => mockSessionState.accessToken,
+  login: vi.fn(() => Promise.resolve()),
+  signup: vi.fn(() => Promise.resolve()),
+  logout: vi.fn(() => {
+    mockSessionState.clearSession();
+    return Promise.resolve();
+  }),
+  refresh: vi.fn(() => Promise.resolve(false)),
+  fetchSession: vi.fn(() => Promise.resolve()),
+  markAnonymous: () => {
+    mockSessionState.markAnonymous();
+  },
+  markHydrated: vi.fn(),
+  setSession: vi.fn(),
   useSession: () => ({
     isAuthenticated: mockSessionState.status === 'authenticated',
     isLoading: mockSessionState.status === 'unknown',
     session: mockSessionState.session,
+    user: null,
   }),
   useSessionStore: Object.assign(
     () => mockSessionState,
