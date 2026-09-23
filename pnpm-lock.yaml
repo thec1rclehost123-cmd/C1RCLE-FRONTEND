@@ -47,6 +47,9 @@ importers:
       '@c1rcle/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@c1rcle/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@c1rcle/design-system':
         specifier: workspace:*
         version: link:../../packages/design-system
@@ -162,6 +165,9 @@ importers:
       '@c1rcle/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@c1rcle/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       '@c1rcle/design-system':
         specifier: workspace:*
         version: link:../../packages/design-system
@@ -5372,7 +5378,7 @@ snapshots:
       obug: 2.1.4
       std-env: 4.2.0
       tinyrainbow: 3.1.1
-      vitest: 4.1.10(@types/node@22.20.1)(@vitest/coverage-v8@4.1.10)(jiti@2.7.0)(jsdom@29.1.1)
+      vitest: 4.1.10(@types/node@26.1.2)(@vitest/coverage-v8@4.1.10)(jiti@2.7.0)(jsdom@29.1.1)
 
   '@vitest/expect@4.1.10':
     dependencies:

@@ -16,6 +16,7 @@ const url = z.url({ error: 'must be an absolute URL including protocol' });
 /** Values that are inlined into the client bundle and are therefore public. */
 export const clientEnvSchema = z.object({
   NEXT_PUBLIC_API_BASE_URL: url,
+  NEXT_PUBLIC_GUEST_PORTAL_URL: url.default('https://thec1rcle.com'),
   NEXT_PUBLIC_APP_NAME: z.string().min(1),
   NEXT_PUBLIC_ENVIRONMENT: z.enum(['development', 'preview', 'production']),
   NEXT_PUBLIC_SENTRY_DSN: url.optional(),
