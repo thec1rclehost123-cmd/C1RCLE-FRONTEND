@@ -21,6 +21,7 @@ import {
 } from '@c1rcle/icons';
 
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
+import { LoadingState } from '@/components/partner-v3/States';
 
 import { PARTNER_SHELL_CONFIG } from './config';
 import { PartnerNotificationButton } from './PartnerNotificationButton';
@@ -59,15 +60,6 @@ const initialsFrom = (name: string): string =>
     .join('')
     .slice(0, 2)
     .toUpperCase() || 'C1';
-
-function AuthorizationSplash({ label }: { readonly label: string }) {
-  return (
-    <div className="partner-auth-splash" role="status" aria-live="polite">
-      <span className="partner-auth-spinner" aria-hidden="true" />
-      <span>{label}</span>
-    </div>
-  );
-}
 
 export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboardLayoutProps) {
   const auth = useDashboardAuth();
@@ -203,10 +195,12 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
     return visibleNavigation.filter((item) => item.label.toLowerCase().includes(normalized));
   }, [query, visibleNavigation]);
 
-  if (auth.loading) return <AuthorizationSplash label="Authorizing access" />;
+  if (auth.loading) return <LoadingState label="Authorizing access" />;
   if (!user || !auth.isApproved || (activeRole && activeRole !== partnerRole)) {
-    return <AuthorizationSplash label="Redirecting" />;
+    return <LoadingState label="Redirecting" />;
   }
+
+  if (!activeRole) return null;
 
   const displayName = membership?.partnerName ?? auth.profile?.displayName ?? config.eyebrow;
   const identityInitials = initialsFrom(displayName);

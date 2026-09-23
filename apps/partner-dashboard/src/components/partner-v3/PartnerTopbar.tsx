@@ -10,6 +10,7 @@ import { Avatar, IconButton } from './index';
 
 
 import type { PartnerNotificationsData, PartnerSearchData } from '@/data/partner-data-source';
+import type { NotificationDecisionDto } from '@c1rcle/contracts';
 import type { StudioConfig } from '@/studios/studio-config';
 
 
@@ -19,6 +20,13 @@ export function PartnerTopbar({
   userName,
   searchData,
   notificationsData,
+  notificationsLoading,
+  notificationsError,
+  unreadNotificationCount,
+  onNotificationRead,
+  onMarkAllNotificationsRead,
+  onRefreshNotifications,
+  onNotificationAction,
   navigationLayout,
   mobileOpen,
   onMobileToggle,
@@ -30,6 +38,13 @@ export function PartnerTopbar({
   readonly userName: string;
   readonly searchData: PartnerSearchData;
   readonly notificationsData: PartnerNotificationsData;
+  readonly notificationsLoading: boolean;
+  readonly notificationsError: string | null;
+  readonly unreadNotificationCount: number;
+  readonly onNotificationRead: (id: string) => void;
+  readonly onMarkAllNotificationsRead: () => void;
+  readonly onRefreshNotifications: () => void;
+  readonly onNotificationAction: (id: string, decision: NotificationDecisionDto) => Promise<unknown>;
   readonly navigationLayout: 'side' | 'top';
   readonly mobileOpen: boolean;
   readonly onMobileToggle: () => void;
@@ -75,7 +90,16 @@ export function PartnerTopbar({
       )}
       <div className={styles['topbarActions']}>
         <PartnerGlobalSearch data={searchData} />
-        <PartnerNotifications data={notificationsData} />
+        <PartnerNotifications
+          data={notificationsData}
+          loading={notificationsLoading}
+          error={notificationsError}
+          unreadCount={unreadNotificationCount}
+          onRead={onNotificationRead}
+          onMarkAllRead={onMarkAllNotificationsRead}
+          onRefresh={onRefreshNotifications}
+          onAction={onNotificationAction}
+        />
         <IconButton
           label={navigationLayout === 'side' ? 'Use top navigation' : 'Use side navigation'}
           className={styles['layoutSwitchButton']}

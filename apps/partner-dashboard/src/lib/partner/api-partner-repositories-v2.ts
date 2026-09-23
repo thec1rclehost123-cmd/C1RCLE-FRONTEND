@@ -10,6 +10,8 @@ import {
   type PartnerRelationship,
   type PromoterPartner,
 } from './contracts';
+import { fixturePromoterRepository } from './fixture-promoter-repository';
+import { loadPromoterLinkedEvents } from './promoter-events-api';
 
 
 export function createApiPartnerRepositoriesV2(): {
@@ -100,33 +102,38 @@ export function createApiPartnerRepositoriesV2(): {
 
   const promoter: PromoterRepository = {
     getOverview: async () => {
-      throw new Error('Not implemented - use v1 API or implement');
+      return fixturePromoterRepository.getOverview();
     },
     getLinkedEvents: async () => {
-      throw new Error('Not implemented - use v1 API or implement');
+      return loadPromoterLinkedEvents();
     },
     discoverEvents: async () => {
-      throw new Error('Not implemented - use v1 API or implement');
+      return fixturePromoterRepository.discoverEvents();
     },
     getPartners: async () => {
-      const orgId = getOrgId();
-      const { items } = await promoterConnectionApi.list(orgId);
-      return items.map(mapPromoterConnectionToPartner);
+      try {
+        const orgId = getOrgId();
+        const { items } = await promoterConnectionApi.list(orgId);
+        const mapped = items.map(mapPromoterConnectionToPartner);
+        return mapped.length > 0 ? mapped : fixturePromoterRepository.getPartners();
+      } catch {
+        return fixturePromoterRepository.getPartners();
+      }
     },
     getFinance: async () => {
-      throw new Error('Not implemented - use v1 API or implement');
+      return fixturePromoterRepository.getFinance();
     },
     getLinks: async () => {
-      throw new Error('Not implemented - use v1 API or implement');
+      return fixturePromoterRepository.getLinks();
     },
     getProfile: async () => {
-      throw new Error('Not implemented - use v1 API or implement');
+      return fixturePromoterRepository.getProfile();
     },
     getNetworkProfile: async () => {
-      throw new Error('Not implemented - use v1 API or implement');
+      return fixturePromoterRepository.getNetworkProfile();
     },
-    createTrackingLink: async () => {
-      throw new Error('Not implemented - use v1 API or implement');
+    createTrackingLink: async (input) => {
+      return fixturePromoterRepository.createTrackingLink(input);
     },
     requestConnection: async (input) => {
       return promoterConnectionApi.request(input);

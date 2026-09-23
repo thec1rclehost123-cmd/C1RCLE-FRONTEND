@@ -366,6 +366,8 @@
 .calendarGrid > span { min-height: 34px; display: grid; place-items: center; border-radius: 9px; color: #c9c9c6; font-size: 13px; font-weight: 600; }
 .calendarGrid .eventDay { background: rgb(var(--overview-accent-rgb) / 14%); color: var(--overview-accent-soft); }
 .calendarGrid .today { background: var(--overview-accent); color: var(--overview-accent-ink); font-weight: 800; }
+.calendarGrid .blockedDay { background: rgb(240 133 122 / 12%); color: #f0857a; box-shadow: inset 0 0 0 1px rgb(240 133 122 / 24%); }
+.calendarGrid .blockedDay.today { background: rgb(240 133 122 / 12%); color: #f0857a; box-shadow: inset 0 0 0 2px var(--overview-accent); font-weight: 800; }
 
 .upcomingList { display: flex; flex-direction: column; gap: 12px; }
 .upcomingEvent {

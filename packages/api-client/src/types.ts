@@ -1,3 +1,4 @@
+import type { RequestId } from '@c1rcle/types';
 import type { z } from 'zod';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -11,6 +12,14 @@ export type TokenProvider = () => string | null | Promise<string | null>;
  * The terminal "give up" hook — clear the session and redirect to sign-in.
  */
 export type UnauthorizedHandler = () => void | Promise<void>;
+
+export interface ApiTiming {
+  readonly method: HttpMethod;
+  readonly path: string;
+  readonly status: number;
+  readonly requestId: RequestId;
+  readonly durationMs: number;
+}
 
 /**
  * Called on the first 401 of a request. Return `true` if a fresh credential
@@ -29,6 +38,8 @@ export interface ApiClientConfig {
   readonly getToken?: TokenProvider;
   readonly reauth?: ReauthHandler;
   readonly onUnauthorized?: UnauthorizedHandler;
+  /** Optional development-only request timing hook. */
+  readonly onTiming?: (timing: ApiTiming) => void;
   /** Injectable for tests. Defaults to the platform `fetch`. */
   readonly fetchImpl?: typeof fetch;
 }
