@@ -122,6 +122,7 @@ export type {
   TablePackageDto,
   CreateTablePackageRequest,
   PromoterAssignmentDto,
+  PromoterAssignedEventDto,
   AssignPromoterRequest,
 } from './contracts/event.js';
 
@@ -142,6 +143,7 @@ export {
   tablePackageDtoSchema,
   createTablePackageSchema,
   promoterAssignmentDtoSchema,
+  promoterAssignedEventDtoSchema,
   assignPromoterSchema,
 } from './contracts/event.js';
 
@@ -200,6 +202,9 @@ export type {
   ProposeActionRequest,
   ResolveProposalRequest,
   AdminAuditRecordDto,
+  AdminAlertCategory,
+  AdminAlertsResponse,
+  AdminAlertCategoryKey,
 } from './contracts/onboarding.js';
 
 export {
@@ -227,6 +232,10 @@ export {
   proposeActionSchema,
   resolveProposalSchema,
   adminAuditRecordDtoSchema,
+  adminAlertCategoryKeySchema,
+  adminAlertSeveritySchema,
+  adminAlertCategorySchema,
+  adminAlertsResponseSchema,
 } from './contracts/onboarding.js';
 
 // Checkout / Orders / Payments / Entitlements
@@ -377,19 +386,32 @@ export {
 } from './contracts/phase6.js';
 
 // Public / discovery (Phase 4 PR1)
+export type { HostPublicDto, DiscoveryFeedDto } from './contracts/public.js';
+export { hostPublicDtoSchema, discoveryFeedDtoSchema } from './contracts/public.js';
+
+// Notifications (V2 partner inbox)
 export type {
-  HostPublicDto,
-  VenuePublicDetailDto,
-  EventVenuePublicDto,
-  EventOrganizerPublicDto,
-  EventPublicDetailDto,
-  DiscoveryFeedDto,
-} from './contracts/public.js';
+  NotificationRecipientTypeDto,
+  NotificationActionTypeDto,
+  NotificationActionDto,
+  NotificationPriorityDto,
+  NotificationDto,
+  NotificationsListResponse,
+  NotificationReadRequest,
+  MarkAllNotificationsReadResult,
+  NotificationDecisionDto,
+  NotificationActionRequestDto,
+} from './contracts/notifications.js';
+
 export {
-  hostPublicDtoSchema,
-  venuePublicDetailDtoSchema,
-  eventVenuePublicDtoSchema,
-  eventOrganizerPublicDtoSchema,
-  eventPublicDetailDtoSchema,
-  discoveryFeedDtoSchema,
-} from './contracts/public.js';
+  notificationRecipientTypeSchema,
+  notificationActionTypeSchema,
+  notificationActionSchema,
+  notificationPrioritySchema,
+  notificationDtoSchema,
+  notificationsListResponseSchema,
+  notificationReadRequestSchema,
+  markAllNotificationsReadResultSchema,
+  notificationDecisionSchema,
+  notificationActionRequestSchema,
+} from './contracts/notifications.js';
