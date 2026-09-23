@@ -6,7 +6,8 @@ import { isApiClientError } from '@c1rcle/api-client';
 import { useSessionStore } from '@c1rcle/auth';
 
 import { getActiveOrgId } from '@/lib/org/active-org';
-import { getPartnerAccess } from '@/lib/org/org-repository';
+
+import { getCachedPartnerAccess } from './org-access-cache';
 
 import type { PartnerAccessDto } from '@c1rcle/contracts';
 
@@ -51,7 +52,7 @@ export function useOrgAccess(orgIdOverride?: string | null): OrgAccessState {
 
     let isMounted = true;
 
-    getPartnerAccess(orgId)
+    getCachedPartnerAccess(orgId)
       .then((data) => {
         if (isMounted) {
           setResult({ orgId, access: data, error: null, isSuspended: false });

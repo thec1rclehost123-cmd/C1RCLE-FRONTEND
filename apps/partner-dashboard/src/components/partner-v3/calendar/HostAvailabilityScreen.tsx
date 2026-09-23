@@ -57,9 +57,7 @@ export function HostAvailabilityScreen({
     const nextDate = next?.days.find((day) => day.day === 16)?.date ?? next?.days[0]?.date;
     if (next && nextDate) update({ month: next.key, date: nextDate });
   };
-  const createHref = selectedSlot
-    ? `/partner/host/events/create?venue=${selectedVenue.venue.id}&date=${selectedDay.date}&slot=${selectedSlot.id}`
-    : undefined;
+  const createHref = `/partner/host/events/create?venue=${selectedVenue.venue.id}&date=${selectedDay.date}${selectedSlot ? `&slot=${selectedSlot.id}` : ''}`;
   return (
     <div className={[styles['page'], styles['hostTheme']].join(' ')}>
       <div className={styles['topRow']}>

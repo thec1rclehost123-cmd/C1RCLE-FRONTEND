@@ -11,12 +11,16 @@ interface PostOptions {
   readonly body?: unknown;
   readonly headers?: Readonly<Record<string, string>>;
 }
+interface PatchOptions extends PostOptions {
+  readonly body?: unknown;
+}
 
 const mocks = vi.hoisted(() => ({
   post: vi.fn<(options: PostOptions) => Promise<unknown>>(),
+  patch: vi.fn<(options: PatchOptions) => Promise<unknown>>(),
 }));
 
-vi.mock('@/lib/api/client', () => ({ apiClient: { post: mocks.post } }));
+vi.mock('@/lib/api/client', () => ({ apiClient: { post: mocks.post, patch: mocks.patch } }));
 vi.mock('@/lib/onboarding/uploadToSignedUrl', () => ({
   uploadToSignedUrl: vi.fn((): Promise<string> => Promise.resolve('https://uploads.invalid/mock')),
 }));
@@ -38,11 +42,14 @@ const draft: EventEditorDraft = {
   pricingRule: '',
   compensation: 'standard',
   commissionRate: 15,
+  salaryAmount: 0,
+  salaryPeriod: 'per_event',
   salaryNotes: '',
 };
 
 beforeEach(() => {
   mocks.post.mockReset();
+  mocks.patch.mockReset();
 });
 
 describe('publishVenueEvent', () => {
@@ -133,6 +140,82 @@ describe('publishVenueEvent', () => {
     expect(fetchMock).toHaveBeenCalledWith('blob:http://localhost/poster');
 
     fetchMock.mockRestore();
+  });
+
+  it('resolves custom commission rates from local tier ids to server tier ids', async () => {
+    const customDraft: EventEditorDraft = {
+      ...draft,
+      selectedPromoterIds: ['promoter_1'],
+      compensation: 'custom',
+      tierCommissions: { ga: 25 },
+    };
+    mocks.post
+      .mockResolvedValueOnce({
+        id: 'evt_custom',
+        version: 1,
+        compensation: {
+          model: 'custom',
+          globalRatePercent: null,
+          tierRates: { ga: 25 },
+          salaryAmountPaise: null,
+          salaryPeriod: null,
+          salaryNotes: null,
+        },
+      })
+      .mockResolvedValueOnce({ id: 'tier_server_1' })
+      .mockResolvedValueOnce({ id: 'assignment_1' })
+      .mockResolvedValueOnce({ id: 'evt_custom', status: 'review' })
+      .mockResolvedValueOnce({ id: 'evt_custom', status: 'published' });
+    mocks.patch.mockResolvedValueOnce({ id: 'evt_custom', version: 2 });
+
+    await expect(publishVenueEvent('org_1', customDraft)).resolves.toMatchObject({
+      status: 'published',
+    });
+
+    expect(mocks.patch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: '/api/v2/events/evt_custom',
+        body: expect.objectContaining({
+          compensation: expect.objectContaining({
+            tierRates: { tier_server_1: 25 },
+          }),
+        }),
+        headers: expect.objectContaining({ 'If-Match': '1' }),
+      }),
+    );
+    expect(mocks.post.mock.calls[2]?.[0].body).toMatchObject({
+      promoterId: 'promoter_1',
+      tierRates: { tier_server_1: { ratePercent: 25, flatPaise: 0 } },
+    });
+  });
+
+  it('sends salary amount in paise with an explicit payout period', async () => {
+    const salaryDraft: EventEditorDraft = {
+      ...draft,
+      selectedPromoterIds: ['promoter_1'],
+      compensation: 'salary',
+      salaryAmount: 1250.5,
+      salaryPeriod: 'per_event',
+    };
+    mocks.post
+      .mockResolvedValueOnce({ id: 'evt_salary' })
+      .mockResolvedValueOnce({ id: 'tier_salary' })
+      .mockResolvedValueOnce({ id: 'assignment_salary' })
+      .mockResolvedValueOnce({ id: 'evt_salary', status: 'review' })
+      .mockResolvedValueOnce({ id: 'evt_salary', status: 'published' });
+
+    await expect(publishVenueEvent('org_1', salaryDraft)).resolves.toMatchObject({
+      status: 'published',
+    });
+    expect(mocks.post.mock.calls[0]?.[0].body).toMatchObject({
+      compensation: {
+        model: 'salary',
+        salaryAmountPaise: 125050,
+        salaryPeriod: 'per_event',
+        globalRatePercent: null,
+        tierRates: {},
+      },
+    });
   });
 
   it('persists relative poster image paths as valid absolute URLs', async () => {

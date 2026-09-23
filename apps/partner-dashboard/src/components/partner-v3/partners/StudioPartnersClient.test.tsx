@@ -51,7 +51,7 @@ beforeEach(() => {
 });
 
 describe('StudioPartnersClient (backend-only)', () => {
-  it('shows a loading state before backend data resolves', () => {
+  it('does not show a loading placeholder before backend data resolves', () => {
     render(
       <StudioPartnersClient
         studio="venue"
@@ -62,7 +62,7 @@ describe('StudioPartnersClient (backend-only)', () => {
         promoterFilter="all"
       />,
     );
-    expect(screen.getByText('Loading partners…')).toBeInTheDocument();
+    expect(screen.queryByText('Loading partners…')).not.toBeInTheDocument();
   });
 
   it('renders backend partners without fixture profiles', async () => {

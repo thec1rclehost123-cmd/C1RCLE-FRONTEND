@@ -1,5 +1,6 @@
 import { createApiClient } from '@c1rcle/api-client';
 import { clearSession } from '@c1rcle/auth';
+import { getClientEnv } from '@c1rcle/config';
 
 /**
  * Same-origin client for the app's own BFF routes (`/api/bff/**`). The BFF owns
@@ -15,6 +16,12 @@ let redirecting = false;
 
 export const bffClient = createApiClient({
   baseUrl: typeof window === 'undefined' ? '' : window.location.origin,
+  onTiming: (timing) => {
+    if (getClientEnv().NEXT_PUBLIC_ENVIRONMENT !== 'production') {
+      // eslint-disable-next-line no-console
+      console.debug('[bff]', timing);
+    }
+  },
   onUnauthorized: () => {
     if (!redirecting) {
       redirecting = true;

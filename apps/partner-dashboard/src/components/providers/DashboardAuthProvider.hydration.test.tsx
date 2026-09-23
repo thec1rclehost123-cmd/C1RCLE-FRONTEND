@@ -6,8 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DashboardAuthProvider, useDashboardAuth } from './DashboardAuthProvider';
 
-import type { SessionState } from '@c1rcle/auth';
-
 const mocks = vi.hoisted(() => ({
   getActiveOrgId: vi.fn<() => string | null>(),
   useSession: vi.fn<() => { isAuthenticated: boolean; isLoading: boolean; user: any }>(),

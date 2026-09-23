@@ -59,6 +59,7 @@ function event(id: string, day: number, status: EventDto['status']): EventDto {
     startingPricePaise: null,
     isFree: false,
     cancellationReason: null,
+    compensation: null,
     version: 1,
     createdAt: timestamp,
     updatedAt: timestamp,
