@@ -1,6 +1,6 @@
-import type { BookingEventFixture } from './types/booking.types';
+import type { BookingEventFixture, BookingTicketTier } from './types/booking.types';
 import type { EventAccentTone } from '@/features/event-detail/types/event-detail.types';
-import type { EventDto, VenueDto } from '@c1rcle/contracts';
+import type { EventDto, PublicTicketTierDto, VenueDto } from '@c1rcle/contracts';
 
 
 /**
@@ -11,10 +11,12 @@ import type { EventDto, VenueDto } from '@c1rcle/contracts';
  * ever reach this module — the public endpoint 404s anything else. No fetch,
  * no fallback fixtures: a missing venue renders honest placeholders.
  *
- * The ticket section gets one tier derived from the event's real price
- * fields — there is no public tier listing yet, and no payment is processed
- * (the flow still ends at the preview confirmation). `maximumQuantity` is a
- * UI stepper cap only.
+ * Ticket tiers come from `GET /api/v2/public/events/:idOrSlug/tiers` when the
+ * caller passes them (real ids the RSVP endpoint accepts). Without tiers the
+ * section falls back to one tier derived from the event's price fields — the
+ * previous preview behavior, kept for paid events with no public tier read.
+ * Zero-price tiers cap at 1 (the server fulfills exactly one RSVP ticket per
+ * account per event); others keep the UI stepper cap.
  */
 
 const FALLBACK_IMAGE = '/c1rcle-logo.webp';
@@ -28,6 +30,7 @@ const ACCENT_TONES: readonly EventAccentTone[] = ['pink', 'purple', 'red', 'oran
 export function toBookingEventFixture(
   event: EventDto,
   venue: VenueDto | null,
+  tiers: readonly PublicTicketTierDto[] | null = null,
 ): BookingEventFixture {
   const city = venue?.city ?? FALLBACK_CITY;
   return {
@@ -41,17 +44,36 @@ export function toBookingEventFixture(
     address: city,
     city,
     doorNote: 'Entry rules are set by the host and shown at checkout.',
-    ticketTiers: [
-      {
-        id: 'general-admission',
-        name: 'General Admission',
-        description: event.summary.trim() || event.title,
-        price: {
-          amountPaise: event.isFree ? 0 : (event.startingPricePaise ?? 0),
-          currency: 'INR',
-        },
-        maximumQuantity: PREVIEW_MAX_QUANTITY,
-      },
-    ],
+    ticketTiers: tiers !== null ? toRealTiers(tiers) : [toFallbackTier(event)],
+  };
+}
+
+function toRealTiers(tiers: readonly PublicTicketTierDto[]): BookingTicketTier[] {
+  // Sold-out tiers stay unselectable — the stepper caps at their live
+  // availability, so a zero-availability tier offers no quantity.
+  return tiers.map((tier) => ({
+    id: tier.id,
+    name: tier.name,
+    description: tier.description || tier.name,
+    price: { amountPaise: tier.priceInPaise, currency: 'INR' },
+    // RSVP fulfills exactly one ticket per account — the stepper must not
+    // offer more. Paid tiers cap at live availability (bounded by the UI cap).
+    maximumQuantity:
+      tier.priceInPaise === 0
+        ? Math.min(1, tier.availableQuantity)
+        : Math.min(tier.availableQuantity, PREVIEW_MAX_QUANTITY),
+  }));
+}
+
+function toFallbackTier(event: EventDto): BookingTicketTier {
+  return {
+    id: 'general-admission',
+    name: 'General Admission',
+    description: event.summary.trim() || event.title,
+    price: {
+      amountPaise: event.isFree ? 0 : (event.startingPricePaise ?? 0),
+      currency: 'INR',
+    },
+    maximumQuantity: PREVIEW_MAX_QUANTITY,
   };
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { toBookingEventFixture } from './booking-mapping';
 
-import type { EventDto, VenueDto } from '@c1rcle/contracts';
+import type { EventDto, PublicTicketTierDto, VenueDto } from '@c1rcle/contracts';
 
 
 const EVENT: EventDto = {
@@ -83,5 +83,60 @@ describe('toBookingEventFixture', () => {
   it('maps free events to a zero price', () => {
     const mapped = toBookingEventFixture({ ...EVENT, isFree: true }, VENUE);
     expect(mapped.ticketTiers[0]?.price).toEqual({ amountPaise: 0, currency: 'INR' });
+  });
+
+  it('maps real public tiers with their ids (RSVP-capable)', () => {
+    const tiers: PublicTicketTierDto[] = [
+      {
+        id: 'tier_rsvp_1',
+        eventId: 'evt_1',
+        name: 'RSVP Entry',
+        description: 'Free entry',
+        priceInPaise: 0,
+        currency: 'INR',
+        availableQuantity: 40,
+      },
+      {
+        id: 'tier_vip_1',
+        eventId: 'evt_1',
+        name: 'VIP',
+        description: 'Priority entry',
+        priceInPaise: 200000,
+        currency: 'INR',
+        availableQuantity: 3,
+      },
+    ];
+    const mapped = toBookingEventFixture(EVENT, VENUE, tiers);
+    expect(mapped.ticketTiers).toEqual([
+      {
+        id: 'tier_rsvp_1',
+        name: 'RSVP Entry',
+        description: 'Free entry',
+        price: { amountPaise: 0, currency: 'INR' },
+        maximumQuantity: 1,
+      },
+      {
+        id: 'tier_vip_1',
+        name: 'VIP',
+        description: 'Priority entry',
+        price: { amountPaise: 200000, currency: 'INR' },
+        maximumQuantity: 3,
+      },
+    ]);
+  });
+
+  it('caps sold-out real tiers at zero so the stepper cannot select them', () => {
+    const mapped = toBookingEventFixture(EVENT, VENUE, [
+      {
+        id: 'tier_soldout_1',
+        eventId: 'evt_1',
+        name: 'RSVP Entry',
+        description: '',
+        priceInPaise: 0,
+        currency: 'INR',
+        availableQuantity: 0,
+      },
+    ]);
+    expect(mapped.ticketTiers[0]?.maximumQuantity).toBe(0);
   });
 });

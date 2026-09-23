@@ -65,6 +65,8 @@ export type {
   PosterUploadUrlDto,
   TicketTierDto,
   CreateTicketTierRequest,
+  PublicTicketTierDto,
+  PublicTicketTierListResponse,
   PromoCodeDto,
   CreatePromoCodeRequest,
   TablePackageDto,
@@ -85,6 +87,8 @@ export {
   ticketTierStatusSchema,
   ticketTierDtoSchema,
   createTicketTierSchema,
+  publicTicketTierDtoSchema,
+  publicTicketTierListResponseSchema,
   promoCodeDtoSchema,
   createPromoCodeSchema,
   tablePackageDtoSchema,
@@ -177,7 +181,7 @@ export {
   adminAuditRecordDtoSchema,
 } from './contracts/onboarding.js';
 
-// Checkout / Orders / Payments / Entitlements
+// Checkout / Orders / Payments / Entitlements / RSVP
 export type {
   PricingLineDto,
   PricingBreakdownDto,
@@ -189,6 +193,8 @@ export type {
   PaymentAttemptResponse,
   PaymentConfirmRequest,
   PaymentConfirmResponse,
+  RsvpRequest,
+  RsvpResponse,
   CheckoutOrderDto,
   OrderDto,
   OrdersListResponse,
@@ -216,6 +222,8 @@ export {
   paymentAttemptResponseSchema,
   paymentConfirmRequestSchema,
   paymentConfirmResponseSchema,
+  rsvpRequestSchema,
+  rsvpResponseSchema,
   checkoutOrderDtoSchema,
   orderDtoSchema,
   ordersListResponseSchema,

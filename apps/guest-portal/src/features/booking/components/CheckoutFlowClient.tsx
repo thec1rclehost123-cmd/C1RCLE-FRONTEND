@@ -2,10 +2,14 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
+import { isApiClientError } from '@c1rcle/api-client';
+import { rsvpResponseSchema } from '@c1rcle/contracts';
+
 import { getEventAccentClasses } from '@/features/event-detail/eventDetailPalette';
+import { bffClient } from '@/lib/bff/bff-client';
 
 import type { BookingEventFixture } from '../types/booking.types';
 
@@ -32,16 +36,23 @@ export function CheckoutFlowClient({
   initialTierId?: string | undefined;
 }) {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const requestedTier = initialTierId ?? searchParams.get('tier') ?? undefined;
   const initialTier = event.ticketTiers.some((tier) => tier.id === requestedTier)
     ? requestedTier
     : event.ticketTiers[0]?.id;
   const [step, setStep] = useState<CheckoutStep>(1);
-  const [quantities, setQuantities] = useState<Record<string, number>>(
-    initialTier ? { [initialTier]: 1 } : {},
-  );
+  const [quantities, setQuantities] = useState<Record<string, number>>(() => {
+    if (!initialTier) return {};
+    // Never pre-select more than the live availability captured at render.
+    const max = event.ticketTiers.find((tier) => tier.id === initialTier)?.maximumQuantity ?? 0;
+    return max > 0 ? { [initialTier]: 1 } : {};
+  });
   const [attendee, setAttendee] = useState({ name: '', email: '', phone: '' });
   const [paymentPreview, setPaymentPreview] = useState<PaymentPreview | null>(null);
+  const [rsvpStatus, setRsvpStatus] = useState<'idle' | 'posting'>('idle');
+  const [rsvpError, setRsvpError] = useState<string | null>(null);
+  const [alreadyOnList, setAlreadyOnList] = useState(false);
   const accent = getEventAccentClasses(event.accentTone);
 
   const selectedTickets = useMemo(
@@ -57,6 +68,44 @@ export function CheckoutFlowClient({
   );
   const previewFeesPaise = Math.round(subtotalPaise * 0.05);
   const previewTotalPaise = subtotalPaise + previewFeesPaise;
+  const totalTickets = selectedTickets.reduce((total, tier) => total + tier.quantity, 0);
+  // A ₹0 total means every selected tier is free — the only booking this
+  // client fulfills for real (direct RSVP, no payment provider). Anything
+  // priced stays on the preview confirmation path.
+  const isFreeBooking = selectedTickets.length > 0 && previewTotalPaise === 0;
+  // The server fulfills exactly one RSVP ticket per account per event.
+  const canConfirmRsvp = isFreeBooking && totalTickets === 1 && rsvpStatus === 'idle';
+
+  function csrfHeader(): Record<string, string> {
+    if (typeof document === 'undefined') return {};
+    const match = /(?:^|;\s*)c1rcle\.csrf=([^;]+)/.exec(document.cookie);
+    return match?.[1] ? { 'x-csrf-token': decodeURIComponent(match[1]) } : {};
+  }
+
+  async function confirmRsvp() {
+    const ticket = selectedTickets[0];
+    if (!ticket || totalTickets !== 1 || rsvpStatus !== 'idle') return;
+    setRsvpStatus('posting');
+    setRsvpError(null);
+    try {
+      const result = await bffClient.post({
+        path: '/api/rsvp',
+        body: { eventId: event.id, tierId: ticket.id },
+        headers: csrfHeader(),
+        schema: rsvpResponseSchema,
+      });
+      router.push(`/confirmation/${encodeURIComponent(result.order.id)}`);
+    } catch (error) {
+      if (isApiClientError(error) && error.code === 'conflict') {
+        setAlreadyOnList(true);
+      } else if (!isApiClientError(error) || error.code !== 'unauthorized') {
+        // Unauthorized is handled by the client's login redirect — every
+        // other failure surfaces inline.
+        setRsvpError('RSVP failed — please try again.');
+      }
+      setRsvpStatus('idle');
+    }
+  }
 
   function changeQuantity(tierId: string, change: number, maximum: number) {
     setQuantities((current) => ({
@@ -236,7 +285,64 @@ export function CheckoutFlowClient({
           </form>
         )}
 
-        {step === 3 && (
+        {step === 3 && isFreeBooking && (
+          <div className="mt-8 space-y-6">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-white">
+                Free RSVP — no payment needed
+              </p>
+              <p className="mt-2 text-xs leading-5 text-white/55">
+                Confirming reserves one ticket on your account. You must be logged in.
+              </p>
+            </div>
+
+            {totalTickets !== 1 && (
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">
+                RSVP admits one guest — select a single ticket to continue.
+              </p>
+            )}
+            {rsvpError !== null && (
+              <p role="alert" className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-400">
+                {rsvpError}
+              </p>
+            )}
+            {alreadyOnList && (
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/60">
+                You&apos;re already on the list —{' '}
+                <Link href="/tickets" className="underline hover:text-white">
+                  view My Tickets
+                </Link>
+                .
+              </p>
+            )}
+
+            <div className="flex items-center justify-between pt-4 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => {
+                  setStep(2);
+                }}
+                className="text-xs font-black uppercase tracking-[0.2em] text-white/50 hover:text-white"
+              >
+                ← Back to details
+              </button>
+              <button
+                type="button"
+                disabled={!canConfirmRsvp}
+                onClick={() => {
+                  void confirmRsvp();
+                }}
+                className={`rounded-full px-8 py-3.5 text-xs font-black uppercase tracking-[0.2em] text-white transition-all shadow-xl ${
+                  canConfirmRsvp ? accent.selected : 'cursor-not-allowed bg-white/10 text-white/30'
+                }`}
+              >
+                {rsvpStatus === 'posting' ? 'Reserving…' : 'Confirm RSVP →'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && !isFreeBooking && (
           <div className="mt-8 space-y-6">
             <div className="grid gap-3 sm:grid-cols-3">
               {(

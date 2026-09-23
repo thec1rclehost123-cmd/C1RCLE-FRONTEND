@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 
 import { createApiClient } from '@c1rcle/api-client';
-import { eventDtoSchema, venueDtoSchema } from '@c1rcle/contracts';
+import { eventDtoSchema, publicTicketTierListResponseSchema, venueDtoSchema } from '@c1rcle/contracts';
 
 import { toBookingEventFixture } from '@/features/booking/booking-mapping';
 import { CheckoutView } from '@/features/booking/components/CheckoutView';
@@ -18,10 +18,12 @@ interface CheckoutPageProps {
 
 /**
  * Fixture checkouts first (unchanged behavior), then real published events
- * mapped into the same preview UI — `GET /api/v2/public/events/:idOrSlug`
+ * mapped into the same UI — `GET /api/v2/public/events/:idOrSlug`
  * 404s anything unpublished, so no dummy content can reach this page. Venue
- * resolves through the public by-id lookup. No payment is processed here;
- * the flow still ends at the preview confirmation.
+ * resolves through the public by-id lookup, tiers through the public tiers
+ * listing (real ids the RSVP endpoint accepts); a tiers failure keeps the
+ * previous price-derived fallback tier. Paid checkout stays a preview — only
+ * free (₹0 total) bookings post a real RSVP from the client.
  */
 async function getCheckoutEvent(id: string): Promise<BookingEventFixture | null> {
   const decoded = decodeURIComponent(id);
@@ -48,7 +50,14 @@ async function getCheckoutEvent(id: string): Promise<BookingEventFixture | null>
         .catch(() => null)
     : null;
 
-  return toBookingEventFixture(event, venue);
+  const tiers = await client
+    .get({
+      path: `/api/v2/public/events/${encodeURIComponent(decoded)}/tiers`,
+      schema: publicTicketTierListResponseSchema,
+    })
+    .catch(() => null);
+
+  return toBookingEventFixture(event, venue, tiers?.items ?? null);
 }
 
 export async function generateMetadata({ params }: CheckoutPageProps): Promise<Metadata> {
