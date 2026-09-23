@@ -175,6 +175,16 @@ export interface HostRepository extends PartnerRepository {
   getPartners(): Promise<readonly PartnerRelationship[]>;
   getFinance(): Promise<PartnerFinanceSummary>;
   getProfile(): Promise<PartnerProfile>;
+  requestPartnership(input: RequestPartnershipRequest): Promise<PartnershipDto>;
+  resolvePartnership(
+    partnershipId: string,
+    action: 'approve' | 'reject' | 'block' | 'end',
+    reason?: string,
+  ): Promise<PartnershipDto>;
+  getPartnerships(params?: {
+    limit?: number;
+    cursor?: string;
+  }): Promise<{ items: readonly PartnershipDto[]; pageInfo: { hasNextPage: boolean } }>;
 }
 
 export interface PartnerOrganizationSummary {
@@ -217,7 +227,10 @@ export interface PromoterNetworkProfileData {
 
 export interface PromoterEvent {
   readonly id: string;
+  readonly slug?: string;
+  readonly assignmentId?: string;
   readonly name: string;
+  readonly imageUrl?: string | null;
   readonly date: string;
   readonly time: string;
   readonly venue: string;
@@ -226,6 +239,7 @@ export interface PromoterEvent {
   readonly status: PromoterEventStatus;
   readonly category: string;
   readonly commissionLabel: string;
+  readonly commissionDetails?: readonly string[];
   readonly clicks: number;
   readonly tickets: number;
   readonly earningsPaise: number;
@@ -313,6 +327,16 @@ export interface PromoterRepository {
   getProfile(): Promise<PromoterProfile>;
   getNetworkProfile(): Promise<PromoterNetworkProfileData>;
   createTrackingLink(input: CreateTrackingLinkInput): Promise<PromoterTrackingLink>;
+  requestConnection(input: RequestConnectionRequest): Promise<PromoterConnectionDto>;
+  resolveConnection(
+    connectionId: string,
+    action: 'approve' | 'reject' | 'block' | 'revoke',
+    reason?: string,
+  ): Promise<PromoterConnectionDto>;
+  getPromoterConnections(params?: {
+    limit?: number;
+    cursor?: string;
+  }): Promise<{ items: readonly PromoterConnectionDto[]; pageInfo: { hasNextPage: boolean } }>;
 }
 
 export const formatInr = (paise: number): string =>

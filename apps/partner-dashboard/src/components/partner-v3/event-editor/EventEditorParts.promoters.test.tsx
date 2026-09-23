@@ -9,15 +9,13 @@ import type { EventEditorData, EventEditorDraft } from '@/data/partner-data-sour
 const testData: EventEditorData = {
   dataStatus: 'fixture',
   role: 'venue',
+  accent: 'orange',
   artworkOptions: [],
   venues: [],
-  genres: [],
-  extraGenres: [],
   promoters: [
     { id: 'promoter-1', name: 'Alex Promoter', initials: 'AP', role: 'Promoter' },
     { id: 'promoter-2', name: 'Sam Promoter', initials: 'SP', role: 'Promoter' },
   ],
-  defaultDraft: {} as EventEditorDraft,
 };
 
 function renderPromoterSelector(initialDraft?: Partial<EventEditorDraft>) {

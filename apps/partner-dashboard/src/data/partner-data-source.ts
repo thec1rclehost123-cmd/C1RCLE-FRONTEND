@@ -721,17 +721,21 @@ export interface PartnerSearchData {
 }
 
 export type PartnerNotificationType = 'payout' | 'request' | 'marketing' | 'operations' | 'system';
+export type PartnerNotificationCategory = 'partners' | 'events' | 'finance' | 'ops';
 export type PartnerNotificationIcon =
   'finance' | 'partner' | 'marketing' | 'operations' | 'request';
 
 export interface PartnerNotification {
   readonly id: string;
+  readonly title?: string;
   readonly description: string;
   readonly time: string;
   readonly type: PartnerNotificationType;
   readonly icon: PartnerNotificationIcon;
   readonly href?: string;
   readonly unread: boolean;
+  readonly decisionSupported?: boolean;
+  readonly category: PartnerNotificationCategory;
 }
 
 export interface PartnerNotificationsData {
@@ -881,6 +885,31 @@ export interface EventEditorTicketTier {
   readonly name: string;
   readonly price: number;
   readonly quantity: number;
+  readonly maxPerOrder?: number | undefined;
+  readonly accessType?: 'ENTRY' | 'VIP' | 'VVIP' | 'TABLE' | 'PACKAGE' | 'RSVP' | undefined;
+  readonly audienceType?: 'GENERAL' | 'MALE' | 'FEMALE' | 'COUPLE' | 'GROUP' | undefined;
+  readonly guestCount?: number;
+  readonly doorPrice?: number | undefined;
+  readonly pricingPhases?: readonly {
+    readonly id: string;
+    readonly name: string;
+    readonly priceInPaise: number;
+    readonly startDate: string;
+    readonly endDate: string;
+    readonly quantity: number | null;
+  }[];
+  readonly benefits?: readonly string[];
+  readonly minAge?: number;
+  readonly maxAge?: number;
+  readonly minPerOrder?: number | undefined;
+  readonly maxPerUser?: number | undefined;
+  readonly tableConfig?: {
+    readonly capacity: number;
+    readonly minimumSpendPaise: number;
+    readonly redeemableAmountPaise: number;
+    readonly tableCount: number;
+  };
+  readonly commissionEligible?: boolean;
 }
 
 export interface EventEditorDraft {
