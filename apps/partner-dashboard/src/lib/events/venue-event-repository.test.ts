@@ -2,7 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { uploadToSignedUrl } from '@/lib/onboarding/uploadToSignedUrl';
 
-import { eventEndAtFromDraft, eventStartAtFromDraft, publishVenueEvent } from './venue-event-repository';
+import {
+  eventEndAtFromDraft,
+  eventStartAtFromDraft,
+  publishVenueEvent,
+} from './venue-event-repository';
 
 import type { EventEditorDraft } from '@/data/partner-data-source';
 
@@ -35,7 +39,24 @@ const draft: EventEditorDraft = {
   genres: ['House'],
   artists: ['Artist One'],
   artwork: { type: 'gradient', value: 'sunset' },
-  ticketTiers: [{ id: 'ga', name: 'General Admission', price: 1200, quantity: 250 }],
+  ticketTiers: [
+    {
+      id: 'ga',
+      name: 'General Admission',
+      price: 1200,
+      quantity: 250,
+      pricingPhases: [
+        {
+          id: 'phase-1',
+          name: 'General Admission',
+          priceInPaise: 120_000,
+          startDate: '17-09',
+          endDate: '17-09',
+          quantity: 250,
+        },
+      ],
+    },
+  ],
   selectedPromoterIds: [],
   tableType: 'none',
   promoCodes: [],
@@ -109,11 +130,9 @@ describe('publishVenueEvent', () => {
       ...draft,
       artwork: { type: 'image', value: 'blob:http://localhost/poster', alt: 'poster.webp' },
     };
-    const fetchMock = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue({
-        blob: () => Promise.resolve(new Blob([new Uint8Array([1])], { type: 'image/webp' })),
-      } as Response);
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      blob: () => Promise.resolve(new Blob([new Uint8Array([1])], { type: 'image/webp' })),
+    } as Response);
 
     await expect(publishVenueEvent('org_1', uploadedDraft)).resolves.toMatchObject({
       id: 'evt_2',
@@ -259,18 +278,18 @@ describe('eventStartAtFromDraft', () => {
 
 describe('eventEndAtFromDraft', () => {
   it('parses explicit endTime and handles overnight span', () => {
-    expect(
-      eventEndAtFromDraft({ date: '2026-09-17', time: '9:30 PM', endTime: '3:00 AM' }),
-    ).toBe('2026-09-18T03:00:00.000Z');
-    expect(
-      eventEndAtFromDraft({ date: '2026-09-17', time: '18:00', endTime: '23:00' }),
-    ).toBe('2026-09-17T23:00:00.000Z');
+    expect(eventEndAtFromDraft({ date: '2026-09-17', time: '9:30 PM', endTime: '3:00 AM' })).toBe(
+      '2026-09-18T03:00:00.000Z',
+    );
+    expect(eventEndAtFromDraft({ date: '2026-09-17', time: '18:00', endTime: '23:00' })).toBe(
+      '2026-09-17T23:00:00.000Z',
+    );
   });
 
   it('parses time range string when endTime is absent', () => {
-    expect(
-      eventEndAtFromDraft({ date: '2026-09-17', time: '9:00 PM - 3:00 AM' }),
-    ).toBe('2026-09-18T03:00:00.000Z');
+    expect(eventEndAtFromDraft({ date: '2026-09-17', time: '9:00 PM - 3:00 AM' })).toBe(
+      '2026-09-18T03:00:00.000Z',
+    );
   });
 
   it('returns null when no end time is present or invalid', () => {

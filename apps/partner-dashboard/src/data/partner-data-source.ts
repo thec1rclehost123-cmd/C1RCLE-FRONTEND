@@ -730,17 +730,21 @@ export interface PartnerSearchData {
 }
 
 export type PartnerNotificationType = 'payout' | 'request' | 'marketing' | 'operations' | 'system';
+export type PartnerNotificationCategory = 'partners' | 'events' | 'finance' | 'ops';
 export type PartnerNotificationIcon =
   'finance' | 'partner' | 'marketing' | 'operations' | 'request';
 
 export interface PartnerNotification {
   readonly id: string;
+  readonly title?: string;
   readonly description: string;
   readonly time: string;
   readonly type: PartnerNotificationType;
   readonly icon: PartnerNotificationIcon;
   readonly href?: string;
   readonly unread: boolean;
+  readonly decisionSupported?: boolean;
+  readonly category: PartnerNotificationCategory;
 }
 
 export interface PartnerNotificationsData {
@@ -907,8 +911,8 @@ export interface EventEditorTicketTier {
     readonly id: string;
     readonly name: string;
     readonly priceInPaise: number;
-    readonly startsAt: string;
-    readonly endsAt: string;
+    readonly startDate: string;
+    readonly endDate: string;
     readonly quantity: number | null;
   }[];
   readonly benefits?: readonly string[];

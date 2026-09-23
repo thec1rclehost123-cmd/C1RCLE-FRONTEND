@@ -1,8 +1,18 @@
 export type PartnerRole = 'venue' | 'host' | 'promoter';
 export type PartnershipStatus = 'partnered' | 'pending' | 'discover';
-export type PromoterEventStatus = 'invited' | 'requested' | 'active' | 'paused' | 'completed' | 'declined';
-export type PartnerEventStatus = 'draft' | 'scheduled' | 'on-sale' | 'sold-out' | 'live' | 'completed' | 'cancelled';
-export type PartnerQueryState = 'loading' | 'loaded' | 'empty' | 'forbidden' | 'not-found' | 'network-error' | 'stale' | 'partial';
+export type PromoterEventStatus =
+  'invited' | 'requested' | 'active' | 'paused' | 'completed' | 'declined';
+export type PartnerEventStatus =
+  'draft' | 'scheduled' | 'on-sale' | 'sold-out' | 'live' | 'completed' | 'cancelled';
+export type PartnerQueryState =
+  | 'loading'
+  | 'loaded'
+  | 'empty'
+  | 'forbidden'
+  | 'not-found'
+  | 'network-error'
+  | 'stale'
+  | 'partial';
 export type PartnerMutationState = 'idle' | 'confirming' | 'submitting' | 'succeeded' | 'failed';
 
 export type PartnershipStatusV2 = 'pending' | 'active' | 'rejected' | 'blocked' | 'ended';
@@ -67,7 +77,11 @@ export interface PartnerEventDetail extends PartnerEventSummary {
   readonly promoterCount: number;
   readonly salesTrend: readonly number[];
   readonly audienceCities: readonly { readonly label: string; readonly value: number }[];
-  readonly attribution: readonly { readonly label: string; readonly clicks: number; readonly tickets: number }[];
+  readonly attribution: readonly {
+    readonly label: string;
+    readonly clicks: number;
+    readonly tickets: number;
+  }[];
 }
 
 export interface PartnerOrderSummary {
@@ -224,7 +238,11 @@ export interface HostOverview {
   readonly nextEvent: PartnerEventSummary | null;
   readonly recentOrders: readonly PartnerOrderSummary[];
   readonly performance: readonly number[];
-  readonly calendar: readonly { readonly date: string; readonly label: string; readonly type: 'event' | 'deadline' | 'payout' }[];
+  readonly calendar: readonly {
+    readonly date: string;
+    readonly label: string;
+    readonly type: 'event' | 'deadline' | 'payout';
+  }[];
 }
 
 export interface HostRepository extends PartnerRepository {
@@ -234,8 +252,15 @@ export interface HostRepository extends PartnerRepository {
   getFinance(): Promise<PartnerFinanceSummary>;
   getProfile(): Promise<PartnerProfile>;
   requestPartnership(input: RequestPartnershipRequest): Promise<PartnershipDto>;
-  resolvePartnership(partnershipId: string, action: 'approve' | 'reject' | 'block' | 'end', reason?: string): Promise<PartnershipDto>;
-  getPartnerships(params?: { limit?: number; cursor?: string }): Promise<{ items: readonly PartnershipDto[]; pageInfo: { hasNextPage: boolean } }>;
+  resolvePartnership(
+    partnershipId: string,
+    action: 'approve' | 'reject' | 'block' | 'end',
+    reason?: string,
+  ): Promise<PartnershipDto>;
+  getPartnerships(params?: {
+    limit?: number;
+    cursor?: string;
+  }): Promise<{ items: readonly PartnershipDto[]; pageInfo: { hasNextPage: boolean } }>;
 }
 
 export interface PartnerOrganizationSummary {
@@ -278,7 +303,10 @@ export interface PromoterNetworkProfileData {
 
 export interface PromoterEvent {
   readonly id: string;
+  readonly slug?: string;
+  readonly assignmentId?: string;
   readonly name: string;
+  readonly imageUrl?: string | null;
   readonly date: string;
   readonly time: string;
   readonly venue: string;
@@ -287,6 +315,7 @@ export interface PromoterEvent {
   readonly status: PromoterEventStatus;
   readonly category: string;
   readonly commissionLabel: string;
+  readonly commissionDetails?: readonly string[];
   readonly clicks: number;
   readonly tickets: number;
   readonly earningsPaise: number;
@@ -357,7 +386,11 @@ export interface PromoterOverview {
   readonly nextEvent: PromoterEvent | null;
   readonly recentOrders: readonly PromoterOrder[];
   readonly performance: readonly number[];
-  readonly calendar: readonly { date: string; label: string; type: 'event' | 'deadline' | 'payout' }[];
+  readonly calendar: readonly {
+    date: string;
+    label: string;
+    type: 'event' | 'deadline' | 'payout';
+  }[];
 }
 
 export interface PromoterRepository {
@@ -371,9 +404,20 @@ export interface PromoterRepository {
   getNetworkProfile(): Promise<PromoterNetworkProfileData>;
   createTrackingLink(input: CreateTrackingLinkInput): Promise<PromoterTrackingLink>;
   requestConnection(input: RequestConnectionRequest): Promise<PromoterConnectionDto>;
-  resolveConnection(connectionId: string, action: 'approve' | 'reject' | 'block' | 'revoke', reason?: string): Promise<PromoterConnectionDto>;
-  getPromoterConnections(params?: { limit?: number; cursor?: string }): Promise<{ items: readonly PromoterConnectionDto[]; pageInfo: { hasNextPage: boolean } }>;
+  resolveConnection(
+    connectionId: string,
+    action: 'approve' | 'reject' | 'block' | 'revoke',
+    reason?: string,
+  ): Promise<PromoterConnectionDto>;
+  getPromoterConnections(params?: {
+    limit?: number;
+    cursor?: string;
+  }): Promise<{ items: readonly PromoterConnectionDto[]; pageInfo: { hasNextPage: boolean } }>;
 }
 
 export const formatInr = (paise: number): string =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(paise / 100);
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(paise / 100);

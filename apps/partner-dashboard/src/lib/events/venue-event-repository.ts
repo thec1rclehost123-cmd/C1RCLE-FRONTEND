@@ -25,6 +25,10 @@ export async function publishVenueEvent(
   if (!startAt) throw new Error('Enter a valid event date and start time.');
 
   const workflowId = crypto.randomUUID();
+  const paidTierIds = new Set(
+    draft.ticketTiers.filter((tier) => tier.accessType !== 'RSVP').map((tier) => tier.id),
+  );
+  const hasPaidTiers = paidTierIds.size > 0;
   const commandHeaders = (suffix: string) => ({
     'x-organization-id': organizationId,
     'Idempotency-Key': `${workflowId}-${suffix}`,
@@ -40,12 +44,19 @@ export async function publishVenueEvent(
       startAt,
       endAt: eventEndAtFromDraft(draft),
       tags: [...new Set([...draft.genres, ...draft.artists])].slice(0, 50),
-      compensation: draft.selectedPromoterIds.length
+      compensation: hasPaidTiers && draft.selectedPromoterIds.length
         ? {
             model: draft.compensation,
             globalRatePercent:
               draft.compensation === 'standard' ? Math.round(draft.commissionRate) : null,
-            tierRates: draft.compensation === 'custom' ? (draft.tierCommissions ?? {}) : {},
+            tierRates:
+              draft.compensation === 'custom'
+                ? Object.fromEntries(
+                    Object.entries(draft.tierCommissions ?? {}).filter(([id]) =>
+                      paidTierIds.has(id),
+                    ),
+                  )
+                : {},
             salaryAmountPaise:
               draft.compensation === 'salary' ? Math.round(draft.salaryAmount * 100) : null,
             salaryPeriod: draft.compensation === 'salary' ? draft.salaryPeriod : null,
@@ -59,40 +70,41 @@ export async function publishVenueEvent(
 
   const serverTierIds = new Map<string, string>();
   for (const [index, tier] of draft.ticketTiers.entries()) {
-    const sanitizedPricingPhases = (tier.pricingPhases ?? [])
-      .map((phase) => {
-        const startsAt = sanitizeIsoDateTime(phase.startsAt);
-        const endsAt = sanitizeIsoDateTime(phase.endsAt);
-        if (!startsAt || !endsAt) return null;
-        return {
-          id: phase.id,
-          name: phase.name.trim() || `Phase ${phase.id}`,
-          priceInPaise: Math.round(phase.priceInPaise),
-          startsAt,
-          endsAt,
-          quantity: phase.quantity ?? null,
-        };
-      })
-      .filter((p): p is NonNullable<typeof p> => p !== null);
+    const isRsvp = tier.accessType === 'RSVP';
 
     const createdTier = await apiClient.post({
       path: `/api/v2/events/${encodeURIComponent(event.id)}/ticket-tiers`,
       body: createTicketTierSchema.parse({
         name: tier.name.trim(),
-        priceInPaise: Math.round(tier.price * 100),
+        ...(!isRsvp ? { priceInPaise: Math.round(tier.price * 100) } : {}),
         quantity: tier.quantity,
         ...(tier.accessType ? { accessType: tier.accessType } : {}),
         ...(tier.audienceType ? { audienceType: tier.audienceType } : {}),
         ...(tier.guestCount ? { guestCount: tier.guestCount } : {}),
-        ...(tier.doorPrice != null ? { doorPriceInPaise: Math.round(tier.doorPrice * 100) } : {}),
-        ...(sanitizedPricingPhases.length > 0 ? { pricingPhases: sanitizedPricingPhases } : {}),
+        ...(!isRsvp && tier.doorPrice != null
+          ? { doorPriceInPaise: Math.round(tier.doorPrice * 100) }
+          : {}),
+        ...(!isRsvp
+          ? {
+              pricingPhases: (tier.pricingPhases ?? []).map((phase) => ({
+                id: phase.id,
+                name: phase.name.trim() || `Phase ${phase.id}`,
+                priceInPaise: Math.round(phase.priceInPaise),
+                startDate: phase.startDate,
+                endDate: phase.endDate,
+                quantity: phase.quantity ?? null,
+              })),
+            }
+          : {}),
         ...(tier.benefits ? { benefits: [...tier.benefits] } : {}),
         ...(tier.minAge != null ? { minAge: tier.minAge } : {}),
         ...(tier.maxAge != null ? { maxAge: tier.maxAge } : {}),
         ...(tier.minPerOrder != null ? { minPerOrder: tier.minPerOrder } : {}),
         ...(tier.maxPerUser != null ? { maxPerUser: tier.maxPerUser } : {}),
         ...(tier.tableConfig ? { tableConfig: tier.tableConfig } : {}),
-        ...(tier.commissionEligible != null ? { commissionEligible: tier.commissionEligible } : {}),
+        ...(!isRsvp && tier.commissionEligible != null
+          ? { commissionEligible: tier.commissionEligible }
+          : {}),
         ...(tier.maxPerOrder != null ? { maxPerOrder: tier.maxPerOrder } : {}),
       }),
       schema: ticketTierDtoSchema,
@@ -106,11 +118,13 @@ export async function publishVenueEvent(
   // otherwise publish validation rejects every custom commission.
   if (event.compensation?.model === 'custom') {
     const tierRates = Object.fromEntries(
-      Object.entries(event.compensation.tierRates).map(([localTierId, rate]) => {
-        const serverTierId = serverTierIds.get(localTierId);
-        if (!serverTierId) throw new Error(`Commission tier ${localTierId} was not created.`);
-        return [serverTierId, rate];
-      }),
+      Object.entries(event.compensation.tierRates)
+        .filter(([localTierId]) => paidTierIds.has(localTierId))
+        .map(([localTierId, rate]) => {
+          const serverTierId = serverTierIds.get(localTierId);
+          if (!serverTierId) throw new Error(`Commission tier ${localTierId} was not created.`);
+          return [serverTierId, rate];
+        }),
     );
     const updatedEvent = await apiClient.patch({
       path: `/api/v2/events/${encodeURIComponent(event.id)}`,
@@ -129,18 +143,21 @@ export async function publishVenueEvent(
       path: `/api/v2/events/${encodeURIComponent(event.id)}/promoter-assignments`,
       body: assignPromoterSchema.parse({
         promoterId,
-        ratePercent: draft.compensation === 'standard' ? Math.round(draft.commissionRate) : 0,
+        ratePercent:
+          hasPaidTiers && draft.compensation === 'standard'
+            ? Math.round(draft.commissionRate)
+            : 0,
         ...(draft.compensation === 'custom'
           ? {
               tierRates: Object.fromEntries(
-                Object.entries(
-                  draft.promoterOverrides?.[promoterId] ?? draft.tierCommissions ?? {},
-                ).map(([localTierId, rate]) => {
-                  const serverTierId = serverTierIds.get(localTierId);
-                  if (!serverTierId)
-                    throw new Error(`Commission tier ${localTierId} was not created.`);
-                  return [serverTierId, { ratePercent: rate, flatPaise: 0 }];
-                }),
+                Object.entries(draft.promoterOverrides?.[promoterId] ?? draft.tierCommissions ?? {})
+                  .filter(([localTierId]) => paidTierIds.has(localTierId))
+                  .map(([localTierId, rate]) => {
+                    const serverTierId = serverTierIds.get(localTierId);
+                    if (!serverTierId)
+                      throw new Error(`Commission tier ${localTierId} was not created.`);
+                    return [serverTierId, { ratePercent: rate, flatPaise: 0 }];
+                  }),
               ),
             }
           : {}),
@@ -275,21 +292,6 @@ export function eventEndAtFromDraft(
   }
 
   return endDate.toISOString();
-}
-
-function sanitizeIsoDateTime(value: string | undefined | null): string | null {
-  if (!value || typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  const parsed = new Date(trimmed);
-  if (!Number.isNaN(parsed.getTime())) {
-    return parsed.toISOString();
-  }
-  const parsedWithZ = new Date(`${trimmed}Z`);
-  if (!Number.isNaN(parsedWithZ.getTime())) {
-    return parsedWithZ.toISOString();
-  }
-  return null;
 }
 
 type PosterContentType = 'image/jpeg' | 'image/png' | 'image/webp';

@@ -110,10 +110,10 @@ export function PartnerEventEditor({
     : (data.venues.find((venue) => venue.id === draft.venueId)?.name ?? 'Your venue');
   const validationErrors = useMemo(
     () => [
-      ...validateDraft(draft, isHost && mode === 'create'),
+      ...validateDraft(draft, isHost && mode === 'create', selectedSlotId),
       ...validateCompensation(draft),
     ],
-    [draft, isHost, mode],
+    [draft, isHost, mode, selectedSlotId],
   );
 
   const updateQuery = (
@@ -160,7 +160,7 @@ export function PartnerEventEditor({
     const errors =
       currentStep === 'venue' || currentStep === 'basics' || currentStep === 'review'
         ? [
-            ...validateDraft(draft, isHost && mode === 'create'),
+            ...validateDraft(draft, isHost && mode === 'create', selectedSlotId),
             ...validateCompensation(draft),
           ]
         : [];
@@ -527,7 +527,7 @@ function draftFromInput(
   };
 }
 
-function validateDraft(draft: EventEditorDraft, host: boolean) {
+function validateDraft(draft: EventEditorDraft, host: boolean, selectedSlotId: string) {
   const errors: string[] = [];
   if (!draft.name.trim()) errors.push('Add an event name.');
   if (host && !draft.venueId) errors.push('Choose a partnered venue.');
@@ -542,10 +542,8 @@ function validateDraft(draft: EventEditorDraft, host: boolean) {
     errors.push('Late arrival surcharge must be between 0% and 100%.');
   draft.ticketTiers.forEach((tier, index) => {
     if (!tier.name.trim()) errors.push(`Name ticket tier ${String(index + 1)}.`);
-    if ((tier.accessType ?? 'ENTRY') === 'RSVP' ? tier.price < 0 : tier.price <= 0)
+    if ((tier.accessType ?? 'ENTRY') !== 'RSVP' && tier.price <= 0)
       errors.push(`Set a valid price for ${tier.name || `tier ${String(index + 1)}`}.`);
-    if (tier.accessType === 'RSVP' && tier.price !== 0)
-      errors.push(`Free RSVP ${tier.name || `tier ${String(index + 1)}`} must be ₹0.`);
     if (tier.quantity <= 0)
       errors.push(`Set a valid quantity for ${tier.name || `tier ${String(index + 1)}`}.`);
     if (tier.maxPerOrder != null && tier.maxPerOrder <= 0)
@@ -554,12 +552,22 @@ function validateDraft(draft: EventEditorDraft, host: boolean) {
       errors.push(
         `Table configuration is required for ${tier.name || `tier ${String(index + 1)}`}.`,
       );
-    (tier.pricingPhases ?? []).forEach((phase, phaseIndex) => {
+    if (
+      tier.accessType === 'RSVP' &&
+      (tier.pricingPhases?.length || tier.commissionEligible || tier.doorPrice != null)
+    )
+      errors.push(
+        `RSVP ${tier.name || `tier ${String(index + 1)}`} cannot have phases, door price, or commission.`,
+      );
+    (tier.accessType === 'RSVP' ? [] : (tier.pricingPhases ?? [])).forEach((phase, phaseIndex) => {
       if (!phase.name.trim())
         errors.push(
           `Name pricing phase ${String(phaseIndex + 1)} in ${tier.name || `tier ${String(index + 1)}`}.`,
         );
-      if (!phase.startsAt || !phase.endsAt)
+      if (
+        !/^\d{2}-\d{2}$/.test(phase.startDate) ||
+        !/^\d{2}-\d{2}$/.test(phase.endDate)
+      )
         errors.push(
           `Set valid start and end dates for ${phase.name || `pricing phase ${String(phaseIndex + 1)}`} in ${tier.name || `tier ${String(index + 1)}`}.`,
         );
@@ -568,7 +576,11 @@ function validateDraft(draft: EventEditorDraft, host: boolean) {
   return errors;
 }
 function validateCompensation(draft: EventEditorDraft): readonly string[] {
-  if (!draft.selectedPromoterIds.length) return [];
+  if (
+    !draft.selectedPromoterIds.length ||
+    !draft.ticketTiers.some((tier) => tier.accessType !== 'RSVP')
+  )
+    return [];
   const errors: string[] = [];
   const tierCommissions = draft.tierCommissions ?? {};
   if (
@@ -579,12 +591,14 @@ function validateCompensation(draft: EventEditorDraft): readonly string[] {
   )
     errors.push('Global commission must be a whole number between 0% and 100%.');
   if (draft.compensation === 'custom')
-    draft.ticketTiers.forEach((tier) => {
-      const rate = tierCommissions[tier.id];
-      if (rate === undefined) errors.push(`${tier.name} needs a commission.`);
-      else if (!Number.isInteger(rate) || rate < 0 || rate > 100)
-        errors.push(`${tier.name} commission must be between 0% and 100%.`);
-    });
+    draft.ticketTiers
+      .filter((tier) => tier.accessType !== 'RSVP')
+      .forEach((tier) => {
+        const rate = tierCommissions[tier.id];
+        if (rate === undefined) errors.push(`${tier.name} needs a commission.`);
+        else if (!Number.isInteger(rate) || rate < 0 || rate > 100)
+          errors.push(`${tier.name} commission must be between 0% and 100%.`);
+      });
   if (draft.compensation === 'salary') {
     if (!Number.isFinite(draft.salaryAmount) || draft.salaryAmount <= 0)
       errors.push('Salary amount must be greater than ₹0.');

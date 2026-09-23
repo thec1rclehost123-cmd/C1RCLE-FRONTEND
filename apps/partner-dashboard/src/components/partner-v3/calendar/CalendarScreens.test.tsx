@@ -169,7 +169,6 @@ describe('Calendar screens', () => {
         startingPricePaise: null,
         isFree: false,
         cancellationReason: null,
-        compensation: null,
         version: 1,
         createdAt: '2026-07-01T00:00:00.000Z',
         updatedAt: '2026-07-01T00:00:00.000Z',

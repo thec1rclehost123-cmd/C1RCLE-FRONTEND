@@ -2,7 +2,7 @@
 
 import { EmptyState, ErrorState } from '@/components/partner-v3/States';
 import { useVenueCalendar } from '@/lib/calendar/use-venue-calendar';
-import { currentMonthKey } from '@/lib/calendar/venue-calendar-repository';
+import { blockVenueDate, currentMonthKey } from '@/lib/calendar/venue-calendar-repository';
 
 import { VenueCalendarScreen } from './VenueCalendarScreen';
 
@@ -46,12 +46,18 @@ export function VenueCalendarRoute({
       />
     );
   }
+  const venueId = state.data.venue.id;
 
   return (
     <VenueCalendarScreen
+      data={state.data.calendar}
       initialMonth={initialMonth ?? currentMonthKey()}
       {...(initialDate ? { initialDate } : {})}
       {...(initialDialog ? { initialDialog } : {})}
+      onBlockDate={async (input) => {
+        await blockVenueDate({ organizationId, venueId, input });
+        state.retry();
+      }}
     />
   );
 }
