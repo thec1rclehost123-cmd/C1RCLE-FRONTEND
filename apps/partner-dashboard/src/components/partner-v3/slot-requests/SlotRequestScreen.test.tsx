@@ -28,46 +28,58 @@ vi.mock('@c1rcle/icons', () => {
   };
 });
 
+const { applySlotRequestAction } = vi.hoisted(() => ({
+  applySlotRequestAction: vi.fn<() => Promise<void>>(),
+}));
+
+vi.mock('@/lib/slot-requests/slot-request-repository', () => ({
+  loadSlotRequestsData: async (direction: 'incoming' | 'outgoing') =>
+    direction === 'incoming'
+      ? fixturePartnerDataSource.getVenueSlotRequests()
+      : fixturePartnerDataSource.getHostSlotRequests(),
+  applySlotRequestAction,
+}));
+
 describe('SlotRequestScreen', () => {
   beforeEach(() => {
     push.mockReset();
     replace.mockReset();
+    applySlotRequestAction.mockReset();
   });
 
-  it('renders Venue incoming requests and opens a review through URL state', async () => {
+  it('renders Venue incoming requests from live data and offers accepted decisions', async () => {
     const user = userEvent.setup();
-    const data = await fixturePartnerDataSource.getVenueSlotRequests();
-    render(<SlotRequestScreen data={data} />);
+    render(<SlotRequestScreen direction="incoming" />);
 
-    expect(screen.getByRole('heading', { name: 'Slot Requests' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Slot Requests' })).toBeInTheDocument();
     expect(screen.getByText('Requested by Arjun (Pulse Collective)')).toBeInTheDocument();
     expect(screen.getByText('Requested by Zoya (Nightowl)')).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Accept' })).toHaveLength(2);
-    expect(screen.getAllByRole('button', { name: 'Accept' })[0]).toBeDisabled();
+    const acceptButtons = screen.getAllByRole('button', { name: 'Accept' });
+    expect(acceptButtons).toHaveLength(2);
+    expect(acceptButtons[0]).not.toBeDisabled();
 
     await user.click(screen.getByRole('button', { name: /Bassline Nights/ }));
     expect(push).toHaveBeenCalledWith('/partner/venue/slot-requests?request=venue-slot-bassline');
   });
 
-  it('renders Host outgoing language and keeps cancellation unavailable', async () => {
-    const data = await fixturePartnerDataSource.getHostSlotRequests();
-    render(<SlotRequestScreen data={data} />);
+  it('renders Host outgoing language and exposes cancellation only on approved requests', async () => {
+    render(<SlotRequestScreen direction="outgoing" initialView="all" />);
 
-    expect(screen.getAllByText('Sent to Skyline Rooftop')).toHaveLength(2);
-    expect(screen.getAllByRole('button', { name: 'Cancel request' })).toHaveLength(2);
-    expect(screen.getAllByRole('button', { name: 'Cancel request' })[0]).toBeDisabled();
+    expect(await screen.findAllByText('Sent to Skyline Rooftop')).toHaveLength(3);
+    const cancelButtons = screen.getAllByRole('button', { name: 'Cancel request' });
+    expect(cancelButtons).toHaveLength(1);
+    expect(cancelButtons[0]).not.toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Accept' })).not.toBeInTheDocument();
   });
 
   it('renders a directly addressed request review and changes preview state in the URL', async () => {
     const user = userEvent.setup();
-    const data = await fixturePartnerDataSource.getVenueSlotRequests();
-    const view = render(<SlotRequestScreen data={data} initialRequestId="venue-slot-bassline" />);
+    const view = render(<SlotRequestScreen direction="incoming" initialRequestId="venue-slot-bassline" />);
 
-    expect(screen.getByRole('dialog', { name: 'Bassline Nights' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Bassline Nights' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Live preview' }));
     expect(replace).toHaveBeenLastCalledWith('/partner/venue/slot-requests?request=venue-slot-bassline&panel=preview');
-    view.rerender(<SlotRequestScreen data={data} initialRequestId="venue-slot-bassline" initialPanel="preview" />);
+    view.rerender(<SlotRequestScreen direction="incoming" initialRequestId="venue-slot-bassline" initialPanel="preview" />);
     await user.click(screen.getByRole('button', { name: 'Mobile app' }));
     expect(replace).toHaveBeenLastCalledWith('/partner/venue/slot-requests?request=venue-slot-bassline&panel=preview&preview=mobile');
   });

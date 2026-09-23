@@ -76,6 +76,7 @@ export function PartnerShell({ studio, interactionData, children }: { readonly s
           userName={userName}
           searchData={interactionData.search}
           notificationsData={interactionData.notifications}
+          notificationDirection={config.role === 'venue' ? 'incoming' : config.role === 'host' ? 'outgoing' : undefined}
           navigationLayout={navigationLayout}
           mobileOpen={mobileOpen}
           onMobileToggle={() => { setMobileOpen((value) => !value); }}

@@ -52,9 +52,6 @@ export const eventDtoSchema = z.object({
   tags: z.array(z.string().min(1)).max(50).default([]),
   startingPricePaise: z.number().int().nonnegative().nullable(),
   isFree: z.boolean(),
-  /** Event-level pricing rules consumed by guest checkout. */
-  earlyBirdDiscountPercent: z.number().int().min(0).max(100).nullable().optional(),
-  lateArrivalChargePercent: z.number().int().min(0).max(100).nullable().optional(),
   cancellationReason: z.string().max(1000).nullable(),
   compensation: eventCompensationSchema.nullable(),
   version: z.number().int().positive(),
@@ -79,8 +76,6 @@ export const createEventSchema = z.object({
   endAt: z.iso.datetime().nullable(),
   tags: z.array(z.string().min(1)).max(50).default([]),
   compensation: eventCompensationSchema.nullable().optional(),
-  earlyBirdDiscountPercent: z.number().int().min(0).max(100).nullable().optional(),
-  lateArrivalChargePercent: z.number().int().min(0).max(100).nullable().optional(),
 });
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 
@@ -300,14 +295,16 @@ export const createTablePackageSchema = z
   .strict();
 export type CreateTablePackageRequest = z.infer<typeof createTablePackageSchema>;
 
+export const commissionRateSchema = z.object({
+  ratePercent: z.number().int().min(0).max(100),
+  flatPaise: z.number().int().nonnegative(),
+});
+
 export const commissionTermsSchema = z.object({
   version: z.number().int().positive(),
   ratePercent: z.number().int().nonnegative(),
   flatPaise: z.number().int().nonnegative(),
-  tierRates: z.record(z.string(), z.object({
-    ratePercent: z.number().int().min(0).max(100),
-    flatPaise: z.number().int().nonnegative(),
-  })).optional(),
+  tierRates: z.record(z.string(), commissionRateSchema).optional(),
 });
 
 export const promoterAssignmentDtoSchema = z.object({
@@ -329,10 +326,7 @@ export const assignPromoterSchema = z
     promoterId: opaqueIdSchema,
     ratePercent: z.number().int().min(0).max(100).optional(),
     flatPaise: z.number().int().nonnegative().optional(),
-    tierRates: z.record(z.string(), z.object({
-      ratePercent: z.number().int().min(0).max(100),
-      flatPaise: z.number().int().nonnegative(),
-    })).optional(),
+    tierRates: z.record(z.string(), commissionRateSchema).optional(),
   })
   .strict();
 export type AssignPromoterRequest = z.infer<typeof assignPromoterSchema>;

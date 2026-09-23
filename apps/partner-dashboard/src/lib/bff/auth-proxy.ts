@@ -211,6 +211,8 @@ export interface ForwardInit {
   readonly cookie?: string | null;
   /** Extra headers to forward verbatim (e.g. `Idempotency-Key`). */
   readonly headers?: Readonly<Record<string, string>>;
+  /** Optional abort so a fossilised gateway cannot stall the BFF forever. */
+  readonly signal?: AbortSignal;
 }
 
 /**
@@ -237,6 +239,7 @@ export async function forwardToGateway(path: string, init: ForwardInit): Promise
     ...(init.body !== undefined ? { body: JSON.stringify(init.body) } : {}),
     redirect: 'manual',
     cache: 'no-store',
+    ...(init.signal !== undefined ? { signal: init.signal } : {}),
   });
 }
 

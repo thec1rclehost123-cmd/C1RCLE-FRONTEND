@@ -5,9 +5,11 @@ import { useEffect, useRef, useState } from 'react';
 
 import { AnnouncementIcon, BankIcon, DoorModeIcon, InviteIcon, NotificationIcon, PartnerIcon } from '@c1rcle/icons';
 
+import { loadSlotRequestNotifications } from '@/lib/slot-requests/slot-request-repository';
+
 import styles from './partner-v3.module.css';
 
-import type { PartnerNotification, PartnerNotificationIcon, PartnerNotificationsData } from '@/data/partner-data-source';
+import type { PartnerNotification, PartnerNotificationIcon, PartnerNotificationsData, SlotRequestDirection } from '@/data/partner-data-source';
 
 const notificationIcons: Record<PartnerNotificationIcon, typeof BankIcon> = {
   finance: BankIcon,
@@ -17,13 +19,28 @@ const notificationIcons: Record<PartnerNotificationIcon, typeof BankIcon> = {
   request: InviteIcon,
 };
 
-export function PartnerNotifications({ data }: { readonly data: PartnerNotificationsData }) {
+export function PartnerNotifications({ data, direction }: { readonly data: PartnerNotificationsData; readonly direction?: SlotRequestDirection | undefined }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [read, setRead] = useState(false);
-  const unreadCount = read ? 0 : data.notifications.filter((notification) => notification.unread).length;
+  const [liveNotifications, setLiveNotifications] = useState<PartnerNotification[] | null>(null);
+  const notifications = liveNotifications ? [...liveNotifications, ...data.notifications] : data.notifications;
+  const unreadCount = read ? 0 : notifications.filter((notification) => notification.unread).length;
+
+  useEffect(() => {
+    if (!direction) return;
+    let cancelled = false;
+    loadSlotRequestNotifications(direction)
+      .then((items) => {
+        if (!cancelled) setLiveNotifications(items);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [direction]);
 
   const close = () => {
     setOpen(false);
@@ -53,7 +70,7 @@ export function PartnerNotifications({ data }: { readonly data: PartnerNotificat
     </button>
     {open ? <section className={styles['notificationPanel']} id="partner-notifications-panel" role="dialog" aria-label="Notifications">
       <header className={styles['notificationHeader']}><strong>Notifications</strong><button ref={closeButtonRef} type="button" onClick={close}>Close</button></header>
-      {data.notifications.length ? <div className={styles['notificationList']}>{data.notifications.map((notification) => <NotificationRow key={notification.id} notification={notification} read={read} onClose={close} />)}</div> : <p className={styles['notificationEmpty']} role="status">No new notifications.</p>}
+      {notifications.length ? <div className={styles['notificationList']}>{notifications.map((notification) => <NotificationRow key={notification.id} notification={notification} read={read} onClose={close} />)}</div> : <p className={styles['notificationEmpty']} role="status">No new notifications.</p>}
     </section> : null}
   </div>;
 }

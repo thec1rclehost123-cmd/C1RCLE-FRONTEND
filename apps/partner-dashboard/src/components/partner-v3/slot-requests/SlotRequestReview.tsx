@@ -6,13 +6,15 @@ import { EventPoster } from '@/components/partner-v3/events/EventPoster';
 import styles from './slot-requests.module.css';
 import { SlotRequestStatusBadge } from './SlotRequestStatusBadge';
 
-import type { SlotRequest } from '@/data/partner-data-source';
+import type { SlotRequest, SlotRequestActionKind } from '@/data/partner-data-source';
 
 type ReviewPanel = 'details' | 'preview';
 type PreviewMode = 'guest' | 'mobile';
 
-export function SlotRequestReview({ request, panel, previewMode, onPanelChange, onPreviewModeChange, onClose }: { readonly request: SlotRequest; readonly panel: ReviewPanel; readonly previewMode: PreviewMode; readonly onPanelChange: (panel: ReviewPanel) => void; readonly onPreviewModeChange: (mode: PreviewMode) => void; readonly onClose: () => void }) {
+export function SlotRequestReview({ request, panel, previewMode, onPanelChange, onPreviewModeChange, onClose, busy, actionError, onAction }: { readonly request: SlotRequest; readonly panel: ReviewPanel; readonly previewMode: PreviewMode; readonly onPanelChange: (panel: ReviewPanel) => void; readonly onPreviewModeChange: (mode: PreviewMode) => void; readonly onClose: () => void; readonly busy: boolean; readonly actionError: string | null; readonly onAction: (id: string, kind: SlotRequestActionKind) => void }) {
   const isIncoming = request.direction === 'incoming';
+  const canDecide = isIncoming && request.status === 'pending';
+  const canCancel = !isIncoming && request.status === 'approved';
   return (
     <div className={styles['reviewRoot']} role="presentation">
       <button type="button" className={styles['reviewScrim']} aria-label="Close slot request review" onClick={onClose} />
@@ -31,8 +33,10 @@ export function SlotRequestReview({ request, panel, previewMode, onPanelChange, 
         </div>
         <footer className={styles['reviewFooter']}>
           <Button type="button" variant="secondary" onClick={onClose}>Close</Button>
-          {request.status === 'pending' && (isIncoming ? <><Button type="button" variant="secondary" disabled title="Request decisions require the slot-request API">Decline</Button><Button type="button" variant="primary" disabled title="Request decisions require the slot-request API">Accept</Button></> : <Button type="button" variant="secondary" disabled title="Request cancellation requires the slot-request API">Cancel request</Button>)}
+          {canDecide ? <><Button type="button" variant="secondary" disabled={busy} onClick={() => { onAction(request.id, 'reject'); }}>Decline</Button><Button type="button" variant="primary" disabled={busy} onClick={() => { onAction(request.id, 'accept'); }}>Accept</Button></> : null}
+          {canCancel ? <Button type="button" variant="secondary" disabled={busy} onClick={() => { onAction(request.id, 'cancel'); }}>Cancel request</Button> : null}
         </footer>
+        {actionError ? <p className={styles['actionError']} role="alert">{actionError}</p> : null}
       </section>
     </div>
   );
@@ -40,15 +44,18 @@ export function SlotRequestReview({ request, panel, previewMode, onPanelChange, 
 
 function Details({ request }: { readonly request: SlotRequest }) {
   const event = request.event;
+  const hasArtistsAndPromoters = (event.artists?.length ?? 0) > 0 || (event.promoters?.length ?? 0) > 0;
+  const hasTiers = (event.tiers?.length ?? 0) > 0;
+  const hasPricing = (event.pricing?.length ?? 0) > 0 || Boolean(event.tables ?? event.codes);
   return <div className={styles['detailStack']}>
-    <section className={styles['noteBox']}><span>Note from requester</span><p>{event.note}</p></section>
-    <section className={styles['detailSection']}><h3>Event details</h3><div className={styles['detailFacts']}><span><CalendarIcon size={15} aria-hidden="true" />{event.date}</span><span><TimeIcon size={15} aria-hidden="true" />{event.time}</span><span><LocationIcon size={15} aria-hidden="true" />{event.venue}</span><span><TicketIcon size={15} aria-hidden="true" />{event.ticketTier}</span></div><p>{event.description}</p></section>
-    <section className={styles['detailSection']}><h3>Artists &amp; promoters</h3><div className={styles['tagList']}>{event.artists.map((artist) => <span key={artist}>{artist}</span>)}{event.promoters.map((promoter) => <span key={promoter}>{promoter}</span>)}</div></section>
-    <section className={styles['detailSection']}><h3>Ticket tiers</h3><div className={styles['tierList']}>{event.tiers.map((tier) => <div key={tier.name}><span><strong>{tier.name}</strong><small>{tier.quantity} tickets</small></span><strong>{tier.price}</strong></div>)}</div></section>
-    <section className={styles['detailSection']}><h3>Dynamic pricing</h3><div className={styles['tagList']}>{event.pricing.map((price) => <span key={price}>{price}</span>)}</div><div className={styles['detailSupplement']}><span>Tables <strong>{event.tables}</strong></span><span>Codes <strong>{event.codes}</strong></span></div></section>
+    {event.note ? <section className={styles['noteBox']}><span>Note from requester</span><p>{event.note}</p></section> : null}
+    <section className={styles['detailSection']}><h3>Event details</h3><div className={styles['detailFacts']}><span><CalendarIcon size={15} aria-hidden="true" />{event.date}</span><span><TimeIcon size={15} aria-hidden="true" />{event.time}</span><span><LocationIcon size={15} aria-hidden="true" />{event.venue}</span>{event.ticketTier ? <span><TicketIcon size={15} aria-hidden="true" />{event.ticketTier}</span> : null}</div><p>{event.description}</p></section>
+    {hasArtistsAndPromoters ? <section className={styles['detailSection']}><h3>Artists &amp; promoters</h3><div className={styles['tagList']}>{(event.artists ?? []).map((artist) => <span key={artist}>{artist}</span>)}{(event.promoters ?? []).map((promoter) => <span key={promoter}>{promoter}</span>)}</div></section> : null}
+    {hasTiers ? <section className={styles['detailSection']}><h3>Ticket tiers</h3><div className={styles['tierList']}>{(event.tiers ?? []).map((tier) => <div key={tier.name}><span><strong>{tier.name}</strong><small>{tier.quantity} tickets</small></span><strong>{tier.price}</strong></div>)}</div></section> : null}
+    {hasPricing ? <section className={styles['detailSection']}><h3>Dynamic pricing</h3><div className={styles['tagList']}>{(event.pricing ?? []).map((price) => <span key={price}>{price}</span>)}</div>{(event.tables || event.codes) ? <div className={styles['detailSupplement']}>{event.tables ? <span>Tables <strong>{event.tables}</strong></span> : null}{event.codes ? <span>Codes <strong>{event.codes}</strong></span> : null}</div> : null}</section> : null}
   </div>;
 }
 
 function LivePreview({ request, previewMode, onPreviewModeChange }: { readonly request: SlotRequest; readonly previewMode: PreviewMode; readonly onPreviewModeChange: (mode: PreviewMode) => void }) {
-  return <div className={styles['previewStack']}><p className={styles['previewIntro']}>See exactly what this event will look like once accepted.</p><div className={styles['previewPicker']}><button type="button" aria-pressed={previewMode === 'guest'} onClick={() => { onPreviewModeChange('guest'); }}><span className={styles['previewIcon']}>◎</span>Guest portal</button><button type="button" aria-pressed={previewMode === 'mobile'} onClick={() => { onPreviewModeChange('mobile'); }}><MobileAppIcon size={17} aria-hidden="true" />Mobile app</button></div><div className={[styles['previewFrame'], previewMode === 'mobile' ? styles['previewFrameMobile'] : ''].filter(Boolean).join(' ')}><div className={styles['previewBar']}><span>‹</span><strong>{previewMode === 'guest' ? 'Guest portal' : 'Mobile app'}</strong><span>⋯</span></div><EventPoster className={styles['previewPoster']} artwork={{ type: 'gradient', value: request.id.includes('retro') ? 'mystery' : request.id.includes('sunday') ? 'sunset' : 'eclipse' }} sizes="400px" /><div className={styles['previewCopy']}><span>{request.event.date} · {request.event.time}</span><h3>{request.event.name}</h3><p>{request.event.venue}</p><div className={styles['previewTicket']}>{request.event.ticketTier}<strong>View tickets</strong></div></div></div></div>;
+  return <div className={styles['previewStack']}><p className={styles['previewIntro']}>See exactly what this event will look like once accepted.</p><div className={styles['previewPicker']}><button type="button" aria-pressed={previewMode === 'guest'} onClick={() => { onPreviewModeChange('guest'); }}><span className={styles['previewIcon']}>◎</span>Guest portal</button><button type="button" aria-pressed={previewMode === 'mobile'} onClick={() => { onPreviewModeChange('mobile'); }}><MobileAppIcon size={17} aria-hidden="true" />Mobile app</button></div><div className={[styles['previewFrame'], previewMode === 'mobile' ? styles['previewFrameMobile'] : ''].filter(Boolean).join(' ')}><div className={styles['previewBar']}><span>‹</span><strong>{previewMode === 'guest' ? 'Guest portal' : 'Mobile app'}</strong><span>⋯</span></div><EventPoster className={styles['previewPoster']} artwork={{ type: 'gradient', value: request.id.includes('retro') ? 'mystery' : request.id.includes('sunday') ? 'sunset' : 'eclipse' }} sizes="400px" /><div className={styles['previewCopy']}><span>{request.event.date} · {request.event.time}</span><h3>{request.event.name}</h3><p>{request.event.venue}</p><div className={styles['previewTicket']}>{request.status === 'approved' ? 'Confirmed slot' : 'Requested'}<strong>Notify me</strong></div></div></div></div>;
 }

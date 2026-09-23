@@ -739,7 +739,7 @@ export interface PartnerNotification {
   readonly time: string;
   readonly type: PartnerNotificationType;
   readonly icon: PartnerNotificationIcon;
-  readonly href?: string;
+  readonly href?: string | undefined;
   readonly unread: boolean;
 }
 
@@ -754,9 +754,10 @@ export interface PartnerShellInteractionData {
   readonly notifications: PartnerNotificationsData;
 }
 
-export type SlotRequestStatus = 'pending' | 'approved' | 'rejected';
+export type SlotRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 export type SlotRequestDirection = 'incoming' | 'outgoing';
 export type SlotRequestAccent = 'orange' | 'lavender';
+export type SlotRequestActionKind = 'accept' | 'reject' | 'cancel';
 
 export interface SlotRequestTier {
   readonly name: string;
@@ -770,14 +771,18 @@ export interface SlotRequestEvent {
   readonly date: string;
   readonly time: string;
   readonly venue: string;
-  readonly ticketTier: string;
-  readonly note: string;
-  readonly artists: readonly string[];
-  readonly promoters: readonly string[];
-  readonly tiers: readonly SlotRequestTier[];
-  readonly pricing: readonly string[];
-  readonly tables: string;
-  readonly codes: string;
+  /** Catalog-depth fields below are optional: the live wire only fills them as
+   *  the backend slice grows; absent ones are hidden, never invented. The
+   *  explicit `| undefined` matches the output of the client-side zod schema
+   *  under `exactOptionalPropertyTypes`. */
+  readonly ticketTier?: string | undefined;
+  readonly note?: string | undefined;
+  readonly artists?: readonly string[] | undefined;
+  readonly promoters?: readonly string[] | undefined;
+  readonly tiers?: readonly SlotRequestTier[] | undefined;
+  readonly pricing?: readonly string[] | undefined;
+  readonly tables?: string | undefined;
+  readonly codes?: string | undefined;
 }
 
 export interface SlotRequest {
@@ -791,7 +796,7 @@ export interface SlotRequest {
 }
 
 export interface SlotRequestsData {
-  readonly dataStatus: 'fixture';
+  readonly dataStatus: 'fixture' | 'live';
   readonly accent: SlotRequestAccent;
   readonly direction: SlotRequestDirection;
   readonly requests: readonly SlotRequest[];

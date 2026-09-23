@@ -9,7 +9,7 @@ import { PartnerNotifications } from './PartnerNotifications';
 import { Avatar, IconButton } from './index';
 
 
-import type { PartnerNotificationsData, PartnerSearchData } from '@/data/partner-data-source';
+import type { PartnerNotificationsData, PartnerSearchData, SlotRequestDirection } from '@/data/partner-data-source';
 import type { StudioConfig } from '@/studios/studio-config';
 
 
@@ -19,6 +19,7 @@ export function PartnerTopbar({
   userName,
   searchData,
   notificationsData,
+  notificationDirection,
   navigationLayout,
   mobileOpen,
   onMobileToggle,
@@ -30,6 +31,7 @@ export function PartnerTopbar({
   readonly userName: string;
   readonly searchData: PartnerSearchData;
   readonly notificationsData: PartnerNotificationsData;
+  readonly notificationDirection?: SlotRequestDirection | undefined;
   readonly navigationLayout: 'side' | 'top';
   readonly mobileOpen: boolean;
   readonly onMobileToggle: () => void;
@@ -75,7 +77,7 @@ export function PartnerTopbar({
       )}
       <div className={styles['topbarActions']}>
         <PartnerGlobalSearch data={searchData} />
-        <PartnerNotifications data={notificationsData} />
+        <PartnerNotifications data={notificationsData} direction={notificationDirection} />
         <IconButton
           label={navigationLayout === 'side' ? 'Use top navigation' : 'Use side navigation'}
           className={styles['layoutSwitchButton']}
