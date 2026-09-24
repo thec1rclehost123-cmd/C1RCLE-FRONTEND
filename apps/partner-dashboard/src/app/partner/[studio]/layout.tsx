@@ -6,10 +6,20 @@ import { isStudioRole } from '@/studios/studio-config';
 
 import type { ReactNode } from 'react';
 
-export default async function StudioLayout({ children, params }: { readonly children: ReactNode; readonly params: Promise<{ studio: string }> }) {
+export default async function StudioLayout({
+  children,
+  params,
+}: {
+  readonly children: ReactNode;
+  readonly params: Promise<{ studio: string }>;
+}) {
   const { studio } = await params;
   if (!isStudioRole(studio)) notFound();
 
   const interactionData = await fixturePartnerDataSource.getPartnerShellInteractions(studio);
-  return <PartnerStudioFrame studio={studio} interactionData={interactionData}>{children}</PartnerStudioFrame>;
+  return (
+    <PartnerStudioFrame studio={studio} interactionData={interactionData}>
+      {children}
+    </PartnerStudioFrame>
+  );
 }

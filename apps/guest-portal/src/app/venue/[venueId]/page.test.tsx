@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import VenueProfilePage, { generateMetadata, generateStaticParams } from './page';
+import VenueProfilePage, { dynamic, generateMetadata } from './page';
 
 vi.mock('next/image', () => ({
   default: ({
@@ -22,14 +22,8 @@ vi.mock('next/navigation', () => ({
 }));
 
 describe('VenueProfilePage', () => {
-  it('prebuilds every fixture venue profile', () => {
-    expect(generateStaticParams()).toEqual(
-      expect.arrayContaining([
-        { venueId: 'the-glass-house-mumbai' },
-        { venueId: 'skyline-social' },
-        { venueId: 'sector-9' },
-      ]),
-    );
+  it('renders public venue profiles on demand', () => {
+    expect(dynamic).toBe('force-dynamic');
   });
 
   it('renders venue identity, location, and upcoming event destination', async () => {
@@ -76,7 +70,7 @@ describe('VenueProfilePage', () => {
       params: Promise.resolve({ venueId: 'skyline-social' }),
     });
 
-    expect(metadata.title).toBe('Skyline Social | THE C1RCLE');
-    expect(metadata.robots).toEqual({ follow: false, index: false });
+    expect(metadata.title).toEqual({ absolute: 'Skyline Social | THE C1RCLE' });
+    expect(metadata.robots).toMatchObject({ follow: false, index: false, noarchive: true });
   });
 });

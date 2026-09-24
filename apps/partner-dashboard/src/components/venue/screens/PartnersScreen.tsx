@@ -214,7 +214,10 @@ function DiscoverPartners({ kind }: { readonly kind: VenuePartnerKind }) {
   const filtered = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase('en-IN');
     return partners.filter((item) => {
-      if (normalized && !`${item.name} ${item.city}`.toLocaleLowerCase('en-IN').includes(normalized))
+      if (
+        normalized &&
+        !`${item.name} ${item.city}`.toLocaleLowerCase('en-IN').includes(normalized)
+      )
         return false;
       if (filters.city !== 'All cities' && item.city !== filters.city) return false;
       if (isHost && filters.eventType !== 'All types' && item.eventType !== filters.eventType)
@@ -681,9 +684,15 @@ function RequestConfirmDialog({
   if (!request || !action) return null;
   const copy =
     action === 'accept'
-      ? { title: 'Accept this request?', body: `${request.partnerName} will be added to Connected.` }
+      ? {
+          title: 'Accept this request?',
+          body: `${request.partnerName} will be added to Connected.`,
+        }
       : action === 'decline'
-        ? { title: 'Decline this request?', body: 'They will be notified this request was declined.' }
+        ? {
+            title: 'Decline this request?',
+            body: 'They will be notified this request was declined.',
+          }
         : { title: 'Cancel this request?', body: 'Your pending request will be withdrawn.' };
   return (
     <div className={styles['modalBackdrop']}>
@@ -707,7 +716,12 @@ function RequestConfirmDialog({
           <button type="button" onClick={onClose}>
             Close
           </button>
-          <button type="button" className={styles['primary']} disabled title="Requires the partnership mutation API.">
+          <button
+            type="button"
+            className={styles['primary']}
+            disabled
+            title="Requires the partnership mutation API."
+          >
             Confirm
           </button>
         </footer>
@@ -888,7 +902,11 @@ function PartnerProfileDrawer({
           ) : (
             <div>
               <dt>Audience / reach</dt>
-              <dd>{partner.audienceReach ? partner.audienceReach.toLocaleString('en-IN') : 'Unavailable'}</dd>
+              <dd>
+                {partner.audienceReach
+                  ? partner.audienceReach.toLocaleString('en-IN')
+                  : 'Unavailable'}
+              </dd>
             </div>
           )}
           <div>
@@ -1039,4 +1057,3 @@ function Avatar({
     </span>
   );
 }
-

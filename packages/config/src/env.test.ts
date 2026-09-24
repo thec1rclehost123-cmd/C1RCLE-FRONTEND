@@ -6,6 +6,7 @@ import { EnvironmentValidationError, getClientEnv, resetEnvCacheForTests } from 
 const VALID = {
   NEXT_PUBLIC_API_BASE_URL: 'https://api.c1rcle.test',
   NEXT_PUBLIC_APP_NAME: 'Guest Portal',
+  NEXT_PUBLIC_APP_ID: 'guest',
   NEXT_PUBLIC_ENVIRONMENT: 'development',
 } as const;
 

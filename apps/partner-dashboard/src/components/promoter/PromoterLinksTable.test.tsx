@@ -6,10 +6,18 @@ import { PromoterLinksTable } from './PromoterLinksTable';
 
 import type { ReactNode } from 'react';
 
-
 vi.mock('next/link', () => ({
-  default: ({ children, href, ...props }: { readonly children: ReactNode; readonly href: string }) => (
-    <a href={href} {...props}>{children}</a>
+  default: ({
+    children,
+    href,
+    ...props
+  }: {
+    readonly children: ReactNode;
+    readonly href: string;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
   ),
 }));
 
@@ -28,18 +36,22 @@ describe('PromoterLinksTable', () => {
     });
 
     render(
-      <PromoterLinksTable rows={[{
-        eventId: 'neon-nights',
-        eventName: 'Neon Nights',
-        shortUrl: 'c1rcle.in/rhea/neon-nights',
-        status: 'active',
-        clicks: 120,
-        purchases: 12,
-        sources: [
-          { channel: 'Instagram', label: 'Main story', clicks: 80, purchases: 8 },
-          { channel: 'WhatsApp', label: 'Close friends', clicks: 40, purchases: 4 },
-        ],
-      }]} />,
+      <PromoterLinksTable
+        rows={[
+          {
+            eventId: 'neon-nights',
+            eventName: 'Neon Nights',
+            shortUrl: 'c1rcle.in/rhea/neon-nights',
+            status: 'active',
+            clicks: 120,
+            purchases: 12,
+            sources: [
+              { channel: 'Instagram', label: 'Main story', clicks: 80, purchases: 8 },
+              { channel: 'WhatsApp', label: 'Close friends', clicks: 40, purchases: 4 },
+            ],
+          },
+        ]}
+      />,
     );
 
     expect(screen.getByText('Neon Nights')).toBeInTheDocument();
@@ -49,7 +61,9 @@ describe('PromoterLinksTable', () => {
       'https://c1rcle.in/rhea/neon-nights',
     );
     await user.click(screen.getByRole('button', { name: 'Copy' }));
-    await vi.waitFor(() => { expect(writeText).toHaveBeenCalledWith('https://c1rcle.in/rhea/neon-nights'); });
+    await vi.waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith('https://c1rcle.in/rhea/neon-nights');
+    });
   });
 
   it('keeps the empty state honest when no permanent links exist', () => {

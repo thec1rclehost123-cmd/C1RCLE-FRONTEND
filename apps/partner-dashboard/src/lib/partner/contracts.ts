@@ -1,8 +1,18 @@
 export type PartnerRole = 'venue' | 'host' | 'promoter';
 export type PartnershipStatus = 'partnered' | 'pending' | 'discover';
-export type PromoterEventStatus = 'invited' | 'requested' | 'active' | 'paused' | 'completed' | 'declined';
-export type PartnerEventStatus = 'draft' | 'scheduled' | 'on-sale' | 'sold-out' | 'live' | 'completed' | 'cancelled';
-export type PartnerQueryState = 'loading' | 'loaded' | 'empty' | 'forbidden' | 'not-found' | 'network-error' | 'stale' | 'partial';
+export type PromoterEventStatus =
+  'invited' | 'requested' | 'active' | 'paused' | 'completed' | 'declined';
+export type PartnerEventStatus =
+  'draft' | 'scheduled' | 'on-sale' | 'sold-out' | 'live' | 'completed' | 'cancelled';
+export type PartnerQueryState =
+  | 'loading'
+  | 'loaded'
+  | 'empty'
+  | 'forbidden'
+  | 'not-found'
+  | 'network-error'
+  | 'stale'
+  | 'partial';
 export type PartnerMutationState = 'idle' | 'confirming' | 'submitting' | 'succeeded' | 'failed';
 
 export interface PartnerPermissions {
@@ -61,7 +71,11 @@ export interface PartnerEventDetail extends PartnerEventSummary {
   readonly promoterCount: number;
   readonly salesTrend: readonly number[];
   readonly audienceCities: readonly { readonly label: string; readonly value: number }[];
-  readonly attribution: readonly { readonly label: string; readonly clicks: number; readonly tickets: number }[];
+  readonly attribution: readonly {
+    readonly label: string;
+    readonly clicks: number;
+    readonly tickets: number;
+  }[];
 }
 
 export interface PartnerOrderSummary {
@@ -148,7 +162,11 @@ export interface HostOverview {
   readonly nextEvent: PartnerEventSummary | null;
   readonly recentOrders: readonly PartnerOrderSummary[];
   readonly performance: readonly number[];
-  readonly calendar: readonly { readonly date: string; readonly label: string; readonly type: 'event' | 'deadline' | 'payout' }[];
+  readonly calendar: readonly {
+    readonly date: string;
+    readonly label: string;
+    readonly type: 'event' | 'deadline' | 'payout';
+  }[];
 }
 
 export interface HostRepository extends PartnerRepository {
@@ -278,7 +296,11 @@ export interface PromoterOverview {
   readonly nextEvent: PromoterEvent | null;
   readonly recentOrders: readonly PromoterOrder[];
   readonly performance: readonly number[];
-  readonly calendar: readonly { date: string; label: string; type: 'event' | 'deadline' | 'payout' }[];
+  readonly calendar: readonly {
+    date: string;
+    label: string;
+    type: 'event' | 'deadline' | 'payout';
+  }[];
 }
 
 export interface PromoterRepository {
@@ -294,4 +316,8 @@ export interface PromoterRepository {
 }
 
 export const formatInr = (paise: number): string =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(paise / 100);
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(paise / 100);

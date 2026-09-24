@@ -1,13 +1,6 @@
 import Link from 'next/link';
 
-import {
-  BankIcon,
-  CheckIcon,
-  EmailIcon,
-  LocationIcon,
-  NextIcon,
-  TicketIcon,
-} from '@c1rcle/icons';
+import { BankIcon, CheckIcon, EmailIcon, LocationIcon, NextIcon, TicketIcon } from '@c1rcle/icons';
 
 import { hostEvents, hostSlotRequests } from './host-studio-model';
 import styles from './HostOverviewScreen.module.css';
@@ -53,8 +46,15 @@ export function HostOverviewScreen() {
 
       <div className={className('topGrid')}>
         {nextEvent ? (
-          <section className={`${className('panel')} ${className('tonight')}`} aria-labelledby="tonight-title">
-            <div className={className('poster')} role="img" aria-label={`${nextEvent.name} artwork`}>
+          <section
+            className={`${className('panel')} ${className('tonight')}`}
+            aria-labelledby="tonight-title"
+          >
+            <div
+              className={className('poster')}
+              role="img"
+              aria-label={`${nextEvent.name} artwork`}
+            >
               <div className={className('posterCopy')} aria-hidden="true">
                 <small>
                   THU <b>16</b> JUL
@@ -108,7 +108,10 @@ export function HostOverviewScreen() {
           </section>
         ) : null}
 
-        <section className={`${className('panel')} ${className('activity')}`} aria-labelledby="activity-title">
+        <section
+          className={`${className('panel')} ${className('activity')}`}
+          aria-labelledby="activity-title"
+        >
           <div className={className('sectionHeading')}>
             <h2 id="activity-title">Recent activity</h2>
             <Link href="/host/events/invitations">View all</Link>
@@ -127,7 +130,10 @@ export function HostOverviewScreen() {
               <NextIcon size={18} aria-hidden="true" />
             </Link>
 
-            <Link href={`/host/events/requests/${hostSlotRequests[0]?.id ?? ''}`} className={className('activityItem')}>
+            <Link
+              href={`/host/events/requests/${hostSlotRequests[0]?.id ?? ''}`}
+              className={className('activityItem')}
+            >
               <span className={`${className('activityIcon')} ${className('accent')}`}>
                 <TicketIcon size={17} strokeWidth={1.8} aria-hidden="true" />
               </span>
@@ -170,7 +176,10 @@ export function HostOverviewScreen() {
       </div>
 
       <div className={className('lowerGrid')}>
-        <section className={`${className('panel')} ${className('sales')}`} aria-labelledby="confirmations-title">
+        <section
+          className={`${className('panel')} ${className('sales')}`}
+          aria-labelledby="confirmations-title"
+        >
           <div className={className('sectionHeading')}>
             <div className={className('performanceCopy')}>
               <h2 id="confirmations-title">Performance</h2>
@@ -238,7 +247,10 @@ export function HostOverviewScreen() {
         </section>
 
         <div className={className('rightColumn')}>
-          <section className={`${className('panel')} ${className('upcoming')}`} aria-labelledby="upcoming-title">
+          <section
+            className={`${className('panel')} ${className('upcoming')}`}
+            aria-labelledby="upcoming-title"
+          >
             <div className={className('sectionHeading')}>
               <h2 id="upcoming-title">Upcoming events</h2>
               <Link href="/host/events">View all</Link>
@@ -257,7 +269,11 @@ export function HostOverviewScreen() {
                 const isWarning = event.status === 'Requested' || event.status === 'Invitation';
 
                 return (
-                  <Link href={`/host/events/${event.id}`} key={event.id} className={className('upcomingItem')}>
+                  <Link
+                    href={`/host/events/${event.id}`}
+                    key={event.id}
+                    className={className('upcomingItem')}
+                  >
                     <span className={className('eventArtwork')} aria-hidden="true">
                       {event.name
                         .split(' ')
@@ -270,7 +286,15 @@ export function HostOverviewScreen() {
                       <span>{event.venue}</span>
                     </span>
                     <span className={className('statusTag')}>
-                      <strong className={isConfirmed ? className('confirmed') : isWarning ? className('warning') : ''}>
+                      <strong
+                        className={
+                          isConfirmed
+                            ? className('confirmed')
+                            : isWarning
+                              ? className('warning')
+                              : ''
+                        }
+                      >
                         {statusLabel}
                       </strong>
                     </span>

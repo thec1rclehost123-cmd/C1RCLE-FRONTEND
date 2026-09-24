@@ -2,7 +2,6 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-
 import { HostPartnersScreen } from '@/components/host/HostPartnersScreen';
 import { PromoterPartnersScreen } from '@/components/promoter/PromoterPartnersScreen';
 
@@ -10,8 +9,17 @@ import type { PromoterPartner } from '@/lib/partner/contracts';
 import type { ReactNode } from 'react';
 
 vi.mock('next/link', () => ({
-  default: ({ children, href, ...props }: { readonly children: ReactNode; readonly href: string }) => (
-    <a href={href} {...props}>{children}</a>
+  default: ({
+    children,
+    href,
+    ...props
+  }: {
+    readonly children: ReactNode;
+    readonly href: string;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
   ),
 }));
 
@@ -77,7 +85,11 @@ describe('role partner screens', () => {
     expect(screen.getByText('Host · Pune · Verified')).toBeInTheDocument();
     expect(screen.getByText('Active partner')).toBeInTheDocument();
 
-    await user.click(within(screen.getByRole('dialog', { name: 'Partner profile' })).getByRole('button', { name: 'Close partner details' }));
+    await user.click(
+      within(screen.getByRole('dialog', { name: 'Partner profile' })).getByRole('button', {
+        name: 'Close partner details',
+      }),
+    );
     expect(screen.queryByRole('dialog', { name: 'Partner profile' })).not.toBeInTheDocument();
   });
 });

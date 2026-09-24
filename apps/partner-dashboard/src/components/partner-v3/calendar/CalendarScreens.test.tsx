@@ -51,9 +51,15 @@ describe('Calendar screens', () => {
     expect(screen.getByText('Neon Nights: Afrobeats Edition')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '2026-07-12, blocked' }));
-    expect(replace).toHaveBeenLastCalledWith('/partner/venue/calendar?month=2026-07&date=2026-07-12', { scroll: false });
+    expect(replace).toHaveBeenLastCalledWith(
+      '/partner/venue/calendar?month=2026-07&date=2026-07-12',
+      { scroll: false },
+    );
     await user.click(screen.getByRole('button', { name: 'Block date' }));
-    expect(replace).toHaveBeenLastCalledWith('/partner/venue/calendar?month=2026-07&date=2026-07-16&dialog=block', { scroll: false });
+    expect(replace).toHaveBeenLastCalledWith(
+      '/partner/venue/calendar?month=2026-07&date=2026-07-16&dialog=block',
+      { scroll: false },
+    );
   });
 
   it('renders Host partnered venue availability without venue ownership controls', async () => {
@@ -68,7 +74,10 @@ describe('Calendar screens', () => {
     expect(screen.getByRole('button', { name: '8:00 PM – 11:00 PM' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '8:00 PM – 11:00 PM' }));
-    expect(replace).toHaveBeenLastCalledWith('/partner/host/calendar?venue=skyline-rooftop&month=2026-07&date=2026-07-18&slot=2026-07-18-late', { scroll: false });
+    expect(replace).toHaveBeenLastCalledWith(
+      '/partner/host/calendar?venue=skyline-rooftop&month=2026-07&date=2026-07-18&slot=2026-07-18-late',
+      { scroll: false },
+    );
   });
 
   it('opens Venue Block Date through URL state without saving a fake mutation', async () => {
@@ -76,6 +85,10 @@ describe('Calendar screens', () => {
     render(<VenueCalendarScreen data={data} initialDialog />);
 
     expect(screen.getByRole('dialog', { name: 'Block a date' })).toBeInTheDocument();
-    expect(within(screen.getByRole('dialog', { name: 'Block a date' })).getByRole('button', { name: 'Block date' })).toBeDisabled();
+    expect(
+      within(screen.getByRole('dialog', { name: 'Block a date' })).getByRole('button', {
+        name: 'Block date',
+      }),
+    ).toBeDisabled();
   });
 });

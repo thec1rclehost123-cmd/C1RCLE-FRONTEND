@@ -81,6 +81,9 @@ describe('PartnerSettingsScreen', () => {
 
     expect(screen.getByText('Business profile')).toBeInTheDocument();
     expect(screen.getByText('Privacy & security')).toBeInTheDocument();
-    expect(screen.getAllByRole('button').filter((button) => (button as HTMLButtonElement).disabled).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole('button').filter((button) => (button as HTMLButtonElement).disabled)
+        .length,
+    ).toBeGreaterThan(0);
   });
 });

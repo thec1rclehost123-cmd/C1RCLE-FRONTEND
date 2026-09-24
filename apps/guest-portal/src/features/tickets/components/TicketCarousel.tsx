@@ -84,7 +84,9 @@ export function TicketCarousel({ items }: TicketCarouselProps) {
                       : 'bg-white/5 border border-white/10'
                   }`}
                 >
-                  <span className={`text-xs font-black ${isActive ? 'text-[#FF4400]' : 'text-white/40'}`}>
+                  <span
+                    className={`text-xs font-black ${isActive ? 'text-[#FF4400]' : 'text-white/40'}`}
+                  >
                     ★
                   </span>
                 </div>
@@ -125,9 +127,7 @@ export function TicketCarousel({ items }: TicketCarouselProps) {
 
                 <div
                   className={`w-full py-2.5 rounded-xl flex items-center justify-center transition-all ${
-                    isActive
-                      ? 'bg-white text-black shadow-md'
-                      : 'bg-white/10 text-white/50'
+                    isActive ? 'bg-white text-black shadow-md' : 'bg-white/10 text-white/50'
                   }`}
                 >
                   <span className="text-[10px] font-black uppercase tracking-widest">

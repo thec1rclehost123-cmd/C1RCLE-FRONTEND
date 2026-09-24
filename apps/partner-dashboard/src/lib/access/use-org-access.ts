@@ -75,8 +75,7 @@ export function useOrgAccess(orgIdOverride?: string | null): OrgAccessState {
 
   // A result fetched for a different (or no) org is stale — treat it as still loading
   // rather than flashing the previous org's access while the new request is in flight.
-  const { access, error, isSuspended } =
-    orgId && result.orgId === orgId ? result : IDLE_RESULT;
+  const { access, error, isSuspended } = orgId && result.orgId === orgId ? result : IDLE_RESULT;
   const isLoading = orgId !== null && result.orgId !== orgId;
 
   const hasPermission = useCallback(

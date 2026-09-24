@@ -1,5 +1,12 @@
 // Session store exports
-export { useSessionStore, useSession, getAccessToken, setSession, clearSession, markAnonymous } from './session-store.js';
+export {
+  useSessionStore,
+  useSession,
+  getAccessToken,
+  setSession,
+  clearSession,
+  markAnonymous,
+} from './session-store.js';
 export type { SessionState, SessionStatus } from './session-store.js';
 
 // Auth client exports

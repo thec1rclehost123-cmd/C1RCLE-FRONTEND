@@ -42,9 +42,9 @@ describe('active-org', () => {
 
   it('parses the active org id out of a raw cookie header', () => {
     expect(getActiveOrgIdFromCookieHeader('c1rcle.active-org=org-abc')).toBe('org-abc');
-    expect(
-      getActiveOrgIdFromCookieHeader('other=1; c1rcle.active-org=org-xyz; another=2'),
-    ).toBe('org-xyz');
+    expect(getActiveOrgIdFromCookieHeader('other=1; c1rcle.active-org=org-xyz; another=2')).toBe(
+      'org-xyz',
+    );
     expect(getActiveOrgIdFromCookieHeader('other=1')).toBeNull();
     expect(getActiveOrgIdFromCookieHeader('')).toBeNull();
   });

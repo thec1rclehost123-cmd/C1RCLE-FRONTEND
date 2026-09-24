@@ -24,7 +24,9 @@ describe('PromoterFinanceScreen', () => {
     expect(screen.getByRole('heading', { name: 'Finance' })).toBeInTheDocument();
     expect(screen.getByText('Wallet Balance')).toBeInTheDocument();
     expect(screen.getAllByText('₹0')).toHaveLength(4);
-    expect(screen.getByText('Withdrawals unavailable during launch verification')).toBeInTheDocument();
+    expect(
+      screen.getByText('Withdrawals unavailable during launch verification'),
+    ).toBeInTheDocument();
     expect(screen.getByText('No earnings yet.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '+ Add Bank Account' })).toBeDisabled();
   });

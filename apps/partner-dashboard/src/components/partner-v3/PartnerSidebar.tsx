@@ -17,7 +17,6 @@ import styles from './partner-v3.module.css';
 
 import type { StudioConfig, StudioIconName } from '@/studios/studio-config';
 
-
 const ICONS = {
   dashboard: DashboardIcon,
   events: CalendarIcon,
@@ -31,11 +30,21 @@ const ICONS = {
   settings: SettingsIcon,
 } satisfies Record<StudioIconName, typeof DashboardIcon>;
 
-export function PartnerSidebar({ config, pathname, onLayoutToggle }: { readonly config: StudioConfig; readonly pathname: string; readonly onLayoutToggle: () => void }) {
+export function PartnerSidebar({
+  config,
+  pathname,
+  onLayoutToggle,
+}: {
+  readonly config: StudioConfig;
+  readonly pathname: string;
+  readonly onLayoutToggle: () => void;
+}) {
   return (
     <aside className={styles['sidebar']} aria-label={`${config.label} navigation`}>
       <div className={styles['brandBlock']}>
-        <span className={styles['brandMark']} aria-hidden="true"><i /></span>
+        <span className={styles['brandMark']} aria-hidden="true">
+          <i />
+        </span>
         <span className={styles['brandText']}>
           <strong>THE C1RCLE</strong>
           <small>{config.label}</small>
@@ -46,7 +55,14 @@ export function PartnerSidebar({ config, pathname, onLayoutToggle }: { readonly 
           const Icon = ICONS[item.icon];
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
-            <Link key={item.href} href={item.href} className={[styles['navItem'], active ? styles['navItemActive'] : ''].filter(Boolean).join(' ')} aria-current={active ? 'page' : undefined}>
+            <Link
+              key={item.href}
+              href={item.href}
+              className={[styles['navItem'], active ? styles['navItemActive'] : '']
+                .filter(Boolean)
+                .join(' ')}
+              aria-current={active ? 'page' : undefined}
+            >
               <Icon size={17} aria-hidden="true" />
               <span>{item.label}</span>
             </Link>

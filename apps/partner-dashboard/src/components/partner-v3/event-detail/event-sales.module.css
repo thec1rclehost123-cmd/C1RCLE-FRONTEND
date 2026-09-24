@@ -1,113 +1,508 @@
-.salesStack { display: flex; flex-direction: column; gap: 20px; }
-.salesTwoColumn { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.salesHeading { display: flex; align-items: center; gap: 12px; }
-.salesHeading h2 { margin: 0; color: #f5f5f3; font-size: 19px; font-weight: 800; }
-.salesHeadingIcon { display: inline-flex; width: 32px; height: 32px; align-items: center; justify-content: center; border-radius: 10px; background: rgb(139 92 246 / 16%); }
-.salesPanel { min-width: 0; padding: 22px; border: 1px solid rgb(255 255 255 / 6%); border-radius: 18px; background: #141414; }
-.salesPanelTitle { margin: 0 0 18px; color: #f5f5f3; font-size: 16px; font-weight: 700; }
-.salesPanelEyebrow { margin-bottom: 16px; color: #6a6a66; font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
-.salesPanelDescription { margin: -10px 0 20px; color: #8a8a86; font-size: 13px; }
-.funnelStats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-.funnelStat { padding: 18px 20px; border: 1px solid rgb(255 255 255 / 6%); border-radius: 14px; background: #141414; }
-.funnelStat span { display: block; margin-bottom: 12px; color: #6a6a66; font-size: 10.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
-.funnelStat strong { font-size: 26px; font-weight: 800; }
-.funnelSteps { display: flex; flex-direction: column; gap: 12px; }
-.funnelStep { display: flex; align-items: center; gap: 16px; min-height: 67px; padding: 16px 18px; border-left: 3px solid currentColor; border-radius: 10px; background: rgb(255 255 255 / 3%); }
-.funnelStep > span { width: 130px; flex: none; color: currentColor; font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
-.funnelStep > strong { width: 26px; color: #fff; font-size: 15px; text-align: right; }
-.salesBarTrack { height: 9px; flex: 1; overflow: hidden; border-radius: 999px; background: rgb(255 255 255 / 8%); }
-.salesBar { display: block; height: 100%; border-radius: inherit; }
-.salesNote { margin: 16px 0 0; padding: 16px; border: 1px solid rgb(255 255 255 / 5%); border-radius: 11px; background: rgb(255 255 255 / 3%); color: #6a6a66; font-size: 12px; font-weight: 600; letter-spacing: .02em; text-align: center; }
-.salesRows { display: flex; flex-direction: column; gap: 16px; }
-.salesRowHeader { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 7px; color: #f5f5f3; font-size: 14px; }
-.salesRowHeader strong { color: #c9c9c6; font-size: 14px; font-weight: 700; }
-.breakdownRows { display: flex; flex-direction: column; gap: 14px; }
-.breakdownRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid rgb(255 255 255 / 6%); }
-.breakdownRow span { color: #c9c9c6; font-size: 13.5px; font-weight: 600; }
-.breakdownRow strong { font-size: 14px; font-weight: 800; }
-.genderContent { display: flex; align-items: center; gap: 24px; }
-.genderDonut { width: 100px; height: 100px; flex: none; transform: rotate(-90deg); }
-.genderTrack, .genderSegment { fill: none; stroke-width: 16; }
-.genderTrack { stroke: rgb(255 255 255 / 6%); }
-.genderSegment { stroke-linecap: butt; }
-.genderLegend { display: flex; flex: 1; flex-direction: column; gap: 10px; }
-.genderLegendRow { display: flex; align-items: center; gap: 9px; color: #c9c9c6; font-size: 13px; font-weight: 600; }
-.genderLegendRow span:nth-child(2) { flex: 1; }
-.genderLegendRow strong { color: #f5f5f3; font-size: 13px; }
-.legendSwatch { width: 10px; height: 10px; border-radius: 3px; background: currentColor; }
-.ageRow { display: flex; align-items: center; gap: 12px; }
-.ageRow > span { width: 52px; color: #c9c9c6; font-size: 13px; font-weight: 600; }
-.ageRow > strong { width: 20px; color: #fff; font-size: 13px; text-align: right; }
-.ageRow > em { width: 34px; color: #8a8a86; font-size: 12px; font-style: normal; font-weight: 700; text-align: right; }
-.crowdSegmentGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.crowdSegmentGrid .salesPanel { padding: 18px; }
-.crowdSegmentLabel { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; color: #8a8a86; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
-.crowdSegmentLabel > span { width: 14px; height: 14px; border-radius: 50%; background: currentColor; }
-.crowdSegmentGrid strong { display: block; margin-bottom: 4px; font-size: 24px; font-weight: 800; }
-.crowdSegmentGrid small { color: #6a6a66; font-size: 12px; }
-.loyaltyGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
-.loyaltyCard { padding: 16px; border: 1px solid currentColor; border-radius: 12px; background: rgb(255 255 255 / 3%); text-align: center; }
-.loyaltyCard span { display: block; margin-bottom: 8px; color: currentColor; font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
-.loyaltyCard strong { color: #fff; font-size: 22px; font-weight: 800; }
-.comparisonScroller { overflow-x: auto; }
-.comparisonTable { min-width: 480px; }
-.comparisonHeader, .comparisonRow { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 12px; align-items: center; padding-inline: 4px; }
-.comparisonHeader { padding-bottom: 12px; border-bottom: 1px solid rgb(255 255 255 / 6%); color: #6a6a66; font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
-.comparisonHeader span:not(:first-child), .comparisonRow > :not(:first-child) { text-align: right; }
-.comparisonRow { min-height: 52px; padding-block: 13px; border-bottom: 1px solid rgb(255 255 255 / 5%); }
-.comparisonRow > span { font-size: 14px; font-weight: 600; }
-.comparisonRow > strong { color: #f5f5f3; font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.comparisonCurrent { color: #ff8a55; font-weight: 800 !important; }
-.comparisonCurrentLavender { color: #a78bfa; }
-.comparisonName { color: #f5f5f3; }
-.toneOrange { color: #ff8a55; }
-.toneViolet { color: #8b5cf6; }
-.toneLavender { color: #a78bfa; }
-.toneTeal { color: #00c2a8; }
-.tonePink { color: #ec4899; }
-.toneYellow { color: #e0b23a; }
-.toneGreen { color: #6ee79b; }
-.toneRed { color: #f0857a; }
-.toneMuted { color: #f5f5f3; }
-.salesBar.toneOrange { background: linear-gradient(90deg, #ff5a1f, #ffb078); }
-.salesBar.toneViolet, .tierBarViolet { background: linear-gradient(90deg, #8b5cf6, #c4a5ff); }
-.salesBar.toneLavender { background: #a78bfa; }
-.salesBar.toneTeal, .tierBarTeal { background: linear-gradient(90deg, #00c2a8, #6ee7d4); }
-.salesBar.toneYellow { background: #e0b23a; }
-.salesBar.toneGreen { background: #6ee79b; }
-.salesBar.toneRed { background: #f0857a; }
-.width0 { width: 0%; }
-.width9 { width: 9%; }
-.width25 { width: 25%; }
-.width32 { width: 32%; }
-.width35 { width: 35%; }
-.width38 { width: 38%; }
-.width40 { width: 40%; }
-.width42 { width: 42%; }
-.width52 { width: 52%; }
-.width58 { width: 58%; }
-.width60 { width: 60%; }
-.width62 { width: 62%; }
-.width70 { width: 70%; }
-.width76 { width: 76%; }
-.width82 { width: 82%; }
-.width86 { width: 86%; }
-.width94 { width: 94%; }
-.width100 { width: 100%; }
+.salesStack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.salesTwoColumn {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.salesHeading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.salesHeading h2 {
+  margin: 0;
+  color: #f5f5f3;
+  font-size: 19px;
+  font-weight: 800;
+}
+.salesHeadingIcon {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgb(139 92 246 / 16%);
+}
+.salesPanel {
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid rgb(255 255 255 / 6%);
+  border-radius: 18px;
+  background: #141414;
+}
+.salesPanelTitle {
+  margin: 0 0 18px;
+  color: #f5f5f3;
+  font-size: 16px;
+  font-weight: 700;
+}
+.salesPanelEyebrow {
+  margin-bottom: 16px;
+  color: #6a6a66;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.salesPanelDescription {
+  margin: -10px 0 20px;
+  color: #8a8a86;
+  font-size: 13px;
+}
+.funnelStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.funnelStat {
+  padding: 18px 20px;
+  border: 1px solid rgb(255 255 255 / 6%);
+  border-radius: 14px;
+  background: #141414;
+}
+.funnelStat span {
+  display: block;
+  margin-bottom: 12px;
+  color: #6a6a66;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.funnelStat strong {
+  font-size: 26px;
+  font-weight: 800;
+}
+.funnelSteps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.funnelStep {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 67px;
+  padding: 16px 18px;
+  border-left: 3px solid currentColor;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 3%);
+}
+.funnelStep > span {
+  width: 130px;
+  flex: none;
+  color: currentColor;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.funnelStep > strong {
+  width: 26px;
+  color: #fff;
+  font-size: 15px;
+  text-align: right;
+}
+.salesBarTrack {
+  height: 9px;
+  flex: 1;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 8%);
+}
+.salesBar {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+.salesNote {
+  margin: 16px 0 0;
+  padding: 16px;
+  border: 1px solid rgb(255 255 255 / 5%);
+  border-radius: 11px;
+  background: rgb(255 255 255 / 3%);
+  color: #6a6a66;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+.salesRows {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.salesRowHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 7px;
+  color: #f5f5f3;
+  font-size: 14px;
+}
+.salesRowHeader strong {
+  color: #c9c9c6;
+  font-size: 14px;
+  font-weight: 700;
+}
+.breakdownRows {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.breakdownRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgb(255 255 255 / 6%);
+}
+.breakdownRow span {
+  color: #c9c9c6;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.breakdownRow strong {
+  font-size: 14px;
+  font-weight: 800;
+}
+.genderContent {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.genderDonut {
+  width: 100px;
+  height: 100px;
+  flex: none;
+  transform: rotate(-90deg);
+}
+.genderTrack,
+.genderSegment {
+  fill: none;
+  stroke-width: 16;
+}
+.genderTrack {
+  stroke: rgb(255 255 255 / 6%);
+}
+.genderSegment {
+  stroke-linecap: butt;
+}
+.genderLegend {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+}
+.genderLegendRow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #c9c9c6;
+  font-size: 13px;
+  font-weight: 600;
+}
+.genderLegendRow span:nth-child(2) {
+  flex: 1;
+}
+.genderLegendRow strong {
+  color: #f5f5f3;
+  font-size: 13px;
+}
+.legendSwatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: currentColor;
+}
+.ageRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ageRow > span {
+  width: 52px;
+  color: #c9c9c6;
+  font-size: 13px;
+  font-weight: 600;
+}
+.ageRow > strong {
+  width: 20px;
+  color: #fff;
+  font-size: 13px;
+  text-align: right;
+}
+.ageRow > em {
+  width: 34px;
+  color: #8a8a86;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  text-align: right;
+}
+.crowdSegmentGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.crowdSegmentGrid .salesPanel {
+  padding: 18px;
+}
+.crowdSegmentLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: #8a8a86;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.crowdSegmentLabel > span {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.crowdSegmentGrid strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 24px;
+  font-weight: 800;
+}
+.crowdSegmentGrid small {
+  color: #6a6a66;
+  font-size: 12px;
+}
+.loyaltyGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+.loyaltyCard {
+  padding: 16px;
+  border: 1px solid currentColor;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 3%);
+  text-align: center;
+}
+.loyaltyCard span {
+  display: block;
+  margin-bottom: 8px;
+  color: currentColor;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.loyaltyCard strong {
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+}
+.comparisonScroller {
+  overflow-x: auto;
+}
+.comparisonTable {
+  min-width: 480px;
+}
+.comparisonHeader,
+.comparisonRow {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  gap: 12px;
+  align-items: center;
+  padding-inline: 4px;
+}
+.comparisonHeader {
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgb(255 255 255 / 6%);
+  color: #6a6a66;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.comparisonHeader span:not(:first-child),
+.comparisonRow > :not(:first-child) {
+  text-align: right;
+}
+.comparisonRow {
+  min-height: 52px;
+  padding-block: 13px;
+  border-bottom: 1px solid rgb(255 255 255 / 5%);
+}
+.comparisonRow > span {
+  font-size: 14px;
+  font-weight: 600;
+}
+.comparisonRow > strong {
+  color: #f5f5f3;
+  font-size: 13.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.comparisonCurrent {
+  color: #ff8a55;
+  font-weight: 800 !important;
+}
+.comparisonCurrentLavender {
+  color: #a78bfa;
+}
+.comparisonName {
+  color: #f5f5f3;
+}
+.toneOrange {
+  color: #ff8a55;
+}
+.toneViolet {
+  color: #8b5cf6;
+}
+.toneLavender {
+  color: #a78bfa;
+}
+.toneTeal {
+  color: #00c2a8;
+}
+.tonePink {
+  color: #ec4899;
+}
+.toneYellow {
+  color: #e0b23a;
+}
+.toneGreen {
+  color: #6ee79b;
+}
+.toneRed {
+  color: #f0857a;
+}
+.toneMuted {
+  color: #f5f5f3;
+}
+.salesBar.toneOrange {
+  background: linear-gradient(90deg, #ff5a1f, #ffb078);
+}
+.salesBar.toneViolet,
+.tierBarViolet {
+  background: linear-gradient(90deg, #8b5cf6, #c4a5ff);
+}
+.salesBar.toneLavender {
+  background: #a78bfa;
+}
+.salesBar.toneTeal,
+.tierBarTeal {
+  background: linear-gradient(90deg, #00c2a8, #6ee7d4);
+}
+.salesBar.toneYellow {
+  background: #e0b23a;
+}
+.salesBar.toneGreen {
+  background: #6ee79b;
+}
+.salesBar.toneRed {
+  background: #f0857a;
+}
+.width0 {
+  width: 0%;
+}
+.width9 {
+  width: 9%;
+}
+.width25 {
+  width: 25%;
+}
+.width32 {
+  width: 32%;
+}
+.width35 {
+  width: 35%;
+}
+.width38 {
+  width: 38%;
+}
+.width40 {
+  width: 40%;
+}
+.width42 {
+  width: 42%;
+}
+.width52 {
+  width: 52%;
+}
+.width58 {
+  width: 58%;
+}
+.width60 {
+  width: 60%;
+}
+.width62 {
+  width: 62%;
+}
+.width70 {
+  width: 70%;
+}
+.width76 {
+  width: 76%;
+}
+.width82 {
+  width: 82%;
+}
+.width86 {
+  width: 86%;
+}
+.width94 {
+  width: 94%;
+}
+.width100 {
+  width: 100%;
+}
 
 @media (max-width: 820px) {
-  .funnelStats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .crowdSegmentGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .loyaltyGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .funnelStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .crowdSegmentGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .loyaltyGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 620px) {
-  .salesTwoColumn, .crowdSegmentGrid { grid-template-columns: 1fr; }
-  .funnelStats { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .funnelStat { padding: 16px; }
-  .funnelStat span { min-height: 27px; }
-  .funnelStat strong { font-size: 22px; }
-  .salesPanel { padding: 18px; }
-  .genderContent { gap: 16px; }
-  .loyaltyGrid { gap: 10px; }
+  .salesTwoColumn,
+  .crowdSegmentGrid {
+    grid-template-columns: 1fr;
+  }
+  .funnelStats {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .funnelStat {
+    padding: 16px;
+  }
+  .funnelStat span {
+    min-height: 27px;
+  }
+  .funnelStat strong {
+    font-size: 22px;
+  }
+  .salesPanel {
+    padding: 18px;
+  }
+  .genderContent {
+    gap: 16px;
+  }
+  .loyaltyGrid {
+    gap: 10px;
+  }
 }

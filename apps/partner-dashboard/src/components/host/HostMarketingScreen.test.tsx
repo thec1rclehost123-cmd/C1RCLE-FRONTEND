@@ -6,7 +6,9 @@ import { HostMarketingScreen } from './HostMarketingScreen';
 
 vi.mock('@/components/venue/screens/MarketingScreen', () => ({
   IPhonePreview: ({ channel, message }: { readonly channel: string; readonly message: string }) => (
-    <div data-testid="iphone-preview">{channel}: {message}</div>
+    <div data-testid="iphone-preview">
+      {channel}: {message}
+    </div>
   ),
 }));
 

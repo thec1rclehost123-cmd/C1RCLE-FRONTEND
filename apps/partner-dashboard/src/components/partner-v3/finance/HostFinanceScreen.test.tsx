@@ -41,7 +41,10 @@ describe('HostFinanceScreen', () => {
 
     expect(screen.getByRole('heading', { name: 'Finance' })).toBeInTheDocument();
     expect(screen.getByText('Available balance')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Bank & cards' })).toHaveAttribute('href', '/partner/host/finance?view=bank');
+    expect(screen.getByRole('link', { name: 'Bank & cards' })).toHaveAttribute(
+      'href',
+      '/partner/host/finance?view=bank',
+    );
     expect(screen.getByRole('button', { name: /Withdraw/ })).toBeDisabled();
     expect(screen.getByRole('button', { name: /Request payout/ })).toBeDisabled();
   });
@@ -52,6 +55,8 @@ describe('HostFinanceScreen', () => {
 
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(screen.getByText('Karan Shah')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open actions for order #8821' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Open actions for order #8821' }),
+    ).toBeInTheDocument();
   });
 });

@@ -22,18 +22,18 @@ This slice replaces the mock auth engine with a real one, establishes the single
 
 The frozen V2 planning docs (`thec1rcle/docs/V2-Partners_Frontend/{route-manifest.ts, API_V2_ROUTE_MANIFEST.md, Middleware_documentation.docx}`) and the live backend diverge. Per the V2 master prompt §3 ("explicitly record important conflicts before making destructive changes"), each is resolved here. Live code + `C1RCLE-BACKEND/docs/architecture/decisions.md` win where they are newer and more specific.
 
-| # | Concern | Frozen planning doc | Live backend + backend `decisions.md` | Resolution |
-|---|---|---|---|---|
-| C-1 | Session/auth routes | `/api/v2/session`, `/session/sync`, `/session/logout` — all **DEFERRED** | `/api/v2/auth/{signup,login,refresh,logout}` + `GET /api/v2/auth/session` — **live, tested** (D-001, phase-00) | **Use `/api/v2/auth/*`.** The frozen `session.*` names are superseded. |
-| C-2 | Success envelope | `{ data, meta }` | **bare DTO** (`eventDtoSchema` etc.) / `{ items, pageInfo }` for lists | **Bare DTO.** Both `@c1rcle/contracts` and `@c1rcle/api-client` already implement it. |
-| C-3 | Error envelope | flat `{ code, message, ..., requestId }` | flat `{ code, message, status, requestId, fieldErrors? }` | **Agree.** From every path including 404 and unhandled 5xx (D-009). |
-| C-4 | Identity mechanism | "Firebase ID-token verification" (manifest) vs "Better Auth" (middleware doc) — self-contradictory | Better Auth: httpOnly cookie + `bearer()` plugin; access token = Better Auth session token via `set-auth-token` header, **not a minted JWT** | **Better Auth** (D-001, open-q3 resolved). |
-| C-5 | Middleware chain | global `onRequest`: tracing → auth → cache-bookkeeping; per-route `preHandler`: `rateLimit → validateV2 → requirePermission → cached → handler` | identical | **Agree.** The frontend cooperates with this exact order (§4). |
-| C-6 | Rate-limit classes | 4 (middleware doc) vs 9 (manifest); burst numbers disagree | 4: `PUBLIC_READ` 120 / `AUTH_READ` 240 / `STANDARD_COMMAND` 60 / `SENSITIVE_COMMAND` 10, per 60s; auth routes = `SENSITIVE_COMMAND` | **4-class model.** Frontend handles `429` + `Retry-After`. |
-| C-7 | CSRF | "**frontend / thin-BFF concern, not the gateway**" (PLAN:125 lists cookies + CSRF as an approved Next.js BFF use case); gateway has none | gateway relies on Bearer + CORS-credentials + SameSite; prod cross-domain "needs revisit" (D-001) | **A minimal Next.js BFF owns the cookie/CSRF surface** (§8). Doc-sanctioned; also fixes the unresolved prod cross-domain cookie problem. |
-| C-8 | Idempotency key | "one key per user **intent**, not per network retry" (RM:407, PLAN:293) | current partial FE wiring mints a fresh UUID per HTTP call — wrong | **Key minted at the user-action call site**, stable across the client's internal retries (§7). |
-| C-9 | Runtime route truth | `route-manifest.ts` doc says only 3 ACTIVE routes | ~80 routes registered; `apps/api-gateway/src/routes/v2/route-manifest.ts` + route files are truth | **The code manifest is truth.** The doc manifest is stale. |
-| C-10 | `role` on the user | V1 role soup (`user`/`onboarding`/`partner`/`venue`/`host`/`promoter`/…) | V2 `role ∈ {guest, partner, admin}`, server-set; `/auth/signup` forces `partner` | **`{guest, partner, admin}`.** Per-org capability/role is a **separate** concern resolved from `GET /organizations/:id/access`, never from the token. |
+| #    | Concern             | Frozen planning doc                                                                                                                             | Live backend + backend `decisions.md`                                                                                                        | Resolution                                                                                                                                            |
+| ---- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C-1  | Session/auth routes | `/api/v2/session`, `/session/sync`, `/session/logout` — all **DEFERRED**                                                                        | `/api/v2/auth/{signup,login,refresh,logout}` + `GET /api/v2/auth/session` — **live, tested** (D-001, phase-00)                               | **Use `/api/v2/auth/*`.** The frozen `session.*` names are superseded.                                                                                |
+| C-2  | Success envelope    | `{ data, meta }`                                                                                                                                | **bare DTO** (`eventDtoSchema` etc.) / `{ items, pageInfo }` for lists                                                                       | **Bare DTO.** Both `@c1rcle/contracts` and `@c1rcle/api-client` already implement it.                                                                 |
+| C-3  | Error envelope      | flat `{ code, message, ..., requestId }`                                                                                                        | flat `{ code, message, status, requestId, fieldErrors? }`                                                                                    | **Agree.** From every path including 404 and unhandled 5xx (D-009).                                                                                   |
+| C-4  | Identity mechanism  | "Firebase ID-token verification" (manifest) vs "Better Auth" (middleware doc) — self-contradictory                                              | Better Auth: httpOnly cookie + `bearer()` plugin; access token = Better Auth session token via `set-auth-token` header, **not a minted JWT** | **Better Auth** (D-001, open-q3 resolved).                                                                                                            |
+| C-5  | Middleware chain    | global `onRequest`: tracing → auth → cache-bookkeeping; per-route `preHandler`: `rateLimit → validateV2 → requirePermission → cached → handler` | identical                                                                                                                                    | **Agree.** The frontend cooperates with this exact order (§4).                                                                                        |
+| C-6  | Rate-limit classes  | 4 (middleware doc) vs 9 (manifest); burst numbers disagree                                                                                      | 4: `PUBLIC_READ` 120 / `AUTH_READ` 240 / `STANDARD_COMMAND` 60 / `SENSITIVE_COMMAND` 10, per 60s; auth routes = `SENSITIVE_COMMAND`          | **4-class model.** Frontend handles `429` + `Retry-After`.                                                                                            |
+| C-7  | CSRF                | "**frontend / thin-BFF concern, not the gateway**" (PLAN:125 lists cookies + CSRF as an approved Next.js BFF use case); gateway has none        | gateway relies on Bearer + CORS-credentials + SameSite; prod cross-domain "needs revisit" (D-001)                                            | **A minimal Next.js BFF owns the cookie/CSRF surface** (§8). Doc-sanctioned; also fixes the unresolved prod cross-domain cookie problem.              |
+| C-8  | Idempotency key     | "one key per user **intent**, not per network retry" (RM:407, PLAN:293)                                                                         | current partial FE wiring mints a fresh UUID per HTTP call — wrong                                                                           | **Key minted at the user-action call site**, stable across the client's internal retries (§7).                                                        |
+| C-9  | Runtime route truth | `route-manifest.ts` doc says only 3 ACTIVE routes                                                                                               | ~80 routes registered; `apps/api-gateway/src/routes/v2/route-manifest.ts` + route files are truth                                            | **The code manifest is truth.** The doc manifest is stale.                                                                                            |
+| C-10 | `role` on the user  | V1 role soup (`user`/`onboarding`/`partner`/`venue`/`host`/`promoter`/…)                                                                        | V2 `role ∈ {guest, partner, admin}`, server-set; `/auth/signup` forces `partner`                                                             | **`{guest, partner, admin}`.** Per-org capability/role is a **separate** concern resolved from `GET /organizations/:id/access`, never from the token. |
 
 Record these in `C1RCLE-BACKEND/docs/architecture/decisions.md` as a new decision entry (D-024) when the backend punch-list lands.
 
@@ -69,11 +69,11 @@ Fastify /api/v2  (backend decides everything)
 
 ### 3.2 Single-owner packages (lint-enforced — `no-restricted-imports` / `no-restricted-syntax`)
 
-| Capability | Sole owner | Everyone else |
-|---|---|---|
-| Network / HTTP | `@c1rcle/api-client` | no `fetch`, no `axios`, no second client |
-| Session / access token | `@c1rcle/auth` | no ad-hoc token storage, no `firebase/auth` |
-| Environment variables | `@c1rcle/config` | no `process.env` outside it |
+| Capability                   | Sole owner                                          | Everyone else                                |
+| ---------------------------- | --------------------------------------------------- | -------------------------------------------- |
+| Network / HTTP               | `@c1rcle/api-client`                                | no `fetch`, no `axios`, no second client     |
+| Session / access token       | `@c1rcle/auth`                                      | no ad-hoc token storage, no `firebase/auth`  |
+| Environment variables        | `@c1rcle/config`                                    | no `process.env` outside it                  |
 | Wire contracts (zod + types) | `@c1rcle/contracts` (backend-owned, mirrored to FE) | no hand-written response schemas or decoders |
 
 These four rules already exist in `C1RCLE-FRONTEND/docs/architecture/README.md`; this slice adds `@c1rcle/auth` and `@c1rcle/contracts` to the enforced set and makes them true in `partner-dashboard`.
@@ -112,7 +112,7 @@ Frontend obligations that fall out of this:
 
 The V2 docs (D-003, T-series rule 2 / T01, `chatgpt_response.md`) specify: contracts are backend-owned; the end state is a **published versioned package**; the interim mechanism is `scripts/contract-parity.mjs` locking the frontend copy. Neither repo has CI yet, so:
 
-- **New FE workspace package `@c1rcle/contracts`** — *generated*, never hand-edited. `C1RCLE-BACKEND/scripts/export-contracts.mjs` copies `packages/contracts/src/**` into `C1RCLE-FRONTEND/packages/contracts/src/**`, adds the FE package scaffolding (`package.json`, `tsconfig.build.json`, build to JS + `.d.ts` — Next does not transpile workspace TS, per `C1RCLE-FRONTEND` ADR-0003), and a `GENERATED — do not edit` header on every file.
+- **New FE workspace package `@c1rcle/contracts`** — _generated_, never hand-edited. `C1RCLE-BACKEND/scripts/export-contracts.mjs` copies `packages/contracts/src/**` into `C1RCLE-FRONTEND/packages/contracts/src/**`, adds the FE package scaffolding (`package.json`, `tsconfig.build.json`, build to JS + `.d.ts` — Next does not transpile workspace TS, per `C1RCLE-FRONTEND` ADR-0003), and a `GENERATED — do not edit` header on every file.
 - **`scripts/contract-parity.mjs`** (already exists in the backend) is wired into both repos' `pnpm check` and pre-push hook. It parses shared fixtures through both repos' schemas and asserts identical accept/reject + identical status→code map. Drift → non-zero exit → hook fails.
 - `@c1rcle/api-client/src/schemas.ts` becomes **re-exports** from `@c1rcle/contracts` (`pageInfoSchema`, `paginatedSchema`, `roleSchema`, `userSchema`, `sessionSchema`, `noContentSchema`). `@c1rcle/types`' overlapping types (`ApiError`, `ApiErrorCode`, `Role`, `Session`, `User`, `PageInfo`, `Paginated`) become `import type` re-exports of the `@c1rcle/contracts` inferred types, so there is exactly one definition.
 - The 16 hand-written partner decoders in `src/lib/partner/api-partner-decoders.ts` are **deleted** in spec C. This slice only needs the auth/onboarding/organization schemas, consumed via `schema.parse()`.
@@ -133,9 +133,9 @@ Restore the shape the stale `packages/auth/dist/session-store.d.ts` already docu
 type SessionStatus = 'unknown' | 'authenticated' | 'anonymous';
 
 interface SessionState {
-  session: { user: User } | null;   // User from @c1rcle/contracts (id, email, displayName, role, avatarUrl)
-  accessToken: string | null;        // in memory ONLY — never localStorage/sessionStorage/IndexedDB/cookie-readable
-  expiresAt: number | null;          // epoch ms (matches authBridgeResponseSchema)
+  session: { user: User } | null; // User from @c1rcle/contracts (id, email, displayName, role, avatarUrl)
+  accessToken: string | null; // in memory ONLY — never localStorage/sessionStorage/IndexedDB/cookie-readable
+  expiresAt: number | null; // epoch ms (matches authBridgeResponseSchema)
   status: SessionStatus;
 }
 ```
@@ -149,13 +149,13 @@ interface SessionState {
 
 Each uses `createApiClient()` and goes **through the BFF** (`/api/auth/*` on the FE origin, §8), not directly to the gateway, because they set or rely on the httpOnly cookie.
 
-| Action | BFF route → gateway | On success | On failure |
-|---|---|---|---|
-| `signup({ email, password, displayName })` | `POST /api/auth/signup` → `POST /api/v2/auth/signup` | `setSession(user, accessToken, expiresAt)` | throw typed `ApiClientError` (422 → field errors) |
-| `login({ email, password })` | `POST /api/auth/login` → `POST /api/v2/auth/login` | `setSession(...)` | generic message on 401 (no account-existence oracle) |
-| `refresh()` | `POST /api/auth/refresh` → `POST /api/v2/auth/refresh` | `setSession(...)` with new token | `clearSession()`, return `false` |
-| `logout()` | `POST /api/auth/logout` → `POST /api/v2/auth/logout` | `clearSession()` | `clearSession()` anyway (best-effort) |
-| `fetchSession()` | `GET /api/auth/session` → `GET /api/v2/auth/session` | `setSession(user, currentToken, expiresAt)` | `markAnonymous()` |
+| Action                                     | BFF route → gateway                                    | On success                                  | On failure                                           |
+| ------------------------------------------ | ------------------------------------------------------ | ------------------------------------------- | ---------------------------------------------------- |
+| `signup({ email, password, displayName })` | `POST /api/auth/signup` → `POST /api/v2/auth/signup`   | `setSession(user, accessToken, expiresAt)`  | throw typed `ApiClientError` (422 → field errors)    |
+| `login({ email, password })`               | `POST /api/auth/login` → `POST /api/v2/auth/login`     | `setSession(...)`                           | generic message on 401 (no account-existence oracle) |
+| `refresh()`                                | `POST /api/auth/refresh` → `POST /api/v2/auth/refresh` | `setSession(...)` with new token            | `clearSession()`, return `false`                     |
+| `logout()`                                 | `POST /api/auth/logout` → `POST /api/v2/auth/logout`   | `clearSession()`                            | `clearSession()` anyway (best-effort)                |
+| `fetchSession()`                           | `GET /api/auth/session` → `GET /api/v2/auth/session`   | `setSession(user, currentToken, expiresAt)` | `markAnonymous()`                                    |
 
 - `signup` / `login` request bodies are validated client-side against `signupRequestSchema` / `loginRequestSchema` from `@c1rcle/contracts` **before** send. Neither schema has a `role` field — the FE must never send one.
 - Response bodies parsed against `authBridgeResponseSchema` (`signup`/`login`/`refresh`) or `sessionSchema` (`GET session`).
@@ -184,8 +184,11 @@ Wiring (in `partner-dashboard`, once, at the composition root):
 ```ts
 createApiClient({
   getToken: getAccessToken,
-  reauth: () => auth.refresh(),                 // returns Promise<boolean>
-  onUnauthorized: () => { auth.clearSession(); redirectToLogin(); },
+  reauth: () => auth.refresh(), // returns Promise<boolean>
+  onUnauthorized: () => {
+    auth.clearSession();
+    redirectToLogin();
+  },
 });
 ```
 
@@ -212,13 +215,13 @@ Data reads and business mutations do **not** go through the BFF — they call th
 
 ### 9.1 `DashboardAuthProvider` → five units
 
-| Unit | File | Responsibility |
-|---|---|---|
-| Session state + network | `@c1rcle/auth` | §6 |
-| Server bootstrap | `@c1rcle/auth/server-session` | §6.3 |
-| Edge redirect | `src/proxy.ts` | §9.2 |
-| Permission read | `src/lib/access/use-org-access.ts` | §9.4 |
-| React provider | `src/components/providers/session-provider.tsx` | thin: hydrate from server bootstrap, expose `useSession`, run the idle timer (§9.5), wire `createApiClient` once |
+| Unit                    | File                                            | Responsibility                                                                                                   |
+| ----------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Session state + network | `@c1rcle/auth`                                  | §6                                                                                                               |
+| Server bootstrap        | `@c1rcle/auth/server-session`                   | §6.3                                                                                                             |
+| Edge redirect           | `src/proxy.ts`                                  | §9.2                                                                                                             |
+| Permission read         | `src/lib/access/use-org-access.ts`              | §9.4                                                                                                             |
+| React provider          | `src/components/providers/session-provider.tsx` | thin: hydrate from server bootstrap, expose `useSession`, run the idle timer (§9.5), wire `createApiClient` once |
 
 Delete: `src/lib/firebase/client.ts`, `src/lib/auth/getCachedFirebaseIdToken.ts`, all `firebase/auth` + `firebase/storage` imports, the `firebase` dependency in `package.json`. Delete the `/auth/change-password` and `/forgot-password` dead references (password reset is a later slice — Better Auth supports it; no route in this slice).
 
@@ -256,15 +259,15 @@ V1 collected ~40 fields across 6–7 wizard steps with email OTP, phone OTP, ent
 
 ### 10.1 The V2 flow
 
-| Step | Call | Body | Notes |
-|---|---|---|---|
-| 1. Account | `POST /api/auth/signup` (BFF → `POST /api/v2/auth/signup`) | `{ email, password, displayName }` | Separate prerequisite, not part of the application. `role` never sent (backend forces `partner`). |
-| 2. Start application | `POST /api/v2/onboarding/applications` | `{ requestedType: 'venue'\|'host'\|'promoter', plan: 'basic'\|'silver'\|'diamond', profile }` | `profile` required minimum = **`legalName`, `contactPerson`, `phone`, `city`**. Optional: `area`, `website`, `capacity` (number\|null), `instagram`, `bio`, `businessType` (free string), `registrationNumber`, `entityType` (free string, drives nothing server-side). `Idempotency-Key` required. |
-| 3. Autosave | `PATCH /api/v2/onboarding/applications/:id` | `onboardingProfileSchema.partial().strict()` | Not idempotency-keyed (autosave). Wizard step is **client state only** — V2 does not persist `onboardingStep`. Unknown key → `422`. |
-| 4. Documents ×3 | `POST /api/v2/onboarding/applications/:id/documents` | `{ label, storagePath }` | Labels: **`id_front`, `id_back`, `selfie`** only. Re-uploading a label replaces it. `Idempotency-Key` required. **See §10.3 — upload deferred this slice.** |
-| 5. (optional) format check | `POST /api/v2/onboarding/verify-document` | `{ documentType, documentNumber, holderName? }` | Provider = `format-check`. Returns `{ passed, provider, reason, referenceId }`. **UI renders "format check passed — pending manual review", never "verified", no green tick** (D-018). ≤5 attempts per applicant. |
-| 6. Submit | `POST /api/v2/onboarding/applications/:id/submit` | — | Hard-blocks until the 3 required documents are present. `Idempotency-Key` required. |
-| 7. Poll status | `GET /api/v2/onboarding/me` | — | Returns `{ request: onboardingRequestDtoSchema \| null }`. Status values: `draft \| submitted \| changes_requested \| approved \| rejected`. On `approved` → `GET /api/v2/organizations` (the provisioned org now exists) → land in studio. |
+| Step                       | Call                                                       | Body                                                                                          | Notes                                                                                                                                                                                                                                                                                               |
+| -------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Account                 | `POST /api/auth/signup` (BFF → `POST /api/v2/auth/signup`) | `{ email, password, displayName }`                                                            | Separate prerequisite, not part of the application. `role` never sent (backend forces `partner`).                                                                                                                                                                                                   |
+| 2. Start application       | `POST /api/v2/onboarding/applications`                     | `{ requestedType: 'venue'\|'host'\|'promoter', plan: 'basic'\|'silver'\|'diamond', profile }` | `profile` required minimum = **`legalName`, `contactPerson`, `phone`, `city`**. Optional: `area`, `website`, `capacity` (number\|null), `instagram`, `bio`, `businessType` (free string), `registrationNumber`, `entityType` (free string, drives nothing server-side). `Idempotency-Key` required. |
+| 3. Autosave                | `PATCH /api/v2/onboarding/applications/:id`                | `onboardingProfileSchema.partial().strict()`                                                  | Not idempotency-keyed (autosave). Wizard step is **client state only** — V2 does not persist `onboardingStep`. Unknown key → `422`.                                                                                                                                                                 |
+| 4. Documents ×3            | `POST /api/v2/onboarding/applications/:id/documents`       | `{ label, storagePath }`                                                                      | Labels: **`id_front`, `id_back`, `selfie`** only. Re-uploading a label replaces it. `Idempotency-Key` required. **See §10.3 — upload deferred this slice.**                                                                                                                                         |
+| 5. (optional) format check | `POST /api/v2/onboarding/verify-document`                  | `{ documentType, documentNumber, holderName? }`                                               | Provider = `format-check`. Returns `{ passed, provider, reason, referenceId }`. **UI renders "format check passed — pending manual review", never "verified", no green tick** (D-018). ≤5 attempts per applicant.                                                                                   |
+| 6. Submit                  | `POST /api/v2/onboarding/applications/:id/submit`          | —                                                                                             | Hard-blocks until the 3 required documents are present. `Idempotency-Key` required.                                                                                                                                                                                                                 |
+| 7. Poll status             | `GET /api/v2/onboarding/me`                                | —                                                                                             | Returns `{ request: onboardingRequestDtoSchema \| null }`. Status values: `draft \| submitted \| changes_requested \| approved \| rejected`. On `approved` → `GET /api/v2/organizations` (the provisioned org now exists) → land in studio.                                                         |
 
 ### 10.2 Fields cut from the current wizard (no V2 home)
 
@@ -353,6 +356,7 @@ Every item below is traceable to `thec1rcle/{SECURITY_HARDENING.md, docs/threat-
 ## 12. Mock teardown (this slice)
 
 **Delete:**
+
 - `apps/partner-dashboard/src/lib/firebase/client.ts`
 - `apps/partner-dashboard/src/lib/auth/getCachedFirebaseIdToken.ts`
 - `apps/partner-dashboard/src/app/api/auth/{me,partner-context,profile,check-email,check-availability,create-account,onboard,onboard-status,onboarding-progress}/route.ts`
@@ -385,21 +389,25 @@ Deferred (tracked, not this slice): **signed-URL issuing for onboarding document
 ## 14. Testing
 
 ### Unit
+
 - `@c1rcle/auth`: `login`/`signup`/`refresh`/`logout`/`fetchSession` store transitions; refresh-stampede (N concurrent → 1 network call); no token in any storage (spy on `localStorage`/`sessionStorage` — asserted zero writes).
 - `@c1rcle/api-client`: `reauth` — 401 → reauth true → one retry → success; reauth false → `unauthorized` surfaced; a retried request that 401s again does not loop; `Retry-After` honored on 429.
 - BFF handlers: Origin check rejects cross-site; CSRF double-submit mismatch → 403; prototype-pollution keys stripped; cookie re-scoped to FE origin; no body logging (spy on console).
 - `useOrgAccess`: maps `partnerAccessDtoSchema` → studio + tab visibility; `tabVisibility: null` → all tabs.
 
 ### Contract
+
 - `contract-parity.mjs` green both directions in `pnpm check`.
 - Every response the auth/onboarding repositories parse has a `@c1rcle/contracts` schema (no `z.unknown()`).
 
 ### Integration / E2E (`apps/partner-dashboard/e2e`, Playwright)
+
 - Full journey against a real gateway on `STORAGE_DRIVER=firestore`: signup → start application → autosave → (documents step shows deferred state) → submit blocked without docs → **seed an approved application via an admin call (`POST /api/v2/admin/onboarding/applications/:id/approve` needs platform-admin session) or fallback to backend seed script `apps/api-gateway/src/scripts/seed-platform-admin.ts`** → `GET /onboarding/me` returns `approved` → `GET /organizations` → land in `/venue/overview` (or host/promoter) with a real session.
 - Assert: zero requests to any deleted `/api/auth/*` or `/api/kyc/*` route; every `/api/v2` request carries `Authorization: Bearer` and (for org-scoped) matching `X-Organization-Id` + path; a forced 401 mid-session triggers exactly one refresh + retry.
 - Security: CSP header present and correct; no token in `localStorage`/`sessionStorage` at any point; login with a wrong password shows the generic message.
 
 ### Local dev setup (documented in the plan)
+
 - `C1RCLE-BACKEND/apps/api-gateway/.env.local` with `STORAGE_DRIVER=firestore` + the `thec1rcle-india` Firebase credentials (already the documented dev sandbox, D-008).
 - `C1RCLE-FRONTEND` `.env.local` with `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080`.
 - `NODE_OPTIONS=--dns-result-order=ipv4first` for backend commands (phase-00 Session Log — this sandbox has no IPv6 route).

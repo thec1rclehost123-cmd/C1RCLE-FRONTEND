@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('C1RCLE Partner Dashboard', () => {
-  test('renders useful landing content without waiting for the cinematic scene', async ({ page }) => {
+  test('renders useful landing content without waiting for the cinematic scene', async ({
+    page,
+  }) => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
 
     await expect(

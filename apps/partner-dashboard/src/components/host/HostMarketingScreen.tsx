@@ -24,8 +24,20 @@ export function HostMarketingScreen({ initialTab = 'compose' }: { readonly initi
             <p>Send one message to your event audience.</p>
           </div>
           <nav className={styles['tabs']} aria-label="Marketing sections">
-            <button type="button" className={tab === 'compose' ? styles['active'] : undefined} onClick={() => setTab('compose')}>Compose</button>
-            <button type="button" className={tab === 'history' ? styles['active'] : undefined} onClick={() => setTab('history')}>Campaign history</button>
+            <button
+              type="button"
+              className={tab === 'compose' ? styles['active'] : undefined}
+              onClick={() => { setTab('compose'); }}
+            >
+              Compose
+            </button>
+            <button
+              type="button"
+              className={tab === 'history' ? styles['active'] : undefined}
+              onClick={() => { setTab('history'); }}
+            >
+              Campaign history
+            </button>
           </nav>
         </header>
         {tab === 'compose' ? <HostCompose /> : <HostCampaignHistory />}
@@ -68,7 +80,12 @@ function HostCompose() {
           <span className={styles['fieldLabel']}>Channel</span>
           <div className={styles['channelRow']}>
             {CHANNELS.map((item) => (
-              <button key={item} type="button" className={channel === item ? styles['channelActive'] : styles['channelBtn']} onClick={() => setChannel(item)}>
+              <button
+                key={item}
+                type="button"
+                className={channel === item ? styles['channelActive'] : styles['channelBtn']}
+                onClick={() => { setChannel(item); }}
+              >
                 {item}
               </button>
             ))}
@@ -76,12 +93,22 @@ function HostCompose() {
         </div>
 
         <div className={styles['row']}>
-          <label className={styles['fieldLabel']} htmlFor="host-marketing-message">Message</label>
+          <label className={styles['fieldLabel']} htmlFor="host-marketing-message">
+            Message
+          </label>
           <div className={styles['messageWrap']}>
-            <textarea id="host-marketing-message" className={styles['messageArea']} value={message} maxLength={320} onChange={(event) => setMessage(event.target.value)} />
+            <textarea
+              id="host-marketing-message"
+              className={styles['messageArea']}
+              value={message}
+              maxLength={320}
+              onChange={(event) => { setMessage(event.target.value); }}
+            />
             <div className={styles['messageMeta']}>
               <div className={styles['fieldBtns']}>
-                <button type="button" onClick={() => insertField('first_name')}>First name</button>
+                <button type="button" onClick={() => { insertField('first_name'); }}>
+                  First name
+                </button>
               </div>
               <span className={styles['charCount']}>{message.length} / 320</span>
             </div>
@@ -104,7 +131,7 @@ function HostCompose() {
 
         <div className={styles['actions']}>
           <span />
-          <button type="button" className={styles['launchBtn']} onClick={() => setNotice(true)}>
+          <button type="button" className={styles['launchBtn']} onClick={() => { setNotice(true); }}>
             Schedule message
           </button>
         </div>
@@ -112,8 +139,15 @@ function HostCompose() {
       </div>
 
       <aside className={styles['previewSide']}>
-        <div className="host-marketing-preview-heading"><h2>Preview</h2><small>{channel} · iPhone</small></div>
-        <IPhonePreview channel={channel} message={message.replace('{{first_name}}', 'Arjun')} eventName="Neon Nights: Afrobeats" />
+        <div className="host-marketing-preview-heading">
+          <h2>Preview</h2>
+          <small>{channel} · iPhone</small>
+        </div>
+        <IPhonePreview
+          channel={channel}
+          message={message.replace('{{first_name}}', 'Arjun')}
+          eventName="Neon Nights: Afrobeats"
+        />
       </aside>
     </div>
   );
@@ -123,33 +157,59 @@ function HostCampaignHistory() {
   const [query, setQuery] = useState('');
   const [channel, setChannel] = useState('All channels');
   const normalized = query.trim().toLocaleLowerCase('en-IN');
-  const campaigns = useMemo(() => hostCampaigns.filter((campaign) => {
-    const matchesQuery = !normalized || campaign.some((value) => value.toLocaleLowerCase('en-IN').includes(normalized));
-    const matchesChannel = channel === 'All channels' || campaign[1] === channel;
-    return matchesQuery && matchesChannel;
-  }), [channel, normalized]);
+  const campaigns = useMemo(
+    () =>
+      hostCampaigns.filter((campaign) => {
+        const matchesQuery =
+          !normalized ||
+          campaign.some((value) => value.toLocaleLowerCase('en-IN').includes(normalized));
+        const matchesChannel = channel === 'All channels' || campaign[1] === channel;
+        return matchesQuery && matchesChannel;
+      }),
+    [channel, normalized],
+  );
 
   return (
     <>
       <div className="host-toolbar">
         <label>
           <span className="sr-only">Search campaigns</span>
-          <input type="search" value={query} placeholder="Search campaigns" onChange={(event) => setQuery(event.target.value)} />
+          <input
+            type="search"
+            value={query}
+            placeholder="Search campaigns"
+            onChange={(event) => { setQuery(event.target.value); }}
+          />
         </label>
-        <select aria-label="Channel" value={channel} onChange={(event) => setChannel(event.target.value)}>
+        <select
+          aria-label="Channel"
+          value={channel}
+          onChange={(event) => { setChannel(event.target.value); }}
+        >
           <option>All channels</option>
-          {CHANNELS.map((item) => <option key={item}>{item}</option>)}
+          {CHANNELS.map((item) => (
+            <option key={item}>{item}</option>
+          ))}
         </select>
       </div>
-      <HostTable columns={['Campaign', 'Channel', 'Sent', 'Result', 'Status']} label="Campaign history">
+      <HostTable
+        columns={['Campaign', 'Channel', 'Sent', 'Result', 'Status']}
+        label="Campaign history"
+      >
         <>
           {campaigns.map((campaign) => (
             <tr key={campaign[0]}>
-              <td><strong>{campaign[0]}</strong></td>
+              <td>
+                <strong>{campaign[0]}</strong>
+              </td>
               <td>{campaign[1]}</td>
               <td>{campaign[2]}</td>
               <td>{campaign[4]}</td>
-              <td><HostStatus tone={campaign[3] === 'Delivered' ? 'success' : 'neutral'}>{campaign[3]}</HostStatus></td>
+              <td>
+                <HostStatus tone={campaign[3] === 'Delivered' ? 'success' : 'neutral'}>
+                  {campaign[3]}
+                </HostStatus>
+              </td>
             </tr>
           ))}
         </>

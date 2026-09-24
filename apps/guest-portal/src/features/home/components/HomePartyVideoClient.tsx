@@ -97,13 +97,7 @@ export function HomePartyVideoClient({
           <source src={desktopSrc} type="video/mp4" />
         </video>
       ) : (
-        <Image
-          src={posterSrc}
-          alt=""
-          fill
-          sizes="100vw"
-          className="object-cover"
-        />
+        <Image src={posterSrc} alt="" fill sizes="100vw" className="object-cover" />
       )}
     </div>
   );

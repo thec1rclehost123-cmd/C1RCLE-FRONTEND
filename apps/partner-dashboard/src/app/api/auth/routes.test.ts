@@ -63,17 +63,21 @@ describe('POST /api/auth/signup', () => {
     );
 
     const res = await signup(
-      post('/api/auth/signup', { origin: APP_ORIGIN }, {
-        email: 'a@b.com',
-        password: 'password123',
-        displayName: 'A',
-      }),
+      post(
+        '/api/auth/signup',
+        { origin: APP_ORIGIN },
+        {
+          email: 'a@b.com',
+          password: 'password123',
+          displayName: 'A',
+        },
+      ),
     );
 
     expect(res.status).toBe(201);
     await expect(res.json()).resolves.toMatchObject({ accessToken: 'tok_abc' });
     const setCookie = res.headers.get('set-cookie') ?? '';
-    expect(setCookie).toContain('c1rcle.csrf=');
+    expect(setCookie).toContain('partner.c1rcle.csrf=');
     expect(setCookie).toContain('better-auth.session_token=sess_abc');
     expect(setCookie.toLowerCase()).not.toContain('domain=');
     expect(setCookie.toLowerCase()).toContain('httponly');
@@ -116,7 +120,9 @@ describe('POST /api/auth/signup', () => {
       ),
     );
 
-    const res = await signup(post('/api/auth/signup', { origin: APP_ORIGIN }, { email: 'a@b.com' }));
+    const res = await signup(
+      post('/api/auth/signup', { origin: APP_ORIGIN }, { email: 'a@b.com' }),
+    );
 
     expect(res.status).toBe(422);
     await expect(res.json()).resolves.toMatchObject({
@@ -131,10 +137,14 @@ describe('POST /api/auth/signup', () => {
     mockForward.mockResolvedValue(gatewayResponse(AUTH_BODY, { status: 201 }));
 
     await signup(
-      post('/api/auth/signup', { origin: APP_ORIGIN }, {
-        email: 'secret@b.com',
-        password: 'hunter2xx',
-      }),
+      post(
+        '/api/auth/signup',
+        { origin: APP_ORIGIN },
+        {
+          email: 'secret@b.com',
+          password: 'hunter2xx',
+        },
+      ),
     );
 
     const logged = [...log.mock.calls, ...errorLog.mock.calls].flat().map((entry) => String(entry));
@@ -178,7 +188,7 @@ describe('POST /api/auth/refresh', () => {
       post('/api/auth/refresh', {
         origin: APP_ORIGIN,
         'x-csrf-token': 'tok',
-        cookie: 'c1rcle.csrf=tok; better-auth.session_token=sess_abc',
+        cookie: 'partner.c1rcle.csrf=tok; better-auth.session_token=sess_abc',
       }),
     );
 
@@ -203,12 +213,12 @@ describe('POST /api/auth/logout', () => {
       post('/api/auth/logout', {
         origin: APP_ORIGIN,
         'x-csrf-token': 'tok',
-        cookie: 'c1rcle.csrf=tok',
+        cookie: 'partner.c1rcle.csrf=tok',
       }),
     );
 
     expect(res.status).toBe(204);
-    expect((res.headers.get('set-cookie') ?? '').toLowerCase()).toContain('c1rcle.csrf=;');
+    expect((res.headers.get('set-cookie') ?? '').toLowerCase()).toContain('partner.c1rcle.csrf=;');
   });
 });
 

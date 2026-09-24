@@ -25,7 +25,6 @@ export function ExploreEventCard({ event }: { event: ExploreEvent }) {
     <article className="group h-full">
       <Link
         href={`/event/${event.slug}`}
-        aria-label={`View ${event.title}`}
         className="relative block aspect-[4/5] min-h-[24rem] overflow-hidden rounded-[1.5rem] border border-white/10 bg-white/5 shadow-lg transition-transform duration-300 hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white motion-reduce:transition-none sm:min-h-[26rem] sm:rounded-[1.75rem]"
       >
         <Image
@@ -47,7 +46,7 @@ export function ExploreEventCard({ event }: { event: ExploreEvent }) {
             {event.category}
           </span>
           {event.badge && (
-            <span className="rounded-full bg-[#FF4400] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-white">
+            <span className="rounded-full bg-[#FF6B4A] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-black">
               {event.badge}
             </span>
           )}

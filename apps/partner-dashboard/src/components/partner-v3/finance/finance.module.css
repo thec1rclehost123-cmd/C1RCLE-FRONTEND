@@ -25,8 +25,16 @@
   --finance-payment-glow: rgb(167 139 250 / 40%);
 }
 
-.financeHeader { margin: 0 0 22px; }
-.financeHeader h1 { margin: 0; font: 800 30px/1.08 var(--font-display), sans-serif; letter-spacing: -.02em; }
+.financeHeader {
+  margin: 0 0 22px;
+}
+.financeHeader h1 {
+  margin: 0;
+  font:
+    800 30px/1.08 var(--font-display),
+    sans-serif;
+  letter-spacing: -0.02em;
+}
 
 .financeTabs {
   display: flex;
@@ -52,8 +60,13 @@
   white-space: nowrap;
 }
 
-.financeTab:hover { color: #f5f5f3; }
-.financeTab[aria-current='page'] { background: #262626; color: #f5f5f3; }
+.financeTab:hover {
+  color: #f5f5f3;
+}
+.financeTab[aria-current='page'] {
+  background: #262626;
+  color: #f5f5f3;
+}
 
 .financeTopGrid,
 .financeMetricGrid {
@@ -62,7 +75,9 @@
   gap: 20px;
 }
 
-.financeTopGrid { margin-bottom: 20px; }
+.financeTopGrid {
+  margin-bottom: 20px;
+}
 
 .balanceHero {
   position: relative;
@@ -72,28 +87,103 @@
   border: 1px solid rgb(255 255 255 / 9%);
   border-radius: 28px;
   background: rgb(22 17 14 / 72%);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 8%), 0 26px 60px rgb(0 0 0 / 45%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 8%),
+    0 26px 60px rgb(0 0 0 / 45%);
   backdrop-filter: blur(18px);
 }
 
 .balanceGlow,
-.bankCardGlow { position: absolute; pointer-events: none; }
-.balanceGlow { top: -70px; left: -30px; width: 320px; height: 320px; background: radial-gradient(circle, var(--finance-accent-glow), transparent 66%); filter: blur(14px); }
-.balanceSparkline { position: absolute; right: 0; bottom: 0; left: 0; width: 100%; height: 120px; opacity: .5; }
-.balanceSparkLine { fill: none; stroke: var(--finance-accent-light); stroke-width: 2.5; stroke-linecap: round; }
-.balanceContent { position: relative; z-index: 1; }
-.balanceLabelRow { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; color: #d8c4b8; font-size: 13px; font-weight: 600; }
-.balanceDelta { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; background: rgb(110 231 155 / 14%); color: #6ee79b; font-size: 12px; font-weight: 700; }
-.balanceValue { display: block; margin-bottom: 8px; font-size: clamp(38px, 4vw, 52px); font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
-.balanceHero p { margin: 0 0 26px; color: #c9b7ac; font-size: 13px; font-weight: 500; }
-.balanceActions { display: flex; flex-wrap: wrap; gap: 12px; }
+.bankCardGlow {
+  position: absolute;
+  pointer-events: none;
+}
+.balanceGlow {
+  top: -70px;
+  left: -30px;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, var(--finance-accent-glow), transparent 66%);
+  filter: blur(14px);
+}
+.balanceSparkline {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 120px;
+  opacity: 0.5;
+}
+.balanceSparkLine {
+  fill: none;
+  stroke: var(--finance-accent-light);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.balanceContent {
+  position: relative;
+  z-index: 1;
+}
+.balanceLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  color: #d8c4b8;
+  font-size: 13px;
+  font-weight: 600;
+}
+.balanceDelta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgb(110 231 155 / 14%);
+  color: #6ee79b;
+  font-size: 12px;
+  font-weight: 700;
+}
+.balanceValue {
+  display: block;
+  margin-bottom: 8px;
+  font-size: clamp(38px, 4vw, 52px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.balanceHero p {
+  margin: 0 0 26px;
+  color: #c9b7ac;
+  font-size: 13px;
+  font-weight: 500;
+}
+.balanceActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
 .financePrimaryAction,
-.financeSecondaryAction { min-height: 46px; border-radius: 999px; padding-inline: 24px; }
-.financePrimaryAction { background: var(--finance-accent); }
-.financeSecondaryAction { border-color: rgb(255 255 255 / 16%); background: rgb(255 255 255 / 10%); backdrop-filter: blur(8px); }
+.financeSecondaryAction {
+  min-height: 46px;
+  border-radius: 999px;
+  padding-inline: 24px;
+}
+.financePrimaryAction {
+  background: var(--finance-accent);
+}
+.financeSecondaryAction {
+  border-color: rgb(255 255 255 / 16%);
+  background: rgb(255 255 255 / 10%);
+  backdrop-filter: blur(8px);
+}
 .financePrimaryAction:disabled,
 .financeSecondaryAction:disabled,
-.unavailableSave:disabled { cursor: not-allowed; opacity: .62; }
+.unavailableSave:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
 
 .bankCard {
   position: relative;
@@ -109,167 +199,792 @@
   box-shadow: 0 26px 60px rgb(0 0 0 / 45%);
 }
 
-.bankCardGlow { top: -40px; right: -30px; width: 200px; height: 200px; background: radial-gradient(circle, var(--finance-accent-glow), transparent 68%); }
+.bankCardGlow {
+  top: -40px;
+  right: -30px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, var(--finance-accent-glow), transparent 68%);
+}
 .bankCardTop,
-.bankCardIdentity { position: relative; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.bankCardTop > div { display: grid; gap: 6px; }
-.bankCardLabel { color: #9a9a96; font-size: 11px; font-weight: 700; letter-spacing: .16em; }
-.bankCardTop strong { color: #e9e9e6; font-size: 15px; }
-.bankChip { width: 40px; height: 30px; flex: none; border-radius: 6px; background: linear-gradient(135deg, #e9c46a, #b08922); box-shadow: inset 0 0 0 1px rgb(0 0 0 / 20%); }
-.bankCardBottom { position: relative; }
-.bankNumber { display: block; margin-bottom: 14px; color: #e9e9e6; font-size: 21px; letter-spacing: .14em; font-variant-numeric: tabular-nums; }
-.bankCardIdentity { align-items: flex-end; }
-.bankCardIdentity > span { display: grid; gap: 3px; }
-.bankCardIdentity small { color: #7a7a76; font-size: 10px; letter-spacing: .08em; }
-.bankCardIdentity > span > strong { color: #d9d9d6; font-size: 13px; }
-.bankCardIdentity a { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1px solid rgb(255 255 255 / 16%); border-radius: 999px; background: rgb(255 255 255 / 10%); color: #f5f5f3; font-size: 12px; font-weight: 700; text-decoration: none; }
-.bankCardIdentity a:hover { background: rgb(255 255 255 / 16%); }
+.bankCardIdentity {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.bankCardTop > div {
+  display: grid;
+  gap: 6px;
+}
+.bankCardLabel {
+  color: #9a9a96;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+.bankCardTop strong {
+  color: #e9e9e6;
+  font-size: 15px;
+}
+.bankChip {
+  width: 40px;
+  height: 30px;
+  flex: none;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #e9c46a, #b08922);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 20%);
+}
+.bankCardBottom {
+  position: relative;
+}
+.bankNumber {
+  display: block;
+  margin-bottom: 14px;
+  color: #e9e9e6;
+  font-size: 21px;
+  letter-spacing: 0.14em;
+  font-variant-numeric: tabular-nums;
+}
+.bankCardIdentity {
+  align-items: flex-end;
+}
+.bankCardIdentity > span {
+  display: grid;
+  gap: 3px;
+}
+.bankCardIdentity small {
+  color: #7a7a76;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+.bankCardIdentity > span > strong {
+  color: #d9d9d6;
+  font-size: 13px;
+}
+.bankCardIdentity a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 10%);
+  color: #f5f5f3;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.bankCardIdentity a:hover {
+  background: rgb(255 255 255 / 16%);
+}
 
-.financeMetricGrid { margin-bottom: 22px; }
-.financeMetric { min-height: 88px; display: flex; align-items: center; gap: 16px; padding: 20px 22px; border: 1px solid rgb(255 255 255 / 7%); border-radius: 20px; background: rgb(20 20 20 / 60%); backdrop-filter: blur(18px); }
-.financeMetricIcon { width: 46px; height: 46px; display: grid; flex: none; place-items: center; border-radius: 14px; background: var(--finance-accent-soft); color: var(--finance-accent-light); }
-.financeMetricPositive { background: rgb(110 231 155 / 12%); color: #6ee79b; }
-.financeMetricWarning { background: var(--finance-accent-soft); color: var(--finance-accent-light); }
-.hourglassIcon { font-size: 19px; line-height: 1; filter: grayscale(1) saturate(.25); }
-.financeMetricCopy { min-width: 0; flex: 1; display: grid; gap: 5px; }
-.financeMetricCopy > span { color: #8a8a86; font-size: 13px; font-weight: 600; }
-.financeMetricCopy > strong { font-size: 26px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-.financeMetric > small { max-width: 120px; color: #6a6a66; font-size: 12px; line-height: 1.4; text-align: right; }
+.financeMetricGrid {
+  margin-bottom: 22px;
+}
+.financeMetric {
+  min-height: 88px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 22px;
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 20px;
+  background: rgb(20 20 20 / 60%);
+  backdrop-filter: blur(18px);
+}
+.financeMetricIcon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  flex: none;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--finance-accent-soft);
+  color: var(--finance-accent-light);
+}
+.financeMetricPositive {
+  background: rgb(110 231 155 / 12%);
+  color: #6ee79b;
+}
+.financeMetricWarning {
+  background: var(--finance-accent-soft);
+  color: var(--finance-accent-light);
+}
+.hourglassIcon {
+  font-size: 19px;
+  line-height: 1;
+  filter: grayscale(1) saturate(0.25);
+}
+.financeMetricCopy {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 5px;
+}
+.financeMetricCopy > span {
+  color: #8a8a86;
+  font-size: 13px;
+  font-weight: 600;
+}
+.financeMetricCopy > strong {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.financeMetric > small {
+  max-width: 120px;
+  color: #6a6a66;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: right;
+}
 
 .payoutSection,
-.ordersSection { position: relative; overflow: visible; padding: 24px 26px; border: 1px solid rgb(255 255 255 / 8%); border-radius: 24px; background: rgb(20 20 20 / 55%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 5%), 0 20px 50px rgb(0 0 0 / 35%); backdrop-filter: blur(18px); }
-.payoutSection { overflow: hidden; }
-.sectionHeader { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
-.sectionHeader h2 { margin: 0; font-size: 17px; font-weight: 700; }
-.payoutControls { display: flex; align-items: center; gap: 10px; }
+.ordersSection {
+  position: relative;
+  overflow: visible;
+  padding: 24px 26px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 24px;
+  background: rgb(20 20 20 / 55%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 5%),
+    0 20px 50px rgb(0 0 0 / 35%);
+  backdrop-filter: blur(18px);
+}
+.payoutSection {
+  overflow: hidden;
+}
+.sectionHeader {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+.sectionHeader h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+.payoutControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .financeSearch,
-.ordersSearch { display: flex; align-items: center; gap: 9px; border: 1px solid rgb(255 255 255 / 8%); background: #0d0d0d; color: #8a8a86; }
-.financeSearch { width: 200px; padding: 9px 13px; border-radius: 999px; }
+.ordersSearch {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  background: #0d0d0d;
+  color: #8a8a86;
+}
+.financeSearch {
+  width: 200px;
+  padding: 9px 13px;
+  border-radius: 999px;
+}
 .financeSearch input,
-.ordersSearch input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: #f5f5f3; font: inherit; font-size: 13px; }
+.ordersSearch input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #f5f5f3;
+  font: inherit;
+  font-size: 13px;
+}
 .financeSearch input::placeholder,
-.ordersSearch input::placeholder { color: #6a6a66; }
-.rangeControl { position: relative; }
-.rangeControl > button { display: inline-flex; align-items: center; gap: 7px; padding: 9px 15px; border: 1px solid rgb(255 255 255 / 8%); border-radius: 999px; background: #0d0d0d; color: #c9c9c6; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; }
-.rangeControl > button:hover { background: #181818; }
-.rangeMenu { position: absolute; z-index: 10; top: calc(100% + 6px); right: 0; width: 190px; display: grid; gap: 4px; padding: 6px; border: 1px solid rgb(255 255 255 / 10%); border-radius: 12px; background: #181818; box-shadow: 0 16px 40px rgb(0 0 0 / 50%); }
-.rangeMenu button { padding: 9px 11px; border: 0; border-radius: 8px; background: transparent; color: #c9c9c6; cursor: pointer; font: inherit; font-size: 12px; text-align: left; }
+.ordersSearch input::placeholder {
+  color: #6a6a66;
+}
+.rangeControl {
+  position: relative;
+}
+.rangeControl > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 999px;
+  background: #0d0d0d;
+  color: #c9c9c6;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+.rangeControl > button:hover {
+  background: #181818;
+}
+.rangeMenu {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 190px;
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 12px;
+  background: #181818;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 50%);
+}
+.rangeMenu button {
+  padding: 9px 11px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #c9c9c6;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+}
 .rangeMenu button:hover,
-.rangeMenu button[aria-pressed='true'] { background: rgb(255 255 255 / 7%); color: #f5f5f3; }
-.payoutRows { position: relative; }
-.payoutTimeline { position: absolute; top: 30px; bottom: 30px; left: 31px; width: 2px; background: linear-gradient(to bottom, var(--finance-accent-timeline), rgb(255 255 255 / 8%)); }
-.payoutRow { position: relative; display: flex; align-items: center; gap: 16px; min-height: 72px; padding: 13px 8px; border-radius: 14px; }
-.payoutRow:hover { background: rgb(255 255 255 / 4%); }
-.payoutIcon { width: 46px; height: 46px; display: grid; flex: none; place-items: center; border: 2px solid var(--finance-accent-border); border-radius: 15px; background: #17140f; color: var(--finance-accent-light); }
-.payoutIdentity { min-width: 0; flex: 1; display: grid; gap: 2px; }
-.payoutIdentity strong { font-size: 14px; font-weight: 700; }
-.payoutIdentity span { overflow: hidden; color: #8a8a86; font-size: 12px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
-.payoutStatus { display: inline-flex; align-items: center; width: fit-content; padding: 4px 11px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+.rangeMenu button[aria-pressed='true'] {
+  background: rgb(255 255 255 / 7%);
+  color: #f5f5f3;
+}
+.payoutRows {
+  position: relative;
+}
+.payoutTimeline {
+  position: absolute;
+  top: 30px;
+  bottom: 30px;
+  left: 31px;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--finance-accent-timeline), rgb(255 255 255 / 8%));
+}
+.payoutRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 72px;
+  padding: 13px 8px;
+  border-radius: 14px;
+}
+.payoutRow:hover {
+  background: rgb(255 255 255 / 4%);
+}
+.payoutIcon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  flex: none;
+  place-items: center;
+  border: 2px solid var(--finance-accent-border);
+  border-radius: 15px;
+  background: #17140f;
+  color: var(--finance-accent-light);
+}
+.payoutIdentity {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 2px;
+}
+.payoutIdentity strong {
+  font-size: 14px;
+  font-weight: 700;
+}
+.payoutIdentity span {
+  overflow: hidden;
+  color: #8a8a86;
+  font-size: 12px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.payoutStatus {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
 .payoutStatus[data-status='paid'],
-.payoutStatus[data-status='confirmed'] { background: rgb(110 231 155 / 14%); color: #6ee79b; }
+.payoutStatus[data-status='confirmed'] {
+  background: rgb(110 231 155 / 14%);
+  color: #6ee79b;
+}
 .payoutStatus[data-status='scheduled'],
-.payoutStatus[data-status='pending'] { background: rgb(255 176 32 / 14%); color: #ffb020; }
-.payoutStatus[data-status='refunded'] { background: rgb(240 133 122 / 12%); color: #f0857a; }
-.payoutStatus[data-status='cancelled'] { background: rgb(255 255 255 / 6%); color: #8a8a86; }
-.payoutAmount { min-width: 120px; color: #6ee79b; font-size: 17px; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
-.payoutStatus[data-status='scheduled'] + .payoutAmount { color: var(--finance-accent-light); }
-.payoutChevron { flex: none; color: #6a6a66; }
+.payoutStatus[data-status='pending'] {
+  background: rgb(255 176 32 / 14%);
+  color: #ffb020;
+}
+.payoutStatus[data-status='refunded'] {
+  background: rgb(240 133 122 / 12%);
+  color: #f0857a;
+}
+.payoutStatus[data-status='cancelled'] {
+  background: rgb(255 255 255 / 6%);
+  color: #8a8a86;
+}
+.payoutAmount {
+  min-width: 120px;
+  color: #6ee79b;
+  font-size: 17px;
+  font-weight: 800;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.payoutStatus[data-status='scheduled'] + .payoutAmount {
+  color: var(--finance-accent-light);
+}
+.payoutChevron {
+  flex: none;
+  color: #6a6a66;
+}
 
-.ordersToolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-.ordersSearch { width: min(340px, 100%); padding: 11px 14px; border-radius: 12px; }
-.orderStatusFilters { display: flex; gap: 4px; padding: 4px; border: 1px solid rgb(255 255 255 / 8%); border-radius: 12px; background: #141414; overflow-x: auto; }
-.orderStatusFilters button { min-height: 34px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: #8a8a86; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.ordersToolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.ordersSearch {
+  width: min(340px, 100%);
+  padding: 11px 14px;
+  border-radius: 12px;
+}
+.orderStatusFilters {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 12px;
+  background: #141414;
+  overflow-x: auto;
+}
+.orderStatusFilters button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #8a8a86;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
 .orderStatusFilters button:hover,
-.orderStatusFilters button[aria-pressed='true'] { background: #262626; color: #f5f5f3; }
-.ordersTableWrap { overflow-x: auto; border: 1px solid rgb(255 255 255 / 7%); border-radius: 18px; background: rgb(20 20 20 / 50%); }
-.ordersTable { width: 100%; min-width: 760px; border-collapse: collapse; }
-.ordersTable th { padding: 13px 20px; border-bottom: 1px solid rgb(255 255 255 / 7%); color: #6a6a66; font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-align: left; text-transform: uppercase; }
-.ordersTable th button { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; font-size: inherit; font-weight: inherit; letter-spacing: inherit; text-transform: inherit; }
-.ordersTable th button:hover { color: #f5f5f3; }
-.ordersTable td { padding: 14px 20px; border-bottom: 1px solid rgb(255 255 255 / 5%); color: #c9c9c6; font-size: 13px; font-weight: 600; white-space: nowrap; }
-.ordersTable tr:last-child td { border-bottom: 0; }
-.ordersTable tbody tr:hover { background: rgb(255 255 255 / 3%); }
-.ordersTable td:first-child { display: flex; align-items: center; gap: 12px; color: #f5f5f3; }
-.orderAvatar { width: 36px; height: 36px; display: grid; flex: none; place-items: center; border-radius: 50%; color: #fff; font-size: 11px; font-weight: 800; }
-.avatarOrange { background: linear-gradient(135deg, #ff5a1f, #8b2109); }
-.avatarViolet { background: linear-gradient(135deg, #8b5cf6, #33205f); }
-.avatarTeal { background: linear-gradient(135deg, #00c2a8, #075e56); }
-.avatarPink { background: linear-gradient(135deg, #ec4899, #6e153f); }
-.avatarGold { background: linear-gradient(135deg, #e9c46a, #795f16); }
-.avatarIndigo { background: linear-gradient(135deg, #6366f1, #25265f); }
-.orderIdentity { min-width: 0; display: grid; gap: 3px; }
-.orderIdentity strong { overflow: hidden; font-size: 14px; text-overflow: ellipsis; }
-.orderIdentity small { color: #6a6a66; font-size: 12px; font-weight: 500; }
-.orderActions { position: relative; text-align: right; }
-.orderActions > button { width: 30px; height: 30px; display: inline-grid; place-items: center; border: 0; border-radius: 9px; background: transparent; color: #8a8a86; cursor: pointer; }
+.orderStatusFilters button[aria-pressed='true'] {
+  background: #262626;
+  color: #f5f5f3;
+}
+.ordersTableWrap {
+  overflow-x: auto;
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 18px;
+  background: rgb(20 20 20 / 50%);
+}
+.ordersTable {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+.ordersTable th {
+  padding: 13px 20px;
+  border-bottom: 1px solid rgb(255 255 255 / 7%);
+  color: #6a6a66;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+.ordersTable th button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+.ordersTable th button:hover {
+  color: #f5f5f3;
+}
+.ordersTable td {
+  padding: 14px 20px;
+  border-bottom: 1px solid rgb(255 255 255 / 5%);
+  color: #c9c9c6;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ordersTable tr:last-child td {
+  border-bottom: 0;
+}
+.ordersTable tbody tr:hover {
+  background: rgb(255 255 255 / 3%);
+}
+.ordersTable td:first-child {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #f5f5f3;
+}
+.orderAvatar {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+.avatarOrange {
+  background: linear-gradient(135deg, #ff5a1f, #8b2109);
+}
+.avatarViolet {
+  background: linear-gradient(135deg, #8b5cf6, #33205f);
+}
+.avatarTeal {
+  background: linear-gradient(135deg, #00c2a8, #075e56);
+}
+.avatarPink {
+  background: linear-gradient(135deg, #ec4899, #6e153f);
+}
+.avatarGold {
+  background: linear-gradient(135deg, #e9c46a, #795f16);
+}
+.avatarIndigo {
+  background: linear-gradient(135deg, #6366f1, #25265f);
+}
+.orderIdentity {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.orderIdentity strong {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+}
+.orderIdentity small {
+  color: #6a6a66;
+  font-size: 12px;
+  font-weight: 500;
+}
+.orderActions {
+  position: relative;
+  text-align: right;
+}
+.orderActions > button {
+  width: 30px;
+  height: 30px;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #8a8a86;
+  cursor: pointer;
+}
 .orderActions > button:hover,
-.orderActions > button[aria-expanded='true'] { background: rgb(255 255 255 / 8%); color: #f5f5f3; }
-.orderMenu { position: absolute; z-index: 20; top: calc(100% - 5px); right: 12px; width: 168px; display: grid; gap: 2px; padding: 6px; border: 1px solid rgb(255 255 255 / 10%); border-radius: 12px; background: rgb(24 24 24 / 98%); box-shadow: 0 16px 40px rgb(0 0 0 / 50%); }
-.orderMenu button { padding: 9px 11px; border: 0; border-radius: 8px; background: transparent; color: #8a8a86; cursor: not-allowed; font: inherit; font-size: 13px; text-align: left; }
-.orderMenu button:disabled { opacity: .65; }
-.financeEmpty { padding: 36px 20px; color: #8a8a86; font-size: 13px; text-align: center; }
+.orderActions > button[aria-expanded='true'] {
+  background: rgb(255 255 255 / 8%);
+  color: #f5f5f3;
+}
+.orderMenu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% - 5px);
+  right: 12px;
+  width: 168px;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 12px;
+  background: rgb(24 24 24 / 98%);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 50%);
+}
+.orderMenu button {
+  padding: 9px 11px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #8a8a86;
+  cursor: not-allowed;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+}
+.orderMenu button:disabled {
+  opacity: 0.65;
+}
+.financeEmpty {
+  padding: 36px 20px;
+  color: #8a8a86;
+  font-size: 13px;
+  text-align: center;
+}
 
-.accountGrid { display: grid; grid-template-columns: repeat(2, minmax(280px, 1fr)); gap: 20px; max-width: 900px; }
-.accountPanel { padding: 26px; border: 1px solid rgb(255 255 255 / 6%); border-radius: 20px; background: #141414; }
-.accountPanel h2 { margin: 0 0 4px; font-size: 17px; font-weight: 700; }
-.accountPanel > p { margin: 0 0 22px; color: #8a8a86; font-size: 13px; }
-.accountForm { display: grid; gap: 16px; }
-.accountForm label { display: grid; gap: 8px; color: #c9c9c6; font-size: 13px; font-weight: 600; }
-.accountForm input { width: 100%; min-height: 46px; box-sizing: border-box; padding: 0 14px; border: 1px solid rgb(255 255 255 / 10%); border-radius: 12px; background: #0d0d0d; color: #f5f5f3; font: inherit; font-size: 14px; font-weight: 500; }
-.accountFormRow { display: flex; gap: 14px; }
-.accountFormRow label { flex: 1; }
-.unavailableSave { width: 100%; min-height: 46px; margin-top: 4px; }
-.paymentCard { position: relative; display: grid; gap: 18px; min-height: 150px; overflow: hidden; margin-bottom: 22px; padding: 22px; border-radius: 16px; background: linear-gradient(120deg, #2a1206, #160b04); }
-.paymentCard::after { position: absolute; top: -30px; right: -20px; width: 180px; height: 180px; background: radial-gradient(circle, var(--finance-payment-glow), transparent 68%); content: ''; }
+.accountGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  gap: 20px;
+  max-width: 900px;
+}
+.accountPanel {
+  padding: 26px;
+  border: 1px solid rgb(255 255 255 / 6%);
+  border-radius: 20px;
+  background: #141414;
+}
+.accountPanel h2 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 700;
+}
+.accountPanel > p {
+  margin: 0 0 22px;
+  color: #8a8a86;
+  font-size: 13px;
+}
+.accountForm {
+  display: grid;
+  gap: 16px;
+}
+.accountForm label {
+  display: grid;
+  gap: 8px;
+  color: #c9c9c6;
+  font-size: 13px;
+  font-weight: 600;
+}
+.accountForm input {
+  width: 100%;
+  min-height: 46px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 12px;
+  background: #0d0d0d;
+  color: #f5f5f3;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+}
+.accountFormRow {
+  display: flex;
+  gap: 14px;
+}
+.accountFormRow label {
+  flex: 1;
+}
+.unavailableSave {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 4px;
+}
+.paymentCard {
+  position: relative;
+  display: grid;
+  gap: 18px;
+  min-height: 150px;
+  overflow: hidden;
+  margin-bottom: 22px;
+  padding: 22px;
+  border-radius: 16px;
+  background: linear-gradient(120deg, #2a1206, #160b04);
+}
+.paymentCard::after {
+  position: absolute;
+  top: -30px;
+  right: -20px;
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle, var(--finance-payment-glow), transparent 68%);
+  content: '';
+}
 .paymentCard > span,
 .paymentCard > strong,
-.paymentCard > div { position: relative; z-index: 1; }
-.paymentCard > span { color: #d8c4b8; font-size: 13px; }
-.paymentCard > strong { font-size: 20px; letter-spacing: .08em; }
-.paymentCard > div { display: flex; justify-content: space-between; color: #d8c4b8; font-size: 13px; }
-.accountNote { grid-column: 1 / -1; display: inline-flex; align-items: center; gap: 8px; color: #8a8a86; font-size: 12px; }
-.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); clip-path: inset(50%); white-space: nowrap; }
+.paymentCard > div {
+  position: relative;
+  z-index: 1;
+}
+.paymentCard > span {
+  color: #d8c4b8;
+  font-size: 13px;
+}
+.paymentCard > strong {
+  font-size: 20px;
+  letter-spacing: 0.08em;
+}
+.paymentCard > div {
+  display: flex;
+  justify-content: space-between;
+  color: #d8c4b8;
+  font-size: 13px;
+}
+.accountNote {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #8a8a86;
+  font-size: 12px;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 
 .financePage a:focus-visible,
 .financePage button:focus-visible,
-.financePage input:focus-visible { outline: 2px solid var(--finance-focus); outline-offset: 2px; }
+.financePage input:focus-visible {
+  outline: 2px solid var(--finance-focus);
+  outline-offset: 2px;
+}
 
 @media (max-width: 900px) {
   .financeTopGrid,
   .financeMetricGrid,
-  .accountGrid { grid-template-columns: 1fr; }
-  .accountGrid { max-width: none; }
-  .accountNote { grid-column: auto; }
-  .sectionHeader { align-items: flex-start; flex-direction: column; }
-  .payoutControls { width: 100%; }
-  .financeSearch { flex: 1; }
-  .ordersToolbar { align-items: stretch; flex-direction: column; }
-  .ordersSearch { width: auto; }
-  .orderStatusFilters { width: 100%; }
+  .accountGrid {
+    grid-template-columns: 1fr;
+  }
+  .accountGrid {
+    max-width: none;
+  }
+  .accountNote {
+    grid-column: auto;
+  }
+  .sectionHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .payoutControls {
+    width: 100%;
+  }
+  .financeSearch {
+    flex: 1;
+  }
+  .ordersToolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .ordersSearch {
+    width: auto;
+  }
+  .orderStatusFilters {
+    width: 100%;
+  }
 }
 
 @media (max-width: 560px) {
-  .financeHeader h1 { font-size: 27px; }
-  .financeTabs { width: 100%; overflow-x: auto; }
-  .financeTab { flex: 1; justify-content: center; padding-inline: 11px; font-size: 12px; }
+  .financeHeader h1 {
+    font-size: 27px;
+  }
+  .financeTabs {
+    width: 100%;
+    overflow-x: auto;
+  }
+  .financeTab {
+    flex: 1;
+    justify-content: center;
+    padding-inline: 11px;
+    font-size: 12px;
+  }
   .balanceHero,
-  .bankCard { min-height: 250px; padding: 22px; border-radius: 20px; }
-  .balanceActions { align-items: stretch; flex-direction: column; }
+  .bankCard {
+    min-height: 250px;
+    padding: 22px;
+    border-radius: 20px;
+  }
+  .balanceActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
   .financePrimaryAction,
-  .financeSecondaryAction { width: 100%; }
-  .bankNumber { font-size: 16px; letter-spacing: .1em; }
-  .bankCardIdentity { align-items: flex-start; flex-direction: column; }
+  .financeSecondaryAction {
+    width: 100%;
+  }
+  .bankNumber {
+    font-size: 16px;
+    letter-spacing: 0.1em;
+  }
+  .bankCardIdentity {
+    align-items: flex-start;
+    flex-direction: column;
+  }
   .payoutSection,
-  .ordersSection { padding: 18px 14px; border-radius: 18px; }
-  .payoutControls { align-items: stretch; flex-direction: column; }
-  .financeSearch { width: auto; }
-  .rangeControl > button { width: 100%; justify-content: space-between; }
-  .rangeMenu { right: auto; left: 0; width: 100%; }
-  .payoutRow { gap: 10px; padding-inline: 0; }
-  .payoutIcon { width: 40px; height: 40px; border-radius: 12px; }
-  .payoutStatus { padding-inline: 8px; font-size: 10px; }
-  .payoutAmount { min-width: auto; font-size: 14px; }
-  .payoutChevron { display: none; }
-  .accountPanel { padding: 20px 16px; }
-  .accountFormRow { flex-direction: column; }
+  .ordersSection {
+    padding: 18px 14px;
+    border-radius: 18px;
+  }
+  .payoutControls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .financeSearch {
+    width: auto;
+  }
+  .rangeControl > button {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .rangeMenu {
+    right: auto;
+    left: 0;
+    width: 100%;
+  }
+  .payoutRow {
+    gap: 10px;
+    padding-inline: 0;
+  }
+  .payoutIcon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+  .payoutStatus {
+    padding-inline: 8px;
+    font-size: 10px;
+  }
+  .payoutAmount {
+    min-width: auto;
+    font-size: 14px;
+  }
+  .payoutChevron {
+    display: none;
+  }
+  .accountPanel {
+    padding: 20px 16px;
+  }
+  .accountFormRow {
+    flex-direction: column;
+  }
 }

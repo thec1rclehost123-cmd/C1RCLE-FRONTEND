@@ -251,14 +251,12 @@ export function HomeFeaturedDropsClient({ content }: { content: HomeFeaturedDrop
               cardRefs.current[index] = node;
             }}
             href="/explore"
-            aria-label={`Open ${event.title}`}
             className="group absolute left-1/2 top-[43%] overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#0b0807] text-left shadow-[0_28px_75px_rgba(0,0,0,0.62)] outline-none [transform-style:preserve-3d] transition-[transform,opacity,border-color,box-shadow] duration-[1100ms] ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-[#ff6b4a]/45 hover:shadow-[0_34px_90px_rgba(255,68,0,0.16)] focus-visible:ring-2 focus-visible:ring-[#ff6b4a] motion-reduce:transition-none"
           >
             <Image
               src={event.image}
               alt=""
               fill
-              unoptimized
               sizes="(max-width: 640px) 200px, (max-width: 1024px) 258px, 310px"
               className="object-cover transition-transform duration-700 group-hover:scale-[1.035] motion-reduce:transition-none"
             />

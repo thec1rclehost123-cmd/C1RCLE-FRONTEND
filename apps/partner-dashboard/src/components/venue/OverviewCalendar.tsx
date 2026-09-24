@@ -48,7 +48,9 @@ export function OverviewCalendar() {
         className={className('trigger')}
         aria-haspopup="dialog"
         aria-expanded={open}
-        onClick={() => { setOpen((value) => !value); }}
+        onClick={() => {
+          setOpen((value) => !value);
+        }}
       >
         <ExternalLinkIcon size={16} strokeWidth={1.7} aria-hidden="true" />
         Pop-out calendar

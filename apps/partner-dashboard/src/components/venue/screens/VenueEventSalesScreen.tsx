@@ -2,7 +2,6 @@ import Link from 'next/link';
 
 import { EventOrdersTable } from '../event-detail/EventOrdersTable';
 import { EventSalesChart } from '../event-detail/EventSalesChart';
-
 import styles from '../event-detail/VenueEventDetail.module.css';
 
 import type { VenueEventSalesModel } from '../event-detail-model';

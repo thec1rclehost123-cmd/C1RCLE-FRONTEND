@@ -7,7 +7,7 @@ export function HomeAppReview() {
     <>
       <section
         aria-labelledby="home-app-review-heading"
-        className="flex flex-col items-center justify-center bg-black px-6 py-24 text-white md:py-32"
+        className="defer-offscreen-render flex flex-col items-center justify-center bg-black px-6 py-24 text-white md:py-32"
       >
         <div className="mx-auto flex max-w-4xl flex-col items-center text-center">
           <h2
@@ -27,7 +27,7 @@ export function HomeAppReview() {
 
       <section
         aria-label="Life inside THE C1RCLE"
-        className="relative h-[100svh] min-h-[560px] w-full overflow-hidden bg-black"
+        className="defer-offscreen-render relative h-[100svh] min-h-[560px] w-full overflow-hidden bg-black"
       >
         <HomePartyVideoClient
           desktopSrc="/home/video/party-desktop.m4v"
@@ -46,9 +46,6 @@ function StoreLink({ href, store }: { href: string; store: 'apple' | 'google' })
   return (
     <Link
       href={href}
-      aria-label={
-        apple ? 'Explore the app for Apple devices' : 'Explore the app for Android devices'
-      }
       className="flex w-[210px] items-center justify-center gap-3 rounded-xl border border-white/20 bg-black px-5 py-2.5 text-white transition-colors hover:bg-zinc-900 motion-reduce:transition-none"
     >
       {apple ? <AppleIcon /> : <GooglePlayIcon />}

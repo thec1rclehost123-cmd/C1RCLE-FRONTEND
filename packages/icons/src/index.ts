@@ -117,4 +117,22 @@ export {
   Wine as BottleServiceIcon,
 } from 'lucide-react';
 
+/**
+ * Onboarding / landing icon set.
+ *
+ * These are the icon needs of the partner onboarding wizard and the
+ * pre-login marketing/landing surfaces. Same rule as the sets above:
+ * names describe product meaning, which lets the underlying lucide asset
+ * be swapped without touching call sites.
+ */
+export {
+  Zap as InstantIcon,
+  CheckCircle2 as VerifiedTickIcon,
+  Briefcase as BusinessIcon,
+  ShieldCheck as ComplianceIcon,
+  Sparkles as AssistantIcon,
+  Building as CompanyIcon,
+  Upload as UploadIcon,
+} from 'lucide-react';
+
 export type { LucideProps as IconProps } from 'lucide-react';

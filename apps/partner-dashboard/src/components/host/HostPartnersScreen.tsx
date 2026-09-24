@@ -48,25 +48,25 @@ export function HostPartnersScreen({
 
   const myPartners = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const base = hostPartners.filter(p => p.kind === kind && p.status !== 'Discover');
+    const base = hostPartners.filter((p) => p.kind === kind && p.status !== 'Discover');
     if (!q) return base;
-    return base.filter(p => `${p.name} ${p.city}`.toLowerCase().includes(q));
+    return base.filter((p) => `${p.name} ${p.city}`.toLowerCase().includes(q));
   }, [kind, query]);
 
   const findPartners = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const base = hostPartners.filter(p => p.kind === kind && p.status === 'Discover');
-    return base.filter(p => {
+    const base = hostPartners.filter((p) => p.kind === kind && p.status === 'Discover');
+    return base.filter((p) => {
       if (q && !`${p.name} ${p.city}`.toLowerCase().includes(q)) return false;
       if (city !== 'All cities' && p.city !== city) return false;
       return true;
     });
   }, [kind, query, city]);
 
-  const cities = ['All cities', ...new Set(hostPartners.map(p => p.city))];
+  const cities = ['All cities', ...new Set(hostPartners.map((p) => p.city))];
   const selectedLastEvent = selected
     ? hostEvents
-        .filter(event => event.venue === selected.name && event.status === 'Completed')
+        .filter((event) => event.venue === selected.name && event.status === 'Completed')
         .at(-1)
     : null;
 
@@ -76,7 +76,11 @@ export function HostPartnersScreen({
       <header className={s('header')}>
         <div>
           <h1>
-            {view === 'find' ? 'Find partners' : view === 'requests' ? 'Partnership requests' : 'Partners'}
+            {view === 'find'
+              ? 'Find partners'
+              : view === 'requests'
+                ? 'Partnership requests'
+                : 'Partners'}
           </h1>
           <p>
             {view === 'find'
@@ -144,11 +148,15 @@ export function HostPartnersScreen({
                   'Action',
                 ]}
               />
-              {myPartners.map(p => (
+              {myPartners.map((p) => (
                 <div key={p.id} className={s('partnerRow')} role="row">
                   <div role="cell" className={s('identity')}>
                     <span className={s('avatar')} data-tone="amber">
-                      {p.name.split(' ').map(w => w[0]).join('').slice(0, 2)}
+                      {p.name
+                        .split(' ')
+                        .map((w) => w[0])
+                        .join('')
+                        .slice(0, 2)}
                     </span>
                     <span>
                       <strong>{p.name}</strong>
@@ -164,7 +172,7 @@ export function HostPartnersScreen({
                   <span role="cell" className={s('eventCell')}>
                     {(() => {
                       const lastEvent = hostEvents
-                        .filter(event => event.venue === p.name && event.status === 'Completed')
+                        .filter((event) => event.venue === p.name && event.status === 'Completed')
                         .at(-1);
                       return lastEvent ? (
                         <>
@@ -176,14 +184,17 @@ export function HostPartnersScreen({
                       );
                     })()}
                   </span>
-                  <span role="cell" className={p.status === 'Active' ? s('positive') : s('pending')}>
+                  <span
+                    role="cell"
+                    className={p.status === 'Active' ? s('positive') : s('pending')}
+                  >
                     {p.status}
                   </span>
                   <span role="cell">
                     <button
                       type="button"
                       className={s('secondaryAction')}
-                      onClick={e => {
+                      onClick={(e) => {
                         triggerRef.current = e.currentTarget;
                         setSelected(p);
                       }}
@@ -214,7 +225,7 @@ export function HostPartnersScreen({
                   setCity(e.target.value);
                 }}
               >
-                {cities.map(c => (
+                {cities.map((c) => (
                   <option key={c}>{c}</option>
                 ))}
               </select>
@@ -228,28 +239,36 @@ export function HostPartnersScreen({
             </section>
           ) : (
             <div className={s('cardGrid')}>
-              {findPartners.map(p => (
+              {findPartners.map((p) => (
                 <article key={p.id} className={s('partnerCard')}>
-                <div className={s('portrait')} data-tone="amber">
-                  <span>{p.name.split(' ').map(w => w[0]).join('').slice(0, 2)}</span>
-                  {p.verified ? (
-                    <em>
-                      <CheckIcon size={13} aria-hidden="true" /> Verified
-                    </em>
-                  ) : null}
-                </div>
-                <h2>{p.name}</h2>
-                <p>{p.kind === 'venue' ? 'Venue' : 'Promoter'} · {p.city}</p>
-                <small>{p.detail}</small>
-                <button
-                  type="button"
-                  onClick={e => {
-                    triggerRef.current = e.currentTarget;
-                    setSelected(p);
-                  }}
-                >
-                  View profile
-                </button>
+                  <div className={s('portrait')} data-tone="amber">
+                    <span>
+                      {p.name
+                        .split(' ')
+                        .map((w) => w[0])
+                        .join('')
+                        .slice(0, 2)}
+                    </span>
+                    {p.verified ? (
+                      <em>
+                        <CheckIcon size={13} aria-hidden="true" /> Verified
+                      </em>
+                    ) : null}
+                  </div>
+                  <h2>{p.name}</h2>
+                  <p>
+                    {p.kind === 'venue' ? 'Venue' : 'Promoter'} · {p.city}
+                  </p>
+                  <small>{p.detail}</small>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      triggerRef.current = e.currentTarget;
+                      setSelected(p);
+                    }}
+                  >
+                    View profile
+                  </button>
                 </article>
               ))}
             </div>
@@ -285,7 +304,7 @@ export function HostPartnersScreen({
               columns={['Partner', 'Type', 'Request', 'Date', 'Status', 'Action']}
             />
             {subTab === 'sent' ? (
-              hostSlotRequests.map(r => (
+              hostSlotRequests.map((r) => (
                 <div key={r.id} className={s('partnerRow')} role="row">
                   <div role="cell" className={s('identity')}>
                     <span>
@@ -305,7 +324,10 @@ export function HostPartnersScreen({
                     <strong>{r.date}</strong>
                     <small>Updated {r.updatedAt}</small>
                   </span>
-                  <span role="cell" className={r.status === 'Accepted' ? s('positive') : s('pending')}>
+                  <span
+                    role="cell"
+                    className={r.status === 'Accepted' ? s('positive') : s('pending')}
+                  >
                     {r.status}
                   </span>
                   <span role="cell">
@@ -364,7 +386,15 @@ export function HostPartnersScreen({
             ? `${selected.kind === 'venue' ? 'Venue' : 'Promoter'} · ${selected.city}${selected.verified ? ' · Verified' : ''}`
             : ''
         }
-        initials={selected ? selected.name.split(' ').map(w => w[0]).join('').slice(0, 2) : ''}
+        initials={
+          selected
+            ? selected.name
+                .split(' ')
+                .map((w) => w[0])
+                .join('')
+                .slice(0, 2)
+            : ''
+        }
         tone="amber"
       >
         {selected ? (

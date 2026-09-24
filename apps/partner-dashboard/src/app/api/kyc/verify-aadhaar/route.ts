@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export async function POST() {
+export function POST() {
   return NextResponse.json({
     success: true,
     verified: true,

@@ -1,46 +1,19 @@
 # Founder Tasks — Backend Phase 5 completion + unblock the frontend interns
 
-> **▶ 2026-08-31 UPDATE.** A full doc audit changed the backend priority. `SPRINT-2026-08-31.md`
-> is now the authority for this front — read it first. Summary of what's new since 2026-08-29:
-> - **P0-A (new, blocks everything): green `pnpm check`.** lint fails (~900 core `no-explicit-any`),
->   boundaries fails (razorpay `fetch()` — this doc's Task B3), one test fails (`compare-and-set.test.ts`
->   — Shriyash root-causes it). Land P0-A before any Phase 4 PR merges.
-> - **P0-B (new): docs reconciliation** — ROADMAP + phase-04/05 files + stale-plan banners (Shriyash).
-> - **P1-A (new, the big item): Phase 4 HTTP route rebuild.** Phase 4's routes (checkout / payments /
->   orders / tickets / wallet / webhooks / public) were **never committed** — lost in the 2026-08-28
->   incident, `a1bd2e7` only committed `v2-services.ts`. Domain/services/adapters/contracts are
->   intact. Split: PR1 public/discovery (Ayush) → PR2 checkout/payments/webhook (Shriyash) ∥ PR3
->   orders/tickets/wallet (Ayush; Sagar helps wk2). See `SPRINT-2026-08-31.md` §P1-A.
-> - **P1-C: Phase 5 close-out** = Task A2 + Task B1 + Task B2 below, unchanged, **plus** 5
->   domain-model unit test files (Sagar, wk2).
-> - Task B4 (any-ratchet) is folded into P0-A. Task B3 (razorpay boundary) is folded into P0-A.
->
-> **▶ 2026-09-01 — done since:**
-> - **Backend deployed** — `https://circle-v2-backend.onrender.com` (Render, Docker, firestore).
->   `C1RCLE-BACKEND` `dc7bb79` added `Dockerfile` + `.dockerignore`. Interns hit it directly.
-> - **Auth "org-less user" bug fixed** (`dc7bb79`) — session-only actor in `plugins/auth.ts`;
->   `X-Organization-Id` optional on `GET/POST /organizations`. A fresh signup can now reach
->   onboarding + org routes on the real driver. 133/133 gateway tests + live chain verified.
->   `plugins/auth.test.ts` added.
-> - **Onboarding flow specced** for the interns — `ONBOARDING-FLOW-SPEC-2026-09-01.md`.
-> - **Still open (P0-A):** core `any` ratchet, razorpay boundary, `compare-and-set.test.ts` root-cause.
->   Phase 4 route rebuild — not started.
->
-> Original 2026-08-29 text below stands for the per-task detail.
+**Who:** you + co-founder. Two tasks, one each. **Repo: `C1RCLE-BACKEND` @ `main`.**
+(The 3 interns are on `C1RCLE-FRONTEND` — see `INTERN-TASKS-2026-08-27.md`. They
+never touch the backend; you own it.)
 
-**Who:** Task A = **Shriyash**, Task B = **Ayush**. **Repo: `C1RCLE-BACKEND` @
-`main`.** (Sagar/Keshvi/Anil/Majid are on `C1RCLE-FRONTEND` — see
-`INTERN-TASKS-2026-08-27.md`. They never touch the backend; the founders own it.)
+**Why these two:** the frontend auth slice (Phases 3–8) has exactly one hard
+backend dependency — onboarding document upload — and backend Phase 5 still has
+six honest-501 routes + two boundary/debt items ("Track G"). Founder A clears the
+frontend blocker then takes the scanner-side gaps; Founder B takes the
+wallet/stats/payments side. The two task sets touch different domains, so you
+don't collide.
 
-**Why this split:** the frontend auth slice had exactly one hard backend
-dependency — onboarding document upload (**A1, now DONE**) — and backend Phase 5
-still has six honest-501 routes + two boundary/debt items ("Track G"). Shriyash
-(Task A) took the blocker then the scanner-side gaps; Ayush (Task B) takes the
-wallet/stats/payments side. Different domains, no collision.
-
-**Status:** **A1 shipped** (`2a9a4b3`). Nothing else here blocks a frontend
-person — do it in parallel, any order. Shriyash also owns Phase 8 E2E and
-reviews every frontend PR, so Task A2 fits around that.
+**Priority:** Founder A **Task A1 first** — it is the only thing blocking an
+intern (Track 3, onboarding wizard step 3). Everything else is Phase 5 cleanup
+that does not block the frontend slice; do it in parallel, any order.
 
 ---
 
@@ -83,23 +56,12 @@ reviews every frontend PR, so Task A2 fits around that.
 
 ---
 
-## TASK A (Shriyash) — Onboarding document upload, then scanner-side Phase 5 gaps
+## FOUNDER A — Onboarding document upload, then scanner-side Phase 5 gaps
 
-### Task A1 — Signed-URL issuing for onboarding KYC documents  ✅ DONE (`C1RCLE-BACKEND` `2a9a4b3`, contracts `fb45fc1` on FE `staging`)
-
-`ObjectStoragePort` + `EchoObjectStorage` (memory) + `FirebaseObjectStorage`
-(v4 signed PUT, jpeg/png/webp, ≤5 MiB, 10-min TTL) + `OnboardingService.issueDocumentUploadUrl`
-+ `POST /api/v2/onboarding/applications/:requestId/documents/upload-url` +
-`documentUploadUrlRequestSchema` / `documentUploadUrlDtoSchema`. 4 new
-integration tests. `FIREBASE_STORAGE_BUCKET` env (defaults `<project>.firebasestorage.app`).
-Intern 3's onboarding wizard is unblocked. Original brief kept below for reference.
-
----
-
-<details><summary>Original A1 brief</summary>
+### Task A1 — Signed-URL issuing for onboarding KYC documents ⟵ do this first
 
 **The gap:** `POST /api/v2/onboarding/applications/:requestId/documents` already
-exists and takes `{ label, storagePath }` — but a browser has no way to *get* a
+exists and takes `{ label, storagePath }` — but a browser has no way to _get_ a
 `storagePath` or push bytes anywhere. Track 3's onboarding wizard step 3 is
 stubbed purely because of this.
 
@@ -109,15 +71,15 @@ stubbed purely because of this.
    ```ts
    export interface ObjectStoragePort {
      issueUploadUrl(input: {
-       key: string;            // e.g. kyc/{userId}/{applicationId}/{label}
-       contentType: string;    // must be image/jpeg | image/png | image/webp
-       maxBytes: number;       // enforce ≤ 5 * 1024 * 1024
+       key: string; // e.g. kyc/{userId}/{applicationId}/{label}
+       contentType: string; // must be image/jpeg | image/png | image/webp
+       maxBytes: number; // enforce ≤ 5 * 1024 * 1024
      }): Promise<{
-       uploadUrl: string;      // the signed PUT URL
+       uploadUrl: string; // the signed PUT URL
        method: 'PUT';
-       headers: Record<string, string>;  // content-type the client must echo
-       storagePath: string;    // what the client passes back to .../documents
-       expiresAt: string;      // ISO-8601, ~10 min out
+       headers: Record<string, string>; // content-type the client must echo
+       storagePath: string; // what the client passes back to .../documents
+       expiresAt: string; // ISO-8601, ~10 min out
      }>;
    }
    ```
@@ -128,7 +90,7 @@ stubbed purely because of this.
      the interns' local dev and the E2E happy path.
    - `packages/core/src/infrastructure/firestore/…` (or a sibling GCS module) —
      real `@google-cloud/storage` v4 `getSignedUrl({ version: 'v4', action:
-     'write', expires, contentType })` against the KYC bucket. Reuse the
+'write', expires, contentType })` against the KYC bucket. Reuse the
      Firebase creds wiring already in `getFirestoreClient` / the app config
      (`config.firebase*`). Bucket name from config, not hardcoded.
 3. **Service** — `OnboardingService.issueDocumentUploadUrl(input, actor)` in
@@ -141,18 +103,22 @@ stubbed purely because of this.
      style).
 4. **Contract schemas** — `packages/contracts/src/contracts/onboarding.ts`:
    ```ts
-   export const documentUploadUrlRequestSchema = z.object({
-     label: onboardingDocumentLabelSchema,      // reuse the existing label enum
-     contentType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
-   }).strict();
+   export const documentUploadUrlRequestSchema = z
+     .object({
+       label: onboardingDocumentLabelSchema, // reuse the existing label enum
+       contentType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+     })
+     .strict();
 
-   export const documentUploadUrlDtoSchema = z.object({
-     uploadUrl: z.string().url(),
-     method: z.literal('PUT'),
-     headers: z.record(z.string()),
-     storagePath: z.string().min(1),
-     expiresAt: z.string().datetime(),
-   }).strict();
+   export const documentUploadUrlDtoSchema = z
+     .object({
+       uploadUrl: z.string().url(),
+       method: z.literal('PUT'),
+       headers: z.record(z.string()),
+       storagePath: z.string().min(1),
+       expiresAt: z.string().datetime(),
+     })
+     .strict();
    ```
 5. **Route** — `apps/api-gateway/src/routes/v2/onboarding.ts`:
    `POST /onboarding/applications/:requestId/documents/upload-url` —
@@ -165,7 +131,7 @@ stubbed purely because of this.
    application → 403/404; then `POST .../documents` with the returned
    `storagePath` succeeds and `POST .../submit` clears "missing documents".
 7. **Export + notify:** `node scripts/export-contracts.mjs --frontend
-   ../C1RCLE-FRONTEND`, ping the interns, add one line to
+../C1RCLE-FRONTEND`, ping the interns, add one line to
    `docs/superpowers/plans/2026-08-27-auth-foundation-plan.md` "Deferred /
    follow-up" marking the backend item done.
 
@@ -173,14 +139,12 @@ stubbed purely because of this.
 type → profile → upload-url → PUT (memory: skip) → documents → submit → approved
 entirely through `/api/v2`.
 
-</details>
-
-### Task A2 — `POST /door/override` + `GET /door/offline-manifest`  (Track G)
+### Task A2 — `POST /door/override` + `GET /door/offline-manifest` (Track G)
 
 Both are honest 501s in `apps/api-gateway/src/routes/v2/door/scanner-routes.ts`
 (~line 372 and ~line 399) because they need a domain decision, not route wiring.
 
-- **`/door/override`** — decide what an override *persists*. Recommended: a new
+- **`/door/override`** — decide what an override _persists_. Recommended: a new
   `overridden` terminal state on `ScanLedgerStatus`
   (`packages/core/src/domain/models/scan-ledger.ts`) with a `denied → overridden`
   FSM transition that records `overriddenBy` (actor) + `reason` + a link to the
@@ -188,7 +152,7 @@ Both are honest 501s in `apps/api-gateway/src/routes/v2/door/scanner-routes.ts`
   `ScannerService.overrideScan(input, actor)` (requires `ticket.override`, org
   check via the scanner session), wire the route, serialize, test the FSM guard
   (can't override an already-consumed scan).
-- **`/door/offline-manifest`** — only ship this if you also ship the *verifying*
+- **`/door/offline-manifest`** — only ship this if you also ship the _verifying_
   side. An HMAC-SHA256 manifest signed with `config.magicTicketSecret` (or a new
   `config.offlineManifestSecret`), and `syncOfflineScans` /
   `POST /door/offline-sync` **rejects** a manifest whose signature doesn't verify.
@@ -201,9 +165,9 @@ green; `door` suite green.
 
 ---
 
-## TASK B (Ayush) — Cover-wallet freeze/unfreeze, door stats, payment boundary, lint debt
+## FOUNDER B — Cover-wallet freeze/unfreeze, door stats, payment boundary, lint debt
 
-### Task B1 — Cover-wallet `freeze` / `unfreeze`  (Track G)
+### Task B1 — Cover-wallet `freeze` / `unfreeze` (Track G)
 
 Honest 501s in
 `apps/api-gateway/src/routes/v2/door/cover-wallet-routes.ts` (~line 301 and
@@ -230,7 +194,7 @@ Honest 501s in
    "freeze/unfreeze stay honest 501s" is rewritten; add: freeze then charge →
    rejected; freeze then unfreeze → charge works; double-freeze → conflict.
 
-### Task B2 — `GET /door/stats` (+ `/door/stats/ws`)  (Track G)
+### Task B2 — `GET /door/stats` (+ `/door/stats/ws`) (Track G)
 
 Both honest 501s in `apps/api-gateway/src/routes/v2/phase5-routes.ts`.
 
@@ -302,5 +266,6 @@ cd C1RCLE-BACKEND/apps/api-gateway
 #   (creds: thec1rcle/apps/api-gateway/.env.development — disposable dev sandbox)
 NODE_OPTIONS=--dns-result-order=ipv4first pnpm dev      # :8080
 ```
+
 Memory driver (`STORAGE_DRIVER=memory`) is fine for unit work and fabricates a
 dev actor; the signed-URL and auth paths need `firestore`.

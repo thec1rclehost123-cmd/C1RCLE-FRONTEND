@@ -89,7 +89,7 @@ import {
 } from '@c1rcle/icons';
 
 import type { IconProps as LucideIconProps } from '@c1rcle/icons';
-import type { ComponentType, CSSProperties } from 'react';
+import type { ComponentType } from 'react';
 
 const REGISTRY: Record<string, ComponentType<LucideIconProps>> = {
   archive: ArchiveIcon,
@@ -177,19 +177,17 @@ export interface IconProps {
   name: string;
   size?: number;
   color?: string;
-  style?: CSSProperties;
   className?: string;
 }
 
-export function Icon({ name, size = 16, color, style, className }: IconProps) {
+export function Icon({ name, size = 16, color, className }: IconProps) {
   const Cmp = REGISTRY[name];
   if (!Cmp) return null;
   return (
     <Cmp
       size={size}
       {...(color ? { color } : {})}
-      {...(className ? { className } : {})}
-      style={{ flex: 'none', ...style }}
+      className={`flex-none ${className ?? ''}`}
     />
   );
 }

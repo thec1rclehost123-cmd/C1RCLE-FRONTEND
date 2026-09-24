@@ -40,10 +40,21 @@ export const onboardingProfileSchema = z
   .strict();
 export type OnboardingProfileDto = z.infer<typeof onboardingProfileSchema>;
 
+/**
+ * A document's KYC review state — separate from `OnboardingStatus`. `pending`
+ * means uploaded but not yet reviewed; `verified`/`rejected` are a KYC
+ * reviewer's explicit call, never inferred from the application's own status.
+ */
+export const onboardingDocumentStatusSchema = z.enum(['pending', 'verified', 'rejected']);
+
 export const onboardingDocumentSchema = z.object({
   label: z.string().min(1).max(60),
   storagePath: z.string().min(1).max(500),
   uploadedAt: z.iso.datetime(),
+  status: onboardingDocumentStatusSchema,
+  reviewedBy: opaqueIdSchema.nullable(),
+  reviewedAt: z.iso.datetime().nullable(),
+  rejectionReason: z.string().nullable(),
 });
 
 export const onboardingRequestDtoSchema = z.object({
@@ -92,8 +103,24 @@ export const addOnboardingDocumentSchema = z
   .strict();
 export type AddOnboardingDocumentRequest = z.infer<typeof addOnboardingDocumentSchema>;
 
-/** The three KYC images V2 collects. */
-export const onboardingDocumentLabelSchema = z.enum(['id_front', 'id_back', 'selfie']);
+/**
+ * The KYC images V2 collects. `id_front`/`id_back`/`selfie` cover an
+ * individual applicant's identity step; the remaining four back the
+ * business-entity path (a registration document plus a separate identity
+ * set for the authorized signatory) — v1's label vocabulary (domain model's
+ * own comment: "id_front, id_back, selfie, cheque, registration_certificate…"),
+ * widened here to the exact set the signup wizard's business/signatory
+ * steps need.
+ */
+export const onboardingDocumentLabelSchema = z.enum([
+  'id_front',
+  'id_back',
+  'selfie',
+  'registration_certificate',
+  'sig_id_front',
+  'sig_id_back',
+  'sig_selfie',
+]);
 export type OnboardingDocumentLabel = z.infer<typeof onboardingDocumentLabelSchema>;
 
 /**
@@ -123,11 +150,28 @@ export const documentUploadUrlDtoSchema = z
   .strict();
 export type DocumentUploadUrlDto = z.infer<typeof documentUploadUrlDtoSchema>;
 
+/** Admin-side signed GET for one uploaded KYC document. */
+export const documentReadUrlDtoSchema = z
+  .object({
+    readUrl: z.string().min(1),
+    /** Epoch ms — the URL is unusable after this. */
+    expiresAt: z.number().int().positive(),
+  })
+  .strict();
+export type DocumentReadUrlDto = z.infer<typeof documentReadUrlDtoSchema>;
+
 export const verifyDocumentSchema = z
   .object({
     documentType: z.string().min(1).max(40),
     documentNumber: z.string().min(1).max(64),
     holderName: z.string().max(200).optional(),
+    /**
+     * A provider-issued proof rather than a value to format-validate —
+     * `documentType: 'phone'`'s GCP Identity Platform ID token from the
+     * client's `signInWithPhoneNumber` flow. Unused for every other
+     * documentType.
+     */
+    proofToken: z.string().min(1).max(4096).optional(),
   })
   .strict();
 export type VerifyDocumentRequest = z.infer<typeof verifyDocumentSchema>;
@@ -153,6 +197,14 @@ export const reviewOnboardingSchema = z
   .strict();
 export type ReviewOnboardingRequest = z.infer<typeof reviewOnboardingSchema>;
 
+/** KYC desk: rejecting a document always requires a reason (unlike verifying it). */
+export const rejectKycDocumentSchema = z
+  .object({
+    reason: z.string().min(1).max(2000),
+  })
+  .strict();
+export type RejectKycDocumentRequest = z.infer<typeof rejectKycDocumentSchema>;
+
 /**
  * The organization an approval created. Deliberately not `organizationDtoSchema`:
  * that one carries `role`, meaning *the caller's* role in the org, and the
@@ -176,13 +228,7 @@ export const approveOnboardingResultSchema = z.object({
   request: z.object({
     id: opaqueIdSchema,
     userId: opaqueIdSchema,
-    status: z.enum([
-      'draft',
-      'submitted',
-      'changes_requested',
-      'approved',
-      'rejected',
-    ]),
+    status: z.enum(['draft', 'submitted', 'changes_requested', 'approved', 'rejected']),
     requestedType: z.enum(['venue', 'host', 'promoter']),
     plan: z.enum(['basic', 'silver', 'diamond']),
     profile: z.object({
@@ -199,11 +245,7 @@ export const approveOnboardingResultSchema = z.object({
       registrationNumber: z.string().max(120).optional(),
       entityType: z.string().max(120).optional(),
     }),
-    documents: z.array(z.object({
-      label: z.string().min(1).max(60),
-      storagePath: z.string().min(1).max(500),
-      uploadedAt: z.iso.datetime(),
-    })),
+    documents: z.array(onboardingDocumentSchema),
     missingDocuments: z.array(z.string()),
     submittedAt: z.iso.datetime().nullable(),
     reviewedBy: opaqueIdSchema.nullable(),
@@ -233,13 +275,26 @@ export type ApproveOnboardingResult = z.infer<typeof approveOnboardingResultSche
 export const adminRoleSchema = z.enum(['super', 'admin', 'ops', 'finance', 'support']);
 
 export const adminActionSchema = z.enum([
+  'EVENT_PAUSE',
+  'EVENT_RESUME',
+  'EVENT_FORCE_PAUSE',
   'ONBOARDING_APPROVE',
   'VENUE_SUSPEND',
+  'VENUE_REINSTATE',
+  'ORGANIZATION_SUSPEND',
+  'ORGANIZATION_REINSTATE',
   'FINANCIAL_REFUND',
   'PAYOUT_BATCH_RUN',
+  'DISPUTE_RESOLVE',
+  'USER_BAN',
+  'USER_UNBAN',
   'ADMIN_PROVISION',
+  'ADMIN_ROLE_UPDATE',
   'COMMISSION_ADJUST',
   'PAYOUT_FREEZE',
+  'PAYOUT_RELEASE',
+  'PROMOTER_SUSPEND',
+  'PROMOTER_REINSTATE',
 ]);
 
 export const proposalStatusSchema = z.enum(['pending', 'approved', 'rejected', 'cancelled']);
@@ -295,9 +350,28 @@ export const adminAuditRecordDtoSchema = z.object({
   action: z.string(),
   targetType: z.string(),
   targetId: opaqueIdSchema,
+  /** Live-resolved display name for the target; `null` when unresolvable. */
+  targetName: z.string().nullable(),
   before: z.record(z.string(), z.unknown()).nullable(),
   after: z.record(z.string(), z.unknown()).nullable(),
   reason: z.string().nullable(),
   occurredAt: z.number().int().nonnegative(),
 });
 export type AdminAuditRecordDto = z.infer<typeof adminAuditRecordDtoSchema>;
+
+/**
+ * Global entity lookup (the "omnibox") — O(1) parallel doc-id fetches
+ * across known collections rather than a scan, ported from v1's
+ * `lookup/route.js`. `type` names which collection matched.
+ */
+export const adminLookupResultItemSchema = z.object({
+  type: z.enum(['venue', 'event', 'organization', 'user']),
+  id: opaqueIdSchema,
+  label: z.string(),
+});
+export type AdminLookupResultItem = z.infer<typeof adminLookupResultItemSchema>;
+
+export const adminLookupResponseSchema = z.object({
+  items: z.array(adminLookupResultItemSchema),
+});
+export type AdminLookupResponse = z.infer<typeof adminLookupResponseSchema>;

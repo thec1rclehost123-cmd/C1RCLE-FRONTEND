@@ -34,16 +34,30 @@ const subscribeToNavigationLayout = (onStoreChange: () => void) => {
 
 const getServerNavigationLayout = (): PartnerNavigationLayout => 'side';
 
-export function PartnerShell({ studio, interactionData, children }: { readonly studio: StudioRole; readonly interactionData: PartnerShellInteractionData; readonly children: ReactNode }) {
+export function PartnerShell({
+  studio,
+  interactionData,
+  children,
+}: {
+  readonly studio: StudioRole;
+  readonly interactionData: PartnerShellInteractionData;
+  readonly children: ReactNode;
+}) {
   const config = getStudioConfig(studio);
   const pathname = usePathname();
   const router = useRouter();
   const auth = useDashboardAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const navigationLayout = useSyncExternalStore(subscribeToNavigationLayout, getStoredNavigationLayout, getServerNavigationLayout);
+  const navigationLayout = useSyncExternalStore(
+    subscribeToNavigationLayout,
+    getStoredNavigationLayout,
+    getServerNavigationLayout,
+  );
   const userName = auth.profile?.displayName ?? 'Partner';
   const appClass = styles['app'] ?? '';
-  const activeLabel = config.navigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))?.label ?? config.label;
+  const activeLabel =
+    config.navigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+      ?.label ?? config.label;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -52,7 +66,9 @@ export function PartnerShell({ studio, interactionData, children }: { readonly s
       }
     };
     window.addEventListener('keydown', onKeyDown);
-    return () => { window.removeEventListener('keydown', onKeyDown); };
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+    };
   }, []);
 
   const signOut = async () => {
@@ -67,8 +83,23 @@ export function PartnerShell({ studio, interactionData, children }: { readonly s
   };
 
   return (
-    <div className={[appClass, navigationLayout === 'top' ? styles['appTopNavigation'] : '', 'partner-v3-app'].filter(Boolean).join(' ')} data-navigation-layout={navigationLayout}>
-      {navigationLayout === 'side' ? <PartnerSidebar config={config} pathname={pathname} onLayoutToggle={toggleNavigationLayout} /> : null}
+    <div
+      className={[
+        appClass,
+        navigationLayout === 'top' ? styles['appTopNavigation'] : '',
+        'partner-v3-app',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      data-navigation-layout={navigationLayout}
+    >
+      {navigationLayout === 'side' ? (
+        <PartnerSidebar
+          config={config}
+          pathname={pathname}
+          onLayoutToggle={toggleNavigationLayout}
+        />
+      ) : null}
       <div className={styles['main']}>
         <PartnerTopbar
           config={config}
@@ -78,13 +109,22 @@ export function PartnerShell({ studio, interactionData, children }: { readonly s
           notificationsData={interactionData.notifications}
           navigationLayout={navigationLayout}
           mobileOpen={mobileOpen}
-          onMobileToggle={() => { setMobileOpen((value) => !value); }}
+          onMobileToggle={() => {
+            setMobileOpen((value) => !value);
+          }}
           onLayoutToggle={toggleNavigationLayout}
           onSignOut={() => void signOut()}
         />
         <main className={styles['content']}>{children}</main>
       </div>
-      <MobileNavigation config={config} pathname={pathname} open={mobileOpen} onClose={() => { setMobileOpen(false); }} />
+      <MobileNavigation
+        config={config}
+        pathname={pathname}
+        open={mobileOpen}
+        onClose={() => {
+          setMobileOpen(false);
+        }}
+      />
     </div>
   );
 }

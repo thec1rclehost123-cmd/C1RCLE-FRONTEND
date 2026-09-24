@@ -38,13 +38,10 @@ vi.mock('@c1rcle/auth', () => ({
     isLoading: mockSessionState.status === 'unknown',
     session: mockSessionState.session,
   }),
-  useSessionStore: Object.assign(
-    () => mockSessionState,
-    {
-      getState: () => mockSessionState,
-      setState,
-    },
-  ),
+  useSessionStore: Object.assign(() => mockSessionState, {
+    getState: () => mockSessionState,
+    setState,
+  }),
 }));
 
 vi.mock('@c1rcle/providers', () => ({

@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import { Breadcrumbs } from '@/components/seo/Breadcrumbs';
+
 import { getEventAccentClasses, getGuestToneClass } from '../eventDetailPalette';
 
 import { EventPosterPanel } from './EventPosterPanel';
@@ -77,6 +79,13 @@ export function EventDetailView({ event }: { event: EventDetailFixture }) {
       <EventBackdrop accentTone={event.accentTone} />
 
       <div className="relative mx-auto max-w-[1380px] px-4 sm:px-6 lg:px-8">
+        <Breadcrumbs
+          items={[
+            { label: 'Home', href: '/' },
+            { label: 'Explore', href: '/explore' },
+            { label: event.title, href: `/event/${event.slug}` },
+          ]}
+        />
         <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-3 lg:grid-cols-[410px_minmax(0,1fr)] xl:grid-cols-[440px_minmax(0,1fr)]">
           <aside className="order-1 min-w-0 space-y-3 lg:sticky lg:top-24 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:self-start">
             <EventPosterPanel event={event} />

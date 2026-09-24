@@ -1,4 +1,5 @@
 import { createApiClient, isApiClientError } from '@c1rcle/api-client';
+import { getClientEnv } from '@c1rcle/config';
 import {
   authBridgeResponseSchema,
   loginRequestSchema,
@@ -23,8 +24,18 @@ interface LoginInput {
 /** Fixed, non-oracular message for any authentication failure. */
 const GENERIC_AUTH_FAILURE = 'Authentication failed';
 
-/** Non-httpOnly CSRF cookie the BFF sets on login/signup; echoed on cookie-authed calls. */
-const CSRF_COOKIE = 'c1rcle.csrf';
+/**
+ * Non-httpOnly CSRF cookie the BFF sets on login/signup; echoed on
+ * cookie-authed calls. Namespaced by `NEXT_PUBLIC_APP_ID` so guest-portal,
+ * partner-dashboard, and admin-console don't collide when run together on
+ * `localhost` (browsers key cookies by host, not port) — must match the
+ * BFF's own `CSRF_COOKIE` constant (each app's `src/lib/bff/auth-proxy.ts`).
+ * Resolved lazily (not a module-level const) so `getClientEnv()`'s
+ * validation runs at first use, not at import time.
+ */
+function csrfCookieName(): string {
+  return `${getClientEnv().NEXT_PUBLIC_APP_ID}.c1rcle.csrf`;
+}
 
 // Refresh-stampede guard: holds the in-flight promise so concurrent callers await the same one.
 let inFlightRefresh: Promise<boolean> | null = null;
@@ -49,7 +60,7 @@ function csrfHeaders(): Record<string, string> {
   if (typeof document === 'undefined') {
     return {};
   }
-  const match = new RegExp(`(?:^|;\\s*)${CSRF_COOKIE}=([^;]+)`).exec(document.cookie);
+  const match = new RegExp(`(?:^|;\\s*)${csrfCookieName()}=([^;]+)`).exec(document.cookie);
   return match?.[1] !== undefined ? { 'x-csrf-token': decodeURIComponent(match[1]) } : {};
 }
 

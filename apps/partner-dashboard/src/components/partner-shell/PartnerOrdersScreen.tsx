@@ -83,14 +83,16 @@ export function PartnerOrdersScreen({
               <input
                 type="search"
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => { setQuery(event.target.value); }}
                 placeholder="Search by name or order #"
               />
             </label>
             <label className={styles['statusFilter']}>
               <span className={styles['srOnly']}>Filter by status</span>
-              <select value={status} onChange={(event) => setStatus(event.target.value)}>
-                {statusOptions.map((option) => <option key={option}>{option}</option>)}
+              <select value={status} onChange={(event) => { setStatus(event.target.value); }}>
+                {statusOptions.map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
               </select>
             </label>
           </div>
@@ -113,7 +115,9 @@ export function PartnerOrdersScreen({
                   <th scope="col">Tickets</th>
                   <th scope="col">{kind === 'promoter' ? 'Attributed earnings' : 'Total'}</th>
                   <th scope="col">Status</th>
-                  <th scope="col"><span className={styles['srOnly']}>Actions</span></th>
+                  <th scope="col">
+                    <span className={styles['srOnly']}>Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>

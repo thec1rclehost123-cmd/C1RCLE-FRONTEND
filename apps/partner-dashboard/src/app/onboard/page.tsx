@@ -1,4 +1,4 @@
-import PageClient from './PageClient';
+import { OnboardingPage as PageClient } from './PageClient';
 
 export const metadata = {
   title: 'Onboarding | Partner Dashboard',

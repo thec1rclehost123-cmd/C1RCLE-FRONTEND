@@ -209,7 +209,8 @@ the existing `./src/**` glob and were removed.
 
 plus 7 new untracked files (~476 lines): `signup/page.tsx`, `signup/layout.tsx`,
 `lib/org/org-repository.ts`, `lib/org/active-org.ts` + its test, and `lib/access/use-org-access.ts`
-+ its test.
+
+- its test.
 
 ## Verifying it yourself
 

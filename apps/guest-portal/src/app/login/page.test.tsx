@@ -12,7 +12,9 @@ describe('LoginPage', () => {
 
     expect(screen.getByText(/GET IN/i)).toBeInTheDocument();
     expect(screen.getByText(loginFixture.hero.tagline)).toBeInTheDocument();
-    expect(screen.queryByText(/fixture data|ui preview|no authentication/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/fixture data|ui preview|no authentication/i),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /continue with apple/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /continue with phone number/i })).toBeInTheDocument();
@@ -25,7 +27,9 @@ describe('LoginPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /continue with apple/i }));
     expect(screen.getByRole('heading', { name: /what should we call you/i })).toBeInTheDocument();
-    expect(screen.queryByText(/signed in|account created|ui preview|fixture/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/signed in|account created|ui preview|fixture/i),
+    ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /go back/i }));
     fireEvent.click(screen.getByRole('button', { name: /continue with google/i }));

@@ -35,9 +35,18 @@ describe('VenueEventsScreen', () => {
     render(<VenueEventsScreen data={data} />);
 
     expect(screen.getByRole('heading', { name: 'Events' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /slot requests/i })).toHaveAttribute('href', '/partner/venue/slot-requests');
-    expect(screen.getByRole('link', { name: /create event/i })).toHaveAttribute('href', '/partner/venue/events/create');
-    expect(screen.getByRole('tab', { name: 'Analytics' })).toHaveAttribute('href', '/partner/venue/events/analytics');
+    expect(screen.getByRole('link', { name: /slot requests/i })).toHaveAttribute(
+      'href',
+      '/partner/venue/slot-requests',
+    );
+    expect(screen.getByRole('link', { name: /create event/i })).toHaveAttribute(
+      'href',
+      '/partner/venue/events/create',
+    );
+    expect(screen.getByRole('tab', { name: 'Analytics' })).toHaveAttribute(
+      'href',
+      '/partner/venue/events/analytics',
+    );
     expect(screen.getByRole('region', { name: 'Venue events gallery' })).toBeInTheDocument();
     expect(screen.getByText('Neon Nights: Afrobeats')).toBeInTheDocument();
   });
@@ -57,6 +66,9 @@ describe('VenueEventsScreen', () => {
     await user.click(screen.getByRole('button', { name: /^Live/ }));
     await user.click(screen.getByRole('button', { name: 'List view' }));
     expect(screen.getByRole('region', { name: 'Venue events list' })).toBeInTheDocument();
-    expect(replace).toHaveBeenLastCalledWith('/partner/venue/events?search=Neon&status=live&view=list', { scroll: false });
+    expect(replace).toHaveBeenLastCalledWith(
+      '/partner/venue/events?search=Neon&status=live&view=list',
+      { scroll: false },
+    );
   });
 });

@@ -15,9 +15,17 @@ declare namespace NodeJS {
   interface ProcessEnv {
     NEXT_PUBLIC_API_BASE_URL?: string;
     NEXT_PUBLIC_APP_NAME?: string;
+    NEXT_PUBLIC_APP_ID?: string;
     NEXT_PUBLIC_ENVIRONMENT?: string;
     NEXT_PUBLIC_SENTRY_DSN?: string;
+    NEXT_PUBLIC_FIREBASE_API_KEY?: string;
+    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN?: string;
+    NEXT_PUBLIC_FIREBASE_PROJECT_ID?: string;
+    NEXT_PUBLIC_FIREBASE_APP_ID?: string;
     NODE_ENV?: string;
+    SITE_URL?: string;
+    VERCEL_ENV?: string;
+    VERCEL_URL?: string;
     ANALYZE?: string;
   }
 }

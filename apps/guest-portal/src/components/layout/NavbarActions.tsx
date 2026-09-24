@@ -2,12 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { navLinks } from './DesktopNavLinks';
 
 export function NavbarActions({ isAuthenticated = false }: { isAuthenticated?: boolean }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const isLoginPage = pathname === '/login';
   const accountHref = isAuthenticated ? '/profile' : '/login';
@@ -17,21 +19,43 @@ export function NavbarActions({ isAuthenticated = false }: { isAuthenticated?: b
     if (!mobileMenuOpen) return;
 
     const previousOverflow = document.body.style.overflow;
+    const focusable = menuRef.current?.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled])',
+    );
+    focusable?.[0]?.focus();
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMobileMenuOpen(false);
+      if (event.key === 'Escape') {
+        setMobileMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+    const trapFocus = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab' || focusable === undefined || focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
     };
 
     document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', closeOnEscape);
+    window.addEventListener('keydown', trapFocus);
 
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', closeOnEscape);
+      window.removeEventListener('keydown', trapFocus);
     };
   }, [mobileMenuOpen]);
 
   const closeMenu = () => {
     setMobileMenuOpen(false);
+    menuButtonRef.current?.focus();
   };
 
   return (
@@ -46,6 +70,7 @@ export function NavbarActions({ isAuthenticated = false }: { isAuthenticated?: b
       )}
 
       <button
+        ref={menuButtonRef}
         type="button"
         aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
         aria-expanded={mobileMenuOpen}
@@ -68,7 +93,11 @@ export function NavbarActions({ isAuthenticated = false }: { isAuthenticated?: b
 
       {mobileMenuOpen && (
         <div
+          ref={menuRef}
           id="mobile-navigation"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Mobile navigation"
           className="pointer-events-auto fixed inset-0 z-[-1] flex items-center justify-center bg-black/96 p-8 pt-24 backdrop-blur-xl lg:hidden"
         >
           <div className="flex w-full max-w-sm flex-col items-center gap-6">

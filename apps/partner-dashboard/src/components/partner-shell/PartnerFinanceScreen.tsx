@@ -1,6 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
+
 import {
   BankIcon,
   CalendarIcon,
@@ -11,7 +13,6 @@ import {
   TimeIcon,
 } from '@c1rcle/icons';
 
-import Link from 'next/link';
 
 import styles from '../venue/screens/VenueFinance.module.css';
 
@@ -72,7 +73,7 @@ export function PartnerFinanceScreen({
   const [query, setQuery] = useState('');
   const filteredHistory = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase('en-IN');
-        return normalized
+    return normalized
       ? history.filter((row) =>
           `${row.date} ${row.event ?? ''} ${row.status} ${row.amount}`
             .toLocaleLowerCase('en-IN')
@@ -160,14 +161,14 @@ export function PartnerFinanceScreen({
             <SearchIcon size={18} aria-hidden="true" />
             <input
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => { setQuery(event.target.value); }}
               placeholder="Search history"
             />
           </label>
         </header>
         <div role="table" aria-label="Payout history">
           <div
-            className={`${styles['tableHead']} ${hasEvents ? '' : styles['compactTable']}`}
+            className={`${styles['tableHead'] ?? ''} ${hasEvents ? '' : (styles['compactTable'] ?? '')}`}
             role="row"
           >
             <span>Date</span>
@@ -177,7 +178,7 @@ export function PartnerFinanceScreen({
           </div>
           {filteredHistory.map((row) => (
             <div
-              className={`${styles['payoutRow']} ${hasEvents ? '' : styles['compactTable']}`}
+              className={`${styles['payoutRow'] ?? ''} ${hasEvents ? '' : (styles['compactTable'] ?? '')}`}
               role="row"
               key={row.id}
             >
@@ -208,14 +209,16 @@ export function PartnerFinanceScreen({
             aria-label={section.title}
           >
             <div className={styles['secondaryHead']} role="row">
-              {section.columns.map((column) => <span key={column}>{column}</span>)}
+              {section.columns.map((column) => (
+                <span key={column}>{column}</span>
+              ))}
             </div>
             {section.rows.map((row) => (
               <div className={styles['secondaryRow']} role="row" key={row.id}>
                 {row.cells.map((cell, index) => (
                   <span
                     role="cell"
-                    key={`${row.id}-${index}`}
+                    key={`${row.id}-${String(index)}`}
                     data-tone={cell.tone}
                     data-emphasis={cell.emphasis ? 'true' : undefined}
                   >

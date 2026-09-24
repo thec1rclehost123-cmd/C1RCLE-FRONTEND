@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  getHostPartner,
-  hostAvailability,
-  hostEvents,
-  hostPartners,
-} from './host-studio-model';
+import { getHostPartner, hostAvailability, hostEvents, hostPartners } from './host-studio-model';
 
 describe('Host Studio normalized model', () => {
   it('keeps venues and promoters separate while sharing one relationship source', () => {

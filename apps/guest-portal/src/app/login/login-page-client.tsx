@@ -167,10 +167,7 @@ export function LoginPageClient() {
   return (
     <div className="relative min-h-screen w-full bg-black text-white selection:bg-[#FF4400]/30 selection:text-white">
       <div className="flex min-h-screen w-full flex-col md:flex-row">
-        <LoginHeroPanel
-          headline={loginFixture.hero.headline}
-          tagline={loginFixture.hero.tagline}
-        />
+        <LoginHeroPanel headline={loginFixture.hero.headline} tagline={loginFixture.hero.tagline} />
 
         <section className="relative flex flex-1 items-center justify-center bg-black px-6 py-24 md:px-12 md:py-16">
           {step !== 'methods' && step !== 'complete' && (
@@ -180,8 +177,19 @@ export function LoginPageClient() {
               aria-label="Go back"
               className="absolute left-6 top-7 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white transition-colors hover:border-[#FF4400] hover:text-[#FF4400] md:left-12"
             >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0 7-7m-7 7h18" />
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2.5}
+                  d="M10 19l-7-7m0 0 7-7m-7 7h18"
+                />
               </svg>
             </button>
           )}
@@ -195,7 +203,9 @@ export function LoginPageClient() {
             onFormChange={handleFormChange}
             onSubmit={handleSubmit}
             onToggleChoice={toggleChoice}
-            onEditPhone={() => { setStep('phone'); }}
+            onEditPhone={() => {
+              setStep('phone');
+            }}
             onResendOtp={() => {
               handleFormChange('otp', '');
               setStatus({ type: 'idle' });

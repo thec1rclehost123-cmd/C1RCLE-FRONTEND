@@ -25,19 +25,18 @@ export function VenueNotificationDrawer({
   if (!open) return null;
   const compact =
     role === 'host'
-      ? hostNotifications
-          .slice(0, 3)
-          .map((item) => ({
-            id: item.id,
-            title: item.title,
-            summary: item.body,
-            time: item.time,
-            destination: item.href,
-          }))
+      ? hostNotifications.slice(0, 3).map((item) => ({
+          id: item.id,
+          title: item.title,
+          summary: item.body,
+          time: item.time,
+          destination: item.href,
+        }))
       : role === 'venue'
         ? venueNotifications.slice(0, 3)
         : [];
-  const allHref = role === 'host' ? '/host/notifications' : role === 'venue' ? '/venue/notifications' : null;
+  const allHref =
+    role === 'host' ? '/host/notifications' : role === 'venue' ? '/venue/notifications' : null;
   return (
     <aside
       ref={drawerRef}
@@ -53,16 +52,20 @@ export function VenueNotificationDrawer({
         </button>
       </header>
       <div>
-        {compact.length ? compact.map((item) => (
-          <Link key={item.id} href={item.destination ?? allHref ?? '#'} onClick={onClose}>
-            <CalendarIcon size={20} aria-hidden="true" />
-            <span>
-              <strong>{item.title}</strong>
-              <small>{item.summary}</small>
-            </span>
-            <time>{item.time}</time>
-          </Link>
-        )) : <p role="status">Notifications are not available for this workspace.</p>}
+        {compact.length ? (
+          compact.map((item) => (
+            <Link key={item.id} href={item.destination ?? allHref ?? '#'} onClick={onClose}>
+              <CalendarIcon size={20} aria-hidden="true" />
+              <span>
+                <strong>{item.title}</strong>
+                <small>{item.summary}</small>
+              </span>
+              <time>{item.time}</time>
+            </Link>
+          ))
+        ) : (
+          <p role="status">Notifications are not available for this workspace.</p>
+        )}
       </div>
       {allHref ? (
         <Link className="partner-notification-all" href={allHref} onClick={onClose}>

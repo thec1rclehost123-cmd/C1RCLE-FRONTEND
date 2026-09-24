@@ -76,8 +76,7 @@ export function ExploreDiscoveryClient({
               id="explore-results-heading"
               className="mt-3 text-[2.35rem] font-black uppercase leading-[0.9] tracking-[-0.055em] sm:text-6xl"
             >
-              What&apos;s on in{' '}
-              <span className="block text-[#FF4400] sm:inline">{activeCity}</span>
+              What&apos;s on in <span className="block text-[#FF4400] sm:inline">{activeCity}</span>
             </h2>
           </div>
           <p
@@ -225,7 +224,10 @@ function ExploreSelect({
         >
           {children}
         </select>
-        <span aria-hidden="true" className="text-[10px] text-white/40 group-hover:text-white transition-colors pointer-events-none">
+        <span
+          aria-hidden="true"
+          className="text-[10px] text-white/40 group-hover:text-white transition-colors pointer-events-none"
+        >
           ▼
         </span>
       </div>

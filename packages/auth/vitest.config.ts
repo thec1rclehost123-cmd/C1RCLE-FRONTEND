@@ -17,6 +17,7 @@ export default defineConfig({
     env: {
       NEXT_PUBLIC_API_BASE_URL: 'https://api.c1rcle.test',
       NEXT_PUBLIC_APP_NAME: 'Partner Dashboard',
+      NEXT_PUBLIC_APP_ID: 'partner',
       NEXT_PUBLIC_ENVIRONMENT: 'development',
     },
     coverage: {

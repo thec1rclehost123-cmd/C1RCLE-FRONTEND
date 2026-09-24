@@ -22,7 +22,12 @@ export default async function PromoterFinanceOrdersPage() {
         source: order.channel,
         ticketCount: order.ticketCount,
         attributedEarnings: formatInr(order.commissionPaise),
-        status: order.status === 'confirmed' ? 'Confirmed' : order.status === 'refunded' ? 'Refunded' : 'Pending',
+        status:
+          order.status === 'confirmed'
+            ? 'Confirmed'
+            : order.status === 'refunded'
+              ? 'Refunded'
+              : 'Pending',
       }))}
     />
   );

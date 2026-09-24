@@ -1,9 +1,15 @@
+import { buildPublicMetadata } from '@/lib/seo/metadata';
+
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'Terms of Service',
-  description: 'Terms of Service for THE C1RCLE.',
-};
+export function generateMetadata(): Metadata {
+  return buildPublicMetadata({
+    path: '/terms',
+    title: 'Terms of Service',
+    description: 'Terms information for THE C1RCLE.',
+    indexable: false,
+  });
+}
 
 export default function TermsPage() {
   return (

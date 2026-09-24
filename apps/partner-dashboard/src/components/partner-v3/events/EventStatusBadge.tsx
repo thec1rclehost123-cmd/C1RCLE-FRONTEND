@@ -10,5 +10,10 @@ const toneClasses: Readonly<Record<PartnerEventStatus, string>> = {
 };
 
 export function EventStatusBadge({ status }: { readonly status: PartnerEventStatus }) {
-  return <span className={[styles['statusBadge'], toneClasses[status]].join(' ')}><i aria-hidden="true" />{status}</span>;
+  return (
+    <span className={[styles['statusBadge'], toneClasses[status]].join(' ')}>
+      <i aria-hidden="true" />
+      {status}
+    </span>
+  );
 }

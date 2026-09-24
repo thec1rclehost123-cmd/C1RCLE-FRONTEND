@@ -2,23 +2,21 @@
 
 import Link from 'next/link';
 
-import { EventDetailLayout } from '../venue/event-detail/EventDetailLayout';
 import { formatInr } from '@/lib/partner/contracts';
-import { CopyLinkButton } from './PromoterShareActions';
+
+import { EventDetailLayout } from '../venue/event-detail/EventDetailLayout';
+import styles from '../venue/event-detail/VenueEventDetail.module.css';
+
 import {
   getPrimaryPromoterEventLink,
   getPromoterEventLinks,
   getPromoterEventOrders,
   getPromoterEventStatusLabel,
 } from './promoter-event-detail-model';
+import { CopyLinkButton } from './PromoterShareActions';
 
-import styles from '../venue/event-detail/VenueEventDetail.module.css';
 
-import type {
-  PromoterEvent,
-  PromoterOrder,
-  PromoterTrackingLink,
-} from '@/lib/partner/contracts';
+import type { PromoterEvent, PromoterOrder, PromoterTrackingLink } from '@/lib/partner/contracts';
 
 const s = (name: string) => styles[name] ?? name;
 
@@ -69,7 +67,8 @@ export function PromoterEventDetailScreen({
     posterSrc,
     posterAlt: event.name,
     statusLabel: getPromoterEventStatusLabel(event.status),
-    statusTone: (event.status === 'active' ? 'success' : 'warning') as 'success' | 'warning' | 'neutral',
+    statusTone: (event.status === 'active' ? 'success' : 'warning') as
+      'success' | 'warning' | 'neutral',
     roleLabel: `Terms: ${event.commissionLabel}`,
   };
 
@@ -82,7 +81,12 @@ export function PromoterEventDetailScreen({
   );
 
   return (
-    <EventDetailLayout event={headerModel} tabs={eventTabs(event.id)} activeTab={activeTab} actions={actions}>
+    <EventDetailLayout
+      event={headerModel}
+      tabs={eventTabs(event.id)}
+      activeTab={activeTab}
+      actions={actions}
+    >
       {activeTab === 'performance' ? (
         <div className={s('summaryPage')}>
           <div className={s('metricStrip')}>
@@ -104,7 +108,9 @@ export function PromoterEventDetailScreen({
             <div className={s('panelHeading')}>
               <h2>Attribution trend</h2>
             </div>
-            <p className={s('emptyState')}>Daily attribution history is unavailable for this event.</p>
+            <p className={s('emptyState')}>
+              Daily attribution history is unavailable for this event.
+            </p>
           </section>
         </div>
       ) : activeTab === 'orders' ? (
@@ -112,12 +118,12 @@ export function PromoterEventDetailScreen({
           <section className={s('guestTable')} aria-label="Attributed orders">
             <table>
               <colgroup>
-                <col style={{ width: '22%' }} />
-                <col style={{ width: '18%' }} />
-                <col style={{ width: '14%' }} />
-                <col style={{ width: '20%' }} />
-                <col style={{ width: '14%' }} />
-                <col style={{ width: '12%' }} />
+                <col className="w-[22%]" />
+                <col className="w-[18%]" />
+                <col className="w-[14%]" />
+                <col className="w-[20%]" />
+                <col className="w-[14%]" />
+                <col className="w-[12%]" />
               </colgroup>
               <thead>
                 <tr>
@@ -126,21 +132,39 @@ export function PromoterEventDetailScreen({
                   <th scope="col">Tickets</th>
                   <th scope="col">Attributed earnings</th>
                   <th scope="col">Status</th>
-                  <th scope="col" style={{ textAlign: 'right' }}>Time</th>
+                  <th scope="col" className="text-right">
+                    Time
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {eventOrders.length ? eventOrders.map((order) => (
-                  <tr key={order.id}>
-                    <td><strong>{order.id}</strong></td>
-                    <td>{order.channel}</td>
-                    <td>{order.ticketCount} {order.ticketCount === 1 ? 'ticket' : 'tickets'}</td>
-                    <td><strong>{formatInr(order.commissionPaise)}</strong></td>
-                    <td><span className={s('orderStatus')}>{order.status}</span></td>
-                    <td style={{ textAlign: 'right' }}>{order.createdAt}</td>
+                {eventOrders.length ? (
+                  eventOrders.map((order) => (
+                    <tr key={order.id}>
+                      <td>
+                        <strong>{order.id}</strong>
+                      </td>
+                      <td>{order.channel}</td>
+                      <td>
+                        {order.ticketCount} {order.ticketCount === 1 ? 'ticket' : 'tickets'}
+                      </td>
+                      <td>
+                        <strong>{formatInr(order.commissionPaise)}</strong>
+                      </td>
+                      <td>
+                        <span className={s('orderStatus')}>{order.status}</span>
+                      </td>
+                      <td className="text-right">{order.createdAt}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6}>
+                      <span className={s('emptyState')}>
+                        Order data unavailable for this event.
+                      </span>
+                    </td>
                   </tr>
-                )) : (
-                  <tr><td colSpan={6}><span className={s('emptyState')}>Order data unavailable for this event.</span></td></tr>
                 )}
               </tbody>
             </table>
@@ -161,7 +185,10 @@ export function PromoterEventDetailScreen({
                 </article>
               </div>
             ) : (
-              <p className={s('emptyState')}>Permanent tracked link unavailable. <Link href={`/promoter/links?event=${event.id}`}>Open Links</Link></p>
+              <p className={s('emptyState')}>
+                Permanent tracked link unavailable.{' '}
+                <Link href={`/promoter/links?event=${event.id}`}>Open Links</Link>
+              </p>
             )}
           </section>
           <section className={s('panel')}>
@@ -170,12 +197,18 @@ export function PromoterEventDetailScreen({
               <div className={s('summaryOrders')}>
                 {eventLinks.map((link) => (
                   <article key={link.id}>
-                    <span>{link.channel} · {link.label}</span>
-                    <strong>{link.clicks.toLocaleString('en-IN')} clicks · {link.purchases} tickets</strong>
+                    <span>
+                      {link.channel} · {link.label}
+                    </span>
+                    <strong>
+                      {link.clicks.toLocaleString('en-IN')} clicks · {link.purchases} tickets
+                    </strong>
                   </article>
                 ))}
               </div>
-            ) : <p className={s('emptyState')}>Channel attribution is unavailable for this event.</p>}
+            ) : (
+              <p className={s('emptyState')}>Channel attribution is unavailable for this event.</p>
+            )}
           </section>
         </div>
       ) : activeTab === 'commission' ? (
@@ -196,7 +229,9 @@ export function PromoterEventDetailScreen({
           </div>
           <section className={s('panel')}>
             <h2>Commission terms & agreement</h2>
-            <p className={s('emptyState')}>Additional settlement terms are unavailable for this event.</p>
+            <p className={s('emptyState')}>
+              Additional settlement terms are unavailable for this event.
+            </p>
           </section>
         </div>
       ) : (
@@ -225,14 +260,26 @@ export function PromoterEventDetailScreen({
               <p className={s('emptyState')}>Daily ticket history is unavailable for this event.</p>
             </section>
 
-            <div style={{ display: 'grid', gap: '16px' }}>
+            <div className="grid gap-4">
               <section className={s('panel')}>
                 <h2>Promoter terms</h2>
                 <div className={s('summaryOrders')}>
-                  <article><span>Commission rate</span><strong>{event.commissionLabel}</strong></article>
-                  <article><span>Venue</span><strong>{event.venue}</strong></article>
-                  <article><span>Host</span><strong>{event.host}</strong></article>
-                  <article><span>Status</span><strong>{getPromoterEventStatusLabel(event.status)}</strong></article>
+                  <article>
+                    <span>Commission rate</span>
+                    <strong>{event.commissionLabel}</strong>
+                  </article>
+                  <article>
+                    <span>Venue</span>
+                    <strong>{event.venue}</strong>
+                  </article>
+                  <article>
+                    <span>Host</span>
+                    <strong>{event.host}</strong>
+                  </article>
+                  <article>
+                    <span>Status</span>
+                    <strong>{getPromoterEventStatusLabel(event.status)}</strong>
+                  </article>
                 </div>
               </section>
 
@@ -249,7 +296,9 @@ export function PromoterEventDetailScreen({
                       </article>
                     ))}
                   </div>
-                ) : <p className={s('emptyState')}>Order data unavailable for this event.</p>}
+                ) : (
+                  <p className={s('emptyState')}>Order data unavailable for this event.</p>
+                )}
               </section>
             </div>
           </div>

@@ -5,6 +5,20 @@ import HomePage from '@/app/page';
 import { HomeBackgroundVideoClient } from '@/features/home/components/HomeBackgroundVideoClient';
 import { homeFixture } from '@/features/home/fixtures/home.fixture';
 
+const seoMocks = vi.hoisted(() => ({
+  production: false,
+  events: [] as { id: string; slug: string; title: string; summary: string }[],
+}));
+
+vi.mock('@/lib/seo/site', () => ({
+  absoluteUrl: (path: string) => `http://localhost:3000${path}`,
+  isProductionSeo: () => seoMocks.production,
+}));
+
+vi.mock('@/lib/seo/public-data', () => ({
+  getPublicEventsForSitemap: vi.fn(() => Promise.resolve(seoMocks.events)),
+}));
+
 vi.mock('next/image', () => ({
   default: ({
     alt,
@@ -25,11 +39,13 @@ vi.mock('next/image', () => ({
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  seoMocks.production = false;
+  seoMocks.events = [];
 });
 
 describe('Home Page', () => {
-  it('renders the hero section and featured drops section', () => {
-    render(<HomePage />);
+  it('renders the hero section and featured drops section', async () => {
+    render(await HomePage());
 
     expect(screen.getByRole('heading', { level: 1, name: 'THE C1RCLE' })).toBeInTheDocument();
     expect(
@@ -42,19 +58,19 @@ describe('Home Page', () => {
     expect(screen.getByRole('heading', { name: 'Featured Drops' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Featured drops carousel' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Discover Offline' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'View Neon Nights' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Neon Nights/i })).toHaveAttribute(
       'href',
       '/event/neon-nights',
     );
     expect(screen.queryByText(/Run the Room/i)).not.toBeInTheDocument();
   });
 
-  it('renders the curved featured-drop rail with linked event posters', () => {
-    render(<HomePage />);
+  it('renders the curved featured-drop rail with linked event posters', async () => {
+    render(await HomePage());
 
     const carousel = screen.getByRole('region', { name: 'Featured drops carousel' });
-    const velvetDrop = within(carousel).getByRole('link', { name: 'Open Velvet Nights' });
-    const eclipseDrop = within(carousel).getByRole('link', { name: 'Open Eclipse' });
+    const velvetDrop = within(carousel).getByRole('link', { name: /Velvet Nights/i });
+    const eclipseDrop = within(carousel).getByRole('link', { name: /Eclipse/i });
 
     expect(velvetDrop).toHaveAttribute('href', '/explore');
     expect(eclipseDrop).toHaveAttribute('href', '/explore');
@@ -62,7 +78,7 @@ describe('Home Page', () => {
     expect(screen.queryByRole('button', { name: /featured drop/i })).not.toBeInTheDocument();
   });
 
-  it('does not auto-advance featured drops when reduced motion is requested', () => {
+  it('does not auto-advance featured drops when reduced motion is requested', async () => {
     vi.useFakeTimers();
     vi.stubGlobal(
       'matchMedia',
@@ -73,13 +89,13 @@ describe('Home Page', () => {
       }),
     );
 
-    render(<HomePage />);
+    render(await HomePage());
     act(() => {
       vi.advanceTimersByTime(7000);
     });
 
     const carousel = screen.getByRole('region', { name: 'Featured drops carousel' });
-    expect(within(carousel).getByRole('link', { name: 'Open Velvet Nights' })).toBeInTheDocument();
+    expect(within(carousel).getByRole('link', { name: /Velvet Nights/i })).toBeInTheDocument();
   });
 
   it('keeps the background static when reduced motion is requested', () => {
@@ -136,5 +152,23 @@ describe('Home Page', () => {
     expect(JSON.stringify(homeFixture)).not.toMatch(
       /firebase|firestore|razorpay|paymentSuccess|checkoutSuccess|api\//i,
     );
+  });
+
+  it('never renders fixture event inventory in the production homepage', async () => {
+    seoMocks.production = true;
+    seoMocks.events = [
+      {
+        id: 'authoritative-event',
+        slug: 'authoritative-event',
+        title: 'Authoritative Event',
+        summary: 'Published by the public events service.',
+      },
+    ];
+
+    render(await HomePage());
+
+    expect(screen.getByRole('heading', { name: 'Authoritative Event' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Featured Drops' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Neon Nights')).not.toBeInTheDocument();
   });
 });

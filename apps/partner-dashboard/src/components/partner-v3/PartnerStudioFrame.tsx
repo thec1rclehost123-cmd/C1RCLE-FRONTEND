@@ -13,7 +13,15 @@ import { EmptyState, LoadingState } from './States';
 
 import type { PartnerShellInteractionData } from '@/data/partner-data-source';
 
-export function PartnerStudioFrame({ studio, interactionData, children }: { readonly studio: StudioRole; readonly interactionData: PartnerShellInteractionData; readonly children: ReactNode }) {
+export function PartnerStudioFrame({
+  studio,
+  interactionData,
+  children,
+}: {
+  readonly studio: StudioRole;
+  readonly interactionData: PartnerShellInteractionData;
+  readonly children: ReactNode;
+}) {
   const auth = useDashboardAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -34,7 +42,11 @@ export function PartnerStudioFrame({ studio, interactionData, children }: { read
   }, [activeRole, auth.isApproved, auth.isBanned, auth.loading, auth.user, pathname, router]);
 
   if (auth.loading) {
-    return <PartnerShell studio={studio} interactionData={interactionData}><LoadingState label="Authorizing Partner V3" /></PartnerShell>;
+    return (
+      <PartnerShell studio={studio} interactionData={interactionData}>
+        <LoadingState label="Authorizing Partner V3" />
+      </PartnerShell>
+    );
   }
 
   if (!auth.user || auth.isBanned || !auth.isApproved || !activeRole) {
@@ -50,7 +62,9 @@ export function PartnerStudioFrame({ studio, interactionData, children }: { read
             description={`This authenticated account belongs to ${getStudioConfig(activeRole).label}. Choose that workspace to continue.`}
           />
         </PageContainer>
-      ) : children}
+      ) : (
+        children
+      )}
     </PartnerShell>
   );
 }

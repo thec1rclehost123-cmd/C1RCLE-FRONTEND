@@ -22,6 +22,7 @@
     "@c1rcle/api-client": "workspace:*",
     "@c1rcle/auth": "workspace:*",
     "@c1rcle/config": "workspace:*",
+    "@c1rcle/contracts": "workspace:*",
     "@c1rcle/design-system": "workspace:*",
     "@c1rcle/hooks": "workspace:*",
     "@c1rcle/icons": "workspace:*",
@@ -35,6 +36,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-hook-form": "7.84.0",
+    "server-only": "0.0.1",
     "zod": "4.4.3"
   },
   "devDependencies": {

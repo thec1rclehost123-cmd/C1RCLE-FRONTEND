@@ -5,7 +5,11 @@ import { PromoterOverviewScreen } from '@/components/partner-v3/overview/Promote
 import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
 import { isStudioRole } from '@/studios/studio-config';
 
-export default async function StudioOverviewPage({ params }: { readonly params: Promise<{ studio: string }> }) {
+export default async function StudioOverviewPage({
+  params,
+}: {
+  readonly params: Promise<{ studio: string }>;
+}) {
   const { studio } = await params;
   if (!isStudioRole(studio)) notFound();
 

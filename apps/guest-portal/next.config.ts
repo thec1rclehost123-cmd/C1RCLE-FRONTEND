@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
 
+  // Resolve metadata before streaming so missing public entities return a real
+  // HTTP 404 instead of a soft-404 response that crawlers could misinterpret.
+  htmlLimitedBots: /.*/,
+
   /*
    * Docker needs the standalone server bundle. Vercel generates its own
    * serverless output, so enabling standalone there produces incompatible
@@ -52,16 +56,25 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=86400, stale-while-revalidate=604800',
+            value: 'public, max-age=604800, stale-while-revalidate=2592000',
           },
         ],
       },
       {
-        source: '/events/:path*',
+        source: '/app/screens/:path*',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=86400, stale-while-revalidate=604800',
+            value: 'public, max-age=604800, stale-while-revalidate=2592000',
+          },
+        ],
+      },
+      {
+        source: '/event/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, s-maxage=300, stale-while-revalidate=3600',
           },
         ],
       },

@@ -1,10 +1,11 @@
 import { notFound } from 'next/navigation';
 
+import { PrivateDataUnavailable } from '@/components/private/PrivateDataUnavailable';
 import { CheckoutView } from '@/features/booking/components/CheckoutView';
-import {
-  bookingEventFixtures,
-  findBookingEventFixture,
-} from '@/features/booking/fixtures/booking.fixture';
+import { findBookingEventFixture } from '@/features/booking/fixtures/booking.fixture';
+import { requireGuestSession } from '@/lib/auth/require-session';
+import { buildPrivateMetadata } from '@/lib/seo/metadata';
+import { isProductionSeo } from '@/lib/seo/site';
 
 import type { Metadata } from 'next';
 
@@ -12,27 +13,28 @@ interface CheckoutPageProps {
   params: Promise<{ id: string }>;
 }
 
-export const dynamicParams = false;
-
-export function generateStaticParams() {
-  return bookingEventFixtures.map((event) => ({ id: event.id }));
-}
+export const dynamicParams = true;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function generateMetadata({ params }: CheckoutPageProps): Promise<Metadata> {
+  if (isProductionSeo()) {
+    return buildPrivateMetadata('Checkout', 'Complete your event booking securely.');
+  }
+
   const { id } = await params;
   const event = findBookingEventFixture(decodeURIComponent(id));
 
-  return {
-    title: event ? `Checkout Preview — ${event.title}` : 'Checkout unavailable',
-    description: event
-      ? `Fixture-only checkout presentation for ${event.title}.`
-      : 'This checkout preview is unavailable.',
-    robots: { index: false, follow: false },
-  };
+  return buildPrivateMetadata(
+    event ? 'Checkout' : 'Checkout unavailable',
+    event ? 'Complete your event booking securely.' : 'This checkout is unavailable.',
+  );
 }
 
 export default async function CheckoutPage({ params }: CheckoutPageProps) {
   const { id } = await params;
+  await requireGuestSession(`/checkout/${encodeURIComponent(id)}`);
+  if (isProductionSeo()) return <PrivateDataUnavailable title="Checkout unavailable" />;
   const event = findBookingEventFixture(decodeURIComponent(id));
   if (!event) notFound();
 
