@@ -186,115 +186,22 @@ export async function submitHostEventRequest(
   organizationId: string,
   draft: EventEditorDraft,
 ): Promise<void> {
-  const startAt = eventStartAtFromDraft(draft);
-  if (!startAt) throw new Error('Enter a valid event date and start time.');
-
-  const workflowId = crypto.randomUUID();
-  const commandHeaders = (suffix: string) => ({
-    'x-organization-id': organizationId,
-    'Idempotency-Key': `${workflowId}-${suffix}`,
-  });
-
   const imageUrl = await resolvePosterImageUrl(organizationId, draft);
-  const event = await apiClient.post({
-    path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/events`,
-    body: createEventSchema.parse({
-      venueId: draft.venueId,
-      title: draft.name.trim(),
-      imageUrl,
-      startAt,
-      endAt: eventEndAtFromDraft(draft),
-      tags: [...new Set([...draft.genres, ...draft.artists])].slice(0, 50),
-    }),
-    schema: eventDtoSchema,
-    headers: commandHeaders('event'),
-  });
 
-  await apiClient.post({
-    path: `/api/v2/venues/${encodeURIComponent(draft.venueId)}/slot-requests`,
-    body: createSlotRequestSchema.parse({
-      eventId: event.id,
-      message: `Host request for "${draft.name.trim()}" on ${draft.dateLabel}`,
-    }),
-    schema: slotRequestDtoSchema,
-    headers: commandHeaders('slot-request'),
+  await submitHostSlotRequest({
+    organizationId,
+    venueId: draft.venueId,
+    name: draft.name.trim(),
+    date: draft.date,
+    time: draft.time,
+    endTime: draft.endTime,
+    dateLabel: draft.dateLabel,
+    genres: draft.genres,
+    artists: draft.artists,
+    posterPublicUrl: imageUrl ?? null,
   });
 }
 
-export function eventStartAtFromDraft(
-  draft: Pick<EventEditorDraft, 'date' | 'time'>,
-): string | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.date)) return null;
-  const date = new Date(`${draft.date}T00:00:00.000Z`);
-  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== draft.date) return null;
-
-  const twelveHour = /^\s*(\d{1,2}):(\d{2})\s*(AM|PM)\b/i.exec(draft.time);
-  const twentyFourHour = /^\s*(\d{1,2}):(\d{2})\b/.exec(draft.time);
-  const match = twelveHour ?? twentyFourHour;
-  if (!match) return null;
-
-  let hours = Number(match[1]);
-  const minutes = Number(match[2]);
-  if (minutes < 0 || minutes > 59) return null;
-  if (twelveHour) {
-    if (hours < 1 || hours > 12) return null;
-    hours %= 12;
-    if (twelveHour[3]?.toUpperCase() === 'PM') hours += 12;
-  } else if (hours < 0 || hours > 23) {
-    return null;
-  }
-
-  return `${draft.date}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00.000Z`;
-}
-
-export function eventEndAtFromDraft(
-  draft: Pick<EventEditorDraft, 'date' | 'time'> & { readonly endTime?: string },
-): string | null {
-  const startAt = eventStartAtFromDraft(draft);
-  if (!startAt) return null;
-
-  let endTimeStr = draft.endTime?.trim();
-  if (!endTimeStr && draft.time.includes('-')) {
-    endTimeStr = draft.time.split('-')[1]?.trim();
-  } else if (!endTimeStr && draft.time.includes('–')) {
-    endTimeStr = draft.time.split('–')[1]?.trim();
-  }
-
-  if (!endTimeStr) return null;
-
-  const twelveHour = /^\s*(\d{1,2}):(\d{2})\s*(AM|PM)\b/i.exec(endTimeStr);
-  const twentyFourHour = /^\s*(\d{1,2}):(\d{2})\b/.exec(endTimeStr);
-  const match = twelveHour ?? twentyFourHour;
-  if (!match) return null;
-
-  let hours = Number(match[1]);
-  const minutes = Number(match[2]);
-  if (minutes < 0 || minutes > 59) return null;
-  if (twelveHour) {
-    if (hours < 1 || hours > 12) return null;
-    hours %= 12;
-    if (twelveHour[3]?.toUpperCase() === 'PM') hours += 12;
-  } else if (hours < 0 || hours > 23) {
-    return null;
-  }
-
-  const startDate = new Date(startAt);
-  const endDate = new Date(
-    Date.UTC(
-      startDate.getUTCFullYear(),
-      startDate.getUTCMonth(),
-      startDate.getUTCDate(),
-      hours,
-      minutes,
-    ),
-  );
-
-  if (endDate <= startDate) {
-    endDate.setUTCDate(endDate.getUTCDate() + 1);
-  }
-
-  return endDate.toISOString();
-}
 
 type PosterContentType = 'image/jpeg' | 'image/png' | 'image/webp';
 
