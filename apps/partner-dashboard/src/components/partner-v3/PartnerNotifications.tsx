@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 
 import { AnnouncementIcon, BankIcon, DoorModeIcon, InviteIcon, NotificationIcon, PartnerIcon } from '@c1rcle/icons';
 
+import { loadSlotRequestNotifications } from '@/lib/slot-requests/slot-request-repository';
+
 import styles from './partner-v3.module.css';
 
 import type { PartnerNotification, PartnerNotificationCategory, PartnerNotificationIcon, PartnerNotificationsData } from '@/data/partner-data-source';

@@ -1,21 +1,23 @@
 import {
   assignPromoterSchema,
   createEventSchema,
-  createSlotRequestSchema,
   createTicketTierSchema,
   eventDtoSchema,
   posterUploadUrlDtoSchema,
   promoterAssignmentDtoSchema,
-  slotRequestDtoSchema,
   ticketTierDtoSchema,
   updateEventSchema,
 } from '@c1rcle/contracts';
 
 import { apiClient } from '@/lib/api/client';
+import { eventEndAtFromDraft, eventStartAtFromDraft } from '@/lib/events/event-time';
 import { uploadToSignedUrl } from '@/lib/onboarding/uploadToSignedUrl';
+import { submitHostSlotRequest } from '@/lib/slot-requests/slot-request-repository';
 
 import type { EventEditorDraft } from '@/data/partner-data-source';
 import type { EventDto } from '@c1rcle/contracts';
+
+export { eventEndAtFromDraft, eventStartAtFromDraft } from '@/lib/events/event-time';
 
 export async function publishVenueEvent(
   organizationId: string,
@@ -46,22 +48,22 @@ export async function publishVenueEvent(
       tags: [...new Set([...draft.genres, ...draft.artists])].slice(0, 50),
       compensation: hasPaidTiers && draft.selectedPromoterIds.length
         ? {
-            model: draft.compensation,
-            globalRatePercent:
-              draft.compensation === 'standard' ? Math.round(draft.commissionRate) : null,
-            tierRates:
-              draft.compensation === 'custom'
-                ? Object.fromEntries(
-                    Object.entries(draft.tierCommissions ?? {}).filter(([id]) =>
-                      paidTierIds.has(id),
-                    ),
-                  )
-                : {},
-            salaryAmountPaise:
-              draft.compensation === 'salary' ? Math.round(draft.salaryAmount * 100) : null,
-            salaryPeriod: draft.compensation === 'salary' ? draft.salaryPeriod : null,
-            salaryNotes: draft.compensation === 'salary' ? draft.salaryNotes || null : null,
-          }
+          model: draft.compensation,
+          globalRatePercent:
+            draft.compensation === 'standard' ? Math.round(draft.commissionRate) : null,
+          tierRates:
+            draft.compensation === 'custom'
+              ? Object.fromEntries(
+                Object.entries(draft.tierCommissions ?? {}).filter(([id]) =>
+                  paidTierIds.has(id),
+                ),
+              )
+              : {},
+          salaryAmountPaise:
+            draft.compensation === 'salary' ? Math.round(draft.salaryAmount * 100) : null,
+          salaryPeriod: draft.compensation === 'salary' ? draft.salaryPeriod : null,
+          salaryNotes: draft.compensation === 'salary' ? draft.salaryNotes || null : null,
+        }
         : null,
     }),
     schema: eventDtoSchema,
@@ -86,15 +88,15 @@ export async function publishVenueEvent(
           : {}),
         ...(!isRsvp
           ? {
-              pricingPhases: (tier.pricingPhases ?? []).map((phase) => ({
-                id: phase.id,
-                name: phase.name.trim() || `Phase ${phase.id}`,
-                priceInPaise: Math.round(phase.priceInPaise),
-                startDate: phase.startDate,
-                endDate: phase.endDate,
-                quantity: phase.quantity ?? null,
-              })),
-            }
+            pricingPhases: (tier.pricingPhases ?? []).map((phase) => ({
+              id: phase.id,
+              name: phase.name.trim() || `Phase ${phase.id}`,
+              priceInPaise: Math.round(phase.priceInPaise),
+              startDate: phase.startDate,
+              endDate: phase.endDate,
+              quantity: phase.quantity ?? null,
+            })),
+          }
           : {}),
         ...(tier.benefits ? { benefits: [...tier.benefits] } : {}),
         ...(tier.minAge != null ? { minAge: tier.minAge } : {}),
@@ -149,17 +151,17 @@ export async function publishVenueEvent(
             : 0,
         ...(draft.compensation === 'custom'
           ? {
-              tierRates: Object.fromEntries(
-                Object.entries(draft.promoterOverrides?.[promoterId] ?? draft.tierCommissions ?? {})
-                  .filter(([localTierId]) => paidTierIds.has(localTierId))
-                  .map(([localTierId, rate]) => {
-                    const serverTierId = serverTierIds.get(localTierId);
-                    if (!serverTierId)
-                      throw new Error(`Commission tier ${localTierId} was not created.`);
-                    return [serverTierId, { ratePercent: rate, flatPaise: 0 }];
-                  }),
-              ),
-            }
+            tierRates: Object.fromEntries(
+              Object.entries(draft.promoterOverrides?.[promoterId] ?? draft.tierCommissions ?? {})
+                .filter(([localTierId]) => paidTierIds.has(localTierId))
+                .map(([localTierId, rate]) => {
+                  const serverTierId = serverTierIds.get(localTierId);
+                  if (!serverTierId)
+                    throw new Error(`Commission tier ${localTierId} was not created.`);
+                  return [serverTierId, { ratePercent: rate, flatPaise: 0 }];
+                }),
+            ),
+          }
           : {}),
       }),
       schema: promoterAssignmentDtoSchema,
@@ -365,7 +367,7 @@ async function resolvePosterImageUrl(
 
   const ext = contentType.split('/')[1] ?? 'jpg';
   const fileName =
-    draft.artwork.alt && draft.artwork.alt.includes('.') ? draft.artwork.alt : `poster.${ext}`;
+    draft.artwork.alt?.includes('.') ? draft.artwork.alt : `poster.${ext}`;
 
   const file = new File([blob], fileName, { type: contentType });
   await uploadToSignedUrl(grant.uploadUrl, grant.headers, file);

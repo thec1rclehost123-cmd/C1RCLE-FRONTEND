@@ -34,6 +34,9 @@ export type {
   CreateVenueBlockInput,
   SlotRequestDto,
   CreateSlotRequestInput,
+  SlotRequestListResponse,
+  SlotRequestActor,
+  SlotRequestDetailDto,
 } from './contracts/organization.js';
 
 export {
@@ -51,6 +54,9 @@ export {
   createVenueBlockSchema,
   slotRequestDtoSchema,
   createSlotRequestSchema,
+  slotRequestListResponseSchema,
+  slotRequestActorSchema,
+  slotRequestDetailDtoSchema,
 } from './contracts/organization.js';
 
 // Event + Catalog
