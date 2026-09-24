@@ -53,7 +53,10 @@ export const eventDtoSchema = z.object({
   startingPricePaise: z.number().int().nonnegative().nullable(),
   isFree: z.boolean(),
   cancellationReason: z.string().max(1000).nullable(),
-  compensation: eventCompensationSchema.nullable(),
+  // Optional + nullable ON PURPOSE: the backend omits this key until the
+  // promoter-compensation slice lands server-side. Required here would fail
+  // every live event parse (and every test fixture) until then.
+  compensation: eventCompensationSchema.nullable().optional(),
   version: z.number().int().positive(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
