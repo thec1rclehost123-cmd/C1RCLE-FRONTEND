@@ -5,8 +5,10 @@ import { useState } from 'react';
 
 import { Button, EmptyState, ErrorState, LoadingState, TextField } from '@c1rcle/ui';
 
+import { OnboardingApplicationDetail } from '@/components/admin/onboarding-application-detail';
 import { PageHeader } from '@/components/admin/page-header';
 import {
+  getOnboardingApplication,
   getOnboardingDocumentReadUrl,
   listOnboardingApplications,
   rejectOnboardingDocument,
@@ -46,6 +48,7 @@ export default function KycReviewDesk() {
   const queryClient = useQueryClient();
   const [rejecting, setRejecting] = useState<Rejecting | null>(null);
   const [reason, setReason] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const submitted = useQuery({
     queryKey: ['admin', 'onboarding', 'submitted'],
@@ -54,6 +57,17 @@ export default function KycReviewDesk() {
   const changesRequested = useQuery({
     queryKey: ['admin', 'onboarding', 'changes_requested'],
     queryFn: () => listOnboardingApplications('changes_requested'),
+  });
+
+  const detail = useQuery({
+    queryKey: ['admin', 'onboarding', 'application', selectedId],
+    queryFn: () => {
+      if (selectedId === null) {
+        throw new Error('No application selected');
+      }
+      return getOnboardingApplication(selectedId);
+    },
+    enabled: selectedId !== null,
   });
 
   const applications = [...(submitted.data?.items ?? []), ...(changesRequested.data?.items ?? [])];
@@ -125,10 +139,21 @@ export default function KycReviewDesk() {
                     {shortId(application.userId)} · {application.profile.city}
                   </p>
                 </div>
-                <StatusBadge
-                  label={ONBOARDING_STATUS_LABELS[application.status]}
-                  tone={onboardingStatusTone(application.status)}
-                />
+                <div className="flex flex-col items-end gap-2">
+                  <StatusBadge
+                    label={ONBOARDING_STATUS_LABELS[application.status]}
+                    tone={onboardingStatusTone(application.status)}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedId(application.id);
+                    }}
+                  >
+                    View all details
+                  </Button>
+                </div>
               </div>
 
               <p className="text-xs text-muted-foreground">
@@ -252,6 +277,25 @@ export default function KycReviewDesk() {
         <p role="alert" className="text-sm text-destructive">
           The document could not be opened. It is safe to retry.
         </p>
+      ) : null}
+
+      {selectedId !== null && detail.isPending ? (
+        <LoadingState label="Loading application details…" />
+      ) : detail.isError ? (
+        <ErrorState
+          description="Application details could not be loaded. Please retry."
+          onRetry={() => void detail.refetch()}
+        />
+      ) : detail.data !== undefined ? (
+        <OnboardingApplicationDetail
+          application={detail.data}
+          onOpenDocument={(applicationId, label) => {
+            viewDocumentMutation.mutate({ applicationId, label });
+          }}
+          onClose={() => {
+            setSelectedId(null);
+          }}
+        />
       ) : null}
     </div>
   );

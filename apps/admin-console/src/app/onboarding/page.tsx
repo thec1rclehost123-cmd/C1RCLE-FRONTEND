@@ -5,10 +5,12 @@ import { useState } from 'react';
 
 import { Button, EmptyState, ErrorState, LoadingState, TextField } from '@c1rcle/ui';
 
+import { OnboardingApplicationDetail } from '@/components/admin/onboarding-application-detail';
 import { PageHeader } from '@/components/admin/page-header';
 import { StatusFilter } from '@/components/admin/status-filter';
 import {
   approveOnboardingApplication,
+  getOnboardingApplication,
   getOnboardingDocumentReadUrl,
   listOnboardingApplications,
   ONBOARDING_STATUSES,
@@ -59,10 +61,22 @@ export default function OnboardingDesk() {
   const [filter, setFilter] = useState<Filter>('submitted');
   const [reviewing, setReviewing] = useState<Reviewing | null>(null);
   const [note, setNote] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const list = useQuery({
     queryKey: ['admin', 'onboarding', filter],
     queryFn: () => listOnboardingApplications(filter),
+  });
+
+  const detail = useQuery({
+    queryKey: ['admin', 'onboarding', 'application', selectedId],
+    queryFn: () => {
+      if (selectedId === null) {
+        throw new Error('No application selected');
+      }
+      return getOnboardingApplication(selectedId);
+    },
+    enabled: selectedId !== null,
   });
 
   const invalidate = () => {
@@ -181,9 +195,20 @@ export default function OnboardingDesk() {
                 const reviewable = IN_REVIEWABLE.includes(application.status);
                 const docsVerified = allRequiredDocumentsVerified(application);
                 return (
-                  <tr key={application.id}>
+                  <tr
+                    key={application.id}
+                    className={selectedId === application.id ? 'bg-muted/30' : undefined}
+                  >
                     <td className="px-4 py-3">
-                      <p className="font-medium">{application.profile.legalName}</p>
+                      <button
+                        type="button"
+                        className="text-left font-medium underline-offset-4 hover:underline"
+                        onClick={() => {
+                          setSelectedId(application.id);
+                        }}
+                      >
+                        {application.profile.legalName}
+                      </button>
                       <p className="font-mono text-xs text-muted-foreground">
                         {shortId(application.userId)} · {application.profile.city}
                       </p>
@@ -321,6 +346,25 @@ export default function OnboardingDesk() {
         <p role="alert" className="text-sm text-destructive">
           The document could not be opened. It is safe to retry.
         </p>
+      ) : null}
+
+      {selectedId !== null && detail.isPending ? (
+        <LoadingState label="Loading application details…" />
+      ) : detail.isError ? (
+        <ErrorState
+          description="Application details could not be loaded. Please retry."
+          onRetry={() => void detail.refetch()}
+        />
+      ) : detail.data !== undefined ? (
+        <OnboardingApplicationDetail
+          application={detail.data}
+          onOpenDocument={(applicationId, label) => {
+            viewDocumentMutation.mutate({ applicationId, label });
+          }}
+          onClose={() => {
+            setSelectedId(null);
+          }}
+        />
       ) : null}
     </div>
   );
