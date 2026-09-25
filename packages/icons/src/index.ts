@@ -108,6 +108,7 @@ export {
   StickyNote as NoteIcon,
   Ticket as TicketIcon,
   TrendingUp as TrendUpIcon,
+  Upload as UploadIcon,
   User as GuestIcon,
   UserPlus as InviteIcon,
   Video as VideoIcon,
@@ -132,7 +133,6 @@ export {
   ShieldCheck as ComplianceIcon,
   Sparkles as AssistantIcon,
   Building as CompanyIcon,
-  Upload as UploadIcon,
 } from 'lucide-react';
 
 export type { LucideProps as IconProps } from 'lucide-react';

@@ -32,12 +32,87 @@ function gatewayBaseUrl(): string {
   return getClientEnv().NEXT_PUBLIC_API_BASE_URL.replace(/\/$/, '');
 }
 
+/** Name the frontend uses for the Better-Auth session cookie (proxy + BFF). */
+export const SESSION_COOKIE_NAME = 'better-auth.session_token';
+
+/**
+ * A production gateway (`useSecureCookies`) itself reads the `__Secure-`
+ * prefixed session cookie; a development gateway reads the unprefixed name.
+ * The frontend always stores the unprefixed name (see `rescopeSessionCookies`),
+ * so when forwarding browser cookies to the gateway we emit both names with
+ * the same value — the gateway picks whichever name it is configured for, and
+ * the other is ignored.
+ */
+function withGatewaySessionCookieName(
+  cookieHeader: string | null | undefined,
+): string | null | undefined {
+  if (cookieHeader === undefined || cookieHeader === null || cookieHeader.length === 0) {
+    return cookieHeader;
+  }
+  if (cookieHeader.includes(`__Secure-${SESSION_COOKIE_NAME}=`)) {
+    return cookieHeader;
+  }
+  const match = new RegExp(`(?:^|;)\\s*${escapeRegExp(SESSION_COOKIE_NAME)}=([^;]+)`).exec(
+    cookieHeader,
+  );
+  if (match === null) {
+    return cookieHeader;
+  }
+  const value = match[1];
+  if (value === undefined) {
+    return cookieHeader;
+  }
+  return `${cookieHeader}; __Secure-${SESSION_COOKIE_NAME}=${value}`;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function isProduction(): boolean {
   return getClientEnv().NEXT_PUBLIC_ENVIRONMENT === 'production';
 }
 
 function newRequestId(): string {
   return crypto.randomUUID();
+}
+
+/**
+ * Auth material to forward from a browser request to the gateway: the session
+ * cookie plus, when the client supplied one, the in-memory Better-Auth bearer
+ * token — the app's standard in-memory auth (`getToken`). The gateway's
+ * `getSession` accepts either. Authorization is relayed verbatim and never
+ * read or logged.
+ */
+export function gatewayAuthInit(
+  req: NextRequest,
+): { readonly cookie: string | null; readonly headers?: Readonly<Record<string, string>> } {
+  const authorization = req.headers.get('authorization');
+  const requestId = req.headers.get('x-request-id');
+  const headers: Record<string, string> = {};
+  if (authorization !== null && authorization.length > 0) {
+    headers['Authorization'] = authorization;
+  }
+  if (requestId !== null && requestId.length > 0) {
+    headers['x-request-id'] = requestId;
+  }
+  return {
+    cookie: req.headers.get('cookie'),
+    ...(Object.keys(headers).length > 0 ? { headers } : {}),
+  };
+}
+
+/**
+ * Extracts an `If-Match` version header off the browser request for forwarding
+ * to the gateway, mirroring the client-side optimistic-locking contract
+ * (`versionHeaderSchema`: a positive integer). Malformed or absent headers are
+ * dropped — the gateway owns the version check and the 409 on mismatch.
+ */
+export function ifMatchHeader(req: NextRequest): Record<string, string> {
+  const ifMatch = req.headers.get('if-match');
+  return ifMatch !== null && ifMatch.length > 0 && /^[1-9][0-9]*$/.test(ifMatch)
+    ? { 'If-Match': ifMatch }
+    : {};
 }
 
 /** Flat error envelope, matching the gateway's shape (`{ code, message, status, requestId }`). */
@@ -116,6 +191,17 @@ export function mintCsrfToken(): string {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
+/**
+ * A fresh `Idempotency-Key` for a gateway command (e.g. the document-confirm
+ * step). Uniqueness is what protects the gateway's dedup: the same key on a
+ * retried confirmation returns the already-recorded document instead of
+ * creating a duplicate record. UUIDs satisfy the gateway's format contract
+ * (`^[A-Za-z0-9_-]+$`, ≤ 128 chars).
+ */
+export function mintIdempotencyKey(): string {
+  return crypto.randomUUID();
+}
+
 export function setCsrfCookie(res: NextResponse, token: string): void {
   res.cookies.set(csrfCookieName(), token, {
     httpOnly: false,
@@ -129,10 +215,12 @@ export function clearCsrfCookie(res: NextResponse): void {
   res.cookies.set(csrfCookieName(), '', { path: '/', maxAge: 0 });
 }
 
-interface ForwardInit {
-  readonly method: 'GET' | 'POST';
+export interface ForwardInit {
+  readonly method: 'GET' | 'POST' | 'PATCH';
   readonly body?: unknown;
   readonly cookie?: string | null;
+  /** Extra headers to forward verbatim (e.g. `Idempotency-Key`). */
+  readonly headers?: Readonly<Record<string, string>>;
 }
 
 /**
@@ -145,8 +233,12 @@ export async function forwardToGateway(path: string, init: ForwardInit): Promise
   if (init.body !== undefined) {
     headers['content-type'] = 'application/json';
   }
-  if (init.cookie !== undefined && init.cookie !== null && init.cookie.length > 0) {
-    headers['cookie'] = init.cookie;
+  const cookieHeader = withGatewaySessionCookieName(init.cookie);
+  if (cookieHeader !== undefined && cookieHeader !== null && cookieHeader.length > 0) {
+    headers['cookie'] = cookieHeader;
+  }
+  for (const [key, value] of Object.entries(init.headers ?? {})) {
+    headers[key] = value;
   }
 
   return fetch(`${gatewayBaseUrl()}${path}`, {
@@ -156,6 +248,36 @@ export async function forwardToGateway(path: string, init: ForwardInit): Promise
     redirect: 'manual',
     cache: 'no-store',
   });
+}
+
+/**
+ * Server-side `PUT` of an uploaded file to the pre-signed object-storage URL
+ * the gateway issued. This is the other sanctioned raw-fetch call: the signed
+ * PUT must go to an arbitrary storage host (Google Storage / a `memory://`
+ * dev stub), which `@c1rcle/api-client` structurally cannot represent. It runs
+ * inside the BFF so the browser never sees the storage origin (CSP-clean).
+ *
+ * `memory://` URLs are produced by the backend's memory storage driver (local
+ * dev): there is nothing to PUT, so the upload is a no-op and the caller keeps
+ * going as if it succeeded.
+ */
+export async function putToStorage(
+  uploadUrl: string,
+  headers: Readonly<Record<string, string>>,
+  body: ArrayBuffer,
+): Promise<boolean> {
+  if (uploadUrl.startsWith('memory://')) {
+    return true;
+  }
+
+  const response = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: { ...headers, 'content-length': String(body.byteLength) },
+    body,
+    redirect: 'manual',
+  });
+
+  return response.ok;
 }
 
 interface ParsedSetCookie {
@@ -197,13 +319,21 @@ function parseSetCookie(raw: string): ParsedSetCookie | null {
     }
   }
 
-  return {
-    name: pair.slice(0, eq).trim(),
-    value: pair.slice(eq + 1).trim(),
-    path,
-    maxAge,
-    expires,
-  };
+const rawValue = pair.slice(eq + 1).trim();
+  // The gateway's `Set-Cookie` value is already percent-encoded (Better Auth's
+  // session token contains raw `/`/`=` from base64). `res.cookies.set()` below
+  // percent-encodes whatever value it's given, so passing this through as-is
+  // double-encodes it — the browser then stores and replays a token that never
+  // matches the original, and every `/refresh` 401s. Decode once here so the
+  // round trip nets out to exactly one layer of encoding.
+  let value: string;
+  try {
+    value = decodeURIComponent(rawValue);
+  } catch {
+    value = rawValue;
+  }
+
+  return { name: pair.slice(0, eq).trim(), value, path, maxAge, expires };
 }
 
 /**
@@ -219,8 +349,20 @@ export function rescopeSessionCookies(gatewayResponse: Response, res: NextRespon
     if (parsed === null) {
       continue;
     }
-    names.push(parsed.name);
-    res.cookies.set(parsed.name, parsed.value, {
+    /*
+     * Normalize to the frontend's fixed, unprefixed cookie name. A production
+     * gateway (useSecureCookies) emits `__Secure-better-auth.session_token` —
+     * the browser only accepts names with that prefix over HTTPS AND with the
+     * `Secure` attribute, so on an http://localhost dev origin the cookie is
+     * silently rejected and the edge's presence check would redirect every
+     * `/onboard` request to `/login`. Stripping the prefix makes it store on
+     * any origin; `Secure` is still imposed in production where the frontend
+     * origin is HTTPS. `forwardToGateway` re-adds the prefixed twin for the
+     * gateway, which may expect it.
+     */
+    const name = parsed.name.replace(/^__Secure-/, '');
+    names.push(name);
+    res.cookies.set(name, parsed.value, {
       httpOnly: true,
       sameSite: 'lax',
       secure: isProduction(),

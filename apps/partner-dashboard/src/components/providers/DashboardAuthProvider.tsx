@@ -1,14 +1,15 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { getAccessToken, login, logout, signup, useSession } from '@c1rcle/auth';
 
+import { clearPartnerAccessCache, getCachedPartnerAccess } from '@/lib/access/org-access-cache';
 import { useOrgAccess } from '@/lib/access/use-org-access';
 import { getMyOnboardingRequest } from '@/lib/onboarding/onboarding-repository';
 import { getActiveOrgId, setActiveOrg } from '@/lib/org/active-org';
-import { getOrganizations, getPartnerAccess } from '@/lib/org/org-repository';
+import { getOrganizations } from '@/lib/org/org-repository';
 
 import type { DashboardProfile, PartnerMembership, PartnerType, StaffRole } from '@/lib/rbac/types';
 import type { OnboardingRequestDto } from '@c1rcle/contracts';
@@ -82,16 +83,12 @@ interface AuthContextValue {
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
-  switchPartner: (partnerId: string) => Promise<void>;
+  switchPartner: (partnerId: string) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-/** V2's org roles are `owner|admin|manager|member`; the frontend's staff-role
- * vocabulary has no `member` — `staff` is the closest existing label. */
-function toStaffRole(role: string): StaffRole {
-  return role === 'member' ? 'staff' : (role as StaffRole);
-}
+
 
 export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -102,10 +99,38 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   // effect would add here except an extra render.
   const [activeOrgId, setActiveOrgIdState] = useState<string | null>(() => getActiveOrgId());
   const [memberships, setMemberships] = useState<PartnerMembership[]>([]);
+  const [organizationIds, setOrganizationIds] = useState<string[]>([]);
   const [onboardingRequest, setOnboardingRequest] = useState<OnboardingRequestDto | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
 
-  const orgAccess = useOrgAccess(activeOrgId);
+  // Account switch guard: `activeOrgId` state is initialized once at mount, so
+  // without this a login as Account B reuses Account A's in-memory id for one
+  // render and fires `GET /access` with B's token against A's org -> 403
+  // (`X-Organization-Id does not match...`). Reset to the (already cleared by
+  // `@c1rcle/auth` login/logout) cookie value on every user change.
+  const lastUserId = useRef<string | null>(null);
+  const sessionUserId = session.user?.id ?? null;
+  if (lastUserId.current !== sessionUserId) {
+    lastUserId.current = sessionUserId;
+    const fresh = getActiveOrgId();
+    if (fresh !== activeOrgId) {
+      // Render-phase update is intentional here (React-endorsed
+      // store-during-render pattern for derived state on prop change).
+      setActiveOrgIdState(fresh);
+    }
+  }
+
+  // Only query `/access` for an org the account actually holds. Firing with a
+  // stale cookie (previous account, deleted org) 403s in the RBAC preHandler
+  // before the service layer; `loadAccountData` below clears such cookies, but
+  // the hook would already have fired. Gating here removes that 403 noise.
+  // It also requires the `x-organization-id` header fix in `use-org-access.ts`:
+  // without the header the gateway answers 422, never 200/403.
+  const validatedActiveOrgId =
+    activeOrgId !== null && organizationIds.includes(activeOrgId)
+      ? activeOrgId
+      : null;
+  const orgAccess = useOrgAccess(session.isAuthenticated ? validatedActiveOrgId : null);
 
   useEffect(() => {
     // A mutable object property, not a plain `let` — TypeScript narrows a
@@ -124,8 +149,17 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
       if (session.isLoading) return;
       const currentUser = session.user;
       if (!session.isAuthenticated || !currentUser) {
+        clearPartnerAccessCache();
+        setOrganizationIds([]);
         setMemberships([]);
         setOnboardingRequest(null);
+        if (activeOrgId !== null) {
+          // Session is gone but in-memory + cookie org hints may remain (e.g.
+          // logout failed mid-flight). Clear both so the next login never
+          // queries the previous account's org.
+          setActiveOrg(null);
+          if (!lifecycle.cancelled) setActiveOrgIdState(null);
+        }
         setDataLoading(false);
         return;
       }
@@ -134,51 +168,81 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
       try {
         const [orgs, request] = await Promise.all([getOrganizations(), getMyOnboardingRequest()]);
         if (lifecycle.cancelled) return;
-
-        const resolved = await Promise.all(
-          orgs.map(async (org): Promise<PartnerMembership | null> => {
-            try {
-              const access = await getPartnerAccess(org.id);
-              return {
-                uid: currentUser.id,
-                partnerId: org.id,
-                partnerType: access.partnerType as PartnerType,
-                role: toStaffRole(org.role),
-                isActive: org.id === activeOrgId,
-                partnerName: org.name,
-              };
-            } catch {
-              // A member the caller can list but not yet resolve access for
-              // (e.g. a suspended org) is dropped from the switcher rather
-              // than shown broken.
-              return null;
-            }
-          }),
-        );
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- real unmount-race guard; the linter can't see the cleanup function's mutation of `lifecycle.cancelled` from here.
-        if (lifecycle.cancelled) return;
-
-        const resolvedMemberships = resolved.filter((m): m is PartnerMembership => m !== null);
-        setMemberships(resolvedMemberships);
+        clearPartnerAccessCache();
+        setOrganizationIds(orgs.map((org) => org.id));
         setOnboardingRequest(request);
 
-        // First login, single org, no active-org cookie yet — pick it rather
-        // than force a one-item picker. Multiple orgs or zero orgs are left
-        // for the user (or the existing select-organization redirect) to
-        // resolve explicitly.
+        const resolveMembership = async (org: (typeof orgs)[number]): Promise<PartnerMembership | null> => {
+          try {
+            const access = await getCachedPartnerAccess(org.id);
+            return {
+              uid: currentUser.id,
+              partnerId: org.id,
+              partnerType: access.partnerType as PartnerType,
+              role: toStaffRole(org.role),
+              isActive: org.id === activeOrgId,
+              partnerName: org.name,
+            };
+          } catch {
+            // A member whose access cannot be resolved is omitted from the switcher.
+            return null;
+          }
+        };
+
+        const activeOrg = activeOrgId === null
+          ? undefined
+          : orgs.find((org) => org.id === activeOrgId);
+
+        if (activeOrg) {
+          // Only the active workspace is on the critical path. Other
+          // organizations are resolved after the page is unblocked.
+          const activeMembership = await resolveMembership(activeOrg);
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- lifecycle is mutated by the effect cleanup while this request is pending.
+          if (lifecycle.cancelled) return;
+          setMemberships(activeMembership ? [activeMembership] : []);
+          setDataLoading(false);
+
+          void Promise.all(
+            orgs.filter((org) => org.id !== activeOrg.id).map(resolveMembership),
+          ).then((resolved) => {
+            if (lifecycle.cancelled) return;
+            setMemberships((current) => [
+              ...current.filter((membership) => membership.partnerId === activeOrg.id),
+              ...resolved.filter((membership): membership is PartnerMembership => membership !== null),
+            ]);
+          });
+          return;
+        }
+
+        // No valid active organization exists. Resolve all organizations so
+        // the organization picker can auto-select a single option or display
+        // multiple options.
+        const resolved = await Promise.all(orgs.map(resolveMembership));
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- lifecycle is mutated by the effect cleanup while these requests are pending.
+        if (lifecycle.cancelled) return;
+        const resolvedMemberships = resolved.filter((m): m is PartnerMembership => m !== null);
+        setMemberships(resolvedMemberships);
+
+        // Stale or missing activeOrgId (e.g. from a different account's session).
+        // Clear storage and auto-pick if there is exactly one membership.
         const [only, ...rest] = resolvedMemberships;
-        if (!activeOrgId && only && rest.length === 0) {
-          await setActiveOrg(only.partnerId);
+        if (only && rest.length === 0) {
+          setActiveOrg(only.partnerId);
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- real unmount-race guard; see the comment on `lifecycle` above.
           if (!lifecycle.cancelled) setActiveOrgIdState(only.partnerId);
+        } else {
+          setActiveOrg(null);
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- real unmount-race guard; see the comment on `lifecycle` above.
+          if (!lifecycle.cancelled) setActiveOrgIdState(null);
         }
+        setDataLoading(false);
       } catch {
         if (!lifecycle.cancelled) {
+          setOrganizationIds([]);
           setMemberships([]);
           setOnboardingRequest(null);
+          setDataLoading(false);
         }
-      } finally {
-        if (!lifecycle.cancelled) setDataLoading(false);
       }
     }
 
@@ -189,7 +253,14 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- activeOrgId is read, not a trigger; re-running per active-org change would refetch the whole membership list for no reason.
   }, [session.isLoading, session.isAuthenticated, session.user?.id]);
 
-  const isApproved = onboardingRequest?.status === 'approved';
+  // An approved account stops appearing in `/onboarding/me` (approved requests
+  // are excluded from OPEN_STATUSES server-side), so `status === 'approved'`
+  // alone can never flip this true for a fully provisioned user — they'd be
+  // bounced back to `/onboard` forever. A resolved membership list is the
+  // reliable signal that onboarding already succeeded. (Invite-accepted and
+  // directly-provisioned members never go through the onboarding FSM at all,
+  // so membership alone must also grant access.)
+  const isApproved = onboardingRequest?.status === 'approved' || memberships.length > 0;
   // No `isBanned` concept exists in V2 yet — see the file-level comment.
   const isBanned = false;
   const onboardingStatus = onboardingRequest?.status ?? null;
@@ -217,8 +288,8 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     await logout();
   }, []);
 
-  const switchPartner = useCallback(async (partnerId: string) => {
-    await setActiveOrg(partnerId);
+  const switchPartner = useCallback((partnerId: string) => {
+    setActiveOrg(partnerId);
     window.location.reload();
   }, []);
 
@@ -236,7 +307,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     [orgAccess],
   );
 
-  const loading = session.isLoading || (session.isAuthenticated && dataLoading);
+  const loading = session.isLoading || (session.isAuthenticated && (dataLoading || orgAccess.isLoading));
 
   const authContextValue = useMemo<AuthContextValue>(() => {
     const activeMembership: PartnerMembership | null =
@@ -332,4 +403,27 @@ export function useDashboardAuth() {
     throw new Error('useDashboardAuth must be used within DashboardAuthProvider');
   }
   return context;
+}
+
+/**
+ * Maps backend role vocabularies to the dashboard's `StaffRole`.
+ * Sources: `organizationDto.role` (`owner|admin|manager|member`) and
+ * `/access` role (`OWNER|MANAGER|STAFF` from the gateway's `toPartnerRole`).
+ * Unknown values fail closed to `staff` (least privilege), never throw — this
+ * runs inside the membership-resolution loop where a throw would drop every
+ * membership and lock the user out with "no partner access".
+ */
+function toStaffRole(role: string): StaffRole {
+  switch (role.toLowerCase()) {
+    case 'owner':
+      return 'owner';
+    case 'admin':
+      return 'admin';
+    case 'manager':
+      return 'manager';
+    case 'promoter':
+      return 'promoter';
+    default:
+      return 'staff';
+  }
 }

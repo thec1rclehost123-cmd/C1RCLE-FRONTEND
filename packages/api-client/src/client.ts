@@ -18,6 +18,10 @@ interface SendOptions {
   readonly path: string;
   readonly query?: Readonly<Record<string, string | number | boolean | undefined>>;
   readonly body?: unknown;
+  /** Raw payload sent as-is (e.g. a `File` whose bytes the BFF absorbs). When set, `body` is ignored. */
+  readonly rawBody?: BodyInit | null;
+  /** Content type for a `rawBody` upload. Defaults to `application/octet-stream`. */
+  readonly contentType?: string;
   readonly headers?: Readonly<Record<string, string>>;
   readonly signal?: AbortSignal;
   readonly timeoutMs?: number;
@@ -133,9 +137,12 @@ export class ApiClient {
 
   async #run<T>(
     attempt: () => Promise<T>,
-    options: { retries?: number; signal?: AbortSignal },
+    options: { method?: HttpMethod; retries?: number; signal?: AbortSignal },
   ): Promise<T> {
-    const attempts = (options.retries ?? this.#maxRetries) + 1;
+    // Reads may retry once, but writes must not be replayed implicitly: a
+    // timeout can happen after the server has already committed the write.
+    const defaultRetries = options.method === 'GET' ? Math.min(this.#maxRetries, 1) : 0;
+    const attempts = (options.retries ?? defaultRetries) + 1;
     let lastError: ApiClientError | undefined;
 
     for (let attemptIndex = 0; attemptIndex < attempts; attemptIndex += 1) {
@@ -212,6 +219,7 @@ export class ApiClient {
     isReauthRetry: boolean,
   ): Promise<{ response: Response; requestId: RequestId }> {
     const requestId = newRequestId();
+    const startedAt = Date.now();
     const timeoutMs = options.timeoutMs ?? this.#timeoutMs;
     const timeoutSignal = AbortSignal.timeout(timeoutMs);
     const signal = options.signal
@@ -219,7 +227,9 @@ export class ApiClient {
       : timeoutSignal;
 
     const token = await this.#config.getToken?.();
-    const hasBody = options.body !== undefined;
+    const isRaw = options.rawBody !== undefined;
+    const hasBody = options.body !== undefined || isRaw;
+    const requestBody = isRaw ? options.rawBody : hasBody ? JSON.stringify(options.body) : undefined;
 
     let response: Response;
 
@@ -230,13 +240,20 @@ export class ApiClient {
         headers: {
           accept: 'application/json',
           'x-request-id': requestId,
-          ...(hasBody ? { 'content-type': 'application/json' } : {}),
+          ...(hasBody
+            ? {
+                'content-type': isRaw
+                  ? (options.contentType ?? 'application/octet-stream')
+                  : 'application/json',
+              }
+            : {}),
           ...(token !== null && token !== undefined ? { authorization: `Bearer ${token}` } : {}),
           ...options.headers,
         },
-        ...(hasBody ? { body: JSON.stringify(options.body) } : {}),
+        ...(requestBody !== undefined ? { body: requestBody } : {}),
       });
     } catch (cause) {
+      this.#logTiming(options, requestId, 0, startedAt);
       if (options.signal?.aborted === true) {
         throw this.#error('aborted', 'Request was cancelled.', { requestId, cause });
       }
@@ -263,10 +280,28 @@ export class ApiClient {
           return this.#send(options, true);
         }
       }
-      throw await this.#toHttpError(response, correlationId);
+      const error = await this.#toHttpError(response, correlationId);
+      this.#logTiming(options, correlationId, response.status, startedAt);
+      throw error;
     }
 
+    this.#logTiming(options, correlationId, response.status, startedAt);
     return { response, requestId: correlationId };
+  }
+
+  #logTiming(
+    options: { readonly method?: HttpMethod; readonly path: string },
+    requestId: RequestId,
+    status: number,
+    startedAt: number,
+  ): void {
+    this.#config.onTiming?.({
+      method: options.method ?? 'GET',
+      path: options.path,
+      status,
+      requestId,
+      durationMs: Date.now() - startedAt,
+    });
   }
 
   #parse<T>(schema: RequestOptions<T>['schema'], payload: unknown, requestId: RequestId): T {

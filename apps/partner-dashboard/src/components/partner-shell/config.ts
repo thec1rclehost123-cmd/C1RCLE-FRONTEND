@@ -28,6 +28,13 @@ export const PARTNER_SHELL_CONFIG: Readonly<Record<PartnerDashboardRole, Partner
         permission: 'VIEW_MARKETING',
       },
       {
+        label: 'Presence',
+        href: '/venue/presence',
+        icon: 'globe',
+        match: 'exact',
+        permission: 'VIEW_MARKETING',
+      },
+      {
         label: 'Finance',
         href: '/venue/finance',
         icon: 'wallet-cards',
@@ -61,6 +68,13 @@ export const PARTNER_SHELL_CONFIG: Readonly<Record<PartnerDashboardRole, Partner
         label: 'Marketing',
         href: '/host/marketing',
         icon: 'send',
+        match: 'exact',
+        permission: 'VIEW_MARKETING',
+      },
+      {
+        label: 'Presence',
+        href: '/host/presence',
+        icon: 'globe',
         match: 'exact',
         permission: 'VIEW_MARKETING',
       },
