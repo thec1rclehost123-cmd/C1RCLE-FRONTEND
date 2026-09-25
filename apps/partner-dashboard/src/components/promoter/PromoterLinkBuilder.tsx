@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 
-
 import { CopyLinkButton } from './PromoterShareActions';
 
 import type { PromoterEventLinkRow } from './PromoterLinksTable';
@@ -51,7 +50,9 @@ export function PromoterLinkBuilder({
           <span>Source</span>
           <select
             value={channel}
-            onChange={(event) => { setChannel(event.target.value as (typeof channels)[number]); }}
+            onChange={(event) => {
+              setChannel(event.target.value as (typeof channels)[number]);
+            }}
           >
             {channels.map((item) => (
               <option key={item}>{item}</option>
@@ -64,14 +65,18 @@ export function PromoterLinkBuilder({
           </span>
           <input
             value={label}
-            onChange={(event) => { setLabel(event.target.value); }}
+            onChange={(event) => {
+              setLabel(event.target.value);
+            }}
             maxLength={40}
             placeholder="e.g. August story"
           />
         </label>
         <button
           type="button"
-          onClick={() => { setSelected(selectedLink); }}
+          onClick={() => {
+            setSelected(selectedLink);
+          }}
           disabled={!selectedLink}
           title={
             !selectedLink ? 'No permanent tracked link is available for this event.' : undefined

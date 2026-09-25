@@ -13,7 +13,6 @@ import {
   TimeIcon,
 } from '@c1rcle/icons';
 
-
 import styles from '../venue/screens/VenueFinance.module.css';
 
 export interface PartnerFinanceHistoryRow {
@@ -161,7 +160,9 @@ export function PartnerFinanceScreen({
             <SearchIcon size={18} aria-hidden="true" />
             <input
               value={query}
-              onChange={(event) => { setQuery(event.target.value); }}
+              onChange={(event) => {
+                setQuery(event.target.value);
+              }}
               placeholder="Search history"
             />
           </label>

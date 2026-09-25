@@ -15,7 +15,12 @@ import {
 } from '@c1rcle/icons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@c1rcle/ui';
 
-import { listAdmins, listOnboardingApplications, listProposals, listRefunds } from '@/lib/admin/admin-api';
+import {
+  listAdmins,
+  listOnboardingApplications,
+  listProposals,
+  listRefunds,
+} from '@/lib/admin/admin-api';
 import { formatPaise } from '@/lib/admin/format';
 
 import type { IconProps } from '@c1rcle/icons';
@@ -76,7 +81,12 @@ function LiveStatsCards() {
     }
     let cancelled = false;
 
-    Promise.all([listProposals('pending', 1), listRefunds('pending', 1), listOnboardingApplications('submitted', 1), listAdmins(1)])
+    Promise.all([
+      listProposals('pending', 1),
+      listRefunds('pending', 1),
+      listOnboardingApplications('submitted', 1),
+      listAdmins(1),
+    ])
       .then(([proposals, refunds, onboarding, admins]) => {
         if (cancelled) {
           return;
@@ -158,7 +168,12 @@ function LiveStatsCards() {
         hint="awaiting review"
         icon={InviteIcon}
       />
-      <StatCard label="Admins" value={String(stats.activeAdmins)} hint="active accounts" icon={AdminIcon} />
+      <StatCard
+        label="Admins"
+        value={String(stats.activeAdmins)}
+        hint="active accounts"
+        icon={AdminIcon}
+      />
     </div>
   );
 }

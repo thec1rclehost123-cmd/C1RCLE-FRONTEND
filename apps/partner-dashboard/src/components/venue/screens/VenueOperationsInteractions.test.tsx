@@ -2,6 +2,8 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { initialCreateEventDraft } from '../create-event-model';
+
 import { CreateEventScreen } from './CreateEventScreen';
 import { FinanceScreen } from './FinanceScreen';
 import { MarketingScreen } from './MarketingScreen';
@@ -105,6 +107,16 @@ describe('Venue operations interactions', () => {
     const publish = vi.fn().mockResolvedValue(undefined);
     render(
       <CreateEventScreen
+        // The default draft's date is `2026-09-24`, which `validateEventDraft`
+        // rejects with "Event must start in the future." the moment the wall
+        // clock passes it — this test would otherwise silently break every
+        // run after 2026-09-24. Pin a far-future date so the wizard can reach
+        // the publish mutation on any machine/CI date.
+        initialDraft={{
+          ...initialCreateEventDraft,
+          date: '2099-09-24',
+          dateLabel: 'Thu, 24 Sep 2099',
+        }}
         mutations={{ saveDraft: vi.fn().mockResolvedValue(undefined), publish }}
       />,
     );
@@ -115,7 +127,7 @@ describe('Venue operations interactions', () => {
     await user.click(screen.getByRole('button', { name: /Continue to tickets/ }));
     expect(screen.getByRole('heading', { name: 'Tickets' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /Continue to review/ }));
-    expect(screen.getByText(/Friday Frequency · Thu, 24 Sep 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Friday Frequency · Thu, 24 Sep 2099/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Publish event' }));
     expect(publish).toHaveBeenCalledWith(expect.objectContaining({ name: 'Friday Frequency' }));
   });

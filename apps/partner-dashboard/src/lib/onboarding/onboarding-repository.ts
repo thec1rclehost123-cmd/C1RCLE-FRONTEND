@@ -1,121 +1,182 @@
 import { z } from 'zod';
 
+/*
+ * `documentUploadUrl*` / `verif*Document*` are generated onto `@c1rcle/contracts/client` but
+ * missed the curated `@c1rcle/contracts` index — imported from `/client` here rather than editing
+ * either generated file.
+ */
+import { isApiClientError } from '@c1rcle/api-client';
 import {
-  documentUploadUrlDtoSchema,
   onboardingRequestDtoSchema,
+  startOnboardingSchema,
   verificationResultDtoSchema,
-} from '@c1rcle/contracts';
+} from '@c1rcle/contracts/client';
 
 import { apiClient } from '@/lib/api/client';
+import { bffClient } from '@/lib/bff/bff-client';
+import { csrfHeaders } from '@/lib/onboarding/csrf';
 
 import type {
-  DocumentUploadUrlDto,
   OnboardingDocumentLabel,
-  OnboardingProfileDto,
   OnboardingRequestDto,
   SaveOnboardingProgressRequest,
+  StartOnboardingRequest,
   VerificationResultDto,
-} from '@c1rcle/contracts';
+  VerifyDocumentRequest,
+} from '@c1rcle/contracts/client';
 
-const myOnboardingResponseSchema = z.object({
+const onboardingMeResponseSchema = z.object({
   request: onboardingRequestDtoSchema.nullable(),
 });
 
 /**
- * The logged-in user's own onboarding application, or `null` before they
- * have started one. Mirrors `org-repository.ts`'s shape — a thin
- * `apiClient` call, no fixture fallback.
+ * Optimistic-locking version per application, keyed by request id. Every write
+ * returns the DTO with its freshly bumped `version`; it is cached here and sent
+ * as `If-Match` on the next write so the gateway's version check passes. On a
+ * `409 conflict` (stale — another write landed in between, e.g. a concurrent
+ * document upload or autosave) we re-read the current version via `getMine()`
+ * and retry exactly once before surfacing the error. This keeps all onboarding
+ * writes (autosave, upload, submit) on the same advancing version without
+ * threading prop state through every form component.
  */
-export async function getMyOnboardingRequest(): Promise<OnboardingRequestDto | null> {
-  const response = await apiClient.get({
-    path: '/api/v2/onboarding/me',
-    schema: myOnboardingResponseSchema,
+const versionByRequestId = new Map<string, number>();
+
+function ifMatchHeader(requestId: string): Record<string, string> | undefined {
+  const version = versionByRequestId.get(requestId);
+  return version === undefined ? undefined : { 'If-Match': String(version) };
+}
+
+function recordVersion(requestId: string, dto: OnboardingRequestDto): void {
+  versionByRequestId.set(requestId, dto.version);
+}
+
+/**
+ * Runs a versioned write with optimistic locking: sends `If-Match` from the
+ * last DTO seen for `requestId`, and on a `409 conflict` re-reads the current
+ * version and retries once. Idempotency keys are preserved across the retry so
+ * the gateway dedups the replayed write.
+ */
+async function withVersionRecovery(
+  requestId: string,
+  write: (ifMatch: Record<string, string> | undefined) => Promise<OnboardingRequestDto>,
+): Promise<OnboardingRequestDto> {
+  try {
+    const dto = await write(ifMatchHeader(requestId));
+    recordVersion(requestId, dto);
+    return dto;
+  } catch (error) {
+    if (!isApiClientError(error) || error.status !== 409) {
+      throw error;
+    }
+
+    const current = await getMine();
+    if (current !== null && current.id === requestId) {
+      recordVersion(requestId, current);
+    }
+
+    const dto = await write(ifMatchHeader(requestId));
+    recordVersion(requestId, dto);
+    return dto;
+  }
+}
+
+/** The applicant's own application, if any. `null` before they have started. */
+export async function getMine(): Promise<OnboardingRequestDto | null> {
+  // Read through the same-origin BFF (`/api/bff/onboarding/me`), which
+  // forwards the browser's httpOnly session cookie to the gateway — no bearer
+  // token involved, unlike the direct-gateway writes below.
+  const response = await bffClient.get({
+    path: '/api/bff/onboarding/me',
+    schema: onboardingMeResponseSchema,
   });
+  if (response.request !== null) {
+    recordVersion(response.request.id, response.request);
+  }
   return response.request;
 }
 
-export interface StartOnboardingInput {
-  requestedType: 'venue' | 'host' | 'promoter';
-  plan: 'basic' | 'silver' | 'diamond';
-  profile: OnboardingProfileDto;
-}
+/** Alias of {@link getMine}; kept under the V1 name for shared callers. */
+export const getMyOnboardingRequest = getMine;
 
-/** Creates the applicant's onboarding request. One per user (server-enforced). */
-export async function startOnboarding(input: StartOnboardingInput): Promise<OnboardingRequestDto> {
-  return apiClient.post({
+/** Opens an application. One live application per person — a `409` means one already exists. */
+export async function start(
+  input: StartOnboardingRequest,
+  idempotencyKey: string,
+): Promise<OnboardingRequestDto> {
+  const application = await apiClient.post({
     path: '/api/v2/onboarding/applications',
-    body: input,
+    body: startOnboardingSchema.parse(input),
     schema: onboardingRequestDtoSchema,
-    headers: { 'Idempotency-Key': crypto.randomUUID() },
+    headers: { 'Idempotency-Key': idempotencyKey },
   });
+  recordVersion(application.id, application);
+  return application;
+}
+
+/** Autosave. Not idempotency-keyed — a last-write-wins draft edit. */
+export async function saveProgress(
+  requestId: string,
+  patch: SaveOnboardingProgressRequest,
+): Promise<OnboardingRequestDto> {
+  return withVersionRecovery(requestId, (ifMatch) =>
+    apiClient.patch({
+      path: `/api/v2/onboarding/applications/${requestId}`,
+      body: patch,
+      schema: onboardingRequestDtoSchema,
+      headers: { ...ifMatch },
+    }),
+  );
 }
 
 /**
- * Autosave. Not idempotency-keyed on the backend (last-write-wins draft
- * edit) — matches here, no key minted.
+ * Uploads one KYC image with the file bytes moving end-to-end through the app's
+ * own BFF (`/api/bff/onboarding/.../documents/upload?label=`): the browser POSTs
+ * the raw bytes same-origin, the BFF absorbs them, asks the gateway for a
+ * pre-signed URL, PUTs the bytes to object storage server-side and confirms the
+ * `storagePath`. The browser never performs a cross-origin PUT, so the app CSP
+ * (`connect-src 'self' …`) is never in play for storage.
+ *
+ * The confirm step is idempotency-keyed; retries reuse the same key and dedup
+ * into the already-recorded document.
  */
-export async function saveOnboardingProgress(
-  requestId: string,
-  profile: SaveOnboardingProgressRequest,
-): Promise<OnboardingRequestDto> {
-  return apiClient.patch({
-    path: `/api/v2/onboarding/applications/${requestId}`,
-    body: profile,
-    schema: onboardingRequestDtoSchema,
-  });
-}
-
-/** Mints a pre-signed upload URL. The client PUTs the file there directly, then confirms below. */
-export async function getDocumentUploadUrl(
+export async function uploadDocument(
   requestId: string,
   label: OnboardingDocumentLabel,
-  contentType: 'image/jpeg' | 'image/png' | 'image/webp',
-): Promise<DocumentUploadUrlDto> {
-  return apiClient.post({
-    path: `/api/v2/onboarding/applications/${requestId}/documents/upload-url`,
-    body: { label, contentType },
-    schema: documentUploadUrlDtoSchema,
-  });
-}
-
-/**
- * Confirms a document after the file was PUT to the pre-signed URL. Pass
- * `storagePath` back verbatim from `getDocumentUploadUrl`'s response.
- */
-export async function addOnboardingDocument(
-  requestId: string,
-  label: OnboardingDocumentLabel,
-  storagePath: string,
+  file: File,
+  idempotencyKey: string,
 ): Promise<OnboardingRequestDto> {
-  return apiClient.post({
-    path: `/api/v2/onboarding/applications/${requestId}/documents`,
-    body: { label, storagePath },
-    schema: onboardingRequestDtoSchema,
-    headers: { 'Idempotency-Key': crypto.randomUUID() },
-  });
+  return withVersionRecovery(requestId, (ifMatch) =>
+    bffClient.post({
+      path: `/api/bff/onboarding/applications/${requestId}/documents/upload`,
+      query: { label },
+      rawBody: file,
+      contentType: file.type,
+      schema: onboardingRequestDtoSchema,
+      headers: { ...csrfHeaders(), 'Idempotency-Key': idempotencyKey, ...ifMatch },
+    }),
+  );
 }
 
-/** Submits the application for review. Fails if any required document is still missing. */
-export async function submitOnboardingRequest(requestId: string): Promise<OnboardingRequestDto> {
-  return apiClient.post({
-    path: `/api/v2/onboarding/applications/${requestId}/submit`,
-    body: undefined,
-    schema: onboardingRequestDtoSchema,
-    headers: { 'Idempotency-Key': crypto.randomUUID() },
-  });
+/** Submits the application for review. Blocked server-side until all 3 documents are present. */
+export async function submit(
+  requestId: string,
+  idempotencyKey: string,
+): Promise<OnboardingRequestDto> {
+  return withVersionRecovery(requestId, (ifMatch) =>
+    apiClient.post({
+      path: `/api/v2/onboarding/applications/${requestId}/submit`,
+      body: null,
+      schema: onboardingRequestDtoSchema,
+      headers: { 'Idempotency-Key': idempotencyKey, ...ifMatch },
+    }),
+  );
 }
 
 /**
- * Structural document verification (Aadhaar format, phone via GCP Identity
- * Platform's `proofToken`, etc). Never presented as government identity
- * confirmation — `passed` only means the format/provider check passed.
+ * Optional format check on a document's declared identity number — never rendered as "Verified",
+ * only as a format-check pass, pending manual review (D-018).
  */
-export async function verifyOnboardingDocument(input: {
-  documentType: string;
-  documentNumber: string;
-  holderName?: string;
-  proofToken?: string;
-}): Promise<VerificationResultDto> {
+export async function verifyDocument(input: VerifyDocumentRequest): Promise<VerificationResultDto> {
   return apiClient.post({
     path: '/api/v2/onboarding/verify-document',
     body: input,

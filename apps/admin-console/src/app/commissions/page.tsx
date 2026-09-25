@@ -7,10 +7,7 @@ import { Fragment, useState } from 'react';
 import { Button, EmptyState, ErrorState, LoadingState, TextField } from '@c1rcle/ui';
 
 import { PageHeader } from '@/components/admin/page-header';
-import {
-  listHosts,
-  raiseCommissionAdjustProposal,
-} from '@/lib/admin/admin-api';
+import { listHosts, raiseCommissionAdjustProposal } from '@/lib/admin/admin-api';
 import { formatDateTime, shortId, StatusBadge } from '@/lib/admin/format';
 
 import type { adminHostDtoSchema } from '@c1rcle/contracts';
@@ -192,8 +189,7 @@ function CommissionAdjustForm({
   const [reason, setReason] = useState('');
 
   const parsedRate = Number(rateText);
-  const rateValid =
-    Number.isInteger(parsedRate) && parsedRate >= 0 && parsedRate <= 100;
+  const rateValid = Number.isInteger(parsedRate) && parsedRate >= 0 && parsedRate <= 100;
   const reasonValid = reason.trim().length >= 1 && reason.trim().length <= 2000;
   const untouched = parsedRate === org.platformFeePercent;
 

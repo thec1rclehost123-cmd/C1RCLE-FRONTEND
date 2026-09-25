@@ -32,13 +32,8 @@ export function EmptyState({
   );
 }
 
-export function LoadingState({ label = 'Loading' }: { readonly label?: string }) {
-  return (
-    <div className={styles['loadingState']} role="status" aria-live="polite">
-      <span className={styles['partnerV3Spinner']} aria-hidden="true" />
-      <span>{label}</span>
-    </div>
-  );
+export function LoadingState(_props: { readonly label?: string }) {
+  return null;
 }
 
 export function ErrorState({

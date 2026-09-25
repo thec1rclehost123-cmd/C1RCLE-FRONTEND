@@ -75,7 +75,10 @@ export default function OrdersDesk() {
       {list.isPending ? (
         <LoadingState label="Loading orders…" />
       ) : list.isError ? (
-        <ErrorState description="Orders could not be loaded. Please retry." onRetry={() => void list.refetch()} />
+        <ErrorState
+          description="Orders could not be loaded. Please retry."
+          onRetry={() => void list.refetch()}
+        />
       ) : list.data.length === 0 ? (
         <EmptyState title="No orders" description="Nothing matches this filter." />
       ) : (
@@ -129,7 +132,9 @@ export default function OrdersDesk() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     {order.refundedPaise > 0 ? (
-                      <span className="text-muted-foreground">{formatPaise(order.refundedPaise)}</span>
+                      <span className="text-muted-foreground">
+                        {formatPaise(order.refundedPaise)}
+                      </span>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
@@ -138,9 +143,14 @@ export default function OrdersDesk() {
                     {order.paymentId !== null ? shortId(order.paymentId) : '—'}
                   </td>
                   <td className="px-4 py-3">
-                    <StatusBadge label={ORDER_STATUS_LABELS[order.status]} tone={orderStatusTone(order.status)} />
+                    <StatusBadge
+                      label={ORDER_STATUS_LABELS[order.status]}
+                      tone={orderStatusTone(order.status)}
+                    />
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{formatDateTime(order.createdAt)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {formatDateTime(order.createdAt)}
+                  </td>
                 </tr>
               ))}
             </tbody>

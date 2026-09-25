@@ -1,16 +1,17 @@
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { forwardToGateway } from '@/lib/bff/auth-proxy';
+import { csrfCookieName, forwardToGateway } from '@/lib/bff/auth-proxy';
 
 import { POST as otpSend } from './send/route';
 import { POST as otpVerify } from './verify/route';
 
 /**
  * ─── Email OTP BFF routes ────────────────────────────────────────────────────
- * Pre-session, same test shape as `../routes.test.ts` (signup/login): mock
- * `forwardToGateway`, assert the proxy forwards to the right gateway path
- * and passes the response through unchanged.
+ * Session-scoped, same test shape as `phone-verification/route.test.ts`
+ * and `../routes.test.ts`: mock `forwardToGateway`, assert the proxy forwards
+ * to the right gateway path with the session cookie and passes the response
+ * through unchanged.
  */
 vi.mock('@/lib/bff/auth-proxy', async (importOriginal) => {
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- vitest's documented mock-factory pattern
@@ -36,6 +37,12 @@ function post(path: string, headers: Record<string, string>, body?: unknown): Ne
   });
 }
 
+const CSRF_HEADERS = {
+  origin: APP_ORIGIN,
+  'x-csrf-token': 'tok',
+  cookie: `${csrfCookieName()}=tok; better-auth.session_token=sess_abc`,
+};
+
 beforeEach(() => {
   mockForward.mockReset();
 });
@@ -45,17 +52,28 @@ afterEach(() => {
 });
 
 describe('POST /api/auth/otp/send', () => {
-  it('forwards to /api/v2/auth/otp/send and passes the ack through', async () => {
-    mockForward.mockResolvedValue(gatewayResponse({ message: 'If valid, a code has been sent.' }));
-
+  it('rejects a missing CSRF token', async () => {
     const res = await otpSend(
       post('/api/auth/otp/send', { origin: APP_ORIGIN }, { email: 'a@b.com' }),
     );
+    expect(res.status).toBe(403);
+    expect(mockForward).not.toHaveBeenCalled();
+  });
+
+  it('forwards to /api/v2/auth/otp/send, carrying the session cookie, and passes the ack through', async () => {
+    mockForward.mockResolvedValue(gatewayResponse({ message: 'If valid, a code has been sent.' }));
+
+    const res = await otpSend(post('/api/auth/otp/send', CSRF_HEADERS, { email: 'a@b.com' }));
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ message: 'If valid, a code has been sent.' });
-    const [calledPath] = mockForward.mock.calls[0] as [string, { body?: unknown }];
+    const [calledPath, calledInit] = mockForward.mock.calls[0] as [
+      string,
+      { body?: unknown; cookie?: string | null },
+    ];
     expect(calledPath).toBe('/api/v2/auth/otp/send');
+    expect(calledInit.body).toEqual({ email: 'a@b.com' });
+    expect(calledInit.cookie).toContain('better-auth.session_token=sess_abc');
   });
 
   it('rejects a cross-origin request', async () => {
@@ -73,25 +91,35 @@ describe('POST /api/auth/otp/send', () => {
         { status: 429 },
       ),
     );
-    const res = await otpSend(
-      post('/api/auth/otp/send', { origin: APP_ORIGIN }, { email: 'a@b.com' }),
-    );
+    const res = await otpSend(post('/api/auth/otp/send', CSRF_HEADERS, { email: 'a@b.com' }));
     expect(res.status).toBe(429);
   });
 });
 
 describe('POST /api/auth/otp/verify', () => {
-  it('forwards to /api/v2/auth/otp/verify with the body unchanged', async () => {
-    mockForward.mockResolvedValue(gatewayResponse({ message: 'Verified.' }));
-
+  it('rejects a missing CSRF token', async () => {
     const res = await otpVerify(
       post('/api/auth/otp/verify', { origin: APP_ORIGIN }, { email: 'a@b.com', code: '123456' }),
     );
+    expect(res.status).toBe(403);
+    expect(mockForward).not.toHaveBeenCalled();
+  });
+
+  it('forwards to /api/v2/auth/otp/verify with the body unchanged, carrying the session cookie', async () => {
+    mockForward.mockResolvedValue(gatewayResponse({ message: 'Verified.' }));
+
+    const res = await otpVerify(
+      post('/api/auth/otp/verify', CSRF_HEADERS, { email: 'a@b.com', code: '123456' }),
+    );
 
     expect(res.status).toBe(200);
-    const [calledPath, calledInit] = mockForward.mock.calls[0] as [string, { body?: unknown }];
+    const [calledPath, calledInit] = mockForward.mock.calls[0] as [
+      string,
+      { body?: unknown; cookie?: string | null },
+    ];
     expect(calledPath).toBe('/api/v2/auth/otp/verify');
     expect(calledInit.body).toEqual({ email: 'a@b.com', code: '123456' });
+    expect(calledInit.cookie).toContain('better-auth.session_token=sess_abc');
   });
 
   it('passes a wrong-code 400 straight through', async () => {
@@ -102,7 +130,7 @@ describe('POST /api/auth/otp/verify', () => {
       ),
     );
     const res = await otpVerify(
-      post('/api/auth/otp/verify', { origin: APP_ORIGIN }, { email: 'a@b.com', code: '000000' }),
+      post('/api/auth/otp/verify', CSRF_HEADERS, { email: 'a@b.com', code: '000000' }),
     );
     expect(res.status).toBe(400);
   });
