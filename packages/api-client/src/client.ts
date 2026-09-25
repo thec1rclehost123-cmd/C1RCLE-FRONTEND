@@ -229,7 +229,11 @@ export class ApiClient {
     const token = await this.#config.getToken?.();
     const isRaw = options.rawBody !== undefined;
     const hasBody = options.body !== undefined || isRaw;
-    const requestBody = isRaw ? options.rawBody : hasBody ? JSON.stringify(options.body) : undefined;
+    const requestBody = isRaw
+      ? options.rawBody
+      : hasBody
+        ? JSON.stringify(options.body)
+        : undefined;
 
     let response: Response;
 

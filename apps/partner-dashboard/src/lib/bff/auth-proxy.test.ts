@@ -126,7 +126,8 @@ describe('rescopeSessionCookies', () => {
     // encoded string straight into `res.cookies.set()` (which encodes again) is
     // exactly the bug: the browser ends up storing/replaying a token that never
     // matches the original, so `POST /api/auth/refresh` 401s every time.
-    const rawToken = 'AcdMb7pFISI1UyXTcorZLBeXYwURG1At.TJZdUTST1bVFtrlsvP7EYKlqcRTk/u/4t32xhZM26LI=';
+    const rawToken =
+      'AcdMb7pFISI1UyXTcorZLBeXYwURG1At.TJZdUTST1bVFtrlsvP7EYKlqcRTk/u/4t32xhZM26LI=';
     const gatewayResponse = new Response(null, { status: 200 });
     gatewayResponse.headers.append(
       'set-cookie',

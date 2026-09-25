@@ -148,7 +148,11 @@ describe('useOrgAccess', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    getPartnerAccessMock.mockResolvedValue({ ...ACCESS_FIXTURE, organizationId: 'org-2', partnerType: 'host' });
+    getPartnerAccessMock.mockResolvedValue({
+      ...ACCESS_FIXTURE,
+      organizationId: 'org-2',
+      partnerType: 'host',
+    });
     act(() => {
       rerender({ orgId: 'org-2' });
     });

@@ -112,7 +112,11 @@ describe('Venue operations interactions', () => {
         // clock passes it — this test would otherwise silently break every
         // run after 2026-09-24. Pin a far-future date so the wizard can reach
         // the publish mutation on any machine/CI date.
-        initialDraft={{ ...initialCreateEventDraft, date: '2099-09-24', dateLabel: 'Thu, 24 Sep 2099' }}
+        initialDraft={{
+          ...initialCreateEventDraft,
+          date: '2099-09-24',
+          dateLabel: 'Thu, 24 Sep 2099',
+        }}
         mutations={{ saveDraft: vi.fn().mockResolvedValue(undefined), publish }}
       />,
     );

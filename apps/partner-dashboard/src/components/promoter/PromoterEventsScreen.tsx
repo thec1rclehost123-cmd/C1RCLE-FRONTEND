@@ -33,7 +33,10 @@ const STATUS_TONE = {
 } as const;
 
 function statusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
-  return (STATUS_TONE as Record<string, 'success' | 'warning' | 'danger' | 'neutral'>)[status] ?? 'neutral';
+  return (
+    (STATUS_TONE as Record<string, 'success' | 'warning' | 'danger' | 'neutral'>)[status] ??
+    'neutral'
+  );
 }
 
 function statusLabel(status: PromoterEvent['status']): string {
@@ -146,7 +149,9 @@ export function PromoterEventsScreen({
   };
   const confirmRequest = () => {
     setRequestState('submitting');
-    window.setTimeout(() => { setRequestState('prepared'); }, 550);
+    window.setTimeout(() => {
+      setRequestState('prepared');
+    }, 550);
   };
 
   return (
@@ -173,7 +178,9 @@ export function PromoterEventsScreen({
                   setTab(item.key);
                   setQuery('');
                 }}
-                onKeyDown={(e) => { onTabKeyDown(e, index); }}
+                onKeyDown={(e) => {
+                  onTabKeyDown(e, index);
+                }}
               >
                 {item.label}
                 {item.count !== undefined ? <span>{item.count}</span> : null}
@@ -191,7 +198,9 @@ export function PromoterEventsScreen({
           <input
             type="search"
             value={query}
-            onChange={(e) => { setQuery(e.target.value); }}
+            onChange={(e) => {
+              setQuery(e.target.value);
+            }}
             placeholder="Search events"
           />
         </label>
@@ -203,7 +212,9 @@ export function PromoterEventsScreen({
               type="button"
               aria-expanded={filtersOpen}
               aria-controls="promoter-event-filters"
-              onClick={() => { setFiltersOpen((o) => !o); }}
+              onClick={() => {
+                setFiltersOpen((o) => !o);
+              }}
             >
               <FilterIcon size={19} aria-hidden="true" />
               Filters
@@ -217,7 +228,12 @@ export function PromoterEventsScreen({
               >
                 <label>
                   <span>City</span>
-                  <select value={city} onChange={(e) => { setCity(e.target.value); }}>
+                  <select
+                    value={city}
+                    onChange={(e) => {
+                      setCity(e.target.value);
+                    }}
+                  >
                     <option>All cities</option>
                     <option>Mumbai</option>
                     <option>Pune</option>
@@ -226,7 +242,12 @@ export function PromoterEventsScreen({
                 </label>
                 <label>
                   <span>Category</span>
-                  <select value={category} onChange={(e) => { setCategory(e.target.value); }}>
+                  <select
+                    value={category}
+                    onChange={(e) => {
+                      setCategory(e.target.value);
+                    }}
+                  >
                     <option>All categories</option>
                     <option>Techno</option>
                     <option>Indie</option>
@@ -236,7 +257,12 @@ export function PromoterEventsScreen({
                 </label>
                 <label>
                   <span>Commission</span>
-                  <select value={commission} onChange={(e) => { setCommission(e.target.value); }}>
+                  <select
+                    value={commission}
+                    onChange={(e) => {
+                      setCommission(e.target.value);
+                    }}
+                  >
                     <option>All models</option>
                     <option>Per ticket</option>
                     <option>Percentage</option>
@@ -247,7 +273,12 @@ export function PromoterEventsScreen({
                   <button type="button" onClick={clearFilters} disabled={!hasFilters}>
                     Clear
                   </button>
-                  <button type="button" onClick={() => { setFiltersOpen(false); }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFiltersOpen(false);
+                    }}
+                  >
                     Done
                   </button>
                 </div>
@@ -328,7 +359,9 @@ export function PromoterEventsScreen({
             <button
               type="button"
               className="pd-button pd-button--primary"
-              onClick={() => { setRequestState('confirming'); }}
+              onClick={() => {
+                setRequestState('confirming');
+              }}
             >
               Request partnership
             </button>
@@ -342,7 +375,9 @@ export function PromoterEventsScreen({
         confirmLabel="Prepare request"
         busy={requestState === 'submitting'}
         onConfirm={confirmRequest}
-        onCancel={() => { setRequestState('idle'); }}
+        onCancel={() => {
+          setRequestState('idle');
+        }}
       />
       <DashboardToast
         message={
@@ -520,9 +555,7 @@ function DiscoveryGrid({
                 className="object-cover w-full h-[180px]"
               />
             ) : (
-              <div
-                className="w-full h-[180px] bg-[var(--dashboard-surface-elevated)] flex items-center justify-center text-[var(--dashboard-text-secondary)] text-[13px]"
-              >
+              <div className="w-full h-[180px] bg-[var(--dashboard-surface-elevated)] flex items-center justify-center text-[var(--dashboard-text-secondary)] text-[13px]">
                 {event.category}
               </div>
             )}
@@ -543,7 +576,13 @@ function DiscoveryGrid({
               <div className={s('ticketCell')}>
                 <strong>{event.commissionLabel}</strong>
               </div>
-              <button type="button" className={s('gridAction')} onClick={() => { onSelect(event); }}>
+              <button
+                type="button"
+                className={s('gridAction')}
+                onClick={() => {
+                  onSelect(event);
+                }}
+              >
                 View opportunity
               </button>
             </div>
@@ -583,9 +622,7 @@ function EventPosterFallback({
     return <Image src={src} alt="" width={160} height={86} sizes="160px" priority={index < 2} />;
   }
   return (
-    <div
-      className="w-[160px] h-[86px] bg-[var(--dashboard-surface-elevated)] rounded-[var(--dashboard-radius-control)] flex items-center justify-center text-[var(--dashboard-text-secondary)] text-[22px] font-bold flex-shrink-0"
-    >
+    <div className="w-[160px] h-[86px] bg-[var(--dashboard-surface-elevated)] rounded-[var(--dashboard-radius-control)] flex items-center justify-center text-[var(--dashboard-text-secondary)] text-[22px] font-bold flex-shrink-0">
       {name
         .split(' ')
         .map((w) => w[0])

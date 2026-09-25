@@ -14,13 +14,14 @@
 >   `packages/core`), deployed as **https://circle-v2-backend.onrender.com**
 >
 > The wizard uses a **split transport model**:
+>
 > - **Reads and file uploads** go same-origin through the Next.js **BFF**
 >   (`/api/bff/onboarding/*`, `/api/bff/organizations/*`, `/api/auth/*`) and are
 >   authenticated by the **session cookie** (no bearer header needed).
 > - **State-changing application commands** (`start`, `autosave`, `submit`,
 >   `verify-document`) call the gateway **directly from the browser** with the
 >   in-memory **Bearer** token via the shared `@c1rcle/api-client`.
-> - **Email OTP and phone token verification** are *not* sent over the wire for
+> - **Email OTP and phone token verification** are _not_ sent over the wire for
 >   everything: email OTP goes through `/api/auth/otp/*`; phone OTP is
 >   Firebase/GCP-side; only the resulting Firebase ID token is confirmed
 >   server-side through `POST /api/v2/onboarding/verify-document`.
@@ -84,13 +85,13 @@
 
 The two monorepos involved split cleanly down the middle of the diagram:
 
-| Layer | Where the code lives |
-|-------|----------------------|
-| Frontend wizard / BFF | `D:\C1RCLE-FRONTEND\apps\partner-dashboard` |
-| API client + contracts | `D:\C1RCLE-FRONTEND\packages\{api-client,auth,contracts,config}` |
-| API Gateway (routes) | `D:\C1RCLE-BACKEND\apps\api-gateway\src` |
-| Backend service + domain | `D:\C1RCLE-BACKEND\packages\core\src` |
-| Database / storage | Firestore + Firebase Storage (project from `FIRESTORE_PROJECT_ID`) |
+| Layer                    | Where the code lives                                               |
+| ------------------------ | ------------------------------------------------------------------ |
+| Frontend wizard / BFF    | `D:\C1RCLE-FRONTEND\apps\partner-dashboard`                        |
+| API client + contracts   | `D:\C1RCLE-FRONTEND\packages\{api-client,auth,contracts,config}`   |
+| API Gateway (routes)     | `D:\C1RCLE-BACKEND\apps\api-gateway\src`                           |
+| Backend service + domain | `D:\C1RCLE-BACKEND\packages\core\src`                              |
+| Database / storage       | Firestore + Firebase Storage (project from `FIRESTORE_PROJECT_ID`) |
 
 ---
 
@@ -98,27 +99,34 @@ The two monorepos involved split cleanly down the middle of the diagram:
 
 The onboarding screen lives at route **`/onboard`**:
 
-| File | Role |
-|------|------|
-| `apps/partner-dashboard/src/app/onboard/page.tsx` | Server component, renders `PageClient`, sets metadata |
-| `apps/partner-dashboard/src/app/onboard/layout.tsx` | Wraps children in `DashboardAuthProvider` (no `SessionProvider`) |
-| `apps/partner-dashboard/src/app/onboard/PageClient.tsx` | **The entire wizard** (2640 lines, `'use client'`) |
+| File                                                    | Role                                                             |
+| ------------------------------------------------------- | ---------------------------------------------------------------- |
+| `apps/partner-dashboard/src/app/onboard/page.tsx`       | Server component, renders `PageClient`, sets metadata            |
+| `apps/partner-dashboard/src/app/onboard/layout.tsx`     | Wraps children in `DashboardAuthProvider` (no `SessionProvider`) |
+| `apps/partner-dashboard/src/app/onboard/PageClient.tsx` | **The entire wizard** (2640 lines, `'use client'`)               |
 
 ### Step sequence
 
 ```ts
 type OnboardingStep =
-  | 'signup' | 'email_verify' | 'phone_verify' | 'entity_type'
-  | 'role' | 'details' | 'kyc_identity' | 'kyc_business'
-  | 'kyc_signatory' | 'success';
+  | 'signup'
+  | 'email_verify'
+  | 'phone_verify'
+  | 'entity_type'
+  | 'role'
+  | 'details'
+  | 'kyc_identity'
+  | 'kyc_business'
+  | 'kyc_signatory'
+  | 'success';
 ```
 
 `getStepSequence(entityType)` computes the tail dynamically:
 
-| Entity type | Sequence |
-|---|---|
-| `individual` | `role → signup → email_verify → phone_verify → entity_type → details → kyc_identity → success` (**8 steps**) |
-| `business` | `role → signup → email_verify → phone_verify → entity_type → details → kyc_business → kyc_signatory → success` (**9 steps**) |
+| Entity type  | Sequence                                                                                                                     |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `individual` | `role → signup → email_verify → phone_verify → entity_type → details → kyc_identity → success` (**8 steps**)                 |
+| `business`   | `role → signup → email_verify → phone_verify → entity_type → details → kyc_business → kyc_signatory → success` (**9 steps**) |
 
 Step labels: `signup` **Sign Up**, `email_verify` **Email**, `phone_verify` **Phone**,
 `entity_type` **Entity**, `role` **Role**, `details` **Details**,
@@ -129,18 +137,18 @@ clickable to jump back. The header back button at step index 0 →
 
 ### 2.1 What each step does
 
-| Step | UI | Network action (on advance) |
-|------|----|------------------------------|
-| `role` | 3 `RoleCard`s — Venue Partner, Event Host, Promoter | none; Continue → `signup` |
-| `signup` | In-place **Sign Up / Log In toggle** (`emailExists`). Sign-up: Full Name, Email, Password (+ eye). Log-in: Email + Password | **Sign up**: `authSignUp(email, password, name)` then **`sendOtp(email)`** (sequential). **Log in**: `authSignIn(email, password)` then `getMine()` (see §2.4). |
-| `email_verify` | Email field (disabled once sent), 6-digit `OtpInput`, Send Code, Verify Email, `ResendButton` (60 s cooldown), "Use a different email" | `sendOtp(email)` → `POST /api/auth/otp/send`; `verifyOtp(email, code)` → `POST /api/auth/otp/verify` → on success → `phone_verify` |
-| `phone_verify` | Phone field (sanitised digits/`+`/spaces), invisible reCAPTCHA anchor `#phone-verify-recaptcha`, test-bypass banner in dev/preview, `OtpInput`, verify/resend, "Use a different number" | Firebase `sendPhoneOtp(toE164(...))` (no HTTP of its own); `confirmPhoneOtp(code)` → Firebase ID token → **`verifyDocument({documentType:'phone', documentNumber, proofToken})`** → direct gateway → `entity_type` |
-| `entity_type` | Individual / Business card pick | none → `details` |
-| `details` | "Signed In As" banner + entity/profile fields (see §2.2) | `start(...)` → `POST /api/v2/onboarding/applications` (plan hard-coded `'basic'`) → first KYC step |
-| `kyc_identity` | `<KycIdentityForm>` — ID type/number, doc front/back/selfie, optional Aadhaar format-check | `uploadDocument()` per file; "Verify Aadhaar" → `verifyDocument({documentType:'aadhaar', ...})` (format check only) |
-| `kyc_business` | `<KycBusinessForm>` — PAN, GST (opt), registered address, registration certificate | registration certificate is **local-only** (no real slot, never uploaded — see §2.3) |
-| `kyc_signatory` | `<KycSignatoryForm>` — signatory name/designation/email/phone, ID type/number, doc front/back/selfie | `uploadDocument()` per file (labels `id_front`/`id_back`/`selfie`) |
-| `success` | Approved view ("You're Approved" + **Go to Dashboard**) vs Pending view ("Application Submitted" + What Happens Next + Return to Login) | polls `getMine()` immediately then every **10 s** |
+| Step            | UI                                                                                                                                                                                      | Network action (on advance)                                                                                                                                                                                        |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `role`          | 3 `RoleCard`s — Venue Partner, Event Host, Promoter                                                                                                                                     | none; Continue → `signup`                                                                                                                                                                                          |
+| `signup`        | In-place **Sign Up / Log In toggle** (`emailExists`). Sign-up: Full Name, Email, Password (+ eye). Log-in: Email + Password                                                             | **Sign up**: `authSignUp(email, password, name)` then **`sendOtp(email)`** (sequential). **Log in**: `authSignIn(email, password)` then `getMine()` (see §2.4).                                                    |
+| `email_verify`  | Email field (disabled once sent), 6-digit `OtpInput`, Send Code, Verify Email, `ResendButton` (60 s cooldown), "Use a different email"                                                  | `sendOtp(email)` → `POST /api/auth/otp/send`; `verifyOtp(email, code)` → `POST /api/auth/otp/verify` → on success → `phone_verify`                                                                                 |
+| `phone_verify`  | Phone field (sanitised digits/`+`/spaces), invisible reCAPTCHA anchor `#phone-verify-recaptcha`, test-bypass banner in dev/preview, `OtpInput`, verify/resend, "Use a different number" | Firebase `sendPhoneOtp(toE164(...))` (no HTTP of its own); `confirmPhoneOtp(code)` → Firebase ID token → **`verifyDocument({documentType:'phone', documentNumber, proofToken})`** → direct gateway → `entity_type` |
+| `entity_type`   | Individual / Business card pick                                                                                                                                                         | none → `details`                                                                                                                                                                                                   |
+| `details`       | "Signed In As" banner + entity/profile fields (see §2.2)                                                                                                                                | `start(...)` → `POST /api/v2/onboarding/applications` (plan hard-coded `'basic'`) → first KYC step                                                                                                                 |
+| `kyc_identity`  | `<KycIdentityForm>` — ID type/number, doc front/back/selfie, optional Aadhaar format-check                                                                                              | `uploadDocument()` per file; "Verify Aadhaar" → `verifyDocument({documentType:'aadhaar', ...})` (format check only)                                                                                                |
+| `kyc_business`  | `<KycBusinessForm>` — PAN, GST (opt), registered address, registration certificate                                                                                                      | registration certificate is **local-only** (no real slot, never uploaded — see §2.3)                                                                                                                               |
+| `kyc_signatory` | `<KycSignatoryForm>` — signatory name/designation/email/phone, ID type/number, doc front/back/selfie                                                                                    | `uploadDocument()` per file (labels `id_front`/`id_back`/`selfie`)                                                                                                                                                 |
+| `success`       | Approved view ("You're Approved" + **Go to Dashboard**) vs Pending view ("Application Submitted" + What Happens Next + Return to Login)                                                 | polls `getMine()` immediately then every **10 s**                                                                                                                                                                  |
 
 ### 2.2 Details step fields
 
@@ -162,11 +170,11 @@ The Details form maps server vocabulary onto local state via `PROFILE_KEY_MAP`.
 
 Real labels used by the forms:
 
-| Form | Uploaded labels |
-|---|---|
-| `KycIdentityForm` (individual) | `id_front`, `id_back`, `selfie` |
-| `KycSignatoryForm` (business) | `id_front`, `id_back`, `selfie` (signatory's ID + selfie) |
-| `KycBusinessForm` (business) | **none** — registration certificate is local placeholder |
+| Form                           | Uploaded labels                                           |
+| ------------------------------ | --------------------------------------------------------- |
+| `KycIdentityForm` (individual) | `id_front`, `id_back`, `selfie`                           |
+| `KycSignatoryForm` (business)  | `id_front`, `id_back`, `selfie` (signatory's ID + selfie) |
+| `KycBusinessForm` (business)   | **none** — registration certificate is local placeholder  |
 
 `KycIdentityForm` includes an "ID Type" select and "Verify Aadhaar" handler that calls
 `verifyDocument({documentType:'aadhaar', documentNumber})` (12 digits enabled) — this is a
@@ -214,34 +222,34 @@ On `success` with a `submittedRequestId`: `getMine()` immediately, then `setInte
 
 **Auth BFF** (`src/app/api/auth/*` — all re-scope session cookies on success; login/signup also mint the CSRF cookie):
 
-| Browser endpoint | Method | Gateway forward | Guard | Notes |
-|---|---|---|---|---|
-| `/api/auth/signup` | POST | `POST /api/v2/auth/signup` | same-origin only | 201 + cookies + CSRF mint |
-| `/api/auth/login` | POST | `POST /api/v2/auth/login` | same-origin only | 200 + cookies + CSRF mint; every gateway 4xx is `Authentication failed` |
-| `/api/auth/refresh` | POST | `POST /api/v2/auth/refresh` | same-origin + CSRF | 200 + re-scoped cookie; 401 → unauthorized |
-| `/api/auth/logout` | POST | `POST /api/v2/auth/logout` | same-origin + CSRF | best-effort (`.catch(() => null)`); always 204 + `clearCsrfCookie` |
-| `/api/auth/session` | GET | `GET /api/v2/auth/session` | same-origin | 401 → synthesized `{code:'unauthorized'}` |
-| `/api/auth/otp/send` | POST | `POST /api/v2/auth/otp/send` | same-origin + CSRF | body `{email}`; generic ack `{message}` |
-| `/api/auth/otp/verify` | POST | `POST /api/v2/auth/otp/verify` | same-origin + CSRF | body `{email, code}`; real 400 `Invalid or expired code.` passed through |
-| `/api/auth/phone-verification` | POST | `POST /api/v2/onboarding/verify-document` (body rewritten to `{documentType:'phone', documentNumber, proofToken}`) | same-origin + CSRF | cookie-auth twin of the direct-bearer route; **not on the wizard path** (§6.3) |
+| Browser endpoint               | Method | Gateway forward                                                                                                    | Guard              | Notes                                                                          |
+| ------------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------ | ------------------ | ------------------------------------------------------------------------------ |
+| `/api/auth/signup`             | POST   | `POST /api/v2/auth/signup`                                                                                         | same-origin only   | 201 + cookies + CSRF mint                                                      |
+| `/api/auth/login`              | POST   | `POST /api/v2/auth/login`                                                                                          | same-origin only   | 200 + cookies + CSRF mint; every gateway 4xx is `Authentication failed`        |
+| `/api/auth/refresh`            | POST   | `POST /api/v2/auth/refresh`                                                                                        | same-origin + CSRF | 200 + re-scoped cookie; 401 → unauthorized                                     |
+| `/api/auth/logout`             | POST   | `POST /api/v2/auth/logout`                                                                                         | same-origin + CSRF | best-effort (`.catch(() => null)`); always 204 + `clearCsrfCookie`             |
+| `/api/auth/session`            | GET    | `GET /api/v2/auth/session`                                                                                         | same-origin        | 401 → synthesized `{code:'unauthorized'}`                                      |
+| `/api/auth/otp/send`           | POST   | `POST /api/v2/auth/otp/send`                                                                                       | same-origin + CSRF | body `{email}`; generic ack `{message}`                                        |
+| `/api/auth/otp/verify`         | POST   | `POST /api/v2/auth/otp/verify`                                                                                     | same-origin + CSRF | body `{email, code}`; real 400 `Invalid or expired code.` passed through       |
+| `/api/auth/phone-verification` | POST   | `POST /api/v2/onboarding/verify-document` (body rewritten to `{documentType:'phone', documentNumber, proofToken}`) | same-origin + CSRF | cookie-auth twin of the direct-bearer route; **not on the wizard path** (§6.3) |
 
 **Onboarding BFF** (`src/app/api/bff/onboarding/*`):
 
-| Browser endpoint | Method | Gateway forward | Idempotency-Key | If-Match | Notes |
-|---|---|---|---|---|---|
-| `/api/bff/onboarding/me` | GET | `GET /api/v2/onboarding/me` | no | no | on success, if no `c1rcle.csrf` cookie present, mints one (returning applicants) |
-| `/api/bff/onboarding/applications` | POST | `POST /api/v2/onboarding/applications` | optional (forwarded) | no | 201 + re-scoped cookies |
-| `/api/bff/onboarding/applications/:id` | PATCH | `PATCH /api/v2/onboarding/applications/:id` | no | yes | autosave |
-| `/api/bff/onboarding/applications/:id/documents/upload` | POST | (1) `POST .../documents/upload-url` → (2) **server PUT to storage** → (3) `POST .../documents` | **required** (client's or minted) | yes | the whole upload ($3.3) |
-| `/api/bff/onboarding/applications/:id/submit` | POST | `POST /api/v2/onboarding/applications/:id/submit` | optional (forwarded) | yes | no body |
-| `/api/bff/onboarding/verify-document` | POST | `POST /api/v2/onboarding/verify-document` | no | no | exists but unused by the wizard (wizard goes direct) |
+| Browser endpoint                                        | Method | Gateway forward                                                                                | Idempotency-Key                   | If-Match | Notes                                                                            |
+| ------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------- | --------------------------------- | -------- | -------------------------------------------------------------------------------- |
+| `/api/bff/onboarding/me`                                | GET    | `GET /api/v2/onboarding/me`                                                                    | no                                | no       | on success, if no `c1rcle.csrf` cookie present, mints one (returning applicants) |
+| `/api/bff/onboarding/applications`                      | POST   | `POST /api/v2/onboarding/applications`                                                         | optional (forwarded)              | no       | 201 + re-scoped cookies                                                          |
+| `/api/bff/onboarding/applications/:id`                  | PATCH  | `PATCH /api/v2/onboarding/applications/:id`                                                    | no                                | yes      | autosave                                                                         |
+| `/api/bff/onboarding/applications/:id/documents/upload` | POST   | (1) `POST .../documents/upload-url` → (2) **server PUT to storage** → (3) `POST .../documents` | **required** (client's or minted) | yes      | the whole upload ($3.3)                                                          |
+| `/api/bff/onboarding/applications/:id/submit`           | POST   | `POST /api/v2/onboarding/applications/:id/submit`                                              | optional (forwarded)              | yes      | no body                                                                          |
+| `/api/bff/onboarding/verify-document`                   | POST   | `POST /api/v2/onboarding/verify-document`                                                      | no                                | no       | exists but unused by the wizard (wizard goes direct)                             |
 
 **Organization BFF** (`src/app/api/bff/organizations/*`) — same-origin cookie reads added for the login / dashboard org graph:
 
-| Browser endpoint | Method | Gateway forward | Notes |
-|---|---|---|---|
-| `/api/bff/organizations` | GET | `GET /api/v2/organizations` | same-origin only |
-| `/api/bff/organizations/:id/access` | GET | `GET /api/v2/organizations/:id/access` | sends `x-organization-id: <id>` |
+| Browser endpoint                    | Method | Gateway forward                        | Notes                           |
+| ----------------------------------- | ------ | -------------------------------------- | ------------------------------- |
+| `/api/bff/organizations`            | GET    | `GET /api/v2/organizations`            | same-origin only                |
+| `/api/bff/organizations/:id/access` | GET    | `GET /api/v2/organizations/:id/access` | sends `x-organization-id: <id>` |
 
 ### 3.2 Cross-cutting BFF behaviour (`src/lib/bff/auth-proxy.ts`)
 
@@ -285,37 +293,37 @@ No field renaming occurs at the BFF; bodies are forwarded byte-for-byte (minus p
 
 ### Auth routes (`routes/v2/auth/index.ts`) — all under `/api/v2/auth`
 
-| Route | Rate limit | Body | Success |
-|---|---|---|---|
-| `POST /signup` | SENSITIVE_COMMAND (10/min) | `{email, password(8-128), displayName(1-200)}` strict; `role: 'partner'` set server-side | **201** `{user:{id,email,displayName,role,avatarUrl}, accessToken, expiresAt}`; Better Auth 4xx forwarded verbatim |
-| `POST /login` | SENSITIVE_COMMAND | `{email, password(1-128)}` strict | **200** same bridge; **every 4xx collapses to `400 Authentication failed`** (no account-existence oracle) |
-| `POST /refresh` | SENSITIVE_COMMAND | none | 200 bridge (token = session token); no session → 401 |
-| `POST /logout` | none | none | 204 |
-| `GET /session` | AUTH_READ | none | `{user, expiresAt}` (no token) |
+| Route           | Rate limit                 | Body                                                                                     | Success                                                                                                            |
+| --------------- | -------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `POST /signup`  | SENSITIVE_COMMAND (10/min) | `{email, password(8-128), displayName(1-200)}` strict; `role: 'partner'` set server-side | **201** `{user:{id,email,displayName,role,avatarUrl}, accessToken, expiresAt}`; Better Auth 4xx forwarded verbatim |
+| `POST /login`   | SENSITIVE_COMMAND          | `{email, password(1-128)}` strict                                                        | **200** same bridge; **every 4xx collapses to `400 Authentication failed`** (no account-existence oracle)          |
+| `POST /refresh` | SENSITIVE_COMMAND          | none                                                                                     | 200 bridge (token = session token); no session → 401                                                               |
+| `POST /logout`  | none                       | none                                                                                     | 204                                                                                                                |
+| `GET /session`  | AUTH_READ                  | none                                                                                     | `{user, expiresAt}` (no token)                                                                                     |
 
 `accessToken` is Better Auth's session token taken from the `set-auth-token` header (bearer plugin); no separate JWT is minted.
 
 ### Email OTP routes (`routes/v2/auth/otp-routes.ts`) — deliberately **pre-session**
 
-| Route | Rate limit | Body | Success | Error |
-|---|---|---|---|---|
-| `POST /api/v2/auth/otp/send` | **OTP_SEND (5/min)** | `{email}` strict | 200 `{message:'If valid, a code has been sent.'}` (cooldown is swallowed into the same ack) | 500 |
-| `POST /api/v2/auth/otp/verify` | **OTP_VERIFY (10/min)** | `{email, code: ^\d{6}$}` strict | 200 `{message:'Verified.'}` | **400 `Invalid or expired code.`** for wrong/expired/locked/absent |
+| Route                          | Rate limit              | Body                            | Success                                                                                     | Error                                                              |
+| ------------------------------ | ----------------------- | ------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `POST /api/v2/auth/otp/send`   | **OTP_SEND (5/min)**    | `{email}` strict                | 200 `{message:'If valid, a code has been sent.'}` (cooldown is swallowed into the same ack) | 500                                                                |
+| `POST /api/v2/auth/otp/verify` | **OTP_VERIFY (10/min)** | `{email, code: ^\d{6}$}` strict | 200 `{message:'Verified.'}`                                                                 | **400 `Invalid or expired code.`** for wrong/expired/locked/absent |
 
 Rules (`packages/core/src/domain/models/email-otp.ts`): 6-digit CSPRNG code, HMAC-SHA256 hash keyed by `EMAIL_OTP_SECRET`, 10-minute expiry, 60-second resend cooldown, 5 failed attempts → lockout; successful verify **deletes** the record (single-use). No Resend key + non-production → the code is **logged** as `dev_email_otp`; production without a key fails the send.
 
 ### Onboarding routes (`routes/v2/onboarding.ts`) — not org-scoped
 
-| Gateway method + path | Rate limit | Idempotency-Key | Service call |
-|---|---|---|---|
-| `GET /onboarding/me` | AUTH_READ | – | `getMine` → `{request: DTO \| null}` (`null` when none open) |
-| `GET /onboarding/applications` | AUTH_READ | – | `listMine` (paginated) |
-| `POST /onboarding/applications` | STANDARD_COMMAND | **required** | `start` → 201; second open application → 400 |
-| `PATCH /onboarding/applications/:requestId` | STANDARD_COMMAND | no (last-write-wins) | `saveProgress` (draft/changes only; unknown keys → 422; other user's id → 404) |
-| `POST .../documents/upload-url` | STANDARD_COMMAND | no (deterministic overwrite) | `issueDocumentUploadUrl` |
-| `POST .../documents` | STANDARD_COMMAND | **required** | `addDocument` (replace by label) |
-| `POST .../submit` | STANDARD_COMMAND | **required** | `submit`; missing docs → 400; wrong status → 409 |
-| `POST /onboarding/verify-document` | SENSITIVE_COMMAND (10/min) | no | `verifyDocument` |
+| Gateway method + path                       | Rate limit                 | Idempotency-Key              | Service call                                                                   |
+| ------------------------------------------- | -------------------------- | ---------------------------- | ------------------------------------------------------------------------------ |
+| `GET /onboarding/me`                        | AUTH_READ                  | –                            | `getMine` → `{request: DTO \| null}` (`null` when none open)                   |
+| `GET /onboarding/applications`              | AUTH_READ                  | –                            | `listMine` (paginated)                                                         |
+| `POST /onboarding/applications`             | STANDARD_COMMAND           | **required**                 | `start` → 201; second open application → 400                                   |
+| `PATCH /onboarding/applications/:requestId` | STANDARD_COMMAND           | no (last-write-wins)         | `saveProgress` (draft/changes only; unknown keys → 422; other user's id → 404) |
+| `POST .../documents/upload-url`             | STANDARD_COMMAND           | no (deterministic overwrite) | `issueDocumentUploadUrl`                                                       |
+| `POST .../documents`                        | STANDARD_COMMAND           | **required**                 | `addDocument` (replace by label)                                               |
+| `POST .../submit`                           | STANDARD_COMMAND           | **required**                 | `submit`; missing docs → 400; wrong status → 409                               |
+| `POST /onboarding/verify-document`          | SENSITIVE_COMMAND (10/min) | no                           | `verifyDocument`                                                               |
 
 `command()` wraps create / document-confirm / submit in `runIdempotent` (reused key + same hash → replay stored response; reused key + different request → 409).
 
@@ -323,13 +331,13 @@ Rules (`packages/core/src/domain/models/email-otp.ts`): 6-digit CSPRNG code, HMA
 
 `documentType: 'phone'` dispatches to `FirebasePhoneVerificationProvider` (`provider: 'firebase-phone'`):
 
-| Failure | `reason` |
-|---|---|
-| no `proofToken` | `missing_proof_token` |
-| `verifyIdToken` throws | `invalid_or_expired_token` |
-| no `phone_number` claim | `token_has_no_phone_claim` |
-| normalized token phone ≠ submitted phone | `phone_mismatch` |
-| match → `{passed:true, reason:'phone_verified', referenceId: uid}` | |
+| Failure                                                            | `reason`                   |
+| ------------------------------------------------------------------ | -------------------------- |
+| no `proofToken`                                                    | `missing_proof_token`      |
+| `verifyIdToken` throws                                             | `invalid_or_expired_token` |
+| no `phone_number` claim                                            | `token_has_no_phone_claim` |
+| normalized token phone ≠ submitted phone                           | `phone_mismatch`           |
+| match → `{passed:true, reason:'phone_verified', referenceId: uid}` |                            |
 
 **Attempt budget**: 5 per user per rolling 24 h (shared across phone + Aadhaar) → 6th → **403**.
 Every attempt (pass/fail/error) is appended to `v2_verification_attempts`. On the memory driver the
@@ -337,13 +345,13 @@ composite provider is not wired, so everything goes to `FormatCheckVerificationP
 
 ### Rate limits (`plugins/rate-limit.ts`)
 
-| Class | Limit | Used by |
-|---|---|---|
-| `AUTH_READ` | 240 / 60 s | GET onboarding, session |
-| `STANDARD_COMMAND` | 60 / 60 s | create, autosave, upload-url, confirm, submit |
-| `SENSITIVE_COMMAND` | 10 / 60 s | auth signup/login/refresh, verify-document, admin review commands |
-| `OTP_SEND` | 5 / 60 s | otp/send |
-| `OTP_VERIFY` | 10 / 60 s | otp/verify |
+| Class               | Limit      | Used by                                                           |
+| ------------------- | ---------- | ----------------------------------------------------------------- |
+| `AUTH_READ`         | 240 / 60 s | GET onboarding, session                                           |
+| `STANDARD_COMMAND`  | 60 / 60 s  | create, autosave, upload-url, confirm, submit                     |
+| `SENSITIVE_COMMAND` | 10 / 60 s  | auth signup/login/refresh, verify-document, admin review commands |
+| `OTP_SEND`          | 5 / 60 s   | otp/send                                                          |
+| `OTP_VERIFY`        | 10 / 60 s  | otp/verify                                                        |
 
 ### Validation and errors
 
@@ -356,17 +364,17 @@ composite provider is not wired, so everything goes to `FormatCheckVerificationP
 
 ### `OnboardingService` (`packages/core/src/application/onboarding/onboarding-service.ts`)
 
-| Method | What it does / validates |
-|---|---|
-| `start(userId, cmd)` | One open application per user (`findOpenForUser` → 400 if exists). `sanitizeApplicantProfile` allow-list (12 fields) drops anything else. |
-| `getMine(userId)` | `findOpenForUser` → open application or `null` (**approved/rejected are excluded** — see §6.2). |
-| `saveProgress(userId, requestId, body)` | `requireOwn` (other user reads 404); editable only `draft`/`changes_requested`; bumps version. |
-| `issueDocumentUploadUrl` | `requireOwn`; label in `REQUIRED_DOCUMENT_LABELS` (`['id_front','id_back','selfie']`); content-type whitelist; key `kyc/<userId>/<requestId>/<label>`; 10-min TTL; ≤ 5 MB. |
-| `addDocument` | replace-by-label, bump version. |
-| `submit(userId, requestId)` | fails 400 if any of the three required documents missing; `draft → submitted`, `submittedAt` set. |
-| `verifyDocument(userId, cmd)` | attempt budget 5/24 h → else 403; `CompositeVerificationProvider` dispatch (phone → Firebase; else format-check); attempt appended pass/fail/error. |
-| `approve(adminUserId, cmd)` | TIER2 `authorize(..., 'ONBOARDING_APPROVE')` (support → 403); status must be `submitted`; **org-first write**: name = `legalName`, slug = slugified name (≤32) + `-` + 6 alphanumerics of requestId, owner = applicant, capability = `requestedType`, timezone `Asia/Kolkata`, `platformFeePercent` basic 15 / silver 12 / diamond 10; then request → `approved` + `provisionedOrganizationId`; admin audit appended to `v2_admin_audit_logs`. |
-| `reject` / `requestChanges` | same TIER2 gate; `requestChanges` requires a note. |
+| Method                                  | What it does / validates                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `start(userId, cmd)`                    | One open application per user (`findOpenForUser` → 400 if exists). `sanitizeApplicantProfile` allow-list (12 fields) drops anything else.                                                                                                                                                                                                                                                                                                      |
+| `getMine(userId)`                       | `findOpenForUser` → open application or `null` (**approved/rejected are excluded** — see §6.2).                                                                                                                                                                                                                                                                                                                                                |
+| `saveProgress(userId, requestId, body)` | `requireOwn` (other user reads 404); editable only `draft`/`changes_requested`; bumps version.                                                                                                                                                                                                                                                                                                                                                 |
+| `issueDocumentUploadUrl`                | `requireOwn`; label in `REQUIRED_DOCUMENT_LABELS` (`['id_front','id_back','selfie']`); content-type whitelist; key `kyc/<userId>/<requestId>/<label>`; 10-min TTL; ≤ 5 MB.                                                                                                                                                                                                                                                                     |
+| `addDocument`                           | replace-by-label, bump version.                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `submit(userId, requestId)`             | fails 400 if any of the three required documents missing; `draft → submitted`, `submittedAt` set.                                                                                                                                                                                                                                                                                                                                              |
+| `verifyDocument(userId, cmd)`           | attempt budget 5/24 h → else 403; `CompositeVerificationProvider` dispatch (phone → Firebase; else format-check); attempt appended pass/fail/error.                                                                                                                                                                                                                                                                                            |
+| `approve(adminUserId, cmd)`             | TIER2 `authorize(..., 'ONBOARDING_APPROVE')` (support → 403); status must be `submitted`; **org-first write**: name = `legalName`, slug = slugified name (≤32) + `-` + 6 alphanumerics of requestId, owner = applicant, capability = `requestedType`, timezone `Asia/Kolkata`, `platformFeePercent` basic 15 / silver 12 / diamond 10; then request → `approved` + `provisionedOrganizationId`; admin audit appended to `v2_admin_audit_logs`. |
+| `reject` / `requestChanges`             | same TIER2 gate; `requestChanges` requires a note.                                                                                                                                                                                                                                                                                                                                                                                             |
 
 ### `EmailOtpService` (`packages/core/src/application/auth/email-otp-service.ts`)
 
@@ -414,6 +422,7 @@ const OPEN_STATUSES = ['draft', 'submitted', 'changes_requested'];
 
 So `GET /onboarding/me` returns `{request: null}` for **approved** (and rejected) applications.
 Consequences:
+
 - The success screen's 10-second poll can never observe `approved` → the "You're Approved / Go to Dashboard" view is **not reached** through this poll; the applicant sees "pending" forever until they log in again via `/login` (which lists the provisioned org and routes in).
 - `DashboardAuthProvider.isApproved` frontend side is **resolved**: it now accepts "has
   organizations" as well as `'approved'` —
@@ -425,15 +434,15 @@ Consequences:
 
 ### 6.3 Direct-bearer vs BFF calls in the wizard
 
-| Call | Client | Auth |
-|---|---|---|
-| `getMine` (resume + poll) | `bffClient` | session cookie |
-| `uploadDocument` | `bffClient` | cookie + CSRF + Idempotency-Key + If-Match |
-| `sendOtp` / `verifyOtp` | same-origin `createApiClient` | cookie + CSRF |
-| `start` / `saveProgress` / `submit` | `apiClient` (shared root) | bearer + reauth-on-401 |
-| `verifyDocument` (phone, aadhaar) | `apiClient` | bearer |
-| `getOrganizations` / `getPartnerAccess` | `bffClient` | cookie |
-| `createOrganization` (not ws) | `apiClient` | bearer + Idempotency-Key |
+| Call                                    | Client                        | Auth                                       |
+| --------------------------------------- | ----------------------------- | ------------------------------------------ |
+| `getMine` (resume + poll)               | `bffClient`                   | session cookie                             |
+| `uploadDocument`                        | `bffClient`                   | cookie + CSRF + Idempotency-Key + If-Match |
+| `sendOtp` / `verifyOtp`                 | same-origin `createApiClient` | cookie + CSRF                              |
+| `start` / `saveProgress` / `submit`     | `apiClient` (shared root)     | bearer + reauth-on-401                     |
+| `verifyDocument` (phone, aadhaar)       | `apiClient`                   | bearer                                     |
+| `getOrganizations` / `getPartnerAccess` | `bffClient`                   | cookie                                     |
+| `createOrganization` (not ws)           | `apiClient`                   | bearer + Idempotency-Key                   |
 
 The reported `/api/auth/phone-verification` BFF route and the `/api/bff/onboarding/verify-document`
 route both exist but the wizard uses the **direct-bearer** `verifyDocument` path.
@@ -492,13 +501,13 @@ POST /api/bff/onboarding/       (1) POST /api/v2/.../documents/upload-url
                                         { label, storagePath }         → addDocument → save
 ```
 
-| Stage | Body |
-|---|---|
-| Browser → BFF | raw `File` bytes; `Content-Type: image/jpeg`; `?label=id_front`; CSRF + Idempotency-Key + If-Match |
-| BFF → Gateway (upload-url) | `{ "label": "id_front", "contentType": "image/jpeg" }` |
-| BFF → Storage | `PUT` raw bytes with returned headers (`content-type`, `x-goog-content-length-range`) |
-| BFF → Gateway (confirm) | `{ "label": "id_front", "storagePath": "kyc/user_/req_/id_front" }` (same key) |
-| Response | updated DTO → wizard reads `documents.find(label).storagePath` |
+| Stage                      | Body                                                                                               |
+| -------------------------- | -------------------------------------------------------------------------------------------------- |
+| Browser → BFF              | raw `File` bytes; `Content-Type: image/jpeg`; `?label=id_front`; CSRF + Idempotency-Key + If-Match |
+| BFF → Gateway (upload-url) | `{ "label": "id_front", "contentType": "image/jpeg" }`                                             |
+| BFF → Storage              | `PUT` raw bytes with returned headers (`content-type`, `x-goog-content-length-range`)              |
+| BFF → Gateway (confirm)    | `{ "label": "id_front", "storagePath": "kyc/user_/req_/id_front" }` (same key)                     |
+| Response                   | updated DTO → wizard reads `documents.find(label).storagePath`                                     |
 
 ### 7.4 Email OTP (signup step)
 
@@ -561,52 +570,54 @@ Missing documents → 400; success → DTO with `status:'submitted'`, `missingDo
 ## 10. Key files quick reference
 
 ### Frontend (`D:\C1RCLE-FRONTEND`)
-| File | Purpose |
-|---|---|
-| `apps/partner-dashboard/src/app/onboard/page.tsx` | `/onboard` page |
-| `apps/partner-dashboard/src/app/onboard/PageClient.tsx` | The 8/9-step wizard (all state, all step logic) |
+
+| File                                                                        | Purpose                                                                                                                         |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/partner-dashboard/src/app/onboard/page.tsx`                           | `/onboard` page                                                                                                                 |
+| `apps/partner-dashboard/src/app/onboard/PageClient.tsx`                     | The 8/9-step wizard (all state, all step logic)                                                                                 |
 | `apps/partner-dashboard/src/components/providers/DashboardAuthProvider.tsx` | Session wrapper: `signIn/signUp/signOut`, org graph + `getMyOnboardingRequest`, `isApproved`, `/onboard`+`/login` bypass splash |
-| `apps/partner-dashboard/src/components/providers/session-provider.tsx` | Session bootstrap/refresh/focus/idle logout; `c1rcle.session.bootstrap` guard |
-| `apps/partner-dashboard/src/lib/bff/auth-proxy.ts` | Shared BFF proxy: origin/CSRF checks, gateway fetch, twin cookie, re-scope, storage PUT |
-| `apps/partner-dashboard/src/lib/bff/bff-client.ts` | Same-origin BFF `createApiClient` (cookie auth; 401 → clear + `/login`) |
-| `apps/partner-dashboard/src/lib/onboarding/onboarding-repository.ts` | `getMine`, `start`, `saveProgress`, `uploadDocument`, `submit`, `verifyDocument` + optimistic locking |
-| `apps/partner-dashboard/src/lib/onboarding/otp.ts` | Email OTP client (send/verify) |
-| `apps/partner-dashboard/src/lib/onboarding/csrf.ts` | `c1rcle.csrf` → `x-csrf-token` double-submit |
-| `apps/partner-dashboard/src/lib/firebase/phone-auth.ts` | Firebase phone send/confirm → ID token (recaptcha, test bypass) |
-| `apps/partner-dashboard/src/lib/org/org-repository.ts` | `getOrganizations`/`getPartnerAccess` (BFF), `createOrganization` (direct) |
-| `apps/partner-dashboard/src/lib/org/route-after-auth.ts` | `routeAfterAuth` (post-login/post-approval routing) |
-| `apps/partner-dashboard/src/lib/org/active-org.ts` | `c1rcle.active-org` cookie + token refresh |
-| `apps/partner-dashboard/src/lib/access/use-org-access.ts` | Active-org access state (via `getPartnerAccess`) |
-| `apps/partner-dashboard/src/proxy.ts` | Edge bouncer + CSP nonce (Firebase origins) |
-| `packages/api-client/src/client.ts` | HTTP client (fetch, zod parse, retry, reauth, `rawBody`) |
-| `packages/auth/src/auth-client.ts` | `signup/login/refresh/logout/fetchSession` → `/api/auth/*` |
-| `packages/auth/src/server-session.ts` | Server-to-server gateway session resolve |
-| `packages/contracts/src/contracts/onboarding.ts` | zod schemas + DTOs (7 document labels) |
-| `packages/contracts/src/contracts/auth.ts` | auth bridge + OTP schemas |
-| `packages/config/src/schema.ts` | env schema incl. Firebase/TEST_PHONE/ENVIRONMENT |
+| `apps/partner-dashboard/src/components/providers/session-provider.tsx`      | Session bootstrap/refresh/focus/idle logout; `c1rcle.session.bootstrap` guard                                                   |
+| `apps/partner-dashboard/src/lib/bff/auth-proxy.ts`                          | Shared BFF proxy: origin/CSRF checks, gateway fetch, twin cookie, re-scope, storage PUT                                         |
+| `apps/partner-dashboard/src/lib/bff/bff-client.ts`                          | Same-origin BFF `createApiClient` (cookie auth; 401 → clear + `/login`)                                                         |
+| `apps/partner-dashboard/src/lib/onboarding/onboarding-repository.ts`        | `getMine`, `start`, `saveProgress`, `uploadDocument`, `submit`, `verifyDocument` + optimistic locking                           |
+| `apps/partner-dashboard/src/lib/onboarding/otp.ts`                          | Email OTP client (send/verify)                                                                                                  |
+| `apps/partner-dashboard/src/lib/onboarding/csrf.ts`                         | `c1rcle.csrf` → `x-csrf-token` double-submit                                                                                    |
+| `apps/partner-dashboard/src/lib/firebase/phone-auth.ts`                     | Firebase phone send/confirm → ID token (recaptcha, test bypass)                                                                 |
+| `apps/partner-dashboard/src/lib/org/org-repository.ts`                      | `getOrganizations`/`getPartnerAccess` (BFF), `createOrganization` (direct)                                                      |
+| `apps/partner-dashboard/src/lib/org/route-after-auth.ts`                    | `routeAfterAuth` (post-login/post-approval routing)                                                                             |
+| `apps/partner-dashboard/src/lib/org/active-org.ts`                          | `c1rcle.active-org` cookie + token refresh                                                                                      |
+| `apps/partner-dashboard/src/lib/access/use-org-access.ts`                   | Active-org access state (via `getPartnerAccess`)                                                                                |
+| `apps/partner-dashboard/src/proxy.ts`                                       | Edge bouncer + CSP nonce (Firebase origins)                                                                                     |
+| `packages/api-client/src/client.ts`                                         | HTTP client (fetch, zod parse, retry, reauth, `rawBody`)                                                                        |
+| `packages/auth/src/auth-client.ts`                                          | `signup/login/refresh/logout/fetchSession` → `/api/auth/*`                                                                      |
+| `packages/auth/src/server-session.ts`                                       | Server-to-server gateway session resolve                                                                                        |
+| `packages/contracts/src/contracts/onboarding.ts`                            | zod schemas + DTOs (7 document labels)                                                                                          |
+| `packages/contracts/src/contracts/auth.ts`                                  | auth bridge + OTP schemas                                                                                                       |
+| `packages/config/src/schema.ts`                                             | env schema incl. Firebase/TEST_PHONE/ENVIRONMENT                                                                                |
 
 ### Backend (`D:\C1RCLE-BACKEND`)
-| File | Purpose |
-|---|---|
-| `apps/api-gateway/src/routes/v2/onboarding.ts` | Onboarding routes + `toDto` + command/idempotency wrapper |
-| `apps/api-gateway/src/routes/v2/auth/index.ts` | signup/login/refresh/logout/session bridge |
-| `apps/api-gateway/src/routes/v2/auth/otp-routes.ts` | email OTP send/verify (+ rate limits, flattened verify error) |
-| `apps/api-gateway/src/routes/v2/admin/onboarding-review.ts` | approve / reject / request-changes / queue + audit |
-| `apps/api-gateway/src/plugins/auth.ts` | Better Auth config + session/actor resolution (twin cookie) |
-| `apps/api-gateway/src/plugins/validate-v2.ts` | zod validation → 422 fieldErrors |
-| `apps/api-gateway/src/plugins/rate-limit.ts` | Rate limit classes incl. OTP_SEND/OTP_VERIFY |
-| `apps/api-gateway/src/lib/v2-idempotency.ts` | `runIdempotent` wrapper |
-| `apps/api-gateway/src/lib/verification/firebase-phone-verifier.ts` | Firebase ID-token → phone claim verification |
-| `apps/api-gateway/src/lib/notifications/resend-email-sender.ts` | Resend delivery; dev OTP logging |
-| `packages/core/src/application/onboarding/onboarding-service.ts` | Onboarding business logic (incl. approval + org provisioning) |
-| `packages/core/src/application/auth/email-otp-service.ts` | Email OTP send/verify + budget |
-| `packages/core/src/domain/models/onboarding.ts` | Aggregate, FSM, required labels, profile sanitisation |
-| `packages/core/src/domain/models/email-otp.ts` | OTP rules (expiry/cooldown/attempts/HMAC) |
-| `packages/core/src/domain/ports/repositories.ts` | `OnboardingRepository`, `EmailOtpRepository` ports |
-| `packages/core/src/infrastructure/firestore/firestore-onboarding-repository.ts` | Firestore repo + `OPEN_STATUSES` |
-| `packages/core/src/infrastructure/firestore/firestore-email-otp-repository.ts` | `v2_email_otps` repo |
-| `packages/core/src/infrastructure/firestore/compare-and-set.ts` | Optimistic-lock write |
-| `packages/core/src/infrastructure/firestore/firebase-object-storage.ts` | v4 signed PUT URL grants |
+
+| File                                                                            | Purpose                                                       |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `apps/api-gateway/src/routes/v2/onboarding.ts`                                  | Onboarding routes + `toDto` + command/idempotency wrapper     |
+| `apps/api-gateway/src/routes/v2/auth/index.ts`                                  | signup/login/refresh/logout/session bridge                    |
+| `apps/api-gateway/src/routes/v2/auth/otp-routes.ts`                             | email OTP send/verify (+ rate limits, flattened verify error) |
+| `apps/api-gateway/src/routes/v2/admin/onboarding-review.ts`                     | approve / reject / request-changes / queue + audit            |
+| `apps/api-gateway/src/plugins/auth.ts`                                          | Better Auth config + session/actor resolution (twin cookie)   |
+| `apps/api-gateway/src/plugins/validate-v2.ts`                                   | zod validation → 422 fieldErrors                              |
+| `apps/api-gateway/src/plugins/rate-limit.ts`                                    | Rate limit classes incl. OTP_SEND/OTP_VERIFY                  |
+| `apps/api-gateway/src/lib/v2-idempotency.ts`                                    | `runIdempotent` wrapper                                       |
+| `apps/api-gateway/src/lib/verification/firebase-phone-verifier.ts`              | Firebase ID-token → phone claim verification                  |
+| `apps/api-gateway/src/lib/notifications/resend-email-sender.ts`                 | Resend delivery; dev OTP logging                              |
+| `packages/core/src/application/onboarding/onboarding-service.ts`                | Onboarding business logic (incl. approval + org provisioning) |
+| `packages/core/src/application/auth/email-otp-service.ts`                       | Email OTP send/verify + budget                                |
+| `packages/core/src/domain/models/onboarding.ts`                                 | Aggregate, FSM, required labels, profile sanitisation         |
+| `packages/core/src/domain/models/email-otp.ts`                                  | OTP rules (expiry/cooldown/attempts/HMAC)                     |
+| `packages/core/src/domain/ports/repositories.ts`                                | `OnboardingRepository`, `EmailOtpRepository` ports            |
+| `packages/core/src/infrastructure/firestore/firestore-onboarding-repository.ts` | Firestore repo + `OPEN_STATUSES`                              |
+| `packages/core/src/infrastructure/firestore/firestore-email-otp-repository.ts`  | `v2_email_otps` repo                                          |
+| `packages/core/src/infrastructure/firestore/compare-and-set.ts`                 | Optimistic-lock write                                         |
+| `packages/core/src/infrastructure/firestore/firebase-object-storage.ts`         | v4 signed PUT URL grants                                      |
 
 ---
 

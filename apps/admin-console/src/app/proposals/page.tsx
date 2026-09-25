@@ -323,7 +323,8 @@ export default function ProposalsDesk() {
                                 commissionMutation.mutate(proposal.id);
                               }}
                               aria-busy={
-                                commissionMutation.isPending && commissionExecutingId === proposal.id
+                                commissionMutation.isPending &&
+                                commissionExecutingId === proposal.id
                               }
                             >
                               {commissionMutation.isPending && commissionExecutingId === proposal.id

@@ -45,11 +45,12 @@ export default function SelectOrganizationPage() {
             router.replace(target);
           });
         }
-
       })
       .catch((err: unknown) => {
         if (!isMounted) return;
-        setError(err instanceof Error ? err.message : 'Failed to load organizations. Please try again.');
+        setError(
+          err instanceof Error ? err.message : 'Failed to load organizations. Please try again.',
+        );
         setLoading(false);
       });
 
@@ -67,7 +68,7 @@ export default function SelectOrganizationPage() {
     const fallbackRoute = await resolveOrgOverviewPath(org.id);
     const lastRoute =
       typeof window !== 'undefined'
-        ? window.localStorage.getItem(`partner:last-route:${org.id}`) ?? fallbackRoute
+        ? (window.localStorage.getItem(`partner:last-route:${org.id}`) ?? fallbackRoute)
         : fallbackRoute;
     // Full page load, not `router.push`: the auth provider initializes its
     // active-org state once from the cookie (`getActiveOrgId()` in its lazy
@@ -142,4 +143,3 @@ export default function SelectOrganizationPage() {
     </main>
   );
 }
-

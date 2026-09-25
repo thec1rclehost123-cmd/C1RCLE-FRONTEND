@@ -86,7 +86,9 @@ export default function HealthDesk() {
                 tone={readiness.data.ok ? 'success' : 'destructive'}
               />
             </p>
-            <p className="mt-2">Version {version.data.version} · build {version.data.buildSha}</p>
+            <p className="mt-2">
+              Version {version.data.version} · build {version.data.buildSha}
+            </p>
             <p>Started {formatDateTime(version.data.startedAt)}</p>
           </div>
         </>

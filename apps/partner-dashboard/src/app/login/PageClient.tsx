@@ -51,7 +51,10 @@ const roleConfig = {
     label: 'Promoter',
     description: 'Sales & outreach',
   },
-} as const satisfies Record<WorkspaceType, { icon: typeof Building2; label: string; description: string }>;
+} as const satisfies Record<
+  WorkspaceType,
+  { icon: typeof Building2; label: string; description: string }
+>;
 
 /* Per-workspace ambient styling as static Tailwind classes — inline `style=` objects are banned
  * by the design-system lint rule (no-restricted-syntax), and Tailwind's JIT needs literals. */
@@ -64,8 +67,7 @@ const BLOB_CLASS: Record<WorkspaceType, string> = {
 const RING_BORDER: Record<WorkspaceType, string> = {
   venue:
     'border-t-[rgba(244,74,34,0.75)] border-r-transparent border-b-[rgba(244,74,34,0.25)] border-l-transparent',
-  host:
-    'border-t-[rgba(255,255,255,0.75)] border-r-transparent border-b-[rgba(255,255,255,0.25)] border-l-transparent',
+  host: 'border-t-[rgba(255,255,255,0.75)] border-r-transparent border-b-[rgba(255,255,255,0.25)] border-l-transparent',
   promoter:
     'border-t-[rgba(34,197,94,0.75)] border-r-transparent border-b-[rgba(34,197,94,0.25)] border-l-transparent',
 };
@@ -213,7 +215,9 @@ const SPARK_SHADOW: Record<WorkspaceType, readonly [string, string, string]> = {
 };
 
 /** Per-role ring colours for the sparkle field — tri-colour default, single colour once a workspace is picked. */
-function useRingColors(type: WorkspaceType | null): readonly [WorkspaceType, WorkspaceType, WorkspaceType] {
+function useRingColors(
+  type: WorkspaceType | null,
+): readonly [WorkspaceType, WorkspaceType, WorkspaceType] {
   if (type === 'venue') return ['venue', 'venue', 'venue'];
   if (type === 'host') return ['host', 'host', 'host'];
   if (type === 'promoter') return ['promoter', 'promoter', 'promoter'];
@@ -334,7 +338,9 @@ function LoginForm() {
         }
         setError(err.message || 'Invalid email or password.');
       } else if (err instanceof Error && err.message === 'Authentication failed') {
-        setError('Invalid email or password. Please check your credentials or create a new account.');
+        setError(
+          'Invalid email or password. Please check your credentials or create a new account.',
+        );
       } else if (err instanceof Error) {
         setError(err.message);
       } else {
@@ -508,7 +514,9 @@ function LoginForm() {
                     <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--accent-primary)]">
                       {userType ? roleConfig[userType].label : ''} Workspace
                     </span>
-                    <h3 className="text-headline text-[var(--text-primary)] leading-tight">Sign in</h3>
+                    <h3 className="text-headline text-[var(--text-primary)] leading-tight">
+                      Sign in
+                    </h3>
                   </div>
                 </div>
 
@@ -587,7 +595,11 @@ function LoginForm() {
                         }}
                         className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-placeholder)] hover:text-[var(--text-secondary)] transition-colors"
                       >
-                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        {showPassword ? (
+                          <EyeOff className="h-5 w-5" />
+                        ) : (
+                          <Eye className="h-5 w-5" />
+                        )}
                       </button>
                     </div>
                     {fieldErrors['password'] && (

@@ -128,7 +128,7 @@ jobs:
 
       - name: Run e2e suite
         env:
-          CI: 'true'
+          CI: "true"
         run: pnpm turbo run test:e2e --filter=./apps/${{ matrix.app }}
 
       - name: Upload Playwright report

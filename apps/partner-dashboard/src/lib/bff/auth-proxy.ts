@@ -84,9 +84,10 @@ function newRequestId(): string {
  * `getSession` accepts either. Authorization is relayed verbatim and never
  * read or logged.
  */
-export function gatewayAuthInit(
-  req: NextRequest,
-): { readonly cookie: string | null; readonly headers?: Readonly<Record<string, string>> } {
+export function gatewayAuthInit(req: NextRequest): {
+  readonly cookie: string | null;
+  readonly headers?: Readonly<Record<string, string>>;
+} {
   const authorization = req.headers.get('authorization');
   const requestId = req.headers.get('x-request-id');
   const headers: Record<string, string> = {};
@@ -319,7 +320,7 @@ function parseSetCookie(raw: string): ParsedSetCookie | null {
     }
   }
 
-const rawValue = pair.slice(eq + 1).trim();
+  const rawValue = pair.slice(eq + 1).trim();
   // The gateway's `Set-Cookie` value is already percent-encoded (Better Auth's
   // session token contains raw `/`/`=` from base64). `res.cookies.set()` below
   // percent-encodes whatever value it's given, so passing this through as-is

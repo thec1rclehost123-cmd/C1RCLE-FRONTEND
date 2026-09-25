@@ -71,7 +71,7 @@ behaviour:
 - List orgs from `getOrganizations()` (`GET /api/v2/organizations`,
   `paginatedSchema(organizationDtoSchema)`) — real data, no fixtures. Error → typed
   unavailable state. Zero orgs → `router.replace('/onboard')`; exactly one → `setActiveOrg(org.id)`
-  + `resolveOrgOverviewPath(org.id)` then replace — the picker only renders for 2+ orgs.
+  - `resolveOrgOverviewPath(org.id)` then replace — the picker only renders for 2+ orgs.
 - The list load is gated on `useSessionStore().hydrated` (same token-hydration rule as
   `useOrgAccess`: firing `getOrganizations` before the session `refresh()` resolves a token 401s).
 - Active org from `getActiveOrgId()` (`c1rcle.active-org` cookie); tiles are labelled from

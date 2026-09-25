@@ -1,7 +1,15 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import { getAccessToken, login, logout, signup, useSession } from '@c1rcle/auth';
 
@@ -88,8 +96,6 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-
-
 export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const session = useSession();
@@ -127,9 +133,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   // It also requires the `x-organization-id` header fix in `use-org-access.ts`:
   // without the header the gateway answers 422, never 200/403.
   const validatedActiveOrgId =
-    activeOrgId !== null && organizationIds.includes(activeOrgId)
-      ? activeOrgId
-      : null;
+    activeOrgId !== null && organizationIds.includes(activeOrgId) ? activeOrgId : null;
   const orgAccess = useOrgAccess(session.isAuthenticated ? validatedActiveOrgId : null);
 
   useEffect(() => {
@@ -172,7 +176,9 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
         setOrganizationIds(orgs.map((org) => org.id));
         setOnboardingRequest(request);
 
-        const resolveMembership = async (org: (typeof orgs)[number]): Promise<PartnerMembership | null> => {
+        const resolveMembership = async (
+          org: (typeof orgs)[number],
+        ): Promise<PartnerMembership | null> => {
           try {
             const access = await getCachedPartnerAccess(org.id);
             return {
@@ -189,9 +195,8 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
           }
         };
 
-        const activeOrg = activeOrgId === null
-          ? undefined
-          : orgs.find((org) => org.id === activeOrgId);
+        const activeOrg =
+          activeOrgId === null ? undefined : orgs.find((org) => org.id === activeOrgId);
 
         if (activeOrg) {
           // Only the active workspace is on the critical path. Other
@@ -208,7 +213,9 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
             if (lifecycle.cancelled) return;
             setMemberships((current) => [
               ...current.filter((membership) => membership.partnerId === activeOrg.id),
-              ...resolved.filter((membership): membership is PartnerMembership => membership !== null),
+              ...resolved.filter(
+                (membership): membership is PartnerMembership => membership !== null,
+              ),
             ]);
           });
           return;
@@ -307,7 +314,8 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     [orgAccess],
   );
 
-  const loading = session.isLoading || (session.isAuthenticated && (dataLoading || orgAccess.isLoading));
+  const loading =
+    session.isLoading || (session.isAuthenticated && (dataLoading || orgAccess.isLoading));
 
   const authContextValue = useMemo<AuthContextValue>(() => {
     const activeMembership: PartnerMembership | null =

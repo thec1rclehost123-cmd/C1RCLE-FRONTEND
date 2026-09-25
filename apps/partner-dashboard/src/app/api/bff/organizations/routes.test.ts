@@ -88,10 +88,10 @@ describe('GET /api/bff/organizations', () => {
 
   it('passes a gateway error through', async () => {
     mockForward.mockResolvedValue(
-      new Response(
-        JSON.stringify({ code: 'unauthorized', message: 'No session', status: 401 }),
-        { status: 401, headers: { 'content-type': 'application/json' } },
-      ),
+      new Response(JSON.stringify({ code: 'unauthorized', message: 'No session', status: 401 }), {
+        status: 401,
+        headers: { 'content-type': 'application/json' },
+      }),
     );
 
     const res = await organizationsGet(

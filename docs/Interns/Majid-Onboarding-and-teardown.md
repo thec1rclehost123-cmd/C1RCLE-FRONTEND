@@ -84,15 +84,15 @@ all network traffic goes through the BFF; the browser never calls the gateway or
 
 ### Request path per step
 
-| Wizard step | Browser → BFF | BFF → Gateway |
-|-------------|---------------|----------------|
-| Auth (existing) | `@c1rcle/auth` → `/api/auth/{login,signup,session,refresh,logout}` | `/api/v2/auth/*` |
-| Bootstrap, phone, details, success polling, post-auth lookup | `GET /api/bff/onboarding/me` | `GET /api/v2/onboarding/me` |
-| Application creation (details step) | `POST /api/bff/onboarding/applications` | `POST /api/v2/onboarding/applications` |
-| Autosave (details step) | `PATCH /api/bff/onboarding/applications/:id` | `PATCH /api/v2/onboarding/applications/:id` |
-| Document upload | `POST /api/bff/onboarding/applications/:id/documents/upload` (raw file, same-origin) | `POST …/documents/upload-url` → **server-side** `PUT` to Firebase → `POST …/documents` |
-| Format check | `POST /api/bff/onboarding/verify-document` | `POST /api/v2/onboarding/verify-document` |
-| Submit (review step) | `POST /api/bff/onboarding/applications/:id/submit` | `POST /api/v2/onboarding/applications/:id/submit` |
+| Wizard step                                                  | Browser → BFF                                                                        | BFF → Gateway                                                                          |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| Auth (existing)                                              | `@c1rcle/auth` → `/api/auth/{login,signup,session,refresh,logout}`                   | `/api/v2/auth/*`                                                                       |
+| Bootstrap, phone, details, success polling, post-auth lookup | `GET /api/bff/onboarding/me`                                                         | `GET /api/v2/onboarding/me`                                                            |
+| Application creation (details step)                          | `POST /api/bff/onboarding/applications`                                              | `POST /api/v2/onboarding/applications`                                                 |
+| Autosave (details step)                                      | `PATCH /api/bff/onboarding/applications/:id`                                         | `PATCH /api/v2/onboarding/applications/:id`                                            |
+| Document upload                                              | `POST /api/bff/onboarding/applications/:id/documents/upload` (raw file, same-origin) | `POST …/documents/upload-url` → **server-side** `PUT` to Firebase → `POST …/documents` |
+| Format check                                                 | `POST /api/bff/onboarding/verify-document`                                           | `POST /api/v2/onboarding/verify-document`                                              |
+| Submit (review step)                                         | `POST /api/bff/onboarding/applications/:id/submit`                                   | `POST /api/v2/onboarding/applications/:id/submit`                                      |
 
 ### How it works
 
@@ -124,7 +124,7 @@ Root cause, two failures on the same code path (`handleAuthSubmit`):
 
 1. **`POST /api/auth/signup` → 422.** The gateway signup contract is strict
    (`signupRequestSchema`: RFC-valid email, password 8–128, displayName 1–200, no unknown keys). The
-   wizard only validated that email was *non-empty*, so a malformed email (e.g. with spaces) passed
+   wizard only validated that email was _non-empty_, so a malformed email (e.g. with spaces) passed
    the client, got rejected by the gateway, and the catch merely showed the generic envelope message —
    the wizard never called `setStep(PHONE_STEP)`.
 2. **`GET /api/bff/onboarding/me` → 401 right after a successful auth.** The step advance was gated
@@ -162,7 +162,7 @@ Failed to fetch RSC payload for http://localhost:3001/onboard  (repeated)
 ```
 
 **Root cause (verified against the deployed gateway).** The partner-dashboard BFF points at the
-*deployed* backend (`apps/partner-dashboard/.env.local` → `https://circle-v2-backend.onrender.com`),
+_deployed_ backend (`apps/partner-dashboard/.env.local` → `https://circle-v2-backend.onrender.com`),
 which runs Better Auth with `useSecureCookies` (production) and therefore sets its session cookie with
 the **`__Secure-` prefix**:
 
@@ -177,9 +177,9 @@ Two independent failures followed:
    reject a `__Secure-` cookie set without `Secure` over http, so the session cookie was **never
    stored by the browser** — signup still returned 201 (in-memory session), but the browser had no cookie.
 2. Even if it had been stored, the edge (`proxy.ts`) gated on the **unprefixed** name
-   `better-auth.session_token`, which only a *development* gateway emits.
+   `better-auth.session_token`, which only a _development_ gateway emits.
 
-Consequence: every GET (document *or* RSC) request to `/onboard` lacked the cookie → `proxy.ts`
+Consequence: every GET (document _or_ RSC) request to `/onboard` lacked the cookie → `proxy.ts`
 answered **307 → /login?next=/onboard**. Next's client router lets a 307 fall through its RSC fetch,
 logs "Failed to fetch RSC payload … Falling back to browser navigation", and retries the full
 navigate into the same 307 — the `/onboard ⇄ /login` + RSC-failure churn. **The RSC failures are
@@ -491,7 +491,7 @@ Fresh signup bounced the user to `/login` instead of advancing to the **Phone** 
    `@c1rcle/auth`'s `signup()` calls `setSession(user, accessToken, expiresAt)` **before** resolving
    (`packages/auth/src/auth-client.ts:74`), so `getToken: getAccessToken` (the documented behaviour in
    Onboardingflow.md §2) is what lets `/me` answer 200 right after signup.
-2. **Unconditional 401 → `/login` redirect.** `loadMine()` was redirecting on *any* auth failure,
+2. **Unconditional 401 → `/login` redirect.** `loadMine()` was redirecting on _any_ auth failure,
    including the `/me` call issued immediately after `signup()`/`login()` — the exact case the
    2026-09-07 fix had declared "brand-new applicant → proceed to PHONE".
 
@@ -508,8 +508,8 @@ The phone step now matches the user's earlier (pre-corruption) structure — the
 pattern adapted to V2 (no OTP endpoint; Onboardingflow.md §13):
 
 - **Step 2 label "Verify Phone"**, title "Confirm Your Number", description
-  *"We'll send an SMS code to confirm your mobile number. This becomes your verified contact on the
-  platform."*
+  _"We'll send an SMS code to confirm your mobile number. This becomes your verified contact on the
+  platform."_
 - **Mobile Number (with country code)** input, pre-filled `+91 `, sanitised to digits/`+`/spaces,
   placeholder `+91 98765 43210` (Indian 10-digit-after-+91 validation, international ≥ 8 digits).
 - **Send SMS Code** button → validates, then swaps to the code UI and starts a **client-side 60 s
@@ -517,7 +517,7 @@ pattern adapted to V2 (no OTP endpoint; Onboardingflow.md §13):
 - **6-digit code input** (`OtpInput`, numeric-only, centered) + **Verify Phone** button — simulated:
   any valid 6-digit code is accepted (no OTP endpoint exists), writes `profile.phone`, goes to
   **Entity Type**.
-- **Resend** button shows ``Resend in Ns`` while cooling down, then **Resend Code** (re-runs send).
+- **Resend** button shows `Resend in Ns` while cooling down, then **Resend Code** (re-runs send).
 - **Use a different number** resets to the input.
 - Removed the old "Continue without a phone number" skip link (the documented flow always collects a
   number; `validateDetails` also requires `phone`).
@@ -540,6 +540,7 @@ The V1 partner dashboard onboarding flow at `apps/partner-dashboard/app/onboard/
 (~2800 lines) implements a dynamic step sequence based on entity type:
 
 **Individual entity type (7 steps):**
+
 1. `role` — Partner type selection (venue/host/promoter)
 2. `email_verify` — Email OTP verification or password login for existing users
 3. `phone_verify` — Phone SMS OTP verification
@@ -549,6 +550,7 @@ The V1 partner dashboard onboarding flow at `apps/partner-dashboard/app/onboard/
 7. `success` — Application submitted / approved polling
 
 **Business entity type (8 steps):**
+
 1. `role` — Partner type selection
 2. `email_verify` — Email verification
 3. `phone_verify` — Phone verification
@@ -559,49 +561,51 @@ The V1 partner dashboard onboarding flow at `apps/partner-dashboard/app/onboard/
 8. `success` — Application submitted / approved polling
 
 **V1 Profile Fields (details step):**
-| Field | Type | Required | Notes |
-|-------|------|----------|-------|
-| Name | Text | Yes | Label varies by role (Venue Name / Brand Name / Full Name) |
-| Contact Person | Text | Yes | "Authorized Contact" for business |
-| Phone | Tel (read-only) | Yes | Pre-filled from phone verification |
-| City | Select dropdown | Yes | 10 Indian cities |
-| Area | Text | Yes | e.g. "Bandra" |
-| Website | Text | No | Optional |
-| Business Type | Select | Business only | pvt_ltd, llp, partnership, sole_prop, trust |
-| Registration Number | Text | No (Business) | CIN/registration |
-| Capacity | Text | Venue only | Approximate capacity |
-| Plan | Select | Venue only | Subscription tier |
-| Host Category | Select | Host only | dj, organizer, collective |
-| Instagram | Text | Promoter only | Handle |
-| Bio | Textarea | Promoter only | Short bio |
-| Upcoming Events | Textarea | Promoter only | Optional, pipe-delimited format |
-| Past Events | Textarea | Promoter only | Optional |
+
+| Field               | Type            | Required      | Notes                                                      |
+| ------------------- | --------------- | ------------- | ---------------------------------------------------------- |
+| Name                | Text            | Yes           | Label varies by role (Venue Name / Brand Name / Full Name) |
+| Contact Person      | Text            | Yes           | "Authorized Contact" for business                          |
+| Phone               | Tel (read-only) | Yes           | Pre-filled from phone verification                         |
+| City                | Select dropdown | Yes           | 10 Indian cities                                           |
+| Area                | Text            | Yes           | e.g. "Bandra"                                              |
+| Website             | Text            | No            | Optional                                                   |
+| Business Type       | Select          | Business only | pvt_ltd, llp, partnership, sole_prop, trust                |
+| Registration Number | Text            | No (Business) | CIN/registration                                           |
+| Capacity            | Text            | Venue only    | Approximate capacity                                       |
+| Plan                | Select          | Venue only    | Subscription tier                                          |
+| Host Category       | Select          | Host only     | dj, organizer, collective                                  |
+| Instagram           | Text            | Promoter only | Handle                                                     |
+| Bio                 | Textarea        | Promoter only | Short bio                                                  |
+| Upcoming Events     | Textarea        | Promoter only | Optional, pipe-delimited format                            |
+| Past Events         | Textarea        | Promoter only | Optional                                                   |
 
 **V1 KYC Fields (kyc_identity step):**
-| Field | Type | Required | Notes |
-|-------|------|----------|-------|
-| ID Type | Select | Yes | aadhaar, passport, driving_licence, voter_id |
-| ID Number | Text | Yes | Varies by ID type |
-| Document Front | File upload | Yes | JPG/PNG/PDF, max 5MB |
-| Document Back | File upload | Conditional | Required for aadhaar, driving_licence, voter_id |
-| Selfie | File upload | Yes | JPG/PNG/PDF, max 5MB |
-| Aadhaar Verify | Button | Aadhaar only | Structural Verhoeff checksum validation |
+
+| Field          | Type        | Required     | Notes                                           |
+| -------------- | ----------- | ------------ | ----------------------------------------------- |
+| ID Type        | Select      | Yes          | aadhaar, passport, driving_licence, voter_id    |
+| ID Number      | Text        | Yes          | Varies by ID type                               |
+| Document Front | File upload | Yes          | JPG/PNG/PDF, max 5MB                            |
+| Document Back  | File upload | Conditional  | Required for aadhaar, driving_licence, voter_id |
+| Selfie         | File upload | Yes          | JPG/PNG/PDF, max 5MB                            |
+| Aadhaar Verify | Button      | Aadhaar only | Structural Verhoeff checksum validation         |
 
 ### V2 Onboarding Flow (Aligned to V1)
 
 The V2 onboarding wizard (`src/app/onboard/PageClient.tsx`) now implements an **8-step flow**
 matching V1's step sequence as closely as possible, given V2's backend constraints:
 
-| Step | V2 Step Name | V1 Equivalent | Fields Collected | Validation / Gate |
-|------|-------------|---------------|-----------------|-------------------|
-| 0 | **Role** | `role` ✅ | `requestedType` ∈ `{venue, host, promoter}` | Card selection; URL `?type=` |
-| 1 | **Auth** | `email_verify` ⚠️ | `email`, `password`, `displayName` (signup only) | Email non-empty; password ≥ 8 chars; 409 → login mode |
-| 2 | **Phone** | `phone_verify` ⚠️ | Phone number input + SMS OTP flow | Phone validation (Indian + international); cooldown timer |
-| 3 | **Entity Type** | `entity_type` ✅ | Individual/Business radio cards | Card selection |
-| 4 | **Details** | `details` ✅ | All profile fields (see below) | Required fields gate; autosave via `PATCH` |
-| 5 | **Documents** | `kyc_identity` ⚠️ | ID type, ID number, file uploads | ID type/number collected; 3 file uploads via signed URLs |
-| 6 | **Review** | *(not in V1)* | Summary of all data | Submit disabled while `missingDocuments.length > 0` |
-| 7 | **Success** | `success` ✅ | Polls `GET /onboarding/me` every 15s | `approved` → studio; `rejected` terminal; `changes_requested` → step 4 |
+| Step | V2 Step Name    | V1 Equivalent     | Fields Collected                                 | Validation / Gate                                                      |
+| ---- | --------------- | ----------------- | ------------------------------------------------ | ---------------------------------------------------------------------- |
+| 0    | **Role**        | `role` ✅         | `requestedType` ∈ `{venue, host, promoter}`      | Card selection; URL `?type=`                                           |
+| 1    | **Auth**        | `email_verify` ⚠️ | `email`, `password`, `displayName` (signup only) | Email non-empty; password ≥ 8 chars; 409 → login mode                  |
+| 2    | **Phone**       | `phone_verify` ⚠️ | Phone number input + SMS OTP flow                | Phone validation (Indian + international); cooldown timer              |
+| 3    | **Entity Type** | `entity_type` ✅  | Individual/Business radio cards                  | Card selection                                                         |
+| 4    | **Details**     | `details` ✅      | All profile fields (see below)                   | Required fields gate; autosave via `PATCH`                             |
+| 5    | **Documents**   | `kyc_identity` ⚠️ | ID type, ID number, file uploads                 | ID type/number collected; 3 file uploads via signed URLs               |
+| 6    | **Review**      | _(not in V1)_     | Summary of all data                              | Submit disabled while `missingDocuments.length > 0`                    |
+| 7    | **Success**     | `success` ✅      | Polls `GET /onboarding/me` every 15s             | `approved` → studio; `rejected` terminal; `changes_requested` → step 4 |
 
 **Legend:** ✅ = exact match with V1, ⚠️ = adapted to V2 backend constraints
 
@@ -610,6 +614,7 @@ matching V1's step sequence as closely as possible, given V2's backend constrain
 The details step collects all profile fields in the same order as V1's `details` step:
 
 #### Common Fields (always shown):
+
 1. **Name** (`legalName`) — label varies by role (same as V1)
 2. **Contact Person** (`contactPerson`) — "Authorized Contact" for business
 3. **Phone** (`phone`) — read-only, green check icon, pre-filled from Step 2
@@ -618,18 +623,22 @@ The details step collects all profile fields in the same order as V1's `details`
 6. **Website** (`website`) — optional
 
 #### Business-Only Fields (when `entityType === 'business'`):
+
 7. **Legal Business Name** — replaces the generic Name field
 8. **Business Type** (`businessType`) — select dropdown (same options as V1)
 9. **Registration/CIN Number** (`registrationNumber`) — optional
 
 #### Venue-Only Fields (when `requestedType === 'venue'`):
+
 10. **Approximate Capacity** (`capacity`) — number input
 11. **Subscription Tier** (`plan`) — select dropdown (moved from old Plan step)
 
 #### Host-Only Fields (when `requestedType === 'host'`):
+
 12. **Host Category** — select dropdown (organizer/dj/collective) — **changed from V2 text field to V1 dropdown**
 
 #### Promoter-Only Fields (when `requestedType === 'promoter'`):
+
 13. **Instagram Handle** (`instagram`) — text input
 14. **Short Bio** (`bio`) — textarea
 15. **Upcoming Events** — textarea (optional, pipe-delimited format) — **newly added, matches V1**
@@ -639,14 +648,14 @@ The details step collects all profile fields in the same order as V1's `details`
 
 The documents step now collects V1's KYC identity fields at the UI level:
 
-| Field | Type | Required | Notes |
-|-------|------|----------|-------|
-| ID Type | Select dropdown | No | Aadhaar, Passport, DL, Voter ID (same as V1) |
-| ID Number | Text input | No | Varies by ID type |
-| Aadhaar Verify | Button | Aadhaar only | Simulated (V2 backend lacks this endpoint) |
-| ID Front | File upload | Yes | Via V2's pre-signed URL mechanism |
-| ID Back | File upload | Conditional | Required for aadhaar, DL, voter_id |
-| Selfie | File upload | Yes | Via V2's pre-signed URL mechanism |
+| Field          | Type            | Required     | Notes                                        |
+| -------------- | --------------- | ------------ | -------------------------------------------- |
+| ID Type        | Select dropdown | No           | Aadhaar, Passport, DL, Voter ID (same as V1) |
+| ID Number      | Text input      | No           | Varies by ID type                            |
+| Aadhaar Verify | Button          | Aadhaar only | Simulated (V2 backend lacks this endpoint)   |
+| ID Front       | File upload     | Yes          | Via V2's pre-signed URL mechanism            |
+| ID Back        | File upload     | Conditional  | Required for aadhaar, DL, voter_id           |
+| Selfie         | File upload     | Yes          | Via V2's pre-signed URL mechanism            |
 
 **Note:** ID type, ID number, and Aadhaar verification are collected in the UI for user experience
 but are NOT sent to the V2 backend (which doesn't accept these fields). They appear in the Review
@@ -654,53 +663,53 @@ step summary.
 
 ### What Changed from Previous V2 (6-step) Flow
 
-| Change | Before | After | Rationale |
-|--------|--------|-------|-----------|
-| Step count | 7 steps (0–6) | 8 steps (0–7) | Added dedicated Phone and Entity Type steps |
-| Phone collection | In Plan step (Step 2) | Dedicated Phone step (Step 2) | Matches V1's `phone_verify` step |
-| Entity type | Toggle inside Profile step | Dedicated Entity Type step (Step 3) | Matches V1's `entity_type` step |
-| Plan selection | Dedicated Plan step (Step 2) | Inside Details step (Step 4, venue only) | Matches V1 where plan is in details |
-| Application creation | At Plan step | At Details step | Application needs profile data first |
-| Host category | Text field | Select dropdown | Matches V1's dropdown |
-| Promoter events | Not collected | Upcoming/Past Events textareas | Matches V1's promoter fields |
-| Documents | 3 generic file uploads | ID type + number + file uploads | Matches V1's `kyc_identity` fields |
-| Nightlife tastes | `vibeTags[]` section | Removed | V1 doesn't have this field |
-| User intents | `intents[]` section | Removed | V1 doesn't have this field |
-| Date of Birth | `dateOfBirth` field | Removed | V1 doesn't collect this |
+| Change               | Before                       | After                                    | Rationale                                   |
+| -------------------- | ---------------------------- | ---------------------------------------- | ------------------------------------------- |
+| Step count           | 7 steps (0–6)                | 8 steps (0–7)                            | Added dedicated Phone and Entity Type steps |
+| Phone collection     | In Plan step (Step 2)        | Dedicated Phone step (Step 2)            | Matches V1's `phone_verify` step            |
+| Entity type          | Toggle inside Profile step   | Dedicated Entity Type step (Step 3)      | Matches V1's `entity_type` step             |
+| Plan selection       | Dedicated Plan step (Step 2) | Inside Details step (Step 4, venue only) | Matches V1 where plan is in details         |
+| Application creation | At Plan step                 | At Details step                          | Application needs profile data first        |
+| Host category        | Text field                   | Select dropdown                          | Matches V1's dropdown                       |
+| Promoter events      | Not collected                | Upcoming/Past Events textareas           | Matches V1's promoter fields                |
+| Documents            | 3 generic file uploads       | ID type + number + file uploads          | Matches V1's `kyc_identity` fields          |
+| Nightlife tastes     | `vibeTags[]` section         | Removed                                  | V1 doesn't have this field                  |
+| User intents         | `intents[]` section          | Removed                                  | V1 doesn't have this field                  |
+| Date of Birth        | `dateOfBirth` field          | Removed                                  | V1 doesn't collect this                     |
 
 ### V1 Behavior That Could NOT Be Replicated (V2 Backend Constraints)
 
-| V1 Feature | Why It Can't Be in V2 | Adaptation |
-|------------|----------------------|------------|
-| Email OTP verification | V2 uses `@c1rcle/auth` email/password auth | Email+password signup/login instead |
-| Phone SMS OTP verification | V2 backend has no OTP endpoints | Phone number collected but not OTP-verified |
-| Aadhaar Verhoeff verification | V2 backend has no `/api/kyc/verify-aadhaar` | Simulated with timeout (UI only) |
-| Business KYC (PAN, GST, address, reg doc) | V2 backend doesn't accept these fields | Collected in UI's ID type/number fields only |
-| Signatory KYC (rep identity verification) | V2 backend doesn't accept these fields | Not present |
-| Firebase account creation with full profile | V2 uses separate auth + application creation | Auth first, then application with profile |
-| `kycStepData` in final submission | V2 backend doesn't accept this | Documents uploaded via separate API |
+| V1 Feature                                  | Why It Can't Be in V2                        | Adaptation                                   |
+| ------------------------------------------- | -------------------------------------------- | -------------------------------------------- |
+| Email OTP verification                      | V2 uses `@c1rcle/auth` email/password auth   | Email+password signup/login instead          |
+| Phone SMS OTP verification                  | V2 backend has no OTP endpoints              | Phone number collected but not OTP-verified  |
+| Aadhaar Verhoeff verification               | V2 backend has no `/api/kyc/verify-aadhaar`  | Simulated with timeout (UI only)             |
+| Business KYC (PAN, GST, address, reg doc)   | V2 backend doesn't accept these fields       | Collected in UI's ID type/number fields only |
+| Signatory KYC (rep identity verification)   | V2 backend doesn't accept these fields       | Not present                                  |
+| Firebase account creation with full profile | V2 uses separate auth + application creation | Auth first, then application with profile    |
+| `kycStepData` in final submission           | V2 backend doesn't accept this               | Documents uploaded via separate API          |
 
 ### Field Storage Mapping (V1 → V2 Backend)
 
-| V1 Field | V2 Profile Field | V2 Backend Schema |
-|----------|-----------------|-------------------|
-| `name` | `legalName` | `profile.legalName` ✅ |
-| `contactPerson` | `contactPerson` | `profile.contactPerson` ✅ |
-| `phone` | `phone` | `profile.phone` ✅ |
-| `city` | `city` | `profile.city` ✅ |
-| `area` | `area` | `profile.area` ✅ |
-| `website` | `website` | `profile.website` ✅ |
-| `capacity` | `capacity` | `profile.capacity` ✅ |
-| `plan` | `plan` | `request.plan` ✅ |
-| `businessType` | `businessType` | `profile.businessType` ✅ |
-| `registrationNumber` | `registrationNumber` | `profile.registrationNumber` ✅ |
-| `instagram` | `instagram` | `profile.instagram` ✅ |
-| `bio` | `bio` | `profile.bio` ✅ |
-| `role` (host category) | `hostCategory` (UI only) | Stored in `bio` field ✅ |
-| `upcomingEventsText` | `upcomingEventsText` (UI only) | Not in V2 backend ❌ |
-| `pastEventsText` | `pastEventsText` (UI only) | Not in V2 backend ❌ |
-| `idType` | `idType` (UI only) | Not in V2 backend ❌ |
-| `idNumber` | `idNumber` (UI only) | Not in V2 backend ❌ |
+| V1 Field               | V2 Profile Field               | V2 Backend Schema               |
+| ---------------------- | ------------------------------ | ------------------------------- |
+| `name`                 | `legalName`                    | `profile.legalName` ✅          |
+| `contactPerson`        | `contactPerson`                | `profile.contactPerson` ✅      |
+| `phone`                | `phone`                        | `profile.phone` ✅              |
+| `city`                 | `city`                         | `profile.city` ✅               |
+| `area`                 | `area`                         | `profile.area` ✅               |
+| `website`              | `website`                      | `profile.website` ✅            |
+| `capacity`             | `capacity`                     | `profile.capacity` ✅           |
+| `plan`                 | `plan`                         | `request.plan` ✅               |
+| `businessType`         | `businessType`                 | `profile.businessType` ✅       |
+| `registrationNumber`   | `registrationNumber`           | `profile.registrationNumber` ✅ |
+| `instagram`            | `instagram`                    | `profile.instagram` ✅          |
+| `bio`                  | `bio`                          | `profile.bio` ✅                |
+| `role` (host category) | `hostCategory` (UI only)       | Stored in `bio` field ✅        |
+| `upcomingEventsText`   | `upcomingEventsText` (UI only) | Not in V2 backend ❌            |
+| `pastEventsText`       | `pastEventsText` (UI only)     | Not in V2 backend ❌            |
+| `idType`               | `idType` (UI only)             | Not in V2 backend ❌            |
+| `idNumber`             | `idNumber` (UI only)           | Not in V2 backend ❌            |
 
 ## Firebase Teardown
 
@@ -792,9 +801,11 @@ dashboard's `details` step order.
 ## Files changed in this slice
 
 ### Core onboarding change:
+
 - `src/app/onboard/PageClient.tsx` — rewritten V2 8-step wizard aligned with V1 flow/fields.
 
 ### Supporting files (pre-existing changes, not from V1 alignment):
+
 - `src/lib/onboarding/uploadToSignedUrl.ts` — cross-origin signed-PUT helper (`memory://` no-op) that
   moved the browser upload server-side on 2026-09-07; **deleted** with the BFF change (see
   **Onboarding through the BFF**).
@@ -814,6 +825,7 @@ the root `layout.tsx`, `src/lib/{api,org,access}`, and the studio route-group tr
 (`src/app/{venue,host,promoter}/**`) — those were edited for the `isBanned` removal only.
 
 ### Verification
+
 - `git diff --name-only -- packages/ apps/api-gateway/` → empty (no backend files changed)
 - `git diff --name-only -- apps/partner-dashboard/` → only `PageClient.tsx` changed (the rewrite)
 - Phone OTP is simulated (V2 has no SMS OTP endpoint)

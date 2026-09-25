@@ -18,27 +18,27 @@ backend `DELETE` route or overlap guard.
 
 ### Backend (7 files)
 
-| File | Change |
-|---|---|
-| `domain/models/venue.ts` | New: `cancelVenueBlock` (blocked→cancelled soft-cancel), `doSlotRangesOverlap` (half-open interval check), `assertSlotRangeFree` (overlap guard) |
-| `domain/ports/repositories.ts` | Added `getSlotById` + `listOverlappingSlots` to `VenueSlotRepository` interface |
-| `application/venues/venue-service.ts` | New `unblock()` method (IDOR guard → cancel → save); `block()` now calls `assertSlotRangeFree` first |
-| `firestore-venue-slot-repository.ts` | Implemented `getSlotById` + `listOverlappingSlots` for Firestore |
-| `memory-repositories.ts` | Implemented `getSlotById` + `listOverlappingSlots` for in-memory tests |
-| `routes/v2/partner/venues.ts` | New `DELETE /venues/:venueId/calendar/blocks/:blockId` route (`venue.manage`, idempotency, error mapping) |
-| `routes/v2/partner/venues.test.ts` | 135 new lines — unblock happy path, 404, 400 (already cancelled), 403, overlap guard |
+| File                                  | Change                                                                                                                                           |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `domain/models/venue.ts`              | New: `cancelVenueBlock` (blocked→cancelled soft-cancel), `doSlotRangesOverlap` (half-open interval check), `assertSlotRangeFree` (overlap guard) |
+| `domain/ports/repositories.ts`        | Added `getSlotById` + `listOverlappingSlots` to `VenueSlotRepository` interface                                                                  |
+| `application/venues/venue-service.ts` | New `unblock()` method (IDOR guard → cancel → save); `block()` now calls `assertSlotRangeFree` first                                             |
+| `firestore-venue-slot-repository.ts`  | Implemented `getSlotById` + `listOverlappingSlots` for Firestore                                                                                 |
+| `memory-repositories.ts`              | Implemented `getSlotById` + `listOverlappingSlots` for in-memory tests                                                                           |
+| `routes/v2/partner/venues.ts`         | New `DELETE /venues/:venueId/calendar/blocks/:blockId` route (`venue.manage`, idempotency, error mapping)                                        |
+| `routes/v2/partner/venues.test.ts`    | 135 new lines — unblock happy path, 404, 400 (already cancelled), 403, overlap guard                                                             |
 
 ### Frontend (8 files)
 
-| File | Change |
-|---|---|
-| `VenueCalendarScreen.tsx` | Replaced static fixture data with live fetches (venues + slots + events); added `handleBlock` / `handleUnblock`; fixed month navigation via `shiftMonthKey` + `buildMonthGrid`; loading/error status messages |
-| `BlockDateDialog.tsx` | Wired `onBlock` prop to API call; overnight toggle with `addDays` helper; `submitting` / `submitError` states |
-| `CalendarDayDetails.tsx` | `block` (single) → `blocks[]` (array); replaced always-disabled `BlockedDetail` with live `BlockEventCard` (unblock button + overnight span display) |
-| `CalendarScreens.test.tsx` | 372-line suite — block flow, unblock flow, loading and error states |
-| `calendar/page.tsx` | Removed `data` prop — screen now fetches internally |
-| `calendar.module.css` | Added `.blockError` red-tinted alert style |
-| `partner-data-source.ts` | Added `CalendarBlock.endDate` for overnight blocks + JSDoc on all fields |
+| File                       | Change                                                                                                                                                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VenueCalendarScreen.tsx`  | Replaced static fixture data with live fetches (venues + slots + events); added `handleBlock` / `handleUnblock`; fixed month navigation via `shiftMonthKey` + `buildMonthGrid`; loading/error status messages |
+| `BlockDateDialog.tsx`      | Wired `onBlock` prop to API call; overnight toggle with `addDays` helper; `submitting` / `submitError` states                                                                                                 |
+| `CalendarDayDetails.tsx`   | `block` (single) → `blocks[]` (array); replaced always-disabled `BlockedDetail` with live `BlockEventCard` (unblock button + overnight span display)                                                          |
+| `CalendarScreens.test.tsx` | 372-line suite — block flow, unblock flow, loading and error states                                                                                                                                           |
+| `calendar/page.tsx`        | Removed `data` prop — screen now fetches internally                                                                                                                                                           |
+| `calendar.module.css`      | Added `.blockError` red-tinted alert style                                                                                                                                                                    |
+| `partner-data-source.ts`   | Added `CalendarBlock.endDate` for overnight blocks + JSDoc on all fields                                                                                                                                      |
 
 ---
 

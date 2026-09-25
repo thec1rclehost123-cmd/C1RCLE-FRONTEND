@@ -26,7 +26,15 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect, useRef, useCallback, type ChangeEvent, type InputHTMLAttributes, type ReactNode } from 'react';
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  type ChangeEvent,
+  type InputHTMLAttributes,
+  type ReactNode,
+} from 'react';
 
 import { isApiClientError } from '@c1rcle/api-client';
 import { useSession } from '@c1rcle/auth';
@@ -132,7 +140,12 @@ function docLabelCopy(label: DocLabel): { title: string; label: string } {
 export function OnboardingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { signIn: authSignIn, signUp: authSignUp, signOut, loading: authLoading } = useDashboardAuth();
+  const {
+    signIn: authSignIn,
+    signUp: authSignUp,
+    signOut,
+    loading: authLoading,
+  } = useDashboardAuth();
   const { user: authUser } = useSession();
 
   const [step, setStep] = useState<OnboardingStep>('role');
@@ -263,67 +276,74 @@ export function OnboardingPage() {
 
   // Shared by initial load, existing-user login, and post-submit poll: maps a
   // real application onto wizard state + the correct step.
-  const seedFromApplication = useCallback((application: OnboardingRequestDto, go: (s: OnboardingStep) => void) => {
-    setSubmittedRequestId(application.id);
-    if (application.status === 'approved') {
-      setApprovalStatus('approved');
-      go('success');
-      return;
-    }
-    if (application.status === 'rejected') {
-      setApprovalStatus('rejected');
-      setReviewNote(application.reviewNote ?? '');
-      go('success');
-      return;
-    }
-    if (application.status === 'changes_requested') {
-      setApprovalStatus('changes_requested');
-      setReviewNote(application.reviewNote ?? '');
-      go('success');
-      return;
-    }
-    if (application.status === 'submitted') {
-      setApprovalStatus('pending');
-      go('success');
-      return;
-    }
-    // draft — continue from where the profile left off.
-    setApprovalStatus('pending');
-    const p = application.profile;
-    setFormData((prev) => ({
-      ...prev,
-      legalName: p.legalName !== '' ? p.legalName : prev.legalName,
-      contactPerson: p.contactPerson !== '' ? p.contactPerson : prev.contactPerson,
-      phone: p.phone !== '' ? p.phone : prev.phone,
-      city: p.city !== '' ? p.city : prev.city,
-      area: p.area ?? prev.area,
-      website: p.website ?? prev.website,
-      capacity: p.capacity != null ? String(p.capacity) : prev.capacity,
-      instagram: p.instagram ?? prev.instagram,
-      bio: p.bio ?? prev.bio,
-      businessType: p.businessType ?? prev.businessType,
-      registrationNumber: p.registrationNumber ?? prev.registrationNumber,
-    }));
-    setIsBusiness(p.entityType === 'business');
-    setPlan(application.plan);
-
-    const seeded: Record<DocLabel, string | null> = { id_front: null, id_back: null, selfie: null };
-    for (const doc of application.documents) {
-      if (doc.label === 'id_front' || doc.label === 'id_back' || doc.label === 'selfie') {
-        seeded[doc.label] = doc.storagePath;
+  const seedFromApplication = useCallback(
+    (application: OnboardingRequestDto, go: (s: OnboardingStep) => void) => {
+      setSubmittedRequestId(application.id);
+      if (application.status === 'approved') {
+        setApprovalStatus('approved');
+        go('success');
+        return;
       }
-    }
-    setDocuments(seeded);
+      if (application.status === 'rejected') {
+        setApprovalStatus('rejected');
+        setReviewNote(application.reviewNote ?? '');
+        go('success');
+        return;
+      }
+      if (application.status === 'changes_requested') {
+        setApprovalStatus('changes_requested');
+        setReviewNote(application.reviewNote ?? '');
+        go('success');
+        return;
+      }
+      if (application.status === 'submitted') {
+        setApprovalStatus('pending');
+        go('success');
+        return;
+      }
+      // draft — continue from where the profile left off.
+      setApprovalStatus('pending');
+      const p = application.profile;
+      setFormData((prev) => ({
+        ...prev,
+        legalName: p.legalName !== '' ? p.legalName : prev.legalName,
+        contactPerson: p.contactPerson !== '' ? p.contactPerson : prev.contactPerson,
+        phone: p.phone !== '' ? p.phone : prev.phone,
+        city: p.city !== '' ? p.city : prev.city,
+        area: p.area ?? prev.area,
+        website: p.website ?? prev.website,
+        capacity: p.capacity != null ? String(p.capacity) : prev.capacity,
+        instagram: p.instagram ?? prev.instagram,
+        bio: p.bio ?? prev.bio,
+        businessType: p.businessType ?? prev.businessType,
+        registrationNumber: p.registrationNumber ?? prev.registrationNumber,
+      }));
+      setIsBusiness(p.entityType === 'business');
+      setPlan(application.plan);
 
-    const missing = application.missingDocuments.length;
-    if (!isProfileStarted(application)) {
-      go('details');
-    } else if (missing > 0) {
-      go('documents');
-    } else {
-      go('review');
-    }
-  }, []);
+      const seeded: Record<DocLabel, string | null> = {
+        id_front: null,
+        id_back: null,
+        selfie: null,
+      };
+      for (const doc of application.documents) {
+        if (doc.label === 'id_front' || doc.label === 'id_back' || doc.label === 'selfie') {
+          seeded[doc.label] = doc.storagePath;
+        }
+      }
+      setDocuments(seeded);
+
+      const missing = application.missingDocuments.length;
+      if (!isProfileStarted(application)) {
+        go('details');
+      } else if (missing > 0) {
+        go('documents');
+      } else {
+        go('review');
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (authLoading) return;
@@ -345,7 +365,9 @@ export function OnboardingPage() {
       }
 
       setSubmittedRequestId(application.id);
-      seedFromApplication(application, (s) => { setStep(s); });
+      seedFromApplication(application, (s) => {
+        setStep(s);
+      });
     };
 
     void checkInitialState();
@@ -374,7 +396,9 @@ export function OnboardingPage() {
     };
     void checkApproval();
     const interval = setInterval(() => void checkApproval(), 10_000);
-    return () => { clearInterval(interval); };
+    return () => {
+      clearInterval(interval);
+    };
   }, [step, submittedRequestId]);
 
   const handleProfileChange = (key: string, value: string | number | null) => {
@@ -429,7 +453,9 @@ export function OnboardingPage() {
       await authSignIn(email, loginPassword);
       const application = await getMine();
       if (application) {
-        seedFromApplication(application, (s) => { setStep(s); });
+        seedFromApplication(application, (s) => {
+          setStep(s);
+        });
       } else {
         // Signed in with no application on record — begin a fresh one (role is
         // kept from step 1), skipping the signup screen.
@@ -510,17 +536,24 @@ export function OnboardingPage() {
         // One live application per person — adopt the existing draft and resume.
         const existing = await getMine();
         if (existing) {
-          seedFromApplication(existing, (s) => { setStep(s); });
+          seedFromApplication(existing, (s) => {
+            setStep(s);
+          });
           setError('You already have an application in progress — resuming it.');
           return;
         }
         setError('You already have an application in progress.');
       } else {
-        setError(err instanceof Error ? err.message : 'Failed to create account. Please try again.');
+        setError(
+          err instanceof Error ? err.message : 'Failed to create account. Please try again.',
+        );
         if (isApiClientError(err) && err.fieldErrors) {
           setFieldErrors(
             Object.fromEntries(
-              Object.entries(err.fieldErrors as Record<string, string[]>).map(([k, v]) => [k, v.join(' ')]),
+              Object.entries(err.fieldErrors as Record<string, string[]>).map(([k, v]) => [
+                k,
+                v.join(' '),
+              ]),
             ),
           );
         }
@@ -538,7 +571,11 @@ export function OnboardingPage() {
     // but never block the UI on it.
     void getMine().then((application) => {
       if (!application) return;
-      const seeded: Record<DocLabel, string | null> = { id_front: null, id_back: null, selfie: null };
+      const seeded: Record<DocLabel, string | null> = {
+        id_front: null,
+        id_back: null,
+        selfie: null,
+      };
       for (const doc of application.documents) {
         if (doc.label === 'id_front' || doc.label === 'id_back' || doc.label === 'selfie') {
           seeded[doc.label] = doc.storagePath;
@@ -560,7 +597,10 @@ export function OnboardingPage() {
     }
     setLoading(true);
     try {
-      const application = await submitOnboardingApplication(submittedRequestId, crypto.randomUUID());
+      const application = await submitOnboardingApplication(
+        submittedRequestId,
+        crypto.randomUUID(),
+      );
       setSubmittedRequestId(application.id);
       setApprovalStatus('pending');
       setStep('success');
@@ -688,21 +728,27 @@ export function OnboardingPage() {
                   title="Venue Partner"
                   description="Direct management for nightlife venues, clubs, and lounge spaces."
                   active={partnerType === 'venue'}
-                  onClick={() => { setPartnerType('venue'); }}
+                  onClick={() => {
+                    setPartnerType('venue');
+                  }}
                 />
                 <RoleCard
                   icon={Users}
                   title="Event Host"
                   description="For organizers, DJs, and collectives hosting independent events."
                   active={partnerType === 'host'}
-                  onClick={() => { setPartnerType('host'); }}
+                  onClick={() => {
+                    setPartnerType('host');
+                  }}
                 />
                 <RoleCard
                   icon={Zap}
                   title="Promoter"
                   description="Access tools for ticket distribution and guestlist management."
                   active={partnerType === 'promoter'}
-                  onClick={() => { setPartnerType('promoter'); }}
+                  onClick={() => {
+                    setPartnerType('promoter');
+                  }}
                 />
               </div>
               <ActionButton
@@ -767,7 +813,9 @@ export function OnboardingPage() {
                     type="text"
                     name="name"
                     value={name}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => { setName(e.target.value); }}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                      setName(e.target.value);
+                    }}
                     placeholder="Your name"
                     required
                   />
@@ -777,7 +825,9 @@ export function OnboardingPage() {
                   icon={Mail}
                   type="email"
                   value={email}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => { setEmail(e.target.value); }}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                    setEmail(e.target.value);
+                  }}
                   placeholder="you@company.com"
                 />
                 <div className="relative">
@@ -798,22 +848,31 @@ export function OnboardingPage() {
                   />
                   <button
                     type="button"
-                    onClick={() => { setShowPassword(!showPassword); }}
+                    onClick={() => {
+                      setShowPassword(!showPassword);
+                    }}
                     className="absolute right-4 top-[42px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
                   >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5" />
-                    ) : (
-                      <Eye className="h-5 w-5" />
-                    )}
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
                 {emailExists ? (
-                  <ActionButton onClick={() => { void handleExistingUserLogin(); }} loading={loading} loadingText="AUTHORIZING ACCESS...">
+                  <ActionButton
+                    onClick={() => {
+                      void handleExistingUserLogin();
+                    }}
+                    loading={loading}
+                    loadingText="AUTHORIZING ACCESS..."
+                  >
                     Verify & Login <ChevronRight className="h-5 w-5" />
                   </ActionButton>
                 ) : (
-                  <ActionButton onClick={() => { void handleSignup(); }} loading={loading}>
+                  <ActionButton
+                    onClick={() => {
+                      void handleSignup();
+                    }}
+                    loading={loading}
+                  >
                     Continue <ChevronRight className="h-5 w-5" />
                   </ActionButton>
                 )}
@@ -842,7 +901,12 @@ export function OnboardingPage() {
                 }
                 description="Choose your plan and tell us about the applicant. You'll upload verification documents next."
               />
-              <ErrorBanner error={error} onLoginClick={() => { router.push('/login'); }} />
+              <ErrorBanner
+                error={error}
+                onLoginClick={() => {
+                  router.push('/login');
+                }}
+              />
 
               {authUser && (
                 <div className="p-5 rounded-2xl bg-[var(--state-success-bg)] border border-[var(--state-success)]/20 flex items-center justify-between mb-8">
@@ -864,7 +928,10 @@ export function OnboardingPage() {
               )}
 
               <form
-                onSubmit={(e) => { e.preventDefault(); void handleCreateApplication(); }}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void handleCreateApplication();
+                }}
                 className="space-y-8"
               >
                 {/* Plan */}
@@ -875,7 +942,9 @@ export function OnboardingPage() {
                       <button
                         key={p.value}
                         type="button"
-                        onClick={() => { setPlan(p.value); }}
+                        onClick={() => {
+                          setPlan(p.value);
+                        }}
                         className={`p-4 rounded-2xl border-2 text-left transition-all ${plan === p.value ? 'bg-[var(--surface-tertiary)] border-[var(--accent-primary)]' : 'bg-[var(--surface-elevated)] border-[var(--border-subtle)] hover:border-[var(--border-default)]'}`}
                       >
                         <div className="flex items-center justify-between">
@@ -896,11 +965,19 @@ export function OnboardingPage() {
                   />
 
                   <FormField
-                    label={partnerType === 'venue' ? 'Venue Name' : partnerType === 'host' ? 'Brand / Collective Name' : 'Your Full Name'}
+                    label={
+                      partnerType === 'venue'
+                        ? 'Venue Name'
+                        : partnerType === 'host'
+                          ? 'Brand / Collective Name'
+                          : 'Your Full Name'
+                    }
                     icon={partnerType === 'venue' ? Building2 : User}
                     value={formData.legalName}
                     error={fieldErrors['legalName']}
-                    onChange={(v) => { handleProfileChange('legalName', v); }}
+                    onChange={(v) => {
+                      handleProfileChange('legalName', v);
+                    }}
                     placeholder={
                       partnerType === 'venue'
                         ? 'e.g. Club Eclipse'
@@ -916,7 +993,9 @@ export function OnboardingPage() {
                       icon={Briefcase}
                       value={formData.contactPerson}
                       error={fieldErrors['contactPerson']}
-                      onChange={(v) => { handleProfileChange('contactPerson', v); }}
+                      onChange={(v) => {
+                        handleProfileChange('contactPerson', v);
+                      }}
                       placeholder="Primary contact"
                     />
                     {/* Phone is a typed, unverified profile field (spec) — no OTP. */}
@@ -926,7 +1005,9 @@ export function OnboardingPage() {
                       type="tel"
                       value={formData.phone}
                       error={fieldErrors['phone']}
-                      onChange={(v) => { handleProfileChange('phone', v); }}
+                      onChange={(v) => {
+                        handleProfileChange('phone', v);
+                      }}
                       placeholder="+91 98765 43210"
                     />
                   </div>
@@ -936,7 +1017,9 @@ export function OnboardingPage() {
                     <input
                       type="checkbox"
                       checked={isBusiness}
-                      onChange={(e) => { setIsBusiness(e.target.checked); }}
+                      onChange={(e) => {
+                        setIsBusiness(e.target.checked);
+                      }}
                       className="h-4 w-4 rounded accent-[var(--accent-primary)]"
                     />
                     <span className="text-[13px] text-[var(--text-secondary)]">
@@ -948,14 +1031,18 @@ export function OnboardingPage() {
                       <FormSelect
                         label="Business Type"
                         value={formData.businessType}
-                        onChange={(v) => { handleProfileChange('businessType', v); }}
+                        onChange={(v) => {
+                          handleProfileChange('businessType', v);
+                        }}
                         options={[{ value: '', label: 'Select business type' }, ...BUSINESS_TYPES]}
                       />
                       <FormField
                         label="Registration / CIN Number (optional)"
                         icon={Briefcase}
                         value={formData.registrationNumber}
-                        onChange={(v) => { handleProfileChange('registrationNumber', v); }}
+                        onChange={(v) => {
+                          handleProfileChange('registrationNumber', v);
+                        }}
                         placeholder="e.g. U74999MH2020PTC123456"
                       />
                     </div>
@@ -966,13 +1053,20 @@ export function OnboardingPage() {
                       label="City"
                       value={formData.city}
                       error={fieldErrors['city']}
-                      onChange={(v) => { handleProfileChange('city', v); }}
-                      options={[{ value: '', label: 'Select a city' }, ...CITIES.map((c) => ({ value: c, label: c }))]}
+                      onChange={(v) => {
+                        handleProfileChange('city', v);
+                      }}
+                      options={[
+                        { value: '', label: 'Select a city' },
+                        ...CITIES.map((c) => ({ value: c, label: c })),
+                      ]}
                     />
                     <FormField
                       label="Area / Locality"
                       value={formData.area}
-                      onChange={(v) => { handleProfileChange('area', v); }}
+                      onChange={(v) => {
+                        handleProfileChange('area', v);
+                      }}
                       placeholder="e.g. Bandra"
                     />
                   </div>
@@ -981,7 +1075,9 @@ export function OnboardingPage() {
                     label="Website (optional)"
                     icon={Globe}
                     value={formData.website}
-                    onChange={(v) => { handleProfileChange('website', v); }}
+                    onChange={(v) => {
+                      handleProfileChange('website', v);
+                    }}
                     placeholder="https://yourbrand.com"
                   />
 
@@ -990,7 +1086,9 @@ export function OnboardingPage() {
                       label="Approximate Capacity"
                       icon={Users}
                       value={formData.capacity}
-                      onChange={(v) => { handleProfileChange('capacity', v === '' ? null : Number(v)); }}
+                      onChange={(v) => {
+                        handleProfileChange('capacity', v === '' ? null : Number(v));
+                      }}
                       placeholder="e.g. 500"
                     />
                   )}
@@ -1001,7 +1099,9 @@ export function OnboardingPage() {
                         label="Instagram Handle"
                         icon={AtSign}
                         value={formData.instagram}
-                        onChange={(v) => { handleProfileChange('instagram', v); }}
+                        onChange={(v) => {
+                          handleProfileChange('instagram', v);
+                        }}
                         placeholder="@yourusername"
                       />
                       <div className="space-y-2">
@@ -1011,7 +1111,9 @@ export function OnboardingPage() {
                         <textarea
                           id="promoter-bio"
                           value={formData.bio}
-                          onChange={(e) => { handleProfileChange('bio', e.target.value); }}
+                          onChange={(e) => {
+                            handleProfileChange('bio', e.target.value);
+                          }}
                           placeholder="Tell us about your reach, experience, and what you're looking for..."
                           className="w-full bg-[var(--surface-secondary)] border border-[var(--border-subtle)] rounded-xl px-4 py-3 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] focus:bg-[var(--surface-base)] focus:border-[var(--accent-primary)] focus:ring-3 focus:ring-[var(--accent-glow)] transition-all outline-none min-h-[120px] resize-none"
                         />
@@ -1065,7 +1167,9 @@ export function OnboardingPage() {
                       label={copy.title}
                       fieldName={label}
                       value={documents[label]}
-                      onChange={(path) => { handleDocumentUploaded(label, path); }}
+                      onChange={(path) => {
+                        handleDocumentUploaded(label, path);
+                      }}
                       uid={authUser?.id ?? ''}
                       stepId="documents"
                       requestId={submittedRequestId}
@@ -1076,7 +1180,9 @@ export function OnboardingPage() {
               </div>
               <div className="mt-8">
                 <ActionButton
-                  onClick={() => { setStep('review'); }}
+                  onClick={() => {
+                    setStep('review');
+                  }}
                   disabled={!allDocumentsUploaded}
                 >
                   {allDocumentsUploaded ? (
@@ -1109,7 +1215,10 @@ export function OnboardingPage() {
               <ErrorBanner error={error} />
               <div className="space-y-6">
                 <div className="p-6 rounded-2xl bg-[var(--surface-secondary)] border border-[var(--border-subtle)] space-y-3">
-                  <SummaryRow label="Role" value={partnerType.charAt(0).toUpperCase() + partnerType.slice(1)} />
+                  <SummaryRow
+                    label="Role"
+                    value={partnerType.charAt(0).toUpperCase() + partnerType.slice(1)}
+                  />
                   <SummaryRow label="Plan" value={plan.charAt(0).toUpperCase() + plan.slice(1)} />
                   <SummaryRow label="Name" value={formData.legalName} />
                   <SummaryRow label="Contact" value={formData.contactPerson} />
@@ -1135,7 +1244,9 @@ export function OnboardingPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => { void submitApplication(); }}
+                  onClick={() => {
+                    void submitApplication();
+                  }}
                   disabled={loading || !allDocumentsUploaded}
                   className="w-full bg-[var(--accent-primary)] text-white h-14 rounded-2xl font-semibold text-[14px] hover:brightness-110 transition-all flex items-center justify-center gap-3 shadow-lg shadow-[var(--accent-primary)]/20 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -1174,9 +1285,13 @@ export function OnboardingPage() {
                   >
                     <Sparkles className="h-12 w-12" />
                   </motion.div>
-                  <h1 className="text-display-sm text-[var(--text-primary)] mb-4">You're Approved</h1>
+                  <h1 className="text-display-sm text-[var(--text-primary)] mb-4">
+                    You're Approved
+                  </h1>
                   <p className="text-body text-[var(--text-secondary)] mb-10 max-w-md mx-auto">
-                    <span className="font-semibold text-[var(--text-primary)]">{formData.legalName}</span>{' '}
+                    <span className="font-semibold text-[var(--text-primary)]">
+                      {formData.legalName}
+                    </span>{' '}
                     has been approved. Continue to your dashboard.
                   </p>
                   <button
@@ -1198,7 +1313,9 @@ export function OnboardingPage() {
                   >
                     <AlertCircle className="h-12 w-12" />
                   </motion.div>
-                  <h1 className="text-display-sm text-[var(--text-primary)] mb-4">Application Not Approved</h1>
+                  <h1 className="text-display-sm text-[var(--text-primary)] mb-4">
+                    Application Not Approved
+                  </h1>
                   <p className="text-body text-[var(--text-secondary)] mb-10 max-w-md mx-auto">
                     {reviewNote || 'Our team was unable to approve this application.'}
                   </p>
@@ -1224,13 +1341,18 @@ export function OnboardingPage() {
                   >
                     <RefreshCwIcon />
                   </motion.div>
-                  <h1 className="text-display-sm text-[var(--text-primary)] mb-4">Changes Requested</h1>
+                  <h1 className="text-display-sm text-[var(--text-primary)] mb-4">
+                    Changes Requested
+                  </h1>
                   <p className="text-body text-[var(--text-secondary)] mb-10 max-w-md mx-auto">
-                    {reviewNote || 'Our team has requested changes before this application can continue.'}
+                    {reviewNote ||
+                      'Our team has requested changes before this application can continue.'}
                   </p>
                   <div className="flex flex-col gap-3">
                     <button
-                      onClick={() => { setStep('details'); }}
+                      onClick={() => {
+                        setStep('details');
+                      }}
                       className="inline-flex items-center justify-center gap-3 px-8 py-3.5 rounded-2xl bg-[var(--accent-primary)] text-white font-semibold text-[14px] hover:brightness-110 transition-all"
                     >
                       Fix Profile <ChevronRight className="h-4 w-4" />
@@ -1258,10 +1380,14 @@ export function OnboardingPage() {
                   >
                     <CheckCircle2 className="h-12 w-12" />
                   </motion.div>
-                  <h1 className="text-display-sm text-[var(--text-primary)] mb-4">Application Submitted</h1>
+                  <h1 className="text-display-sm text-[var(--text-primary)] mb-4">
+                    Application Submitted
+                  </h1>
                   <p className="text-body text-[var(--text-secondary)] mb-10 max-w-md mx-auto">
                     Your application and verification documents for{' '}
-                    <span className="font-semibold text-[var(--text-primary)]">{formData.legalName}</span>{' '}
+                    <span className="font-semibold text-[var(--text-primary)]">
+                      {formData.legalName}
+                    </span>{' '}
                     are under review. We'll notify you once approved.
                   </p>
                   <div className="p-6 rounded-2xl bg-[var(--surface-secondary)] border border-[var(--border-subtle)] mb-10 flex items-start gap-4 text-left">
@@ -1298,7 +1424,15 @@ export function OnboardingPage() {
 
 function RefreshCwIcon() {
   return (
-    <svg className="h-12 w-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      className="h-12 w-12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M21 2v6h-6" />
       <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
       <path d="M3 22v-6h6" />
@@ -1342,7 +1476,9 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4">
       <span className="text-[12px] text-[var(--text-tertiary)]">{label}</span>
-      <span className="text-[13px] font-semibold text-[var(--text-primary)] text-right">{value}</span>
+      <span className="text-[13px] font-semibold text-[var(--text-primary)] text-right">
+        {value}
+      </span>
     </div>
   );
 }
@@ -1599,7 +1735,11 @@ function KycFileZone({
     }
 
     const contentType = file.type;
-    if (contentType !== 'image/jpeg' && contentType !== 'image/png' && contentType !== 'image/webp') {
+    if (
+      contentType !== 'image/jpeg' &&
+      contentType !== 'image/png' &&
+      contentType !== 'image/webp'
+    ) {
       setUploadError('Please upload a JPG, PNG, or WEBP image.');
       return;
     }
@@ -1628,7 +1768,9 @@ function KycFileZone({
           <span className="text-[12px] text-emerald-400 font-medium truncate flex-1">Uploaded</span>
           <button
             type="button"
-            onClick={() => { onChange(null); }}
+            onClick={() => {
+              onChange(null);
+            }}
             className="p-1 rounded-lg hover:bg-red-500/20 text-[var(--text-tertiary)] hover:text-red-400 transition-colors"
           >
             <X className="h-3.5 w-3.5" />
@@ -1641,8 +1783,12 @@ function KycFileZone({
             <span className="text-[12px] text-[var(--text-tertiary)]">Uploading… {progress}%</span>
           </div>
           <div className="progress-bar w-full">
-            {/* eslint-disable-next-line no-restricted-syntax -- dynamic upload width is set inline; the design-token .progress-bar/.progress-bar-fill classes carry the chrome. */}
-            <div className="progress-bar-fill progress-bar-fill-accent" style={{ width: `${String(progress)}%` }} />
+            {/* eslint-disable no-restricted-syntax -- dynamic upload width is set inline; the design-token .progress-bar/.progress-bar-fill classes carry the chrome. */}
+            <div
+              className="progress-bar-fill progress-bar-fill-accent"
+              style={{ width: `${String(progress)}%` }}
+            />
+            {/* eslint-enable no-restricted-syntax */}
           </div>
         </div>
       ) : (

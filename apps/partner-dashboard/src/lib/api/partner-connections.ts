@@ -165,4 +165,12 @@ export const promoterConnectionApi: PromoterConnectionApi = {
     }),
 };
 
-export type { PartnershipDto, RequestPartnershipRequest, ResolvePartnershipRequest, PromoterConnectionDto, RequestConnectionRequest, PaginationQuery, Paginated };
+export type {
+  PartnershipDto,
+  RequestPartnershipRequest,
+  ResolvePartnershipRequest,
+  PromoterConnectionDto,
+  RequestConnectionRequest,
+  PaginationQuery,
+  Paginated,
+};

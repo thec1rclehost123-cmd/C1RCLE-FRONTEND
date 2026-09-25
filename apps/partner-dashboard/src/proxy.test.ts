@@ -30,9 +30,9 @@ describe('proxy.session-gate', () => {
   });
 
   it('passes /onboard for a cookie-bearing visitor under either cookie name', () => {
-    expect(
-      proxy(request('/onboard', { cookie: 'better-auth.session_token=abc' })).status,
-    ).toBe(200);
+    expect(proxy(request('/onboard', { cookie: 'better-auth.session_token=abc' })).status).toBe(
+      200,
+    );
     expect(
       proxy(request('/onboard', { cookie: '__Secure-better-auth.session_token=abc' })).status,
     ).toBe(200);
@@ -53,6 +53,6 @@ describe('proxy.csp-nonce', () => {
   it('stamps a Content-Security-Policy header on page responses', () => {
     const res = proxy(request('/onboard'));
     expect(res.headers.get('Content-Security-Policy')).toContain("default-src 'self'");
-    expect(res.headers.get('Content-Security-Policy')).toContain('\'strict-dynamic\'');
+    expect(res.headers.get('Content-Security-Policy')).toContain("'strict-dynamic'");
   });
 });

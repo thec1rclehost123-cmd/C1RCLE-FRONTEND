@@ -127,10 +127,7 @@ export function SessionAuthProvider({ children }: { children: ReactNode }) {
     [orgAccess],
   );
 
-  const canDo = useCallback(
-    (action: string) => orgAccess.hasPermission(action),
-    [orgAccess],
-  );
+  const canDo = useCallback((action: string) => orgAccess.hasPermission(action), [orgAccess]);
 
   const profile = useMemo<DashboardProfile | null>(() => {
     if (!user) return null;
@@ -191,7 +188,9 @@ export function SessionAuthProvider({ children }: { children: ReactNode }) {
     ],
   );
 
-  return <SessionAuthContext.Provider value={authContextValue}>{children}</SessionAuthContext.Provider>;
+  return (
+    <SessionAuthContext.Provider value={authContextValue}>{children}</SessionAuthContext.Provider>
+  );
 }
 
 export function useSessionContext() {
