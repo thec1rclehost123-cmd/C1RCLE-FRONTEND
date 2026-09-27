@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { forwardToGateway } from '@/lib/bff/auth-proxy';
+import { csrfCookieName, forwardToGateway } from '@/lib/bff/auth-proxy';
 
 import { POST as otpSend } from './send/route';
 import { POST as otpVerify } from './verify/route';
@@ -40,7 +40,7 @@ function post(path: string, headers: Record<string, string>, body?: unknown): Ne
 const CSRF_HEADERS = {
   origin: APP_ORIGIN,
   'x-csrf-token': 'tok',
-  cookie: 'c1rcle.csrf=tok; better-auth.session_token=sess_abc',
+  cookie: `${csrfCookieName()}=tok; better-auth.session_token=sess_abc`,
 };
 
 beforeEach(() => {
@@ -61,9 +61,7 @@ describe('POST /api/auth/otp/send', () => {
   });
 
   it('forwards to /api/v2/auth/otp/send, carrying the session cookie, and passes the ack through', async () => {
-    mockForward.mockResolvedValue(
-      gatewayResponse({ message: 'If valid, a code has been sent.' }),
-    );
+    mockForward.mockResolvedValue(gatewayResponse({ message: 'If valid, a code has been sent.' }));
 
     const res = await otpSend(post('/api/auth/otp/send', CSRF_HEADERS, { email: 'a@b.com' }));
 
@@ -101,11 +99,7 @@ describe('POST /api/auth/otp/send', () => {
 describe('POST /api/auth/otp/verify', () => {
   it('rejects a missing CSRF token', async () => {
     const res = await otpVerify(
-      post(
-        '/api/auth/otp/verify',
-        { origin: APP_ORIGIN },
-        { email: 'a@b.com', code: '123456' },
-      ),
+      post('/api/auth/otp/verify', { origin: APP_ORIGIN }, { email: 'a@b.com', code: '123456' }),
     );
     expect(res.status).toBe(403);
     expect(mockForward).not.toHaveBeenCalled();
@@ -115,11 +109,7 @@ describe('POST /api/auth/otp/verify', () => {
     mockForward.mockResolvedValue(gatewayResponse({ message: 'Verified.' }));
 
     const res = await otpVerify(
-      post(
-        '/api/auth/otp/verify',
-        CSRF_HEADERS,
-        { email: 'a@b.com', code: '123456' },
-      ),
+      post('/api/auth/otp/verify', CSRF_HEADERS, { email: 'a@b.com', code: '123456' }),
     );
 
     expect(res.status).toBe(200);
@@ -140,11 +130,7 @@ describe('POST /api/auth/otp/verify', () => {
       ),
     );
     const res = await otpVerify(
-      post(
-        '/api/auth/otp/verify',
-        CSRF_HEADERS,
-        { email: 'a@b.com', code: '000000' },
-      ),
+      post('/api/auth/otp/verify', CSRF_HEADERS, { email: 'a@b.com', code: '000000' }),
     );
     expect(res.status).toBe(400);
   });

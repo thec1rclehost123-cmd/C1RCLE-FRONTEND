@@ -1,3 +1,17 @@
+import type {
+  PartnershipDto,
+  PromoterConnectionDto,
+  RequestConnectionRequest,
+  RequestPartnershipRequest,
+} from '@c1rcle/contracts';
+
+export type {
+  PartnershipDto,
+  PromoterConnectionDto,
+  RequestConnectionRequest,
+  RequestPartnershipRequest,
+};
+
 export type PartnerRole = 'venue' | 'host' | 'promoter';
 export type PartnershipStatus = 'partnered' | 'pending' | 'discover';
 export type PromoterEventStatus =

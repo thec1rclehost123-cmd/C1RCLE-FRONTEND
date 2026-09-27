@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiClientError } from '@c1rcle/api-client';
 import { markHydrated } from '@c1rcle/auth';
 
-import { clearPartnerAccessCache } from './org-access-cache';
 import { useOrgAccess } from './use-org-access';
 
 import type { PartnerAccessDto } from '@c1rcle/contracts';
@@ -145,7 +144,11 @@ describe('useOrgAccess', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    getPartnerAccessMock.mockResolvedValue({ ...ACCESS_FIXTURE, organizationId: 'org-2', partnerType: 'host' });
+    getPartnerAccessMock.mockResolvedValue({
+      ...ACCESS_FIXTURE,
+      organizationId: 'org-2',
+      partnerType: 'host',
+    });
     act(() => {
       rerender({ orgId: 'org-2' });
     });

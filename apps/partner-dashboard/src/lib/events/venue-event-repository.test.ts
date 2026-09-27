@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { uploadToSignedUrl } from '@/lib/onboarding/uploadToSignedUrl';

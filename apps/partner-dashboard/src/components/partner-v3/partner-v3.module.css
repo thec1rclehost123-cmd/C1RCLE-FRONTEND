@@ -391,7 +391,9 @@
   position: relative;
 }
 
-.notificationRoot { z-index: 1000; }
+.notificationRoot {
+  z-index: 1000;
+}
 
 .globalSearchField {
   position: relative;
@@ -587,16 +589,43 @@
   color: var(--partner-v3-ink);
   outline: none;
 }
-.notificationTabs { display: flex; gap: 4px; overflow-x: auto; padding: 4px 8px 10px; border-bottom: 1px solid var(--partner-v3-border); }
-.notificationTabs button { flex: 0 0 auto; padding: 6px 9px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: var(--partner-v3-ink-muted); cursor: pointer; font: inherit; font-size: 11px; }
+.notificationTabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 4px 8px 10px;
+  border-bottom: 1px solid var(--partner-v3-border);
+}
+.notificationTabs button {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--partner-v3-ink-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
 .notificationTabs button:hover,
-.notificationTabs button:focus-visible { color: var(--partner-v3-ink); outline: none; }
-.notificationTabs button.notificationTabActive { border-color: var(--partner-v3-border); background: var(--partner-v3-surface-muted); color: var(--partner-v3-ink); }
+.notificationTabs button:focus-visible {
+  color: var(--partner-v3-ink);
+  outline: none;
+}
+.notificationTabs button.notificationTabActive {
+  border-color: var(--partner-v3-border);
+  background: var(--partner-v3-surface-muted);
+  color: var(--partner-v3-ink);
+}
 .notificationList {
   display: grid;
   gap: 2px;
 }
-.notificationItem { min-width: 0; padding-bottom: 7px; border-bottom: 1px solid var(--partner-v3-border); }
+.notificationItem {
+  min-width: 0;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--partner-v3-border);
+}
 .notificationRow {
   display: flex;
   align-items: flex-start;
@@ -606,7 +635,14 @@
   color: inherit;
   text-decoration: none;
 }
-.notificationItem > button.notificationRow { width: 100%; border: 0; background: transparent; cursor: pointer; font: inherit; text-align: left; }
+.notificationItem > button.notificationRow {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
 .notificationRow:hover,
 .notificationRow:focus-visible {
   background: rgb(255 255 255 / 6%);
@@ -647,7 +683,11 @@
   font-size: 13px;
   line-height: 1.4;
 }
-.notificationCopy > strong { color: var(--partner-v3-ink); font-size: 12px; line-height: 1.35; }
+.notificationCopy > strong {
+  color: var(--partner-v3-ink);
+  font-size: 12px;
+  line-height: 1.35;
+}
 .notificationCopy time {
   color: var(--partner-v3-ink-subtle);
   font-size: 11px;
@@ -667,11 +707,42 @@
   font-size: 13px;
   text-align: center;
 }
-.notificationError { margin: 6px 12px; color: var(--partner-v3-danger); font-size: 12px; line-height: 1.4; }
-.notificationMarkRead { margin: 0 12px 4px; padding: 2px 0; border: 0; background: transparent; color: var(--partner-v3-ink-muted); cursor: pointer; font: inherit; font-size: 11px; }
-.notificationQuickActions { display: flex; gap: 8px; padding: 0 12px 6px; }
-.notificationQuickActions button { min-height: 28px; padding: 0 10px; border: 1px solid var(--partner-v3-border); border-radius: 8px; background: var(--partner-v3-surface-muted); color: var(--partner-v3-ink); cursor: pointer; font: inherit; font-size: 11px; }
-.notificationQuickActions button:disabled { cursor: wait; opacity: .6; }
+.notificationError {
+  margin: 6px 12px;
+  color: var(--partner-v3-danger);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.notificationMarkRead {
+  margin: 0 12px 4px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--partner-v3-ink-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
+.notificationQuickActions {
+  display: flex;
+  gap: 8px;
+  padding: 0 12px 6px;
+}
+.notificationQuickActions button {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--partner-v3-border);
+  border-radius: 8px;
+  background: var(--partner-v3-surface-muted);
+  color: var(--partner-v3-ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
+.notificationQuickActions button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
 
 .pageContainer {
   width: min(1180px, 100%);

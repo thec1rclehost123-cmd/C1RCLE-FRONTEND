@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -37,7 +37,7 @@ describe('PartnerEventEditor', () => {
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     expect(screen.getByRole('alert')).toHaveTextContent('Add an event name.');
 
-    await user.type(screen.getByLabelText('Event name'), 'Test night');
+    fireEvent.change(screen.getByLabelText('Event name'), { target: { value: 'Test night' } });
     const availableDate = availability.months[0]?.days.find((day) => day.state === 'available');
     expect(availableDate).toBeDefined();
     if (availableDate)
@@ -117,7 +117,7 @@ describe('PartnerEventEditor', () => {
       />,
     );
 
-    await user.type(screen.getByLabelText('Event name'), 'Backend Night');
+    fireEvent.change(screen.getByLabelText('Event name'), { target: { value: 'Backend Night' } });
     await user.click(screen.getByRole('button', { name: String(availableDate.day) }));
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     await user.click(screen.getByRole('button', { name: 'Continue' }));

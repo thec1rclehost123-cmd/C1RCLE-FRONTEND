@@ -124,6 +124,9 @@ export function createApiPartnerRepositories(options: ApiPartnerRepositoryOption
     getPartners: () => request('/api/v1/partner/host/partners', options.decoders.relationships),
     getFinance: () => request('/api/v1/partner/host/finance', options.decoders.hostFinance),
     getProfile: () => request('/api/v1/partner/host/profile', options.decoders.hostProfile),
+    requestPartnership: () => Promise.reject(new Error('Not implemented')),
+    resolvePartnership: () => Promise.reject(new Error('Not implemented')),
+    getPartnerships: () => Promise.reject(new Error('Not implemented')),
   };
 
   const promoter: PromoterRepository = {
@@ -148,6 +151,9 @@ export function createApiPartnerRepositories(options: ApiPartnerRepositoryOption
         method: 'POST',
         body: input,
       }),
+    requestConnection: () => Promise.reject(new Error('Not implemented')),
+    resolveConnection: () => Promise.reject(new Error('Not implemented')),
+    getPromoterConnections: () => Promise.reject(new Error('Not implemented')),
   };
 
   return { host, promoter };

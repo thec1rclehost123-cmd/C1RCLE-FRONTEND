@@ -3,11 +3,7 @@ import { organizationDtoSchema, paginatedSchema, partnerAccessDtoSchema } from '
 import { apiClient } from '@/lib/api/client';
 import { bffClient } from '@/lib/bff/bff-client';
 
-import type {
-  CreateOrganizationInput,
-  OrganizationDto,
-  PartnerAccessDto,
-} from '@c1rcle/contracts';
+import type { CreateOrganizationInput, OrganizationDto, PartnerAccessDto } from '@c1rcle/contracts';
 
 /**
  * Fetches all organizations the logged-in user has access to, through the

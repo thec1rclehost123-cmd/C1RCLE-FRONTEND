@@ -9,13 +9,32 @@ import type { EventEditorData, EventEditorDraft } from '@/data/partner-data-sour
 const testData: EventEditorData = {
   dataStatus: 'fixture',
   role: 'venue',
-  accent: 'orange',
   artworkOptions: [],
   venues: [],
   promoters: [
     { id: 'promoter-1', name: 'Alex Promoter', initials: 'AP', role: 'Promoter' },
     { id: 'promoter-2', name: 'Sam Promoter', initials: 'SP', role: 'Promoter' },
   ],
+  genres: [],
+  extraGenres: [],
+  defaultDraft: {
+    venueId: '',
+    date: '',
+    dateLabel: '',
+    name: '',
+    time: '',
+    genres: [],
+    artists: [],
+    artwork: { type: 'gradient', value: 'from-orange-500 to-red-500' },
+    ticketTiers: [],
+    selectedPromoterIds: [],
+    tableType: 'none',
+    promoCodes: [],
+    pricingRule: 'none',
+    compensation: 'standard',
+    commissionRate: 0,
+    salaryNotes: '',
+  },
 };
 
 function renderPromoterSelector(initialDraft?: Partial<EventEditorDraft>) {
@@ -111,7 +130,9 @@ describe('EventPromoterSelector compensation models and promoter overrides', () 
     // Set custom override for promoter
     await user.click(screen.getByRole('button', { name: '+ Set custom commission' }));
 
-    const customGaInput = screen.getByLabelText('Alex Promoter General Admission custom commission');
+    const customGaInput = screen.getByLabelText(
+      'Alex Promoter General Admission custom commission',
+    );
     const customVipInput = screen.getByLabelText('Alex Promoter VIP Pass custom commission');
 
     expect(customGaInput).toHaveValue(10);

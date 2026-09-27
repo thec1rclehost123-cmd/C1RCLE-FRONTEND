@@ -11,8 +11,6 @@ import {
   type PromoterPartner,
 } from './contracts';
 import { fixturePromoterRepository } from './fixture-promoter-repository';
-import { loadPromoterLinkedEvents } from './promoter-events-api';
-
 
 export function createApiPartnerRepositoriesV2(): {
   readonly host: HostRepository;
@@ -29,10 +27,10 @@ export function createApiPartnerRepositoriesV2(): {
     kind: p.initiatedBy === 'host' ? 'venue' : 'host',
     name:
       p.initiatedBy === 'host'
-        ? (p.venueName ?? `Venue ${p.venueId.slice(0, 8)}`)
-        : (p.hostName ?? `Host ${p.hostOrganizationId.slice(0, 8)}`),
-    city: p.venueCity ?? 'Unknown',
-    verified: Boolean(p.venueName ?? p.hostName),
+        ? `Venue ${p.venueId.slice(0, 8)}`
+        : `Host ${p.hostOrganizationId.slice(0, 8)}`,
+    city: 'Unknown',
+    verified: false,
     status: p.status === 'active' ? 'partnered' : p.status === 'pending' ? 'pending' : 'discover',
     eventsTogether: 0,
     responseTime: 'Unknown',
@@ -42,10 +40,10 @@ export function createApiPartnerRepositoriesV2(): {
   const mapPromoterConnectionToPartner = (c: PromoterConnectionDto): PromoterPartner => ({
     id: c.id,
     kind: c.targetType,
-    name: c.targetName ?? c.promoterName ?? `${c.targetType} ${c.targetId.slice(0, 8)}`,
-    city: c.targetCity ?? 'Unknown',
+    name: `${c.targetType} ${c.targetId.slice(0, 8)}`,
+    city: 'Unknown',
     category: 'Unknown',
-    verified: Boolean(c.targetName ?? c.promoterName),
+    verified: false,
     status: c.status === 'active' ? 'partnered' : c.status === 'pending' ? 'pending' : 'discover',
     eventsTogether: 0,
     responseTime: 'Unknown',
@@ -53,28 +51,18 @@ export function createApiPartnerRepositoriesV2(): {
   });
 
   const host: HostRepository = {
-    getOrganizations: async () => {
-      return [];
-    },
-    getOverview: async () => {
-      throw new Error('Not implemented - use v1 API or implement');
-    },
-    getEvents: async () => {
-      throw new Error('Not implemented - use v1 API or implement');
-    },
-    getEvent: async () => null,
-    getEventAnalytics: async () => null,
+    getOrganizations: () => Promise.resolve([]),
+    getOverview: () => Promise.reject(new Error('Not implemented - use v1 API or implement')),
+    getEvents: () => Promise.reject(new Error('Not implemented - use v1 API or implement')),
+    getEvent: () => Promise.resolve(null),
+    getEventAnalytics: () => Promise.resolve(null),
     getPartners: async () => {
       const orgId = getOrgId();
       const { items } = await partnershipApi.list(orgId);
       return items.map(mapPartnershipToRelationship);
     },
-    getFinance: async () => {
-      throw new Error('Not implemented - use v1 API or implement');
-    },
-    getProfile: async () => {
-      throw new Error('Not implemented - use v1 API or implement');
-    },
+    getFinance: () => Promise.reject(new Error('Not implemented - use v1 API or implement')),
+    getProfile: () => Promise.reject(new Error('Not implemented - use v1 API or implement')),
     requestPartnership: async (input) => {
       return partnershipApi.request(input);
     },
@@ -105,7 +93,7 @@ export function createApiPartnerRepositoriesV2(): {
       return fixturePromoterRepository.getOverview();
     },
     getLinkedEvents: async () => {
-      return loadPromoterLinkedEvents();
+      return fixturePromoterRepository.getLinkedEvents();
     },
     discoverEvents: async () => {
       return fixturePromoterRepository.discoverEvents();
@@ -115,9 +103,9 @@ export function createApiPartnerRepositoriesV2(): {
         const orgId = getOrgId();
         const { items } = await promoterConnectionApi.list(orgId);
         const mapped = items.map(mapPromoterConnectionToPartner);
-        return mapped.length > 0 ? mapped : fixturePromoterRepository.getPartners();
+        return await (mapped.length > 0 ? mapped : fixturePromoterRepository.getPartners());
       } catch {
-        return fixturePromoterRepository.getPartners();
+        return await fixturePromoterRepository.getPartners();
       }
     },
     getFinance: async () => {

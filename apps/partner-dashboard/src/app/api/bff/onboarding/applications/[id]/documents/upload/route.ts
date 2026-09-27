@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import {
-  documentUploadUrlDtoSchema,
-  onboardingDocumentLabelSchema,
-} from '@c1rcle/contracts';
+import { documentUploadUrlDtoSchema, onboardingDocumentLabelSchema } from '@c1rcle/contracts';
 
 import {
   assertCsrf,
@@ -102,15 +99,12 @@ export async function POST(req: NextRequest, ctx: RouteParams): Promise<NextResp
     return errorEnvelope('server', 'Upload to object storage failed.', 502);
   }
 
-  const confirmResponse = await forwardToGateway(
-    `${UPLOAD_URL_PATH}/${id}/documents`,
-    {
-      method: 'POST',
-      body: { label: label.data, storagePath: upload.storagePath },
-      cookie,
-      headers: forwardedHeaders,
-    },
-  );
+  const confirmResponse = await forwardToGateway(`${UPLOAD_URL_PATH}/${id}/documents`, {
+    method: 'POST',
+    body: { label: label.data, storagePath: upload.storagePath },
+    cookie,
+    headers: forwardedHeaders,
+  });
   const confirmText = await confirmResponse.text();
   if (!confirmResponse.ok) {
     return passThroughGatewayError(confirmResponse.status, confirmText);

@@ -99,7 +99,19 @@ function SectionHeader({
   );
 }
 
-export function OverviewScreen({ data, links, accent = 'orange', studio, organizationId }: { readonly data: OverviewData; readonly links: OverviewLinks; readonly accent?: OverviewAccent; readonly studio?: 'venue' | 'host'; readonly organizationId?: string | null }) {
+export function OverviewScreen({
+  data,
+  links,
+  accent = 'orange',
+  studio,
+  organizationId,
+}: {
+  readonly data: OverviewData;
+  readonly links: OverviewLinks;
+  readonly accent?: OverviewAccent;
+  readonly studio?: 'venue' | 'host';
+  readonly organizationId?: string | null;
+}) {
   const soldPercent = Math.round((data.nextEvent.sold / data.nextEvent.capacity) * 100);
 
   return (
@@ -206,7 +218,12 @@ export function OverviewScreen({ data, links, accent = 'orange', studio, organiz
       </div>
 
       <div className={styles['secondaryGrid']}>
-        <OverviewCalendarCard fallback={data.calendar} href={links.calendar} {...(studio ? { studio } : {})} {...(organizationId !== undefined ? { organizationId } : {})} />
+        <OverviewCalendarCard
+          fallback={data.calendar}
+          href={links.calendar}
+          {...(studio ? { studio } : {})}
+          {...(organizationId !== undefined ? { organizationId } : {})}
+        />
 
         <section
           className={classNames(styles['card'], styles['upcomingCard'])}

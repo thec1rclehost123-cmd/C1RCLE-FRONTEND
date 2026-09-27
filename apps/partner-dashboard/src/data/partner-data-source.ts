@@ -47,6 +47,7 @@ export interface OverviewCalendarDay {
   readonly day: number;
   readonly eventCount?: number;
   readonly isToday?: boolean;
+  readonly isBlocked?: boolean;
 }
 
 export interface OverviewNetworkMember {
@@ -131,6 +132,7 @@ export interface PartnerEventArtwork {
   readonly type: 'image' | 'gradient';
   readonly value: string;
   readonly alt?: string;
+  readonly file?: File;
 }
 
 export interface PartnerEventRecord {
@@ -846,7 +848,7 @@ export interface PartnerVenueOption {
 }
 
 export interface VenueCalendarData {
-  readonly dataStatus: 'fixture';
+  readonly dataStatus: 'fixture' | 'live';
   readonly accent: 'orange';
   readonly months: readonly CalendarMonth[];
   readonly blocks: readonly CalendarBlock[];
@@ -858,7 +860,7 @@ export interface HostAvailabilityVenue {
 }
 
 export interface HostAvailabilityData {
-  readonly dataStatus: 'fixture';
+  readonly dataStatus: 'fixture' | 'live';
   readonly accent: 'lavender';
   readonly venues: readonly HostAvailabilityVenue[];
 }
@@ -929,6 +931,13 @@ export interface EventEditorDraft {
   readonly compensation: 'standard' | 'custom' | 'salary';
   readonly commissionRate: number;
   readonly salaryNotes: string;
+  readonly endTime?: string;
+  readonly tierCommissions?: Record<string, number>;
+  readonly salaryAmount?: number;
+  readonly salaryPeriod?: string;
+  readonly promoterOverrides?: Record<string, Record<string, number>>;
+  readonly earlyBirdDiscountPercent?: number;
+  readonly lateArrivalChargePercent?: number;
 }
 
 export interface EventEditorData {

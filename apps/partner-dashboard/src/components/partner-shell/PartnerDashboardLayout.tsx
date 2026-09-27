@@ -22,7 +22,6 @@ import {
 
 import { LoadingState } from '@/components/partner-v3/States';
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
-import { LoadingState } from '@/components/partner-v3/States';
 
 import { PARTNER_SHELL_CONFIG } from './config';
 import { isPartnerNavigationItemActive } from './partner-navigation';
@@ -101,7 +100,6 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
 
   useEffect(() => {
     if (auth.loading) return;
-    if (!user) {
     if (!user) {
       router.replace('/login');
       return;

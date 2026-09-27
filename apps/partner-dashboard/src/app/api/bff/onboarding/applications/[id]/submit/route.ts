@@ -30,18 +30,15 @@ export async function POST(req: NextRequest, ctx: RouteParams): Promise<NextResp
   const { id } = await ctx.params;
   const idempotencyKey = req.headers.get('idempotency-key') ?? undefined;
   const { cookie, headers: authHeaders } = gatewayAuthInit(req);
-  const gatewayResponse = await forwardToGateway(
-    `/api/v2/onboarding/applications/${id}/submit`,
-    {
-      method: 'POST',
-      cookie,
-      headers: {
-        ...authHeaders,
-        ...(idempotencyKey !== undefined ? { 'Idempotency-Key': idempotencyKey } : {}),
-        ...ifMatchHeader(req),
-      },
+  const gatewayResponse = await forwardToGateway(`/api/v2/onboarding/applications/${id}/submit`, {
+    method: 'POST',
+    cookie,
+    headers: {
+      ...authHeaders,
+      ...(idempotencyKey !== undefined ? { 'Idempotency-Key': idempotencyKey } : {}),
+      ...ifMatchHeader(req),
     },
-  );
+  });
   const bodyText = await gatewayResponse.text();
 
   if (!gatewayResponse.ok) {

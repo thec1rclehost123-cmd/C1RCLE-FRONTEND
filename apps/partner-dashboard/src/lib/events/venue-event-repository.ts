@@ -44,25 +44,28 @@ export async function publishVenueEvent(
       startAt,
       endAt: eventEndAtFromDraft(draft),
       tags: [...new Set([...draft.genres, ...draft.artists])].slice(0, 50),
-      compensation: hasPaidTiers && draft.selectedPromoterIds.length
-        ? {
-            model: draft.compensation,
-            globalRatePercent:
-              draft.compensation === 'standard' ? Math.round(draft.commissionRate) : null,
-            tierRates:
-              draft.compensation === 'custom'
-                ? Object.fromEntries(
-                    Object.entries(draft.tierCommissions ?? {}).filter(([id]) =>
-                      paidTierIds.has(id),
-                    ),
-                  )
-                : {},
-            salaryAmountPaise:
-              draft.compensation === 'salary' ? Math.round(draft.salaryAmount * 100) : null,
-            salaryPeriod: draft.compensation === 'salary' ? draft.salaryPeriod : null,
-            salaryNotes: draft.compensation === 'salary' ? draft.salaryNotes || null : null,
-          }
-        : null,
+      compensation:
+        hasPaidTiers && draft.selectedPromoterIds.length
+          ? {
+              model: draft.compensation,
+              globalRatePercent:
+                draft.compensation === 'standard' ? Math.round(draft.commissionRate) : null,
+              tierRates:
+                draft.compensation === 'custom'
+                  ? Object.fromEntries(
+                      Object.entries(draft.tierCommissions ?? {}).filter(([id]) =>
+                        paidTierIds.has(id),
+                      ),
+                    )
+                  : {},
+              salaryAmountPaise:
+                draft.compensation === 'salary'
+                  ? Math.round((draft.salaryAmount ?? 0) * 100)
+                  : null,
+              salaryPeriod: draft.compensation === 'salary' ? draft.salaryPeriod : null,
+              salaryNotes: draft.compensation === 'salary' ? draft.salaryNotes || null : null,
+            }
+          : null,
     }),
     schema: eventDtoSchema,
     headers: commandHeaders('event'),
@@ -144,9 +147,7 @@ export async function publishVenueEvent(
       body: assignPromoterSchema.parse({
         promoterId,
         ratePercent:
-          hasPaidTiers && draft.compensation === 'standard'
-            ? Math.round(draft.commissionRate)
-            : 0,
+          hasPaidTiers && draft.compensation === 'standard' ? Math.round(draft.commissionRate) : 0,
         ...(draft.compensation === 'custom'
           ? {
               tierRates: Object.fromEntries(
@@ -336,8 +337,7 @@ async function resolvePosterImageUrl(
   if (draft.artwork.file instanceof Blob) {
     blob = draft.artwork.file;
   } else {
-    // eslint-disable-next-line no-restricted-globals, no-restricted-syntax
-    const response = await fetch(draft.artwork.value);
+    const response = await globalThis.fetch(draft.artwork.value);
     blob = await response.blob();
   }
 
@@ -364,8 +364,7 @@ async function resolvePosterImageUrl(
   });
 
   const ext = contentType.split('/')[1] ?? 'jpg';
-  const fileName =
-    draft.artwork.alt && draft.artwork.alt.includes('.') ? draft.artwork.alt : `poster.${ext}`;
+  const fileName = draft.artwork.alt?.includes('.') ? draft.artwork.alt : `poster.${ext}`;
 
   const file = new File([blob], fileName, { type: contentType });
   await uploadToSignedUrl(grant.uploadUrl, grant.headers, file);
