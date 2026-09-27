@@ -66,6 +66,7 @@ export type {
   CreateVenueInput,
   OrganizationMemberDto,
   InviteMemberInput,
+  VenueAddress,
   VenueProfileDto,
   VenueSlotDto,
   SlotRequestDto,

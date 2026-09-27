@@ -62,3 +62,33 @@ export interface TextRequestOptions {
   readonly timeoutMs?: number;
   readonly retries?: number;
 }
+
+/**
+ * Options for an `EventStream` (Server-Sent Events) connection. Deliberately
+ * schema-less per call, same as `TextRequestOptions` — a stream carries
+ * several different named event types over its lifetime, so validating one
+ * fixed shape here would not fit; the caller validates per event name.
+ */
+export interface EventStreamOptions {
+  readonly path: string;
+  readonly query?: Readonly<Record<string, string | number | boolean | undefined>>;
+  readonly headers?: Readonly<Record<string, string>>;
+  readonly signal?: AbortSignal;
+  /**
+   * A stream is long-lived by nature — this bounds the *connection attempt*
+   * (mirrors every other call's `timeoutMs`), not the stream's lifetime.
+   * Defaults to the client's own `timeoutMs`, which is too short for most
+   * streams; callers should pass one comfortably above the server's own
+   * bounded stream lifetime, if it has one.
+   */
+  readonly timeoutMs?: number;
+}
+
+/** One SSE frame, already split into its `event:`/`data:` pair. Comment
+ * lines (bare `: keep-alive`) carry neither and are never surfaced. */
+export type EventStreamListener = (event: string, data: string) => void;
+
+export interface EventStreamHandle {
+  /** Aborts the underlying connection. Idempotent. */
+  readonly close: () => void;
+}

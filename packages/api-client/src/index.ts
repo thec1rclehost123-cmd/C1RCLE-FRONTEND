@@ -11,6 +11,9 @@ export {
 } from './schemas.js';
 export type {
   ApiClientConfig,
+  EventStreamHandle,
+  EventStreamListener,
+  EventStreamOptions,
   HttpMethod,
   ReauthHandler,
   RequestOptions,

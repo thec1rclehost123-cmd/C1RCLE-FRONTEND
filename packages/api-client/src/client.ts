@@ -5,7 +5,15 @@
  */
 import { ApiClientError, parseRetryAfterMs, statusToErrorCode } from './errors.js';
 
-import type { ApiClientConfig, HttpMethod, RequestOptions, TextRequestOptions } from './types.js';
+import type {
+  ApiClientConfig,
+  EventStreamHandle,
+  EventStreamListener,
+  EventStreamOptions,
+  HttpMethod,
+  RequestOptions,
+  TextRequestOptions,
+} from './types.js';
 import type { ApiErrorCode, RequestId } from '@c1rcle/types';
 
 const DEFAULT_TIMEOUT_MS = 15_000;
@@ -38,6 +46,19 @@ function buildUrl(baseUrl: string, path: string, query: RequestOptions<unknown>[
   }
 
   return url.toString();
+}
+
+/** Splits one SSE frame into its `event:`/`data:` lines and fires `onEvent`
+ * only when both are present — a bare comment line (`: keep-alive`) has
+ * neither and is correctly dropped rather than surfaced as an empty event. */
+function emitFrame(frame: string, onEvent: EventStreamListener): void {
+  let event: string | null = null;
+  let data: string | null = null;
+  for (const line of frame.split('\n')) {
+    if (line.startsWith('event:')) event = line.slice('event:'.length).trim();
+    else if (line.startsWith('data:')) data = line.slice('data:'.length).trim();
+  }
+  if (event !== null && data !== null) onEvent(event, data);
 }
 
 function delay(ms: number, signal: AbortSignal | undefined): Promise<void> {
@@ -129,6 +150,85 @@ export class ApiClient {
    */
   public fetchText(options: TextRequestOptions): Promise<string> {
     return this.#run(() => this.#attemptText(options, false), options);
+  }
+
+  /**
+   * Opens a Server-Sent Events connection through `#send` — the same
+   * base-URL resolution, auth header and error normalisation every other
+   * call gets, which is the whole reason this stays inside the one module
+   * allowed to reach `fetch`. Unlike the JSON/text calls there is no retry
+   * wrapper: a stream's reconnect policy (if any) belongs to the caller,
+   * which already knows what "the connection dropped" should mean for it.
+   *
+   * `onEvent` fires once per SSE frame (`event:`/`data:` pair); bare
+   * comment lines (`: keep-alive`) are not surfaced. `onClose` fires when
+   * the server ends the stream (`'done'`) or the connection fails
+   * (`'error'`) — never on a caller-initiated `close()`.
+   */
+  public openEventStream(
+    options: EventStreamOptions,
+    onEvent: EventStreamListener,
+    onClose?: (reason: 'done' | 'error', error?: unknown) => void,
+  ): EventStreamHandle {
+    const ownController = new AbortController();
+    const signal = options.signal
+      ? AbortSignal.any([options.signal, ownController.signal])
+      : ownController.signal;
+    // Read through a function, not a bare `signal.aborted` property access
+    // or a plain `let closed` flag — TS's control-flow narrowing otherwise
+    // statically (and wrongly) infers the value as always `false`, since it
+    // cannot see the mutation happening inside the separately-returned
+    // `close()` closure below or across the `await` points here.
+    const isAborted = (): boolean => signal.aborted;
+
+    void (async () => {
+      try {
+        const { response } = await this.#send(
+          {
+            method: 'GET',
+            path: options.path,
+            ...(options.query === undefined ? {} : { query: options.query }),
+            headers: { accept: 'text/event-stream', ...options.headers },
+            signal,
+            timeoutMs: options.timeoutMs ?? this.#timeoutMs,
+          },
+          false,
+        );
+        const body = response.body;
+        if (body === null) {
+          if (!isAborted()) onClose?.('error', new Error('Stream response had no body.'));
+          return;
+        }
+
+        const reader = body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (!isAborted()) {
+          const { done, value } = await reader.read();
+          if (done) {
+            if (!isAborted()) onClose?.('done');
+            return;
+          }
+          buffer += decoder.decode(value, { stream: true });
+
+          let separatorIndex = buffer.indexOf('\n\n');
+          while (separatorIndex !== -1) {
+            emitFrame(buffer.slice(0, separatorIndex), onEvent);
+            buffer = buffer.slice(separatorIndex + 2);
+            separatorIndex = buffer.indexOf('\n\n');
+          }
+        }
+      } catch (error) {
+        if (!isAborted()) onClose?.('error', error);
+      }
+    })();
+
+    return {
+      close: () => {
+        ownController.abort();
+      },
+    };
   }
 
   async #run<T>(

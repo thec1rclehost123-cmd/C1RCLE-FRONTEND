@@ -16,10 +16,14 @@ import {
 } from '@c1rcle/icons';
 
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
+import { getActiveOrgId } from '@/lib/org/active-org';
+import { getMyVenue, getVenueProfile, updateVenueProfile } from '@/lib/venue/venue-repository';
 
 import { resolveVenueSettingsPermissions, venueSettingsSource } from '../venue-settings-model';
 
 import styles from './VenueSettings.module.css';
+
+import type { VenueDto, VenueProfileDto } from '@c1rcle/contracts';
 
 export type SettingsTab = 'profile' | 'payout' | 'team' | 'security';
 
@@ -81,31 +85,184 @@ export function SettingsScreen({ tab = 'profile' }: { readonly tab?: SettingsTab
   );
 }
 
+/**
+ * The form's own working shape — a flat record, not `VenueProfileDto`
+ * directly, because the form edits fields that live at different nesting
+ * depths on the wire (`public.name`, `public.address.city`,
+ * `private.contactEmail`, ...) and "venue type" has no backend field at
+ * all (kept local-only, disclosed below, rather than inventing one).
+ */
+interface VenueProfileForm {
+  name: string;
+  type: string;
+  capacity: number;
+  street: string;
+  city: string;
+  lat: string;
+  lng: string;
+  phone: string;
+  publicEmail: string;
+  instagram: string;
+}
+
+const EMPTY_FORM: VenueProfileForm = {
+  name: '',
+  type: 'Nightclub',
+  capacity: 0,
+  street: '',
+  city: '',
+  lat: '',
+  lng: '',
+  phone: '',
+  publicEmail: '',
+  instagram: '',
+};
+
+function toForm(profile: VenueProfileDto, previousType: string): VenueProfileForm {
+  return {
+    name: profile.public.name,
+    // No backend field for this — see the disclosed note by the select
+    // below. Preserved across a reload rather than reset to the default.
+    type: previousType,
+    capacity: profile.public.capacity ?? 0,
+    street: profile.public.address.street ?? '',
+    city: profile.public.address.city ?? '',
+    lat: profile.public.address.lat !== undefined ? String(profile.public.address.lat) : '',
+    lng: profile.public.address.lng !== undefined ? String(profile.public.address.lng) : '',
+    phone: profile.private.contactPhone ?? '',
+    publicEmail: profile.private.contactEmail ?? '',
+    instagram: profile.private.socials.instagram ?? '',
+  };
+}
+
 function VenueProfile({ canManage }: { readonly canManage: boolean }) {
-  const initial = venueSettingsSource.profile;
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [form, setForm] = useState(initial);
+  const [form, setForm] = useState<VenueProfileForm>(EMPTY_FORM);
+  const [venue, setVenue] = useState<VenueDto | null>(null);
+  const [profile, setProfile] = useState<VenueProfileDto | null>(null);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'no-venue' | 'error'>('loading');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Same `lifecycle.cancelled` object trick `DashboardAuthProvider.tsx`
+    // uses (see its own comment): a plain `let cancelled` gets narrowed to
+    // a constant by TS within this closure, since it can't see the
+    // cleanup function's later mutation — an object property isn't
+    // narrowed that way. Every `setState` also runs inside the async
+    // function's microtask continuation, never synchronously in the
+    // effect body itself, which is what `react-hooks/set-state-in-effect`
+    // requires.
+    const lifecycle = { cancelled: false };
+    // Read through a function, not a direct `lifecycle.cancelled` property
+    // access — after the FIRST such check in a block, TS's control-flow
+    // narrowing (wrongly) treats every later access as still `false`,
+    // since it can't see the cleanup closure's later mutation. Same fix as
+    // `ApiClient.openEventStream`'s `isAborted()` earlier this session.
+    const isCancelled = (): boolean => lifecycle.cancelled;
+    void (async () => {
+      const organizationId = getActiveOrgId();
+      if (organizationId === null) {
+        setStatus('error');
+        return;
+      }
+      try {
+        const myVenue = await getMyVenue(organizationId);
+        if (isCancelled()) return;
+        if (myVenue === null) {
+          setStatus('no-venue');
+          return;
+        }
+        const myProfile = await getVenueProfile(myVenue.id, organizationId);
+        if (isCancelled()) return;
+        setVenue(myVenue);
+        setProfile(myProfile);
+        setForm(toForm(myProfile, EMPTY_FORM.type));
+        setStatus('ready');
+      } catch {
+        if (!isCancelled()) setStatus('error');
+      }
+    })();
+    return () => {
+      lifecycle.cancelled = true;
+    };
+  }, []);
+
   useEffect(
     () => () => {
       if (logoUrl) URL.revokeObjectURL(logoUrl);
     },
     [logoUrl],
   );
-  const setField = (field: keyof typeof form, value: string | number) => {
+  const setField = (field: keyof VenueProfileForm, value: string | number) => {
     setForm((current) => ({ ...current, [field]: value }));
   };
   const reset = () => {
-    setForm(initial);
+    if (profile !== null) setForm(toForm(profile, form.type));
     if (logoUrl) URL.revokeObjectURL(logoUrl);
     setLogoUrl(null);
+    setSaveError(null);
   };
+
+  const handleSubmit = (event: React.SyntheticEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    const organizationId = getActiveOrgId();
+    if (venue === null || profile === null || organizationId === null) return;
+
+    const lat = form.lat.trim().length > 0 ? Number(form.lat) : undefined;
+    const lng = form.lng.trim().length > 0 ? Number(form.lng) : undefined;
+    if ((lat !== undefined && Number.isNaN(lat)) || (lng !== undefined && Number.isNaN(lng))) {
+      setSaveError('Latitude/longitude must be numbers.');
+      return;
+    }
+
+    setSaving(true);
+    setSaveError(null);
+    // The backend does a SHALLOW merge on `public` — sending only the
+    // edited address subfields would silently drop whatever wasn't
+    // included, so every address field goes through together (see
+    // `venue-repository.ts`'s `updateVenueProfile` doc comment).
+    void updateVenueProfile(venue.id, organizationId, venue.version, {
+      public: {
+        name: form.name,
+        capacity: form.capacity,
+        address: {
+          street: form.street.trim().length > 0 ? form.street : undefined,
+          city: form.city.trim().length > 0 ? form.city : undefined,
+          lat,
+          lng,
+        },
+      },
+      private: {
+        contactPhone: form.phone.trim().length > 0 ? form.phone : null,
+        contactEmail: form.publicEmail.trim().length > 0 ? form.publicEmail : null,
+      },
+    })
+      .then((updated) => {
+        setProfile(updated);
+        setForm(toForm(updated, form.type));
+        setVenue((current) => (current === null ? current : { ...current, version: current.version + 1 }));
+      })
+      .catch((error: unknown) => {
+        setSaveError(error instanceof Error ? error.message : 'Could not save changes.');
+      })
+      .finally(() => {
+        setSaving(false);
+      });
+  };
+
+  if (status === 'loading') {
+    return <p className={styles['note']}>Loading venue…</p>;
+  }
+  if (status === 'no-venue') {
+    return <p className={styles['note']}>This organization has no venue yet.</p>;
+  }
+  if (status === 'error') {
+    return <p className={styles['note']}>Could not load venue settings. Try reloading the page.</p>;
+  }
+
   return (
-    <form
-      className={styles['profileForm']}
-      onSubmit={(event) => {
-        event.preventDefault();
-      }}
-    >
+    <form className={styles['profileForm']} onSubmit={handleSubmit}>
       <section className={styles['panel']}>
         <h2>Venue identity</h2>
         <div className={styles['identityGrid']}>
@@ -116,7 +273,7 @@ function VenueProfile({ canManage }: { readonly canManage: boolean }) {
               <img src={logoUrl} alt="Selected venue logo preview" />
             ) : (
               <strong>
-                {initial.logoText.split('\n').map((line) => (
+                {venueSettingsSource.profile.logoText.split('\n').map((line) => (
                   <span key={line}>{line}</span>
                 ))}
               </strong>
@@ -159,6 +316,10 @@ function VenueProfile({ canManage }: { readonly canManage: boolean }) {
                   <option>Bar</option>
                   <option>Live venue</option>
                 </select>
+                {/* No backend field exists for this yet — kept as a local-only
+                    preference rather than fabricating one; not included in
+                    the save request. */}
+                <small className={styles['note']}>Not saved — no backend field yet.</small>
               </Field>
               <Field label="Capacity">
                 <input
@@ -177,15 +338,54 @@ function VenueProfile({ canManage }: { readonly canManage: boolean }) {
       </section>
       <section className={styles['panel']}>
         <h2>Location and contact</h2>
-        <Field label="Address">
-          <input
-            value={form.address}
-            disabled={!canManage}
-            onChange={(event) => {
-              setField('address', event.target.value);
-            }}
-          />
-        </Field>
+        <div className={styles['twoColumns']}>
+          <Field label="Street">
+            <input
+              value={form.street}
+              disabled={!canManage}
+              onChange={(event) => {
+                setField('street', event.target.value);
+              }}
+            />
+          </Field>
+          <Field label="City">
+            <input
+              value={form.city}
+              disabled={!canManage}
+              onChange={(event) => {
+                setField('city', event.target.value);
+              }}
+            />
+          </Field>
+        </div>
+        <div className={styles['twoColumns']}>
+          <Field label="Latitude">
+            <input
+              inputMode="decimal"
+              placeholder="e.g. 18.5204"
+              value={form.lat}
+              disabled={!canManage}
+              onChange={(event) => {
+                setField('lat', event.target.value);
+              }}
+            />
+          </Field>
+          <Field label="Longitude">
+            <input
+              inputMode="decimal"
+              placeholder="e.g. 73.8567"
+              value={form.lng}
+              disabled={!canManage}
+              onChange={(event) => {
+                setField('lng', event.target.value);
+              }}
+            />
+          </Field>
+        </div>
+        <small className={styles['note']}>
+          Used to confirm door staff are on-site before opening a shift (a soft check layered on
+          top of the door code, not a replacement for it).
+        </small>
         <div className={styles['twoColumns']}>
           <Field label="Phone">
             <input
@@ -218,18 +418,14 @@ function VenueProfile({ canManage }: { readonly canManage: boolean }) {
           />
         </Field>
       </section>
+      {saveError !== null ? <p className={styles['note']}>{saveError}</p> : null}
       <footer>
-        <button type="button" onClick={reset}>
+        <button type="button" onClick={reset} disabled={saving}>
           Cancel
         </button>
         {canManage ? (
-          <button
-            type="submit"
-            className={styles['primary']}
-            disabled
-            title="Venue profile changes require the settings mutation API."
-          >
-            Save changes unavailable
+          <button type="submit" className={styles['primary']} disabled={saving}>
+            {saving ? 'Saving…' : 'Save changes'}
           </button>
         ) : (
           <span>You do not have permission to change venue settings.</span>

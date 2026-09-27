@@ -10,6 +10,7 @@
     "./base": "./dist/base.js",
     "./library": "./dist/library.js",
     "./react": "./dist/react.js",
+    "./react-native": "./dist/react-native.js",
     "./next": "./dist/next.js"
   },
   "files": [
