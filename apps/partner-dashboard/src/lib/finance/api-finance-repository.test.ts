@@ -263,7 +263,12 @@ describe('requestPayout', () => {
   it('includes bankAccountId when the user picked one', async () => {
     postMock.mockResolvedValue(payout);
 
-    await requestPayout(client, 'org_1', { amountPaise: 100_00, bankAccountId: 'ba_9' }, 'intent-3');
+    await requestPayout(
+      client,
+      'org_1',
+      { amountPaise: 100_00, bankAccountId: 'ba_9' },
+      'intent-3',
+    );
 
     expect(postMock.mock.calls[0]?.[0]?.body).toEqual({
       amountPaise: 100_00,

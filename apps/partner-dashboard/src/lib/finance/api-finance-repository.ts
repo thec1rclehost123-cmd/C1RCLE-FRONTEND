@@ -23,7 +23,11 @@ import type { z } from 'zod';
  * client) without either one importing the other's auth state.
  */
 export interface FinanceApiClient {
-  get<T>(options: { path: string; schema: z.ZodType<T>; headers?: Record<string, string> }): Promise<T>;
+  get<T>(options: {
+    path: string;
+    schema: z.ZodType<T>;
+    headers?: Record<string, string>;
+  }): Promise<T>;
   post<T>(options: {
     path: string;
     schema: z.ZodType<T>;

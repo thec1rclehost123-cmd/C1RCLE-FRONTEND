@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { FinanceLoadError, loadFinanceData } from './load-finance-data';
+import { ApiClientError } from '@c1rcle/api-client';
+
+import { classifyFinanceFailure, FinanceLoadError, loadFinanceData } from './load-finance-data';
 
 import type { ServerApiClient } from '@/lib/api/server-client';
 
@@ -106,5 +108,83 @@ describe('loadFinanceData', () => {
     await loadFinanceData({ accent: 'orange', client, organizationId: 'org_explicit' });
 
     expect(getMock.mock.calls[0]?.[0]?.path).toContain('/organizations/org_explicit/');
+  });
+
+  it('reports a rejected session as signed-out, not as a retryable failure', async () => {
+    getMock.mockRejectedValue(
+      new ApiClientError({
+        code: 'unauthorized',
+        message: 'no session',
+        status: 401,
+        requestId: undefined,
+        fieldErrors: undefined,
+      }),
+    );
+
+    const error = await loadFinanceData({ accent: 'orange', client }).catch((e: unknown) => e);
+
+    // Terminal, not transient: the page must offer a sign-in, not a retry button
+    // that can only fail the same way.
+    expect((error as FinanceLoadError).reason).toBe('signed-out');
+  });
+
+  it('reports a cross-tenant read as forbidden, not as a retryable failure', async () => {
+    getMock.mockRejectedValue(
+      new ApiClientError({
+        code: 'forbidden',
+        message: 'nope',
+        status: 403,
+        requestId: undefined,
+        fieldErrors: undefined,
+      }),
+    );
+
+    const error = await loadFinanceData({ accent: 'orange', client }).catch((e: unknown) => e);
+
+    expect((error as FinanceLoadError).reason).toBe('forbidden');
+  });
+});
+
+describe('classifyFinanceFailure', () => {
+  /** `ApiError` requires every discriminant, including the undefined ones. */
+  const apiError = (
+    code: ConstructorParameters<typeof ApiClientError>[0]['code'],
+    status: number | undefined,
+  ) =>
+    new ApiClientError({
+      code,
+      message: 'boom',
+      status,
+      requestId: undefined,
+      fieldErrors: undefined,
+    });
+
+  it('maps an unauthorized ApiClientError to signed-out', () => {
+    expect(classifyFinanceFailure(apiError('unauthorized', 401))).toBe('signed-out');
+  });
+
+  it('maps a 403 to forbidden, which is distinct from signed-out', () => {
+    // A 403 with an expired session is a 401 upstream, so the two must not
+    // collapse: one sends the user to log in, the other tells them to ask for
+    // an invite.
+    expect(classifyFinanceFailure(apiError('forbidden', 403))).toBe('forbidden');
+  });
+
+  it('treats a 5xx as a retryable api failure', () => {
+    expect(classifyFinanceFailure(apiError('server', 503))).toBe('api');
+  });
+
+  it('treats a network failure as a retryable api failure', () => {
+    // No status at all — the request never reached the gateway.
+    expect(classifyFinanceFailure(apiError('network', undefined))).toBe('api');
+  });
+
+  it('falls back to api for a non-ApiClientError, rather than guessing a cause', () => {
+    // A thrown `TypeError` from fetch is the common shape; the safe assumption
+    // is "transient, offer a retry", never "signed out" (which would log the
+    // user out of a session that is fine).
+    expect(classifyFinanceFailure(new TypeError('Failed to fetch'))).toBe('api');
+    expect(classifyFinanceFailure('a string')).toBe('api');
+    expect(classifyFinanceFailure(undefined)).toBe('api');
   });
 });

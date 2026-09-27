@@ -17,7 +17,6 @@ import type {
   PayoutResponse,
 } from '@c1rcle/contracts';
 
-
 /**
  * ─── Finance view model ─────────────────────────────────────────────────────
  *

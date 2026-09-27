@@ -324,7 +324,10 @@ describe('toBalanceTrend', () => {
 
   it('skips an unparseable createdAt rather than poisoning the bucket', () => {
     const trend = toBalanceTrend(
-      [inflow({ amountPaise: 50_000, createdAt: 'nope' }), inflow({ amountPaise: 20_000, createdAt: THIS_WEEK })],
+      [
+        inflow({ amountPaise: 50_000, createdAt: 'nope' }),
+        inflow({ amountPaise: 20_000, createdAt: THIS_WEEK }),
+      ],
       now,
     );
     expect(trend[7]).toBe(20_000);

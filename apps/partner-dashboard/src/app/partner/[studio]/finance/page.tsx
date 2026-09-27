@@ -1,12 +1,18 @@
 import { notFound } from 'next/navigation';
 
+import { FinanceLoadFailureState } from '@/components/partner-v3/finance/FinanceLoadFailureState';
 import { HostFinanceScreen } from '@/components/partner-v3/finance/HostFinanceScreen';
 import { PromoterFinanceScreen } from '@/components/partner-v3/finance/PromoterFinanceScreen';
 import { VenueFinanceScreen } from '@/components/partner-v3/finance/VenueFinanceScreen';
 import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
-import { loadFinanceData } from '@/lib/finance/load-finance-data';
+import { FinanceLoadError, loadFinanceData } from '@/lib/finance/load-finance-data';
 
-import type { FinanceDateRange, FinanceOrderStatus, FinanceView } from '@/data/partner-data-source';
+import type {
+  FinanceDateRange,
+  FinanceOrderStatus,
+  FinanceView,
+  PartnerFinanceData,
+} from '@/data/partner-data-source';
 
 export default async function StudioFinancePage({
   params,
@@ -54,7 +60,24 @@ export default async function StudioFinancePage({
 
   // Real reads. The accent is a role tint, nothing more — the gateway is what
   // decides whether this viewer may read this org's money.
-  const data = await loadFinanceData({ accent: studio === 'host' ? 'lavender' : 'orange' });
+  //
+  // The loader throws rather than degrading to fixture numbers, so the failure
+  // is handled here instead of falling through to the route's `error.tsx`:
+  // Next strips a Server Component's `error.message` in production, so by the
+  // time an `error.tsx` boundary sees it, the *kind* of failure is unrecoverable
+  // and every case would collapse into one generic "could not load". Catching
+  // here keeps `reason` intact and lets each case offer the right next step.
+  let data: PartnerFinanceData;
+  try {
+    data = await loadFinanceData({ accent: studio === 'host' ? 'lavender' : 'orange' });
+  } catch (cause) {
+    if (cause instanceof FinanceLoadError) {
+      return <FinanceLoadFailureState reason={cause.reason} />;
+    }
+    // Not ours — rethrow so the route's `error.tsx` reports it as unexpected.
+    throw cause;
+  }
+
   const props = {
     data,
     view,

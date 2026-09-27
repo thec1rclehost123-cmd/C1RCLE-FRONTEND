@@ -1,53 +1,29 @@
 import { refresh } from '@c1rcle/auth';
 import { getClientEnv } from '@c1rcle/config';
 
-const ACTIVE_ORG_COOKIE_NAME = 'c1rcle.active-org';
+import {
+  ACTIVE_ORG_COOKIE_NAME,
+  getActiveOrgId,
+  getActiveOrgIdFromCookieHeader,
+} from './active-org-cookie';
+
+/**
+ * ─── Active organization (browser) ──────────────────────────────────────────
+ *
+ * The cookie *writers* and the browser read live here. The pure parsing lives in
+ * `active-org-cookie.ts` — see that file for why it had to be split out.
+ *
+ * ⚠️ This module imports `@c1rcle/auth`, so it is **not** server-safe. A Server
+ * Component must import `getActiveOrgIdFromCookieHeader` from
+ * `@/lib/org/active-org-cookie` instead, or the RSC build fails on
+ * `useSyncExternalStore`.
+ */
 
 function isProduction(): boolean {
   return getClientEnv().NEXT_PUBLIC_ENVIRONMENT === 'production';
 }
 
-/**
- * Gets the current active organization ID from the browser cookie.
- * Client-side only — for Server Components / layouts, pass the incoming
- * request's cookie header to `getActiveOrgIdFromCookieHeader` instead.
- */
-export function getActiveOrgId(): string | null {
-  if (typeof document === 'undefined') {
-    return null;
-  }
-
-  return parseActiveOrgCookie(document.cookie);
-}
-
-/**
- * Reads `c1rcle.active-org` out of a raw `Cookie` header string. Framework-agnostic
- * (no `next/*` import) so it can be called from a Server Component or layout via
- * `getActiveOrgIdFromCookieHeader((await cookies()).toString())` — mirrors
- * `getServerSession`'s cookie-header-in pattern in `@c1rcle/auth`.
- */
-export function getActiveOrgIdFromCookieHeader(cookieHeader: string): string | null {
-  return parseActiveOrgCookie(cookieHeader);
-}
-
-function parseActiveOrgCookie(cookieHeader: string): string | null {
-  if (!cookieHeader) {
-    return null;
-  }
-
-  const cookies = cookieHeader.split(';');
-  for (const cookie of cookies) {
-    const separatorIndex = cookie.indexOf('=');
-    if (separatorIndex === -1) continue;
-    const key = cookie.slice(0, separatorIndex).trim();
-    const value = cookie.slice(separatorIndex + 1).trim();
-    if (key === ACTIVE_ORG_COOKIE_NAME && value) {
-      return decodeURIComponent(value);
-    }
-  }
-
-  return null;
-}
+export { ACTIVE_ORG_COOKIE_NAME, getActiveOrgId, getActiveOrgIdFromCookieHeader };
 
 /**
  * Sets or clears the active organization ID cookie, and triggers token refresh for token rotation.
