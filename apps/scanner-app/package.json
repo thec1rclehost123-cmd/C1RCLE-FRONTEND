@@ -47,7 +47,7 @@
     "@babel/core": "^7.28.0",
     "@c1rcle/eslint-config": "workspace:*",
     "@c1rcle/tsconfig": "workspace:*",
-    "@types/react": "19.2.11",
+    "@types/react": "^19.0.0",
     "jest": "^30.2.0",
     "jest-expo": "~55.0.0",
     "typescript": "5.9.3"

@@ -4,6 +4,7 @@ import { HostFinanceScreen } from '@/components/partner-v3/finance/HostFinanceSc
 import { PromoterFinanceScreen } from '@/components/partner-v3/finance/PromoterFinanceScreen';
 import { VenueFinanceScreen } from '@/components/partner-v3/finance/VenueFinanceScreen';
 import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
+import { loadFinanceData } from '@/lib/finance/load-finance-data';
 
 import type { FinanceDateRange, FinanceOrderStatus, FinanceView } from '@/data/partner-data-source';
 
@@ -15,12 +16,18 @@ export default async function StudioFinancePage({
   readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { studio } = await params;
+  if (studio !== 'venue' && studio !== 'host' && studio !== 'promoter') {
+    notFound();
+  }
+
+  // Promoters get their own screen (leaderboard-shaped, not a payouts desk), and
+  // `PromoterFinanceData` is a different model from `PartnerFinanceData` — so it
+  // is not on this loader's path yet. Left on the fixture deliberately rather
+  // than force-fed partner-shaped data that would misreport a commission as a
+  // balance.
   if (studio === 'promoter') {
     const data = await fixturePartnerDataSource.getPromoterFinance();
     return <PromoterFinanceScreen data={data} />;
-  }
-  if (studio !== 'venue' && studio !== 'host') {
-    notFound();
   }
 
   const query = await searchParams;
@@ -44,10 +51,10 @@ export default async function StudioFinancePage({
   const sort: 'tickets' | 'amount' | null =
     sortValue === 'tickets' || sortValue === 'amount' ? sortValue : null;
   const direction = getValue(query['direction']) === 'asc' ? ('asc' as const) : ('desc' as const);
-  const data =
-    studio === 'host'
-      ? await fixturePartnerDataSource.getHostFinance()
-      : await fixturePartnerDataSource.getVenueFinance();
+
+  // Real reads. The accent is a role tint, nothing more — the gateway is what
+  // decides whether this viewer may read this org's money.
+  const data = await loadFinanceData({ accent: studio === 'host' ? 'lavender' : 'orange' });
   const props = {
     data,
     view,

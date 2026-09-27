@@ -1834,10 +1834,15 @@ const venueFinanceData: VenueFinanceData = {
   },
   bankAccount: {
     bankName: 'HDFC Bank',
+    // Masked only. The full number was removed from this fixture when the
+    // finance screen was wired to the real API, because `FinanceBankAccount`
+    // no longer has a field for it — and a fixture that can still hold a
+    // plaintext account number is exactly how a real one eventually gets typed
+    // in somewhere.
     displayNumber: '5010 •••• •••• 4412',
-    accountNumber: '5010 0284 4412',
     ifscCode: 'HDFC0001234',
     accountHolder: 'Rhea Kapoor Events LLP',
+    verified: true,
   },
   paymentCard: {
     label: 'THE C1RCLE · Business',
