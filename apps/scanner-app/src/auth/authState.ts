@@ -68,6 +68,25 @@ export function useScannerAuthState(): { state: ScannerAuthState; refresh: () =>
     };
   }, [refresh]);
 
+  // Every other state change reaches this hook via `notifyAuthStateChanged()`
+  // called right after some explicit action (login, pairing, redeem,
+  // logout). But the in-memory staff access token and the 12h scanner
+  // session both expire purely by the clock, with no action to call that
+  // from — a staff member can be mid-shift on scan.tsx/door.tsx when the
+  // token dies, and without this, `state` never re-evaluates: every
+  // subsequent API call 401s and the screen shows a generic "offline"
+  // error indefinitely, with no way to self-recover short of an app
+  // restart. Polling is coarser than an exact expiry timer, but doesn't
+  // need one more piece of state to track "when does the current session
+  // expire" — it just asks the same question this hook already knows how
+  // to answer, periodically.
+  useEffect(() => {
+    const interval = setInterval(refresh, 60_000);
+    return () => {
+      clearInterval(interval);
+    };
+  }, [refresh]);
+
   useEffect(() => {
     cancelledRef.current = false;
 

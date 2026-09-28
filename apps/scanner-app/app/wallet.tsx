@@ -84,7 +84,17 @@ export default function WalletScreen(): React.JSX.Element {
     }
     setBusy(true);
     setError(null);
-    void resolveWalletQr(eventId, payload)
+    // Re-read the session rather than trusting the `eventId` captured once
+    // at mount: if a manager redeems a new door code for a different event
+    // while this screen stays mounted (backgrounded mid-shift, say), the
+    // stale id would silently resolve/charge against the wrong event.
+    void getSessionMeta()
+      .then((meta) => {
+        if (meta === null) {
+          throw new Error('No active scanner session.');
+        }
+        return resolveWalletQr(meta.event.id, payload);
+      })
       .then((resolved) => {
         setQrPayload(payload);
         setWallet(resolved);
@@ -103,7 +113,13 @@ export default function WalletScreen(): React.JSX.Element {
     }
     setBusy(true);
     setError(null);
-    void chargeWallet({ eventId, qrPayload, presetItemId, quantity: 1, idempotencyKey })
+    void getSessionMeta()
+      .then((meta) => {
+        if (meta === null) {
+          throw new Error('No active scanner session.');
+        }
+        return chargeWallet({ eventId: meta.event.id, qrPayload, presetItemId, quantity: 1, idempotencyKey });
+      })
       .then((result) => {
         showToast(`${label} · ${rupees(result.charged.amountPaise)} charged`);
         setChargeTimes((times) => [...times, Date.now()]);
@@ -244,6 +260,12 @@ export default function WalletScreen(): React.JSX.Element {
               setWallet(null);
               setQrPayload(null);
               setError(null);
+              // Abandoning this tab without charging is a genuinely new
+              // intent — the next charge is for whatever tab gets scanned
+              // next, so it must not replay under the old key (which the
+              // backend's idempotency store would otherwise return the
+              // cached response for, silently charging the wrong tab).
+              setIdempotencyKey(crypto.randomUUID());
             }}
             style={styles.secondaryButton}
           >

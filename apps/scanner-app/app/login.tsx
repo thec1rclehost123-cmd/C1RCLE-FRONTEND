@@ -202,7 +202,19 @@ export default function LoginScreen(): React.JSX.Element {
           <View style={styles.dividerLine} />
         </View>
 
-        <Pressable style={styles.gateCodeButton} onPress={handleLogin}>
+        <Pressable
+          style={styles.gateCodeButton}
+          onPress={() => {
+            // The contract has no gate-access-code auth endpoint — a door
+            // code exists, but it's redeemed AFTER staff login (the
+            // /redeem screen), not an alternative to it. This button used
+            // to call `handleLogin`, which silently required the exact
+            // same staff-ID+password fields — a dead affordance identical
+            // to the primary button. Say so honestly instead of faking a
+            // path that doesn't exist yet.
+            setError('Gate access codes aren’t available yet — sign in with your staff account above.');
+          }}
+        >
           <Text style={styles.gateCodeLabel}>Use a gate access code</Text>
         </Pressable>
 

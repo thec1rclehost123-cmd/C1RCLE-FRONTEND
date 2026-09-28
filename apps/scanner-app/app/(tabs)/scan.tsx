@@ -4,7 +4,10 @@ import * as Network from 'expo-network';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { isApiClientError } from '@c1rcle/api-client';
+
 import { checkIn, fetchStats, lookupTicket, overrideCheckIn, staffDeny } from '@/api/scannerApiClient';
+import { notifyAuthStateChanged } from '@/auth/authState';
 import { getSessionMeta } from '@/auth/scannerSession';
 import { canOverride, getStaffUser } from '@/auth/staffAuth';
 import { ScatterAccents } from '@/components/decor/ScatterAccents';
@@ -235,9 +238,28 @@ export default function ScanScreen(): React.JSX.Element {
             });
           }
           setUiState({ kind: 'idle' });
-        } catch {
-          setUiState({ kind: 'offline' });
-          showToast('Scanner offline — entry denied until connectivity returns.');
+        } catch (cause) {
+          // A single catch-all used to show "Scanner offline" for every
+          // failure — a genuine network drop, an expired staff session
+          // (401), and a permissions/validation error all looked identical
+          // to the person at the door, who'd keep tapping TRY AGAIN
+          // believing it was connectivity. Only a real network/timeout
+          // failure gets the offline card; an expired session hands off to
+          // the auth-state watchdog (which will redirect to /login), and
+          // anything else gets a specific-enough toast to act on.
+          if (isApiClientError(cause) && cause.isAuthFailure) {
+            setUiState({ kind: 'idle' });
+            showToast('Your session has expired — logging you out.');
+            notifyAuthStateChanged();
+          } else if (isApiClientError(cause) && (cause.code === 'network' || cause.code === 'timeout')) {
+            setUiState({ kind: 'offline' });
+            showToast('Scanner offline — entry denied until connectivity returns.');
+          } else {
+            setUiState({ kind: 'idle' });
+            showToast(
+              isApiClientError(cause) ? cause.message : 'Could not process this ticket. Try again.',
+            );
+          }
         }
       })();
     },

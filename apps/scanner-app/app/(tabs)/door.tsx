@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { fetchDoorSales, submitDineIn, submitTicketSale, submitWalkIn } from '@/api/scannerApiClient';
@@ -105,8 +105,24 @@ export default function DoorScreen(): React.JSX.Element {
   // One key per user intent. Rotated only after a sale actually succeeds —
   // never per network attempt, or a retry becomes a second charge.
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
+  // The exact field values the current `idempotencyKey` was minted for. If a
+  // submit fails (or silently succeeds but the response is lost) and staff
+  // then edits the form before resubmitting, the key must NOT be replayed —
+  // the backend's idempotency store would return the cached response for the
+  // OLD field values, showing a false "success" for data that was never
+  // actually sent. Comparing against a signature of the fields (not a
+  // per-field onChange handler) means every field is covered, including the
+  // plain TextInputs (name/phone/email/age) that don't otherwise clear
+  // `formError` on change.
+  const lastAttemptSignature = useRef<string | null>(null);
   const [sales, setSales] = useState<DoorSale[]>([]);
   const [salesError, setSalesError] = useState<string | null>(null);
+  // Bumped only after a submission actually succeeds (see `resetForm`), not
+  // on every `submitting` transition — depending on `submitting` directly
+  // refetched once when a submit STARTED (redundant — nothing changed yet)
+  // and again when it ended, and the two could race, occasionally showing
+  // sales counts from before the just-submitted entry landed.
+  const [salesRefreshTick, setSalesRefreshTick] = useState(0);
 
   useEffect(() => {
     void getSessionMeta().then((meta) => {
@@ -134,7 +150,7 @@ export default function DoorScreen(): React.JSX.Element {
       .catch((cause: unknown) => {
         setSalesError(cause instanceof Error ? cause.message : 'Could not load entries.');
       });
-  }, [segment, submitting]);
+  }, [segment, salesRefreshTick]);
 
   const selectedTier = tiers.find((tier) => tier.id === tierId) ?? null;
   const isTicket = entryType === 'ticket';
@@ -150,6 +166,7 @@ export default function DoorScreen(): React.JSX.Element {
     setTierId(null);
     setQuantity(1);
     setIdempotencyKey(crypto.randomUUID());
+    lastAttemptSignature.current = null;
   };
 
   const handleSubmit = (): void => {
@@ -182,6 +199,24 @@ export default function DoorScreen(): React.JSX.Element {
 
     const submittedName = name.trim();
     const submittedType = entryType;
+    const attemptSignature = JSON.stringify({
+      name: submittedName,
+      phone,
+      email: email.trim(),
+      gender,
+      age,
+      entryType,
+      guests,
+      tierId,
+      quantity,
+      paymentMode,
+    });
+    const submissionKey =
+      attemptSignature === lastAttemptSignature.current ? idempotencyKey : crypto.randomUUID();
+    lastAttemptSignature.current = attemptSignature;
+    if (submissionKey !== idempotencyKey) {
+      setIdempotencyKey(submissionKey);
+    }
     void getSessionMeta()
       .then(async (meta) => {
         if (meta === null) {
@@ -194,7 +229,7 @@ export default function DoorScreen(): React.JSX.Element {
           gender,
           gate: meta.gate,
           paymentMode,
-          idempotencyKey,
+          idempotencyKey: submissionKey,
           ...(email.trim().length > 0 ? { guestEmail: email.trim() } : {}),
         };
         if (submittedType === 'ticket' && selectedTier !== null) {
@@ -223,6 +258,7 @@ export default function DoorScreen(): React.JSX.Element {
       })
       .then(() => {
         resetForm();
+        setSalesRefreshTick((tick) => tick + 1);
       })
       .catch((cause: unknown) => {
         setFormError(cause instanceof Error ? cause.message : 'Could not record this entry.');
