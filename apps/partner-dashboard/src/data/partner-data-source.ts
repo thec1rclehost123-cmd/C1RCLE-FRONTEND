@@ -22,7 +22,16 @@ export interface OverviewEvent {
   readonly imageAlt?: string;
   readonly status: 'live' | 'draft' | 'past';
   readonly sold: number;
-  readonly capacity: number;
+  /**
+   * `null` when the venue never declared one.
+   *
+   * Deliberately not `0`: the screen computes `sold / capacity` for a
+   * sell-through percentage, and `0` would render as divide-by-zero rather than
+   * "not declared". A `0` is a real capacity only for a room that genuinely
+   * holds nobody, which the domain does not allow (`createVenue` rejects
+   * non-positive capacity).
+   */
+  readonly capacity: number | null;
 }
 
 export interface OverviewTrendSeries {
@@ -60,10 +69,23 @@ export interface OverviewNetworkMember {
 }
 
 export interface OverviewData {
-  readonly dataStatus: 'fixture';
+  /**
+   * `api` once the screen is reading real endpoints. The screen renders a
+   * "Fixture data" badge from this, so leaving it at `fixture` while serving
+   * real numbers would be a lie told to the user, and setting it to `api` while
+   * still serving fixture numbers would be the same lie in reverse.
+   */
+  readonly dataStatus: 'fixture' | 'api';
   readonly todayLabel: string;
   readonly greeting: string;
-  readonly nextEvent: OverviewEvent & { readonly doorsLabel: string };
+  /**
+   * `doorsLabel` is optional because the backend has **no doors time**. An event
+   * carries `startAt`/`endAt` and nothing else — a "doors open at" field was
+   * never modelled, and inferring one (say, an hour before start) would put a
+   * time on the screen that no partner ever set. Absent means the card simply
+   * does not claim to know.
+   */
+  readonly nextEvent: OverviewEvent & { readonly doorsLabel?: string };
   readonly trends: readonly OverviewTrendSeries[];
   readonly recentActivity: readonly OverviewActivity[];
   readonly calendar: {

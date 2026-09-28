@@ -48,6 +48,18 @@ const upcomingBackgroundClasses = [
   styles['upcomingEvent-4'],
 ] as const;
 
+/**
+ * Sell-through percentage, or `0` when capacity is undeclared.
+ *
+ * The `0` is only ever *displayed* behind a `capacity === null` guard at both
+ * call sites; it exists so the helper has a total return type. Callers that
+ * render it without checking capacity would be showing a real divide-by-zero.
+ */
+function soldPercentOf(event: OverviewData['nextEvent']): number {
+  if (event.capacity === null || event.capacity <= 0) return 0;
+  return Math.round((event.sold / event.capacity) * 100);
+}
+
 const eventStatusClasses = {
   live: styles['eventStatus-live'],
   draft: styles['eventStatus-draft'],
@@ -108,7 +120,6 @@ export function OverviewScreen({
   readonly links: OverviewLinks;
   readonly accent?: OverviewAccent;
 }) {
-  const soldPercent = Math.round((data.nextEvent.sold / data.nextEvent.capacity) * 100);
   const weekdays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   return (
@@ -121,7 +132,12 @@ export function OverviewScreen({
         <div>
           <div className={styles['dateLine']}>
             <span>{data.todayLabel}</span>
-            <span className={styles['fixtureTag']}>Fixture data</span>
+            {/* The badge follows `dataStatus`, so it can only ever describe what
+                is actually on screen. When the screen is API-backed there is
+                nothing to disclaim. */}
+            {data.dataStatus === 'fixture' ? (
+              <span className={styles['fixtureTag']}>Fixture data</span>
+            ) : null}
           </div>
           <h1>{data.greeting}</h1>
         </div>
@@ -150,24 +166,39 @@ export function OverviewScreen({
                   <i aria-hidden="true" />
                   {data.nextEvent.dateLabel} · {data.nextEvent.timeLabel}
                 </span>
-                <span>{data.nextEvent.doorsLabel}</span>
+                {/* The backend has no doors-time field, so the API-backed path
+                    never supplies one. Rendering an empty span would leave a
+                    stray gap in the topline; inventing one (e.g. an hour before
+                    start) would print a time no partner ever set. */}
+                {data.nextEvent.doorsLabel ? <span>{data.nextEvent.doorsLabel}</span> : null}
               </div>
               <div className={styles['heroDetails']}>
                 <p>{data.nextEvent.venue}</p>
                 <h2 id="next-event-title">{data.nextEvent.name}</h2>
                 <div className={styles['capacityLabels']}>
-                  <span>
-                    {data.nextEvent.sold.toLocaleString('en-IN')} of{' '}
-                    {data.nextEvent.capacity.toLocaleString('en-IN')} tickets sold
-                  </span>
-                  <strong>{soldPercent}% full</strong>
+                  {/* `null` capacity means the venue never declared one. Showing
+                      "0 tickets" would be a different claim, and the percentage
+                      has no denominator, so the sell-through is simply omitted. */}
+                  {data.nextEvent.capacity === null ? (
+                    <span>{data.nextEvent.sold.toLocaleString('en-IN')} tickets sold</span>
+                  ) : (
+                    <>
+                      <span>
+                        {data.nextEvent.sold.toLocaleString('en-IN')} of{' '}
+                        {data.nextEvent.capacity.toLocaleString('en-IN')} tickets sold
+                      </span>
+                      <strong>{soldPercentOf(data.nextEvent)}% full</strong>
+                    </>
+                  )}
                 </div>
-                <progress
-                  className={styles['progressTrack']}
-                  aria-label={String(soldPercent) + '% of tickets sold'}
-                  value={soldPercent}
-                  max={100}
-                />
+                {data.nextEvent.capacity === null ? null : (
+                  <progress
+                    className={styles['progressTrack']}
+                    aria-label={String(soldPercentOf(data.nextEvent)) + '% of tickets sold'}
+                    value={soldPercentOf(data.nextEvent)}
+                    max={100}
+                  />
+                )}
                 <Link className={styles['heroAction']} href={`${data.nextEvent.href}/guests`}>
                   <UsersIcon size={18} aria-hidden="true" />
                   View guest list
@@ -277,7 +308,7 @@ export function OverviewScreen({
           />
           <div className={styles['upcomingList']}>
             {data.upcomingEvents.map((event, index) => {
-              const percent = Math.round((event.sold / event.capacity) * 100);
+              const percent = soldPercentOf(event);
               return (
                 <Link
                   className={classNames(styles['upcomingEvent'], upcomingBackgroundClasses[index])}
@@ -290,8 +321,16 @@ export function OverviewScreen({
                       {event.venue} · {event.dateLabel}
                     </span>
                   </div>
+                  {/* No declared capacity → no percentage, rather than a
+                      divide-by-zero dressed up as "0% sold". */}
                   <b className={eventStatusClasses[event.status]}>
-                    {percent}%<small>sold</small>
+                    {event.capacity === null ? (
+                      <small>sold</small>
+                    ) : (
+                      <>
+                        {percent}%<small>sold</small>
+                      </>
+                    )}
                   </b>
                 </Link>
               );
