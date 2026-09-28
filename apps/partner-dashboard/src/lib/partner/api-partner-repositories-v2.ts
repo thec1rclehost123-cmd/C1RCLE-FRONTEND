@@ -21,6 +21,10 @@ export function createApiPartnerRepositoriesV2(): {
     return orgId;
   };
 
+  const assertNever = (value: never): never => {
+    throw new Error(`Unsupported action: ${String(value)}`);
+  };
+
   const mapPartnershipToRelationship = (p: PartnershipDto): PartnerRelationship => ({
     id: p.id,
     kind: p.initiatedBy === 'host' ? 'venue' : 'host',
@@ -75,6 +79,8 @@ export function createApiPartnerRepositoriesV2(): {
           return partnershipApi.block(partnershipId, reason);
         case 'end':
           return partnershipApi.end(partnershipId);
+        default:
+          return assertNever(action);
       }
     },
     getPartnerships: async (params) => {
@@ -135,6 +141,8 @@ export function createApiPartnerRepositoriesV2(): {
           return promoterConnectionApi.block(connectionId, reason);
         case 'revoke':
           return promoterConnectionApi.revoke(connectionId);
+        default:
+          return assertNever(action);
       }
     },
     getPromoterConnections: async (params) => {
