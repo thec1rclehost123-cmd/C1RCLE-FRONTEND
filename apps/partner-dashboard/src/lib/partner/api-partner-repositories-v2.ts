@@ -1,6 +1,5 @@
 import { getActiveOrgId } from '@/lib/org/active-org';
-
-import { partnershipApi, promoterConnectionApi } from '../api/partner-connections';
+import { partnershipApi, promoterConnectionApi } from '@/lib/api/partner-connections';
 
 import {
   type HostRepository,
@@ -63,10 +62,10 @@ export function createApiPartnerRepositoriesV2(): {
     },
     getFinance: () => Promise.reject(new Error('Not implemented - use v1 API or implement')),
     getProfile: () => Promise.reject(new Error('Not implemented - use v1 API or implement')),
-    requestPartnership: async (input) => {
+    requestPartnership: (input) => {
       return partnershipApi.request(input);
     },
-    resolvePartnership: async (partnershipId, action, reason) => {
+    resolvePartnership: (partnershipId, action, reason) => {
       switch (action) {
         case 'approve':
           return partnershipApi.approve(partnershipId, reason);
@@ -123,10 +122,10 @@ export function createApiPartnerRepositoriesV2(): {
     createTrackingLink: async (input) => {
       return fixturePromoterRepository.createTrackingLink(input);
     },
-    requestConnection: async (input) => {
+    requestConnection: (input) => {
       return promoterConnectionApi.request(input);
     },
-    resolveConnection: async (connectionId, action, reason) => {
+    resolveConnection: (connectionId, action, reason) => {
       switch (action) {
         case 'approve':
           return promoterConnectionApi.approve(connectionId);

@@ -3,7 +3,7 @@ import type {
   PromoterConnectionDto,
   RequestConnectionRequest,
   RequestPartnershipRequest,
-} from '@c1rcle/contracts';
+} from '@c1rcle/contracts/client';
 
 export type {
   PartnershipDto,
