@@ -31,7 +31,7 @@ export type ReauthHandler = () => Promise<boolean>;
 
 export interface ApiClientConfig {
   readonly baseUrl: string;
-  /** Milliseconds before a request is aborted. Defaults to 15000. */
+  /** Milliseconds before a request is aborted. Defaults to 60000. */
   readonly timeoutMs?: number;
   /** Retry attempts for retryable failures. Defaults to 2. */
   readonly maxRetries?: number;

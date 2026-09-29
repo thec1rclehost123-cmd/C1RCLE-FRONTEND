@@ -14,17 +14,20 @@ import { CalendarGrid } from './CalendarGrid';
 import { CalendarHeader } from './CalendarHeader';
 
 import type { VenueCalendarData } from '@/data/partner-data-source';
+import type { CreateVenueBlockInput } from '@/lib/calendar/venue-calendar-repository';
 
 export function VenueCalendarScreen({
   data,
   initialMonth,
   initialDate,
   initialDialog,
+  onBlockDate,
 }: {
   readonly data: VenueCalendarData;
   readonly initialMonth?: string;
   readonly initialDate?: string;
   readonly initialDialog?: boolean;
+  readonly onBlockDate?: (input: CreateVenueBlockInput) => Promise<void>;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -115,6 +118,9 @@ export function VenueCalendarScreen({
         <BlockDateDialog
           day={selectedDay.day}
           dateLabel={month.label}
+          monthKey={month.key}
+          selectedDate={selectedDate}
+          onBlock={onBlockDate}
           onClose={() => {
             update({ dialog: false });
           }}

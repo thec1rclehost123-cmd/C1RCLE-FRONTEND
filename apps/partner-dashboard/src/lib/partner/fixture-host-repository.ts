@@ -286,4 +286,7 @@ export const fixtureHostRepository: HostRepository = {
   getProfile() {
     return Promise.resolve(profile);
   },
+  requestPartnership: () => Promise.reject(new Error('Not implemented')),
+  resolvePartnership: () => Promise.reject(new Error('Not implemented')),
+  getPartnerships: () => Promise.reject(new Error('Not implemented')),
 };

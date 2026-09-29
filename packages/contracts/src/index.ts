@@ -67,6 +67,9 @@ export type {
   CreateTablePackageRequest,
   PromoterAssignmentDto,
   AssignPromoterRequest,
+  PosterUploadUrlDto,
+  PosterUploadUrlRequest,
+  PromoterAssignedEventDto,
 } from './contracts/event.js';
 
 export {
@@ -85,6 +88,9 @@ export {
   createTablePackageSchema,
   promoterAssignmentDtoSchema,
   assignPromoterSchema,
+  posterUploadUrlDtoSchema,
+  posterUploadUrlRequestSchema,
+  promoterAssignedEventDtoSchema,
 } from './contracts/event.js';
 
 // Partner (partnerships, promoters, referrals, analytics)

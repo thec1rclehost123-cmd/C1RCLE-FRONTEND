@@ -375,4 +375,7 @@ export const fixturePromoterRepository: PromoterRepository = {
     };
     return Promise.resolve(link);
   },
+  requestConnection: () => Promise.reject(new Error('Not implemented')),
+  resolveConnection: () => Promise.reject(new Error('Not implemented')),
+  getPromoterConnections: () => Promise.reject(new Error('Not implemented')),
 };

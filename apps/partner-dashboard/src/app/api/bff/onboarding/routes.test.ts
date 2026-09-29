@@ -98,7 +98,7 @@ describe('GET /api/bff/onboarding/me', () => {
       new NextRequest(`${APP_ORIGIN}/api/bff/onboarding/me`, {
         headers: {
           origin: APP_ORIGIN,
-          cookie: `${csrfCookieName()}=existing`,
+          cookie: 'c1rcle.csrf=existing',
           authorization: 'Bearer fe_session_tok_123',
         },
       }),
@@ -107,7 +107,7 @@ describe('GET /api/bff/onboarding/me', () => {
     expect(res.status).toBe(200);
     expect(mockForward).toHaveBeenCalledWith('/api/v2/onboarding/me', {
       method: 'GET',
-      cookie: `${csrfCookieName()}=existing`,
+      cookie: 'c1rcle.csrf=existing',
       headers: { Authorization: 'Bearer fe_session_tok_123' },
     });
   });

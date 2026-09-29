@@ -28,7 +28,6 @@ export async function getPartnerAccess(organizationId: string): Promise<PartnerA
   return bffClient.get({
     path: `/api/bff/organizations/${organizationId}/access`,
     schema: partnerAccessDtoSchema,
-    headers: { 'x-organization-id': organizationId },
   });
 }
 

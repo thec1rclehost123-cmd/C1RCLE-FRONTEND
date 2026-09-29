@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
+import { eventStartAtFromDraft } from '@/lib/events/venue-event-repository';
+
 import styles from './event-editor.module.css';
 import {
   EventAdvancedSettings,
@@ -41,6 +43,7 @@ export interface PartnerEventEditorProps {
   readonly initialDate?: string;
   readonly initialSlotId?: string;
   readonly initialEvent?: PartnerEventDetailData;
+  readonly onSubmit?: (draft: EventEditorDraft) => Promise<void>;
 }
 
 const venueSteps: readonly EventEditorStep[] = ['basics', 'promoters', 'review'];
@@ -55,6 +58,7 @@ export function PartnerEventEditor({
   initialDate,
   initialSlotId,
   initialEvent,
+  onSubmit,
 }: PartnerEventEditorProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -73,6 +77,8 @@ export function PartnerEventEditor({
     'closed',
   );
   const [showErrors, setShowErrors] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const queryStep = searchParams.get('step') ?? undefined;
   const currentStep = queryStep ? normaliseStep(queryStep, steps) : localStep;
@@ -103,8 +109,8 @@ export function PartnerEventEditor({
     ? (selectedVenueAvailability?.venue.name ?? 'Choose a partnered venue')
     : (data.venues.find((venue) => venue.id === draft.venueId)?.name ?? 'Your venue');
   const validationErrors = useMemo(
-    () => validateDraft(draft, isHost && mode === 'create', selectedSlotId),
-    [draft, isHost, mode, selectedSlotId],
+    () => [...validateDraft(draft, isHost && mode === 'create'), ...validateCompensation(draft)],
+    [draft, isHost, mode],
   );
 
   const updateQuery = (
@@ -147,10 +153,10 @@ export function PartnerEventEditor({
     setLocalStep(step);
     updateQuery({ step }, 'push');
   };
-  const nextStep = () => {
+  const nextStep = async () => {
     const errors =
-      currentStep === 'venue' || currentStep === 'basics'
-        ? validateDraft(draft, isHost && mode === 'create', selectedSlotId)
+      currentStep === 'venue' || currentStep === 'basics' || currentStep === 'review'
+        ? [...validateDraft(draft, isHost && mode === 'create'), ...validateCompensation(draft)]
         : [];
     if (errors.length) {
       setShowErrors(true);
@@ -159,7 +165,19 @@ export function PartnerEventEditor({
     const index = steps.indexOf(currentStep);
     const next = steps[index + 1];
     if (next) moveStep(next);
-    else setShowErrors(true);
+    else if (onSubmit) {
+      setSubmitting(true);
+      setSubmitError(null);
+      try {
+        await onSubmit(draft);
+      } catch (error) {
+        setSubmitError(
+          error instanceof Error ? error.message : 'The event could not be submitted.',
+        );
+      } finally {
+        setSubmitting(false);
+      }
+    } else setShowErrors(true);
   };
   const previousStep = () => {
     const index = steps.indexOf(currentStep);
@@ -171,21 +189,24 @@ export function PartnerEventEditor({
     if (!file) return;
     setDraft((current) => ({
       ...current,
-      artwork: { type: 'image', value: URL.createObjectURL(file), alt: file.name },
+      artwork: { type: 'image', value: URL.createObjectURL(file), alt: file.name, file },
     }));
   };
   const addArtist = (artist: string) => {
     const name = artist.trim();
     if (name && !draft.artists.includes(name)) update({ artists: [...draft.artists, name] });
   };
-  const nextLabel =
-    currentStep === 'review'
+  const nextLabel = submitting
+    ? 'Publishing…'
+    : currentStep === 'review'
       ? mode === 'edit'
         ? 'Save changes'
         : isHost
           ? 'Submit for approval'
           : 'Publish event'
-      : 'Continue';
+      : isHost && currentStep === 'venue'
+        ? 'Create event'
+        : 'Continue';
   const pageTitle = mode === 'edit' ? 'Edit event' : 'Create event';
   return (
     <EventEditorShell studio={data.role}>
@@ -234,6 +255,7 @@ export function PartnerEventEditor({
             <VenueStep
               data={data}
               draft={draft}
+              update={update}
               onVenue={chooseVenue}
               onDate={chooseDate}
               onSlot={chooseSlot}
@@ -305,22 +327,34 @@ export function PartnerEventEditor({
               </ul>
             </div>
           ) : null}
+          {submitError ? (
+            <div className={styles['validation']} role="alert">
+              {submitError}
+            </div>
+          ) : null}
           <div className={styles['actions']}>
             {steps.indexOf(currentStep) > 0 ? (
-              <button className={styles['actionButton']} type="button" onClick={previousStep}>
+              <button
+                className={styles['actionButton']}
+                type="button"
+                onClick={previousStep}
+                disabled={submitting}
+              >
                 Back
               </button>
             ) : null}
             <button
               className={[styles['actionButton'], styles['actionButtonPrimary']].join(' ')}
               type="button"
-              onClick={nextStep}
-              disabled={currentStep === 'review' && validationErrors.length > 0}
+              onClick={() => {
+                void nextStep();
+              }}
+              disabled={submitting}
             >
               {nextLabel} <span aria-hidden="true">→</span>
             </button>
           </div>
-          {currentStep === 'review' ? (
+          {currentStep === 'review' && !onSubmit ? (
             <div className={styles['unavailable']}>
               Frontend-only fixture:{' '}
               {isHost
@@ -343,6 +377,8 @@ export function PartnerEventEditor({
       {previewMode !== 'closed' ? (
         <EventPreviewOverlay
           mode={previewMode}
+          draft={draft}
+          venueName={venueName}
           onPick={(modeChoice) => {
             setPreviewMode(modeChoice);
           }}
@@ -358,6 +394,7 @@ export function PartnerEventEditor({
 function VenueStep({
   data,
   draft,
+  update,
   availability,
   selectedSlotId,
   onVenue,
@@ -366,6 +403,7 @@ function VenueStep({
 }: {
   readonly data: EventEditorData;
   readonly draft: EventEditorDraft;
+  readonly update: (values: Partial<EventEditorDraft>) => void;
   readonly availability: readonly CalendarMonth[];
   readonly selectedSlotId: string;
   readonly onVenue: (id: string) => void;
@@ -405,6 +443,21 @@ function VenueStep({
           <span>
             {data.venues.find((venue) => venue.id === draft.venueId)?.name ?? 'Not selected'}
           </span>
+        </div>
+      </section>
+      <section className={styles['card']}>
+        <div className={styles['cardTitle']}>Event name</div>
+        <p className={styles['muted']}>Give your event a clear, descriptive title.</p>
+        <div className={styles['field']}>
+          <label htmlFor="venue-step-event-name">Event name</label>
+          <input
+            id="venue-step-event-name"
+            value={draft.name}
+            onChange={(event) => {
+              update({ name: event.target.value });
+            }}
+            placeholder="e.g. Neon Nights: Afrobeats Edition"
+          />
         </div>
       </section>
       <EventDateTimeSection
@@ -468,21 +521,84 @@ function draftFromInput(
   };
 }
 
-function validateDraft(draft: EventEditorDraft, host: boolean, selectedSlotId: string) {
+function validateDraft(draft: EventEditorDraft, host: boolean) {
   const errors: string[] = [];
   if (!draft.name.trim()) errors.push('Add an event name.');
   if (host && !draft.venueId) errors.push('Choose a partnered venue.');
   if (!draft.date) errors.push('Choose an available date.');
-  if (host && !selectedSlotId) errors.push('Choose an available time slot.');
+  else if (!eventStartAtFromDraft(draft)) errors.push('Enter a valid event start time.');
   if (!draft.ticketTiers.length) errors.push('Add at least one ticket tier.');
+  const earlyBird = draft.earlyBirdDiscountPercent ?? 0;
+  const lateArrival = draft.lateArrivalChargePercent ?? 0;
+  if (earlyBird < 0 || earlyBird > 100)
+    errors.push('Early bird discount must be between 0% and 100%.');
+  if (lateArrival < 0 || lateArrival > 100)
+    errors.push('Late arrival surcharge must be between 0% and 100%.');
   draft.ticketTiers.forEach((tier, index) => {
     if (!tier.name.trim()) errors.push(`Name ticket tier ${String(index + 1)}.`);
-    if (tier.price <= 0)
+    if ((tier.accessType ?? 'ENTRY') !== 'RSVP' && tier.price <= 0)
       errors.push(`Set a valid price for ${tier.name || `tier ${String(index + 1)}`}.`);
     if (tier.quantity <= 0)
       errors.push(`Set a valid quantity for ${tier.name || `tier ${String(index + 1)}`}.`);
+    if (tier.maxPerOrder != null && tier.maxPerOrder <= 0)
+      errors.push(`Max tickets for ${tier.name || `tier ${String(index + 1)}`} must be positive.`);
+    if (tier.accessType === 'TABLE' && !tier.tableConfig)
+      errors.push(
+        `Table configuration is required for ${tier.name || `tier ${String(index + 1)}`}.`,
+      );
+    if (
+      tier.accessType === 'RSVP' &&
+      (tier.pricingPhases?.length || tier.commissionEligible || tier.doorPrice != null)
+    )
+      errors.push(
+        `RSVP ${tier.name || `tier ${String(index + 1)}`} cannot have phases, door price, or commission.`,
+      );
+    (tier.accessType === 'RSVP' ? [] : (tier.pricingPhases ?? [])).forEach((phase, phaseIndex) => {
+      if (!phase.name.trim())
+        errors.push(
+          `Name pricing phase ${String(phaseIndex + 1)} in ${tier.name || `tier ${String(index + 1)}`}.`,
+        );
+      if (!/^\d{2}-\d{2}$/.test(phase.startDate) || !/^\d{2}-\d{2}$/.test(phase.endDate))
+        errors.push(
+          `Set valid start and end dates for ${phase.name || `pricing phase ${String(phaseIndex + 1)}`} in ${tier.name || `tier ${String(index + 1)}`}.`,
+        );
+    });
   });
   return errors;
+}
+function validateCompensation(draft: EventEditorDraft): readonly string[] {
+  if (
+    !draft.selectedPromoterIds.length ||
+    !draft.ticketTiers.some((tier) => tier.accessType !== 'RSVP')
+  )
+    return [];
+  const errors: string[] = [];
+  const tierCommissions = draft.tierCommissions ?? {};
+  if (
+    draft.compensation === 'standard' &&
+    (!Number.isInteger(draft.commissionRate) ||
+      draft.commissionRate < 0 ||
+      draft.commissionRate > 100)
+  )
+    errors.push('Global commission must be a whole number between 0% and 100%.');
+  if (draft.compensation === 'custom')
+    draft.ticketTiers
+      .filter((tier) => tier.accessType !== 'RSVP')
+      .forEach((tier) => {
+        const rate = tierCommissions[tier.id];
+        if (rate === undefined) errors.push(`${tier.name} needs a commission.`);
+        else if (!Number.isInteger(rate) || rate < 0 || rate > 100)
+          errors.push(`${tier.name} commission must be between 0% and 100%.`);
+      });
+  if (draft.compensation === 'salary') {
+    if (
+      draft.salaryAmount === undefined ||
+      !Number.isFinite(draft.salaryAmount) ||
+      draft.salaryAmount <= 0
+    )
+      errors.push('Salary amount must be greater than ₹0.');
+  }
+  return [...new Set(errors)];
 }
 function normaliseStep(
   value: string | undefined,

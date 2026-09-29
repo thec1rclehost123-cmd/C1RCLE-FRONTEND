@@ -16,7 +16,7 @@ import type {
 } from './types.js';
 import type { ApiErrorCode, RequestId } from '@c1rcle/types';
 
-const DEFAULT_TIMEOUT_MS = 15_000;
+const DEFAULT_TIMEOUT_MS = 60_000;
 const DEFAULT_MAX_RETRIES = 2;
 const RETRY_BASE_DELAY_MS = 250;
 
@@ -412,9 +412,11 @@ export class ApiClient {
     const result = schema.safeParse(payload);
 
     if (!result.success) {
+      // eslint-disable-next-line no-console
+      console.error('[API CLIENT ZOD ERROR]', result.error, payload);
       throw this.#error(
         'parse',
-        'The server response did not match the expected contract. This usually means the frontend and backend are out of sync.',
+        `The server response did not match the expected contract. This usually means the frontend and backend are out of sync. Zod Error: ${result.error.message}`,
         { requestId, cause: result.error },
       );
     }

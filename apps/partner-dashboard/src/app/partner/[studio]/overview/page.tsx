@@ -1,9 +1,11 @@
+import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 
 import { OverviewLoadFailureState } from '@/components/partner-v3/overview/OverviewLoadFailureState';
 import { OverviewScreen } from '@/components/partner-v3/overview/OverviewScreen';
 import { PromoterOverviewScreen } from '@/components/partner-v3/overview/PromoterOverviewScreen';
 import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
+import { getActiveOrgIdFromCookieHeader } from '@/lib/org/active-org-cookie';
 import { OverviewLoadError, loadOverviewData } from '@/lib/overview/load-overview-data';
 import { isStudioRole } from '@/studios/studio-config';
 
@@ -57,10 +59,14 @@ export default async function StudioOverviewPage({
     throw cause;
   }
 
+  const organizationId = getActiveOrgIdFromCookieHeader((await cookies()).toString());
+
   return (
     <OverviewScreen
       data={overview}
       accent={isHost ? 'lavender' : 'orange'}
+      studio={isHost ? 'host' : 'venue'}
+      organizationId={organizationId}
       links={{
         createEvent: `${prefix}/events/create`,
         calendar: `${prefix}/calendar`,
