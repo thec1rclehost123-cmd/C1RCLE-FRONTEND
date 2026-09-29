@@ -78,6 +78,20 @@ export function assertCsrf(req: NextRequest): NextResponse | null {
   const cookie = req.cookies.get(csrfCookieName())?.value ?? '';
   const header = req.headers.get(CSRF_HEADER) ?? '';
   if (!timingSafeEqual(cookie, header)) {
+    // TEMP DIAGNOSTIC — metadata only, no token values. Remove after root-cause.
+    // eslint-disable-next-line no-console
+    console.error('[assertCsrf] mismatch metadata', {
+      cookieName: csrfCookieName(),
+      cookiePresent: req.cookies.has(csrfCookieName()),
+      cookieCount: req.cookies.getAll().filter((c) => c.name === csrfCookieName()).length,
+      cookieLen: cookie.length,
+      headerLen: header.length,
+      headerPresent: req.headers.has(CSRF_HEADER),
+      allCookieNames: req.cookies.getAll().map((c) => c.name),
+      env: process.env.NEXT_PUBLIC_ENVIRONMENT,
+      vercelEnv: process.env.VERCEL_ENV,
+      host: req.headers.get('host'),
+    });
     return errorEnvelope('forbidden', 'CSRF check failed.', 403);
   }
   return null;
