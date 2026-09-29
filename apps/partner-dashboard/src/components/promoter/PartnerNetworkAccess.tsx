@@ -14,8 +14,8 @@ export function PartnerNetworkAccess({ children }: { readonly children: ReactNod
 
   useEffect(() => {
     if (auth.loading) return;
-    if (!auth.user || !auth.isApproved || auth.isBanned) router.replace('/login');
-  }, [auth.isApproved, auth.isBanned, auth.loading, auth.user, router]);
+    if (!auth.user || !auth.isApproved) router.replace('/login');
+  }, [auth.isApproved, auth.loading, auth.user, router]);
 
   if (auth.loading || !auth.user || !auth.isApproved || auth.isBanned)
     return (

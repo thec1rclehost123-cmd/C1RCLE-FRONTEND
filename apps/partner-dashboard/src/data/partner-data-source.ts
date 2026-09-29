@@ -47,6 +47,7 @@ export interface OverviewCalendarDay {
   readonly day: number;
   readonly eventCount?: number;
   readonly isToday?: boolean;
+  readonly isBlocked?: boolean;
 }
 
 export interface OverviewNetworkMember {
@@ -131,6 +132,7 @@ export interface PartnerEventArtwork {
   readonly type: 'image' | 'gradient';
   readonly value: string;
   readonly alt?: string;
+  readonly file?: File;
 }
 
 export interface PartnerEventRecord {
@@ -721,17 +723,21 @@ export interface PartnerSearchData {
 }
 
 export type PartnerNotificationType = 'payout' | 'request' | 'marketing' | 'operations' | 'system';
+export type PartnerNotificationCategory = 'partners' | 'events' | 'finance' | 'ops';
 export type PartnerNotificationIcon =
   'finance' | 'partner' | 'marketing' | 'operations' | 'request';
 
 export interface PartnerNotification {
   readonly id: string;
+  readonly title?: string;
   readonly description: string;
   readonly time: string;
   readonly type: PartnerNotificationType;
   readonly icon: PartnerNotificationIcon;
   readonly href?: string;
   readonly unread: boolean;
+  readonly decisionSupported?: boolean;
+  readonly category: PartnerNotificationCategory;
 }
 
 export interface PartnerNotificationsData {
@@ -842,7 +848,7 @@ export interface PartnerVenueOption {
 }
 
 export interface VenueCalendarData {
-  readonly dataStatus: 'fixture';
+  readonly dataStatus: 'fixture' | 'live';
   readonly accent: 'orange';
   readonly months: readonly CalendarMonth[];
   readonly blocks: readonly CalendarBlock[];
@@ -854,7 +860,7 @@ export interface HostAvailabilityVenue {
 }
 
 export interface HostAvailabilityData {
-  readonly dataStatus: 'fixture';
+  readonly dataStatus: 'fixture' | 'live';
   readonly accent: 'lavender';
   readonly venues: readonly HostAvailabilityVenue[];
 }
@@ -881,6 +887,31 @@ export interface EventEditorTicketTier {
   readonly name: string;
   readonly price: number;
   readonly quantity: number;
+  readonly maxPerOrder?: number | undefined;
+  readonly accessType?: 'ENTRY' | 'VIP' | 'VVIP' | 'TABLE' | 'PACKAGE' | 'RSVP' | undefined;
+  readonly audienceType?: 'GENERAL' | 'MALE' | 'FEMALE' | 'COUPLE' | 'GROUP' | undefined;
+  readonly guestCount?: number;
+  readonly doorPrice?: number | undefined;
+  readonly pricingPhases?: readonly {
+    readonly id: string;
+    readonly name: string;
+    readonly priceInPaise: number;
+    readonly startDate: string;
+    readonly endDate: string;
+    readonly quantity: number | null;
+  }[];
+  readonly benefits?: readonly string[];
+  readonly minAge?: number;
+  readonly maxAge?: number;
+  readonly minPerOrder?: number | undefined;
+  readonly maxPerUser?: number | undefined;
+  readonly tableConfig?: {
+    readonly capacity: number;
+    readonly minimumSpendPaise: number;
+    readonly redeemableAmountPaise: number;
+    readonly tableCount: number;
+  };
+  readonly commissionEligible?: boolean;
 }
 
 export interface EventEditorDraft {
@@ -900,6 +931,13 @@ export interface EventEditorDraft {
   readonly compensation: 'standard' | 'custom' | 'salary';
   readonly commissionRate: number;
   readonly salaryNotes: string;
+  readonly endTime?: string;
+  readonly tierCommissions?: Record<string, number>;
+  readonly salaryAmount?: number;
+  readonly salaryPeriod?: string;
+  readonly promoterOverrides?: Record<string, Record<string, number>>;
+  readonly earlyBirdDiscountPercent?: number;
+  readonly lateArrivalChargePercent?: number;
 }
 
 export interface EventEditorData {

@@ -89,17 +89,11 @@ export function gatewayAuthInit(req: NextRequest): {
   readonly headers?: Readonly<Record<string, string>>;
 } {
   const authorization = req.headers.get('authorization');
-  const requestId = req.headers.get('x-request-id');
-  const headers: Record<string, string> = {};
-  if (authorization !== null && authorization.length > 0) {
-    headers['Authorization'] = authorization;
-  }
-  if (requestId !== null && requestId.length > 0) {
-    headers['x-request-id'] = requestId;
-  }
   return {
     cookie: req.headers.get('cookie'),
-    ...(Object.keys(headers).length > 0 ? { headers } : {}),
+    ...(authorization !== null && authorization.length > 0
+      ? { headers: { Authorization: authorization } }
+      : {}),
   };
 }
 

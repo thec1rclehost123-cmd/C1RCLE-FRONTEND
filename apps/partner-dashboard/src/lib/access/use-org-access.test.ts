@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiClientError } from '@c1rcle/api-client';
 import { markHydrated } from '@c1rcle/auth';
 
-import { clearPartnerAccessCache } from './org-access-cache';
 import { useOrgAccess } from './use-org-access';
 
 import type { PartnerAccessDto } from '@c1rcle/contracts';
@@ -31,9 +30,6 @@ const ACCESS_FIXTURE: PartnerAccessDto = {
 
 afterEach(() => {
   getPartnerAccessMock.mockReset();
-  // `getCachedPartnerAccess` shares completed reads at module scope; without
-  // clearing it, later tests hit the previous test's cached resolution.
-  clearPartnerAccessCache();
 });
 
 describe('useOrgAccess', () => {
