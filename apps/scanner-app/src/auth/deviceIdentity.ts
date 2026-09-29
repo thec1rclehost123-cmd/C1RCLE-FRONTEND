@@ -39,7 +39,10 @@ export async function setStoredDeviceName(name: string): Promise<void> {
 }
 
 export async function isDevicePaired(): Promise<boolean> {
-  const [id, name] = await Promise.all([getStoredItem(DEVICE_ID_KEY), getStoredItem(DEVICE_NAME_KEY)]);
+  const [id, name] = await Promise.all([
+    getStoredItem(DEVICE_ID_KEY),
+    getStoredItem(DEVICE_NAME_KEY),
+  ]);
   return id !== null && name !== null;
 }
 

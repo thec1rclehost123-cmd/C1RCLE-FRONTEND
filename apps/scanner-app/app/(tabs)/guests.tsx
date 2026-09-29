@@ -46,7 +46,13 @@ function initials(name: string): string {
  * `disabled` renders as the same static "PENDING" pill the row used to
  * show unconditionally, for staff without override rights.
  */
-function AdmitButton({ onPress, disabled }: { readonly onPress: () => void; readonly disabled: boolean }): React.JSX.Element {
+function AdmitButton({
+  onPress,
+  disabled,
+}: {
+  readonly onPress: () => void;
+  readonly disabled: boolean;
+}): React.JSX.Element {
   const [scale] = useState(() => new Animated.Value(1));
 
   if (disabled) {
@@ -58,7 +64,12 @@ function AdmitButton({ onPress, disabled }: { readonly onPress: () => void; read
   }
 
   const animateTo = (value: number): void => {
-    Animated.spring(scale, { toValue: value, useNativeDriver: true, speed: 40, bounciness: 12 }).start();
+    Animated.spring(scale, {
+      toValue: value,
+      useNativeDriver: true,
+      speed: 40,
+      bounciness: 12,
+    }).start();
   };
 
   return (
@@ -151,7 +162,11 @@ export default function GuestsScreen(): React.JSX.Element {
         style={styles.search}
       />
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRow}
+      >
         {FILTERS.map((entry) => {
           const active = entry === filter;
           return (
@@ -168,10 +183,14 @@ export default function GuestsScreen(): React.JSX.Element {
         })}
       </ScrollView>
 
-      {truncated ? <Text style={styles.notice}>More results not shown — refine your search.</Text> : null}
+      {truncated ? (
+        <Text style={styles.notice}>More results not shown — refine your search.</Text>
+      ) : null}
       {error !== null ? <Text style={styles.error}>{error}</Text> : null}
       {!staffCanOverride ? (
-        <Text style={styles.notice}>Your role can't manually check guests in — tap does nothing.</Text>
+        <Text style={styles.notice}>
+          Your role can't manually check guests in — tap does nothing.
+        </Text>
       ) : null}
 
       <View style={styles.listCard}>
@@ -215,8 +234,19 @@ export default function GuestsScreen(): React.JSX.Element {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   container: { padding: 16, paddingBottom: 110, gap: 12 },
-  titleRow: { paddingHorizontal: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  title: { fontFamily: 'Anton_400Regular', fontSize: 44, lineHeight: 40, textTransform: 'uppercase', color: colors.onSurface },
+  titleRow: {
+    paddingHorizontal: 4,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  title: {
+    fontFamily: 'Anton_400Regular',
+    fontSize: 44,
+    lineHeight: 40,
+    textTransform: 'uppercase',
+    color: colors.onSurface,
+  },
   titleMeta: { fontFamily: 'Archivo_400Regular', fontSize: 13, color: colors.onSurfaceMuted },
 
   search: {
@@ -255,7 +285,13 @@ const styles = StyleSheet.create({
     borderColor: colors.surfaceRaised,
     overflow: 'hidden',
   },
-  empty: { paddingVertical: 28, paddingHorizontal: 16, textAlign: 'center', fontSize: 13, color: colors.onSurfaceMuted },
+  empty: {
+    paddingVertical: 28,
+    paddingHorizontal: 16,
+    textAlign: 'center',
+    fontSize: 13,
+    color: colors.onSurfaceMuted,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

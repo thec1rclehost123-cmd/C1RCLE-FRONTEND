@@ -88,7 +88,12 @@ function LiveStatsCards() {
     // other list pages) for those two. Still an approximation beyond 100
     // pending refunds or 100 admins, which is a known, accepted gap rather
     // than a paginated true total.
-    Promise.all([listProposals('pending', 1), listRefunds('pending', 100), listOnboardingApplications('submitted', 1), listAdmins(100)])
+    Promise.all([
+      listProposals('pending', 1),
+      listRefunds('pending', 100),
+      listOnboardingApplications('submitted', 1),
+      listAdmins(100),
+    ])
       .then(([proposals, refunds, onboarding, admins]) => {
         if (cancelled) {
           return;

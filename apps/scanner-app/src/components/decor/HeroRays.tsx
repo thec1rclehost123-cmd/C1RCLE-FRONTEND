@@ -47,7 +47,9 @@ export function HeroRays({ width, height }: HeroRaysProps): React.JSX.Element | 
           const a1 = polarPoint(cx, cy, radius, BASE_ANGLE + wedge.start);
           const a2 = polarPoint(cx, cy, radius, BASE_ANGLE + wedge.end);
           const d = `M ${String(cx)} ${String(cy)} L ${String(a1.x)} ${String(a1.y)} A ${String(radius)} ${String(radius)} 0 0 1 ${String(a2.x)} ${String(a2.y)} Z`;
-          return <Path key={`${String(wedge.start)}-${String(wedge.end)}`} d={d} fill={wedge.color} />;
+          return (
+            <Path key={`${String(wedge.start)}-${String(wedge.end)}`} d={d} fill={wedge.color} />
+          );
         })}
       </Svg>
     </View>

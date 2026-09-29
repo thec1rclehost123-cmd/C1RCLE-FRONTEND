@@ -84,7 +84,7 @@ export const reactNativeConfig = defineConfig(
         {
           selector: "MemberExpression[object.name='process'][property.name='env']",
           message:
-            'ARCHITECTURE: direct process.env access is forbidden. Import the validated, typed environment from this app\'s own env module (Expo uses EXPO_PUBLIC_* — @c1rcle/config is Next.js-only).',
+            "ARCHITECTURE: direct process.env access is forbidden. Import the validated, typed environment from this app's own env module (Expo uses EXPO_PUBLIC_* — @c1rcle/config is Next.js-only).",
         },
         {
           selector: "CallExpression[callee.name='fetch']",

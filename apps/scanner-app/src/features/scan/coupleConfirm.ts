@@ -43,7 +43,12 @@ export function useCoupleConfirm(): UseCoupleConfirmResult {
   const start = useCallback(
     (input: { eventId: string; token: string; expiresAt: string; seats: number }) => {
       const deadline = new Date(input.expiresAt).getTime();
-      setPending({ eventId: input.eventId, token: input.token, expiresAt: deadline, seats: input.seats });
+      setPending({
+        eventId: input.eventId,
+        token: input.token,
+        expiresAt: deadline,
+        seats: input.seats,
+      });
       clearTimer();
       intervalRef.current = setInterval(() => {
         setSecondsRemaining(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)));

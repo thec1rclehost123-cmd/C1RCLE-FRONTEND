@@ -51,10 +51,13 @@ export default function SettingsDesk() {
   // of which field or why.
   const feeRateValid =
     feeRateDraft === '' ||
-    (Number.isFinite(Number(feeRateDraft)) && Number(feeRateDraft) >= 0 && Number(feeRateDraft) <= 1);
+    (Number.isFinite(Number(feeRateDraft)) &&
+      Number(feeRateDraft) >= 0 &&
+      Number(feeRateDraft) <= 1);
   const singleValid =
     singleDraft === '' || (Number.isInteger(Number(singleDraft)) && Number(singleDraft) >= 0);
-  const dualValid = dualDraft === '' || (Number.isInteger(Number(dualDraft)) && Number(dualDraft) >= 0);
+  const dualValid =
+    dualDraft === '' || (Number.isInteger(Number(dualDraft)) && Number(dualDraft) >= 0);
   const draftsValid = feeRateValid && singleValid && dualValid;
 
   const saveMutation = useMutation({

@@ -61,7 +61,14 @@ export function Turntable({
             <Stop offset="100%" stopColor="#121010" stopOpacity={1} />
           </RadialGradient>
         </Defs>
-        <Circle cx={half} cy={half} r={half} fill={colors.background} stroke={colors.border} strokeWidth={1} />
+        <Circle
+          cx={half}
+          cy={half}
+          r={half}
+          fill={colors.background}
+          stroke={colors.border}
+          strokeWidth={1}
+        />
         <Circle cx={half} cy={half} r={half - 5} fill="url(#grain)" />
       </Svg>
       <Animated.View
@@ -73,7 +80,11 @@ export function Turntable({
           transform: [{ rotate: spin }],
         }}
       >
-        <Svg width={innerSize} height={innerSize} viewBox={`0 0 ${String(innerSize)} ${String(innerSize)}`}>
+        <Svg
+          width={innerSize}
+          height={innerSize}
+          viewBox={`0 0 ${String(innerSize)} ${String(innerSize)}`}
+        >
           <Circle
             cx={innerSize / 2}
             cy={innerSize / 2}

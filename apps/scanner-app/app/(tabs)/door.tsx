@@ -2,7 +2,12 @@ import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { fetchDoorSales, submitDineIn, submitTicketSale, submitWalkIn } from '@/api/scannerApiClient';
+import {
+  fetchDoorSales,
+  submitDineIn,
+  submitTicketSale,
+  submitWalkIn,
+} from '@/api/scannerApiClient';
 import { getSessionMeta } from '@/auth/scannerSession';
 import { showToast } from '@/features/toast/toastStore';
 import { colors } from '@/theme/tokens';
@@ -53,7 +58,13 @@ function rupees(paise: number): string {
   return `₹${(paise / 100).toLocaleString('en-IN')}`;
 }
 
-function FieldLabel({ children, required = false }: { readonly children: string; readonly required?: boolean }): React.JSX.Element {
+function FieldLabel({
+  children,
+  required = false,
+}: {
+  readonly children: string;
+  readonly required?: boolean;
+}): React.JSX.Element {
   return (
     <Text style={styles.fieldLabel}>
       {children}
@@ -74,8 +85,20 @@ function ChoiceButton({
   readonly compact?: boolean;
 }): React.JSX.Element {
   return (
-    <Pressable onPress={onPress} style={[styles.choice, compact && styles.choiceCompact, selected ? styles.choiceOn : styles.choiceOff]}>
-      <Text style={[compact ? styles.choiceLabelCompact : styles.choiceLabel, selected ? styles.choiceLabelOn : styles.choiceLabelOff]}>
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.choice,
+        compact && styles.choiceCompact,
+        selected ? styles.choiceOn : styles.choiceOff,
+      ]}
+    >
+      <Text
+        style={[
+          compact ? styles.choiceLabelCompact : styles.choiceLabel,
+          selected ? styles.choiceLabelOn : styles.choiceLabelOff,
+        ]}
+      >
         {label}
       </Text>
     </Pressable>
@@ -303,7 +326,9 @@ export default function DoorScreen(): React.JSX.Element {
             }}
             style={[styles.segment, segment === item.key && styles.segmentActive]}
           >
-            <Text style={[styles.segmentLabel, segment === item.key && styles.segmentLabelActive]}>{item.label}</Text>
+            <Text style={[styles.segmentLabel, segment === item.key && styles.segmentLabelActive]}>
+              {item.label}
+            </Text>
           </Pressable>
         ))}
       </View>
@@ -443,7 +468,11 @@ export default function DoorScreen(): React.JSX.Element {
                           setTierId(tier.id);
                           setFormError(null);
                         }}
-                        style={[styles.tierRow, tierId === tier.id && styles.tierRowActive, soldOut && styles.tierRowDisabled]}
+                        style={[
+                          styles.tierRow,
+                          tierId === tier.id && styles.tierRowActive,
+                          soldOut && styles.tierRowDisabled,
+                        ]}
                       >
                         <View style={styles.tierText}>
                           <Text style={styles.tierName}>{tier.name}</Text>
@@ -525,7 +554,11 @@ export default function DoorScreen(): React.JSX.Element {
 
           {formError !== null ? <Text style={styles.formError}>{formError}</Text> : null}
 
-          <Pressable onPress={handleSubmit} disabled={submitting} style={[styles.submit, styles.submitOn]}>
+          <Pressable
+            onPress={handleSubmit}
+            disabled={submitting}
+            style={[styles.submit, styles.submitOn]}
+          >
             <Text style={styles.submitLabel}>
               {submitting ? 'SUBMITTING…' : isTicket ? 'SELL TICKET' : 'SUBMIT ENTRY'}
             </Text>
@@ -550,11 +583,15 @@ export default function DoorScreen(): React.JSX.Element {
               <Text style={styles.listTotal}>{rupees(totalTaken)}</Text>
             </View>
             {salesError !== null ? <Text style={styles.listEmpty}>{salesError}</Text> : null}
-            {salesError === null && sales.length === 0 ? <Text style={styles.listEmpty}>No entries yet.</Text> : null}
+            {salesError === null && sales.length === 0 ? (
+              <Text style={styles.listEmpty}>No entries yet.</Text>
+            ) : null}
             {sales.map((sale) => (
               <View key={sale.id} style={styles.listRow}>
                 <View style={[styles.avatar, isDine ? styles.avatarDine : styles.avatarWalk]}>
-                  <Text style={[styles.avatarLabel, isDine && styles.avatarLabelDine]}>{initials(sale.guestName)}</Text>
+                  <Text style={[styles.avatarLabel, isDine && styles.avatarLabelDine]}>
+                    {initials(sale.guestName)}
+                  </Text>
                 </View>
                 <View style={styles.listRowText}>
                   <Text style={styles.listRowName}>{sale.guestName}</Text>
@@ -578,7 +615,12 @@ export default function DoorScreen(): React.JSX.Element {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   container: { padding: 16, paddingBottom: 110, gap: 12 },
-  titleRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   titleBlock: { paddingHorizontal: 4, flexShrink: 1 },
   coverTabButton: {
     height: 38,
@@ -590,9 +632,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 4,
   },
-  coverTabLabel: { fontFamily: 'Archivo_800ExtraBold', fontSize: 11, letterSpacing: 0.9, color: colors.onSurface },
-  title: { fontFamily: 'Anton_400Regular', fontSize: 44, lineHeight: 40, textTransform: 'uppercase', color: colors.onSurface },
-  subtitle: { fontFamily: 'Archivo_400Regular', fontSize: 13, color: colors.onSurfaceMuted, marginTop: 6 },
+  coverTabLabel: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 11,
+    letterSpacing: 0.9,
+    color: colors.onSurface,
+  },
+  title: {
+    fontFamily: 'Anton_400Regular',
+    fontSize: 44,
+    lineHeight: 40,
+    textTransform: 'uppercase',
+    color: colors.onSurface,
+  },
+  subtitle: {
+    fontFamily: 'Archivo_400Regular',
+    fontSize: 13,
+    color: colors.onSurfaceMuted,
+    marginTop: 6,
+  },
 
   segmented: {
     flexDirection: 'row',
@@ -603,9 +661,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.surfaceRaised,
   },
-  segment: { flex: 1, height: 40, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  segment: {
+    flex: 1,
+    height: 40,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   segmentActive: { backgroundColor: colors.onSurface },
-  segmentLabel: { fontFamily: 'Archivo_800ExtraBold', fontSize: 12, letterSpacing: 0.72, color: colors.onSurfaceMuted },
+  segmentLabel: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 12,
+    letterSpacing: 0.72,
+    color: colors.onSurfaceMuted,
+  },
   segmentLabelActive: { color: colors.background },
 
   formCard: {
@@ -617,12 +686,33 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   formHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  formTitle: { fontFamily: 'Anton_400Regular', fontSize: 30, lineHeight: 28, textTransform: 'uppercase', color: colors.onSurface },
-  requiredNote: { fontFamily: 'Archivo_700Bold', fontSize: 11, letterSpacing: 1.54, color: colors.onSurfaceMuted },
-  permissionNote: { fontFamily: 'Archivo_400Regular', fontSize: 12, color: colors.onSurfaceFaint, lineHeight: 17 },
+  formTitle: {
+    fontFamily: 'Anton_400Regular',
+    fontSize: 30,
+    lineHeight: 28,
+    textTransform: 'uppercase',
+    color: colors.onSurface,
+  },
+  requiredNote: {
+    fontFamily: 'Archivo_700Bold',
+    fontSize: 11,
+    letterSpacing: 1.54,
+    color: colors.onSurfaceMuted,
+  },
+  permissionNote: {
+    fontFamily: 'Archivo_400Regular',
+    fontSize: 12,
+    color: colors.onSurfaceFaint,
+    lineHeight: 17,
+  },
 
   field: { gap: 7 },
-  fieldLabel: { fontFamily: 'Archivo_800ExtraBold', fontSize: 11, letterSpacing: 1.54, color: colors.onSurfaceMuted },
+  fieldLabel: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 11,
+    letterSpacing: 1.54,
+    color: colors.onSurfaceMuted,
+  },
   requiredMark: { color: colors.primary },
   input: {
     height: 50,
@@ -652,11 +742,23 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   twoUp: { flexDirection: 'row', gap: 8 },
-  choice: { flex: 1, height: 50, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  choice: {
+    flex: 1,
+    height: 50,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   choiceCompact: { height: 42 },
   choiceOn: { backgroundColor: colors.onSurface, borderColor: colors.onSurface },
   choiceOff: { backgroundColor: colors.background, borderColor: colors.border },
-  choiceLabel: { fontFamily: 'Anton_400Regular', fontSize: 17, letterSpacing: 0.68, textTransform: 'uppercase' },
+  choiceLabel: {
+    fontFamily: 'Anton_400Regular',
+    fontSize: 17,
+    letterSpacing: 0.68,
+    textTransform: 'uppercase',
+  },
   choiceLabelCompact: { fontFamily: 'Archivo_800ExtraBold', fontSize: 11, letterSpacing: 0.9 },
   choiceLabelOn: { color: colors.background },
   choiceLabelOff: { color: colors.onSurfaceMuted },
@@ -690,7 +792,12 @@ const styles = StyleSheet.create({
     paddingLeft: 16,
     padding: 8,
   },
-  stepperLabel: { fontFamily: 'Archivo_800ExtraBold', fontSize: 11, letterSpacing: 1.54, color: colors.onSurfaceMuted },
+  stepperLabel: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 11,
+    letterSpacing: 1.54,
+    color: colors.onSurfaceMuted,
+  },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   stepperButton: {
     width: 36,
@@ -701,7 +808,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stepperButtonLabel: { fontSize: 18, color: colors.onSurface },
-  stepperValue: { fontFamily: 'Anton_400Regular', fontSize: 22, color: colors.onSurface, minWidth: 18, textAlign: 'center' },
+  stepperValue: {
+    fontFamily: 'Anton_400Regular',
+    fontSize: 22,
+    color: colors.onSurface,
+    minWidth: 18,
+    textAlign: 'center',
+  },
 
   totalRow: {
     flexDirection: 'row',
@@ -714,13 +827,29 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
   },
-  totalLabel: { fontFamily: 'Archivo_800ExtraBold', fontSize: 11, letterSpacing: 1.54, color: colors.primary },
+  totalLabel: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 11,
+    letterSpacing: 1.54,
+    color: colors.primary,
+  },
   totalValue: { fontFamily: 'Anton_400Regular', fontSize: 24, color: colors.primary },
 
   formError: { fontFamily: 'Archivo_600SemiBold', fontSize: 12, color: colors.primary },
-  submit: { height: 56, borderRadius: 999, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  submit: {
+    height: 56,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
   submitOn: { backgroundColor: colors.primary },
-  submitLabel: { fontFamily: 'Archivo_800ExtraBold', fontSize: 14, letterSpacing: 1.96, color: colors.background },
+  submitLabel: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 14,
+    letterSpacing: 1.96,
+    color: colors.background,
+  },
 
   statGrid: { flexDirection: 'row', gap: 10 },
   statCard: {
@@ -731,8 +860,18 @@ const styles = StyleSheet.create({
     borderColor: colors.surfaceRaised,
     padding: 16,
   },
-  statLabel: { fontFamily: 'Archivo_700Bold', fontSize: 11, letterSpacing: 1.54, color: colors.onSurfaceMuted },
-  statValue: { fontFamily: 'Anton_400Regular', fontSize: 36, lineHeight: 40, color: colors.onSurface },
+  statLabel: {
+    fontFamily: 'Archivo_700Bold',
+    fontSize: 11,
+    letterSpacing: 1.54,
+    color: colors.onSurfaceMuted,
+  },
+  statValue: {
+    fontFamily: 'Anton_400Regular',
+    fontSize: 36,
+    lineHeight: 40,
+    color: colors.onSurface,
+  },
 
   listCard: {
     borderRadius: 22,
@@ -750,9 +889,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.surfaceRaised,
   },
-  listTitle: { fontFamily: 'Archivo_700Bold', fontSize: 11, letterSpacing: 1.54, color: colors.onSurfaceMuted },
+  listTitle: {
+    fontFamily: 'Archivo_700Bold',
+    fontSize: 11,
+    letterSpacing: 1.54,
+    color: colors.onSurfaceMuted,
+  },
   listTotal: { fontFamily: 'Anton_400Regular', fontSize: 16, color: colors.onSurface },
-  listEmpty: { paddingVertical: 28, paddingHorizontal: 16, textAlign: 'center', fontSize: 13, color: colors.onSurfaceMuted },
+  listEmpty: {
+    paddingVertical: 28,
+    paddingHorizontal: 16,
+    textAlign: 'center',
+    fontSize: 13,
+    color: colors.onSurfaceMuted,
+  },
   listRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -762,7 +912,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.surfaceRaised,
   },
-  avatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  avatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   avatarWalk: { backgroundColor: colors.surfaceRaised },
   avatarDine: { backgroundColor: colors.tertiary },
   avatarLabel: { fontFamily: 'Archivo_800ExtraBold', fontSize: 13, color: colors.onSurface },

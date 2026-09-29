@@ -2,11 +2,26 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import * as Network from 'expo-network';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Animated,
+  Easing,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { isApiClientError } from '@c1rcle/api-client';
 
-import { checkIn, fetchStats, lookupTicket, overrideCheckIn, staffDeny } from '@/api/scannerApiClient';
+import {
+  checkIn,
+  fetchStats,
+  lookupTicket,
+  overrideCheckIn,
+  staffDeny,
+} from '@/api/scannerApiClient';
 import { notifyAuthStateChanged } from '@/auth/authState';
 import { getSessionMeta } from '@/auth/scannerSession';
 import { canOverride, getStaffUser } from '@/auth/staffAuth';
@@ -68,7 +83,9 @@ export default function ScanScreen(): React.JSX.Element {
       if (meta === null) return;
       setEvent(meta.event);
       void fetchStats(meta.event.id)
-        .then((stats) => { setInside(stats.occupancy.inside); })
+        .then((stats) => {
+          setInside(stats.occupancy.inside);
+        })
         .catch(() => undefined);
     });
   }, []);
@@ -76,8 +93,18 @@ export default function ScanScreen(): React.JSX.Element {
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
-        Animated.timing(scanlineY, { toValue: 1, duration: 1400, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        Animated.timing(scanlineY, { toValue: 0, duration: 1400, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(scanlineY, {
+          toValue: 1,
+          duration: 1400,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scanlineY, {
+          toValue: 0,
+          duration: 1400,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
       ]),
     );
     animation.start();
@@ -86,38 +113,49 @@ export default function ScanScreen(): React.JSX.Element {
     };
   }, [scanlineY]);
 
-  const pushRecent = useCallback((name: string, tier: string, admitted: boolean, checkInId: string | null = null) => {
-    setRecent((current) => [
-      {
-        name,
-        tier,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        admitted,
-        checkInId,
-        overridden: false,
-      },
-      ...current,
-    ].slice(0, 5));
-    // `fetchStats` is only re-polled on mount — bump the on-screen count
-    // immediately on a real admit so it doesn't lag behind what staff just did.
-    if (admitted) {
-      setInside((current) => (current === null ? current : current + 1));
-    }
-  }, []);
+  const pushRecent = useCallback(
+    (name: string, tier: string, admitted: boolean, checkInId: string | null = null) => {
+      setRecent((current) =>
+        [
+          {
+            name,
+            tier,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            admitted,
+            checkInId,
+            overridden: false,
+          },
+          ...current,
+        ].slice(0, 5),
+      );
+      // `fetchStats` is only re-polled on mount — bump the on-screen count
+      // immediately on a real admit so it doesn't lag behind what staff just did.
+      if (admitted) {
+        setInside((current) => (current === null ? current : current + 1));
+      }
+    },
+    [],
+  );
 
   const [overrideTarget, setOverrideTarget] = useState<RecentEntry | null>(null);
   const [overrideReason, setOverrideReason] = useState('');
   const [overrideBusy, setOverrideBusy] = useState(false);
 
   const submitOverride = useCallback(() => {
-    if (overrideTarget?.checkInId === null || overrideTarget === null || overrideReason.trim().length === 0) {
+    if (
+      overrideTarget?.checkInId === null ||
+      overrideTarget === null ||
+      overrideReason.trim().length === 0
+    ) {
       return;
     }
     const target = overrideTarget;
     setOverrideBusy(true);
     void overrideCheckIn({ checkInId: target.checkInId ?? '', reason: overrideReason.trim() })
       .then(() => {
-        setRecent((current) => current.map((r) => (r.checkInId === target.checkInId ? { ...r, overridden: true } : r)));
+        setRecent((current) =>
+          current.map((r) => (r.checkInId === target.checkInId ? { ...r, overridden: true } : r)),
+        );
         showToast(`${target.name} overridden — admitted`);
         setOverrideTarget(null);
         setOverrideReason('');
@@ -225,7 +263,11 @@ export default function ScanScreen(): React.JSX.Element {
           // tickets" in Settings skips straight to the real admit instead.
           const lookup = await lookupTicket({ eventId: meta.event.id, qrPayload });
           if (lookup.status === 'invalid' || getScannerPreferences().autoAdmit) {
-            const scanResult = await checkIn({ eventId: meta.event.id, qrPayload, gate: meta.gate });
+            const scanResult = await checkIn({
+              eventId: meta.event.id,
+              qrPayload,
+              gate: meta.gate,
+            });
             handleScanResult(scanResult, meta.event.id);
           } else {
             setPendingLookup({
@@ -251,7 +293,10 @@ export default function ScanScreen(): React.JSX.Element {
             setUiState({ kind: 'idle' });
             showToast('Your session has expired — logging you out.');
             notifyAuthStateChanged();
-          } else if (isApiClientError(cause) && (cause.code === 'network' || cause.code === 'timeout')) {
+          } else if (
+            isApiClientError(cause) &&
+            (cause.code === 'network' || cause.code === 'timeout')
+          ) {
             setUiState({ kind: 'offline' });
             showToast('Scanner offline — entry denied until connectivity returns.');
           } else {
@@ -290,7 +335,12 @@ export default function ScanScreen(): React.JSX.Element {
     setUiState({ kind: 'idle' });
   }, []);
 
-  const handleBarcodeScanned = useCallback((event: { data: string }) => { runScan(event.data); }, [runScan]);
+  const handleBarcodeScanned = useCallback(
+    (event: { data: string }) => {
+      runScan(event.data);
+    },
+    [runScan],
+  );
 
   if (permission === null) {
     return <View style={styles.container} />;
@@ -311,9 +361,7 @@ export default function ScanScreen(): React.JSX.Element {
     <View style={styles.screen}>
       <ScrollView style={styles.container} contentContainerStyle={styles.containerContent}>
         <View style={styles.headerRow}>
-          <Text style={styles.headline}>
-            Scan{'\n'}Ticket
-          </Text>
+          <Text style={styles.headline}>Scan{'\n'}Ticket</Text>
           <View style={styles.counter}>
             <Text style={styles.counterValue}>
               {inside ?? recent.filter((r) => r.admitted).length}
@@ -340,10 +388,38 @@ export default function ScanScreen(): React.JSX.Element {
             </View>
             <ScatterAccents
               accents={[
-                { leftPct: 12, topPct: 14, width: 6, height: 12, color: colors.primary, rotationDeg: 30 },
-                { leftPct: 62, topPct: 10, width: 5, height: 10, color: colors.secondary, rotationDeg: -30 },
-                { leftPct: 68, topPct: 60, width: 7, height: 7, color: colors.onSurface, rotationDeg: 45 },
-                { leftPct: 8, topPct: 62, width: 5, height: 12, color: colors.secondary, rotationDeg: 65 },
+                {
+                  leftPct: 12,
+                  topPct: 14,
+                  width: 6,
+                  height: 12,
+                  color: colors.primary,
+                  rotationDeg: 30,
+                },
+                {
+                  leftPct: 62,
+                  topPct: 10,
+                  width: 5,
+                  height: 10,
+                  color: colors.secondary,
+                  rotationDeg: -30,
+                },
+                {
+                  leftPct: 68,
+                  topPct: 60,
+                  width: 7,
+                  height: 7,
+                  color: colors.onSurface,
+                  rotationDeg: 45,
+                },
+                {
+                  leftPct: 8,
+                  topPct: 62,
+                  width: 5,
+                  height: 12,
+                  color: colors.secondary,
+                  rotationDeg: 65,
+                },
               ]}
             />
             <View style={[styles.corner, styles.cornerTopLeft]} />
@@ -369,12 +445,21 @@ export default function ScanScreen(): React.JSX.Element {
             />
           </View>
           <Pressable
-            onPress={() => { setTorchOn((on) => !on); }}
+            onPress={() => {
+              setTorchOn((on) => !on);
+            }}
             style={[styles.actionCircle, torchOn && styles.actionCircleActive]}
           >
-            <Text style={[styles.actionCircleLabel, torchOn && styles.actionCircleLabelActive]}>FLASH</Text>
+            <Text style={[styles.actionCircleLabel, torchOn && styles.actionCircleLabelActive]}>
+              FLASH
+            </Text>
           </Pressable>
-          <Pressable onPress={() => { setManualOpen((open) => !open); }} style={styles.actionCircle}>
+          <Pressable
+            onPress={() => {
+              setManualOpen((open) => !open);
+            }}
+            style={styles.actionCircle}
+          >
             <Text style={styles.actionCircleLabel}>CODE</Text>
           </Pressable>
         </View>
@@ -443,7 +528,9 @@ export default function ScanScreen(): React.JSX.Element {
 
         {coupleConfirm.pending !== null ? (
           <View style={styles.coupleCard}>
-            <Text style={styles.resultHeadline}>COUPLE TICKET — {coupleConfirm.pending.seats} SEATS</Text>
+            <Text style={styles.resultHeadline}>
+              COUPLE TICKET — {coupleConfirm.pending.seats} SEATS
+            </Text>
             <Text style={styles.body}>
               {coupleConfirm.expired
                 ? 'Confirmation window expired — re-scan.'
@@ -455,18 +542,28 @@ export default function ScanScreen(): React.JSX.Element {
                   label="NO"
                   variant="outline"
                   onPress={() => {
-                    void coupleConfirm.confirm(false).then((confirmResult) => { setResult(confirmResult); });
+                    void coupleConfirm.confirm(false).then((confirmResult) => {
+                      setResult(confirmResult);
+                    });
                   }}
                 />
                 <GalaButton
                   label="YES"
                   onPress={() => {
-                    void coupleConfirm.confirm(true).then((confirmResult) => { setResult(confirmResult); });
+                    void coupleConfirm.confirm(true).then((confirmResult) => {
+                      setResult(confirmResult);
+                    });
                   }}
                 />
               </View>
             ) : (
-              <GalaButton label="DISMISS" onPress={() => { coupleConfirm.reset(); resetScan(); }} />
+              <GalaButton
+                label="DISMISS"
+                onPress={() => {
+                  coupleConfirm.reset();
+                  resetScan();
+                }}
+              />
             )}
           </View>
         ) : null}
@@ -477,9 +574,14 @@ export default function ScanScreen(): React.JSX.Element {
             <Text style={styles.body}>No scans yet.</Text>
           ) : (
             recent.map((entry, index) => (
-              <View key={index} style={[styles.recentRow, index === recent.length - 1 && styles.recentRowLast]}>
+              <View
+                key={index}
+                style={[styles.recentRow, index === recent.length - 1 && styles.recentRowLast]}
+              >
                 <View style={styles.recentAvatar}>
-                  <Text style={styles.recentAvatarLabel}>{entry.name.slice(0, 2).toUpperCase()}</Text>
+                  <Text style={styles.recentAvatarLabel}>
+                    {entry.name.slice(0, 2).toUpperCase()}
+                  </Text>
                 </View>
                 <View style={styles.recentText}>
                   <Text style={styles.recentName}>{entry.name}</Text>
@@ -489,7 +591,9 @@ export default function ScanScreen(): React.JSX.Element {
                 </View>
                 {!entry.admitted && entry.overridden ? (
                   <View style={[styles.recentPill, styles.recentPillOverridden]}>
-                    <Text style={[styles.recentPillLabel, styles.recentPillLabelOverridden]}>OVERRIDDEN</Text>
+                    <Text style={[styles.recentPillLabel, styles.recentPillLabelOverridden]}>
+                      OVERRIDDEN
+                    </Text>
                   </View>
                 ) : !entry.admitted && staffCanOverride && entry.checkInId !== null ? (
                   <Pressable
@@ -498,11 +602,25 @@ export default function ScanScreen(): React.JSX.Element {
                     }}
                     style={[styles.recentPill, styles.recentPillDenied]}
                   >
-                    <Text style={[styles.recentPillLabel, styles.recentPillLabelDenied]}>OVERRIDE</Text>
+                    <Text style={[styles.recentPillLabel, styles.recentPillLabelDenied]}>
+                      OVERRIDE
+                    </Text>
                   </Pressable>
                 ) : (
-                  <View style={[styles.recentPill, entry.admitted ? styles.recentPillAdmitted : styles.recentPillDenied]}>
-                    <Text style={[styles.recentPillLabel, entry.admitted ? styles.recentPillLabelAdmitted : styles.recentPillLabelDenied]}>
+                  <View
+                    style={[
+                      styles.recentPill,
+                      entry.admitted ? styles.recentPillAdmitted : styles.recentPillDenied,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.recentPillLabel,
+                        entry.admitted
+                          ? styles.recentPillLabelAdmitted
+                          : styles.recentPillLabelDenied,
+                      ]}
+                    >
                       {entry.admitted ? 'ADMITTED' : 'DENIED'}
                     </Text>
                   </View>
@@ -541,8 +659,8 @@ export default function ScanScreen(): React.JSX.Element {
           <View style={styles.overrideCard}>
             <Text style={styles.resultHeadline}>OVERRIDE DENIAL</Text>
             <Text style={styles.body}>
-              Admits {overrideTarget?.name ?? 'this guest'} anyway. The original deny reason stays on the record —
-              this is logged as who let them in and why, not a correction.
+              Admits {overrideTarget?.name ?? 'this guest'} anyway. The original deny reason stays
+              on the record — this is logged as who let them in and why, not a correction.
             </Text>
             <GalaTextInput
               value={overrideReason}
@@ -661,10 +779,34 @@ const styles = StyleSheet.create({
     height: 40,
     borderColor: colors.primary,
   },
-  cornerTopLeft: { top: 0, left: 0, borderTopWidth: 4, borderLeftWidth: 4, borderTopLeftRadius: 18 },
-  cornerTopRight: { top: 0, right: 0, borderTopWidth: 4, borderRightWidth: 4, borderTopRightRadius: 18 },
-  cornerBottomLeft: { bottom: 0, left: 0, borderBottomWidth: 4, borderLeftWidth: 4, borderBottomLeftRadius: 18 },
-  cornerBottomRight: { bottom: 0, right: 0, borderBottomWidth: 4, borderRightWidth: 4, borderBottomRightRadius: 18 },
+  cornerTopLeft: {
+    top: 0,
+    left: 0,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
+    borderTopLeftRadius: 18,
+  },
+  cornerTopRight: {
+    top: 0,
+    right: 0,
+    borderTopWidth: 4,
+    borderRightWidth: 4,
+    borderTopRightRadius: 18,
+  },
+  cornerBottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
+    borderBottomLeftRadius: 18,
+  },
+  cornerBottomRight: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    borderBottomRightRadius: 18,
+  },
   scanline: {
     position: 'absolute',
     left: '6%',

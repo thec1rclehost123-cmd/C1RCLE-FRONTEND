@@ -29,10 +29,7 @@ function orgHeaders(organizationId: string): Record<string, string> {
   return { 'X-Organization-Id': organizationId };
 }
 
-function commandHeaders(
-  organizationId: string,
-  idempotencyKey?: string,
-): Record<string, string> {
+function commandHeaders(organizationId: string, idempotencyKey?: string): Record<string, string> {
   return {
     ...orgHeaders(organizationId),
     'Idempotency-Key': idempotencyKey ?? crypto.randomUUID(),

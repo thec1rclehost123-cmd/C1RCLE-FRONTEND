@@ -70,7 +70,9 @@ describe('listPartnerships', () => {
 
     await listPartnerships('org/with slash');
 
-    expect(getMock.mock.calls[0]?.[0]?.path).toBe('/api/v2/organizations/org%2Fwith%20slash/partnerships');
+    expect(getMock.mock.calls[0]?.[0]?.path).toBe(
+      '/api/v2/organizations/org%2Fwith%20slash/partnerships',
+    );
   });
 });
 

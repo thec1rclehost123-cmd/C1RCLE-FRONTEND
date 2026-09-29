@@ -2,7 +2,6 @@ import { z } from 'zod';
 
 import { ApiClient } from '@c1rcle/api-client';
 
-
 import { getSessionMeta, getSessionToken } from '@/auth/scannerSession';
 import { getOrganizationId, getStaffAccessToken } from '@/auth/staffAuth';
 import { getScannerEnv } from '@/config/env';
@@ -83,7 +82,10 @@ async function withSessionHeader(): Promise<Record<string, string>> {
   };
 }
 
-export async function login(email: string, password: string): Promise<{
+export async function login(
+  email: string,
+  password: string,
+): Promise<{
   accessToken: string;
   expiresAt: number;
   user: { id: string; email: string; displayName: string | null; role: string };
@@ -235,7 +237,10 @@ export interface StatsStreamHandlers {
  * Returns a `close()` function; the caller owns the connection's lifetime
  * (call it on unmount, same as `clearInterval` for the poll it replaces).
  */
-export function openStatsStream(eventId: string, handlers: StatsStreamHandlers): { close: () => void } {
+export function openStatsStream(
+  eventId: string,
+  handlers: StatsStreamHandlers,
+): { close: () => void } {
   const handle = getClient().openEventStream(
     {
       path: '/api/v2/door/stats/stream',
@@ -292,7 +297,10 @@ export async function fetchGuests(input: {
  * role-level right, not a per-session one — so callers must check
  * `canOverride(getStaffUser()?.role)` before offering this in the UI; the
  * server enforces it regardless and returns 403 if the role lacks it. */
-export async function manualCheckIn(entitlementId: string, eventId: string): Promise<ManualCheckInResponse> {
+export async function manualCheckIn(
+  entitlementId: string,
+  eventId: string,
+): Promise<ManualCheckInResponse> {
   return getClient().post({
     path: '/api/v2/door/guests/check-in',
     body: { entitlementId, eventId },
@@ -320,7 +328,10 @@ export async function staffDeny(input: {
 /** Admits a previously DENIED scan. `SENSITIVE_COMMAND` (10/min) and
  * `ticket.override` — same permission as `manualCheckIn`. 409 if the
  * target checkInId isn't currently `denied`. */
-export async function overrideCheckIn(input: { checkInId: string; reason: string }): Promise<OverrideResponse> {
+export async function overrideCheckIn(input: {
+  checkInId: string;
+  reason: string;
+}): Promise<OverrideResponse> {
   return getClient().post({
     path: '/api/v2/door/override',
     body: input,
@@ -397,7 +408,10 @@ export async function submitTicketSale(input: {
 }
 
 /** Resolves a rotating signed cover-wallet QR. Read-only, no idempotency. */
-export async function resolveWalletQr(eventId: string, qrPayload: string): Promise<WalletQrResponse> {
+export async function resolveWalletQr(
+  eventId: string,
+  qrPayload: string,
+): Promise<WalletQrResponse> {
   return getClient().post({
     path: '/api/v2/door/wallet-qr',
     body: { eventId, qrPayload },
@@ -427,7 +441,10 @@ export async function chargeWallet(input: {
   });
 }
 
-export async function fetchDoorSales(eventId: string, category: 'walkin' | 'dinein'): Promise<DoorSale[]> {
+export async function fetchDoorSales(
+  eventId: string,
+  category: 'walkin' | 'dinein',
+): Promise<DoorSale[]> {
   const result = await getClient().get({
     path: '/api/v2/door/sales',
     query: { eventId, category },

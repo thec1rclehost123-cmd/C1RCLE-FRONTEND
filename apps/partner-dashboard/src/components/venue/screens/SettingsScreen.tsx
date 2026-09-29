@@ -241,7 +241,9 @@ function VenueProfile({ canManage }: { readonly canManage: boolean }) {
       .then((updated) => {
         setProfile(updated);
         setForm(toForm(updated, form.type));
-        setVenue((current) => (current === null ? current : { ...current, version: current.version + 1 }));
+        setVenue((current) =>
+          current === null ? current : { ...current, version: current.version + 1 },
+        );
       })
       .catch((error: unknown) => {
         setSaveError(error instanceof Error ? error.message : 'Could not save changes.');
@@ -383,8 +385,8 @@ function VenueProfile({ canManage }: { readonly canManage: boolean }) {
           </Field>
         </div>
         <small className={styles['note']}>
-          Used to confirm door staff are on-site before opening a shift (a soft check layered on
-          top of the door code, not a replacement for it).
+          Used to confirm door staff are on-site before opening a shift (a soft check layered on top
+          of the door code, not a replacement for it).
         </small>
         <div className={styles['twoColumns']}>
           <Field label="Phone">

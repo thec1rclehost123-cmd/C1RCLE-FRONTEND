@@ -10,7 +10,8 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: true,
     infoPlist: {
-      NSCameraUsageDescription: 'C1RCLE Scanner uses the camera to scan guest QR tickets at the door.',
+      NSCameraUsageDescription:
+        'C1RCLE Scanner uses the camera to scan guest QR tickets at the door.',
       NSLocationWhenInUseUsageDescription:
         'C1RCLE Scanner checks the device is at the venue before opening a shift.',
     },

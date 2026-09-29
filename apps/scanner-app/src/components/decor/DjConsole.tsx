@@ -40,7 +40,9 @@ const LABEL = PLATTER - 64;
 function GrooveRings({ radius }: { readonly radius: number }): React.JSX.Element {
   const rings: React.JSX.Element[] = [];
   for (let r = 0.5; r < radius; r += 3) {
-    rings.push(<Circle key={r} cx={radius} cy={radius} r={r} fill="none" stroke="#121010" strokeWidth={1} />);
+    rings.push(
+      <Circle key={r} cx={radius} cy={radius} r={r} fill="none" stroke="#121010" strokeWidth={1} />,
+    );
   }
   return <>{rings}</>;
 }
@@ -68,7 +70,14 @@ function SheenSweep({ radius }: { readonly radius: number }): React.JSX.Element 
           const p1 = polarPoint(radius, radius, radius, a1);
           const p2 = polarPoint(radius, radius, radius, a2);
           const d = `M ${String(radius)} ${String(radius)} L ${String(p1.x)} ${String(p1.y)} A ${String(radius)} ${String(radius)} 0 0 1 ${String(p2.x)} ${String(p2.y)} Z`;
-          return <Path key={`${String(lobe.start)}-${String(index)}`} d={d} fill="#ffffff" fillOpacity={opacity} />;
+          return (
+            <Path
+              key={`${String(lobe.start)}-${String(index)}`}
+              d={d}
+              fill="#ffffff"
+              fillOpacity={opacity}
+            />
+          );
         }),
       )}
     </>
@@ -81,7 +90,12 @@ function Deck({ labelColor }: { readonly labelColor: string }): React.JSX.Elemen
 
   useEffect(() => {
     const animation = Animated.loop(
-      Animated.timing(rotation, { toValue: 1, duration: 2400, easing: Easing.linear, useNativeDriver: true }),
+      Animated.timing(rotation, {
+        toValue: 1,
+        duration: 2400,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
     );
     animation.start();
     return () => {
@@ -162,7 +176,10 @@ function Knob({ tickColor }: { readonly tickColor: string }): React.JSX.Element 
 function Fader({ thumbTop }: { readonly thumbTop: number }): React.JSX.Element {
   return (
     <View style={styles.fader}>
-      <LinearGradient colors={['#f4f1ee', '#9a9290']} style={[styles.faderThumb, { top: thumbTop }]} />
+      <LinearGradient
+        colors={['#f4f1ee', '#9a9290']}
+        style={[styles.faderThumb, { top: thumbTop }]}
+      />
     </View>
   );
 }
@@ -192,7 +209,11 @@ function LedColumn({ leds }: { readonly leds: readonly string[] }): React.JSX.El
       {leds.map((color, index) => (
         <View
           key={index}
-          style={[styles.led, { backgroundColor: color }, color !== colors.border && { shadowColor: color }]}
+          style={[
+            styles.led,
+            { backgroundColor: color },
+            color !== colors.border && { shadowColor: color },
+          ]}
         />
       ))}
     </View>
@@ -238,7 +259,13 @@ export function DjConsole(): React.JSX.Element {
   return (
     <View style={styles.wrap}>
       <View style={styles.floorGlow}>
-        <RadialGlow width={WRAP_WIDTH * 0.8} height={60} color={colors.primary} stopOpacity={0.35} fadeAt="70%" />
+        <RadialGlow
+          width={WRAP_WIDTH * 0.8}
+          height={60}
+          color={colors.primary}
+          stopOpacity={0.35}
+          fadeAt="70%"
+        />
       </View>
 
       <View style={styles.tiltGroup}>

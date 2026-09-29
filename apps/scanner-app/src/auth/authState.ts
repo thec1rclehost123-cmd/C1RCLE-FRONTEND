@@ -17,7 +17,8 @@ import { isStaffSessionActive } from './staffAuth';
  * with no session STAYED in that same bucket and kept redirecting back to
  * `/pairing` instead of `/redeem`, since nothing distinguished the two.
  */
-export type ScannerAuthState = 'logged_out' | 'needs_pairing' | 'needs_redeem' | 'active_session' | 'checking';
+export type ScannerAuthState =
+  'logged_out' | 'needs_pairing' | 'needs_redeem' | 'active_session' | 'checking';
 
 /**
  * Module-level pub-sub, same pattern as `src/features/toast/toastStore.ts`.

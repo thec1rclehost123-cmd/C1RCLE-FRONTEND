@@ -16,7 +16,13 @@ interface RadialGlowProps {
   readonly fadeAt?: string;
 }
 
-export function RadialGlow({ width, height, color, stopOpacity, fadeAt = '65%' }: RadialGlowProps): React.JSX.Element {
+export function RadialGlow({
+  width,
+  height,
+  color,
+  stopOpacity,
+  fadeAt = '65%',
+}: RadialGlowProps): React.JSX.Element {
   const gradientId = `radialGlow${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
     <Svg width={width} height={height}>

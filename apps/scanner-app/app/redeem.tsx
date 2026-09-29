@@ -30,10 +30,38 @@ import type { DoorEvent } from '@/api/schemas';
  */
 
 const CARD_THEMES = [
-  { background: colors.primary, foreground: colors.background, arrowBg: colors.background, arrowFg: colors.primary, height: 200, titleSize: 36 },
-  { background: colors.secondary, foreground: colors.background, arrowBg: colors.background, arrowFg: colors.secondary, height: 180, titleSize: 32 },
-  { background: colors.surface, foreground: colors.onSurface, arrowBg: colors.onSurface, arrowFg: colors.background, height: 180, titleSize: 32 },
-  { background: colors.tertiary, foreground: colors.onSurface, arrowBg: colors.onSurface, arrowFg: colors.tertiary, height: 180, titleSize: 32 },
+  {
+    background: colors.primary,
+    foreground: colors.background,
+    arrowBg: colors.background,
+    arrowFg: colors.primary,
+    height: 200,
+    titleSize: 36,
+  },
+  {
+    background: colors.secondary,
+    foreground: colors.background,
+    arrowBg: colors.background,
+    arrowFg: colors.secondary,
+    height: 180,
+    titleSize: 32,
+  },
+  {
+    background: colors.surface,
+    foreground: colors.onSurface,
+    arrowBg: colors.onSurface,
+    arrowFg: colors.background,
+    height: 180,
+    titleSize: 32,
+  },
+  {
+    background: colors.tertiary,
+    foreground: colors.onSurface,
+    arrowBg: colors.onSurface,
+    arrowFg: colors.tertiary,
+    height: 180,
+    titleSize: 32,
+  },
 ] as const;
 
 const CARD_ACCENTS = [
@@ -54,7 +82,9 @@ async function tryGetDeviceLocation(): Promise<{ lat: number; lng: number } | un
   try {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== Location.PermissionStatus.GRANTED) return undefined;
-    const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+    const position = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Balanced,
+    });
     return { lat: position.coords.latitude, lng: position.coords.longitude };
   } catch {
     return undefined;
@@ -135,7 +165,10 @@ export default function RedeemScreen(): React.JSX.Element {
   const initial = (user?.displayName ?? user?.email ?? '?').slice(0, 1).toUpperCase();
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={[styles.container, { paddingTop: insets.top + 20 }]}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={[styles.container, { paddingTop: insets.top + 20 }]}
+    >
       <View style={styles.headerRow}>
         <View style={styles.brandRow}>
           <Pressable
@@ -168,7 +201,9 @@ export default function RedeemScreen(): React.JSX.Element {
 
       {organizationId === null ? <Text style={styles.error}>No active staff session.</Text> : null}
       {eventsError !== null ? <Text style={styles.error}>{eventsError}</Text> : null}
-      {eventsError === null && events.length === 0 ? <Text style={styles.empty}>No events today.</Text> : null}
+      {eventsError === null && events.length === 0 ? (
+        <Text style={styles.empty}>No events today.</Text>
+      ) : null}
 
       <View style={styles.cardList}>
         {events.map((event, index) => {
@@ -203,7 +238,9 @@ export default function RedeemScreen(): React.JSX.Element {
                   spread them across the card. */}
               <View style={styles.cardTopRow}>
                 <View style={[styles.datePill, { borderColor: theme.foreground }]}>
-                  <Text style={[styles.datePillLabel, { color: theme.foreground }]}>{formatWhen(event.startAt)}</Text>
+                  <Text style={[styles.datePillLabel, { color: theme.foreground }]}>
+                    {formatWhen(event.startAt)}
+                  </Text>
                 </View>
                 {live ? (
                   <View style={styles.liveBadge}>
@@ -218,14 +255,20 @@ export default function RedeemScreen(): React.JSX.Element {
                   <Text
                     style={[
                       styles.cardTitle,
-                      { color: theme.foreground, fontSize: theme.titleSize, lineHeight: theme.titleSize * 0.95 },
+                      {
+                        color: theme.foreground,
+                        fontSize: theme.titleSize,
+                        lineHeight: theme.titleSize * 0.95,
+                      },
                     ]}
                     numberOfLines={2}
                   >
                     {event.title}
                   </Text>
                   <Text style={[styles.cardMeta, { color: theme.foreground }]} numberOfLines={1}>
-                    {event.capacity === null ? 'Capacity not set' : `${String(event.capacity)} capacity`}
+                    {event.capacity === null
+                      ? 'Capacity not set'
+                      : `${String(event.capacity)} capacity`}
                   </Text>
                 </View>
                 <View style={[styles.cardArrow, { backgroundColor: theme.arrowBg }]}>
@@ -254,7 +297,9 @@ export default function RedeemScreen(): React.JSX.Element {
             disabled={loading || code.trim().length === 0}
             style={[styles.submit, code.trim().length === 0 && styles.submitDisabled]}
           >
-            <Text style={styles.submitLabel}>{loading ? 'OPENING SHIFT…' : 'REDEEM & OPEN SHIFT'}</Text>
+            <Text style={styles.submitLabel}>
+              {loading ? 'OPENING SHIFT…' : 'REDEEM & OPEN SHIFT'}
+            </Text>
           </Pressable>
         </View>
       ) : null}
@@ -266,12 +311,35 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   container: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 32 },
 
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, paddingTop: 4 },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    paddingTop: 4,
+  },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  brandMark: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  brandMark: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   brandMarkLabel: { fontFamily: 'Anton_400Regular', fontSize: 18, color: colors.background },
-  brandName: { fontFamily: 'Archivo_800ExtraBold', fontSize: 14, letterSpacing: 0.28, color: colors.onSurface },
-  brandSub: { fontFamily: 'Archivo_600SemiBold', fontSize: 10, letterSpacing: 2, color: colors.onSurfaceMuted },
+  brandName: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 14,
+    letterSpacing: 0.28,
+    color: colors.onSurface,
+  },
+  brandSub: {
+    fontFamily: 'Archivo_600SemiBold',
+    fontSize: 10,
+    letterSpacing: 2,
+    color: colors.onSurfaceMuted,
+  },
   gateChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -283,10 +351,24 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   gateChipLabel: { fontFamily: 'Archivo_700Bold', fontSize: 12, color: colors.onSurface },
-  gateChipAvatar: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.onSurface, alignItems: 'center', justifyContent: 'center' },
+  gateChipAvatar: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.onSurface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   gateChipAvatarLabel: { fontFamily: 'Archivo_700Bold', fontSize: 12, color: colors.background },
 
-  titleRow: { paddingTop: 26, paddingHorizontal: 4, paddingBottom: 18, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+  titleRow: {
+    paddingTop: 26,
+    paddingHorizontal: 4,
+    paddingBottom: 18,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
   title: {
     fontFamily: 'Anton_400Regular',
     fontSize: 62,
@@ -296,10 +378,23 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: colors.onSurface,
   },
-  titleMeta: { fontFamily: 'Archivo_400Regular', fontSize: 12, lineHeight: 17, color: colors.onSurfaceMuted, textAlign: 'right', paddingBottom: 6 },
+  titleMeta: {
+    fontFamily: 'Archivo_400Regular',
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.onSurfaceMuted,
+    textAlign: 'right',
+    paddingBottom: 6,
+  },
 
   cardList: { gap: 10 },
-  card: { position: 'relative', borderRadius: 30, padding: 20, overflow: 'hidden', justifyContent: 'space-between' },
+  card: {
+    position: 'relative',
+    borderRadius: 30,
+    padding: 20,
+    overflow: 'hidden',
+    justifyContent: 'space-between',
+  },
   cardSurfaceBorder: { borderWidth: 1, borderColor: colors.border },
   cardSelected: { borderWidth: 2, borderColor: colors.onSurface },
   cardTopRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -315,9 +410,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary },
-  liveLabel: { fontFamily: 'Archivo_800ExtraBold', fontSize: 11, letterSpacing: 0.88, color: colors.primary },
+  liveLabel: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 11,
+    letterSpacing: 0.88,
+    color: colors.primary,
+  },
 
-  cardBottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12 },
+  cardBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    gap: 12,
+  },
   // The reference's mock titles ("Neon Nights Vol. 04") are short enough to
   // never reach the card's decorative art in the top-right corner. Real
   // event titles aren't bounded that way, so a `flex: 1` block was letting
@@ -326,11 +431,22 @@ const styles = StyleSheet.create({
   cardTitleBlock: { flex: 1, maxWidth: '62%' },
   cardTitle: { fontFamily: 'Anton_400Regular', lineHeight: 34, textTransform: 'uppercase' },
   cardMeta: { fontFamily: 'Archivo_500Medium', fontSize: 13, marginTop: 6 },
-  cardArrow: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  cardArrow: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   cardArrowLabel: { fontSize: 20 },
 
   form: { gap: 10, paddingTop: 20 },
-  formLabel: { fontFamily: 'Archivo_800ExtraBold', fontSize: 11, letterSpacing: 1.54, color: colors.onSurfaceMuted },
+  formLabel: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 11,
+    letterSpacing: 1.54,
+    color: colors.onSurfaceMuted,
+  },
   input: {
     height: 54,
     borderRadius: 16,
@@ -342,10 +458,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Archivo_600SemiBold',
   },
-  submit: { height: 56, borderRadius: 999, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  submit: {
+    height: 56,
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   submitDisabled: { opacity: 0.5 },
-  submitLabel: { fontFamily: 'Archivo_800ExtraBold', fontSize: 14, letterSpacing: 1.96, color: colors.background },
+  submitLabel: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 14,
+    letterSpacing: 1.96,
+    color: colors.background,
+  },
 
-  error: { fontFamily: 'Archivo_600SemiBold', fontSize: 12, color: colors.primary, paddingHorizontal: 4 },
-  empty: { fontFamily: 'Archivo_400Regular', fontSize: 13, color: colors.onSurfaceMuted, paddingHorizontal: 4 },
+  error: {
+    fontFamily: 'Archivo_600SemiBold',
+    fontSize: 12,
+    color: colors.primary,
+    paddingHorizontal: 4,
+  },
+  empty: {
+    fontFamily: 'Archivo_400Regular',
+    fontSize: 13,
+    color: colors.onSurfaceMuted,
+    paddingHorizontal: 4,
+  },
 });

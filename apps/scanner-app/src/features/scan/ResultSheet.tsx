@@ -33,7 +33,13 @@ interface ResultSheetProps {
  * nothing spent yet) and `result` (an already-settled `checkIn` outcome —
  * admitted or denied, informational only, DISMISS is the only action).
  */
-export function ResultSheet({ result, pending, onDismiss, onAdmit, admitBusy }: ResultSheetProps): React.JSX.Element {
+export function ResultSheet({
+  result,
+  pending,
+  onDismiss,
+  onAdmit,
+  admitBusy,
+}: ResultSheetProps): React.JSX.Element {
   const visible = result !== null || pending !== undefined;
 
   if (pending !== undefined) {
@@ -57,15 +63,21 @@ export function ResultSheet({ result, pending, onDismiss, onAdmit, admitBusy }: 
             <View style={styles.grid}>
               <View style={styles.gridCell}>
                 <Text style={[styles.gridLabel, { color: colors.onSecondary }]}>GUEST</Text>
-                <Text style={[styles.gridValue, { color: colors.onSecondary }]}>{pending.holderName}</Text>
+                <Text style={[styles.gridValue, { color: colors.onSecondary }]}>
+                  {pending.holderName}
+                </Text>
               </View>
               <View style={styles.gridCell}>
                 <Text style={[styles.gridLabel, { color: colors.onSecondary }]}>TIER</Text>
-                <Text style={[styles.gridValue, { color: colors.onSecondary }]}>{pending.tierName}</Text>
+                <Text style={[styles.gridValue, { color: colors.onSecondary }]}>
+                  {pending.tierName}
+                </Text>
               </View>
               <View style={styles.gridCell}>
                 <Text style={[styles.gridLabel, { color: colors.onSecondary }]}>PAX</Text>
-                <Text style={[styles.gridValue, { color: colors.onSecondary }]}>{pending.scansAllowed}</Text>
+                <Text style={[styles.gridValue, { color: colors.onSecondary }]}>
+                  {pending.scansAllowed}
+                </Text>
               </View>
             </View>
             <View style={styles.twoActionRow}>
@@ -92,8 +104,13 @@ export function ResultSheet({ result, pending, onDismiss, onAdmit, admitBusy }: 
 
   const isAdmitted = result.status === 'consumed';
   const isDenied = result.status === 'denied';
-  const backgroundColor = isAdmitted ? colors.secondary : isDenied ? colors.tertiary : colors.primary;
-  const foregroundColor = isAdmitted || result.status === 'confirmation_required' ? colors.onSecondary : colors.onSurface;
+  const backgroundColor = isAdmitted
+    ? colors.secondary
+    : isDenied
+      ? colors.tertiary
+      : colors.primary;
+  const foregroundColor =
+    isAdmitted || result.status === 'confirmation_required' ? colors.onSecondary : colors.onSurface;
   const title = isAdmitted ? 'Admitted' : isDenied ? 'Entry Denied' : 'Couple Ticket';
   const guestName =
     result.status === 'consumed' || result.status === 'confirmation_required'
@@ -101,7 +118,7 @@ export function ResultSheet({ result, pending, onDismiss, onAdmit, admitBusy }: 
       : '—';
   const tierName =
     result.status === 'consumed' || result.status === 'confirmation_required'
-      ? result.entitlement.tierName ?? 'General'
+      ? (result.entitlement.tierName ?? 'General')
       : '—';
   // Reference's grid is always 3 columns (GUEST/TIER/PAX) regardless of
   // outcome — this branch only had 2, silently dropping PAX on every
@@ -124,7 +141,9 @@ export function ResultSheet({ result, pending, onDismiss, onAdmit, admitBusy }: 
           <View style={styles.topRow}>
             <View style={[styles.codePill, { borderColor: foregroundColor }]}>
               <Text style={[styles.codeLabel, { color: foregroundColor }]}>
-                {result.status === 'denied' ? result.denyReason.toUpperCase() : result.status.toUpperCase()}
+                {result.status === 'denied'
+                  ? result.denyReason.toUpperCase()
+                  : result.status.toUpperCase()}
               </Text>
             </View>
             <Text style={[styles.timeLabel, { color: foregroundColor }]}>

@@ -26,7 +26,10 @@ function readRawEnv(): { apiBaseUrl: unknown; appEnv: unknown; organizationId: s
   return {
     apiBaseUrl: extra?.['apiBaseUrl'],
     appEnv: extra?.['appEnv'],
-    organizationId: typeof rawOrganizationId === 'string' && rawOrganizationId.length > 0 ? rawOrganizationId : null,
+    organizationId:
+      typeof rawOrganizationId === 'string' && rawOrganizationId.length > 0
+        ? rawOrganizationId
+        : null,
   };
 }
 

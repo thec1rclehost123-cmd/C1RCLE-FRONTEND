@@ -17,7 +17,7 @@ peerDependencyRules:
   # version mismatch rather than downgrading jest repo-wide for one
   # dev-only watch-mode plugin.
   allowedVersions:
-    'jest-watch-typeahead>jest': '30'
+    "jest-watch-typeahead>jest": "30"
 
 onlyBuiltDependencies:
   - "@tailwindcss/oxide"

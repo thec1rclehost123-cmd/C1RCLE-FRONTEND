@@ -48,9 +48,24 @@ export const spacing = {
  * the reference (uppercase, condensed); Archivo is every other UI string.
  */
 export const typography = {
-  display: { fontFamily: 'Anton_400Regular', fontSize: 44, lineHeight: 40, textTransform: 'uppercase' as const },
-  displayLg: { fontFamily: 'Anton_400Regular', fontSize: 62, lineHeight: 56, textTransform: 'uppercase' as const },
-  headline: { fontFamily: 'Anton_400Regular', fontSize: 30, lineHeight: 28, textTransform: 'uppercase' as const },
+  display: {
+    fontFamily: 'Anton_400Regular',
+    fontSize: 44,
+    lineHeight: 40,
+    textTransform: 'uppercase' as const,
+  },
+  displayLg: {
+    fontFamily: 'Anton_400Regular',
+    fontSize: 62,
+    lineHeight: 56,
+    textTransform: 'uppercase' as const,
+  },
+  headline: {
+    fontFamily: 'Anton_400Regular',
+    fontSize: 30,
+    lineHeight: 28,
+    textTransform: 'uppercase' as const,
+  },
   statNumber: { fontFamily: 'Anton_400Regular', fontSize: 36, lineHeight: 40 },
   statNumberLg: { fontFamily: 'Anton_400Regular', fontSize: 72, lineHeight: 74 },
   body: { fontFamily: 'Archivo_400Regular', fontSize: 14, lineHeight: 20 },

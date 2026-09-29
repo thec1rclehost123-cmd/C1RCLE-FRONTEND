@@ -17,7 +17,11 @@ interface AccentSpec {
  * plain absolutely-positioned Views, no gradient/animation needed for
  * these (unlike Turntable), so no SVG dependency for this one.
  */
-export function ScatterAccents({ accents }: { readonly accents: readonly AccentSpec[] }): React.JSX.Element {
+export function ScatterAccents({
+  accents,
+}: {
+  readonly accents: readonly AccentSpec[];
+}): React.JSX.Element {
   return (
     <>
       {accents.map((accent, index) => (

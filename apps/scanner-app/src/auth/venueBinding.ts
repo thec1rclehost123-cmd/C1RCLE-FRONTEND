@@ -1,4 +1,3 @@
-
 import { getScannerEnv } from '@/config/env';
 import { getStoredItem, setStoredItem } from '@/storage/secureStorage';
 

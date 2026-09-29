@@ -47,9 +47,13 @@ export function GuestsIcon({ color }: { readonly color: string }): React.JSX.Ele
   return (
     <View style={styles.guestsWrap}>
       <View style={[styles.guestHead, { left: 3, top: 2, backgroundColor: color }]} />
-      <View style={[styles.guestHead, { left: 14, top: 2, backgroundColor: color, opacity: 0.6 }]} />
+      <View
+        style={[styles.guestHead, { left: 14, top: 2, backgroundColor: color, opacity: 0.6 }]}
+      />
       <View style={[styles.guestBody, { left: 0, width: 15, backgroundColor: color }]} />
-      <View style={[styles.guestBody, { left: 12, width: 14, backgroundColor: color, opacity: 0.6 }]} />
+      <View
+        style={[styles.guestBody, { left: 12, width: 14, backgroundColor: color, opacity: 0.6 }]}
+      />
     </View>
   );
 }

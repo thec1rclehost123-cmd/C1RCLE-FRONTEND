@@ -109,9 +109,9 @@ describe('VenueSharePanel', () => {
     await user.type(input, '30');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    await waitFor(() =>
-      { expect(setVenueShareMock).toHaveBeenCalledWith('org_venue', 'part_1', 30, expect.any(String)); },
-    );
+    await waitFor(() => {
+      expect(setVenueShareMock).toHaveBeenCalledWith('org_venue', 'part_1', 30, expect.any(String));
+    });
     expect(await screen.findByText('Saved')).toBeInTheDocument();
   });
 

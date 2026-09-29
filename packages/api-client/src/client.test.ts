@@ -351,4 +351,121 @@ describe('ApiClient', () => {
       vi.useRealTimers();
     }
   });
+
+  describe('openEventStream', () => {
+    const encoder = new TextEncoder();
+
+    function sseResponse(chunks: string[], closeAtEnd: boolean): Response {
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          for (const chunk of chunks) controller.enqueue(encoder.encode(chunk));
+          if (closeAtEnd) controller.close();
+        },
+      });
+      return new Response(stream, {
+        status: 200,
+        headers: { 'content-type': 'text/event-stream' },
+      });
+    }
+
+    /** Resolves when onClose fires. */
+    function collectStream(
+      fetchImpl: typeof fetch,
+      overrides: { signal?: AbortSignal } = {},
+    ): {
+      events: [string, string][];
+      closes: { reason: 'done' | 'error'; error?: unknown }[];
+      whenClosed: Promise<void>;
+    } {
+      const events: [string, string][] = [];
+      const closes: { reason: 'done' | 'error'; error?: unknown }[] = [];
+      const whenClosed = new Promise<void>((resolve) => {
+        clientWith(fetchImpl, overrides).openEventStream(
+          { path: '/stream' },
+          (event, data) => events.push([event, data]),
+          (reason, error) => {
+            closes.push({ reason, error });
+            resolve();
+          },
+        );
+      });
+      return { events, closes, whenClosed };
+    }
+
+    it('emits `event:`/`data:` frames, drops bare comment lines and reports `done`', async () => {
+      const fetchImpl = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(
+          sseResponse(
+            ['event: ping\ndata: {"x":1}\n\n: keep-alive\n\nevent: bye\ndata: end\n\n'],
+            true,
+          ),
+        );
+
+      const { events, closes, whenClosed } = collectStream(fetchImpl);
+      await whenClosed;
+
+      expect(events).toEqual([
+        ['ping', '{"x":1}'],
+        ['bye', 'end'],
+      ]);
+      expect(closes).toEqual([{ reason: 'done' }]);
+    });
+
+    it('surfaces a reader failure as an `error` close', async () => {
+      const stream = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          controller.error(new Error('boom'));
+        },
+      });
+      const fetchImpl = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response(stream, { status: 200 }));
+
+      const { closes, whenClosed } = collectStream(fetchImpl);
+      await whenClosed;
+
+      expect(closes[0]?.reason).toBe('error');
+    });
+
+    it('reports an `error` close when the response has no body', async () => {
+      const fetchImpl = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response(null, { status: 200 }));
+
+      const { closes, whenClosed } = collectStream(fetchImpl);
+      await whenClosed;
+
+      expect(closes[0]?.reason).toBe('error');
+    });
+
+    it('close() ends the read loop without firing onClose', async () => {
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode('event: ping\ndata: x\n\n'));
+        },
+      });
+      const fetchImpl = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response(stream, { status: 200 }));
+
+      const events: string[] = [];
+      const closes: string[] = [];
+      const controller = new AbortController();
+      const client = clientWith(fetchImpl);
+      const handle = client.openEventStream(
+        { path: '/stream', signal: controller.signal },
+        (event) => events.push(event),
+        (reason) => closes.push(reason),
+      );
+
+      // Let the first frame be delivered, then end the connection.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      handle.close();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(events).toEqual(['ping']);
+      expect(closes).toEqual([]);
+    });
+  });
 });

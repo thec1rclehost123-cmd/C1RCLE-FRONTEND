@@ -118,7 +118,13 @@ export default function WalletScreen(): React.JSX.Element {
         if (meta === null) {
           throw new Error('No active scanner session.');
         }
-        return chargeWallet({ eventId: meta.event.id, qrPayload, presetItemId, quantity: 1, idempotencyKey });
+        return chargeWallet({
+          eventId: meta.event.id,
+          qrPayload,
+          presetItemId,
+          quantity: 1,
+          idempotencyKey,
+        });
       })
       .then((result) => {
         showToast(`${label} · ${rupees(result.charged.amountPaise)} charged`);
@@ -235,7 +241,8 @@ export default function WalletScreen(): React.JSX.Element {
           ) : (
             <View style={styles.itemGrid}>
               {availableItems.map((item) => {
-                const tooExpensive = wallet.balancePaise !== null && item.amountPaise > wallet.balancePaise;
+                const tooExpensive =
+                  wallet.balancePaise !== null && item.amountPaise > wallet.balancePaise;
                 const disabled = busy || rateLimited || wallet.status !== 'active' || tooExpensive;
                 return (
                   <Pressable
@@ -282,7 +289,13 @@ export default function WalletScreen(): React.JSX.Element {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   container: { padding: 16, gap: 14 },
-  centered: { flex: 1, backgroundColor: colors.background, padding: 16, gap: 14, justifyContent: 'center' },
+  centered: {
+    flex: 1,
+    backgroundColor: colors.background,
+    padding: 16,
+    gap: 14,
+    justifyContent: 'center',
+  },
 
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   backButton: {
@@ -295,7 +308,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   backLabel: { color: colors.onSurface, fontSize: 16 },
-  title: { fontFamily: 'Anton_400Regular', fontSize: 34, lineHeight: 32, textTransform: 'uppercase', color: colors.onSurface },
+  title: {
+    fontFamily: 'Anton_400Regular',
+    fontSize: 34,
+    lineHeight: 32,
+    textTransform: 'uppercase',
+    color: colors.onSurface,
+  },
 
   viewfinder: {
     height: 300,
@@ -306,21 +325,84 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   camera: { flex: 1 },
-  frame: { position: 'absolute', left: '50%', top: '50%', width: 200, height: 200, marginLeft: -100, marginTop: -100 },
+  frame: {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    width: 200,
+    height: 200,
+    marginLeft: -100,
+    marginTop: -100,
+  },
   corner: { position: 'absolute', width: 40, height: 40, borderColor: colors.primary },
-  cornerTopLeft: { top: 0, left: 0, borderTopWidth: 4, borderLeftWidth: 4, borderTopLeftRadius: 18 },
-  cornerTopRight: { top: 0, right: 0, borderTopWidth: 4, borderRightWidth: 4, borderTopRightRadius: 18 },
-  cornerBottomLeft: { bottom: 0, left: 0, borderBottomWidth: 4, borderLeftWidth: 4, borderBottomLeftRadius: 18 },
-  cornerBottomRight: { bottom: 0, right: 0, borderBottomWidth: 4, borderRightWidth: 4, borderBottomRightRadius: 18 },
-  hint: { textAlign: 'center', fontFamily: 'Archivo_400Regular', fontSize: 12, color: colors.onSurfaceMuted },
+  cornerTopLeft: {
+    top: 0,
+    left: 0,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
+    borderTopLeftRadius: 18,
+  },
+  cornerTopRight: {
+    top: 0,
+    right: 0,
+    borderTopWidth: 4,
+    borderRightWidth: 4,
+    borderTopRightRadius: 18,
+  },
+  cornerBottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
+    borderBottomLeftRadius: 18,
+  },
+  cornerBottomRight: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
+    borderBottomRightRadius: 18,
+  },
+  hint: {
+    textAlign: 'center',
+    fontFamily: 'Archivo_400Regular',
+    fontSize: 12,
+    color: colors.onSurfaceMuted,
+  },
 
   walletCard: { borderRadius: 26, backgroundColor: colors.secondary, padding: 20 },
-  walletName: { fontFamily: 'Anton_400Regular', fontSize: 30, lineHeight: 30, textTransform: 'uppercase', color: colors.background },
-  walletBalance: { fontFamily: 'Anton_400Regular', fontSize: 52, lineHeight: 54, color: colors.background },
-  walletHidden: { fontFamily: 'Archivo_600SemiBold', fontSize: 14, color: colors.background, paddingVertical: 12 },
-  walletStatus: { fontFamily: 'Archivo_800ExtraBold', fontSize: 11, letterSpacing: 1.54, color: colors.background },
+  walletName: {
+    fontFamily: 'Anton_400Regular',
+    fontSize: 30,
+    lineHeight: 30,
+    textTransform: 'uppercase',
+    color: colors.background,
+  },
+  walletBalance: {
+    fontFamily: 'Anton_400Regular',
+    fontSize: 52,
+    lineHeight: 54,
+    color: colors.background,
+  },
+  walletHidden: {
+    fontFamily: 'Archivo_600SemiBold',
+    fontSize: 14,
+    color: colors.background,
+    paddingVertical: 12,
+  },
+  walletStatus: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 11,
+    letterSpacing: 1.54,
+    color: colors.background,
+  },
 
-  sectionLabel: { fontFamily: 'Archivo_700Bold', fontSize: 11, letterSpacing: 1.54, color: colors.onSurfaceMuted },
+  sectionLabel: {
+    fontFamily: 'Archivo_700Bold',
+    fontSize: 11,
+    letterSpacing: 1.54,
+    color: colors.onSurfaceMuted,
+  },
   itemGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   itemCard: {
     minWidth: '47%',
@@ -337,8 +419,19 @@ const styles = StyleSheet.create({
   itemAmount: { fontFamily: 'Anton_400Regular', fontSize: 26, color: colors.onSurface },
   itemNote: { fontFamily: 'Archivo_400Regular', fontSize: 11, color: colors.primary },
 
-  primaryButton: { height: 56, borderRadius: 999, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  primaryLabel: { fontFamily: 'Archivo_800ExtraBold', fontSize: 14, letterSpacing: 1.96, color: colors.background },
+  primaryButton: {
+    height: 56,
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryLabel: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 14,
+    letterSpacing: 1.96,
+    color: colors.background,
+  },
   secondaryButton: {
     height: 54,
     borderRadius: 999,
@@ -349,6 +442,11 @@ const styles = StyleSheet.create({
   },
   secondaryLabel: { fontFamily: 'Archivo_700Bold', fontSize: 14, color: colors.onSurface },
 
-  note: { fontFamily: 'Archivo_400Regular', fontSize: 13, color: colors.onSurfaceMuted, lineHeight: 18 },
+  note: {
+    fontFamily: 'Archivo_400Regular',
+    fontSize: 13,
+    color: colors.onSurfaceMuted,
+    lineHeight: 18,
+  },
   error: { fontFamily: 'Archivo_600SemiBold', fontSize: 12, color: colors.primary },
 });

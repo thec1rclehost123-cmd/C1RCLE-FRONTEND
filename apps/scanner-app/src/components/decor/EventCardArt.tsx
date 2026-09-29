@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
-import Svg, { ClipPath, Defs, Ellipse, G, Path, Polygon, RadialGradient, Stop } from 'react-native-svg';
+import Svg, {
+  ClipPath,
+  Defs,
+  Ellipse,
+  G,
+  Path,
+  Polygon,
+  RadialGradient,
+  Stop,
+} from 'react-native-svg';
 
 import { Turntable } from '@/components/decor/Turntable';
 import { colors } from '@/theme/tokens';
@@ -33,8 +42,19 @@ function Floaty({
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
-        Animated.timing(bob, { toValue: 1, duration: durationMs / 2, easing: Easing.inOut(Easing.ease), useNativeDriver: true, delay: delayMs }),
-        Animated.timing(bob, { toValue: 0, duration: durationMs / 2, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(bob, {
+          toValue: 1,
+          duration: durationMs / 2,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+          delay: delayMs,
+        }),
+        Animated.timing(bob, {
+          toValue: 0,
+          duration: durationMs / 2,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
       ]),
     );
     animation.start();
@@ -77,7 +97,13 @@ function Balloon({
             <Stop offset="100%" stopColor={to} />
           </RadialGradient>
         </Defs>
-        <Ellipse cx={width / 2} cy={height / 2} rx={width / 2} ry={height / 2} fill={`url(#${gradientId})`} />
+        <Ellipse
+          cx={width / 2}
+          cy={height / 2}
+          rx={width / 2}
+          ry={height / 2}
+          fill={`url(#${gradientId})`}
+        />
       </Svg>
       <View style={[styles.balloonKnot, { borderBottomColor: to }]} />
       <View style={[styles.balloonString, { height: stringHeight }]} />
@@ -85,7 +111,17 @@ function Balloon({
   );
 }
 
-function PartyHat({ width, stripeA, stripeB, pompom }: { readonly width: number; readonly stripeA: string; readonly stripeB: string; readonly pompom: string }): React.JSX.Element {
+function PartyHat({
+  width,
+  stripeA,
+  stripeB,
+  pompom,
+}: {
+  readonly width: number;
+  readonly stripeA: string;
+  readonly stripeB: string;
+  readonly pompom: string;
+}): React.JSX.Element {
   const height = width * 1.35;
   const pompomSize = width / 3;
   const stripe = width / 6;
@@ -112,7 +148,9 @@ function PartyHat({ width, stripeA, stripeB, pompom }: { readonly width: number;
       <Svg width={width} height={height + pompomSize / 2}>
         <Defs>
           <ClipPath id={clipId}>
-            <Polygon points={`${String(width / 2)},${String(pompomSize / 2)} ${String(width)},${String(height + pompomSize / 2)} 0,${String(height + pompomSize / 2)}`} />
+            <Polygon
+              points={`${String(width / 2)},${String(pompomSize / 2)} ${String(width)},${String(height + pompomSize / 2)} 0,${String(height + pompomSize / 2)}`}
+            />
           </ClipPath>
           <RadialGradient id={pompomId} cx="35%" cy="30%" r="70%">
             <Stop offset="0%" stopColor="#ffffff" />
@@ -124,7 +162,13 @@ function PartyHat({ width, stripeA, stripeB, pompom }: { readonly width: number;
         <G clipPath={`url(#${clipId})`}>
           <G transform={`rotate(-55 ${String(width / 2)} ${String(height / 2)})`}>{bands}</G>
         </G>
-        <Ellipse cx={width / 2} cy={pompomSize / 2} rx={pompomSize / 2} ry={pompomSize / 2} fill={`url(#${pompomId})`} />
+        <Ellipse
+          cx={width / 2}
+          cy={pompomSize / 2}
+          rx={pompomSize / 2}
+          ry={pompomSize / 2}
+          fill={`url(#${pompomId})`}
+        />
       </Svg>
     </View>
   );
@@ -158,10 +202,22 @@ export function EventCardArt({ variant }: { readonly variant: number }): React.J
     return (
       <View style={styles.slotBalloons} pointerEvents="none">
         <Floaty rotationDeg={-12} durationMs={5000} delayMs={1000}>
-          <Balloon width={42} from="#8a4a55" mid={colors.tertiary} to="#22070d" stringHeight={33.6} />
+          <Balloon
+            width={42}
+            from="#8a4a55"
+            mid={colors.tertiary}
+            to="#22070d"
+            stringHeight={33.6}
+          />
         </Floaty>
         <Floaty rotationDeg={10} durationMs={4500} delayMs={300}>
-          <Balloon width={56} from="#ff9d86" mid={colors.primary} to="#a42b13" stringHeight={44.8} />
+          <Balloon
+            width={56}
+            from="#ff9d86"
+            mid={colors.primary}
+            to="#a42b13"
+            stringHeight={44.8}
+          />
         </Floaty>
       </View>
     );
@@ -178,10 +234,20 @@ export function EventCardArt({ variant }: { readonly variant: number }): React.J
   return (
     <View style={styles.slotHats} pointerEvents="none">
       <Floaty rotationDeg={-24} durationMs={5000}>
-        <PartyHat width={32} stripeA={colors.secondary} stripeB={colors.background} pompom={colors.primary} />
+        <PartyHat
+          width={32}
+          stripeA={colors.secondary}
+          stripeB={colors.background}
+          pompom={colors.primary}
+        />
       </Floaty>
       <Floaty rotationDeg={18} durationMs={4000} delayMs={800}>
-        <PartyHat width={58} stripeA={colors.primary} stripeB={colors.onSurface} pompom={colors.secondary} />
+        <PartyHat
+          width={58}
+          stripeA={colors.primary}
+          stripeB={colors.onSurface}
+          pompom={colors.secondary}
+        />
       </Floaty>
     </View>
   );
@@ -190,9 +256,23 @@ export function EventCardArt({ variant }: { readonly variant: number }): React.J
 const styles = StyleSheet.create({
   centered: { alignItems: 'center' },
   slotRecord: { position: 'absolute', right: 14, top: 56 },
-  slotBalloons: { position: 'absolute', right: 22, top: 18, flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  slotBalloons: {
+    position: 'absolute',
+    right: 22,
+    top: 18,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
   slotDisc: { position: 'absolute', right: 18, top: 30 },
-  slotHats: { position: 'absolute', right: 30, top: 20, flexDirection: 'row', alignItems: 'flex-start', gap: 14 },
+  slotHats: {
+    position: 'absolute',
+    right: 30,
+    top: 20,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+  },
 
   recordRow: { flexDirection: 'row', alignItems: 'center' },
   sleeve: {

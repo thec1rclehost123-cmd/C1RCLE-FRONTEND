@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type LayoutChangeEvent,
+} from 'react-native';
 
 import { fetchMyOrganizations, login as loginRequest } from '@/api/scannerApiClient';
 import { notifyAuthStateChanged } from '@/auth/authState';
@@ -212,7 +219,9 @@ export default function LoginScreen(): React.JSX.Element {
       </View>
 
       <View style={styles.form}>
-        <Text style={styles.intro}>Sign in with your staff account to scan tickets and run the door.</Text>
+        <Text style={styles.intro}>
+          Sign in with your staff account to scan tickets and run the door.
+        </Text>
 
         <GalaTextInput
           label="STAFF ID OR PHONE"
@@ -256,9 +265,7 @@ export default function LoginScreen(): React.JSX.Element {
                 }}
               >
                 <Text style={styles.venueChoiceName}>{organization.name}</Text>
-                <Text style={styles.venueChoiceMeta}>
-                  {organization.role.toUpperCase()}
-                </Text>
+                <Text style={styles.venueChoiceMeta}>{organization.role.toUpperCase()}</Text>
               </Pressable>
             ))}
           </View>
@@ -316,7 +323,9 @@ export default function LoginScreen(): React.JSX.Element {
             // same staff-ID+password fields — a dead affordance identical
             // to the primary button. Say so honestly instead of faking a
             // path that doesn't exist yet.
-            setError('Gate access codes aren’t available yet — sign in with your staff account above.');
+            setError(
+              'Gate access codes aren’t available yet — sign in with your staff account above.',
+            );
           }}
         >
           <Text style={styles.gateCodeLabel}>Use a gate access code</Text>

@@ -15,16 +15,29 @@ interface SplitButtonProps {
  * not a centered label. Distinct enough from `GalaButton`'s plain pill to
  * warrant its own component rather than another `GalaButton` variant.
  */
-export function SplitButton({ label, onPress, disabled = false, loading = false }: SplitButtonProps): React.JSX.Element {
+export function SplitButton({
+  label,
+  onPress,
+  disabled = false,
+  loading = false,
+}: SplitButtonProps): React.JSX.Element {
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled || loading}
-      style={({ pressed }) => [styles.base, (disabled || loading) && styles.disabled, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.base,
+        (disabled || loading) && styles.disabled,
+        pressed && styles.pressed,
+      ]}
     >
       <Text style={styles.label}>{label}</Text>
       <View style={styles.arrowCircle}>
-        {loading ? <ActivityIndicator color={colors.primary} size="small" /> : <Text style={styles.arrow}>→</Text>}
+        {loading ? (
+          <ActivityIndicator color={colors.primary} size="small" />
+        ) : (
+          <Text style={styles.arrow}>→</Text>
+        )}
       </View>
     </Pressable>
   );

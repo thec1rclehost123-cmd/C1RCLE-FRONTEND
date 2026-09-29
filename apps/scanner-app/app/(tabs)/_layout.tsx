@@ -53,7 +53,11 @@ function CircleTabBar({ state, navigation }: BottomTabBarProps): React.JSX.Eleme
                 if (route === undefined) {
                   return;
                 }
-                const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+                const event = navigation.emit({
+                  type: 'tabPress',
+                  target: route.key,
+                  canPreventDefault: true,
+                });
                 if (!focused && !event.defaultPrevented) {
                   navigation.navigate(route.name);
                 }
@@ -76,7 +80,10 @@ export default function TabsLayout(): React.JSX.Element {
     <View style={styles.root}>
       <ToastHost />
       <AppScreenHeader />
-      <Tabs screenOptions={{ headerShown: false, sceneStyle: styles.scene }} tabBar={(props) => <CircleTabBar {...props} />}>
+      <Tabs
+        screenOptions={{ headerShown: false, sceneStyle: styles.scene }}
+        tabBar={(props) => <CircleTabBar {...props} />}
+      >
         {TABS.map((tab) => (
           <Tabs.Screen key={tab.name} name={tab.name} />
         ))}

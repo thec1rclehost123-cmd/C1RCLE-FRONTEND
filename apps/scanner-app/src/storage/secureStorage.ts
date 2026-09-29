@@ -57,7 +57,11 @@ export function getStoredItem(key: string, scope: StorageScope = 'device'): Prom
   return SecureStore.getItemAsync(key);
 }
 
-export function setStoredItem(key: string, value: string, scope: StorageScope = 'device'): Promise<void> {
+export function setStoredItem(
+  key: string,
+  value: string,
+  scope: StorageScope = 'device',
+): Promise<void> {
   if (Platform.OS === 'web') {
     try {
       webStorage(scope)?.setItem(key, value);

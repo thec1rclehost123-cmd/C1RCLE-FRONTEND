@@ -140,7 +140,8 @@ export default function StatsScreen(): React.JSX.Element {
 
   const inside = stats?.occupancy.inside ?? 0;
   const capacity = stats?.occupancy.capacity ?? null;
-  const percent = capacity !== null && capacity > 0 ? Math.min(100, Math.round((inside / capacity) * 100)) : 0;
+  const percent =
+    capacity !== null && capacity > 0 ? Math.min(100, Math.round((inside / capacity) * 100)) : 0;
   const doorHeads = derived?.doorHeads ?? 0;
   const scannedTickets = Math.max(0, inside - doorHeads);
 
@@ -155,7 +156,9 @@ export default function StatsScreen(): React.JSX.Element {
         <Text style={styles.heroLabel}>CHECKED IN</Text>
         <Text style={styles.heroValue}>{inside}</Text>
         <Text style={styles.heroMeta}>
-          {capacity === null ? 'capacity not set' : `of ${String(capacity)} capacity · ${String(percent)}%`}
+          {capacity === null
+            ? 'capacity not set'
+            : `of ${String(capacity)} capacity · ${String(percent)}%`}
         </Text>
         <View style={styles.progressTrack}>
           <View style={[styles.progressFill, { width: percentWidth(percent) }]} />
@@ -211,8 +214,12 @@ export default function StatsScreen(): React.JSX.Element {
 
       <View style={styles.card}>
         <Text style={styles.cardLabel}>TAKEN AT THE DOOR</Text>
-        <Text style={styles.takenValue}>₹{((derived?.takenPaise ?? 0) / 100).toLocaleString('en-IN')}</Text>
-        <Text style={styles.qualifier}>Walk-in and dine-in entries. Excludes pre-sold tickets.</Text>
+        <Text style={styles.takenValue}>
+          ₹{((derived?.takenPaise ?? 0) / 100).toLocaleString('en-IN')}
+        </Text>
+        <Text style={styles.qualifier}>
+          Walk-in and dine-in entries. Excludes pre-sold tickets.
+        </Text>
       </View>
     </ScrollView>
   );
@@ -222,26 +229,79 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   container: { padding: 16, paddingBottom: 110, gap: 10 },
   titleBlock: { paddingHorizontal: 4, paddingBottom: 4 },
-  title: { fontFamily: 'Anton_400Regular', fontSize: 44, lineHeight: 40, textTransform: 'uppercase', color: colors.onSurface },
-  subtitle: { fontFamily: 'Archivo_400Regular', fontSize: 13, color: colors.onSurfaceMuted, marginTop: 6 },
+  title: {
+    fontFamily: 'Anton_400Regular',
+    fontSize: 44,
+    lineHeight: 40,
+    textTransform: 'uppercase',
+    color: colors.onSurface,
+  },
+  subtitle: {
+    fontFamily: 'Archivo_400Regular',
+    fontSize: 13,
+    color: colors.onSurfaceMuted,
+    marginTop: 6,
+  },
 
-  hero: { position: 'relative', borderRadius: 28, backgroundColor: colors.primary, padding: 20, overflow: 'hidden' },
-  heroLabel: { fontFamily: 'Archivo_800ExtraBold', fontSize: 11, letterSpacing: 1.54, color: colors.background },
+  hero: {
+    position: 'relative',
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    padding: 20,
+    overflow: 'hidden',
+  },
+  heroLabel: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 11,
+    letterSpacing: 1.54,
+    color: colors.background,
+  },
   // Reference: line-height:1 on a 72px face = 72, not 74.
-  heroValue: { fontFamily: 'Anton_400Regular', fontSize: 72, lineHeight: 72, color: colors.background },
+  heroValue: {
+    fontFamily: 'Anton_400Regular',
+    fontSize: 72,
+    lineHeight: 72,
+    color: colors.background,
+  },
   heroMeta: { fontFamily: 'Archivo_600SemiBold', fontSize: 13, color: colors.background },
-  progressTrack: { height: 8, borderRadius: 999, backgroundColor: 'rgba(11,10,10,0.25)', marginTop: 14, overflow: 'hidden' },
+  progressTrack: {
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(11,10,10,0.25)',
+    marginTop: 14,
+    overflow: 'hidden',
+  },
   progressFill: { height: '100%', borderRadius: 999, backgroundColor: colors.background },
   heroDisc: { position: 'absolute', right: 20, top: 20 },
 
   pairRow: { flexDirection: 'row', gap: 10 },
   ticketsCard: { flex: 1, borderRadius: 22, backgroundColor: colors.secondary, padding: 16 },
-  ticketsLabel: { fontFamily: 'Archivo_800ExtraBold', fontSize: 11, letterSpacing: 1.54, color: colors.background },
-  ticketsValue: { fontFamily: 'Anton_400Regular', fontSize: 36, lineHeight: 40, color: colors.background },
+  ticketsLabel: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 11,
+    letterSpacing: 1.54,
+    color: colors.background,
+  },
+  ticketsValue: {
+    fontFamily: 'Anton_400Regular',
+    fontSize: 36,
+    lineHeight: 40,
+    color: colors.background,
+  },
   ticketsMeta: { fontFamily: 'Archivo_600SemiBold', fontSize: 12, color: colors.background },
   doorCard: { flex: 1, borderRadius: 22, backgroundColor: colors.tertiary, padding: 16 },
-  doorLabel: { fontFamily: 'Archivo_800ExtraBold', fontSize: 11, letterSpacing: 1.54, color: colors.onTertiary },
-  doorValue: { fontFamily: 'Anton_400Regular', fontSize: 36, lineHeight: 40, color: colors.onSurface },
+  doorLabel: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 11,
+    letterSpacing: 1.54,
+    color: colors.onTertiary,
+  },
+  doorValue: {
+    fontFamily: 'Anton_400Regular',
+    fontSize: 36,
+    lineHeight: 40,
+    color: colors.onSurface,
+  },
   doorMeta: { fontFamily: 'Archivo_600SemiBold', fontSize: 12, color: colors.onTertiary },
 
   card: {
@@ -253,11 +313,26 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  cardLabel: { fontFamily: 'Archivo_700Bold', fontSize: 11, letterSpacing: 1.54, color: colors.onSurfaceMuted },
-  unavailable: { fontFamily: 'Archivo_400Regular', fontSize: 12, color: colors.onSurfaceFaint, lineHeight: 17 },
+  cardLabel: {
+    fontFamily: 'Archivo_700Bold',
+    fontSize: 11,
+    letterSpacing: 1.54,
+    color: colors.onSurfaceMuted,
+  },
+  unavailable: {
+    fontFamily: 'Archivo_400Regular',
+    fontSize: 12,
+    color: colors.onSurfaceFaint,
+    lineHeight: 17,
+  },
   qualifier: { fontFamily: 'Archivo_400Regular', fontSize: 11, color: colors.onSurfaceFaint },
 
-  takenValue: { fontFamily: 'Anton_400Regular', fontSize: 36, lineHeight: 40, color: colors.onSurface },
+  takenValue: {
+    fontFamily: 'Anton_400Regular',
+    fontSize: 36,
+    lineHeight: 40,
+    color: colors.onSurface,
+  },
 
   tripleRow: { flexDirection: 'row', gap: 10 },
   smallCard: {
@@ -268,7 +343,12 @@ const styles = StyleSheet.create({
     borderColor: colors.surfaceRaised,
     padding: 14,
   },
-  smallLabel: { fontFamily: 'Archivo_700Bold', fontSize: 10, letterSpacing: 1.2, color: colors.onSurfaceMuted },
+  smallLabel: {
+    fontFamily: 'Archivo_700Bold',
+    fontSize: 10,
+    letterSpacing: 1.2,
+    color: colors.onSurfaceMuted,
+  },
   smallValue: { fontFamily: 'Anton_400Regular', fontSize: 26, color: colors.onSurface },
   smallValueAlert: { color: colors.primary },
 });

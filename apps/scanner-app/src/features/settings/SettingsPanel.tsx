@@ -5,7 +5,10 @@ import { notifyAuthStateChanged } from '@/auth/authState';
 import { clearSession } from '@/auth/scannerSession';
 import { clearStaffSession, getStaffUser } from '@/auth/staffAuth';
 import { ScatterAccents } from '@/components/decor/ScatterAccents';
-import { setScannerPreference, useScannerPreferences } from '@/features/settings/scannerPreferences';
+import {
+  setScannerPreference,
+  useScannerPreferences,
+} from '@/features/settings/scannerPreferences';
 import { colors } from '@/theme/tokens';
 
 /**
@@ -29,9 +32,25 @@ const PROFILE_ACCENTS = [
 
 /** The reference's 50x30 pill switch (`padding:3px`, 24px thumb) — RN's
  * `Switch` renders a platform control that looks nothing like it. */
-function Toggle({ value, onPress, disabled = false }: { readonly value: boolean; readonly onPress: () => void; readonly disabled?: boolean }): React.JSX.Element {
+function Toggle({
+  value,
+  onPress,
+  disabled = false,
+}: {
+  readonly value: boolean;
+  readonly onPress: () => void;
+  readonly disabled?: boolean;
+}): React.JSX.Element {
   return (
-    <Pressable onPress={onPress} disabled={disabled} style={[styles.toggle, value ? styles.toggleOn : styles.toggleOff, disabled && styles.toggleDisabled]}>
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={[
+        styles.toggle,
+        value ? styles.toggleOn : styles.toggleOff,
+        disabled && styles.toggleDisabled,
+      ]}
+    >
       <View style={[styles.toggleThumb, value && styles.toggleThumbOn]} />
     </Pressable>
   );
@@ -53,7 +72,11 @@ function SettingRow({
   readonly last?: boolean;
 }): React.JSX.Element {
   return (
-    <Pressable onPress={onPress} disabled={disabled} style={[styles.row, !last && styles.rowDivider]}>
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={[styles.row, !last && styles.rowDivider]}
+    >
       <View style={styles.rowText}>
         <Text style={styles.rowLabel}>{label}</Text>
         <Text style={styles.rowSub}>{sub}</Text>
@@ -198,7 +221,13 @@ export function SettingsPanel(): React.JSX.Element {
 
 const styles = StyleSheet.create({
   titleBlock: { paddingHorizontal: 4 },
-  title: { fontFamily: 'Anton_400Regular', fontSize: 44, lineHeight: 40, textTransform: 'uppercase', color: colors.onSurface },
+  title: {
+    fontFamily: 'Anton_400Regular',
+    fontSize: 44,
+    lineHeight: 40,
+    textTransform: 'uppercase',
+    color: colors.onSurface,
+  },
 
   profileCard: {
     position: 'relative',
@@ -220,7 +249,13 @@ const styles = StyleSheet.create({
   },
   avatarLabel: { fontFamily: 'Anton_400Regular', fontSize: 24, color: colors.background },
   profileText: { flex: 1 },
-  profileName: { fontFamily: 'Anton_400Regular', fontSize: 22, lineHeight: 23, textTransform: 'uppercase', color: colors.onSurface },
+  profileName: {
+    fontFamily: 'Anton_400Regular',
+    fontSize: 22,
+    lineHeight: 23,
+    textTransform: 'uppercase',
+    color: colors.onSurface,
+  },
   profileMeta: { fontFamily: 'Archivo_600SemiBold', fontSize: 12, color: colors.onTertiary },
 
   sectionLabel: {
@@ -241,9 +276,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.surfaceRaised,
   },
-  segment: { flex: 1, height: 40, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  segment: {
+    flex: 1,
+    height: 40,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   segmentActive: { backgroundColor: colors.onSurface },
-  segmentLabel: { fontFamily: 'Archivo_800ExtraBold', fontSize: 12, letterSpacing: 0.72, color: colors.onSurfaceMuted },
+  segmentLabel: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 12,
+    letterSpacing: 0.72,
+    color: colors.onSurfaceMuted,
+  },
   segmentLabelActive: { color: colors.background },
 
   card: {
@@ -253,7 +299,13 @@ const styles = StyleSheet.create({
     borderColor: colors.surfaceRaised,
     overflow: 'hidden',
   },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
   rowDivider: { borderBottomWidth: 1, borderBottomColor: colors.surfaceRaised },
   rowText: { flex: 1 },
   rowLabel: { fontFamily: 'Archivo_700Bold', fontSize: 14, color: colors.onSurface },
@@ -293,6 +345,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 4,
   },
-  logoutLabel: { fontFamily: 'Archivo_800ExtraBold', fontSize: 14, letterSpacing: 1.96, color: colors.primary },
-  footNote: { textAlign: 'center', fontFamily: 'Archivo_400Regular', fontSize: 11, letterSpacing: 0.88, color: colors.onSurfaceFaint },
+  logoutLabel: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 14,
+    letterSpacing: 1.96,
+    color: colors.primary,
+  },
+  footNote: {
+    textAlign: 'center',
+    fontFamily: 'Archivo_400Regular',
+    fontSize: 11,
+    letterSpacing: 0.88,
+    color: colors.onSurfaceFaint,
+  },
 });

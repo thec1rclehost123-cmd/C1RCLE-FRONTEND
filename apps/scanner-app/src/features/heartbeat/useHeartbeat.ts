@@ -24,6 +24,8 @@ export function useHeartbeat(): void {
       // failed heartbeat has nothing actionable for the user to do.
       void sendHeartbeat().catch(() => undefined);
     }, HEARTBEAT_INTERVAL_MS);
-    return () => { clearInterval(interval); };
+    return () => {
+      clearInterval(interval);
+    };
   }, []);
 }

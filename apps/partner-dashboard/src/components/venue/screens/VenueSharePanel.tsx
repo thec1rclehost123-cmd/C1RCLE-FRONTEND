@@ -152,9 +152,7 @@ export function VenueSharePanel() {
           nextRate,
           idempotencyKey,
         );
-        setPartnerships((current) =>
-          current.map((row) => (row.id === updated.id ? updated : row)),
-        );
+        setPartnerships((current) => current.map((row) => (row.id === updated.id ? updated : row)));
         setDrafts((current) => ({ ...current, [updated.id]: toDraft(updated.venueShareRate) }));
         setSavedId(updated.id);
       } catch {
@@ -185,8 +183,8 @@ export function VenueSharePanel() {
   return (
     <>
       <p className={styles['shareIntro']}>
-        The venue share is deducted from every ticket sale before the host is paid. Leave it blank to
-        decline a share — the whole amount then goes to the host.
+        The venue share is deducted from every ticket sale before the host is paid. Leave it blank
+        to decline a share — the whole amount then goes to the host.
       </p>
       <div
         className={classNames(styles['partnerTable'], styles['shareTable'])}

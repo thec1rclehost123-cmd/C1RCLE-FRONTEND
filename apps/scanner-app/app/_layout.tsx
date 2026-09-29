@@ -1,6 +1,4 @@
-import {
-  Anton_400Regular,
-} from '@expo-google-fonts/anton';
+import { Anton_400Regular } from '@expo-google-fonts/anton';
 import {
   Archivo_400Regular,
   Archivo_500Medium,
@@ -84,13 +82,20 @@ export default function RootLayout(): React.JSX.Element {
 
   if (!fontsLoaded) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: colors.background,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <ActivityIndicator color={colors.primary} />
       </View>
     );
   }
 
-  const targetRoute = state === 'checking' ? null : ROUTE_BY_STATE[state] ?? '/login';
+  const targetRoute = state === 'checking' ? null : (ROUTE_BY_STATE[state] ?? '/login');
   // Only issue a Redirect while we're actually NOT on the target route yet.
   // Rendering <Redirect> unconditionally for the lifetime of the matched
   // route re-fires router.replace() on every layout re-render (any
@@ -102,7 +107,7 @@ export default function RootLayout(): React.JSX.Element {
   // screen (every tab under `active_session`), and comparing against only
   // the single default landing route forced a redirect back to it from
   // every other one.
-  const satisfiedPrefixes = state === 'checking' ? [] : SATISFIED_PREFIXES[state] ?? [];
+  const satisfiedPrefixes = state === 'checking' ? [] : (SATISFIED_PREFIXES[state] ?? []);
   const alreadyThere = satisfiedPrefixes.some((prefix) => pathname.startsWith(prefix));
 
   return (
