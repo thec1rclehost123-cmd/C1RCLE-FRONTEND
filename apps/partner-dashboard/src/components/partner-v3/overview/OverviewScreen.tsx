@@ -124,7 +124,6 @@ export function OverviewScreen({
   readonly studio?: 'venue' | 'host';
   readonly organizationId?: string | null;
 }) {
-
   return (
     <div
       className={[styles['overview'], accent === 'lavender' ? styles['accentLavender'] : '']
