@@ -8,20 +8,56 @@ import { Button } from '@/components/partner-v3/Button';
 
 import styles from './calendar.module.css';
 
+import type { CreateVenueBlockInput } from '@/lib/calendar/venue-calendar-repository';
+
 const reasons = ['Private event', 'Maintenance', 'Other'] as const;
 const hours = Array.from({ length: 12 }, (_, index) => String(index + 1));
 const minutes = ['00', '15', '30', '45'];
 
+/** Converts 12-hour picker values to a zero-padded 24-hour HH:MM string. */
+function to24Hour(hour: string, minute: string, period: 'AM' | 'PM'): string {
+  let h = Number.parseInt(hour, 10);
+  if (period === 'AM' && h === 12) h = 0;
+  if (period === 'PM' && h !== 12) h += 12;
+  return `${String(h).padStart(2, '0')}:${minute}`;
+}
+
+/**
+ * Builds an ISO 8601 datetime from a month key (YYYY-MM), a day number,
+ * and an HH:MM string. The month key is the canonical `CalendarMonth.key`
+ * (e.g. "2026-07"), so the result is always a real calendar date prefix.
+ */
+function toIso(monthKey: string, day: string, hhmm: string): string {
+  const paddedDay = String(Number.parseInt(day, 10) || 1).padStart(2, '0');
+  const normalisedMonth = /^\d{4}-\d{2}$/.test(monthKey) ? monthKey : '2026-07';
+  return `${normalisedMonth}-${paddedDay}T${hhmm}:00.000Z`;
+}
+
+/** Shifts a month-key day by `delta` days, rolling across month boundaries. */
+function addDays(monthKey: string, day: number, delta: number): string {
+  const [year, month] = monthKey.split('-').map(Number);
+  return new Date(Date.UTC(year ?? 2026, (month ?? 1) - 1, day + delta)).toISOString().slice(0, 10);
+}
+
 export function BlockDateDialog({
   day,
   dateLabel,
+  monthKey,
+  selectedDate,
   onClose,
+  onBlock,
 }: {
   readonly day: number;
   readonly dateLabel: string;
+  readonly monthKey: string;
+  /** Full YYYY-MM-DD of the currently selected day — keeps the picker in sync. */
+  readonly selectedDate?: string | undefined;
   readonly onClose: () => void;
+  /** When provided, the "Block date" button is active and calls this on submit. */
+  readonly onBlock?: ((input: CreateVenueBlockInput) => Promise<void>) | undefined;
 }) {
-  const [blockDay, setBlockDay] = useState(String(day));
+  const initialDay = selectedDate?.slice(8, 10).replace(/^0/, '') ?? String(day);
+  const [blockDay, setBlockDay] = useState(initialDay);
   const [fromHour, setFromHour] = useState('7');
   const [fromMinute, setFromMinute] = useState('00');
   const [fromPeriod, setFromPeriod] = useState<'AM' | 'PM'>('PM');
@@ -30,6 +66,49 @@ export function BlockDateDialog({
   const [toPeriod, setToPeriod] = useState<'AM' | 'PM'>('PM');
   const [reason, setReason] = useState<(typeof reasons)[number]>('Private event');
   const [customReason, setCustomReason] = useState('');
+  /** Overnight blocks run past midnight — the end time lands on the next day. */
+  const [overnight, setOvernight] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const canSubmit = Boolean(onBlock) && !submitting;
+
+  async function handleSubmit() {
+    if (!onBlock) return;
+    const dayNumber = Number.parseInt(blockDay, 10);
+    if (!Number.isFinite(dayNumber) || dayNumber < 1 || dayNumber > 31) {
+      setSubmitError('Enter a valid day of the month (1–31).');
+      return;
+    }
+    const startHhmm = to24Hour(fromHour, fromMinute, fromPeriod);
+    const endHhmm = to24Hour(toHour, toMinute, toPeriod);
+    if (!overnight && endHhmm <= startHhmm) {
+      setSubmitError(
+        'End time must be after start time, or switch on "Ends next day" for an overnight block.',
+      );
+      return;
+    }
+    const label = reason === 'Other' && customReason.trim() ? customReason.trim() : reason;
+
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await onBlock({
+        reason: label,
+        date: toIso(monthKey, String(dayNumber), '00:00').slice(0, 10),
+        from: startHhmm,
+        to: endHhmm,
+      });
+      onClose();
+    } catch (err: unknown) {
+      setSubmitError(
+        err instanceof Error ? err.message : 'Something went wrong. Please try again.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <div className={styles['dialogRoot']} role="presentation">
       <button
@@ -82,6 +161,24 @@ export function BlockDateDialog({
             onMinuteChange={setToMinute}
             onPeriodChange={setToPeriod}
           />
+          <div>
+            <div className={styles['reasonOptions']}>
+              <button
+                type="button"
+                aria-pressed={overnight}
+                onClick={() => {
+                  setOvernight((value) => !value);
+                }}
+              >
+                Ends next day
+              </button>
+            </div>
+            {overnight && Number.isFinite(Number.parseInt(blockDay, 10)) ? (
+              <p className={styles['unavailableNote']}>
+                Runs overnight — ends {addDays(monthKey, Number.parseInt(blockDay, 10), 1)}.
+              </p>
+            ) : null}
+          </div>
           <fieldset>
             <legend>Reason</legend>
             <div className={styles['reasonOptions']}>
@@ -109,20 +206,28 @@ export function BlockDateDialog({
             ) : null}
           </fieldset>
         </div>
-        <p className={styles['unavailableNote']}>
-          Calendar changes are unavailable until the connected availability service is enabled.
-        </p>
+        {submitError ? (
+          <p className={styles['blockError']} role="alert">
+            {submitError}
+          </p>
+        ) : !onBlock ? (
+          <p className={styles['unavailableNote']}>
+            Calendar changes are unavailable until the connected availability service is enabled.
+          </p>
+        ) : null}
         <footer>
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>
             Cancel
           </Button>
           <Button
             type="button"
             variant="primary"
-            disabled
-            title="Blocking a date requires the calendar mutation API"
+            disabled={!canSubmit}
+            onClick={() => {
+              void handleSubmit();
+            }}
           >
-            Block date
+            {submitting ? 'Blocking…' : 'Block date'}
           </Button>
         </footer>
       </section>

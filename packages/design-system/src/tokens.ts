@@ -25,6 +25,8 @@ export const semanticColors = [
   'destructive-foreground',
   'success',
   'warning',
+  'urgent',
+  'urgent-foreground',
 ] as const;
 
 export type SemanticColor = (typeof semanticColors)[number];

@@ -272,7 +272,9 @@ export function HelpClient() {
               {submitError}
             </p>
           ) : null}
-          {submittedId !== null ? <p className="text-sm text-emerald-300">Request received. Track it below.</p> : null}
+          {submittedId !== null ? (
+            <p className="text-sm text-emerald-300">Request received. Track it below.</p>
+          ) : null}
         </div>
       </section>
 

@@ -82,7 +82,7 @@ interface AuthContextValue {
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
-  switchPartner: (partnerId: string) => Promise<void>;
+  switchPartner: (partnerId: string) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -168,7 +168,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
         // resolve explicitly.
         const [only, ...rest] = resolvedMemberships;
         if (!activeOrgId && only && rest.length === 0) {
-          await setActiveOrg(only.partnerId);
+          setActiveOrg(only.partnerId);
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- real unmount-race guard; see the comment on `lifecycle` above.
           if (!lifecycle.cancelled) setActiveOrgIdState(only.partnerId);
         }
@@ -189,7 +189,12 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- activeOrgId is read, not a trigger; re-running per active-org change would refetch the whole membership list for no reason.
   }, [session.isLoading, session.isAuthenticated, session.user?.id]);
 
-  const isApproved = onboardingRequest?.status === 'approved';
+  // An approved account stops appearing in `/onboarding/me` (approved requests
+  // are excluded from OPEN_STATUSES server-side), so `status === 'approved'`
+  // alone can never flip this true for a fully provisioned user — they'd be
+  // bounced back to `/onboard` forever. A resolved membership list is the
+  // reliable signal that onboarding already succeeded.
+  const isApproved = onboardingRequest?.status === 'approved' || memberships.length > 0;
   // No `isBanned` concept exists in V2 yet — see the file-level comment.
   const isBanned = false;
   const onboardingStatus = onboardingRequest?.status ?? null;
@@ -217,8 +222,8 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     await logout();
   }, []);
 
-  const switchPartner = useCallback(async (partnerId: string) => {
-    await setActiveOrg(partnerId);
+  const switchPartner = useCallback((partnerId: string) => {
+    setActiveOrg(partnerId);
     window.location.reload();
   }, []);
 
@@ -236,7 +241,8 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     [orgAccess],
   );
 
-  const loading = session.isLoading || (session.isAuthenticated && dataLoading);
+  const loading =
+    session.isLoading || (session.isAuthenticated && (dataLoading || orgAccess.isLoading));
 
   const authContextValue = useMemo<AuthContextValue>(() => {
     const activeMembership: PartnerMembership | null =

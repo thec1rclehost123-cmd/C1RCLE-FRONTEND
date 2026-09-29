@@ -27,14 +27,18 @@ export function HostMarketingScreen({ initialTab = 'compose' }: { readonly initi
             <button
               type="button"
               className={tab === 'compose' ? styles['active'] : undefined}
-              onClick={() => { setTab('compose'); }}
+              onClick={() => {
+                setTab('compose');
+              }}
             >
               Compose
             </button>
             <button
               type="button"
               className={tab === 'history' ? styles['active'] : undefined}
-              onClick={() => { setTab('history'); }}
+              onClick={() => {
+                setTab('history');
+              }}
             >
               Campaign history
             </button>
@@ -84,7 +88,9 @@ function HostCompose() {
                 key={item}
                 type="button"
                 className={channel === item ? styles['channelActive'] : styles['channelBtn']}
-                onClick={() => { setChannel(item); }}
+                onClick={() => {
+                  setChannel(item);
+                }}
               >
                 {item}
               </button>
@@ -102,11 +108,18 @@ function HostCompose() {
               className={styles['messageArea']}
               value={message}
               maxLength={320}
-              onChange={(event) => { setMessage(event.target.value); }}
+              onChange={(event) => {
+                setMessage(event.target.value);
+              }}
             />
             <div className={styles['messageMeta']}>
               <div className={styles['fieldBtns']}>
-                <button type="button" onClick={() => { insertField('first_name'); }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    insertField('first_name');
+                  }}
+                >
                   First name
                 </button>
               </div>
@@ -131,7 +144,13 @@ function HostCompose() {
 
         <div className={styles['actions']}>
           <span />
-          <button type="button" className={styles['launchBtn']} onClick={() => { setNotice(true); }}>
+          <button
+            type="button"
+            className={styles['launchBtn']}
+            onClick={() => {
+              setNotice(true);
+            }}
+          >
             Schedule message
           </button>
         </div>
@@ -178,13 +197,17 @@ function HostCampaignHistory() {
             type="search"
             value={query}
             placeholder="Search campaigns"
-            onChange={(event) => { setQuery(event.target.value); }}
+            onChange={(event) => {
+              setQuery(event.target.value);
+            }}
           />
         </label>
         <select
           aria-label="Channel"
           value={channel}
-          onChange={(event) => { setChannel(event.target.value); }}
+          onChange={(event) => {
+            setChannel(event.target.value);
+          }}
         >
           <option>All channels</option>
           {CHANNELS.map((item) => (

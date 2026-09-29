@@ -19,7 +19,7 @@ import type { NextRequest } from 'next/server';
  * the client's Firebase JS SDK `signInWithPhoneNumber` flow, GCP Identity
  * Platform-backed; see `C1RCLE-BACKEND`'s `firebase-phone-verifier.ts`).
  *
- * **Session-scoped, unlike `otp/send`/`otp/verify`.** This route requires an
+ * **Session-scoped, like `otp/send`/`otp/verify`.** This route requires an
  * existing account (it forwards the session cookie and checks CSRF, same as
  * `refresh`) — the gateway's `verify-document` route resolves the applicant
  * from the session, it does not accept an anonymous caller. If the signup

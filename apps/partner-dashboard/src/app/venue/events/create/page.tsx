@@ -1,9 +1,9 @@
-import { CreateEventScreen } from '@/components/venue/screens/CreateEventScreen';
+import { redirect } from 'next/navigation';
 
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = { title: 'Create event · Venue Studio' };
 
 export default function VenueCreateEventPage() {
-  return <CreateEventScreen />;
+  redirect('/partner/venue/events/create');
 }

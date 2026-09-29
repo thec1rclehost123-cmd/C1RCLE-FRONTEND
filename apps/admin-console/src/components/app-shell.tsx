@@ -75,7 +75,12 @@ function initials(value: string): string {
   const local = value.split('@')[0] ?? value;
   const parts = local.split(/[._-]+/).filter(Boolean);
   const letters = parts.length > 1 ? [parts[0]?.[0], parts[1]?.[0]] : [local[0], local[1]];
-  return letters.filter((letter): letter is string => Boolean(letter)).join('').toUpperCase() || 'C1';
+  return (
+    letters
+      .filter((letter): letter is string => Boolean(letter))
+      .join('')
+      .toUpperCase() || 'C1'
+  );
 }
 
 export function AppShell({
@@ -144,16 +149,13 @@ export function AppShell({
       ) : null}
 
       <aside
-        aria-label="Primary"
         className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-background transition-transform lg:sticky lg:top-0 lg:h-dvh lg:translate-x-0 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-4">
           <Link href="/" onClick={closeMobileNav} className="flex items-center gap-2.5">
-            <span
-              className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground shadow-[0_0_20px_-4px_var(--color-primary)]"
-            >
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground shadow-[0_0_20px_-4px_var(--color-primary)]">
               C1
             </span>
             <span className="flex flex-col leading-none">
@@ -173,7 +175,7 @@ export function AppShell({
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
+        <nav aria-label="Primary" className="flex-1 overflow-y-auto px-3 py-4">
           {NAV_SECTIONS.map((section) => (
             <div key={section.label} className="mb-5">
               <p className="mb-1.5 px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -260,7 +262,11 @@ export function AppShell({
               aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
               className="rounded-sm p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
             >
-              {isDark ? <LightModeIcon size={17} aria-hidden="true" /> : <DarkModeIcon size={17} aria-hidden="true" />}
+              {isDark ? (
+                <LightModeIcon size={17} aria-hidden="true" />
+              ) : (
+                <DarkModeIcon size={17} aria-hidden="true" />
+              )}
             </button>
             <button
               type="button"

@@ -6,6 +6,7 @@ export {
   setSession,
   clearSession,
   markAnonymous,
+  markHydrated,
 } from './session-store.js';
 export type { SessionState, SessionStatus } from './session-store.js';
 

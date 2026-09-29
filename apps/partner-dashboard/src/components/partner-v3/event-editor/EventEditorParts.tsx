@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { useState } from 'react';
 
+import { canSelectEventDate } from './event-date-selection';
 import styles from './event-editor.module.css';
 
 import type {
@@ -73,10 +74,7 @@ export function EventPosterUploader({
               </button>
             ))}
           </div>
-          <span>
-            Uploaded artwork is a local draft preview only and is not saved until a backend publish
-            flow is available.
-          </span>
+          <span>Uploaded posters are saved to the event when you publish it.</span>
         </div>
       </div>
     </section>
@@ -120,7 +118,7 @@ export function EventBasicDetails({
             placeholder="e.g. Neon Nights: Afrobeats Edition"
           />
         </div>
-        <div className={styles['twoColumns']}>
+        <div className={styles['threeColumns']}>
           <div className={styles['field']}>
             <label htmlFor="event-date">
               Date {editMode ? <span aria-label="Date locked"> · locked</span> : null}
@@ -138,6 +136,21 @@ export function EventBasicDetails({
                 update({ time: event.target.value });
               }}
               disabled={editMode}
+              placeholder="e.g. 9:00 PM"
+            />
+          </div>
+          <div className={styles['field']}>
+            <label htmlFor="event-end-time">
+              End time {editMode ? <span aria-label="Time locked"> · locked</span> : null}
+            </label>
+            <input
+              id="event-end-time"
+              value={draft.endTime ?? ''}
+              onChange={(event) => {
+                update({ endTime: event.target.value });
+              }}
+              disabled={editMode}
+              placeholder="e.g. 3:00 AM"
             />
           </div>
         </div>
@@ -265,8 +278,8 @@ export function EventDateTimeSection({
   readonly selectedDate: string;
   readonly selectedSlotId?: string;
   readonly editorRole: 'venue' | 'host';
-  readonly onDate: (day: CalendarDay) => void;
-  readonly onSlot: (slotId: string, label: string) => void;
+  readonly onDate: (day: { readonly date: string; readonly day: number }) => void;
+  readonly onSlot?: (id: string, label: string) => void;
 }) {
   const selectedMonthIndex = months.findIndex((month) =>
     month.days.some((day) => day.date === selectedDate),
@@ -330,13 +343,13 @@ export function EventDateTimeSection({
               className={[
                 styles['calendarDay'],
                 day.date === selectedDate ? styles['calendarDaySelected'] : '',
-                day.state !== 'available' ? styles['calendarDayBooked'] : '',
+                !canSelectEventDate(day.state, editorRole) ? styles['calendarDayBooked'] : '',
               ]
                 .filter(Boolean)
                 .join(' ')}
               key={day.date}
               type="button"
-              disabled={day.state !== 'available'}
+              disabled={!canSelectEventDate(day.state, editorRole)}
               onClick={() => {
                 onDate(day);
               }}
@@ -372,9 +385,11 @@ export function EventDateTimeSection({
           Pending
         </span>
       </div>
-      {editorRole === 'host' && selectedDate ? (
+      {editorRole === 'host' && selectedDate && onSlot ? (
         <div className={styles['slotList']}>
-          <div className={styles['muted']}>Available time slots</div>
+          <div className={styles['muted']}>
+            Select a venue time window (or set custom start &amp; end time in Basics &amp; tickets)
+          </div>
           {(month.days.find((day) => day.date === selectedDate)?.slots ?? []).map((slot) => (
             <button
               className={[
@@ -406,6 +421,7 @@ export function TicketTierEditor({
   readonly tiers: readonly EventEditorTicketTier[];
   readonly onChange: (tiers: readonly EventEditorTicketTier[]) => void;
 }) {
+  const [benefitInputs, setBenefitInputs] = useState<Record<string, string>>({});
   const soldOut = tiers.reduce((total, tier) => total + tier.price * tier.quantity, 0);
   const updateTier = (id: string, values: Partial<EventEditorTicketTier>) => {
     onChange(tiers.map((tier) => (tier.id === id ? { ...tier, ...values } : tier)));
@@ -420,42 +436,410 @@ export function TicketTierEditor({
       </div>
       <div className={styles['ticketList']}>
         {tiers.map((tier) => (
-          <div className={styles['ticketRow']} key={tier.id}>
-            <input
-              aria-label={`${tier.name} name`}
-              value={tier.name}
-              onChange={(event) => {
-                updateTier(tier.id, { name: event.target.value });
-              }}
-              placeholder="Tier name"
-            />
-            <input
-              aria-label={`${tier.name} price`}
-              inputMode="numeric"
-              value={String(tier.price)}
-              onChange={(event) => {
-                updateTier(tier.id, { price: numberValue(event.target.value) });
-              }}
-            />
-            <input
-              aria-label={`${tier.name} quantity`}
-              inputMode="numeric"
-              value={String(tier.quantity)}
-              onChange={(event) => {
-                updateTier(tier.id, { quantity: numberValue(event.target.value) });
-              }}
-            />
-            <span className={styles['ticketGross']}>{formatMoney(tier.price * tier.quantity)}</span>
-            <button
-              className={styles['ticketRemove']}
-              type="button"
-              aria-label={`Remove ${tier.name}`}
-              onClick={() => {
-                onChange(tiers.filter((item) => item.id !== tier.id));
-              }}
-            >
-              ×
-            </button>
+          <div className={styles['ticketCard']} key={tier.id}>
+            <div className={styles['ticketRow']}>
+              <label className={styles['tierFieldLabel']}>
+                <span>Tier Name</span>
+                <input
+                  aria-label={`${tier.name} type of ticket`}
+                  list={`tier-presets-${tier.id}`}
+                  value={tier.name}
+                  onChange={(event) => {
+                    updateTier(tier.id, { name: event.target.value });
+                  }}
+                  placeholder="Type or select name"
+                />
+                <datalist id={`tier-presets-${tier.id}`}>
+                  <option value="General Admission" />
+                  <option value="Early Bird" />
+                  <option value="Phase 1" />
+                  <option value="Phase 2" />
+                  <option value="VIP" />
+                  <option value="VVIP" />
+                  <option value="Female Entry" />
+                  <option value="Couple Entry" />
+                  <option value="Table / Cabana" />
+                </datalist>
+              </label>
+              {tier.accessType !== 'RSVP' ? (
+                <label className={styles['tierFieldLabel']}>
+                  <span>Price (₹)</span>
+                  <input
+                    aria-label={`${tier.name} price`}
+                    inputMode="numeric"
+                    value={String(tier.price)}
+                    onChange={(event) => {
+                      updateTier(tier.id, { price: numberValue(event.target.value) });
+                    }}
+                    placeholder="Price"
+                  />
+                </label>
+              ) : (
+                <div className={styles['tierFieldLabel']}>Free RSVP</div>
+              )}
+              <label className={styles['tierFieldLabel']}>
+                <span>Capacity</span>
+                <input
+                  aria-label={`${tier.name} capacity`}
+                  inputMode="numeric"
+                  value={String(tier.quantity)}
+                  onChange={(event) => {
+                    updateTier(tier.id, { quantity: numberValue(event.target.value) });
+                  }}
+                  placeholder="Capacity"
+                />
+              </label>
+              {tier.accessType !== 'RSVP' ? (
+                <div className={styles['tierFieldLabel']}>
+                  <span>Tier Gross</span>
+                  <span className={styles['ticketGross']}>
+                    {formatMoney(tier.price * tier.quantity)}
+                  </span>
+                </div>
+              ) : null}
+              <button
+                className={styles['ticketRemove']}
+                type="button"
+                aria-label={`Remove ${tier.name}`}
+                onClick={() => {
+                  onChange(tiers.filter((item) => item.id !== tier.id));
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <details className={styles['details']}>
+              <summary className={styles['summary']}>
+                <span className={styles['summaryHeader']}>
+                  <span>Ticket options</span>
+                  <span className={styles['summaryBadge']}>
+                    {tier.accessType ?? 'ENTRY'} · {tier.audienceType ?? 'GENERAL'}
+                  </span>
+                </span>
+                <span className={styles['summaryIcon']}>▼</span>
+              </summary>
+              <div className={styles['detailsBody']}>
+                <div className={styles['ticketOptions']}>
+                  <label>
+                    Ticket type / access
+                    <select
+                      aria-label="Ticket type / access"
+                      value={tier.accessType ?? 'ENTRY'}
+                      onChange={(event) => {
+                        const accessType = event.target
+                          .value as EventEditorTicketTier['accessType'];
+                        updateTier(
+                          tier.id,
+                          accessType === 'RSVP'
+                            ? {
+                                accessType,
+                                price: 0,
+                                doorPrice: undefined,
+                                pricingPhases: [],
+                                commissionEligible: false,
+                              }
+                            : {
+                                accessType,
+                                price: tier.price > 0 ? tier.price : 1000,
+                                commissionEligible: true,
+                              },
+                        );
+                      }}
+                    >
+                      {['ENTRY', 'VIP', 'VVIP', 'TABLE', 'PACKAGE', 'RSVP'].map((value) => (
+                        <option key={value} value={value}>
+                          {value}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Audience
+                    <select
+                      aria-label="Audience"
+                      value={tier.audienceType ?? 'GENERAL'}
+                      onChange={(event) => {
+                        updateTier(tier.id, {
+                          audienceType: event.target.value as EventEditorTicketTier['audienceType'],
+                        });
+                      }}
+                    >
+                      {['GENERAL', 'MALE', 'FEMALE', 'COUPLE', 'GROUP'].map((value) => (
+                        <option key={value} value={value}>
+                          {value}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Guests
+                    <input
+                      aria-label="Guests"
+                      type="number"
+                      min="1"
+                      value={String(tier.guestCount ?? 1)}
+                      onChange={(event) => {
+                        updateTier(tier.id, { guestCount: numberValue(event.target.value) });
+                      }}
+                    />
+                  </label>
+                  {tier.accessType !== 'RSVP' ? (
+                    <label>
+                      Door price (₹)
+                      <input
+                        aria-label="Door price (₹)"
+                        type="number"
+                        min="0"
+                        value={tier.doorPrice != null ? String(tier.doorPrice) : ''}
+                        onChange={(event) => {
+                          updateTier(tier.id, {
+                            doorPrice:
+                              event.target.value === ''
+                                ? undefined
+                                : numberValue(event.target.value),
+                          });
+                        }}
+                      />
+                    </label>
+                  ) : null}
+                  <label>
+                    Benefits
+                    <input
+                      aria-label="Benefits"
+                      value={benefitInputs[tier.id] ?? (tier.benefits ?? []).join(', ')}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setBenefitInputs((current) => ({ ...current, [tier.id]: value }));
+                        updateTier(tier.id, {
+                          benefits: value
+                            .split(',')
+                            .map((item) => item.trim())
+                            .filter(Boolean),
+                        });
+                      }}
+                      placeholder="Entry, Drinks"
+                    />
+                  </label>
+                  <label>
+                    Max per user
+                    <input
+                      aria-label="Max per user"
+                      type="number"
+                      min="1"
+                      value={tier.maxPerUser != null ? String(tier.maxPerUser) : ''}
+                      onChange={(event) => {
+                        updateTier(tier.id, {
+                          maxPerUser:
+                            event.target.value === '' ? undefined : numberValue(event.target.value),
+                        });
+                      }}
+                    />
+                  </label>
+                </div>
+                {tier.accessType === 'TABLE' ? (
+                  <div className={[styles['ticketOptions'], styles['tableOptions']].join(' ')}>
+                    <label>
+                      Table capacity
+                      <input
+                        aria-label="Table capacity"
+                        type="number"
+                        min="1"
+                        value={String(tier.tableConfig?.capacity ?? 1)}
+                        onChange={(event) => {
+                          updateTier(tier.id, {
+                            tableConfig: {
+                              capacity: numberValue(event.target.value),
+                              minimumSpendPaise: tier.tableConfig?.minimumSpendPaise ?? 0,
+                              redeemableAmountPaise: tier.tableConfig?.redeemableAmountPaise ?? 0,
+                              tableCount: tier.tableConfig?.tableCount ?? tier.quantity,
+                            },
+                          });
+                        }}
+                      />
+                    </label>
+                    <label>
+                      Minimum spend (₹)
+                      <input
+                        aria-label="Minimum spend (₹)"
+                        type="number"
+                        min="0"
+                        value={String((tier.tableConfig?.minimumSpendPaise ?? 0) / 100)}
+                        onChange={(event) => {
+                          updateTier(tier.id, {
+                            tableConfig: {
+                              capacity: tier.tableConfig?.capacity ?? 1,
+                              minimumSpendPaise: numberValue(event.target.value) * 100,
+                              redeemableAmountPaise: tier.tableConfig?.redeemableAmountPaise ?? 0,
+                              tableCount: tier.tableConfig?.tableCount ?? tier.quantity,
+                            },
+                          });
+                        }}
+                      />
+                    </label>
+                    <label>
+                      Redeemable (₹)
+                      <input
+                        aria-label="Redeemable (₹)"
+                        type="number"
+                        min="0"
+                        value={String((tier.tableConfig?.redeemableAmountPaise ?? 0) / 100)}
+                        onChange={(event) => {
+                          updateTier(tier.id, {
+                            tableConfig: {
+                              capacity: tier.tableConfig?.capacity ?? 1,
+                              minimumSpendPaise: tier.tableConfig?.minimumSpendPaise ?? 0,
+                              redeemableAmountPaise: numberValue(event.target.value) * 100,
+                              tableCount: tier.tableConfig?.tableCount ?? tier.quantity,
+                            },
+                          });
+                        }}
+                      />
+                    </label>
+                  </div>
+                ) : null}
+                {tier.accessType !== 'RSVP' ? (
+                  <div className={styles['pricingPhasesBlock']}>
+                    <div className={styles['pricingPhasesHeader']}>
+                      <div className={styles['cardTitle']}>Pricing phases</div>
+                      <span className={styles['pricingPhasesSub']}>
+                        Optional — use when the price changes by date
+                      </span>
+                    </div>
+                    {(tier.pricingPhases ?? []).length > 0 ? (
+                      <div className={styles['phaseList']}>
+                        {(tier.pricingPhases ?? []).map((phase) => (
+                          <div className={styles['phaseRow']} key={phase.id}>
+                            <div className={styles['phaseField']}>
+                              <label
+                                htmlFor={`phase-name-${phase.id}`}
+                                className={styles['phaseLabel']}
+                              >
+                                Phase name
+                              </label>
+                              <input
+                                id={`phase-name-${phase.id}`}
+                                aria-label={`${phase.name} phase name`}
+                                value={phase.name}
+                                onChange={(event) => {
+                                  updateTier(tier.id, {
+                                    pricingPhases: (tier.pricingPhases ?? []).map((item) =>
+                                      item.id === phase.id
+                                        ? { ...item, name: event.target.value }
+                                        : item,
+                                    ),
+                                  });
+                                }}
+                              />
+                            </div>
+                            <div className={styles['phaseField']}>
+                              <label
+                                htmlFor={`phase-price-${phase.id}`}
+                                className={styles['phaseLabel']}
+                              >
+                                Price (₹)
+                              </label>
+                              <input
+                                id={`phase-price-${phase.id}`}
+                                aria-label={`${phase.name} phase price`}
+                                type="number"
+                                min="0"
+                                value={String(phase.priceInPaise / 100)}
+                                onChange={(event) => {
+                                  updateTier(tier.id, {
+                                    pricingPhases: (tier.pricingPhases ?? []).map((item) =>
+                                      item.id === phase.id
+                                        ? {
+                                            ...item,
+                                            priceInPaise: numberValue(event.target.value) * 100,
+                                          }
+                                        : item,
+                                    ),
+                                  });
+                                }}
+                              />
+                            </div>
+                            <div className={styles['phaseField']}>
+                              <label
+                                htmlFor={`phase-start-${phase.id}`}
+                                className={styles['phaseLabel']}
+                              >
+                                Start date (DD-MM)
+                              </label>
+                              <input
+                                id={`phase-start-${phase.id}`}
+                                aria-label={`${phase.name} phase start date`}
+                                placeholder="DD-MM"
+                                inputMode="numeric"
+                                maxLength={5}
+                                value={phase.startDate}
+                                onChange={(event) => {
+                                  updateTier(tier.id, {
+                                    pricingPhases: (tier.pricingPhases ?? []).map((item) =>
+                                      item.id === phase.id
+                                        ? { ...item, startDate: event.target.value }
+                                        : item,
+                                    ),
+                                  });
+                                }}
+                              />
+                            </div>
+                            <div className={styles['phaseField']}>
+                              <label
+                                htmlFor={`phase-end-${phase.id}`}
+                                className={styles['phaseLabel']}
+                              >
+                                End date (DD-MM)
+                              </label>
+                              <input
+                                id={`phase-end-${phase.id}`}
+                                aria-label={`${phase.name} phase end date`}
+                                placeholder="DD-MM"
+                                inputMode="numeric"
+                                maxLength={5}
+                                value={phase.endDate}
+                                onChange={(event) => {
+                                  updateTier(tier.id, {
+                                    pricingPhases: (tier.pricingPhases ?? []).map((item) =>
+                                      item.id === phase.id
+                                        ? { ...item, endDate: event.target.value }
+                                        : item,
+                                    ),
+                                  });
+                                }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                    <button
+                      className={styles['outlineButton']}
+                      type="button"
+                      onClick={() => {
+                        const index = (tier.pricingPhases ?? []).length + 1;
+                        updateTier(tier.id, {
+                          pricingPhases: [
+                            ...(tier.pricingPhases ?? []),
+                            {
+                              id: `phase-${String(index)}`,
+                              name: `Phase ${String(index)}`,
+                              priceInPaise: tier.price * 100,
+                              startDate: '',
+                              endDate: '',
+                              quantity: null,
+                            },
+                          ],
+                        });
+                      }}
+                    >
+                      + Add pricing phase
+                    </button>
+                  </div>
+                ) : (
+                  <p>RSVP tickets have no price, phases, or commission.</p>
+                )}
+              </div>
+            </details>
           </div>
         ))}
       </div>
@@ -484,8 +868,11 @@ export function EventAdvancedSettings({
 }) {
   return (
     <details className={[styles['card'], styles['details']].join(' ')}>
-      <summary>
-        ⚙ Advanced setup <span className={styles['muted']}>Promoters, tables & promo codes</span>
+      <summary className={styles['summary']}>
+        <span>
+          ⚙ Advanced setup <span className={styles['muted']}>Tables & promo codes</span>
+        </span>
+        <span className={styles['summaryIcon']}>▼</span>
       </summary>
       <div className={styles['detailsBody']}>
         <div>
@@ -509,7 +896,7 @@ export function EventAdvancedSettings({
                   update({ tableType: value as EventEditorDraft['tableType'] });
                 }}
               >
-                {label}
+                <strong>{label}</strong>
                 <span>{sub}</span>
               </button>
             ))}
@@ -557,16 +944,6 @@ export function EventAdvancedSettings({
             + Add code
           </button>
         </div>
-        <div>
-          <div className={styles['cardTitle']}>Dynamic pricing</div>
-          <div className={styles['muted']}>
-            Auto-adjust price by inventory position — reward early buyers, capture last-call demand.
-          </div>
-          <div className={styles['selectedContext']}>
-            <span>{draft.pricingRule}</span>
-            <span>Read-only rule preview</span>
-          </div>
-        </div>
       </div>
     </details>
   );
@@ -582,19 +959,101 @@ export function EventPromoterSelector({
   readonly update: DraftUpdate;
 }) {
   const selected = new Set(draft.selectedPromoterIds);
+  const paidTiers = draft.ticketTiers.filter((tier) => tier.accessType !== 'RSVP');
+  const hasPaidTiers = paidTiers.length > 0;
+  const tierCommissions = draft.tierCommissions ?? {};
   const toggle = (id: string) => {
+    const next = selected.has(id)
+      ? draft.selectedPromoterIds.filter((item) => item !== id)
+      : [...draft.selectedPromoterIds, id];
+    update({ selectedPromoterIds: next });
+  };
+  const setPromoterOverride = (promoterId: string, enabled: boolean) => {
+    const next = { ...(draft.promoterOverrides ?? {}) };
+    if (enabled) {
+      if (draft.compensation === 'standard') {
+        next[promoterId] = { default: draft.commissionRate };
+      } else if (draft.compensation === 'custom') {
+        next[promoterId] = { ...tierCommissions };
+      } else {
+        next[promoterId] = { default: draft.salaryAmount ?? 0 };
+      }
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+      delete next[promoterId];
+    }
+    update({ promoterOverrides: next });
+  };
+
+  const updatePromoterOverride = (promoterId: string, key: string, val: number) => {
+    const current = draft.promoterOverrides?.[promoterId] ?? {};
+    const nextOverrides = {
+      ...(draft.promoterOverrides ?? {}),
+      [promoterId]: {
+        ...current,
+        [key]: val,
+      },
+    };
+    update({ promoterOverrides: nextOverrides });
+  };
+
+  const selectModel = (model: EventEditorDraft['compensation']) => {
+    if (model === draft.compensation) return;
+    if (
+      draft.compensation === 'custom' &&
+      Object.keys(tierCommissions).length &&
+      // eslint-disable-next-line no-alert
+      !window.confirm('All custom commission mappings will be deleted and replaced. Continue?')
+    )
+      return;
+    if (
+      draft.compensation === 'salary' &&
+      // eslint-disable-next-line no-alert
+      !window.confirm('Salary-based payout settings will be removed. Continue?')
+    )
+      return;
     update({
-      selectedPromoterIds: selected.has(id)
-        ? draft.selectedPromoterIds.filter((item) => item !== id)
-        : [...draft.selectedPromoterIds, id],
+      compensation: model,
+      ...(model !== 'custom' ? { tierCommissions: {} } : {}),
+      ...(model !== 'salary' ? { salaryAmount: 0, salaryNotes: '' } : {}),
     });
   };
+  const gross = paidTiers.reduce((total, tier) => total + tier.price * tier.quantity, 0);
+
+  const calculatePromoterCommission = (promoterId: string): number => {
+    const override = draft.promoterOverrides?.[promoterId];
+    if (draft.compensation === 'standard') {
+      const rate = override?.['default'] ?? draft.commissionRate;
+      return (gross * rate) / 100;
+    }
+    if (draft.compensation === 'custom') {
+      return paidTiers.reduce((total, tier) => {
+        const rate = override?.[tier.id] ?? tierCommissions[tier.id] ?? 0;
+        return total + (tier.price * tier.quantity * rate) / 100;
+      }, 0);
+    }
+    return 0;
+  };
+
+  const commission = draft.selectedPromoterIds.length
+    ? draft.selectedPromoterIds.reduce((sum, id) => sum + calculatePromoterCommission(id), 0) /
+      draft.selectedPromoterIds.length
+    : draft.compensation === 'standard'
+      ? (gross * draft.commissionRate) / 100
+      : draft.compensation === 'custom'
+        ? paidTiers.reduce(
+            (total, tier) =>
+              total + (tier.price * tier.quantity * (tierCommissions[tier.id] ?? 0)) / 100,
+            0,
+          )
+        : 0;
   return (
     <div className={styles['formColumn']}>
       <section className={styles['card']}>
         <div className={styles['cardTitle']}>Promoters on this event</div>
         <p className={styles['muted']}>
-          Turn on to assign partnered promoters and set how they’re paid.
+          Select from your connected promoters. The first promoter uses Standard Commission at 15%
+          by default.
         </p>
         <div className={styles['promoterList']}>
           {data.promoters.map((promoter) => (
@@ -611,99 +1070,319 @@ export function EventPromoterSelector({
                 toggle(promoter.id);
               }}
             >
-              <span className={styles['check']}>{selected.has(promoter.id) ? '✓' : ''}</span>
+              <span className={styles['promoterAvatar']} aria-hidden="true">
+                {promoter.initials || initialsFor(promoter.name)}
+              </span>
               <span className={styles['promoterIdentity']}>
                 <strong>{promoter.name}</strong>
-                <span>{promoter.role}</span>
               </span>
+              <span className={styles['check']}>{selected.has(promoter.id) ? '✓' : ''}</span>
             </button>
           ))}
         </div>
+        {!data.promoters.length ? (
+          <p className={styles['muted']}>
+            No connected promoters. You can publish without compensation.
+          </p>
+        ) : null}
       </section>
-      <section className={styles['card']}>
-        <div className={styles['cardTitle']}>Compensation model</div>
-        <div className={styles['compGrid']}>
-          {[
-            ['standard', 'Global commission', 'One rate across ticket tiers'],
-            ['custom', 'Per-tier commission', 'Different rates by tier'],
-            ['salary', 'Salary', 'Paid outside the platform'],
-          ].map(([value, label, sub]) => (
-            <button
-              className={[
-                styles['compChoice'],
-                draft.compensation === value ? styles['compChoiceSelected'] : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              key={value}
-              type="button"
-              onClick={() => {
-                update({ compensation: value as EventEditorDraft['compensation'] });
-              }}
-            >
-              <strong>{label}</strong>
-              <span>{sub}</span>
-            </button>
-          ))}
-        </div>
-        {draft.compensation === 'salary' ? (
-          <div className={[styles['field'], styles['salaryField']].join(' ')}>
-            <label htmlFor="salary-notes">Salary notes</label>
-            <textarea
-              id="salary-notes"
-              value={draft.salaryNotes}
-              onChange={(event) => {
-                update({ salaryNotes: event.target.value });
-              }}
-              placeholder="e.g. All ticket sales are covered under promoter salary."
-            />
-          </div>
-        ) : (
-          <div className={styles['rateField']}>
-            <input
-              aria-label="Commission rate"
-              inputMode="decimal"
-              value={String(draft.commissionRate)}
-              onChange={(event) => {
-                update({ commissionRate: numberValue(event.target.value) });
-              }}
-            />
-            <span>% commission</span>
-          </div>
-        )}
-      </section>
-      <section className={styles['card']}>
-        <div className={styles['cardTitle']}>Revenue preview</div>
-        <div className={styles['reviewRows']}>
-          <div className={styles['reviewRow']}>
-            <span>Gross ticket value</span>
-            <strong>
-              {formatMoney(
-                draft.ticketTiers.reduce((total, tier) => total + tier.price * tier.quantity, 0),
-              )}
-            </strong>
-          </div>
-          <div className={styles['reviewRow']}>
-            <span>
-              {draft.compensation === 'salary'
-                ? 'Ticket commission (salaried)'
-                : 'Promoter commission'}
-            </span>
-            <strong>
-              {draft.compensation === 'salary'
-                ? '—'
-                : formatMoney(
-                    (draft.ticketTiers.reduce(
-                      (total, tier) => total + tier.price * tier.quantity,
-                      0,
-                    ) *
-                      draft.commissionRate) /
-                      100,
-                  )}
-            </strong>
-          </div>
-        </div>
-      </section>
+      {data.promoters.length && !hasPaidTiers ? (
+        <p className={styles['muted']}>RSVP tickets do not have promoter commission.</p>
+      ) : null}
+      {data.promoters.length && hasPaidTiers ? (
+        <>
+          <section className={styles['card']}>
+            <div className={styles['cardTitle']}>Promoter Compensation</div>
+            <p className={styles['muted']}>
+              Only one promoter compensation model can be used per event.
+            </p>
+            <div className={styles['compGrid']}>
+              {[
+                ['standard', 'Standard Commission', 'One percentage for every ticket tier'],
+                ['custom', 'Custom Commission', 'A commission for each ticket tier'],
+                ['salary', 'Salary Based', 'Promoters are paid outside the platform'],
+              ].map(([value, label, sub]) => (
+                <button
+                  className={[
+                    styles['compChoice'],
+                    draft.compensation === value ? styles['compChoiceSelected'] : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  key={value}
+                  type="button"
+                  onClick={() => {
+                    selectModel(value as EventEditorDraft['compensation']);
+                  }}
+                >
+                  <strong>{label}</strong>
+                  <span>{sub}</span>
+                </button>
+              ))}
+            </div>
+            {draft.compensation === 'standard' ? (
+              <div className={styles['field']}>
+                <label htmlFor="global-commission">Global Commission (%)</label>
+                <div className={styles['rateField']}>
+                  <input
+                    id="global-commission"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={String(draft.commissionRate)}
+                    onChange={(event) => {
+                      update({ commissionRate: numberValue(event.target.value) });
+                    }}
+                  />
+                  <span>%</span>
+                </div>
+                <span className={styles['muted']}>
+                  New ticket tiers automatically inherit this percentage.
+                </span>
+              </div>
+            ) : null}
+            {draft.compensation === 'custom' ? (
+              <div>
+                <p className={styles['customTierSubtext']}>
+                  Every ticket tier needs a commission. 0% is allowed.
+                </p>
+                <div className={styles['customTierList']}>
+                  {paidTiers.map((tier) => (
+                    <div className={styles['customTierRow']} key={tier.id}>
+                      <span className={styles['customTierName']}>{tier.name}</span>
+                      <div className={styles['customRateField']}>
+                        <input
+                          id={`commission-${tier.id}`}
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="1"
+                          placeholder="Required"
+                          aria-label={`${tier.name} commission percentage`}
+                          value={tierCommissions[tier.id] ?? ''}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            const next = { ...tierCommissions };
+                            if (value === '') {
+                              // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+                              delete next[tier.id];
+                            } else next[tier.id] = numberValue(value);
+                            update({ tierCommissions: next });
+                          }}
+                        />
+                        <span>%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {draft.compensation === 'salary' ? (
+              <div className={styles['field']}>
+                <label htmlFor="salary-amount">Salary amount (₹)</label>
+                <input
+                  id="salary-amount"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={draft.salaryAmount ?? ''}
+                  onChange={(event) => {
+                    update({ salaryAmount: numberValue(event.target.value) });
+                  }}
+                />
+                <label htmlFor="salary-period">Salary basis</label>
+                <select
+                  id="salary-period"
+                  value={draft.salaryPeriod}
+                  onChange={(event) => {
+                    update({
+                      salaryPeriod: event.target.value,
+                    });
+                  }}
+                >
+                  <option value="per_event">Per event</option>
+                  <option value="per_day">Per day</option>
+                  <option value="per_month">Per month</option>
+                </select>
+                <label htmlFor="salary-notes">Salary notes</label>
+                <textarea
+                  id="salary-notes"
+                  value={draft.salaryNotes}
+                  onChange={(event) => {
+                    update({ salaryNotes: event.target.value });
+                  }}
+                  placeholder="All ticket sales are covered under promoter salary."
+                />
+                <p className={styles['muted']}>
+                  Ticket commissions are disabled. Promoters receive this fixed payout.
+                </p>
+              </div>
+            ) : null}
+            <div className={styles['overrideSection']}>
+              <div className={styles['cardTitle']}>Promoter Overrides</div>
+              <p className={styles['muted']}>
+                Each promoter uses Event Default unless you enable a custom override.
+              </p>
+              <div className={styles['overrideList']}>
+                {!draft.selectedPromoterIds.length ? (
+                  <p className={styles['muted']}>
+                    Select at least one promoter in &quot;Promoters on this event&quot; above to set
+                    custom promoter overrides.
+                  </p>
+                ) : null}
+                {draft.selectedPromoterIds.map((promoterId) => {
+                  const promoter = data.promoters.find((item) => item.id === promoterId);
+                  const displayName =
+                    promoter?.name ??
+                    (promoterId.length > 2 ? `Promoter ${promoterId.slice(-8)}` : promoterId);
+                  const override = draft.promoterOverrides?.[promoterId];
+                  const isCustomized = Boolean(override);
+
+                  return (
+                    <div
+                      className={[
+                        styles['overrideCard'],
+                        isCustomized ? styles['overrideCardActive'] : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      key={promoterId}
+                    >
+                      <div className={styles['overrideHeader']}>
+                        <div className={styles['overrideIdentity']}>
+                          <span className={styles['promoterAvatar']} aria-hidden="true">
+                            {promoter?.initials ?? initialsFor(displayName)}
+                          </span>
+                          <div>
+                            <strong>{displayName}</strong>
+                            <span className={styles['overrideBadge']}>
+                              {isCustomized ? 'Custom override' : 'Event default'}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          className={styles['outlineButton']}
+                          type="button"
+                          onClick={() => {
+                            setPromoterOverride(promoterId, !isCustomized);
+                          }}
+                        >
+                          {isCustomized ? 'Use Event Default' : '+ Set custom commission'}
+                        </button>
+                      </div>
+                      {isCustomized ? (
+                        <div className={styles['overrideControls']}>
+                          {draft.compensation === 'standard' ? (
+                            <label>
+                              Custom Commission Rate (%)
+                              <div className={styles['rateField']}>
+                                <input
+                                  aria-label={`${displayName} custom commission percentage`}
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  step="1"
+                                  value={String(override?.['default'] ?? draft.commissionRate)}
+                                  onChange={(event) => {
+                                    updatePromoterOverride(
+                                      promoterId,
+                                      'default',
+                                      numberValue(event.target.value),
+                                    );
+                                  }}
+                                />
+                                <span>%</span>
+                              </div>
+                            </label>
+                          ) : draft.compensation === 'custom' ? (
+                            <div>
+                              <span className={styles['overrideSubhead']}>
+                                Custom Tier Commissions for {displayName}:
+                              </span>
+                              <div className={styles['customTierList']}>
+                                {paidTiers.map((tier) => (
+                                  <div className={styles['customTierRow']} key={tier.id}>
+                                    <span className={styles['customTierName']}>{tier.name}</span>
+                                    <div className={styles['customRateField']}>
+                                      <input
+                                        aria-label={`${displayName} ${tier.name} custom commission`}
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        placeholder="Rate"
+                                        value={
+                                          override?.[tier.id] ?? tierCommissions[tier.id] ?? ''
+                                        }
+                                        onChange={(event) => {
+                                          updatePromoterOverride(
+                                            promoterId,
+                                            tier.id,
+                                            numberValue(event.target.value),
+                                          );
+                                        }}
+                                      />
+                                      <span>%</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <label>
+                              Custom Fixed Payout (₹)
+                              <input
+                                aria-label={`${displayName} custom salary amount`}
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={String(override?.['default'] ?? draft.salaryAmount)}
+                                onChange={(event) => {
+                                  updatePromoterOverride(
+                                    promoterId,
+                                    'default',
+                                    numberValue(event.target.value),
+                                  );
+                                }}
+                              />
+                            </label>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+          <section className={styles['card']}>
+            <div className={styles['cardTitle']}>Revenue summary</div>
+            <div className={styles['reviewRows']}>
+              <div className={styles['reviewRow']}>
+                <span>Estimated Gross Revenue</span>
+                <strong>{formatMoney(gross)}</strong>
+              </div>
+              <div className={styles['reviewRow']}>
+                <span>Estimated Promoter Commission</span>
+                <strong>
+                  {draft.compensation === 'salary'
+                    ? 'Handled outside event'
+                    : formatMoney(commission)}
+                </strong>
+              </div>
+              <div className={styles['reviewRow']}>
+                <span>Estimated Venue Revenue</span>
+                <strong>
+                  {draft.compensation === 'salary'
+                    ? formatMoney(gross)
+                    : formatMoney(gross - commission)}
+                </strong>
+              </div>
+            </div>
+          </section>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -790,7 +1469,12 @@ export function EventPreview({
         <i />
         Live preview · what guests see
       </div>
-      <button className={styles['previewCard']} type="button" onClick={onOpen}>
+      <button
+        className={styles['previewCard']}
+        type="button"
+        aria-label={`Open preview for ${draft.name.length ? draft.name : 'Your event name'}`}
+        onClick={onOpen}
+      >
         <div
           className={[styles['previewBackground'], gradientClass(draft.artwork.value)].join(' ')}
         />
@@ -819,28 +1503,62 @@ export function EventPreview({
             {venueName} · {draft.dateLabel}
           </div>
           <div className={styles['buyButton']}>Buy tickets</div>
+          <span className={styles['previewOpenButton']}>Open preview ↗</span>
         </div>
       </button>
-      <div className={styles['previewHint']}>
-        Click preview to choose Guest portal or Mobile app
-      </div>
+      <div className={styles['previewHint']}>Select Guest portal or Mobile app</div>
     </aside>
   );
 }
 
 export function EventPreviewOverlay({
   mode,
+  draft,
+  venueName,
   onPick,
   onClose,
 }: {
   readonly mode: 'picker' | 'guest' | 'mobile';
+  readonly draft: EventEditorDraft;
+  readonly venueName: string;
   readonly onPick: (mode: 'guest' | 'mobile') => void;
   readonly onClose: () => void;
 }) {
+  const preview = (
+    <div className={styles['fullPreview']}>
+      <div className={[styles['fullPreviewArtwork'], gradientClass(draft.artwork.value)].join(' ')}>
+        {draft.artwork.type === 'image' ? (
+          <Image fill sizes="420px" src={draft.artwork.value} alt="" />
+        ) : null}
+      </div>
+      <div className={styles['fullPreviewBody']}>
+        <span className={styles['previewStatus']}>
+          <i />
+          Draft
+        </span>
+        <h2>{draft.name || 'Your event name'}</h2>
+        <p>
+          {venueName} · {draft.dateLabel} · {draft.time}
+        </p>
+        <div className={styles['fullPreviewTickets']}>
+          {draft.ticketTiers.map((tier) => (
+            <div key={tier.id}>
+              <span>{tier.name}</span>
+              <strong>{formatMoney(tier.price)}</strong>
+            </div>
+          ))}
+        </div>
+        <button className={styles['fullPreviewBuy']} type="button">
+          Buy tickets
+        </button>
+      </div>
+    </div>
+  );
   return (
     <dialog className={styles['overlay']} open aria-label="Preview destination">
       {mode === 'picker' ? (
         <div className={styles['previewPicker']}>
+          <p>Choose where to preview this event</p>
           <button
             type="button"
             onClick={() => {
@@ -862,11 +1580,17 @@ export function EventPreviewOverlay({
         <div className={styles['overlayStack']}>
           {mode === 'guest' ? (
             <div className={styles['deviceFrame']}>
-              This is how it will look in the guest portal
+              <div className={styles['guestPreviewShell']}>
+                <span className={styles['previewLabel']}>Guest portal</span>
+                {preview}
+              </div>
             </div>
           ) : (
             <div className={styles['mobileFrame']}>
-              <div>This is how it will look in the mobile app</div>
+              <div className={styles['mobilePreviewShell']}>
+                <span className={styles['previewLabel']}>Mobile app</span>
+                {preview}
+              </div>
             </div>
           )}
           <button className={styles['overlayClose']} type="button" onClick={onClose}>

@@ -15,7 +15,14 @@ import {
   rejectRefund,
   statusFilterOptions,
 } from '@/lib/admin/admin-api';
-import { formatDateTime, formatPaise, refundStatusTone, REFUND_STATUS_LABELS, shortId, StatusBadge } from '@/lib/admin/format';
+import {
+  formatDateTime,
+  formatPaise,
+  refundStatusTone,
+  REFUND_STATUS_LABELS,
+  shortId,
+  StatusBadge,
+} from '@/lib/admin/format';
 
 import type { AdminRefundRequestStatus } from '@/lib/admin/contract-types';
 
@@ -43,7 +50,9 @@ export default function RefundsDesk() {
 
   const approveMutation = useMutation({
     mutationFn: (refundId: string) => approveRefund(refundId),
-    onSuccess: () => { invalidate(); },
+    onSuccess: () => {
+      invalidate();
+    },
   });
 
   const rejectMutation = useMutation({
@@ -78,7 +87,10 @@ export default function RefundsDesk() {
             id="refund-status"
             value={filter}
             onChange={setFilter}
-            options={[{ value: 'all', label: 'All' }, ...statusFilterOptions(REFUND_STATUS_LABELS, REFUND_STATUSES)]}
+            options={[
+              { value: 'all', label: 'All' },
+              ...statusFilterOptions(REFUND_STATUS_LABELS, REFUND_STATUSES),
+            ]}
           />
           <Button
             type="button"
@@ -156,7 +168,9 @@ export default function RefundsDesk() {
                   <td className="px-4 py-3">
                     <StatusBadge label={request.status} tone={refundStatusTone(request.status)} />
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{formatDateTime(request.createdAt)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {formatDateTime(request.createdAt)}
+                  </td>
                   <td className="px-4 py-3">
                     {request.status === 'pending' ? (
                       <div className="flex justify-end gap-2">
@@ -164,7 +178,9 @@ export default function RefundsDesk() {
                           size="sm"
                           variant="primary"
                           disabled={approveMutation.isPending}
-                          onClick={() => { approveMutation.mutate(request.id); }}
+                          onClick={() => {
+                            approveMutation.mutate(request.id);
+                          }}
                         >
                           Approve
                         </Button>
@@ -173,7 +189,9 @@ export default function RefundsDesk() {
                             <TextField
                               label="Reason (required)"
                               value={reason}
-                              onChange={(event) => { setReason(event.target.value); }}
+                              onChange={(event) => {
+                                setReason(event.target.value);
+                              }}
                               placeholder="Why is this rejected?"
                               className="w-64"
                             />
@@ -192,7 +210,9 @@ export default function RefundsDesk() {
                                 size="sm"
                                 variant="destructive"
                                 disabled={rejectMutation.isPending || reason.trim() === ''}
-                                onClick={() => { rejectMutation.mutate(); }}
+                                onClick={() => {
+                                  rejectMutation.mutate();
+                                }}
                               >
                                 Confirm rejection
                               </Button>

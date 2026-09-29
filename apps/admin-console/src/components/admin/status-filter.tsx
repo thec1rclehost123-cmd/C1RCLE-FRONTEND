@@ -22,7 +22,9 @@ export function StatusFilter<TValue extends string>({
       <select
         id={id}
         value={value}
-        onChange={(event) => { onChange(event.target.value as TValue); }}
+        onChange={(event) => {
+          onChange(event.target.value as TValue);
+        }}
         className="rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
       >
         {options.map((option) => (

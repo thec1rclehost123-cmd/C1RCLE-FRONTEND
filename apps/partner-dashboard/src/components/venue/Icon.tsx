@@ -184,10 +184,6 @@ export function Icon({ name, size = 16, color, className }: IconProps) {
   const Cmp = REGISTRY[name];
   if (!Cmp) return null;
   return (
-    <Cmp
-      size={size}
-      {...(color ? { color } : {})}
-      className={`flex-none ${className ?? ''}`}
-    />
+    <Cmp size={size} {...(color ? { color } : {})} className={`flex-none ${className ?? ''}`} />
   );
 }

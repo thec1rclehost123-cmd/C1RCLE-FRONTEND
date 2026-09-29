@@ -14,7 +14,13 @@ import {
   rejectOnboardingDocument,
   verifyOnboardingDocument,
 } from '@/lib/admin/admin-api';
-import { formatDateTime, onboardingStatusTone, ONBOARDING_STATUS_LABELS, shortId, StatusBadge } from '@/lib/admin/format';
+import {
+  formatDateTime,
+  onboardingStatusTone,
+  ONBOARDING_STATUS_LABELS,
+  shortId,
+  StatusBadge,
+} from '@/lib/admin/format';
 
 import type { OnboardingDocumentStatus } from '@/lib/admin/contract-types';
 
@@ -32,7 +38,10 @@ interface Rejecting {
   readonly label: string;
 }
 
-const DOCUMENT_STATUS_TONE: Record<OnboardingDocumentStatus, 'warning' | 'success' | 'destructive'> = {
+const DOCUMENT_STATUS_TONE: Record<
+  OnboardingDocumentStatus,
+  'warning' | 'success' | 'destructive'
+> = {
   pending: 'warning',
   verified: 'success',
   rejected: 'destructive',
@@ -124,7 +133,10 @@ export default function KycReviewDesk() {
           }}
         />
       ) : applications.length === 0 ? (
-        <EmptyState title="Nothing to review" description="No applications are waiting on a decision." />
+        <EmptyState
+          title="Nothing to review"
+          description="No applications are waiting on a decision."
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {applications.map((application) => (
@@ -170,7 +182,8 @@ export default function KycReviewDesk() {
                 ) : (
                   application.documents.map((document) => {
                     const isRejecting =
-                      rejecting?.applicationId === application.id && rejecting.label === document.label;
+                      rejecting?.applicationId === application.id &&
+                      rejecting.label === document.label;
                     return (
                       <div
                         key={document.label}
@@ -196,7 +209,9 @@ export default function KycReviewDesk() {
                           />
                         </div>
                         {document.status === 'rejected' && document.rejectionReason !== null ? (
-                          <p className="text-xs text-muted-foreground">{document.rejectionReason}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {document.rejectionReason}
+                          </p>
                         ) : null}
                         {isRejecting ? (
                           <div className="flex flex-col gap-2">
@@ -237,7 +252,10 @@ export default function KycReviewDesk() {
                               size="sm"
                               variant="outline"
                               onClick={() => {
-                                setRejecting({ applicationId: application.id, label: document.label });
+                                setRejecting({
+                                  applicationId: application.id,
+                                  label: document.label,
+                                });
                                 setReason('');
                               }}
                             >

@@ -131,10 +131,16 @@ describe('Support desk', () => {
 
     const assignSelect = await screen.findByLabelText('Assign to');
     await user.selectOptions(assignSelect, 'admin_1');
-    await user.click(within(assignSelect.closest('div') as HTMLElement).getByRole('button', { name: 'Assign' }));
+    await user.click(
+      within(assignSelect.closest('div') as HTMLElement).getByRole('button', { name: 'Assign' }),
+    );
 
     await waitFor(() => {
-      expect(adminApi.assignSupportTicket).toHaveBeenCalledWith('ticket_1', 'admin_1', 'ops@c1rcle.com');
+      expect(adminApi.assignSupportTicket).toHaveBeenCalledWith(
+        'ticket_1',
+        'admin_1',
+        'ops@c1rcle.com',
+      );
     });
   });
 });

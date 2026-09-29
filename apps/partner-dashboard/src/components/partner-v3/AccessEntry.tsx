@@ -15,7 +15,7 @@ export function PartnerAccessEntry() {
 
   useEffect(() => {
     if (auth.loading) return;
-    if (!auth.user || auth.isBanned) {
+    if (!auth.user) {
       router.replace('/login');
       return;
     }
@@ -24,7 +24,7 @@ export function PartnerAccessEntry() {
       return;
     }
     router.replace(`/partner/${role}/overview`);
-  }, [auth.isApproved, auth.isBanned, auth.loading, auth.user, role, router]);
+  }, [auth.isApproved, auth.loading, auth.user, role, router]);
 
   return <LoadingState label="Opening your workspace" />;
 }

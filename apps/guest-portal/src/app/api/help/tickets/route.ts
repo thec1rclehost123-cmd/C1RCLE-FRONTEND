@@ -6,7 +6,7 @@ import {
   forwardToGateway,
   parseJson,
   passThroughGatewayError,
-} from '@/lib/help/gateway-proxy';
+} from '@/lib/bff/gateway-proxy';
 
 import type { NextRequest } from 'next/server';
 

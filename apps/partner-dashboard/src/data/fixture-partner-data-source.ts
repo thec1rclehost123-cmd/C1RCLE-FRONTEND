@@ -1834,10 +1834,15 @@ const venueFinanceData: VenueFinanceData = {
   },
   bankAccount: {
     bankName: 'HDFC Bank',
+    // Masked only. The full number was removed from this fixture when the
+    // finance screen was wired to the real API, because `FinanceBankAccount`
+    // no longer has a field for it — and a fixture that can still hold a
+    // plaintext account number is exactly how a real one eventually gets typed
+    // in somewhere.
     displayNumber: '5010 •••• •••• 4412',
-    accountNumber: '5010 0284 4412',
     ifscCode: 'HDFC0001234',
     accountHolder: 'Rhea Kapoor Events LLP',
+    verified: true,
   },
   paymentCard: {
     label: 'THE C1RCLE · Business',
@@ -2945,6 +2950,7 @@ const makeNotifications = (role: 'venue' | 'host'): PartnerNotificationsData => 
   notifications: [
     {
       id: `${role}-notification-payout`,
+      category: 'finance',
       description: 'Payout of ₹4,86,200 is scheduled for Fri, Jul 18.',
       time: '12m ago',
       type: 'payout',
@@ -2954,6 +2960,7 @@ const makeNotifications = (role: 'venue' | 'host'): PartnerNotificationsData => 
     },
     {
       id: `${role}-notification-partner`,
+      category: 'partners',
       description: 'The Docks accepted your partner invite.',
       time: '1h ago',
       type: 'request',
@@ -2963,6 +2970,7 @@ const makeNotifications = (role: 'venue' | 'host'): PartnerNotificationsData => 
     },
     {
       id: `${role}-notification-marketing`,
+      category: 'ops',
       description: 'Neon Nights last-call campaign finished sending.',
       time: '3h ago',
       type: 'marketing',
@@ -2972,6 +2980,7 @@ const makeNotifications = (role: 'venue' | 'host'): PartnerNotificationsData => 
     },
     {
       id: `${role}-notification-door`,
+      category: 'ops',
       description: '2 guests flagged at the door for Neon Nights.',
       time: '5h ago',
       type: 'operations',
@@ -2981,6 +2990,7 @@ const makeNotifications = (role: 'venue' | 'host'): PartnerNotificationsData => 
     },
     {
       id: `${role}-notification-request`,
+      category: 'events',
       description: 'Zoya (Nightowl) requested to promote your next event.',
       time: '1d ago',
       type: 'request',

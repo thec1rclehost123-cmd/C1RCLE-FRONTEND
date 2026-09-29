@@ -239,6 +239,26 @@ export default function SupportDesk() {
   const [linkVenueId, setLinkVenueId] = useState('');
   const [linkUserId, setLinkUserId] = useState('');
 
+  /**
+   * Every draft field above (reply/note/priority/assignee/merge/link) is
+   * scoped to whichever ticket is selected, but lives as page-level state —
+   * switching tickets without submitting must not leave ticket A's draft
+   * attached to ticket B. Route every selectedId change through here.
+   */
+  const selectTicket = useCallback((id: string | null, currentPriority?: SupportTicketPriority) => {
+    setSelectedId(id);
+    setAssigneeId('');
+    setReplyText('');
+    setNoteText('');
+    setPriorityDraft(currentPriority ?? 'medium');
+    setResolveReason('');
+    setMergeTargetId('');
+    setLinkOrderId('');
+    setLinkEventId('');
+    setLinkVenueId('');
+    setLinkUserId('');
+  }, []);
+
   const transitionMutation = useMutation({
     mutationFn: (action: 'escalate' | 'close' | 'reopen' | 'restore' | 'delete') => {
       if (selectedId === null) {
@@ -260,7 +280,7 @@ export default function SupportDesk() {
     onSuccess: (_ticket, action) => {
       invalidateTickets();
       if (action === 'delete') {
-        setSelectedId(null);
+        selectTicket(null);
       }
     },
   });
@@ -398,7 +418,7 @@ export default function SupportDesk() {
                   <tr
                     key={ticket.id}
                     onClick={() => {
-                      setSelectedId(ticket.id);
+                      selectTicket(ticket.id, ticket.priority);
                     }}
                     className={`cursor-pointer ${isSelected ? 'bg-muted/60' : ''}`}
                   >
@@ -410,7 +430,8 @@ export default function SupportDesk() {
                         ) : null}
                       </p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        {shortId(ticket.id)} · {ticket.requester.email ?? shortId(ticket.requester.userId)}
+                        {shortId(ticket.id)} ·{' '}
+                        {ticket.requester.email ?? shortId(ticket.requester.userId)}
                       </p>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
@@ -533,7 +554,7 @@ export default function SupportDesk() {
   }
 
   function closePanel(): void {
-    setSelectedId(null);
+    selectTicket(null);
   }
 }
 
@@ -662,9 +683,7 @@ function TicketDetail({
                   <div
                     key={message.id}
                     className={`rounded-lg border border-border px-3 py-2 text-sm ${
-                      message.senderRole === 'admin'
-                        ? 'ml-8 bg-muted/50'
-                        : 'mr-8 bg-background'
+                      message.senderRole === 'admin' ? 'ml-8 bg-muted/50' : 'mr-8 bg-background'
                     }`}
                   >
                     <p className="text-xs text-muted-foreground">
@@ -692,10 +711,11 @@ function TicketDetail({
                     </summary>
                     <ul className="mt-2 space-y-1.5">
                       {ticket.timeline.map((event, index) => (
-                        <li key={`${event.at}-${String(index)}`} className="flex gap-2 text-xs text-muted-foreground">
-                          <span className="shrink-0 font-mono">
-                            {formatDateTime(event.at)}
-                          </span>
+                        <li
+                          key={`${event.at}-${String(index)}`}
+                          className="flex gap-2 text-xs text-muted-foreground"
+                        >
+                          <span className="shrink-0 font-mono">{formatDateTime(event.at)}</span>
                           <span>
                             <span className="font-medium text-foreground">
                               {TIMELINE_TYPE_LABELS[event.type] ?? event.type}
@@ -846,7 +866,10 @@ function TicketDetail({
           <h3 className="text-sm font-semibold">Desk actions</h3>
           <div className="mt-3 space-y-3">
             <div>
-              <label className="text-sm font-medium text-foreground" htmlFor={`assign-${ticket.id}`}>
+              <label
+                className="text-sm font-medium text-foreground"
+                htmlFor={`assign-${ticket.id}`}
+              >
                 Assign to
               </label>
               <div className="mt-1 flex gap-2">
@@ -865,14 +888,22 @@ function TicketDetail({
                     </option>
                   ))}
                 </select>
-                <Button size="sm" variant="outline" disabled={assignPending || assigneeId === ''} onClick={onAssign}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={assignPending || assigneeId === ''}
+                  onClick={onAssign}
+                >
                   {assignPending ? 'Assigning…' : 'Assign'}
                 </Button>
               </div>
             </div>
 
             <div>
-              <label className="text-sm font-medium text-foreground" htmlFor={`priority-${ticket.id}`}>
+              <label
+                className="text-sm font-medium text-foreground"
+                htmlFor={`priority-${ticket.id}`}
+              >
                 Priority
               </label>
               <div className="mt-1 flex gap-2">
@@ -918,7 +949,10 @@ function TicketDetail({
 
             {!isResolved && !isClosed ? (
               <div>
-                <label className="text-sm font-medium text-foreground" htmlFor={`resolve-${ticket.id}`}>
+                <label
+                  className="text-sm font-medium text-foreground"
+                  htmlFor={`resolve-${ticket.id}`}
+                >
                   Resolve
                 </label>
                 <div className="mt-1 flex gap-2">

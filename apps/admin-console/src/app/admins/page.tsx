@@ -81,7 +81,10 @@ export default function AdminsDesk() {
       {list.isPending ? (
         <LoadingState label="Loading admins…" />
       ) : list.isError ? (
-        <ErrorState description="The admin roster could not be loaded. Please retry." onRetry={() => void list.refetch()} />
+        <ErrorState
+          description="The admin roster could not be loaded. Please retry."
+          onRetry={() => void list.refetch()}
+        />
       ) : list.data.items.length === 0 ? (
         <EmptyState title="No admins" description="No platform admin accounts exist yet." />
       ) : (
@@ -114,7 +117,10 @@ export default function AdminsDesk() {
                     <p className="font-mono text-xs text-muted-foreground">{shortId(admin.id)}</p>
                   </td>
                   <td className="px-4 py-3">
-                    <StatusBadge label={ADMIN_ROLE_LABELS[admin.role]} tone={roleTone(admin.role)} />
+                    <StatusBadge
+                      label={ADMIN_ROLE_LABELS[admin.role]}
+                      tone={roleTone(admin.role)}
+                    />
                   </td>
                   <td className="px-4 py-3">
                     <StatusBadge
@@ -122,7 +128,9 @@ export default function AdminsDesk() {
                       tone={admin.isActive ? 'success' : 'muted'}
                     />
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{formatDateTime(admin.createdAt)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {formatDateTime(admin.createdAt)}
+                  </td>
                   <td className="px-4 py-3">
                     {!admin.isActive ? (
                       <p className="text-right text-xs text-muted-foreground">—</p>
@@ -131,7 +139,9 @@ export default function AdminsDesk() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => { setConfirmingRevokeId(null); }}
+                          onClick={() => {
+                            setConfirmingRevokeId(null);
+                          }}
                         >
                           Keep
                         </Button>
@@ -139,7 +149,9 @@ export default function AdminsDesk() {
                           size="sm"
                           variant="destructive"
                           disabled={revokeMutation.isPending}
-                          onClick={() => { revokeMutation.mutate(admin.id); }}
+                          onClick={() => {
+                            revokeMutation.mutate(admin.id);
+                          }}
                         >
                           {revokeMutation.isPending ? 'Revoking…' : 'Confirm revoke'}
                         </Button>
@@ -213,7 +225,13 @@ export default function AdminsDesk() {
                         >
                           Change role
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => { setConfirmingRevokeId(admin.id); }}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setConfirmingRevokeId(admin.id);
+                          }}
+                        >
                           Revoke
                         </Button>
                       </div>

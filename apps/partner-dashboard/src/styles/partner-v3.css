@@ -17,6 +17,21 @@
   --partner-v3-radius-md: 14px;
   --partner-v3-radius-lg: 20px;
   --partner-v3-shadow: 0 24px 60px rgb(0 0 0 / 60%);
+
+  /* Legacy token aliases so V2-origin screens render correctly in the V3 shell */
+  --partner-text: var(--partner-v3-ink);
+  --partner-muted: var(--partner-v3-ink-muted);
+  --partner-accent: var(--partner-v3-accent);
+  --partner-border: var(--partner-v3-border);
+  --partner-border-strong: var(--partner-v3-border-strong);
+  --partner-radius-lg: var(--partner-v3-radius-lg);
+  --partner-shadow: var(--partner-v3-shadow);
+  --dashboard-control: var(--partner-v3-surface);
+  --dashboard-surface: var(--partner-v3-background);
+  --dashboard-selected: var(--partner-v3-surface-muted);
+  --dashboard-radius-panel: var(--partner-v3-radius-lg);
+  --dashboard-radius-button: 12px;
+  --dashboard-radius-control: var(--partner-v3-radius-sm);
 }
 
 .partner-v3-auth-loading {

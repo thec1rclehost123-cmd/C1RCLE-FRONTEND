@@ -15,7 +15,12 @@ import {
 } from '@c1rcle/icons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@c1rcle/ui';
 
-import { listAdmins, listOnboardingApplications, listProposals, listRefunds } from '@/lib/admin/admin-api';
+import {
+  listAdmins,
+  listOnboardingApplications,
+  listProposals,
+  listRefunds,
+} from '@/lib/admin/admin-api';
 import { formatPaise } from '@/lib/admin/format';
 
 import type { IconProps } from '@c1rcle/icons';
@@ -76,7 +81,19 @@ function LiveStatsCards() {
     }
     let cancelled = false;
 
-    Promise.all([listProposals('pending', 1), listRefunds('pending', 1), listOnboardingApplications('submitted', 1), listAdmins(1)])
+    // `proposals`/`onboarding` only need `pageInfo.total`, so limit=1 is
+    // correct (and cheap) for them. `refunds`/`admins` are also summed/
+    // filtered over `.items`, which limit=1 would silently truncate to the
+    // single most-recent row — fetch a real page (100, matching this app's
+    // other list pages) for those two. Still an approximation beyond 100
+    // pending refunds or 100 admins, which is a known, accepted gap rather
+    // than a paginated true total.
+    Promise.all([
+      listProposals('pending', 1),
+      listRefunds('pending', 100),
+      listOnboardingApplications('submitted', 1),
+      listAdmins(100),
+    ])
       .then(([proposals, refunds, onboarding, admins]) => {
         if (cancelled) {
           return;
@@ -158,7 +175,12 @@ function LiveStatsCards() {
         hint="awaiting review"
         icon={InviteIcon}
       />
-      <StatCard label="Admins" value={String(stats.activeAdmins)} hint="active accounts" icon={AdminIcon} />
+      <StatCard
+        label="Admins"
+        value={String(stats.activeAdmins)}
+        hint="active accounts"
+        icon={AdminIcon}
+      />
     </div>
   );
 }

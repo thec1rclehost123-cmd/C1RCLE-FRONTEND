@@ -4,7 +4,15 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { login } from '@c1rcle/auth';
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, TextField } from '@c1rcle/ui';
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  TextField,
+} from '@c1rcle/ui';
 
 import type { SyntheticEvent } from 'react';
 
@@ -31,6 +39,7 @@ export default function LoginPage() {
       // login() calls the BFF /api/auth/login proxy; a 4xx collapses into a
       // single generic message (account-existence oracle suppression).
       await login({ email, password });
+      router.refresh();
       router.replace('/');
     } catch {
       setError('Invalid email or password. Please try again.');
@@ -65,7 +74,9 @@ export default function LoginPage() {
                 autoComplete="email"
                 required
                 value={email}
-                onChange={(event) => { setEmail(event.target.value); }}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                }}
               />
               <TextField
                 label="Password"
@@ -74,7 +85,9 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 required
                 value={password}
-                onChange={(event) => { setPassword(event.target.value); }}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                }}
               />
 
               {error === '' ? null : (

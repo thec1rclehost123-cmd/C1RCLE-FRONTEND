@@ -1,76 +1,82 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  AtSign,
+  Building,
+  Building2,
+  Briefcase,
+  CheckCircle2,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  Globe,
+  Loader2,
+  Lock,
+  Mail,
+  Phone,
+  RefreshCw,
+  ShieldCheck,
+  Sparkles,
+  Upload,
+  User,
+  Users,
+  X,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  type ReactNode,
+  type InputHTMLAttributes,
+} from 'react';
 
 import { isApiClientError } from '@c1rcle/api-client';
-import { login, signup } from '@c1rcle/auth';
-import {
-  AlertIcon as AlertCircle,
-  BackIcon as ArrowLeft,
-  ForwardIcon as ArrowRight,
-  PartnerIcon as Building2,
-  CompanyIcon as Building,
-  BusinessIcon as Briefcase,
-  VerifiedTickIcon as CheckCircle2,
-  NextIcon as ChevronRight,
-  CloseIcon as X,
-  EmailIcon as Mail,
-  LockedIcon as Lock,
-  GuestIcon as User,
-  LocationIcon as MapPin,
-  PhoneIcon as Phone,
-  ComplianceIcon as ShieldCheck,
-  VisibleIcon as Eye,
-  HiddenIcon as EyeOff,
-  InstantIcon as Zap,
-  AssistantIcon as Sparkles,
-  RefreshIcon as RefreshCw,
-  GuestPortalIcon as Globe,
-  SpinnerIcon as Loader2,
-  UploadIcon as Upload,
-  UsersIcon as Users,
-} from '@c1rcle/icons';
+import { getClientEnv } from '@c1rcle/config';
 
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
-import { sendOtpEmail, verifyOtpEmail, verifyPhoneNumber } from '@/lib/bff/auth-otp';
-import { getFirebaseAuth, RecaptchaVerifier, signInWithPhoneNumber } from '@/lib/firebase/client';
+import { confirmPhoneOtp, getTestingBypassEnabled, sendPhoneOtp } from '@/lib/firebase/phone-auth';
 import {
-  addOnboardingDocument,
-  getDocumentUploadUrl,
-  getMyOnboardingRequest,
-  saveOnboardingProgress,
-  startOnboarding,
-  submitOnboardingRequest,
-  verifyOnboardingDocument,
+  getMine,
+  saveProgress as saveOnboardingProgress,
+  start as startOnboarding,
+  submit as submitOnboardingApplication,
+  uploadDocument,
+  verifyDocument,
 } from '@/lib/onboarding/onboarding-repository';
+import { sendOtp, verifyOtp } from '@/lib/onboarding/otp';
+import { routeAfterAuth } from '@/lib/org/route-after-auth';
 
-import type { ConfirmationResult } from '@/lib/firebase/client';
-import type { OnboardingDocumentLabel, OnboardingProfileDto } from '@c1rcle/contracts';
-import type { ComponentType, SVGProps } from 'react';
+import type { User as SessionUser } from '@c1rcle/types';
+import type { ConfirmationResult } from 'firebase/auth';
 
-const Instagram = (props: SVGProps<SVGSVGElement>) => (
-  <svg
-    {...props}
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
-    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
-  </svg>
-);
+type OnboardingPlan = 'basic' | 'silver' | 'diamond';
+
+const PHONE_RECAPTCHA_CONTAINER_ID = 'phone-verify-recaptcha';
+
+/** v1's rule, ported: a bare 10-digit number is assumed Indian (+91-prefixed). */
+function toE164(phone: string): string {
+  const digitsOnly = phone.replace(/[^\d+]/g, '');
+  if (digitsOnly.startsWith('+')) return digitsOnly;
+  if (/^\d{10}$/.test(digitsOnly)) return `+91${digitsOnly}`;
+  return `+${digitsOnly}`;
+}
+
+/** A thrown value's message, or `fallback` when it has none. */
+function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error && err.message ? err.message : fallback;
+}
 
 // ── Step type ─────────────────────────────────────────────────────────────────
 type OnboardingStep =
+  | 'signup'
   | 'email_verify'
   | 'phone_verify'
   | 'entity_type'
@@ -84,40 +90,30 @@ type OnboardingStep =
 type PartnerType = 'venue' | 'host' | 'promoter';
 type EntityType = 'individual' | 'business';
 
-// Dynamic sequence based on entity type (KYC steps vary). `phone_verify` runs
-// after `details` (account creation) — the real phone-verification BFF route
-// requires an existing session, unlike email OTP which is pre-session.
+// Dynamic sequence based on entity type (KYC steps vary). `signup` runs
+// before `email_verify` — the real `/onboarding/otp/send` route requires an
+// authenticated session, so the account must exist before the first OTP.
 function getStepSequence(et: EntityType): OnboardingStep[] {
   const kycSteps: OnboardingStep[] =
     et === 'business' ? ['kyc_business', 'kyc_signatory'] : ['kyc_identity'];
-  return ['role', 'email_verify', 'entity_type', 'details', 'phone_verify', ...kycSteps, 'success'];
+  return [
+    'role',
+    'signup',
+    'email_verify',
+    'phone_verify',
+    'entity_type',
+    'details',
+    ...kycSteps,
+    'success',
+  ];
 }
 
-/**
- * `getDocumentUploadUrl`/`addOnboardingDocument` are typed against
- * `OnboardingDocumentLabel`, which as of this rewrite is still the narrower
- * backend enum (`id_front`/`id_back`/`selfie`) — a matching widening to add
- * the business/signatory labels landed in C1RCLE-BACKEND on an unmerged PR
- * and hasn't been regenerated into this frontend contracts copy yet. The
- * casts below wire the business/signatory labels through identically to the
- * individual ones; they will 422 against the live gateway until the contract
- * sync lands, which is expected.
- */
-const KYC_FIELD_LABELS: Record<string, OnboardingDocumentLabel> = {
-  doc_front: 'id_front',
-  doc_back: 'id_back',
-  selfie: 'selfie',
-  reg_doc: 'registration_certificate',
-  sig_doc_front: 'sig_id_front',
-  sig_doc_back: 'sig_id_back',
-  sig_selfie: 'sig_selfie',
-};
-
 const STEP_LABELS: Record<OnboardingStep, string> = {
+  role: 'Role',
+  signup: 'Sign Up',
   email_verify: 'Email',
   phone_verify: 'Phone',
   entity_type: 'Entity',
-  role: 'Role',
   details: 'Details',
   kyc_identity: 'Identity',
   kyc_business: 'Business',
@@ -125,38 +121,66 @@ const STEP_LABELS: Record<OnboardingStep, string> = {
   success: 'Done',
 };
 
-// BFF routes ship with their own extracted error message; this is the generic
-// fallback for everything else (mirrors the old `err.message || fallback` logic
-// without the `any` — strings/null/undefined falls back; strictly safer).
-function errorMessage(err: unknown, fallback: string): string {
-  if (typeof err === 'object' && err !== null) {
-    const message = (err as { message?: unknown }).message;
-    if (typeof message === 'string' && message !== '') return message;
-  }
-  return fallback;
-}
+/** Only one plan is offered today, so it isn't shown — it's sent to the backend as-is. */
+const DEFAULT_PLAN: OnboardingPlan = 'basic';
 
-// Some flows (a direct PUT to a pre-signed storage URL) genuinely cannot be
-// issued through ApiClient, which is gateway-scoped. Mirrors
-// src/app/verify/PageClient.tsx.
-const legacyFetch = (...args: Parameters<typeof fetch>) => window.fetch(...args);
+const CITIES = [
+  'Pune',
+  'Mumbai',
+  'Goa',
+  'Bengaluru',
+  'Delhi',
+  'Hyderabad',
+  'Chennai',
+  'Kolkata',
+  'Jaipur',
+  'Ahmedabad',
+];
+
+const BUSINESS_TYPES = [
+  { value: 'pvt_ltd', label: 'Private Limited' },
+  { value: 'llp', label: 'LLP' },
+  { value: 'partnership', label: 'Partnership Firm' },
+  { value: 'sole_prop', label: 'Sole Proprietorship' },
+  { value: 'trust', label: 'Trust / Society' },
+];
 
 // ── Main component ────────────────────────────────────────────────────────────
-function OnboardingContent() {
+export function OnboardingPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const authState = useDashboardAuth();
-  const authUser = authState.user as { id: string; email: string | null } | null;
-  const signOut = authState.signOut;
-  const authLoading = authState.loading;
+  /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+  const {
+    user: rawAuthUser,
+    signIn: authSignIn,
+    signUp: authSignUp,
+    signOut,
+    loading: authLoading,
+    isApproved,
+  } = useDashboardAuth();
+  /* eslint-enable @typescript-eslint/no-unsafe-assignment */
+  // `DashboardAuthProvider` types `user` as `any`; it is the @c1rcle/auth session user.
+  const authUser = rawAuthUser as SessionUser | null;
+
+  const clientEnv = getClientEnv();
+  const testingBypass = getTestingBypassEnabled();
+  const testPhone = testingBypass ? (clientEnv.NEXT_PUBLIC_FIREBASE_TEST_PHONE ?? '') : '';
 
   const [step, setStep] = useState<OnboardingStep>('role');
-  const [partnerType, setPartnerType] = useState<PartnerType>('venue');
+  const [partnerType, setPartnerType] = useState<PartnerType>(
+    (searchParams.get('type') as PartnerType | null) ?? 'venue',
+  );
   const [entityType, setEntityType] = useState<EntityType>('individual');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [approvalStatus, setApprovalStatus] = useState<'pending' | 'verified'>('pending');
+
+  // Success screen status — driven by the real application status from getMine(),
+  // never assumed from wizard state.
+  const [approvalStatus, setApprovalStatus] = useState<
+    'pending' | 'approved' | 'changes_requested' | 'rejected'
+  >('pending');
+  const [reviewNote] = useState('');
   const [submittedRequestId, setSubmittedRequestId] = useState<string | null>(null);
 
   // KYC step state — documents are uploaded/confirmed server-side as each
@@ -170,24 +194,36 @@ function OnboardingContent() {
   const [loginPassword, setLoginPassword] = useState('');
 
   // OTP state — provider-agnostic; only verification.js changes per provider
-  const [otpEmail, setOtpEmail] = useState('');
+  const [otpEmail, setOtpEmail] = useState(searchParams.get('email') ?? '');
   const [otpEmailCode, setOtpEmailCode] = useState('');
   const [otpEmailSent, setOtpEmailSent] = useState(false);
   const [emailCooldown, setEmailCooldown] = useState(0);
 
-  const [otpPhone, setOtpPhone] = useState('+91 ');
+  const [otpPhone, setOtpPhone] = useState(testPhone || '+91 ');
   const [otpPhoneCode, setOtpPhoneCode] = useState('');
   const [otpPhoneSent, setOtpPhoneSent] = useState(false);
   const [phoneCooldown, setPhoneCooldown] = useState(0);
+  const [phoneConfirmation, setPhoneConfirmation] = useState<ConfirmationResult | null>(null);
 
   const emailCooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const phoneCooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Phone verification — real Firebase Identity Platform flow.
-  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
-  const confirmationResultRef = useRef<ConfirmationResult | null>(null);
 
   // Form data — all existing fields preserved exactly
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    email: string;
+    password: string;
+    name: string;
+    contactPerson: string;
+    phone: string;
+    city: string;
+    area: string;
+    website: string;
+    capacity: string | number | null;
+    instagram: string;
+    bio: string;
+    businessType: string;
+    registrationNumber: string;
+  }>({
     email: '',
     password: '',
     name: '',
@@ -197,21 +233,34 @@ function OnboardingContent() {
     area: '',
     website: '',
     capacity: '',
-    plan: 'silver',
-    role: 'organizer',
-    association: '',
-    associatedHostId: '',
     instagram: '',
     bio: '',
-    upcomingEventsText: '',
-    pastEventsText: '',
-    businessType: 'pvt_ltd',
+    businessType: '',
     registrationNumber: '',
   });
 
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [hostCategory, setHostCategory] = useState('organizer');
+  const [upcomingEventsText, setUpcomingEventsText] = useState('');
+  const [pastEventsText, setPastEventsText] = useState('');
+
+  const validateProfile = useCallback(() => {
+    const errors: Record<string, string> = {};
+    if (!formData.name.trim()) errors['legalName'] = 'This field is required.';
+    if (!formData.contactPerson.trim()) errors['contactPerson'] = 'This field is required.';
+    if (!formData.phone.trim()) errors['phone'] = 'This field is required.';
+    if (!formData.city.trim()) errors['city'] = 'Please select a city.';
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  }, [formData]);
+
   // ── Save onboarding progress so the user can resume mid-form ─────────
-  // No-op until `startOnboarding()` has created the request (`submittedRequestId`
-  // set) — there is nothing to PATCH before that.
+  // `currentStep` is UI-only now — the real backend has no step field, it
+  // just stores profile fields; resume position is re-derived from those
+  // fields + document/status state via `getMine()`, not from a stored step.
+  // `plan`/`role`/`association`/`associatedHostId`/`upcomingEventsText`/
+  // `pastEventsText` have no home in `saveOnboardingProgressSchema` (it's
+  // `.strict()`) so they stay purely local UI state, never sent to the server.
   const saveProgress = useCallback(
     async (_currentStep: OnboardingStep) => {
       if (!submittedRequestId) return;
@@ -219,7 +268,7 @@ function OnboardingContent() {
         await saveOnboardingProgress(submittedRequestId, {
           legalName: formData.name || undefined,
           contactPerson: formData.contactPerson || undefined,
-          phone: formData.phone || undefined,
+          phone: formData.phone || otpPhone.replace(/\s/g, '') || undefined,
           city: formData.city || undefined,
           area: formData.area || undefined,
           website: formData.website || undefined,
@@ -231,23 +280,24 @@ function OnboardingContent() {
           entityType,
         });
       } catch {
-        /* silent — non-critical */
+        /* silent — non-critical, matches the prior best-effort autosave */
       }
     },
-    [submittedRequestId, entityType, formData],
+    [submittedRequestId, entityType, formData, otpPhone],
   );
 
   // Dynamic sequence depends on entity type chosen at step 4
   const stepSequence = getStepSequence(entityType);
 
+  const initialised = useRef(false);
+
   // Pre-fill from URL params (existing behaviour kept)
   useEffect(() => {
-    const type = searchParams.get('type');
+    const type = searchParams.get('type') as PartnerType;
     const email = searchParams.get('email');
     const hostId = searchParams.get('hostId');
-    if (type)
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- URL type param must pre-fill the selected partner role synchronously on mount; the value is validated by the RoleCard options.
-      setPartnerType(type as PartnerType);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, react-hooks/set-state-in-effect
+    if (type) setPartnerType(type);
     if (email) {
       setOtpEmail(email);
       setFormData((prev) => ({ ...prev, email }));
@@ -269,86 +319,102 @@ function OnboardingContent() {
 
     const checkInitialState = async () => {
       initialChecked.current = true;
-      if (!authUser) {
-        setStep('role');
-        return;
-      }
+      if (authUser) {
+        if (isApproved) {
+          void routeAfterAuth(router);
+          return;
+        }
+        try {
+          const application = await getMine();
+          if (application) {
+            setSubmittedRequestId(application.id);
 
-      try {
-        const request = await getMyOnboardingRequest();
+            if (application.status !== 'draft') {
+              // submitted / changes_requested / approved / rejected — the
+              // success screen renders the real status, no further wizard
+              // steps to resume into.
+              setApprovalStatus(
+                application.status === 'submitted' ? 'pending' : application.status,
+              );
+              setStep('success');
+              initialised.current = true;
+              return;
+            }
 
-        if (!request) {
-          try {
-            await signOut();
-          } catch {
-            // Non-fatal — the wizard restarts from `role` regardless.
+            // Draft application — resume mid-wizard from its saved profile.
+            // The backend has no stored "step"; missingDocuments tells us
+            // whether they still owe KYC images or are ready to submit.
+            const p = application.profile;
+            const isBusiness = p.entityType === 'business';
+            setEntityType(isBusiness ? 'business' : 'individual');
+            setCreatedUid(authUser.id);
+
+            setFormData((prev) => ({
+              ...prev,
+              email: authUser.email,
+              name: p.legalName,
+              contactPerson: p.contactPerson,
+              phone: p.phone,
+              city: p.city,
+              area: p.area ?? prev.area,
+              website: p.website ?? prev.website,
+              capacity: p.capacity != null ? String(p.capacity) : prev.capacity,
+              instagram: p.instagram ?? prev.instagram,
+              bio: p.bio ?? prev.bio,
+              businessType: p.businessType ?? prev.businessType,
+              registrationNumber: p.registrationNumber ?? prev.registrationNumber,
+            }));
+            if (p.phone) {
+              setOtpPhone(p.phone);
+            }
+
+            const seq = getStepSequence(isBusiness ? 'business' : 'individual');
+            const resumeStep =
+              application.missingDocuments.length > 0
+                ? seq[seq.indexOf('details') + 1]
+                : seq[seq.length - 2];
+            setStep(resumeStep ?? 'details');
+            initialised.current = true;
+            return;
           }
-          setStep('role');
+
+          // Authenticated but no application on record yet — this account is
+          // already good (they have a live session), so continue the wizard
+          // from the first authed step instead of discarding it. Mirrors the
+          // equivalent branch in `handleExistingUserLogin`.
+          setFormData((prev) => ({ ...prev, email: authUser.email }));
+          setOtpEmail(authUser.email);
+          initialised.current = true;
+          setStep('phone_verify');
           return;
+        } catch {
+          /* fall through — restart the wizard from `role` */
         }
-
-        setSubmittedRequestId(request.id);
-        setPartnerType(request.requestedType);
-        const isBusiness = request.profile.entityType === 'business';
-        setEntityType(isBusiness ? 'business' : 'individual');
-        setCreatedUid(authUser.id);
-
-        const p = request.profile;
-        setFormData((prev) => ({
-          ...prev,
-          email: authUser.email ?? prev.email,
-          name: p.legalName || prev.name,
-          contactPerson: p.contactPerson || prev.contactPerson,
-          phone: p.phone || prev.phone,
-          city: p.city || prev.city,
-          area: p.area ?? prev.area,
-          website: p.website ?? prev.website,
-          capacity: p.capacity != null ? String(p.capacity) : prev.capacity,
-          plan: request.plan,
-          instagram: p.instagram ?? prev.instagram,
-          bio: p.bio ?? prev.bio,
-          businessType: p.businessType ?? prev.businessType,
-          registrationNumber: p.registrationNumber ?? prev.registrationNumber,
-        }));
-        if (p.phone) setOtpPhone(p.phone);
-
-        if (request.status !== 'draft') {
-          setApprovalStatus(request.status === 'approved' ? 'verified' : 'pending');
-          setStep('success');
-          return;
-        }
-
-        const seq = getStepSequence(isBusiness ? 'business' : 'individual');
-        if (request.missingDocuments.length > 0) {
-          setStep(seq.find((s) => s.startsWith('kyc_')) ?? 'role');
-        } else {
-          const kycSteps = seq.filter((s) => s.startsWith('kyc_'));
-          setStep(kycSteps[kycSteps.length - 1] ?? 'role');
-        }
-      } catch {
-        // Non-fatal — a failed state check resumes the wizard at `role`.
-        setStep('role');
       }
+      setStep('role');
     };
 
     void checkInitialState();
-  }, [authLoading, authUser, signOut]);
+  }, [authLoading, authUser, signOut, isApproved, router]);
 
-  // Approval polling — reads the real request's `.status` directly.
+  // Approval polling — real application status via getMine()
   useEffect(() => {
     if (step !== 'success' || !submittedRequestId) return;
     const checkApproval = async () => {
       try {
-        const request = await getMyOnboardingRequest();
-        setApprovalStatus(request?.status === 'approved' ? 'verified' : 'pending');
+        const application = await getMine();
+        if (!application) return;
+        setApprovalStatus(
+          application.status === 'submitted' || application.status === 'draft'
+            ? 'pending'
+            : application.status,
+        );
       } catch {
         /* silent */
       }
     };
     void checkApproval();
-    const interval = setInterval(() => {
-      void checkApproval();
-    }, 10_000);
+    const interval = setInterval(() => void checkApproval(), 10_000);
     return () => {
       clearInterval(interval);
     };
@@ -360,48 +426,93 @@ function OnboardingContent() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // Details-step profile fields — the UI speaks the server's profile-vocabulary
+  // (legalName, businessType, …), backed by the form-state fields below.
+  const PROFILE_KEY_MAP: Record<string, keyof typeof formData> = {
+    legalName: 'name',
+    businessType: 'businessType',
+    registrationNumber: 'registrationNumber',
+    contactPerson: 'contactPerson',
+    city: 'city',
+    area: 'area',
+    website: 'website',
+    capacity: 'capacity',
+    instagram: 'instagram',
+    bio: 'bio',
+  };
+
+  const fieldValue = (key: string): string => {
+    const mapped = PROFILE_KEY_MAP[key];
+    if (!mapped) return '';
+    return String(formData[mapped] ?? '');
+  };
+
+  const handleProfileChange = (key: string, value: string | number | null) => {
+    const mapped = PROFILE_KEY_MAP[key];
+    if (!mapped) return;
+    setFormData((prev) => ({ ...prev, [mapped]: value }));
+    setFieldErrors((prev) => ({ ...prev, [key]: '' }));
+  };
+
   function startCooldown(
     setter: React.Dispatch<React.SetStateAction<number>>,
     ref: React.RefObject<ReturnType<typeof setInterval> | null>,
   ) {
-    setter(60);
-    const intervalId = setInterval(() => {
+    setter(15);
+    ref.current = setInterval(() => {
       setter((prev) => {
         if (prev <= 1) {
-          clearInterval(intervalId);
+          clearInterval(ref.current ?? undefined);
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-    ref.current = intervalId;
   }
 
-  // ── Email OTP ─────────────────────────────────────────────────────────────
-  // No `/api/auth/check-email` pre-flight — the real system has no
-  // existence-check endpoint (anti-enumeration by design; `otp/send` acks
-  // generically either way). An already-registered email surfaces later, as
-  // a 409 from `signup()` at account creation, which routes back here with
-  // `emailExists` set so the password-login branch below takes over.
-  const handleEmailSubmit = async () => {
+  // ── Signup ────────────────────────────────────────────────────────────────
+  // Its own step, before email verification (per ONBOARDING-FLOW-SPEC-2026-09-01.md
+  // §Step 2): the real `/onboarding/otp/send` route is a "new-signup gate" —
+  // it requires an authenticated session (requireUserId) — so the account
+  // has to exist before the first OTP send, not folded into that screen.
+  // No real check-email endpoint exists; a duplicate email surfaces as a 409
+  // here, routing to the "Welcome Back" sign-in recovery instead of a
+  // separate enumeration-risk pre-flight check.
+  const handleSignup = async () => {
     setError('');
+    if (!formData.name.trim()) {
+      setError('Please enter your name.');
+      return;
+    }
     if (!otpEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(otpEmail)) {
       setError('Please enter a valid email address.');
       return;
     }
+    if (!formData.password || formData.password.length < 8) {
+      setError('Password must be at least 8 characters long.');
+      return;
+    }
     setLoading(true);
     try {
-      await sendOtpEmail(otpEmail);
+      await authSignUp(otpEmail, formData.password, formData.name.trim());
+      await sendOtp(otpEmail);
       setOtpEmailSent(true);
       setFormData((prev) => ({ ...prev, email: otpEmail }));
       startCooldown(setEmailCooldown, emailCooldownRef);
-    } catch (err: unknown) {
-      setError(errorMessage(err, 'An error occurred. Please try again.'));
+      setStep('email_verify');
+    } catch (err) {
+      if (isApiClientError(err) && err.status === 409) {
+        setEmailExists(true);
+        setError('This email is already registered.');
+      } else {
+        setError(err instanceof Error ? err.message : 'An error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // ── Step 2 (sign-in path): resume a returning applicant ────────────────────
   const handleExistingUserLogin = async () => {
     setError('');
     if (!loginPassword) {
@@ -410,58 +521,64 @@ function OnboardingContent() {
     }
     setLoading(true);
     try {
-      await login({ email: otpEmail, password: loginPassword });
+      await authSignIn(otpEmail, loginPassword);
 
-      const request = await getMyOnboardingRequest();
+      const application = await getMine();
 
-      if (!request) {
-        // Account exists but never started onboarding — send them into the
-        // wizard from the entity-type step (role/email are already known).
-        setEntityType('individual');
-        setStep('entity_type');
-        setLoading(false);
-        return;
-      }
-
-      setSubmittedRequestId(request.id);
-      const isBusiness = request.profile.entityType === 'business';
-      setEntityType(isBusiness ? 'business' : 'individual');
-      setPartnerType(request.requestedType);
-
-      if (request.status !== 'draft') {
-        setApprovalStatus(request.status === 'approved' ? 'verified' : 'pending');
+      if (application && application.status !== 'draft') {
+        setSubmittedRequestId(application.id);
+        setApprovalStatus(application.status === 'submitted' ? 'pending' : application.status);
+        initialised.current = true;
         setStep('success');
         setLoading(false);
         return;
       }
 
-      const p = request.profile;
-      setFormData((prev) => ({
-        ...prev,
-        email: otpEmail,
-        name: p.legalName || prev.name,
-        contactPerson: p.contactPerson || prev.contactPerson,
-        phone: p.phone || prev.phone,
-        city: p.city || prev.city,
-        area: p.area ?? prev.area,
-        website: p.website ?? prev.website,
-        capacity: p.capacity != null ? String(p.capacity) : prev.capacity,
-        plan: request.plan,
-        instagram: p.instagram ?? prev.instagram,
-        bio: p.bio ?? prev.bio,
-        businessType: p.businessType ?? prev.businessType,
-        registrationNumber: p.registrationNumber ?? prev.registrationNumber,
-      }));
-      if (p.phone) setOtpPhone(p.phone);
+      if (application) {
+        setSubmittedRequestId(application.id);
+        const p = application.profile;
+        const isBusiness = p.entityType === 'business';
+        setEntityType(isBusiness ? 'business' : 'individual');
 
-      const seq = getStepSequence(isBusiness ? 'business' : 'individual');
-      const nextStep =
-        request.missingDocuments.length > 0
-          ? (seq.find((s) => s.startsWith('kyc_')) ?? 'phone_verify')
-          : (seq.filter((s) => s.startsWith('kyc_')).pop() ?? 'phone_verify');
-      setStep(nextStep);
-    } catch (err: unknown) {
-      setError(errorMessage(err, 'Verification failed. Please try again.'));
+        setFormData((prev) => ({
+          ...prev,
+          email: otpEmail,
+          name: p.legalName,
+          contactPerson: p.contactPerson,
+          phone: p.phone,
+          city: p.city,
+          area: p.area ?? prev.area,
+          website: p.website ?? prev.website,
+          capacity: p.capacity != null ? String(p.capacity) : prev.capacity,
+          instagram: p.instagram ?? prev.instagram,
+          bio: p.bio ?? prev.bio,
+          businessType: p.businessType ?? prev.businessType,
+          registrationNumber: p.registrationNumber ?? prev.registrationNumber,
+        }));
+        if (p.phone) setOtpPhone(p.phone);
+
+        const seq = getStepSequence(isBusiness ? 'business' : 'individual');
+        const nextStep =
+          application.missingDocuments.length > 0
+            ? seq[seq.indexOf('details') + 1]
+            : seq[seq.length - 2];
+
+        initialised.current = true;
+        setStep(nextStep ?? 'details');
+        return;
+      }
+
+      // Account exists but never started an application — resume at
+      // phone_verify, not details: this account has never had its phone
+      // collected/verified, and `handleCreateAccount` requires a valid
+      // phone (min 6 chars) to open the application. Email is already
+      // known-good (they just logged in with it), so email_verify is
+      // skipped, but phone still needs collecting.
+      setFormData((prev) => ({ ...prev, email: otpEmail }));
+      initialised.current = true;
+      setStep('phone_verify');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Verification failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -475,12 +592,12 @@ function OnboardingContent() {
     }
     setLoading(true);
     try {
-      await sendOtpEmail(otpEmail);
+      await sendOtp(otpEmail);
       setOtpEmailSent(true);
       setFormData((prev) => ({ ...prev, email: otpEmail }));
       startCooldown(setEmailCooldown, emailCooldownRef);
-    } catch (err: unknown) {
-      setError(errorMessage(err, ''));
+    } catch (err) {
+      setError(errorMessage(err, 'Could not send the code. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -494,10 +611,10 @@ function OnboardingContent() {
     }
     setLoading(true);
     try {
-      await verifyOtpEmail(otpEmail, otpEmailCode);
-      setStep('entity_type');
-    } catch (err: unknown) {
-      setError(errorMessage(err, ''));
+      await verifyOtp(otpEmail, otpEmailCode);
+      setStep('phone_verify');
+    } catch (err) {
+      setError(errorMessage(err, 'Invalid or expired code.'));
     } finally {
       setLoading(false);
     }
@@ -545,20 +662,20 @@ function OnboardingContent() {
 
     setLoading(true);
     try {
-      const auth = getFirebaseAuth();
-      recaptchaVerifierRef.current ??= new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'invisible',
-      });
-      confirmationResultRef.current = await signInWithPhoneNumber(
-        auth,
-        dialablePhone,
-        recaptchaVerifierRef.current,
-      );
+      // No real phone-availability pre-check exists; a duplicate phone has no
+      // enforcement point until the application is saved, same tradeoff as
+      // the dropped email pre-check above.
+      //
+      // GCP Identity Platform owns send/verify/rate-limit/cooldown for phone
+      // entirely client-side (see lib/firebase/phone-auth.ts) — there is no
+      // backend OTP call here, unlike the email step above.
+      const confirmation = await sendPhoneOtp(toE164(cleanPhone), PHONE_RECAPTCHA_CONTAINER_ID);
+      setPhoneConfirmation(confirmation);
       setOtpPhoneSent(true);
       setFormData((prev) => ({ ...prev, phone: dialablePhone }));
       startCooldown(setPhoneCooldown, phoneCooldownRef);
-    } catch (err: unknown) {
-      setError(errorMessage(err, 'Failed to send code.'));
+    } catch (err) {
+      setError(errorMessage(err, 'Could not send the SMS code. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -570,119 +687,139 @@ function OnboardingContent() {
       setError('Enter the 6-digit code.');
       return;
     }
-    if (!confirmationResultRef.current) {
+    if (!phoneConfirmation) {
       setError('Please request a new code.');
       return;
     }
     setLoading(true);
     try {
-      const credential = await confirmationResultRef.current.confirm(otpPhoneCode);
-      const idToken = await credential.user.getIdToken();
-      await verifyPhoneNumber({
-        phoneNumber: formData.phone || otpPhone.replace(/\s/g, ''),
-        idToken,
+      const cleanPhone = otpPhone.replace(/\s/g, '');
+      // Identity Platform confirming the code only proves the applicant holds
+      // that Firebase-side session, not that it's their number — the ID token
+      // it returns still has to be checked server-side against the applicant's
+      // own entered number via the real onboarding verification endpoint.
+      const idToken = await confirmPhoneOtp(phoneConfirmation, otpPhoneCode);
+      const result = await verifyDocument({
+        documentType: 'phone',
+        documentNumber: cleanPhone,
+        proofToken: idToken,
       });
-      const idx = stepSequence.indexOf('phone_verify');
-      const next = stepSequence[idx + 1];
-      if (next) {
-        setStep(next);
-        void saveProgress(next);
+      if (!result.passed) {
+        throw new Error(result.reason ?? 'Phone verification failed.');
       }
-    } catch (err: unknown) {
-      setError(errorMessage(err, 'Incorrect code.'));
+      setStep('entity_type');
+    } catch (err) {
+      setError(errorMessage(err, 'Invalid or expired code.'));
     } finally {
       setLoading(false);
     }
   };
 
-  // ── Step 5: Create the real account, then start the onboarding request ─────
+  // ── Step 5: Open the application, advance to KYC ──
+  // The account itself was already created back at the email_verify step
+  // (the real OTP send route requires an existing session) and the phone
+  // was already format-validated there too, so this step only opens the
+  // onboarding application against the now-established session.
   const handleCreateAccount = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
+    if (!validateProfile()) return;
     setLoading(true);
     try {
       if (!authUser) {
-        if (!formData.email || !formData.password) {
-          setError('Please provide both email and password.');
-          setLoading(false);
-          return;
-        }
-        if (formData.password.length < 8) {
-          setError('Password must be at least 8 characters long.');
-          setLoading(false);
-          return;
-        }
-        try {
-          await signup({
-            email: formData.email,
-            password: formData.password,
-            displayName: formData.name,
-          });
-        } catch (err: unknown) {
-          if (isApiClientError(err) && err.status === 409) {
-            setEmailExists(true);
-            setOtpEmail(formData.email);
-            setError('This email is already registered.');
-            setStep('email_verify');
-            setLoading(false);
-            return;
-          }
-          throw err;
-        }
+        setError('Your session expired. Please verify your email again to continue.');
+        setStep('email_verify');
+        setLoading(false);
+        return;
       }
+      const createPhone = formData.phone || otpPhone.replace(/\s/g, '');
 
-      const capacityNum = formData.capacity ? Number(formData.capacity) : null;
-      const profile: OnboardingProfileDto = {
-        legalName: formData.name,
-        contactPerson: formData.contactPerson,
-        phone: formData.phone,
-        city: formData.city,
-        area: formData.area || undefined,
-        website: formData.website || undefined,
-        capacity: capacityNum !== null && Number.isFinite(capacityNum) ? capacityNum : null,
-        instagram: formData.instagram || undefined,
-        bio: formData.bio || undefined,
-        businessType: formData.businessType || undefined,
-        registrationNumber: formData.registrationNumber || undefined,
-        entityType,
-      };
+      // Open the application now that we have a real session — this is the
+      // one call that persists the full profile server-side; the request id
+      // it returns backs every subsequent saveProgress/upload/submit call.
+      const application = await startOnboarding(
+        {
+          requestedType: partnerType,
+          plan: DEFAULT_PLAN,
+          profile: {
+            legalName: formData.name,
+            contactPerson: formData.contactPerson,
+            phone: createPhone,
+            city: formData.city,
+            area: formData.area || undefined,
+            website: formData.website || undefined,
+            capacity: formData.capacity ? Number(formData.capacity) : undefined,
+            instagram: formData.instagram || undefined,
+            bio: formData.bio || undefined,
+            businessType: formData.businessType || undefined,
+            registrationNumber: formData.registrationNumber || undefined,
+            entityType,
+          },
+        },
+        crypto.randomUUID(),
+      );
+      setSubmittedRequestId(application.id);
+      setCreatedUid(authUser.id);
+      setFieldErrors({});
 
-      const request = await startOnboarding({
-        requestedType: partnerType,
-        plan: formData.plan as 'basic' | 'silver' | 'diamond',
-        profile,
-      });
-      setSubmittedRequestId(request.id);
-
-      const nextStep = stepSequence[stepSequence.indexOf('details') + 1];
+      // Advance to the first KYC step in the sequence
+      const seq = getStepSequence(entityType);
+      const detailsIdx = seq.indexOf('details');
+      const nextStep = seq[detailsIdx + 1];
       if (nextStep) {
         setStep(nextStep);
-        void saveProgress(nextStep);
       }
-    } catch (err: unknown) {
-      setError(errorMessage(err, 'Failed to create account. Please try again.'));
+    } catch (err) {
+      if (isApiClientError(err) && err.status === 409) {
+        setError('You already have an application in progress.');
+      } else {
+        setError(errorMessage(err, 'Failed to create account. Please try again.'));
+        if (isApiClientError(err) && err.fieldErrors) {
+          setFieldErrors(
+            Object.fromEntries(Object.entries(err.fieldErrors).map(([k, v]) => [k, v.join(' ')])),
+          );
+        }
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // ── Final KYC step: submit the application for review ──────────────────
-  const submitApplication = useCallback(async () => {
-    if (!submittedRequestId) {
-      setKycError('Your application was not found. Please restart onboarding.');
-      return;
-    }
-    setKycSubmitting(true);
-    setKycError('');
-    try {
-      await submitOnboardingRequest(submittedRequestId);
-      setStep('success');
-    } catch (err: unknown) {
-      setKycError(errorMessage(err, 'Failed to submit. Please try again.'));
-    } finally {
-      setKycSubmitting(false);
-    }
-  }, [submittedRequestId]);
+  // ── KYC step: save data and submit when it's the last step ─────────────
+  // Documents themselves are already uploaded/verified by this point (each
+  // KycFileZone / handleVerifyAadhaar call landed on the application as it
+  // happened) — this only needs to flag the application as submitted.
+  const submitApplication = useCallback(
+    async (_stepId: string, _data: Record<string, unknown>) => {
+      setKycSubmitting(true);
+      setKycError('');
+      try {
+        if (!submittedRequestId) {
+          throw new Error('No application found. Please restart onboarding.');
+        }
+        const application = await submitOnboardingApplication(
+          submittedRequestId,
+          crypto.randomUUID(),
+        );
+        setSubmittedRequestId(application.id);
+        setApprovalStatus('pending');
+        setStep('success');
+      } catch (err) {
+        if (isApiClientError(err) && err.status === 400) {
+          setKycError(
+            err.fieldErrors
+              ? Object.values(err.fieldErrors).flat().join(' ')
+              : 'Please upload all required documents before submitting.',
+          );
+        } else {
+          setKycError(errorMessage(err, 'Failed to submit. Please try again.'));
+        }
+      } finally {
+        setKycSubmitting(false);
+      }
+    },
+    [submittedRequestId],
+  );
 
   // ── Intermediate KYC step: advance, or submit on the last one ──────────
   // Documents are already uploaded/confirmed server-side by KycFileZone as
@@ -692,12 +829,14 @@ function OnboardingContent() {
       const idx = stepSequence.indexOf(stepId as OnboardingStep);
       const isLastStep = idx === stepSequence.length - 2; // second-to-last (before "success")
       if (isLastStep) {
-        void submitApplication();
-      } else if (idx !== -1 && idx < stepSequence.length - 1) {
-        const next = stepSequence[idx + 1];
-        if (next) {
-          setStep(next);
-          void saveProgress(next);
+        void submitApplication(stepId, _data);
+      } else {
+        if (idx !== -1 && idx < stepSequence.length - 1) {
+          const next = stepSequence[idx + 1];
+          if (next) {
+            setStep(next);
+            void saveProgress(next);
+          }
         }
       }
     },
@@ -706,23 +845,20 @@ function OnboardingContent() {
 
   const currentStepIndex = stepSequence.indexOf(step);
   const effectiveUid = createdUid ?? authUser?.id ?? '';
+  const requestedType = partnerType;
 
   return (
     <div className="min-h-screen bg-[var(--surface-base)]">
-      {/* Header */}
       <header className="sticky top-0 z-50 bg-[var(--surface-base)]/80 backdrop-blur-xl border-b border-[var(--border-subtle)]">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <button
             onClick={() => {
-              void (async () => {
-                if (currentStepIndex === 0) {
-                  if (authUser) await signOut();
-                  router.push('/login');
-                } else {
-                  const prevStep = stepSequence[currentStepIndex - 1];
-                  if (prevStep) setStep(prevStep);
-                }
-              })();
+              if (currentStepIndex === 0) {
+                router.replace('/login');
+              } else {
+                const prevStep = stepSequence[currentStepIndex - 1];
+                if (prevStep !== undefined) setStep(prevStep);
+              }
             }}
             className="flex items-center gap-2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors text-[11px] font-semibold uppercase tracking-wider"
           >
@@ -740,47 +876,167 @@ function OnboardingContent() {
         </div>
       </header>
 
-      {/* Progress bar — auto-driven by stepSequence */}
-      <div className="max-w-5xl mx-auto px-6 py-6">
-        <div className="flex items-center">
-          {stepSequence
-            .filter((s) => s !== 'success')
-            .map((s, i) => {
-              const isDone = currentStepIndex > i;
-              const isCurrent = currentStepIndex === i;
-              const isLast = i === stepSequence.filter((s) => s !== 'success').length - 1;
-              return (
-                <div key={s} className="flex items-center flex-1">
-                  <div className="flex flex-col items-center gap-1 flex-shrink-0">
-                    <button
-                      type="button"
-                      disabled={!isDone}
-                      onClick={() => {
-                        if (isDone) setStep(s);
-                      }}
-                      className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-all ${isCurrent ? 'bg-[var(--accent-primary)] text-white' : isDone ? 'bg-[var(--state-success)] text-white cursor-pointer hover:opacity-80' : 'bg-[var(--surface-tertiary)] text-[var(--text-tertiary)] cursor-not-allowed'}`}
-                    >
-                      {isDone ? '✓' : i + 1}
-                    </button>
-                    <span
-                      className={`text-[9px] font-semibold uppercase tracking-wider ${isCurrent ? 'text-[var(--accent-primary)]' : isDone ? 'text-[var(--state-success)]' : 'text-[var(--text-tertiary)]'}`}
-                    >
-                      {STEP_LABELS[s]}
-                    </span>
+      {step !== 'success' && (
+        <div className="max-w-5xl mx-auto px-6 py-6">
+          <div className="flex items-center">
+            {stepSequence
+              .filter((s) => s !== 'success')
+              .map((s, i) => {
+                const isDone = currentStepIndex > stepSequence.indexOf(s);
+                const isCurrent = step === s;
+                const filteredSteps = stepSequence.filter((x) => x !== 'success');
+                const isLast = i === filteredSteps.length - 1;
+                return (
+                  <div key={s} className="flex items-center flex-1">
+                    <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                      <button
+                        type="button"
+                        disabled={!isDone}
+                        onClick={() => {
+                          if (isDone) setStep(s);
+                        }}
+                        className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-all ${isCurrent ? 'bg-[var(--accent-primary)] text-white' : isDone ? 'bg-[var(--state-success)] text-white cursor-pointer hover:opacity-80' : 'bg-[var(--surface-tertiary)] text-[var(--text-tertiary)] cursor-not-allowed'}`}
+                      >
+                        {isDone ? '✓' : i + 1}
+                      </button>
+                      <span
+                        className={`text-[9px] font-semibold uppercase tracking-wider ${isCurrent ? 'text-[var(--accent-primary)]' : isDone ? 'text-[var(--state-success)]' : 'text-[var(--text-tertiary)]'}`}
+                      >
+                        {STEP_LABELS[s]}
+                      </span>
+                    </div>
+                    {!isLast && (
+                      <div
+                        className={`flex-1 h-0.5 rounded-full mx-2 mb-4 transition-all ${isDone ? 'bg-[var(--state-success)]' : 'bg-[var(--surface-tertiary)]'}`}
+                      />
+                    )}
                   </div>
-                  {!isLast && (
-                    <div
-                      className={`flex-1 h-0.5 rounded-full mx-2 mb-4 transition-all ${isDone ? 'bg-[var(--state-success)]' : 'bg-[var(--surface-tertiary)]'}`}
-                    />
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+          </div>
         </div>
-      </div>
+      )}
 
       <main className="max-w-xl mx-auto px-6 pb-24">
         <AnimatePresence mode="wait">
+          {/* ── Sign Up ── */}
+          {step === 'signup' && (
+            <motion.div
+              key="signup"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <StepHeader
+                step={String(stepSequence.indexOf('signup') + 1).padStart(2, '0')}
+                label="Sign Up"
+                title={emailExists ? 'Welcome Back' : 'Create Your Account'}
+                description={
+                  emailExists
+                    ? 'Log in with your existing account to resume onboarding.'
+                    : "Enter your email and set a password. We'll verify your email next."
+                }
+              />
+              {/* In-place Sign Up / Log In toggle — switching never leaves /onboard,
+                  so partner-type + progress are kept regardless of which path a
+                  visitor takes. */}
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--surface-secondary)] border border-[var(--border-subtle)] mb-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmailExists(false);
+                    setError('');
+                  }}
+                  className={`flex-1 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${!emailExists ? 'bg-[var(--accent-primary)] text-white' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}`}
+                >
+                  Sign Up
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmailExists(true);
+                    setError('');
+                  }}
+                  className={`flex-1 py-2.5 rounded-lg text-[13px] font-semibold transition-all ${emailExists ? 'bg-[var(--accent-primary)] text-white' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'}`}
+                >
+                  Log In
+                </button>
+              </div>
+              <ErrorBanner error={error} />
+              <div className="space-y-5">
+                {!emailExists && (
+                  <FormInput
+                    label="Full Name"
+                    icon={User}
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    placeholder="Your name"
+                    required
+                  />
+                )}
+                <FormInput
+                  label="Email Address"
+                  icon={Mail}
+                  type="email"
+                  value={otpEmail}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setOtpEmail(e.target.value);
+                  }}
+                  placeholder="you@company.com"
+                />
+                <div className="relative">
+                  <FormInput
+                    label="Password"
+                    icon={Lock}
+                    type={showPassword ? 'text' : 'password'}
+                    value={emailExists ? loginPassword : formData.password}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      if (emailExists) {
+                        setLoginPassword(e.target.value);
+                      } else {
+                        setFormData((prev) => ({ ...prev, password: e.target.value }));
+                      }
+                    }}
+                    placeholder={emailExists ? 'Enter your password' : 'Minimum 8 characters'}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPassword(!showPassword);
+                    }}
+                    className="absolute right-4 top-[42px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+                {emailExists ? (
+                  <ActionButton
+                    onClick={() => {
+                      void handleExistingUserLogin();
+                    }}
+                    loading={loading}
+                    loadingText="AUTHORIZING ACCESS..."
+                  >
+                    Verify & Login <ChevronRight className="h-5 w-5" />
+                  </ActionButton>
+                ) : (
+                  <ActionButton
+                    onClick={() => {
+                      void handleSignup();
+                    }}
+                    loading={loading}
+                  >
+                    Continue <ChevronRight className="h-5 w-5" />
+                  </ActionButton>
+                )}
+              </div>
+            </motion.div>
+          )}
+
           {/* ── Email Verification ── */}
           {step === 'email_verify' && (
             <motion.div
@@ -791,14 +1047,10 @@ function OnboardingContent() {
               transition={{ duration: 0.3 }}
             >
               <StepHeader
-                step="02"
+                step={String(stepSequence.indexOf('email_verify') + 1).padStart(2, '0')}
                 label="Verify Email"
-                title={emailExists ? 'Welcome Back' : 'Confirm Your Email'}
-                description={
-                  emailExists
-                    ? 'Your email is already registered. Enter your password to resume onboarding.'
-                    : "Enter the email address you want to register with. We'll send a 6-digit verification code."
-                }
+                title="Confirm Your Email"
+                description="Enter the 6-digit code we sent to confirm your email address."
               />
               <ErrorBanner error={error} />
               <div className="space-y-5">
@@ -811,65 +1063,16 @@ function OnboardingContent() {
                     setOtpEmail(e.target.value);
                   }}
                   placeholder="you@company.com"
-                  disabled={otpEmailSent || emailExists}
+                  disabled={otpEmailSent}
                 />
-                {emailExists ? (
-                  <>
-                    <div className="relative">
-                      <FormInput
-                        label="Password"
-                        icon={Lock}
-                        type={showPassword ? 'text' : 'password'}
-                        value={loginPassword}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                          setLoginPassword(e.target.value);
-                        }}
-                        placeholder="Enter your password"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowPassword(!showPassword);
-                        }}
-                        className="absolute right-4 top-[42px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-5 w-5" />
-                        ) : (
-                          <Eye className="h-5 w-5" />
-                        )}
-                      </button>
-                    </div>
-                    <ActionButton
-                      onClick={() => {
-                        void handleExistingUserLogin();
-                      }}
-                      loading={loading}
-                      loadingText="AUTHORIZING ACCESS..."
-                    >
-                      Verify & Login <ChevronRight className="h-5 w-5" />
-                    </ActionButton>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEmailExists(false);
-                        setLoginPassword('');
-                        setError('');
-                      }}
-                      className="w-full flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[var(--text-tertiary)] hover:text-[var(--accent-primary)] transition-colors"
-                    >
-                      Use a different email
-                    </button>
-                  </>
-                ) : !otpEmailSent ? (
+                {!otpEmailSent ? (
                   <ActionButton
                     onClick={() => {
-                      void handleEmailSubmit();
+                      void handleSendEmailOtp();
                     }}
                     loading={loading}
                   >
-                    Continue <ChevronRight className="h-5 w-5" />
+                    Send Code <ChevronRight className="h-5 w-5" />
                   </ActionButton>
                 ) : (
                   <>
@@ -926,18 +1129,30 @@ function OnboardingContent() {
                 description="We'll send an SMS code to confirm your mobile number. This becomes your verified contact on the platform."
               />
               <ErrorBanner error={error} />
-              <div id="recaptcha-container" />
+              {testingBypass && (
+                <div className="mb-6 p-4 rounded-2xl bg-[var(--surface-secondary)] border border-[var(--border-subtle)] flex items-start gap-3">
+                  <Sparkles className="h-5 w-5 text-[var(--accent-primary)] flex-shrink-0" />
+                  <p className="text-[12px] leading-relaxed text-[var(--text-secondary)]">
+                    Testing mode: SMS and reCAPTCHA are skipped. Enter the test number configured in
+                    the Firebase Console (Authentication → Phone → Test phone numbers)
+                    {testPhone ? ' — pre-filled below.' : ', e.g. +1 555 555 0100.'} Use the exact
+                    code configured for that number in the console (not an arbitrary one).
+                  </p>
+                </div>
+              )}
+              {/* Invisible reCAPTCHA anchor for Firebase's signInWithPhoneNumber — renders nothing visible. */}
+              <div id={PHONE_RECAPTCHA_CONTAINER_ID} />
               <div className="space-y-5">
-                <FormInput
+                <FormField
                   label="Mobile Number (with country code)"
                   icon={Phone}
                   type="tel"
                   value={otpPhone}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    const val = e.target.value;
-                    let sanitized = val.replace(/[^0-9+\s]/g, '');
+                  onChange={(v) => {
+                    let sanitized = v.replace(/[^0-9+\s]/g, '');
                     if (sanitized.indexOf('+') > 0) {
-                      sanitized = (sanitized[0] ?? '') + sanitized.slice(1).replace(/\+/g, '');
+                      const firstChar = sanitized[0] ?? '';
+                      sanitized = firstChar + sanitized.slice(1).replace(/\+/g, '');
                     }
                     setOtpPhone(sanitized);
                   }}
@@ -981,6 +1196,7 @@ function OnboardingContent() {
                         setOtpPhoneSent(false);
                         setError('');
                         setOtpPhoneCode('');
+                        setPhoneConfirmation(null);
                       }}
                       className="w-full flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[var(--text-tertiary)] hover:text-[var(--accent-primary)] transition-colors"
                     >
@@ -992,10 +1208,9 @@ function OnboardingContent() {
             </motion.div>
           )}
 
-          {/* ── Entity Type ── */}
           {step === 'entity_type' && (
             <motion.div
-              key="entity_type"
+              key="s3"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -1005,7 +1220,7 @@ function OnboardingContent() {
                 step={String(stepSequence.indexOf('entity_type') + 1).padStart(2, '0')}
                 label="Entity Type"
                 title="Individual or Business?"
-                description="This determines which verification documents you'll provide after approval."
+                description="This determines which fields you'll complete in your profile."
               />
               <div className="grid grid-cols-1 gap-4 mb-10">
                 <RoleCard
@@ -1018,7 +1233,7 @@ function OnboardingContent() {
                   }}
                 />
                 <RoleCard
-                  icon={Building as ComponentType<SVGProps<SVGSVGElement>>}
+                  icon={Building}
                   title="Business"
                   description="Registered company, club, LLP, partnership firm, or trust."
                   active={entityType === 'business'}
@@ -1048,7 +1263,7 @@ function OnboardingContent() {
               transition={{ duration: 0.3 }}
             >
               <StepHeader
-                step="01"
+                step={String(stepSequence.indexOf('role') + 1).padStart(2, '0')}
                 label="Select Role"
                 title="Join the Network"
                 description="Select your operational role to begin the onboarding process."
@@ -1073,7 +1288,7 @@ function OnboardingContent() {
                   }}
                 />
                 <RoleCard
-                  icon={Zap as ComponentType<SVGProps<SVGSVGElement>>}
+                  icon={Zap}
                   title="Promoter"
                   description="Access tools for ticket distribution and guestlist management."
                   active={partnerType === 'promoter'}
@@ -1085,7 +1300,7 @@ function OnboardingContent() {
               <ActionButton
                 onClick={() => {
                   setError('');
-                  setStep('email_verify');
+                  setStep('signup');
                 }}
               >
                 Continue <ChevronRight className="h-5 w-5" />
@@ -1093,7 +1308,7 @@ function OnboardingContent() {
             </motion.div>
           )}
 
-          {/* ── Details Form ── */}
+          {/* ── Step 3: Profile + Plan (authed) ── */}
           {step === 'details' && (
             <motion.div
               key="details"
@@ -1103,12 +1318,12 @@ function OnboardingContent() {
               transition={{ duration: 0.3 }}
             >
               <StepHeader
-                step={String(stepSequence.indexOf('details') + 1).padStart(2, '0')}
+                step="05"
                 label="Your Details"
                 title={
-                  partnerType === 'venue'
+                  requestedType === 'venue'
                     ? 'Venue Registration'
-                    : partnerType === 'host'
+                    : requestedType === 'host'
                       ? 'Host Profile'
                       : 'Promoter Enrollment'
                 }
@@ -1122,129 +1337,87 @@ function OnboardingContent() {
                 }}
               />
 
+              {/* Credentials — the account was already created back at the
+                  email_verify step, so this is just a confirmation banner. */}
+              {authUser && (
+                <div className="p-5 rounded-2xl bg-[var(--state-success-bg)] border border-[var(--state-success)]/20 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="h-11 w-11 rounded-xl bg-[var(--state-success)] flex items-center justify-center font-bold text-white text-lg">
+                      {authUser.email[0]?.toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-[var(--state-success)] uppercase tracking-wider mb-0.5">
+                        Signed In As
+                      </p>
+                      <p className="text-[14px] font-semibold text-[var(--text-primary)]">
+                        {authUser.email}
+                      </p>
+                    </div>
+                  </div>
+                  <CheckCircle2 className="h-6 w-6 text-[var(--state-success)]" />
+                </div>
+              )}
+
               <form
                 onSubmit={(e) => {
+                  e.preventDefault();
                   void handleCreateAccount(e);
                 }}
                 className="space-y-8"
               >
-                {/* Credentials section */}
-                {!authUser ? (
-                  <div className="space-y-5">
-                    <SectionTitle title="Account Credentials" />
-                    <div className="p-4 rounded-2xl bg-[var(--state-success-bg)] border border-[var(--state-success)]/20 flex items-center gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-[var(--state-success)] flex-shrink-0" />
-                      <div>
-                        <p className="text-[11px] font-semibold text-[var(--state-success)] uppercase tracking-wider">
-                          Verified Email
-                        </p>
-                        <p className="text-[13px] font-medium text-[var(--text-primary)]">
-                          {otpEmail}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="relative">
-                      <FormInput
-                        label="Create Password"
-                        icon={Lock}
-                        type={showPassword ? 'text' : 'password'}
-                        name="password"
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="Minimum 8 characters"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowPassword(!showPassword);
-                        }}
-                        className="absolute right-4 top-[42px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-5 w-5" />
-                        ) : (
-                          <Eye className="h-5 w-5" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-5 rounded-2xl bg-[var(--state-success-bg)] border border-[var(--state-success)]/20 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="h-11 w-11 rounded-xl bg-[var(--state-success)] flex items-center justify-center font-bold text-white text-lg">
-                        {authUser.email?.slice(0, 1).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-semibold text-[var(--state-success)] uppercase tracking-wider mb-0.5">
-                          Signed In As
-                        </p>
-                        <p className="text-[14px] font-semibold text-[var(--text-primary)]">
-                          {authUser.email}
-                        </p>
-                      </div>
-                    </div>
-                    <CheckCircle2 className="h-6 w-6 text-[var(--state-success)]" />
-                  </div>
-                )}
-
-                {/* Entity Information */}
+                {/* Profile */}
                 <div className="space-y-5">
-                  <SectionTitle
-                    title={partnerType === 'promoter' ? 'Your Profile' : 'Entity Information'}
-                  />
+                  <SectionTitle title={partnerType === 'promoter' ? 'Your Profile' : ''} />
 
                   {entityType === 'business' ? (
                     <>
-                      <FormInput
+                      <FormField
                         label="Legal Business Name"
-                        icon={Building as ComponentType<SVGProps<SVGSVGElement>>}
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        required
+                        icon={Building}
+                        value={fieldValue('legalName')}
+                        error={fieldErrors['legalName']}
+                        onChange={(v) => {
+                          handleProfileChange('legalName', v);
+                        }}
                         placeholder="e.g. Eclipse Nightlife Pvt. Ltd."
                       />
                       <FormSelect
                         label="Business Type"
-                        name="businessType"
-                        value={formData.businessType}
-                        onChange={handleInputChange}
-                        options={[
-                          { value: 'pvt_ltd', label: 'Private Limited' },
-                          { value: 'llp', label: 'LLP' },
-                          { value: 'partnership', label: 'Partnership Firm' },
-                          { value: 'sole_prop', label: 'Sole Proprietorship' },
-                          { value: 'trust', label: 'Trust / Society' },
-                        ]}
+                        value={fieldValue('businessType')}
+                        onChange={(v) => {
+                          handleProfileChange('businessType', v);
+                        }}
+                        options={[{ value: '', label: 'Select business type' }, ...BUSINESS_TYPES]}
                       />
-                      <FormInput
+                      <FormField
                         label="Registration / CIN Number (optional)"
-                        icon={Briefcase as ComponentType<SVGProps<SVGSVGElement>>}
-                        name="registrationNumber"
-                        value={formData.registrationNumber}
-                        onChange={handleInputChange}
+                        icon={Briefcase}
+                        value={fieldValue('registrationNumber')}
+                        onChange={(v) => {
+                          handleProfileChange('registrationNumber', v);
+                        }}
                         placeholder="e.g. U74999MH2020PTC123456"
                       />
                     </>
                   ) : (
-                    <FormInput
+                    <FormField
                       label={
-                        partnerType === 'venue'
+                        requestedType === 'venue'
                           ? 'Venue Name'
-                          : partnerType === 'host'
+                          : requestedType === 'host'
                             ? 'Brand / Collective Name'
                             : 'Your Full Name'
                       }
-                      icon={partnerType === 'venue' ? Building2 : User}
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      required
+                      icon={requestedType === 'venue' ? Building2 : User}
+                      value={fieldValue('legalName')}
+                      error={fieldErrors['legalName']}
+                      onChange={(v) => {
+                        handleProfileChange('legalName', v);
+                      }}
                       placeholder={
-                        partnerType === 'venue'
+                        requestedType === 'venue'
                           ? 'e.g. Club Eclipse'
-                          : partnerType === 'host'
+                          : requestedType === 'host'
                             ? 'e.g. Midnight Collective'
                             : 'Your name'
                       }
@@ -1252,13 +1425,14 @@ function OnboardingContent() {
                   )}
 
                   <div className="grid grid-cols-2 gap-4">
-                    <FormInput
+                    <FormField
                       label={entityType === 'business' ? 'Authorized Contact' : 'Contact Person'}
-                      icon={Briefcase as ComponentType<SVGProps<SVGSVGElement>>}
-                      name="contactPerson"
-                      value={formData.contactPerson}
-                      onChange={handleInputChange}
-                      required
+                      icon={Briefcase}
+                      value={fieldValue('contactPerson')}
+                      error={fieldErrors['contactPerson']}
+                      onChange={(v) => {
+                        handleProfileChange('contactPerson', v);
+                      }}
                       placeholder="Primary contact"
                     />
                     {/* Phone is now verified in a later step (after account
@@ -1279,143 +1453,118 @@ function OnboardingContent() {
                   <div className="grid grid-cols-2 gap-4">
                     <FormSelect
                       label="City"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      required
+                      value={fieldValue('city')}
+                      error={fieldErrors['city']}
+                      onChange={(v) => {
+                        handleProfileChange('city', v);
+                      }}
                       options={[
                         { value: '', label: 'Select a city' },
-                        { value: 'Pune', label: 'Pune' },
-                        { value: 'Mumbai', label: 'Mumbai' },
-                        { value: 'Goa', label: 'Goa' },
-                        { value: 'Bengaluru', label: 'Bengaluru' },
-                        { value: 'Delhi', label: 'Delhi' },
-                        { value: 'Hyderabad', label: 'Hyderabad' },
-                        { value: 'Chennai', label: 'Chennai' },
-                        { value: 'Kolkata', label: 'Kolkata' },
-                        { value: 'Jaipur', label: 'Jaipur' },
-                        { value: 'Ahmedabad', label: 'Ahmedabad' },
+                        ...CITIES.map((c) => ({ value: c, label: c })),
                       ]}
                     />
-                    <FormInput
+                    <FormField
                       label="Area / Locality"
-                      icon={MapPin}
-                      name="area"
-                      value={formData.area}
-                      onChange={handleInputChange}
-                      required
+                      value={fieldValue('area')}
+                      error={fieldErrors['area']}
+                      onChange={(v) => {
+                        handleProfileChange('area', v);
+                      }}
                       placeholder="e.g. Bandra"
                     />
                   </div>
 
-                  <FormInput
+                  <FormField
                     label="Website (optional)"
                     icon={Globe}
-                    name="website"
-                    value={formData.website}
-                    onChange={handleInputChange}
+                    value={fieldValue('website')}
+                    onChange={(v) => {
+                      handleProfileChange('website', v);
+                    }}
                     placeholder="https://yourbrand.com"
                   />
 
-                  {/* Role-specific fields */}
-                  {partnerType === 'venue' && (
-                    <>
-                      <FormInput
-                        label="Approximate Capacity"
-                        icon={Users}
-                        name="capacity"
-                        value={formData.capacity}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="e.g. 500"
-                      />
-                      <FormSelect
-                        label="Subscription Tier"
-                        name="plan"
-                        value={formData.plan}
-                        onChange={handleInputChange}
-                        options={[
-                          { value: 'basic', label: 'Basic Access' },
-                          { value: 'silver', label: 'Silver Tier' },
-                          { value: 'gold', label: 'Gold Premium' },
-                          { value: 'diamond', label: 'Diamond Private' },
-                        ]}
-                      />
-                    </>
+                  {requestedType === 'venue' && (
+                    <FormField
+                      label="Approximate Capacity"
+                      icon={Users}
+                      value={fieldValue('capacity')}
+                      onChange={(v) => {
+                        handleProfileChange('capacity', v === '' ? null : Number(v));
+                      }}
+                      placeholder="e.g. 500"
+                    />
                   )}
-                  {partnerType === 'host' && (
+
+                  {requestedType === 'host' && (
                     <FormSelect
                       label="Host Category"
-                      name="role"
-                      value={formData.role}
-                      onChange={handleInputChange}
+                      value={hostCategory}
+                      onChange={setHostCategory}
                       options={[
-                        { value: 'dj', label: 'Individual DJ / Artist' },
                         { value: 'organizer', label: 'Event Organizer' },
+                        { value: 'dj', label: 'Individual DJ / Artist' },
                         { value: 'collective', label: 'Collective / Label' },
                       ]}
                     />
                   )}
-                  {partnerType === 'promoter' && (
+
+                  {requestedType === 'promoter' && (
                     <>
-                      <FormInput
+                      <FormField
                         label="Instagram Handle"
-                        icon={Instagram}
-                        name="instagram"
-                        value={formData.instagram}
-                        onChange={handleInputChange}
-                        required
+                        icon={AtSign}
+                        value={fieldValue('instagram')}
+                        onChange={(v) => {
+                          handleProfileChange('instagram', v);
+                        }}
                         placeholder="@yourusername"
                       />
                       <div className="space-y-2">
-                        <label htmlFor="bio" className="input-label">
+                        <label className="input-label" htmlFor="promoter-bio">
                           Short Bio
                         </label>
                         <textarea
-                          id="bio"
-                          name="bio"
-                          value={formData.bio}
-                          onChange={handleInputChange}
+                          id="promoter-bio"
+                          value={fieldValue('bio')}
+                          onChange={(e) => {
+                            handleProfileChange('bio', e.target.value);
+                          }}
                           placeholder="Tell us about your reach, experience, and what you're looking for..."
                           className="w-full bg-[var(--surface-secondary)] border border-[var(--border-subtle)] rounded-xl px-4 py-3 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] focus:bg-[var(--surface-base)] focus:border-[var(--accent-primary)] focus:ring-3 focus:ring-[var(--accent-glow)] transition-all outline-none min-h-[120px] resize-none"
-                          required
                         />
                       </div>
                       <div className="space-y-2">
-                        <label htmlFor="upcomingEventsText" className="input-label">
+                        <label className="input-label" htmlFor="promoter-upcoming">
                           Upcoming Events (optional)
                         </label>
                         <textarea
-                          id="upcomingEventsText"
-                          name="upcomingEventsText"
-                          value={formData.upcomingEventsText}
-                          onChange={handleInputChange}
+                          id="promoter-upcoming"
+                          value={upcomingEventsText}
+                          onChange={(e) => {
+                            setUpcomingEventsText(e.target.value);
+                          }}
                           placeholder={
                             'One event per line\nSummer Fridays | Jun 14 2026 | Toy Room | Mumbai\nCampus Heatwave | Jul 05 2026 | Kitty Su | Delhi'
                           }
                           className="w-full bg-[var(--surface-secondary)] border border-[var(--border-subtle)] rounded-xl px-4 py-3 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] focus:bg-[var(--surface-base)] focus:border-[var(--accent-primary)] focus:ring-3 focus:ring-[var(--accent-glow)] transition-all outline-none min-h-[120px] resize-none"
                         />
-                        <p className="text-[12px] leading-5 text-[var(--text-tertiary)]">
-                          Format each line as: event name | date | venue | city
-                        </p>
                       </div>
                       <div className="space-y-2">
-                        <label htmlFor="pastEventsText" className="input-label">
+                        <label className="input-label" htmlFor="promoter-past">
                           Past Event Highlights (optional)
                         </label>
                         <textarea
-                          id="pastEventsText"
-                          name="pastEventsText"
-                          value={formData.pastEventsText}
-                          onChange={handleInputChange}
+                          id="promoter-past"
+                          value={pastEventsText}
+                          onChange={(e) => {
+                            setPastEventsText(e.target.value);
+                          }}
                           placeholder={
                             'One event per line\nNeon Saturdays | Jan 20 2026 | Soho House | Mumbai\nWarehouse Takeover | Dec 28 2025 | AntiSocial | Pune'
                           }
                           className="w-full bg-[var(--surface-secondary)] border border-[var(--border-subtle)] rounded-xl px-4 py-3 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] focus:bg-[var(--surface-base)] focus:border-[var(--accent-primary)] focus:ring-3 focus:ring-[var(--accent-glow)] transition-all outline-none min-h-[120px] resize-none"
                         />
-                        <p className="text-[12px] leading-5 text-[var(--text-tertiary)]">
-                          These appear on your partner profile until real event history is linked.
-                        </p>
                       </div>
                     </>
                   )}
@@ -1429,11 +1578,11 @@ function OnboardingContent() {
                   {loading ? (
                     <>
                       <span className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Setting up account…
+                      Saving…
                     </>
                   ) : (
                     <>
-                      Continue to Verification <ChevronRight className="h-5 w-5" />
+                      Continue to Documents <ChevronRight className="h-5 w-5" />
                     </>
                   )}
                 </button>
@@ -1441,7 +1590,7 @@ function OnboardingContent() {
             </motion.div>
           )}
 
-          {/* ── KYC: Identity Verification (Individual) ── */}
+          {/* ── Step 4: Documents (authed) ── */}
           {step === 'kyc_identity' && (
             <motion.div
               key="kyc_identity"
@@ -1452,9 +1601,9 @@ function OnboardingContent() {
             >
               <StepHeader
                 step={String(stepSequence.indexOf('kyc_identity') + 1).padStart(2, '0')}
-                label="Identity Check"
+                label="Verification Documents"
                 title="Verify Your Identity"
-                description="Upload a government-issued ID and a selfie to confirm your identity."
+                description="Upload a government-issued ID (front and back) and a selfie. Images only — JPG, PNG or WEBP, up to 5 MB each."
               />
               {kycError && <ErrorBanner error={kycError} />}
               <KycIdentityForm
@@ -1503,7 +1652,7 @@ function OnboardingContent() {
             </motion.div>
           )}
 
-          {/* ── KYC: Authorized Representative (Business) ── */}
+          {/* ── Step 5: Review + Submit (authed) ── */}
           {step === 'kyc_signatory' && (
             <motion.div
               key="kyc_signatory"
@@ -1541,7 +1690,7 @@ function OnboardingContent() {
               transition={{ duration: 0.4 }}
               className="text-center pt-8"
             >
-              {approvalStatus === 'verified' ? (
+              {approvalStatus === 'approved' && (
                 <>
                   <motion.div
                     key="approved"
@@ -1559,21 +1708,58 @@ function OnboardingContent() {
                     <span className="font-semibold text-[var(--text-primary)]">
                       {formData.name}
                     </span>{' '}
-                    has been approved. Log in to access your dashboard.
+                    has been approved. Continue to your dashboard.
                   </p>
                   <button
                     onClick={() => {
-                      void (async () => {
-                        if (authUser) await signOut();
-                        router.push('/login');
-                      })();
+                      void routeAfterAuth(router);
                     }}
                     className="inline-flex items-center gap-3 px-8 py-3.5 rounded-2xl bg-[var(--accent-primary)] text-white font-semibold text-[14px] hover:brightness-110 transition-all shadow-lg shadow-[var(--accent-primary)]/20"
                   >
-                    Go to Login <ChevronRight className="h-4 w-4" />
+                    Go to Dashboard <ChevronRight className="h-4 w-4" />
                   </button>
                 </>
-              ) : (
+              )}
+              {approvalStatus === 'changes_requested' && (
+                <>
+                  <motion.div
+                    key="changes"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', delay: 0.2 }}
+                    className="h-24 w-24 rounded-3xl bg-[var(--state-warning-bg, #fbbf241a)] text-[var(--state-warning, #f59e0b)] flex items-center justify-center mx-auto mb-8"
+                  >
+                    <RefreshCw className="h-10 w-10" />
+                  </motion.div>
+                  <h1 className="text-display-sm text-[var(--text-primary)] mb-4">
+                    Changes Requested
+                  </h1>
+                  <p className="text-body text-[var(--text-secondary)] mb-10 max-w-md mx-auto">
+                    {reviewNote ||
+                      'Our team has requested changes before this application can continue.'}
+                  </p>
+                  <div className="flex flex-col gap-3">
+                    <button
+                      onClick={() => {
+                        setStep('details');
+                      }}
+                      className="inline-flex items-center justify-center gap-3 px-8 py-3.5 rounded-2xl bg-[var(--accent-primary)] text-white font-semibold text-[14px] hover:brightness-110 transition-all"
+                    >
+                      Fix Profile <ChevronRight className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (authUser) void signOut();
+                        router.push('/login');
+                      }}
+                      className="inline-flex items-center justify-center gap-2 text-[var(--accent-primary)] font-semibold text-[14px] hover:underline"
+                    >
+                      Return to Login <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </>
+              )}
+              {approvalStatus === 'pending' && (
                 <>
                   <motion.div
                     key="pending"
@@ -1592,7 +1778,7 @@ function OnboardingContent() {
                     <span className="font-semibold text-[var(--text-primary)]">
                       {formData.name}
                     </span>{' '}
-                    are under review. We'll email you once approved.
+                    are under review. We'll notify you once approved.
                   </p>
                   <div className="p-6 rounded-2xl bg-[var(--surface-secondary)] border border-[var(--border-subtle)] mb-10 flex items-start gap-4 text-left">
                     <ShieldCheck className="h-6 w-6 text-[var(--accent-primary)] flex-shrink-0" />
@@ -1601,19 +1787,45 @@ function OnboardingContent() {
                         What Happens Next?
                       </p>
                       <p className="text-[13px] text-[var(--text-tertiary)] leading-relaxed">
-                        Our team reviews applications and documents within 24–48 hours. Once
-                        approved, you'll receive an email to log in and access your full dashboard.
+                        Our team reviews applications and documents within 24–48 hours.
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={() => {
-                      void (async () => {
-                        if (authUser) await signOut();
-                        router.push('/login');
-                      })();
+                      if (authUser) void signOut();
+                      router.push('/login');
                     }}
                     className="inline-flex items-center gap-2 text-[var(--accent-primary)] font-semibold text-[14px] hover:underline"
+                  >
+                    Return to Login <ChevronRight className="h-4 w-4" />
+                  </button>
+                </>
+              )}
+              {approvalStatus === 'rejected' && (
+                <>
+                  <motion.div
+                    key="rejected"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', delay: 0.2 }}
+                    className="h-24 w-24 rounded-3xl bg-[var(--state-error-bg, #fef2f2)] text-[var(--state-error, #ef4444)] flex items-center justify-center mx-auto mb-8"
+                  >
+                    <AlertCircle className="h-10 w-10" />
+                  </motion.div>
+                  <h1 className="text-display-sm text-[var(--text-primary)] mb-4">
+                    Application Rejected
+                  </h1>
+                  <p className="text-body text-[var(--text-secondary)] mb-10 max-w-md mx-auto">
+                    {reviewNote ||
+                      'Unfortunately, your application to become a partner has been rejected.'}
+                  </p>
+                  <button
+                    onClick={() => {
+                      if (authUser) void signOut();
+                      router.push('/login');
+                    }}
+                    className="inline-flex items-center justify-center gap-2 text-[var(--accent-primary)] font-semibold text-[14px] hover:underline"
                   >
                     Return to Login <ChevronRight className="h-4 w-4" />
                   </button>
@@ -1626,25 +1838,6 @@ function OnboardingContent() {
     </div>
   );
 }
-
-export function OnboardingPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[var(--surface-base)]">
-          <div className="flex flex-col items-center gap-4">
-            <div className="h-10 w-10 border-3 border-[var(--accent-primary)]/30 border-t-[var(--accent-primary)] rounded-full animate-spin" />
-            <p className="text-[14px] font-medium text-[var(--text-tertiary)]">Loading...</p>
-          </div>
-        </div>
-      }
-    >
-      <OnboardingContent />
-    </Suspense>
-  );
-}
-
-// ── UI primitives ─────────────────────────────────────────────────────────────
 
 function StepHeader({
   step,
@@ -1668,6 +1861,15 @@ function StepHeader({
   );
 }
 
+function SectionTitle({ title }: { title: string }) {
+  return (
+    <div className="flex items-center gap-4">
+      <span className="text-label text-[var(--text-tertiary)] whitespace-nowrap">{title}</span>
+      <div className="h-px bg-[var(--border-subtle)] flex-1" />
+    </div>
+  );
+}
+
 function RoleCard({
   icon: Icon,
   title,
@@ -1675,7 +1877,7 @@ function RoleCard({
   active,
   onClick,
 }: {
-  icon: ComponentType<SVGProps<SVGSVGElement>>;
+  icon: LucideIcon;
   title: string;
   description: string;
   active: boolean;
@@ -1695,7 +1897,7 @@ function RoleCard({
           <Icon className="h-6 w-6" />
         </div>
         <div className="flex-1">
-          <h3 className={`text-[16px] font-semibold mb-1 text-[var(--text-primary)]`}>{title}</h3>
+          <h3 className="text-[16px] font-semibold mb-1 text-[var(--text-primary)]">{title}</h3>
           <p
             className={`text-[13px] leading-relaxed ${active ? 'text-[var(--text-secondary)]' : 'text-[var(--text-tertiary)]'}`}
           >
@@ -1712,14 +1914,12 @@ function RoleCard({
   );
 }
 
-function FormInput({
-  label,
-  icon: Icon,
-  ...props
-}: {
+type FormInputProps = {
   label: string;
-  icon?: ComponentType<SVGProps<SVGSVGElement>>;
-} & React.InputHTMLAttributes<HTMLInputElement>) {
+  icon?: LucideIcon;
+} & InputHTMLAttributes<HTMLInputElement>;
+
+function FormInput({ label, icon: Icon, ...props }: FormInputProps) {
   return (
     <div className="space-y-2">
       <label className="input-label">{label}</label>
@@ -1736,39 +1936,48 @@ function FormInput({
   );
 }
 
-function FormSelect({
+function FormField({
   label,
-  options,
-  ...props
+  icon: Icon,
+  value,
+  error,
+  onChange,
+  placeholder,
+  type = 'text',
+  disabled = false,
 }: {
   label: string;
-  options: { value: string; label: string }[];
-} & React.SelectHTMLAttributes<HTMLSelectElement>) {
+  icon?: LucideIcon;
+  value: string | number | null;
+  error?: string | undefined;
+  onChange?: (value: string) => void;
+  placeholder?: string;
+  type?: string;
+  disabled?: boolean;
+}) {
   return (
     <div className="space-y-2">
       <label className="input-label">{label}</label>
-      <div className="relative">
-        <select
-          className="w-full bg-[var(--surface-secondary)] border border-[var(--border-subtle)] rounded-xl px-4 py-3.5 text-[14px] text-[var(--text-primary)] appearance-none cursor-pointer transition-all outline-none hover:border-[var(--border-default)] focus:bg-[var(--surface-base)] focus:border-[var(--accent-primary)] focus:ring-3 focus:ring-[var(--accent-glow)]"
-          {...props}
-        >
-          {options.map((opt: { value: string; label: string }) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--text-tertiary)] rotate-90 pointer-events-none" />
+      <div className="relative group">
+        {Icon && (
+          <Icon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--text-placeholder)] group-focus-within:text-[var(--accent-primary)] transition-colors" />
+        )}
+        <input
+          type={type}
+          value={value ?? ''}
+          onChange={
+            onChange
+              ? (e) => {
+                  onChange(e.target.value);
+                }
+              : undefined
+          }
+          placeholder={placeholder}
+          disabled={disabled}
+          className={`w-full bg-[var(--surface-secondary)] border border-[var(--border-subtle)] rounded-xl text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] transition-all outline-none ${Icon ? 'pl-12 pr-4' : 'px-4'} py-3.5 hover:border-[var(--border-default)] focus:bg-[var(--surface-base)] focus:border-[var(--accent-primary)] focus:ring-3 focus:ring-[var(--accent-glow)] disabled:opacity-60 disabled:cursor-not-allowed ${error ? 'border-[var(--state-error)]' : ''}`}
+        />
       </div>
-    </div>
-  );
-}
-
-function SectionTitle({ title }: { title: string }) {
-  return (
-    <div className="flex items-center gap-4">
-      <span className="text-label text-[var(--text-tertiary)] whitespace-nowrap">{title}</span>
-      <div className="h-px bg-[var(--border-subtle)] flex-1" />
+      {error && <p className="text-xs text-[var(--state-error)]">{error}</p>}
     </div>
   );
 }
@@ -1780,7 +1989,7 @@ function OtpInput({
 }: {
   label: string;
   value: string;
-  onChange: (v: string) => void;
+  onChange: (value: string) => void;
 }) {
   return (
     <div className="space-y-2">
@@ -1800,22 +2009,64 @@ function OtpInput({
   );
 }
 
+function FormSelect({
+  label,
+  value,
+  error,
+  onChange,
+  options,
+  disabled = false,
+}: {
+  label: string;
+  value: string;
+  error?: string | undefined;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  disabled?: boolean;
+}) {
+  return (
+    <div className="space-y-2">
+      <label className="input-label">{label}</label>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+          }}
+          disabled={disabled}
+          className={`w-full bg-[var(--surface-secondary)] border rounded-xl px-4 py-3.5 text-[14px] text-[var(--text-primary)] appearance-none cursor-pointer transition-all outline-none hover:border-[var(--border-default)] focus:bg-[var(--surface-base)] focus:border-[var(--accent-primary)] focus:ring-3 focus:ring-[var(--accent-glow)] ${error ? 'border-[var(--state-error)]' : 'border-[var(--border-subtle)]'}`}
+        >
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--text-tertiary)] rotate-90 pointer-events-none" />
+      </div>
+      {error && <p className="text-xs text-[var(--state-error)]">{error}</p>}
+    </div>
+  );
+}
+
 function ActionButton({
   onClick,
   loading = false,
   loadingText = 'Processing...',
+  disabled = false,
   children,
 }: {
   onClick?: () => void;
   loading?: boolean;
   loadingText?: string;
-  children: React.ReactNode;
+  disabled?: boolean;
+  children: ReactNode;
 }) {
   return (
     <button
-      type={onClick ? 'button' : 'submit'}
+      type="button"
       onClick={onClick}
-      disabled={loading}
+      disabled={disabled || loading}
       className="w-full bg-[var(--accent-primary)] text-white h-14 rounded-2xl font-semibold text-[14px] hover:brightness-110 transition-all flex items-center justify-center gap-3 shadow-lg shadow-[var(--accent-primary)]/20 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {loading ? (
@@ -1844,7 +2095,7 @@ function ResendButton({
       type="button"
       onClick={onClick}
       disabled={cooldown > 0 || loading}
-      className="w-full flex items-center justify-center gap-2 text-[13px] font-semibold text-[var(--text-tertiary)] hover:text-[var(--accent-primary)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+      className="w-full flex items-center justify-center gap-2 text-[13px] font-semibold text-[var(--text-tertiary)] hover:text-[var(--accent-primary)] transition-colors disabled:opacity-40"
     >
       <RefreshCw className="h-4 w-4" />
       {cooldown > 0 ? `Resend in ${String(cooldown)}s` : 'Resend Code'}
@@ -1854,7 +2105,6 @@ function ResendButton({
 
 function ErrorBanner({ error, onLoginClick }: { error: string; onLoginClick?: () => void }) {
   if (!error) return null;
-  const lines = error.split('\n').filter(Boolean);
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
@@ -1864,18 +2114,8 @@ function ErrorBanner({ error, onLoginClick }: { error: string; onLoginClick?: ()
       <div className="flex items-start gap-4">
         <AlertCircle className="h-5 w-5 text-[var(--state-error)] flex-shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
-          {lines.length === 1 ? (
-            <p className="text-[14px] font-semibold text-[var(--state-error)]">{error}</p>
-          ) : (
-            <ul className="list-disc list-inside space-y-1">
-              {lines.map((line, i) => (
-                <li key={i} className="text-[14px] font-semibold text-[var(--state-error)]">
-                  {line}
-                </li>
-              ))}
-            </ul>
-          )}
-          {onLoginClick && error.includes('log in') && (
+          <p className="text-[14px] font-semibold text-[var(--state-error)]">{error}</p>
+          {onLoginClick && /log in|sign in/i.test(error) && (
             <button
               onClick={onLoginClick}
               className="text-[12px] font-semibold text-[var(--state-error)] underline hover:no-underline mt-2 inline-block"
@@ -1889,16 +2129,19 @@ function ErrorBanner({ error, onLoginClick }: { error: string; onLoginClick?: ()
   );
 }
 
-// ── KYC form utilities ────────────────────────────────────────────────────────
-
+// ── Document upload zone ───────────────────────────────────────────────────────
+// One of the backend's fixed 3 slots (id_front / id_back / selfie). The upload
+// lands server-side through the app's own BFF (`uploadDocument`); the browser
+// never performs a cross-origin PUT.
 function KycFileZone({
   label,
-  fieldName,
+  fieldName: _fieldName,
   value,
   onChange,
   uid: _uid,
   stepId: _stepId,
   requestId,
+  docLabel,
 }: {
   label: string;
   fieldName: string;
@@ -1906,17 +2149,21 @@ function KycFileZone({
   onChange: (storagePath: string | null) => void;
   uid: string;
   stepId: string;
+  /** The application to attach this document to; required when `docLabel` is set. */
   requestId: string | null;
+  /**
+   * Real backend document slot for this field — the onboarding document
+   * model only has three: `id_front`/`id_back`/`selfie`. Omit for a field
+   * with no real slot yet (e.g. the business registration certificate),
+   * which falls back to a local-only, never-uploaded placeholder.
+   */
+  docLabel?: 'id_front' | 'id_back' | 'selfie';
 }) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [uploadError, setUploadError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Real 3-step flow: mint a pre-signed URL, PUT the file straight to
-  // storage via `legacyFetch` (the one legitimate direct storage call — not a
-  // gateway call; ApiClient is gateway-scoped), then confirm the document on
-  // the onboarding request.
   const handleFile = async (file: File) => {
     setUploadError('');
     if (!requestId) {
@@ -1927,32 +2174,31 @@ function KycFileZone({
       setUploadError('File must be under 5MB.');
       return;
     }
-    if (file.type !== 'image/jpeg' && file.type !== 'image/png' && file.type !== 'image/webp') {
-      setUploadError('File must be a JPG, PNG, or WEBP image.');
+
+    if (!docLabel || !requestId) {
+      // No real document slot for this field yet — kept local-only so the
+      // step can still be filled out, but never durably uploaded anywhere.
+      onChange(URL.createObjectURL(file));
+      return;
+    }
+
+    const contentType = file.type;
+    if (
+      contentType !== 'image/jpeg' &&
+      contentType !== 'image/png' &&
+      contentType !== 'image/webp'
+    ) {
+      setUploadError('Please upload a JPG, PNG, or WEBP image.');
       return;
     }
 
     setUploading(true);
-    setProgress(0);
+    setProgress(10);
     try {
-      const docLabel = KYC_FIELD_LABELS[fieldName] ?? (fieldName as OnboardingDocumentLabel);
-      const { uploadUrl, method, headers, storagePath } = await getDocumentUploadUrl(
-        requestId,
-        docLabel,
-        file.type,
-      );
-      setProgress(50);
-
-      const putRes = await legacyFetch(uploadUrl, { method, headers, body: file });
-      if (!putRes.ok) {
-        throw new Error('Upload failed. Please try again.');
-      }
-      setProgress(90);
-
-      await addOnboardingDocument(requestId, docLabel, storagePath);
+      const updated = await uploadDocument(requestId, docLabel, file, crypto.randomUUID());
       setProgress(100);
-      onChange(storagePath);
-    } catch (e: unknown) {
+      onChange(updated.documents.find((doc) => doc.label === docLabel)?.storagePath ?? null);
+    } catch (e) {
       setUploadError(errorMessage(e, 'Upload failed. Please try again.'));
     } finally {
       setUploading(false);
@@ -1984,12 +2230,13 @@ function KycFileZone({
             <Loader2 className="h-4 w-4 animate-spin text-[var(--text-tertiary)]" />
             <span className="text-[12px] text-[var(--text-tertiary)]">Uploading… {progress}%</span>
           </div>
-          <div className="h-1 rounded-full bg-[var(--surface-tertiary)] overflow-hidden">
+          <div className="progress-bar w-full">
+            {/* eslint-disable no-restricted-syntax -- dynamic upload width is set inline; the design-token .progress-bar/.progress-bar-fill classes carry the chrome. */}
             <div
-              className="h-full bg-[var(--accent-primary)] rounded-full transition-all"
-              // eslint-disable-next-line no-restricted-syntax -- runtime upload progress is a dynamic width that Tailwind arbitrary-value utilities cannot express statically
+              className="progress-bar-fill progress-bar-fill-accent"
               style={{ width: `${String(progress)}%` }}
             />
+            {/* eslint-enable no-restricted-syntax */}
           </div>
         </div>
       ) : (
@@ -2017,10 +2264,7 @@ function KycFileZone({
         type="file"
         accept="image/jpeg,image/png,image/webp"
         className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) void handleFile(file);
-        }}
+        onChange={(e) => e.target.files?.[0] && void handleFile(e.target.files[0])}
       />
     </div>
   );
@@ -2121,7 +2365,10 @@ function KycIdentityForm({
   const [isVerified, setIsVerified] = useState(Boolean(initialData['isVerified']));
   const [verificationError, setVerificationError] = useState('');
 
-  const needsBack = ['aadhaar', 'driving_licence', 'voter_id'].includes(idType);
+  // The real backend requires exactly 3 documents (id_front, id_back, selfie)
+  // to submit, unconditionally by ID type — REQUIRED_DOCUMENT_LABELS has no
+  // per-type variant. A passport holder skipping "back" here would never be
+  // able to clear missingDocuments server-side, so every ID type needs one.
 
   const handleVerifyAadhaar = async () => {
     if (idNumber.length !== 12) {
@@ -2131,34 +2378,38 @@ function KycIdentityForm({
     setVerifying(true);
     setVerificationError('');
     try {
-      // Structural validation only — never presented as government identity
-      // confirmation (see verifyOnboardingDocument's doc comment).
-      const result = await verifyOnboardingDocument({
-        documentType: 'aadhaar',
-        documentNumber: idNumber,
-      });
+      // Format-check only, per D-018 — never rendered as government-verified.
+      const result = await verifyDocument({ documentType: 'aadhaar', documentNumber: idNumber });
       if (!result.passed) {
         throw new Error(result.reason ?? 'Verification failed.');
       }
       setIsVerified(true);
-    } catch (err: unknown) {
-      setVerificationError(errorMessage(err, ''));
+    } catch (err) {
+      setVerificationError(errorMessage(err, 'Verification failed.'));
       setIsVerified(false);
     } finally {
       setVerifying(false);
     }
   };
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- real UX requirement: switching the selected ID type or number must clear stale verification state before the next render.
+  // Any edit to the ID invalidates a previous format check.
+  const resetVerification = () => {
     setIsVerified(false);
     setVerificationError('');
-  }, [idNumber, idType]);
+  };
+  const handleIdTypeChange = (value: string) => {
+    setIdType(value);
+    resetVerification();
+  };
+  const handleIdNumberChange = (value: string) => {
+    setIdNumber(value);
+    resetVerification();
+  };
 
   const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!idType || !idNumber || !docFront || !selfie) return;
-    if (needsBack && !docBack) return;
+    if (!docBack) return;
     if (idType === 'aadhaar' && !isVerified) return;
     onSubmit({
       idType,
@@ -2175,7 +2426,7 @@ function KycIdentityForm({
       <KycSelectField
         label="ID Type"
         value={idType}
-        onChange={setIdType}
+        onChange={handleIdTypeChange}
         options={[
           { value: 'aadhaar', label: 'Aadhaar Card' },
           { value: 'passport', label: 'Passport' },
@@ -2190,7 +2441,7 @@ function KycIdentityForm({
             <KycInputField
               label="ID Number"
               value={idNumber}
-              onChange={setIdNumber}
+              onChange={handleIdNumberChange}
               placeholder="Enter your ID number"
             />
           </div>
@@ -2208,7 +2459,7 @@ function KycIdentityForm({
               ) : isVerified ? (
                 <CheckCircle2 className="h-4 w-4" />
               ) : null}
-              {verifying ? 'Verifying...' : isVerified ? 'Verified' : 'Verify ID'}
+              {verifying ? 'Checking...' : isVerified ? 'Format Validated' : 'Check Format'}
             </button>
           )}
         </div>
@@ -2221,12 +2472,12 @@ function KycIdentityForm({
         {isVerified && idType === 'aadhaar' && (
           <p className="text-[11px] font-medium text-emerald-400 flex items-center gap-1.5 ml-1">
             <CheckCircle2 className="h-3.5 w-3.5" />
-            Aadhaar structurally verified.
+            Aadhaar format validated.
           </p>
         )}
       </div>
 
-      <div className={`grid gap-4 ${needsBack ? 'sm:grid-cols-2' : 'grid-cols-1'}`}>
+      <div className="grid gap-4 sm:grid-cols-2">
         <KycFileZone
           label="Document Front"
           fieldName="doc_front"
@@ -2235,18 +2486,18 @@ function KycIdentityForm({
           uid={uid}
           stepId="kyc_identity"
           requestId={requestId}
+          docLabel="id_front"
         />
-        {needsBack && (
-          <KycFileZone
-            label="Document Back"
-            fieldName="doc_back"
-            value={docBack}
-            onChange={setDocBack}
-            uid={uid}
-            stepId="kyc_identity"
-            requestId={requestId}
-          />
-        )}
+        <KycFileZone
+          label="Document Back"
+          fieldName="doc_back"
+          value={docBack}
+          onChange={setDocBack}
+          uid={uid}
+          stepId="kyc_identity"
+          requestId={requestId}
+          docLabel="id_back"
+        />
       </div>
       <KycFileZone
         label="Selfie Photo"
@@ -2256,6 +2507,7 @@ function KycIdentityForm({
         uid={uid}
         stepId="kyc_identity"
         requestId={requestId}
+        docLabel="selfie"
       />
       <button
         type="submit"
@@ -2265,7 +2517,7 @@ function KycIdentityForm({
           !idNumber ||
           !docFront ||
           !selfie ||
-          (needsBack && !docBack) ||
+          !docBack ||
           (idType === 'aadhaar' && !isVerified)
         }
         className="w-full h-12 rounded-xl bg-[var(--accent-primary)] text-white font-black uppercase tracking-widest text-[11px] hover:brightness-110 disabled:opacity-40 transition-all flex items-center justify-center gap-2"
@@ -2334,7 +2586,7 @@ function KycBusinessForm({
         <div className="flex items-center justify-between">
           <span className="text-[12px] text-[var(--text-tertiary)]">Business Type</span>
           <span className="text-[13px] font-semibold text-[var(--text-primary)]">
-            {(BUSINESS_TYPE_LABELS[businessType] ?? businessType) || '—'}
+            {BUSINESS_TYPE_LABELS[businessType] ?? (businessType || '—')}
           </span>
         </div>
         {cin && (
@@ -2364,6 +2616,8 @@ function KycBusinessForm({
         onChange={setRegDoc}
         uid={uid}
         stepId="kyc_business"
+        // No real document slot exists yet for a business registration
+        // certificate — local-only placeholder (see KycFileZone's docLabel doc).
         requestId={requestId}
       />
       <button
@@ -2411,7 +2665,10 @@ function KycSignatoryForm({
   );
   const [selfie, setSelfie] = useState<string | null>((initialData['selfieUrl'] as string) || null);
   const [declared, setDeclared] = useState(false);
-  const needsBack = ['aadhaar', 'driving_licence', 'voter_id'].includes(idType);
+  // The real backend requires exactly 3 documents (id_front, id_back, selfie)
+  // to submit, unconditionally by ID type — REQUIRED_DOCUMENT_LABELS has no
+  // per-type variant. A passport holder skipping "back" here would never be
+  // able to clear missingDocuments server-side, so every ID type needs one.
 
   const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -2426,7 +2683,7 @@ function KycSignatoryForm({
       !declared
     )
       return;
-    if (needsBack && !docBack) return;
+    if (!docBack) return;
     onSubmit({
       fullName,
       designation,
@@ -2500,7 +2757,7 @@ function KycSignatoryForm({
         onChange={setIdNumber}
         placeholder="Enter ID number"
       />
-      <div className={`grid gap-4 ${needsBack ? 'sm:grid-cols-2' : 'grid-cols-1'}`}>
+      <div className="grid gap-4 sm:grid-cols-2">
         <KycFileZone
           label="Document Front"
           fieldName="sig_doc_front"
@@ -2509,18 +2766,18 @@ function KycSignatoryForm({
           uid={uid}
           stepId="kyc_signatory"
           requestId={requestId}
+          docLabel="id_front"
         />
-        {needsBack && (
-          <KycFileZone
-            label="Document Back"
-            fieldName="sig_doc_back"
-            value={docBack}
-            onChange={setDocBack}
-            uid={uid}
-            stepId="kyc_signatory"
-            requestId={requestId}
-          />
-        )}
+        <KycFileZone
+          label="Document Back"
+          fieldName="sig_doc_back"
+          value={docBack}
+          onChange={setDocBack}
+          uid={uid}
+          stepId="kyc_signatory"
+          requestId={requestId}
+          docLabel="id_back"
+        />
       </div>
       <KycFileZone
         label="Selfie Photo"
@@ -2530,6 +2787,7 @@ function KycSignatoryForm({
         uid={uid}
         stepId="kyc_signatory"
         requestId={requestId}
+        docLabel="selfie"
       />
       <label className="flex items-start gap-3 cursor-pointer">
         <input
@@ -2557,7 +2815,7 @@ function KycSignatoryForm({
           !docFront ||
           !selfie ||
           !declared ||
-          (needsBack && !docBack)
+          !docBack
         }
         className="w-full h-12 rounded-xl bg-[var(--accent-primary)] text-white font-black uppercase tracking-widest text-[11px] hover:brightness-110 disabled:opacity-40 transition-all flex items-center justify-center gap-2"
       >

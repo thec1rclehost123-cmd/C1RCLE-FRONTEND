@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { ApiClient } from './client.js';
 import { ApiClientError } from './errors.js';
+import { noContentSchema } from './schemas.js';
 
 const schema = z.object({ id: z.string() });
 
@@ -239,6 +240,232 @@ describe('ApiClient', () => {
       expect(body).toBe('a,b\n1,2');
       expect(reauth).toHaveBeenCalledTimes(1);
       expect(fetchImpl).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('supports PUT, PATCH and DELETE verbs', async () => {
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ id: 'a' }))
+      .mockResolvedValueOnce(jsonResponse({ id: 'a' }))
+      .mockResolvedValueOnce(jsonResponse({ id: 'a' }));
+    const client = clientWith(fetchImpl);
+
+    await client.put({ path: '/users/a', body: { name: 'x' }, schema });
+    await client.patch({ path: '/users/a', body: { name: 'x' }, schema });
+    await client.delete({ path: '/users/a', schema });
+
+    expect(fetchImpl.mock.calls.map((call) => call[1]?.method)).toEqual(['PUT', 'PATCH', 'DELETE']);
+  });
+
+  it('returns undefined for a 204 No Content response', async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 204 }));
+
+    await expect(
+      clientWith(fetchImpl).get({ path: '/users/a', schema: noContentSchema }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('maps a malformed JSON success body to a parse error', async () => {
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response('this is not json', { status: 200 }));
+
+    await expect(clientWith(fetchImpl).get({ path: '/users', schema })).rejects.toMatchObject({
+      code: 'parse',
+    });
+  });
+
+  it('maps a body-read failure on a text GET to a parse error', async () => {
+    const stream = new ReadableStream({
+      pull(controller) {
+        controller.error(new Error('stream failed'));
+      },
+    });
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(stream, { status: 200 }));
+
+    await expect(clientWith(fetchImpl).fetchText({ path: '/export.csv' })).rejects.toMatchObject({
+      code: 'parse',
+    });
+  });
+
+  it('maps a caller-initiated abort to an aborted error', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockRejectedValue(new DOMException('The operation was aborted.', 'AbortError'));
+
+    await expect(
+      clientWith(fetchImpl).get({ path: '/users', schema, signal: controller.signal }),
+    ).rejects.toMatchObject({
+      code: 'aborted',
+    });
+  });
+
+  it('maps a request that outlives its timeout to a timeout error', async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockImplementation(
+      (_input, init) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener(
+            'abort',
+            () => {
+              reject(new DOMException('Aborted', 'AbortError'));
+            },
+            { once: true },
+          );
+        }),
+    );
+
+    await expect(
+      clientWith(fetchImpl).get({ path: '/users', schema, timeoutMs: 20 }),
+    ).rejects.toMatchObject({
+      code: 'timeout',
+    });
+  });
+
+  it('aborts the retry backoff when the caller cancels mid-wait', async () => {
+    vi.useFakeTimers();
+    try {
+      const controller = new AbortController();
+      const fetchImpl = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(jsonResponse({}, { status: 503 }))
+        .mockResolvedValueOnce(jsonResponse({ id: 'a' }));
+
+      const promise = clientWith(fetchImpl, { maxRetries: 1 }).get({
+        path: '/users',
+        schema,
+        signal: controller.signal,
+      });
+
+      // Let the first attempt fail and reach the retry backoff.
+      await vi.advanceTimersByTimeAsync(0);
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+
+      controller.abort();
+      await expect(promise).rejects.toMatchObject({ name: 'AbortError' });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  describe('openEventStream', () => {
+    const encoder = new TextEncoder();
+
+    function sseResponse(chunks: string[], closeAtEnd: boolean): Response {
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          for (const chunk of chunks) controller.enqueue(encoder.encode(chunk));
+          if (closeAtEnd) controller.close();
+        },
+      });
+      return new Response(stream, {
+        status: 200,
+        headers: { 'content-type': 'text/event-stream' },
+      });
+    }
+
+    /** Resolves when onClose fires. */
+    function collectStream(
+      fetchImpl: typeof fetch,
+      overrides: { signal?: AbortSignal } = {},
+    ): {
+      events: [string, string][];
+      closes: { reason: 'done' | 'error'; error?: unknown }[];
+      whenClosed: Promise<void>;
+    } {
+      const events: [string, string][] = [];
+      const closes: { reason: 'done' | 'error'; error?: unknown }[] = [];
+      const whenClosed = new Promise<void>((resolve) => {
+        clientWith(fetchImpl, overrides).openEventStream(
+          { path: '/stream' },
+          (event, data) => events.push([event, data]),
+          (reason, error) => {
+            closes.push({ reason, error });
+            resolve();
+          },
+        );
+      });
+      return { events, closes, whenClosed };
+    }
+
+    it('emits `event:`/`data:` frames, drops bare comment lines and reports `done`', async () => {
+      const fetchImpl = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(
+          sseResponse(
+            ['event: ping\ndata: {"x":1}\n\n: keep-alive\n\nevent: bye\ndata: end\n\n'],
+            true,
+          ),
+        );
+
+      const { events, closes, whenClosed } = collectStream(fetchImpl);
+      await whenClosed;
+
+      expect(events).toEqual([
+        ['ping', '{"x":1}'],
+        ['bye', 'end'],
+      ]);
+      expect(closes).toEqual([{ reason: 'done' }]);
+    });
+
+    it('surfaces a reader failure as an `error` close', async () => {
+      const stream = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          controller.error(new Error('boom'));
+        },
+      });
+      const fetchImpl = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response(stream, { status: 200 }));
+
+      const { closes, whenClosed } = collectStream(fetchImpl);
+      await whenClosed;
+
+      expect(closes[0]?.reason).toBe('error');
+    });
+
+    it('reports an `error` close when the response has no body', async () => {
+      const fetchImpl = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response(null, { status: 200 }));
+
+      const { closes, whenClosed } = collectStream(fetchImpl);
+      await whenClosed;
+
+      expect(closes[0]?.reason).toBe('error');
+    });
+
+    it('close() ends the read loop without firing onClose', async () => {
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode('event: ping\ndata: x\n\n'));
+        },
+      });
+      const fetchImpl = vi
+        .fn<typeof fetch>()
+        .mockResolvedValue(new Response(stream, { status: 200 }));
+
+      const events: string[] = [];
+      const closes: string[] = [];
+      const controller = new AbortController();
+      const client = clientWith(fetchImpl);
+      const handle = client.openEventStream(
+        { path: '/stream', signal: controller.signal },
+        (event) => events.push(event),
+        (reason) => closes.push(reason),
+      );
+
+      // Let the first frame be delivered, then end the connection.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      handle.close();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(events).toEqual(['ping']);
+      expect(closes).toEqual([]);
     });
   });
 });

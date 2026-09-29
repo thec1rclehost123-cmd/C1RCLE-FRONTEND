@@ -46,6 +46,11 @@
   --color-danger-500: oklch(0.59 0.22 27);
   --color-danger-600: oklch(0.51 0.21 27);
 
+  /* High-attention hue for alerts — sits between warning amber (78) and the
+   * destructive/error red (27): vermilion. Never identical to either. */
+  --color-urgent-500: oklch(0.66 0.19 34);
+  --color-urgent-600: oklch(0.57 0.19 30);
+
   /* ---------------------------------------------------------------
    * Typography
    * ------------------------------------------------------------ */
@@ -96,6 +101,8 @@
   --color-destructive-foreground: var(--c1-destructive-foreground);
   --color-success: var(--c1-success);
   --color-warning: var(--c1-warning);
+  --color-urgent: var(--c1-urgent);
+  --color-urgent-foreground: var(--c1-urgent-foreground);
 }
 
 /* Light theme — the default. */
@@ -117,6 +124,8 @@
   --c1-destructive-foreground: var(--color-neutral-0);
   --c1-success: var(--color-success-600);
   --c1-warning: var(--color-warning-600);
+  --c1-urgent: var(--color-urgent-600);
+  --c1-urgent-foreground: var(--color-neutral-0);
 
   color-scheme: light;
 }
@@ -145,6 +154,8 @@
     --c1-destructive-foreground: var(--color-neutral-950);
     --c1-success: var(--color-success-500);
     --c1-warning: var(--color-warning-500);
+    --c1-urgent: var(--color-urgent-500);
+    --c1-urgent-foreground: var(--color-neutral-950);
 
     color-scheme: dark;
   }
@@ -168,6 +179,8 @@
   --c1-destructive-foreground: var(--color-neutral-950);
   --c1-success: var(--color-success-500);
   --c1-warning: var(--color-warning-500);
+  --c1-urgent: var(--color-urgent-500);
+  --c1-urgent-foreground: var(--color-neutral-950);
 
   color-scheme: dark;
 }

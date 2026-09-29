@@ -700,7 +700,12 @@ export function NightclubScene() {
     addCrowdLight(2, 3.5, -7.0, '#FF4420', 1.4);
     addCrowdLight(0, 3.5, -8.0, '#FF3300', 1.2);
 
-    interface CrowdFigure { lArm: THREE.Mesh; rArm: THREE.Mesh; phase: number; bobSpeed: number }
+    interface CrowdFigure {
+      lArm: THREE.Mesh;
+      rArm: THREE.Mesh;
+      phase: number;
+      bobSpeed: number;
+    }
     const crowdFigures: CrowdFigure[] = [];
 
     // Seeded deterministic random (so same layout every load)

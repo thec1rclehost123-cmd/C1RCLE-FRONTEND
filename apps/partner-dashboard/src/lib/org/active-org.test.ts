@@ -16,27 +16,27 @@ afterEach(() => {
 });
 
 describe('active-org', () => {
-  it('sets and clears c1rcle.active-org cookie', async () => {
-    await setActiveOrg('org-123');
+  it('sets and clears c1rcle.active-org cookie', () => {
+    setActiveOrg('org-123');
     expect(document.cookie).toContain('c1rcle.active-org=org-123');
     expect(getActiveOrgId()).toBe('org-123');
 
-    await setActiveOrg(null);
+    setActiveOrg(null);
     expect(getActiveOrgId()).toBeNull();
   });
 
-  it('does not set Secure in development', async () => {
+  it('does not set Secure in development', () => {
     const setCookieSpy = vi.spyOn(document, 'cookie', 'set');
-    await setActiveOrg('org-dev');
+    setActiveOrg('org-dev');
     expect(setCookieSpy.mock.calls.at(-1)?.[0]).not.toContain('Secure');
   });
 
-  it('sets Secure when NEXT_PUBLIC_ENVIRONMENT is production', async () => {
+  it('sets Secure when NEXT_PUBLIC_ENVIRONMENT is production', () => {
     vi.stubEnv('NEXT_PUBLIC_ENVIRONMENT', 'production');
     resetEnvCacheForTests();
 
     const setCookieSpy = vi.spyOn(document, 'cookie', 'set');
-    await setActiveOrg('org-prod');
+    setActiveOrg('org-prod');
     expect(setCookieSpy.mock.calls.at(-1)?.[0]).toContain('Secure');
   });
 
