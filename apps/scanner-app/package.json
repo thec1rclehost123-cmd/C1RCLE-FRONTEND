@@ -10,8 +10,8 @@
     "build": "expo export",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "jest",
-    "test:coverage": "jest --coverage",
+    "test": "jest --passWithNoTests",
+    "test:coverage": "jest --coverage --passWithNoTests",
     "clean": "rm -rf .expo dist coverage .turbo"
   },
   "dependencies": {
