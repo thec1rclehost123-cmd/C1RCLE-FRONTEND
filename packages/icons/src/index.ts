@@ -136,3 +136,4 @@ export {
 } from 'lucide-react';
 
 export type { LucideProps as IconProps } from 'lucide-react';
+export {};
