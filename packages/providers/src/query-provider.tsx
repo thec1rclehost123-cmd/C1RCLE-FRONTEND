@@ -3,11 +3,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import type { ReactNode } from 'react';
+import { isApiClientError } from '@c1rcle/api-client';
 
-function isApiClientError(_error: unknown) {
-  return false;
-}
+import type { ReactNode } from 'react';
 
 const ONE_MINUTE = 60 * 1000;
 
