@@ -8,6 +8,7 @@ export type StudioIconName =
   | 'requests'
   | 'partners'
   | 'marketing'
+  | 'presence'
   | 'finance'
   | 'guests'
   | 'analytics'
@@ -40,6 +41,7 @@ export const STUDIO_CONFIG: Readonly<Record<StudioRole, StudioConfig>> = {
       { label: 'Slot requests', href: studioPath('venue', 'slot-requests'), icon: 'requests' },
       { label: 'Partners', href: studioPath('venue', 'partners'), icon: 'partners' },
       { label: 'Marketing', href: studioPath('venue', 'marketing'), icon: 'marketing' },
+      { label: 'Presence', href: studioPath('venue', 'presence'), icon: 'presence' },
       { label: 'Finance', href: studioPath('venue', 'finance'), icon: 'finance' },
       { label: 'Settings', href: studioPath('venue', 'settings'), icon: 'settings' },
     ],
@@ -54,6 +56,7 @@ export const STUDIO_CONFIG: Readonly<Record<StudioRole, StudioConfig>> = {
       { label: 'Slot requests', href: studioPath('host', 'slot-requests'), icon: 'requests' },
       { label: 'Partners', href: studioPath('host', 'partners'), icon: 'partners' },
       { label: 'Marketing', href: studioPath('host', 'marketing'), icon: 'marketing' },
+      { label: 'Presence', href: studioPath('host', 'presence'), icon: 'presence' },
       { label: 'Finance', href: studioPath('host', 'finance'), icon: 'finance' },
       { label: 'Settings', href: studioPath('host', 'settings'), icon: 'settings' },
     ],

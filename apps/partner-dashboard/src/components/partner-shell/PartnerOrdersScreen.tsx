@@ -83,13 +83,20 @@ export function PartnerOrdersScreen({
               <input
                 type="search"
                 value={query}
-                onChange={(event) => { setQuery(event.target.value); }}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                }}
                 placeholder="Search by name or order #"
               />
             </label>
             <label className={styles['statusFilter']}>
               <span className={styles['srOnly']}>Filter by status</span>
-              <select value={status} onChange={(event) => { setStatus(event.target.value); }}>
+              <select
+                value={status}
+                onChange={(event) => {
+                  setStatus(event.target.value);
+                }}
+              >
                 {statusOptions.map((option) => (
                   <option key={option}>{option}</option>
                 ))}

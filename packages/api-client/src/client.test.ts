@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { ApiClient } from './client.js';
 import { ApiClientError } from './errors.js';
+import { noContentSchema } from './schemas.js';
 
 const schema = z.object({ id: z.string() });
 
@@ -240,5 +241,114 @@ describe('ApiClient', () => {
       expect(reauth).toHaveBeenCalledTimes(1);
       expect(fetchImpl).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it('supports PUT, PATCH and DELETE verbs', async () => {
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ id: 'a' }))
+      .mockResolvedValueOnce(jsonResponse({ id: 'a' }))
+      .mockResolvedValueOnce(jsonResponse({ id: 'a' }));
+    const client = clientWith(fetchImpl);
+
+    await client.put({ path: '/users/a', body: { name: 'x' }, schema });
+    await client.patch({ path: '/users/a', body: { name: 'x' }, schema });
+    await client.delete({ path: '/users/a', schema });
+
+    expect(fetchImpl.mock.calls.map((call) => call[1]?.method)).toEqual(['PUT', 'PATCH', 'DELETE']);
+  });
+
+  it('returns undefined for a 204 No Content response', async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 204 }));
+
+    await expect(
+      clientWith(fetchImpl).get({ path: '/users/a', schema: noContentSchema }),
+    ).resolves.toBeUndefined();
+  });
+
+  it('maps a malformed JSON success body to a parse error', async () => {
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response('this is not json', { status: 200 }));
+
+    await expect(clientWith(fetchImpl).get({ path: '/users', schema })).rejects.toMatchObject({
+      code: 'parse',
+    });
+  });
+
+  it('maps a body-read failure on a text GET to a parse error', async () => {
+    const stream = new ReadableStream({
+      pull(controller) {
+        controller.error(new Error('stream failed'));
+      },
+    });
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(stream, { status: 200 }));
+
+    await expect(clientWith(fetchImpl).fetchText({ path: '/export.csv' })).rejects.toMatchObject({
+      code: 'parse',
+    });
+  });
+
+  it('maps a caller-initiated abort to an aborted error', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockRejectedValue(new DOMException('The operation was aborted.', 'AbortError'));
+
+    await expect(
+      clientWith(fetchImpl).get({ path: '/users', schema, signal: controller.signal }),
+    ).rejects.toMatchObject({
+      code: 'aborted',
+    });
+  });
+
+  it('maps a request that outlives its timeout to a timeout error', async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockImplementation(
+      (_input, init) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener(
+            'abort',
+            () => {
+              reject(new DOMException('Aborted', 'AbortError'));
+            },
+            { once: true },
+          );
+        }),
+    );
+
+    await expect(
+      clientWith(fetchImpl).get({ path: '/users', schema, timeoutMs: 20 }),
+    ).rejects.toMatchObject({
+      code: 'timeout',
+    });
+  });
+
+  it('aborts the retry backoff when the caller cancels mid-wait', async () => {
+    vi.useFakeTimers();
+    try {
+      const controller = new AbortController();
+      const fetchImpl = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(jsonResponse({}, { status: 503 }))
+        .mockResolvedValueOnce(jsonResponse({ id: 'a' }));
+
+      const promise = clientWith(fetchImpl, { maxRetries: 1 }).get({
+        path: '/users',
+        schema,
+        signal: controller.signal,
+      });
+
+      // Let the first attempt fail and reach the retry backoff.
+      await vi.advanceTimersByTimeAsync(0);
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+
+      controller.abort();
+      await expect(promise).rejects.toMatchObject({ name: 'AbortError' });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

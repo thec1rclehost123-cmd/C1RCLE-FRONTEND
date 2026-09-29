@@ -5,6 +5,7 @@
 - `docs/superpowers/specs/2026-08-27-frontend-gateway-auth-foundation-design.md` — the design.
 - `docs/superpowers/plans/2026-08-27-auth-foundation-plan.md` — the phased plan. **Phase 0 (Allowed APIs) is your API reference. Do not call any endpoint not listed there.**
 - `docs/superpowers/HANDOFF-2026-08-27-auth-foundation.md` — §6 (knowledge base), §7 (do's/don'ts). Read §6.5, §6.6, §6.7 in full.
+- `docs/superpowers/PR16-INTERN-CONTRACT-REVIEW.md` — post-landing review of how these contracts shipped (read after your track merges).
 
 **Repo:** `C1RCLE-FRONTEND` only, branch off `staging`. **You never touch `C1RCLE-BACKEND` or `thec1rcle`.**
 

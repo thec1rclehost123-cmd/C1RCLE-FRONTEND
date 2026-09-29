@@ -15,7 +15,6 @@ import {
 } from './promoter-event-detail-model';
 import { CopyLinkButton } from './PromoterShareActions';
 
-
 import type { PromoterEvent, PromoterOrder, PromoterTrackingLink } from '@/lib/partner/contracts';
 
 const s = (name: string) => styles[name] ?? name;

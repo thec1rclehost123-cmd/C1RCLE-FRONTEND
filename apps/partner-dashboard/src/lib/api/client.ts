@@ -1,5 +1,6 @@
 import { createApiClient } from '@c1rcle/api-client';
 import { clearSession, getAccessToken, refresh } from '@c1rcle/auth';
+import { getClientEnv } from '@c1rcle/config';
 
 /**
  * Composition root for the browser-side API client.
@@ -16,6 +17,12 @@ let redirecting = false;
 export const apiClient = createApiClient({
   getToken: getAccessToken,
   reauth: () => refresh(),
+  onTiming: (timing) => {
+    if (getClientEnv().NEXT_PUBLIC_ENVIRONMENT !== 'production') {
+      // eslint-disable-next-line no-console
+      console.debug('[api]', timing);
+    }
+  },
   onUnauthorized: () => {
     if (!redirecting) {
       redirecting = true;

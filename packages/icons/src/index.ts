@@ -132,7 +132,6 @@ export {
   ShieldCheck as ComplianceIcon,
   Sparkles as AssistantIcon,
   Building as CompanyIcon,
-  Upload as UploadIcon,
 } from 'lucide-react';
 
 export type { LucideProps as IconProps } from 'lucide-react';

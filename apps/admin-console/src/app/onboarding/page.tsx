@@ -16,7 +16,13 @@ import {
   requestOnboardingChanges,
   statusFilterOptions,
 } from '@/lib/admin/admin-api';
-import { formatDateTime, onboardingStatusTone, ONBOARDING_STATUS_LABELS, shortId, StatusBadge } from '@/lib/admin/format';
+import {
+  formatDateTime,
+  onboardingStatusTone,
+  ONBOARDING_STATUS_LABELS,
+  shortId,
+  StatusBadge,
+} from '@/lib/admin/format';
 
 import type { OnboardingStatus } from '@/lib/admin/contract-types';
 import type { OnboardingRequestDto } from '@c1rcle/contracts';
@@ -50,7 +56,9 @@ function allRequiredDocumentsVerified(application: OnboardingRequestDto): boolea
       ? REQUIRED_DOCUMENT_LABELS_BUSINESS
       : REQUIRED_DOCUMENT_LABELS;
   return required.every((label) =>
-    application.documents.some((document) => document.label === label && document.status === 'verified'),
+    application.documents.some(
+      (document) => document.label === label && document.status === 'verified',
+    ),
   );
 }
 
@@ -73,7 +81,8 @@ export default function OnboardingDesk() {
   const reviewNote = () => (note.trim() === '' ? undefined : note.trim());
 
   const approveMutation = useMutation({
-    mutationFn: (applicationId: string) => approveOnboardingApplication(applicationId, reviewNote()),
+    mutationFn: (applicationId: string) =>
+      approveOnboardingApplication(applicationId, reviewNote()),
     onSuccess: () => {
       setReviewing(null);
       setNote('');
@@ -107,7 +116,8 @@ export default function OnboardingDesk() {
     },
   });
 
-  const anyPending = approveMutation.isPending || rejectMutation.isPending || changesMutation.isPending;
+  const anyPending =
+    approveMutation.isPending || rejectMutation.isPending || changesMutation.isPending;
 
   const confirmReview = () => {
     if (reviewing === null || anyPending) {
@@ -149,7 +159,10 @@ export default function OnboardingDesk() {
           onRetry={() => void list.refetch()}
         />
       ) : list.data.items.length === 0 ? (
-        <EmptyState title="Nothing in this queue" description="No applications match this status." />
+        <EmptyState
+          title="Nothing in this queue"
+          description="No applications match this status."
+        />
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full divide-y divide-border text-sm">
@@ -192,10 +205,15 @@ export default function OnboardingDesk() {
                       {application.requestedType} · {application.plan}
                     </td>
                     <td className="px-4 py-3">
-                      <StatusBadge label={application.status} tone={onboardingStatusTone(application.status)} />
+                      <StatusBadge
+                        label={application.status}
+                        tone={onboardingStatusTone(application.status)}
+                      />
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {application.submittedAt === null ? '—' : formatDateTime(application.submittedAt)}
+                      {application.submittedAt === null
+                        ? '—'
+                        : formatDateTime(application.submittedAt)}
                     </td>
                     <td className="px-4 py-3">
                       {application.documents.length === 0 ? (
@@ -227,8 +245,14 @@ export default function OnboardingDesk() {
                           <TextField
                             label="Note"
                             value={note}
-                            onChange={(event) => { setNote(event.target.value); }}
-                            placeholder={reviewing.mode === 'changes' ? 'What should the applicant fix?' : 'Optional note'}
+                            onChange={(event) => {
+                              setNote(event.target.value);
+                            }}
+                            placeholder={
+                              reviewing.mode === 'changes'
+                                ? 'What should the applicant fix?'
+                                : 'Optional note'
+                            }
                             className="w-72"
                           />
                           <div className="flex gap-2">

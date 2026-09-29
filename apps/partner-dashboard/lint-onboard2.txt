@@ -1,0 +1,16 @@
+﻿
+C:\Users\SHRIYASH SAWANT\OneDrive\Desktop\Circle1\C1RCLE-FRONTEND-pr16-merge\apps\partner-dashboard\src\app\onboard\PageClient.tsx
+   253:7   error  Unused eslint-disable directive (no problems were reported from 'react-hooks/set-state-in-effect')
+   267:3   error  Unused eslint-disable directive (no problems were reported from 'react-hooks/preserve-manual-memoization')
+   297:18  error  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined                 @typescript-eslint/no-unnecessary-condition
+   298:22  error  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined                 @typescript-eslint/no-unnecessary-condition
+   299:14  error  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined                 @typescript-eslint/no-unnecessary-condition
+   300:13  error  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined                 @typescript-eslint/no-unnecessary-condition
+  1646:14  error  Unused eslint-disable directive (no problems were reported from 'no-restricted-syntax')
+  1649:15  error  STYLING: inline styles are forbidden. Use Tailwind utilities backed by the design tokens in @c1rcle/design-system  no-restricted-syntax
+
+✖ 8 problems (8 errors, 0 warnings)
+  3 errors and 0 warnings potentially fixable with the `--fix` option.
+
+undefined
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command failed with exit code 1: eslint src/app/onboard/PageClient.tsx

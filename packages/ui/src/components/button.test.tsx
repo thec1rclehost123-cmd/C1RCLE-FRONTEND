@@ -63,4 +63,43 @@ describe('TextField', () => {
     expect(screen.queryByText('Optional')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Email')).toHaveAccessibleDescription('Required');
   });
+
+  it('visually hides the label while keeping it in the accessibility tree', () => {
+    render(<TextField label="Email" labelHidden />);
+    expect(screen.getByText('Email')).toHaveClass('sr-only');
+    expect(screen.getByLabelText('Email')).toBeInTheDocument();
+  });
+
+  it('forwards input props and the ref to the native input', () => {
+    const ref = { current: null as HTMLInputElement | null };
+    render(
+      <TextField label="Email" placeholder="you@example.com" defaultValue="a@b.co" ref={ref} />,
+    );
+
+    const input = screen.getByLabelText('Email');
+    expect(input).toHaveAttribute('placeholder', 'you@example.com');
+    expect(input).toHaveValue('a@b.co');
+    expect(ref.current).toBe(input);
+  });
+
+  it('applies the destructive border and wires the error id when only an error is present', () => {
+    render(<TextField label="Email" error="Enter a valid email." />);
+
+    const input = screen.getByLabelText('Email');
+    expect(input.className).toContain('border-destructive');
+    expect(input).toHaveAttribute('aria-describedby');
+  });
+
+  it('keeps the neutral border and no describedby when neither hint nor error is present', () => {
+    render(<TextField label="Email" />);
+
+    const input = screen.getByLabelText('Email');
+    expect(input.className).toContain('border-input');
+    expect(input).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('merges a caller-supplied class', () => {
+    render(<TextField label="Email" className="custom-field" />);
+    expect(screen.getByLabelText('Email').className).toContain('custom-field');
+  });
 });

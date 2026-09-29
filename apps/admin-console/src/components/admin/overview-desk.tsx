@@ -15,7 +15,12 @@ import {
 } from '@c1rcle/icons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@c1rcle/ui';
 
-import { listAdmins, listOnboardingApplications, listProposals, listRefunds } from '@/lib/admin/admin-api';
+import {
+  listAdmins,
+  listOnboardingApplications,
+  listProposals,
+  listRefunds,
+} from '@/lib/admin/admin-api';
 import { formatPaise } from '@/lib/admin/format';
 
 import type { IconProps } from '@c1rcle/icons';
@@ -165,7 +170,12 @@ function LiveStatsCards() {
         hint="awaiting review"
         icon={InviteIcon}
       />
-      <StatCard label="Admins" value={String(stats.activeAdmins)} hint="active accounts" icon={AdminIcon} />
+      <StatCard
+        label="Admins"
+        value={String(stats.activeAdmins)}
+        hint="active accounts"
+        icon={AdminIcon}
+      />
     </div>
   );
 }

@@ -6,7 +6,6 @@ import styles from '../venue/screens/VenueOrders.module.css';
 
 import { CopyLinkButton } from './PromoterShareActions';
 
-
 export interface PromoterEventLinkRow {
   readonly eventId: string;
   readonly eventName: string;

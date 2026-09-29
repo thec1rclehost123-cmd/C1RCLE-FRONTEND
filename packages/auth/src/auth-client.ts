@@ -25,6 +25,23 @@ interface LoginInput {
 const GENERIC_AUTH_FAILURE = 'Authentication failed';
 
 /**
+ * `c1rcle.active-org` is an id hint owned by the partner-dashboard app, not a
+ * credential. It must never survive an account change: otherwise Account B
+ * inherits Account A's org id and its first `GET /organizations/:id/access`
+ * 403s (`X-Organization-Id does not match...`) before the provider can
+ * validate/clear it. Duplicated here (not imported) so `@c1rcle/auth` stays
+ * independent of app code.
+ */
+function clearActiveOrgHint(): void {
+  if (typeof document === 'undefined') return;
+  // Mirror `setActiveOrg`'s cookie attributes so the clear actually replaces
+  // the value — without `Secure`, Chrome refuses to overwrite a cookie that
+  // was set with `Secure` in production, leaving the stale hint behind.
+  const secure = getClientEnv().NEXT_PUBLIC_ENVIRONMENT === 'production' ? '; Secure' : '';
+  document.cookie = `c1rcle.active-org=; path=/; SameSite=Lax; max-age=0${secure}`;
+}
+
+/**
  * Non-httpOnly CSRF cookie the BFF sets on login/signup; echoed on
  * cookie-authed calls. Namespaced by `NEXT_PUBLIC_APP_ID` so guest-portal,
  * partner-dashboard, and admin-console don't collide when run together on
@@ -82,6 +99,7 @@ export async function signup(input: SignupInput): Promise<void> {
     schema: authBridgeResponseSchema,
   });
 
+  clearActiveOrgHint();
   setSession({ user: response.user }, response.accessToken, response.expiresAt);
 }
 
@@ -103,6 +121,7 @@ export async function login(input: LoginInput): Promise<void> {
       schema: authBridgeResponseSchema,
     });
 
+    clearActiveOrgHint();
     setSession({ user: response.user }, response.accessToken, response.expiresAt);
   } catch (error) {
     if (isApiClientError(error) && (error.status === 400 || error.status === 401)) {
@@ -136,6 +155,7 @@ export async function refresh(): Promise<boolean> {
       return true;
     } catch {
       clearSession();
+      clearActiveOrgHint();
       return false;
     } finally {
       inFlightRefresh = null;
@@ -162,6 +182,7 @@ export async function logout(): Promise<void> {
     // be down. Local state is cleared regardless, so logout never rejects.
   } finally {
     clearSession();
+    clearActiveOrgHint();
   }
 }
 

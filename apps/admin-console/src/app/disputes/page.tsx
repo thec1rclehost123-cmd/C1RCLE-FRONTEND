@@ -77,7 +77,10 @@ export default function DisputesDesk() {
           id="dispute-status"
           value={filter}
           onChange={setFilter}
-          options={[{ value: 'all', label: 'All' }, ...statusFilterOptions(DISPUTE_STATUS_LABELS, DISPUTE_STATUSES)]}
+          options={[
+            { value: 'all', label: 'All' },
+            ...statusFilterOptions(DISPUTE_STATUS_LABELS, DISPUTE_STATUSES),
+          ]}
         />
       </div>
 
@@ -128,9 +131,14 @@ export default function DisputesDesk() {
                   <td className="px-4 py-3 font-medium">{formatPaise(dispute.amountPaise)}</td>
                   <td className="max-w-md px-4 py-3 text-muted-foreground">{dispute.reason}</td>
                   <td className="px-4 py-3">
-                    <StatusBadge label={DISPUTE_STATUS_LABELS[dispute.status]} tone={disputeStatusTone(dispute.status)} />
+                    <StatusBadge
+                      label={DISPUTE_STATUS_LABELS[dispute.status]}
+                      tone={disputeStatusTone(dispute.status)}
+                    />
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{formatDateTime(dispute.createdAt)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {formatDateTime(dispute.createdAt)}
+                  </td>
                   <td className="px-4 py-3">
                     {dispute.status !== 'resolved' ? (
                       <div className="flex justify-end gap-2">
@@ -153,7 +161,9 @@ export default function DisputesDesk() {
                             <TextField
                               label="Resolution note (required)"
                               value={resolutionNote}
-                              onChange={(event) => { setResolutionNote(event.target.value); }}
+                              onChange={(event) => {
+                                setResolutionNote(event.target.value);
+                              }}
                               placeholder="Why is this dispute being resolved this way?"
                               className="w-80"
                             />
@@ -172,7 +182,9 @@ export default function DisputesDesk() {
                                 size="sm"
                                 variant={resolving.outcome === 'upheld' ? 'primary' : 'destructive'}
                                 disabled={resolveMutation.isPending || resolutionNote.trim() === ''}
-                                onClick={() => { resolveMutation.mutate(); }}
+                                onClick={() => {
+                                  resolveMutation.mutate();
+                                }}
                               >
                                 {resolveMutation.isPending
                                   ? 'Resolving…'
