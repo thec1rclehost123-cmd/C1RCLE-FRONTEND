@@ -252,6 +252,9 @@ export class ApiClient {
               }
             : {}),
           ...(token !== null && token !== undefined ? { authorization: `Bearer ${token}` } : {}),
+          ...(/organizations\/([A-Za-z0-9_-]+)/.test(options.path)
+            ? { 'x-organization-id': options.path.match(/organizations\/([A-Za-z0-9_-]+)/)?.[1] }
+            : {}),
           ...options.headers,
         },
         ...(requestBody !== undefined ? { body: requestBody } : {}),
