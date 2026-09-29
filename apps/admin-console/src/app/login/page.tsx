@@ -39,6 +39,7 @@ export default function LoginPage() {
       // login() calls the BFF /api/auth/login proxy; a 4xx collapses into a
       // single generic message (account-existence oracle suppression).
       await login({ email, password });
+      router.refresh();
       router.replace('/');
     } catch {
       setError('Invalid email or password. Please try again.');
