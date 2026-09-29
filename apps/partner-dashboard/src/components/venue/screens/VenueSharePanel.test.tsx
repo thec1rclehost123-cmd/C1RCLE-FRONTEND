@@ -56,7 +56,9 @@ describe('parseVenueShareDraft', () => {
   });
 
   it('rejects a fractional rate rather than rounding it', () => {
-    expect(parseVenueShareDraft('20.5')).toEqual({ error: expect.any(String) });
+    expect(parseVenueShareDraft('20.5')).toEqual({
+      error: 'Enter a whole number between 0 and 50, or leave blank for not negotiated.',
+    });
   });
 
   it('rejects a rate above the domain cap', () => {
@@ -66,8 +68,9 @@ describe('parseVenueShareDraft', () => {
   });
 
   it('rejects a negative rate and non-numeric input', () => {
-    expect(parseVenueShareDraft('-1')).toEqual({ error: expect.any(String) });
-    expect(parseVenueShareDraft('abc')).toEqual({ error: expect.any(String) });
+    const message = 'Enter a whole number between 0 and 50, or leave blank for not negotiated.';
+    expect(parseVenueShareDraft('-1')).toEqual({ error: message });
+    expect(parseVenueShareDraft('abc')).toEqual({ error: message });
   });
 });
 
@@ -107,7 +110,7 @@ describe('VenueSharePanel', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() =>
-      expect(setVenueShareMock).toHaveBeenCalledWith('org_venue', 'part_1', 30, expect.any(String)),
+      { expect(setVenueShareMock).toHaveBeenCalledWith('org_venue', 'part_1', 30, expect.any(String)); },
     );
     expect(await screen.findByText('Saved')).toBeInTheDocument();
   });

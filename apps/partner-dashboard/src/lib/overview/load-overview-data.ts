@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import { ApiClientError } from '@c1rcle/api-client';
 
 import { createServerApiClient } from '@/lib/api/server-client';
+import { getActiveOrgIdFromCookieHeader } from '@/lib/org/active-org-cookie';
 import {
   getOrganizationCalendar,
   getOrganizationEventCards,
@@ -17,7 +18,6 @@ import { dayKeyOffset, monthKeyOffset, toOverviewData } from '@/lib/overview/ove
 // `useSyncExternalStore`; the RSC build rejects a client-only React API in a
 // Server Component, and `tsc` / lint / vitest all happily pass it. See
 // `active-org-cookie.ts` for the full write-up.
-import { getActiveOrgIdFromCookieHeader } from '@/lib/org/active-org-cookie';
 
 import type { OverviewData } from '@/data/partner-data-source';
 import type { ServerApiClient } from '@/lib/api/server-client';

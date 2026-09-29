@@ -19,7 +19,10 @@ export class WebGLErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
+  // Error boundaries have no other reporting path here; matches the dev-log
+  // convention in bff-client.ts.
   override componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+    // eslint-disable-next-line no-console
     console.error('WebGL Error Boundary caught an error:', error, errorInfo);
   }
 

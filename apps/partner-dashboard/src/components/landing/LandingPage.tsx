@@ -4,6 +4,8 @@ import { motion, useReducedMotion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 
+import { useMounted } from '@c1rcle/hooks';
+
 import { MagneticButton } from '@/components/ui/MagneticButton';
 import { WebGLErrorBoundary } from '@/components/ui/WebGLErrorBoundary';
 
@@ -20,13 +22,8 @@ const fadeUp = {
 // eslint-disable-next-line import-x/no-default-export -- consumed via default import by src/app/page.tsx (outside the 2026-09-11 lint-fix scope); named-exporting here would force touching page.tsx.
 export default function LandingPage() {
   const [sceneReady, setSceneReady] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const reduceMotion = useReducedMotion();
-
-  // Ensure component only renders on client side
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // The useful HTML is rendered immediately. WebGL is progressive enhancement,
   // deferred until after the browser has painted the headline and CTAs.

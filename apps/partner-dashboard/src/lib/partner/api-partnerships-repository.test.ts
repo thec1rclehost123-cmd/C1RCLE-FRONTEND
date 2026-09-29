@@ -9,8 +9,19 @@ import {
 
 import type { PartnershipDto } from '@c1rcle/contracts';
 
-const getMock = vi.hoisted(() => vi.fn());
-const postMock = vi.hoisted(() => vi.fn());
+/**
+ * Just enough of the real `RequestOptions` shape for these tests to read
+ * back what the repository actually sent, without the mocks collapsing to
+ * `any` (and every `.path`/`.headers`/`.body` access downstream with it).
+ */
+interface CapturedRequest {
+  readonly path: string;
+  readonly headers: Record<string, string>;
+  readonly body?: unknown;
+}
+
+const getMock = vi.hoisted(() => vi.fn<(options: CapturedRequest) => Promise<unknown>>());
+const postMock = vi.hoisted(() => vi.fn<(options: CapturedRequest) => Promise<unknown>>());
 
 vi.mock('@/lib/api/client', () => ({
   apiClient: { get: getMock, post: postMock },
