@@ -226,6 +226,17 @@ function parseSetCookie(raw: string): ParsedSetCookie | null {
  * origin: `Domain` dropped (host-only), `HttpOnly` + `SameSite=Lax` +
  * `Secure` (prod) re-imposed regardless of what the gateway sent. Returns the
  * cookie names, so logout can also actively expire them.
+ *
+ * Strips a `__Secure-` prefix off the name first: a cookie prefixed
+ * `__Secure-` is spec-required (RFC 6265bis) to carry the `Secure` attribute,
+ * which this app only sets when `isProduction()` — so on any non-production
+ * deployment (a Vercel preview, `NEXT_PUBLIC_ENVIRONMENT` = "preview") the
+ * browser silently refuses to store the cookie at all. It never errors, it
+ * just never appears in the jar, and the very next request looks
+ * unauthenticated — surfaced as an immediate bounce back to /login on every
+ * preview after an otherwise-successful login. `getServerSession`'s
+ * `withGatewayCookieName` already re-adds the `__Secure-` twin when calling
+ * the gateway, so storing the unprefixed name here is the matching half.
  */
 export function rescopeSessionCookies(gatewayResponse: Response, res: NextResponse): string[] {
   const names: string[] = [];
@@ -234,8 +245,9 @@ export function rescopeSessionCookies(gatewayResponse: Response, res: NextRespon
     if (parsed === null) {
       continue;
     }
-    names.push(parsed.name);
-    res.cookies.set(parsed.name, parsed.value, {
+    const name = parsed.name.replace(/^__Secure-/, '');
+    names.push(name);
+    res.cookies.set(name, parsed.value, {
       httpOnly: true,
       sameSite: 'lax',
       secure: isProduction(),
