@@ -267,13 +267,34 @@ Catalog: `GET/POST /events/:eventId/{ticket-tiers,promo-codes,table-packages,pro
 
 ### 4.5 Analytics · partnerships · promoter connections · referral links
 
-| endpoint                                                                                           | perm                                 | Status                               |
-| -------------------------------------------------------------------------------------------------- | ------------------------------------ | ------------------------------------ |
-| `GET /organizations/:organizationId/analytics/overview`                                            | `organization.read`                  | 🟢 → `organizationOverviewDtoSchema` |
-| `GET /events/:eventId/analytics`                                                                   | `event.read`                         | 🟢 → `eventAnalyticsDtoSchema`       |
-| `GET /organizations/:organizationId/partnerships` · `POST /partnerships` · resolve                 | `organization.read` / `venue.manage` | 🟢                                   |
-| `GET /organizations/:organizationId/promoter-connections` · `POST /promoter-connections` · resolve | `organization.read`                  | 🟢                                   |
-| `GET/POST /events/:eventId/referral-links` · `POST /referral-links/:id/deactivate`                 | `event.read` / `event.update`        | 🟢                                   |
+| endpoint                                                                                           | perm                                 | Status                                         |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------ | ---------------------------------------------- |
+| `GET /organizations/:organizationId/analytics/overview`                                            | `organization.read`                  | 🟢 → `organizationOverviewDtoSchema`           |
+| `GET /events/:eventId/analytics`                                                                   | `event.read`                         | 🟢 → `eventAnalyticsDtoSchema`                 |
+| `GET /organizations/:organizationId/analytics/trends` _(new 2026-09-28)_                           | `organization.read`                  | 🟢 → `organizationTrendsDtoSchema`             |
+| `GET /organizations/:organizationId/analytics/calendar` _(new 2026-09-28)_                         | `organization.read`                  | 🟢 → `organizationCalendarDtoSchema`           |
+| `GET /organizations/:organizationId/analytics/events` _(new 2026-09-28)_                           | `organization.read`                  | 🟢 → `organizationEventCardListResponseSchema` |
+| `GET /organizations/:organizationId/finance/orders` _(new 2026-09-28)_                             | `organization.read`                  | 🟢 → `financeOrderListResponseSchema`          |
+| `GET /organizations/:organizationId/partnerships` · `POST /partnerships` · resolve                 | `organization.read` / `venue.manage` | 🟢                                             |
+| `GET /organizations/:organizationId/promoter-connections` · `POST /promoter-connections` · resolve | `organization.read`                  | 🟢                                             |
+| `GET/POST /events/:eventId/referral-links` · `POST /referral-links/:id/deactivate`                 | `event.read` / `event.update`        | 🟢                                             |
+
+The three `analytics/*` routes and `finance/orders` were added on
+**2026-09-28** to unblock the overview and finance desk migrations (see
+`SPRINT-2026-08-31.md` §Session log). Notes that are not obvious from the
+signatures:
+
+- `trends` is **granularity-parameterised** (`hour | day | month`, default
+  `day`). This is a read-model property, not a UI zoom: the four dashboard
+  ranges are four genuinely different shapes. Returns `granularity` +
+  `buckets[]` (dense, zero-filled, each with a `key`) + lifetime `totals`
+  that are deliberately **not** the sum of `buckets`.
+- `analytics/events` exists to avoid an N+1: the overview's cards need venue
+  name, `ticketsSold` and `capacity` resolved in one place rather than one
+  `GET /events/:id/analytics` per card. `capacity` is `null` — never `0` —
+  when the venue never declared one.
+- Neither route has a `clicks` series. Referral-link clicks are a
+  per-promoter vanity counter with no authoritative attribution behind them.
 
 The partner-dashboard `HostRepository` / `PromoterRepository` interfaces
 (`src/lib/partner/contracts.ts`) — `getOrganizations`, `getOverview`, `getEvents`,

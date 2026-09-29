@@ -27,6 +27,7 @@ import {
 } from '../venue-partners-model';
 
 import styles from './VenuePartners.module.css';
+import { VenueSharePanel } from './VenueSharePanel';
 
 import type {
   DiscoverablePartner,
@@ -39,10 +40,11 @@ import type {
 const classNames = (...values: readonly (string | undefined)[]): string =>
   values.filter((value): value is string => Boolean(value)).join(' ');
 
-export type PartnersTab = 'discover' | 'requests' | 'connected';
+export type PartnersTab = 'discover' | 'requests' | 'connected' | 'share';
 
 const TAB_LINKS: readonly { readonly id: PartnersTab; readonly label: string }[] = [
   { id: 'connected', label: 'Connected' },
+  { id: 'share', label: 'Venue share' },
   { id: 'discover', label: 'Discover' },
   { id: 'requests', label: 'Requests' },
 ];
@@ -85,7 +87,9 @@ export function PartnersScreen({
               ? 'Find hosts and promoters that fit your venue.'
               : tab === 'requests'
                 ? 'Connection requests you have sent and received.'
-                : 'Hosts and promoters connected to your venue.'}
+                : tab === 'share'
+                  ? 'Agree the share of every ticket sale that belongs to your venue.'
+                  : 'Hosts and promoters connected to your venue.'}
           </p>
         </div>
       </header>
@@ -105,7 +109,7 @@ export function PartnersScreen({
           ))}
         </nav>
 
-        {tab !== 'requests' ? (
+        {tab !== 'requests' && tab !== 'share' ? (
           <nav className={styles['subnav']} aria-label="Partner type">
             <Link
               href={`/venue/partners?tab=${tab}&view=host`}
@@ -146,6 +150,8 @@ export function PartnersScreen({
         <DiscoverPartners kind={segment} />
       ) : tab === 'requests' ? (
         <PartnershipRequests direction={requestView} />
+      ) : tab === 'share' ? (
+        <VenueSharePanel />
       ) : (
         <ConnectedPartners kind={segment} />
       )}

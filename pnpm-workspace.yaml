@@ -10,6 +10,14 @@ peerDependencyRules:
   # eslint-plugin-import-x. We deliberately use only import-x (see ADR-0002).
   ignoreMissing:
     - eslint-plugin-import
+  # jest-expo (scanner-app) pulls in jest-watch-typeahead, which only
+  # declares jest ^27-29 as a peer; this monorepo is on jest 30 everywhere
+  # else. jest-watch-typeahead's actual API surface (a --watch reporter
+  # plugin) hasn't broken across jest 27->30 in practice — allow the
+  # version mismatch rather than downgrading jest repo-wide for one
+  # dev-only watch-mode plugin.
+  allowedVersions:
+    "jest-watch-typeahead>jest": "30"
 
 onlyBuiltDependencies:
   - "@tailwindcss/oxide"

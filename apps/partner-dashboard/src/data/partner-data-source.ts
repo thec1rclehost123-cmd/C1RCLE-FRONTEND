@@ -22,7 +22,16 @@ export interface OverviewEvent {
   readonly imageAlt?: string;
   readonly status: 'live' | 'draft' | 'past';
   readonly sold: number;
-  readonly capacity: number;
+  /**
+   * `null` when the venue never declared one.
+   *
+   * Deliberately not `0`: the screen computes `sold / capacity` for a
+   * sell-through percentage, and `0` would render as divide-by-zero rather than
+   * "not declared". A `0` is a real capacity only for a room that genuinely
+   * holds nobody, which the domain does not allow (`createVenue` rejects
+   * non-positive capacity).
+   */
+  readonly capacity: number | null;
 }
 
 export interface OverviewTrendSeries {
@@ -61,10 +70,23 @@ export interface OverviewNetworkMember {
 }
 
 export interface OverviewData {
-  readonly dataStatus: 'fixture';
+  /**
+   * `api` once the screen is reading real endpoints. The screen renders a
+   * "Fixture data" badge from this, so leaving it at `fixture` while serving
+   * real numbers would be a lie told to the user, and setting it to `api` while
+   * still serving fixture numbers would be the same lie in reverse.
+   */
+  readonly dataStatus: 'fixture' | 'api';
   readonly todayLabel: string;
   readonly greeting: string;
-  readonly nextEvent: OverviewEvent & { readonly doorsLabel: string };
+  /**
+   * `doorsLabel` is optional because the backend has **no doors time**. An event
+   * carries `startAt`/`endAt` and nothing else — a "doors open at" field was
+   * never modelled, and inferring one (say, an hour before start) would put a
+   * time on the screen that no partner ever set. Absent means the card simply
+   * does not claim to know.
+   */
+  readonly nextEvent: OverviewEvent & { readonly doorsLabel?: string };
   readonly trends: readonly OverviewTrendSeries[];
   readonly recentActivity: readonly OverviewActivity[];
   readonly calendar: {
@@ -549,14 +571,35 @@ export interface FinanceMetric {
   readonly tone?: FinanceTone;
 }
 
+/**
+ * Payout destination.
+ *
+ * There is deliberately **no plaintext account number** on this type, and
+ * there never was one worth keeping: the backend stores only a `last4` and
+ * `bankAccountResponseSchema` exposes only `maskedAccountNumber`, so a field
+ * for the full number could only ever have been fed by a fixture. Keeping the
+ * type honest about that is the point — if a screen needs the number back, the
+ * fix is a re-authenticated reveal endpoint, not re-adding a string field
+ * that invites someone to type a real one into it.
+ */
 export interface FinanceBankAccount {
   readonly bankName: string;
+  /** Masked, e.g. `•••• 4412`. The only account number this app ever shows. */
   readonly displayNumber: string;
-  readonly accountNumber: string;
   readonly ifscCode: string;
   readonly accountHolder: string;
+  readonly verified: boolean;
 }
 
+/**
+ * A card on file for paying platform fees.
+ *
+ * OPTIONAL, and absent for every API-backed finance screen. Nothing in the
+ * backend stores a card: fees go through Razorpay, which tokenizes in a hosted
+ * field, and a CVC must never reach our servers under any design. So this type
+ * survives only for the fixture, and `FinanceBankCards` renders an honest
+ * "no card on file" state when it is missing rather than inventing a number.
+ */
 export interface FinancePaymentCard {
   readonly label: string;
   readonly displayNumber: string;
@@ -588,16 +631,24 @@ export interface FinanceOrder {
 }
 
 export interface PartnerFinanceData {
-  readonly dataStatus: 'fixture';
+  /**
+   * Which world this data came from. `'api'` means every field below is backed
+   * by a real read; `'fixture'` means it is a design placeholder. Screens branch
+   * on it to refuse to render values the API cannot supply (a card number, a
+   * plaintext account) rather than showing a convincing lie.
+   */
+  readonly dataStatus: 'fixture' | 'api';
   readonly accent: FinanceAccent;
   readonly availableBalance: string;
+  /** Period-over-period change, or an honest "nothing to compare" string. */
   readonly balanceDelta: string;
   readonly balanceDetail: string;
   readonly balanceTrend: readonly number[];
   readonly pendingBalance: FinanceMetric;
   readonly nextPayout: FinanceMetric;
   readonly bankAccount: FinanceBankAccount;
-  readonly paymentCard: FinancePaymentCard;
+  /** Fixture-only — see `FinancePaymentCard`. */
+  readonly paymentCard?: FinancePaymentCard;
   readonly payouts: readonly FinancePayout[];
   readonly orders: readonly FinanceOrder[];
 }

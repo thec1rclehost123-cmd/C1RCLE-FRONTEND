@@ -1,25 +1,28 @@
 import { getClientEnv } from '@c1rcle/config';
 
-import { ACTIVE_ORG_COOKIE_NAME, parseActiveOrgCookie } from './active-org-cookie';
+import {
+  ACTIVE_ORG_COOKIE_NAME,
+  getActiveOrgId,
+  getActiveOrgIdFromCookieHeader,
+} from './active-org-cookie';
 
-export { getActiveOrgIdFromCookieHeader } from './active-org-cookie';
+/**
+ * ─── Active organization (browser) ──────────────────────────────────────────
+ *
+ * The cookie *writers* and the browser read live here. The pure parsing lives in
+ * `active-org-cookie.ts` — see that file for why it had to be split out.
+ *
+ * ⚠️ This module imports `@c1rcle/auth`, so it is **not** server-safe. A Server
+ * Component must import `getActiveOrgIdFromCookieHeader` from
+ * `@/lib/org/active-org-cookie` instead, or the RSC build fails on
+ * `useSyncExternalStore`.
+ */
 
 function isProduction(): boolean {
   return getClientEnv().NEXT_PUBLIC_ENVIRONMENT === 'production';
 }
 
-/**
- * Gets the current active organization ID from the browser cookie.
- * Client-side only — for Server Components / layouts, pass the incoming
- * request's cookie header to `getActiveOrgIdFromCookieHeader` instead.
- */
-export function getActiveOrgId(): string | null {
-  if (typeof document === 'undefined') {
-    return null;
-  }
-
-  return parseActiveOrgCookie(document.cookie);
-}
+export { ACTIVE_ORG_COOKIE_NAME, getActiveOrgId, getActiveOrgIdFromCookieHeader };
 
 /**
  * Sets or clears the active organization ID cookie, and triggers token refresh for token rotation.

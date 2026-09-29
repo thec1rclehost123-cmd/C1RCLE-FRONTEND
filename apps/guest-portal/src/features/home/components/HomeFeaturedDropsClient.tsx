@@ -247,7 +247,7 @@ export function HomeFeaturedDropsClient({ content }: { content: HomeFeaturedDrop
         {rail.map(({ event, key }, index) => (
           <Link
             key={key}
-            ref={(node) => {
+            ref={(node: HTMLAnchorElement | null) => {
               cardRefs.current[index] = node;
             }}
             href="/explore"

@@ -239,6 +239,26 @@ export default function SupportDesk() {
   const [linkVenueId, setLinkVenueId] = useState('');
   const [linkUserId, setLinkUserId] = useState('');
 
+  /**
+   * Every draft field above (reply/note/priority/assignee/merge/link) is
+   * scoped to whichever ticket is selected, but lives as page-level state —
+   * switching tickets without submitting must not leave ticket A's draft
+   * attached to ticket B. Route every selectedId change through here.
+   */
+  const selectTicket = useCallback((id: string | null, currentPriority?: SupportTicketPriority) => {
+    setSelectedId(id);
+    setAssigneeId('');
+    setReplyText('');
+    setNoteText('');
+    setPriorityDraft(currentPriority ?? 'medium');
+    setResolveReason('');
+    setMergeTargetId('');
+    setLinkOrderId('');
+    setLinkEventId('');
+    setLinkVenueId('');
+    setLinkUserId('');
+  }, []);
+
   const transitionMutation = useMutation({
     mutationFn: (action: 'escalate' | 'close' | 'reopen' | 'restore' | 'delete') => {
       if (selectedId === null) {
@@ -260,7 +280,7 @@ export default function SupportDesk() {
     onSuccess: (_ticket, action) => {
       invalidateTickets();
       if (action === 'delete') {
-        setSelectedId(null);
+        selectTicket(null);
       }
     },
   });
@@ -398,7 +418,7 @@ export default function SupportDesk() {
                   <tr
                     key={ticket.id}
                     onClick={() => {
-                      setSelectedId(ticket.id);
+                      selectTicket(ticket.id, ticket.priority);
                     }}
                     className={`cursor-pointer ${isSelected ? 'bg-muted/60' : ''}`}
                   >
@@ -534,7 +554,7 @@ export default function SupportDesk() {
   }
 
   function closePanel(): void {
-    setSelectedId(null);
+    selectTicket(null);
   }
 }
 

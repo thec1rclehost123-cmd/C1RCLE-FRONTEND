@@ -43,6 +43,23 @@ export default function SettingsDesk() {
 
   const settings = platformSettings.data;
 
+  // Mirrors the Commissions desk's validate-before-enable pattern: an empty
+  // field means "leave unchanged" (valid), a non-empty field must parse to
+  // something the backend schema will actually accept. Without this, a
+  // non-numeric string reaches `Number()` as NaN, which zod then rejects
+  // deep inside the mutation with a generic "Save failed" and no indication
+  // of which field or why.
+  const feeRateValid =
+    feeRateDraft === '' ||
+    (Number.isFinite(Number(feeRateDraft)) &&
+      Number(feeRateDraft) >= 0 &&
+      Number(feeRateDraft) <= 1);
+  const singleValid =
+    singleDraft === '' || (Number.isInteger(Number(singleDraft)) && Number(singleDraft) >= 0);
+  const dualValid =
+    dualDraft === '' || (Number.isInteger(Number(dualDraft)) && Number(dualDraft) >= 0);
+  const draftsValid = feeRateValid && singleValid && dualValid;
+
   const saveMutation = useMutation({
     mutationFn: () =>
       updatePlatformSettings({
@@ -146,6 +163,9 @@ export default function SettingsDesk() {
                 setFeeRateDraft(event.target.value);
               }}
               placeholder={settings !== undefined ? String(settings.platformFeeRate) : ''}
+              {...(feeRateDraft !== '' && !feeRateValid
+                ? { error: 'Must be a number between 0 and 1' }
+                : {})}
             />
             <TextField
               label="Single approver threshold (paise)"
@@ -159,6 +179,9 @@ export default function SettingsDesk() {
               placeholder={
                 settings !== undefined ? String(settings.refundSingleApproverThresholdPaise) : ''
               }
+              {...(singleDraft !== '' && !singleValid
+                ? { error: 'Must be a whole number of paise, 0 or more' }
+                : {})}
             />
             <TextField
               label="Dual approver threshold (paise)"
@@ -172,11 +195,14 @@ export default function SettingsDesk() {
               placeholder={
                 settings !== undefined ? String(settings.refundDualApproverThresholdPaise) : ''
               }
+              {...(dualDraft !== '' && !dualValid
+                ? { error: 'Must be a whole number of paise, 0 or more' }
+                : {})}
             />
             <div className="flex items-end gap-2">
               <Button
                 variant="primary"
-                disabled={!dirty || saveMutation.isPending}
+                disabled={!dirty || !draftsValid || saveMutation.isPending}
                 onClick={() => {
                   saveMutation.mutate();
                 }}
