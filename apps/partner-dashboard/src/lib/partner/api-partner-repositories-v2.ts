@@ -1,5 +1,6 @@
-import { partnershipApi, promoterConnectionApi } from '@/lib/api/partner-connections';
 import { getActiveOrgId } from '@/lib/org/active-org';
+
+import { partnershipApi, promoterConnectionApi } from '../api/partner-connections';
 
 import {
   type HostRepository,
