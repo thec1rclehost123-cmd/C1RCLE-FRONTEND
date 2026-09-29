@@ -86,6 +86,19 @@ jobs:
         if: always()
         run: cp apps/scanner-app/.env.example apps/scanner-app/.env
 
+      # Expo native deps must stay inside the SDK 55 tested set. `expo install
+      # --check` fails on drift (e.g. react-native-screens pulled out of the
+      # ~4.23.0 range — a newer 4.x breaks the RN 0.83 codegen on CI with
+      # "SearchBarNativeComponent.ts: The first argument of method blur must be
+      # of type React.ElementRef<>"). Fix drift with `npx expo install <pkg>`,
+      # never a manual version bump. Runs before Build so a regression gets a
+      # clear, fast failure instead of a cryptic codegen error minutes later.
+      - name: Check Expo native deps stay in SDK range
+        id: expo-deps
+        if: always()
+        working-directory: apps/scanner-app
+        run: npx expo install --check
+
       - name: Build
         id: build
         if: always()
@@ -102,6 +115,7 @@ jobs:
             echo "| Typecheck | ${{ steps.typecheck.outcome }} |"
             echo "| Boundaries | ${{ steps.boundaries.outcome }} |"
             echo "| Test | ${{ steps.test.outcome }} |"
+            echo "| Expo deps | ${{ steps.expo-deps.outcome }} |"
             echo "| Build | ${{ steps.build.outcome }} |"
           } >> "$GITHUB_STEP_SUMMARY"
 
