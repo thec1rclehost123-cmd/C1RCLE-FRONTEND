@@ -19,6 +19,27 @@ export const loginResponseSchema = z.object({
 });
 export type LoginResponse = z.infer<typeof loginResponseSchema>;
 
+/**
+ * `GET /organizations` — the signed-in user's ACTIVE memberships only
+ * (C1RCLE-BACKEND routes/v2/partner/organizations.ts). This is how the app
+ * learns which venue it belongs to; it is not a directory of every org.
+ *
+ * Transcribed from `organizationDtoSchema` in
+ * `@c1rcle/contracts` (packages/contracts/src/contracts/organization.ts).
+ * Only the fields this app reads are kept, matching the file's convention.
+ */
+export const organizationSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  role: z.string(),
+  status: z.string(),
+});
+export const organizationListResponseSchema = z.object({
+  items: z.array(organizationSchema),
+});
+export type Organization = z.infer<typeof organizationSchema>;
+
 export const doorEventSchema = z.object({
   id: z.string(),
   title: z.string(),

@@ -1,10 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 
-import { login as loginRequest } from '@/api/scannerApiClient';
+import { fetchMyOrganizations, login as loginRequest } from '@/api/scannerApiClient';
 import { notifyAuthStateChanged } from '@/auth/authState';
 import { setStaffSession } from '@/auth/staffAuth';
-import { bindOrganizationId, getBoundOrganizationId } from '@/auth/venueBinding';
+import {
+  bindOrganizationId,
+  chooseOrganization,
+  getBoundOrganizationId,
+  getConfiguredOrganizationId,
+  type OrganizationChoice,
+} from '@/auth/venueBinding';
 import { DjConsole } from '@/components/decor/DjConsole';
 import { HeroRays } from '@/components/decor/HeroRays';
 import { RadialGlow } from '@/components/decor/RadialGlow';
@@ -41,6 +47,13 @@ export default function LoginScreen(): React.JSX.Element {
   // has never been bound to a venue. See src/auth/venueBinding.ts.
   const [boundOrganizationId, setBoundOrganizationId] = useState<string | null>(null);
   const [organizationIdDraft, setOrganizationIdDraft] = useState('');
+  // Set when the account is a member of more than one venue, so the staffer
+  // picks instead of the app guessing (see chooseOrganization).
+  const [choices, setChoices] = useState<OrganizationChoice | null>(null);
+  // Credentials held only between the "pick a venue" prompt and the tap.
+  const [pendingSession, setPendingSession] = useState<Awaited<
+    ReturnType<typeof loginRequest>
+  > | null>(null);
 
   useEffect(() => {
     void getBoundOrganizationId()
@@ -53,10 +66,33 @@ export default function LoginScreen(): React.JSX.Element {
   }, []);
 
   const needsVenueSetup = boundOrganizationId === null;
-  const organizationId = boundOrganizationId ?? organizationIdDraft.trim();
 
   const handleHeroLayout = (event: LayoutChangeEvent): void => {
     setHeroWidth(event.nativeEvent.layout.width);
+  };
+
+  /** Bind the venue and open the staff session, then let the layout route on. */
+  const completeSignIn = async (
+    response: Awaited<ReturnType<typeof loginRequest>>,
+    organizationId: string,
+    shouldBind: boolean,
+  ): Promise<void> => {
+    if (shouldBind) {
+      await bindOrganizationId(organizationId);
+    }
+    setStaffSession({
+      accessToken: response.accessToken,
+      organizationId,
+      user: response.user,
+      expiresAt: response.expiresAt,
+    });
+    // Not router.replace: the root layout owns navigation post-login,
+    // driven by the auth state this notifies it to re-check. A direct
+    // replace() here raced the root layout's own stale-state redirect —
+    // pathname would change to the target before the async pairing/
+    // session check caught up, so the OLD 'logged_out' state's redirect
+    // fired first and bounced straight back to /login despite a 200.
+    notifyAuthStateChanged();
   };
 
   const handleLogin = (): void => {
@@ -64,31 +100,79 @@ export default function LoginScreen(): React.JSX.Element {
       setError('Enter your staff ID and password.');
       return;
     }
-    if (organizationId.length === 0) {
-      setError('Enter the venue ID this handset belongs to.');
-      return;
-    }
     setError(null);
     setLoading(true);
     void loginRequest(email.trim(), password)
       .then(async (response) => {
-        if (needsVenueSetup) {
-          await bindOrganizationId(organizationId);
+        // Always ask the backend which venues this account belongs to, even
+        // when a venue is already known. It is one cheap GET, and it is the
+        // only way to tell a valid binding from a stale one: a handset bound
+        // for a previous account would otherwise pin every call to a venue
+        // this user cannot see, and the backend answers that with an empty
+        // list rather than an error — the exact silent failure this
+        // discovery exists to remove.
+        const memberships = await fetchMyOrganizations(response.accessToken);
+        const memberIds = new Set(memberships.map((organization) => organization.id));
+        const configured = getConfiguredOrganizationId();
+
+        // An operator pin is never silently overridden. A build pointed at a
+        // venue the signed-in account cannot access is a deployment mistake,
+        // and quietly pointing the scanner somewhere else would hide it.
+        if (configured !== null && !memberIds.has(configured)) {
+          setError(
+            'This build is pinned to a venue your account cannot access. Check EXPO_PUBLIC_ORGANIZATION_ID.',
+          );
+          return;
         }
-        setStaffSession({
-          accessToken: response.accessToken,
-          organizationId,
-          user: response.user,
-          expiresAt: response.expiresAt,
-        });
-        // Not router.replace: the root layout owns navigation post-login,
-        // driven by the auth state this notifies it to re-check. A direct
-        // replace() here raced the root layout's own stale-state redirect —
-        // pathname would change to the target before the async pairing/
-        // session check caught up, so the OLD 'logged_out' state's redirect
-        // fired first and bounced straight back to /login despite a 200.
-        notifyAuthStateChanged();
+
+        const known = configured ?? boundOrganizationId ?? organizationIdDraft.trim();
+        // Config, binding and a typed id are all only honoured when this
+        // account is genuinely a member; anything else falls through to
+        // discovery below.
+        if (known.length > 0 && memberIds.has(known)) {
+          await completeSignIn(response, known, needsVenueSetup);
+          return;
+        }
+
+        const choice = chooseOrganization(memberships);
+        if (choice.kind === 'ambiguous') {
+          // Hold the credentials so tapping a venue finishes the sign-in
+          // without a second round trip. Not persisted: a dead app must
+          // not leave a usable access token lying in memory.
+          setPendingSession(response);
+          setChoices(choice);
+          setError('This account works for more than one venue. Pick the one this handset is at.');
+          return;
+        }
+        if (choice.kind === 'none') {
+          setError(
+            'This account is not a member of any venue yet. Ask a venue owner to invite you, or type a venue ID below.',
+          );
+          return;
+        }
+        await completeSignIn(response, choice.organizationId, true);
       })
+      .catch((cause: unknown) => {
+        setError(cause instanceof Error ? cause.message : 'Sign-in failed.');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
+
+  const handleSelectOrganization = (organizationId: string): void => {
+    const pending = pendingSession;
+    setChoices(null);
+    setPendingSession(null);
+    if (pending === null) {
+      // Credentials expired between the prompt and the tap — start over
+      // rather than opening a session we can no longer prove.
+      setError('Your sign-in expired. Please log in again.');
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    void completeSignIn(pending, organizationId, true)
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : 'Sign-in failed.');
       })
@@ -159,6 +243,26 @@ export default function LoginScreen(): React.JSX.Element {
             </Pressable>
           }
         />
+
+        {choices?.kind === 'ambiguous' ? (
+          <View style={styles.venueChoices}>
+            <Text style={styles.venueChoicesLabel}>WHICH VENUE IS THIS HANDSET AT?</Text>
+            {choices.organizations.map((organization) => (
+              <Pressable
+                key={organization.id}
+                style={styles.venueChoice}
+                onPress={() => {
+                  handleSelectOrganization(organization.id);
+                }}
+              >
+                <Text style={styles.venueChoiceName}>{organization.name}</Text>
+                <Text style={styles.venueChoiceMeta}>
+                  {organization.role.toUpperCase()}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
 
         {needsVenueSetup ? (
           <GalaTextInput
@@ -374,6 +478,40 @@ const styles = StyleSheet.create({
     fontFamily: 'Archivo_600SemiBold',
     fontSize: 12,
     color: colors.primary,
+  },
+  venueChoices: {
+    gap: 8,
+  },
+  venueChoicesLabel: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 11,
+    letterSpacing: 1.1,
+    color: colors.onSurfaceMuted,
+  },
+  venueChoice: {
+    minHeight: 54,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  venueChoiceName: {
+    fontFamily: 'Archivo_700Bold',
+    fontSize: 15,
+    color: colors.onSurface,
+    flexShrink: 1,
+  },
+  venueChoiceMeta: {
+    fontFamily: 'Archivo_800ExtraBold',
+    fontSize: 10,
+    letterSpacing: 1.1,
+    color: colors.onSurfaceMuted,
   },
   dividerRow: {
     flexDirection: 'row',

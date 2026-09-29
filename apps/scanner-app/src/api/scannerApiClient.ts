@@ -17,6 +17,7 @@ import {
   guestListResponseSchema,
   loginResponseSchema,
   manualCheckInResponseSchema,
+  organizationListResponseSchema,
   overrideResponseSchema,
   scannerDeviceSchema,
   staffDenyResponseSchema,
@@ -34,6 +35,7 @@ import type {
   DoorStats,
   Guest,
   ManualCheckInResponse,
+  Organization,
   OverrideResponse,
   PaymentMode,
   StaffDenyResponse,
@@ -91,6 +93,28 @@ export async function login(email: string, password: string): Promise<{
     body: { email, password },
     schema: loginResponseSchema,
   });
+}
+
+/**
+ * The venues this staff account actually belongs to — the backend returns
+ * active memberships only, so a stale or revoked org simply isn't listed.
+ *
+ * `accessToken` is passed explicitly and used as the `authorization` header
+ * rather than read from the session, because this runs immediately after
+ * `login()` and before `setStaffSession()` has stored anything. `ApiClient`
+ * spreads per-request `headers` last, so this overrides the (still-null)
+ * `getToken()` result rather than duplicating the header.
+ *
+ * No `x-organization-id` is sent: this call is what discovers the org, so it
+ * cannot already have one. The route is gated on the session-only actor.
+ */
+export async function fetchMyOrganizations(accessToken: string): Promise<Organization[]> {
+  const result = await getClient().get({
+    path: '/api/v2/organizations',
+    headers: { authorization: `Bearer ${accessToken}` },
+    schema: organizationListResponseSchema,
+  });
+  return result.items;
 }
 
 export async function fetchTodaysEvents(organizationId: string): Promise<DoorEvent[]> {
