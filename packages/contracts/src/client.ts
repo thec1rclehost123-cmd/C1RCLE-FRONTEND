@@ -41,6 +41,9 @@ export type {
   OtpSendRequest,
   OtpVerifyRequest,
   OtpAckResponse,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
+  PasswordResetAck,
 } from './contracts/auth.js';
 
 export {
@@ -53,6 +56,9 @@ export {
   otpSendRequestSchema,
   otpVerifyRequestSchema,
   otpAckResponseSchema,
+  forgotPasswordRequestSchema,
+  resetPasswordRequestSchema,
+  passwordResetAckSchema,
 } from './contracts/auth.js';
 
 // Organization, Venue, Member
@@ -69,8 +75,12 @@ export type {
   VenueAddress,
   VenueProfileDto,
   VenueSlotDto,
+  CreateVenueBlockInput,
   SlotRequestDto,
   CreateSlotRequestInput,
+  SlotRequestListResponse,
+  SlotRequestActor,
+  SlotRequestDetailDto,
   InvitationStatus,
   InvitationDto,
   CreateInvitationRequest,
@@ -92,8 +102,12 @@ export {
   venueAddressSchema,
   venueProfileDtoSchema,
   venueSlotDtoSchema,
+  createVenueBlockSchema,
   slotRequestDtoSchema,
   createSlotRequestSchema,
+  slotRequestListResponseSchema,
+  slotRequestActorSchema,
+  slotRequestDetailDtoSchema,
   invitationStatusSchema,
   invitationDtoSchema,
   createInvitationSchema,
@@ -113,17 +127,18 @@ export type {
   CreateEventInput,
   UpdateEventInput,
   CancelEventInput,
+  PosterUploadUrlRequest,
+  PosterUploadUrlDto,
   TicketTierDto,
   CreateTicketTierRequest,
+  PublicTicketTierDto,
+  PublicTicketTierListResponse,
   PromoCodeDto,
   CreatePromoCodeRequest,
   TablePackageDto,
   CreateTablePackageRequest,
   PromoterAssignmentDto,
   AssignPromoterRequest,
-  PosterUploadUrlDto,
-  PosterUploadUrlRequest,
-  PromoterAssignedEventDto,
 } from './contracts/event.js';
 
 export {
@@ -133,18 +148,19 @@ export {
   createEventSchema,
   updateEventSchema,
   cancelEventSchema,
+  posterUploadUrlRequestSchema,
+  posterUploadUrlDtoSchema,
   ticketTierStatusSchema,
   ticketTierDtoSchema,
   createTicketTierSchema,
+  publicTicketTierDtoSchema,
+  publicTicketTierListResponseSchema,
   promoCodeDtoSchema,
   createPromoCodeSchema,
   tablePackageDtoSchema,
   createTablePackageSchema,
   promoterAssignmentDtoSchema,
   assignPromoterSchema,
-  posterUploadUrlDtoSchema,
-  posterUploadUrlRequestSchema,
-  promoterAssignedEventDtoSchema,
 } from './contracts/event.js';
 
 // Partner (partnerships, promoters, referrals, analytics)
@@ -166,6 +182,9 @@ export type {
   CreateReferralLinkRequest,
   PromoterConnectionDto,
   RequestConnectionRequest,
+  DiscoverPartnerDto,
+  DiscoverPartnerKind,
+  DiscoverPartnersQuery,
 } from './contracts/partner.js';
 
 export {
@@ -188,6 +207,9 @@ export {
   createReferralLinkSchema,
   promoterConnectionDtoSchema,
   requestConnectionSchema,
+  discoverPartnerKindSchema,
+  discoverPartnerDtoSchema,
+  discoverPartnersQuerySchema,
 } from './contracts/partner.js';
 
 // Onboarding / KYC / Admin Authority
@@ -248,7 +270,7 @@ export {
   adminLookupResponseSchema,
 } from './contracts/onboarding.js';
 
-// Checkout / Orders / Payments / Entitlements
+// Checkout / Orders / Payments / Entitlements / RSVP
 export type {
   PricingLineDto,
   PricingBreakdownDto,
@@ -260,6 +282,8 @@ export type {
   PaymentAttemptResponse,
   PaymentConfirmRequest,
   PaymentConfirmResponse,
+  RsvpRequest,
+  RsvpResponse,
   CheckoutOrderDto,
   OrderDto,
   OrdersListResponse,
@@ -287,6 +311,8 @@ export {
   paymentAttemptResponseSchema,
   paymentConfirmRequestSchema,
   paymentConfirmResponseSchema,
+  rsvpRequestSchema,
+  rsvpResponseSchema,
   checkoutOrderDtoSchema,
   orderDtoSchema,
   ordersListResponseSchema,
@@ -642,7 +668,9 @@ export {
   supportTicketIdParamSchema,
 } from './contracts/phase7.js';
 
-// Public / discovery (Phase 4 PR1)
+// Guest profile (guest-portal signup onboarding)
+export type { GuestProfileDto, UpsertGuestProfileRequest } from './contracts/guest-profile.js';
+export { guestProfileDtoSchema, upsertGuestProfileSchema } from './contracts/guest-profile.js';
 export type {
   HostPublicDto,
   VenuePublicDetailDto,
