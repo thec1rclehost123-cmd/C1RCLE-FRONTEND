@@ -78,6 +78,17 @@ export function assertCsrf(req: NextRequest): NextResponse | null {
   const cookie = req.cookies.get(csrfCookieName())?.value ?? '';
   const header = req.headers.get(CSRF_HEADER) ?? '';
   if (!timingSafeEqual(cookie, header)) {
+    // TEMP DIAGNOSTIC — remove after root-causing the production CSRF mismatch.
+    // eslint-disable-next-line no-console
+    console.error('[assertCsrf] mismatch', {
+      cookieName: csrfCookieName(),
+      cookieLen: cookie.length,
+      headerLen: header.length,
+      cookieRaw: JSON.stringify(cookie),
+      headerRaw: JSON.stringify(header),
+      allCookies: req.cookies.getAll().map((c) => ({ name: c.name, len: c.value.length })),
+      rawCookieHeader: req.headers.get('cookie'),
+    });
     return errorEnvelope('forbidden', 'CSRF check failed.', 403);
   }
   return null;
