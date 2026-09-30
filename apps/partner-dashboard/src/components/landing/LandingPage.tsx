@@ -4,7 +4,10 @@ import { motion, useReducedMotion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 
+import { useMounted } from '@c1rcle/hooks';
+
 import { MagneticButton } from '@/components/ui/MagneticButton';
+import { WebGLErrorBoundary } from '@/components/ui/WebGLErrorBoundary';
 
 const NightclubScene = dynamic(() => import('./NightclubScene').then((m) => m.NightclubScene), {
   ssr: false,
@@ -19,11 +22,14 @@ const fadeUp = {
 // eslint-disable-next-line import-x/no-default-export -- consumed via default import by src/app/page.tsx (outside the 2026-09-11 lint-fix scope); named-exporting here would force touching page.tsx.
 export default function LandingPage() {
   const [sceneReady, setSceneReady] = useState(false);
+  const mounted = useMounted();
   const reduceMotion = useReducedMotion();
 
   // The useful HTML is rendered immediately. WebGL is progressive enhancement,
   // deferred until after the browser has painted the headline and CTAs.
   useEffect(() => {
+    if (!mounted) return;
+
     const connection = (navigator as Navigator & { connection?: { saveData?: boolean } })
       .connection;
     const compactViewport = window.matchMedia('(max-width: 767px)').matches;
@@ -36,13 +42,17 @@ export default function LandingPage() {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [reduceMotion]);
+  }, [mounted, reduceMotion]);
 
   return (
     <main className="relative w-full h-screen overflow-hidden bg-[#0A0A0B]">
       {/* Layer 1: Three.js 3D nightclub scene */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(244,74,34,0.18),transparent_34%),linear-gradient(160deg,#12080a_0%,#0A0A0B_58%,#060607_100%)]">
-        {sceneReady ? <NightclubScene /> : null}
+        {mounted && sceneReady && (
+          <WebGLErrorBoundary fallback={<div className="absolute inset-0 bg-[#0A0A0B]" />}>
+            <NightclubScene />
+          </WebGLErrorBoundary>
+        )}
       </div>
 
       {/* Layer 2: Bottom-up vignette so text reads against the scene */}
@@ -122,7 +132,7 @@ export default function LandingPage() {
           transition={{ duration: 0.7, delay: 0.2, ease: [0.4, 0, 0.2, 1] }}
           className="text-[15px] font-bold text-white/55 mb-10 max-w-sm leading-relaxed"
         >
-          The all-in-one partner platform for venues, hosts &amp; promoters.
+          The all-in-one partner platform for venues, hosts & promoters.
         </motion.p>
 
         {/* CTAs */}

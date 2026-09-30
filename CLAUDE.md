@@ -45,3 +45,37 @@ gives you structural context (callers, dependents, test coverage) that file sear
 4. Use `query_graph_tool` pattern="tests_for" to check coverage.
 
 <!-- /code-review-graph MCP tools -->
+
+## Dependency & local-env rules (learned the hard way)
+
+### Expo native deps are pinned by the SDK — don't drift them
+
+- **`apps/scanner-app` is the only Expo app.** Its native deps must stay inside
+  the Expo SDK 55 tested set. CI enforces this with
+  `npx expo install --check` (gate step `Expo deps` in `.github/workflows/ci.yml`).
+- **`react-native-screens` must stay `~4.23.0`.** Escalating it to a newer 4.x
+  breaks the RN 0.83 codegen on CI: `SearchBarNativeComponent.ts: The first
+argument of method blur must be of type React.ElementRef<>`. Do not bump it.
+- **Fix ANY native dep drift with `npx expo install <pkg>`** (picks the
+  SDK-matched version), never a manual version bump in `package.json`. Check
+  drift reporting with `npx expo install --check` from `apps/scanner-app`.
+
+### Windows-local `expo export` codegen failure is environmental
+
+- On Windows + pnpm, `expo export` can fail with
+  `Unknown prop type for "type": "undefined"` in `react-native-screens`'s
+  `src/fabric/*NativeComponent.ts` files. Cause: RN's codegen babel plugin
+  can't resolve `CodegenTypes` prop types through the `.pnpm` store's
+  backslash paths. This is NOT a screens bug and NOT a reason to bump the
+  dependency — **the same build passes on Ubuntu CI** (verify there before
+  touching the version).
+
+### Lockfile drift
+
+- CI installs with `pnpm install --frozen-lockfile` (`.github/actions/setup`),
+  so any `package.json`/`pnpm-lock.yaml` mismatch fails the PR. After ANY
+  `pnpm install`/`pnpm add`/expo install, re-add the lockfile explicitly:
+  `git add pnpm-lock.yaml` (it's easy to miss after merge conflicts).
+- `pnpm-lock.yaml` merge conflicts: resolve with `git checkout --theirs`,
+  then `pnpm install` to reconcile, then re-add + verify no version drift
+  slipped in (e.g. `react-native-svg` resolved to an unexpected patch).

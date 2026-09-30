@@ -40,6 +40,44 @@ function newRequestId(): string {
   return crypto.randomUUID();
 }
 
+/** Name the frontend uses for the Better-Auth session cookie (see `rescopeSessionCookies`). */
+const SESSION_COOKIE_NAME = 'better-auth.session_token';
+
+/**
+ * A production gateway (`useSecureCookies`) reads ONLY the `__Secure-`
+ * prefixed session cookie name — it has no unprefixed fallback. This app
+ * always stores the unprefixed name in the browser (`rescopeSessionCookies`
+ * strips the prefix so Chrome will accept the cookie on non-production
+ * deployments), so any raw browser `Cookie` header forwarded to the gateway
+ * needs the `__Secure-` twin added back, or the gateway reports "No active
+ * session" for an otherwise perfectly valid, unexpired session — this was
+ * silently breaking every `/api/auth/refresh` and `/api/auth/logout` call in
+ * production. `getServerSession`'s own `withGatewayCookieName` in
+ * `@c1rcle/auth` already does this for the SSR bootstrap path, which is why
+ * only login itself ever appeared to work.
+ */
+function withGatewaySessionCookieName(
+  cookieHeader: string | null | undefined,
+): string | null | undefined {
+  if (cookieHeader === undefined || cookieHeader === null || cookieHeader.length === 0) {
+    return cookieHeader;
+  }
+  if (cookieHeader.includes(`__Secure-${SESSION_COOKIE_NAME}=`)) {
+    return cookieHeader;
+  }
+  const match = new RegExp(`(?:^|;)\\s*${SESSION_COOKIE_NAME.replace(/\./g, '\\.')}=([^;]+)`).exec(
+    cookieHeader,
+  );
+  if (match === null) {
+    return cookieHeader;
+  }
+  const value = match[1];
+  if (value === undefined) {
+    return cookieHeader;
+  }
+  return `${cookieHeader}; __Secure-${SESSION_COOKIE_NAME}=${value}`;
+}
+
 /** Flat error envelope, matching the gateway's shape (`{ code, message, status, requestId }`). */
 export function errorEnvelope(code: string, message: string, status: number): NextResponse {
   return NextResponse.json({ code, message, status, requestId: newRequestId() }, { status });
@@ -145,8 +183,9 @@ export async function forwardToGateway(path: string, init: ForwardInit): Promise
   if (init.body !== undefined) {
     headers['content-type'] = 'application/json';
   }
-  if (init.cookie !== undefined && init.cookie !== null && init.cookie.length > 0) {
-    headers['cookie'] = init.cookie;
+  const cookie = withGatewaySessionCookieName(init.cookie);
+  if (cookie !== undefined && cookie !== null && cookie.length > 0) {
+    headers['cookie'] = cookie;
   }
 
   return fetch(`${gatewayBaseUrl()}${path}`, {
@@ -226,6 +265,17 @@ function parseSetCookie(raw: string): ParsedSetCookie | null {
  * origin: `Domain` dropped (host-only), `HttpOnly` + `SameSite=Lax` +
  * `Secure` (prod) re-imposed regardless of what the gateway sent. Returns the
  * cookie names, so logout can also actively expire them.
+ *
+ * Strips a `__Secure-` prefix off the name first: a cookie prefixed
+ * `__Secure-` is spec-required (RFC 6265bis) to carry the `Secure` attribute,
+ * which this app only sets when `isProduction()` — so on any non-production
+ * deployment (a Vercel preview, `NEXT_PUBLIC_ENVIRONMENT` = "preview") the
+ * browser silently refuses to store the cookie at all. It never errors, it
+ * just never appears in the jar, and the very next request looks
+ * unauthenticated — surfaced as an immediate bounce back to /login on every
+ * preview after an otherwise-successful login. `getServerSession`'s
+ * `withGatewayCookieName` already re-adds the `__Secure-` twin when calling
+ * the gateway, so storing the unprefixed name here is the matching half.
  */
 export function rescopeSessionCookies(gatewayResponse: Response, res: NextResponse): string[] {
   const names: string[] = [];
@@ -234,8 +284,9 @@ export function rescopeSessionCookies(gatewayResponse: Response, res: NextRespon
     if (parsed === null) {
       continue;
     }
-    names.push(parsed.name);
-    res.cookies.set(parsed.name, parsed.value, {
+    const name = parsed.name.replace(/^__Secure-/, '');
+    names.push(name);
+    res.cookies.set(name, parsed.value, {
       httpOnly: true,
       sameSite: 'lax',
       secure: isProduction(),

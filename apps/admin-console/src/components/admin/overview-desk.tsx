@@ -81,11 +81,18 @@ function LiveStatsCards() {
     }
     let cancelled = false;
 
+    // `proposals`/`onboarding` only need `pageInfo.total`, so limit=1 is
+    // correct (and cheap) for them. `refunds`/`admins` are also summed/
+    // filtered over `.items`, which limit=1 would silently truncate to the
+    // single most-recent row — fetch a real page (100, matching this app's
+    // other list pages) for those two. Still an approximation beyond 100
+    // pending refunds or 100 admins, which is a known, accepted gap rather
+    // than a paginated true total.
     Promise.all([
       listProposals('pending', 1),
-      listRefunds('pending', 1),
+      listRefunds('pending', 100),
       listOnboardingApplications('submitted', 1),
-      listAdmins(1),
+      listAdmins(100),
     ])
       .then(([proposals, refunds, onboarding, admins]) => {
         if (cancelled) {

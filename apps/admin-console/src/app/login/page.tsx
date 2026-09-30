@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { login } from '@c1rcle/auth';
@@ -24,7 +23,6 @@ import type { SyntheticEvent } from 'react';
  */
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,7 +37,11 @@ export default function LoginPage() {
       // login() calls the BFF /api/auth/login proxy; a 4xx collapses into a
       // single generic message (account-existence oracle suppression).
       await login({ email, password });
-      router.replace('/');
+      // A hard navigation, not router.replace(): the root layout Server
+      // Component reads the httpOnly session cookie once per document load.
+      // A client-side transition can land on a Router Cache entry from
+      // before the login cookie was set, bouncing straight back to /login.
+      window.location.assign('/');
     } catch {
       setError('Invalid email or password. Please try again.');
       setLoading(false);

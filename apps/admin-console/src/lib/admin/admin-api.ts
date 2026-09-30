@@ -223,6 +223,16 @@ export function listOnboardingApplications(
   });
 }
 
+/** Fetches one application's full record for the review desks (name-click detail panel). */
+export function getOnboardingApplication(
+  applicationId: string,
+): Promise<z.infer<typeof onboardingRequestDtoSchema>> {
+  return getAdminApiClient().get({
+    path: `/api/v2/admin/onboarding/applications/${applicationId}`,
+    schema: onboardingRequestDtoSchema,
+  });
+}
+
 export function approveOnboardingApplication(
   applicationId: string,
   note?: string,

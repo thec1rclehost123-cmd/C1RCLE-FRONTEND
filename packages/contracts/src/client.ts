@@ -41,6 +41,9 @@ export type {
   OtpSendRequest,
   OtpVerifyRequest,
   OtpAckResponse,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
+  PasswordResetAck,
 } from './contracts/auth.js';
 
 export {
@@ -53,6 +56,9 @@ export {
   otpSendRequestSchema,
   otpVerifyRequestSchema,
   otpAckResponseSchema,
+  forgotPasswordRequestSchema,
+  resetPasswordRequestSchema,
+  passwordResetAckSchema,
 } from './contracts/auth.js';
 
 // Organization, Venue, Member
