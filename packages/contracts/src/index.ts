@@ -78,7 +78,6 @@ export type {
   TablePackageDto,
   CreateTablePackageRequest,
   PromoterAssignmentDto,
-  PromoterAssignedEventDto,
   AssignPromoterRequest,
 } from './contracts/event.js';
 
@@ -101,7 +100,6 @@ export {
   tablePackageDtoSchema,
   createTablePackageSchema,
   promoterAssignmentDtoSchema,
-  promoterAssignedEventDtoSchema,
   assignPromoterSchema,
 } from './contracts/event.js';
 
