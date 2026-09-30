@@ -646,18 +646,21 @@ const versionResponseSchema = z.object({
   startedAt: z.string(),
 });
 
-export function getSystemReadiness(): Promise<z.infer<typeof readinessResponseSchema>> {
-  return getAdminApiClient().get({
-    path: '/api/v2/internal/readiness',
-    schema: readinessResponseSchema,
-  });
+/**
+ * Both routes below call this app's own `/api/health/*` BFF, not the gateway
+ * directly: the gateway's `/api/v2/internal/{readiness,version}` are
+ * deliberately locked behind a shared-secret header at the nginx edge (a
+ * browser can never legitimately hold that secret), so the BFF route holds
+ * it server-side and forwards the response same-origin.
+ */
+export async function getSystemReadiness(): Promise<z.infer<typeof readinessResponseSchema>> {
+  const response = await fetch('/api/health/readiness', { cache: 'no-store' });
+  return readinessResponseSchema.parse(await response.json());
 }
 
-export function getSystemVersion(): Promise<z.infer<typeof versionResponseSchema>> {
-  return getAdminApiClient().get({
-    path: '/api/v2/internal/version',
-    schema: versionResponseSchema,
-  });
+export async function getSystemVersion(): Promise<z.infer<typeof versionResponseSchema>> {
+  const response = await fetch('/api/health/version', { cache: 'no-store' });
+  return versionResponseSchema.parse(await response.json());
 }
 
 /* ─── Directory (venues / events / hosts / users) ─────────────────────────── */
