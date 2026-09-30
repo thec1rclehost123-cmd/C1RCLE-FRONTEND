@@ -335,6 +335,8 @@ export class ApiClient {
         ? JSON.stringify(options.body)
         : undefined;
 
+    const orgMatch = /organizations\/([A-Za-z0-9_-]+)/.exec(options.path);
+
     let response: Response;
 
     try {
@@ -352,8 +354,9 @@ export class ApiClient {
               }
             : {}),
           ...(token !== null && token !== undefined ? { authorization: `Bearer ${token}` } : {}),
+          ...(orgMatch?.[1] ? { 'x-organization-id': orgMatch[1] } : {}),
           ...options.headers,
-        },
+        } as Record<string, string>,
         ...(requestBody !== undefined ? { body: requestBody } : {}),
       });
     } catch (cause) {

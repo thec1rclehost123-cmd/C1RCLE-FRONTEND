@@ -186,6 +186,7 @@ export const ticketTierDtoSchema = z.object({
     .nullable()
     .optional(),
   commissionEligible: z.boolean().optional(),
+
   version: z.number().int().positive(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),

@@ -236,6 +236,9 @@ export type {
   AdminAuditRecordDto,
   AdminLookupResultItem,
   AdminLookupResponse,
+  AdminAlertCategory,
+  AdminAlertsResponse,
+  AdminAlertCategoryKey,
 } from './contracts/onboarding.js';
 
 export {
@@ -687,3 +690,30 @@ export {
   eventPublicDetailDtoSchema,
   discoveryFeedDtoSchema,
 } from './contracts/public.js';
+
+// Notifications (V2 partner inbox)
+export type {
+  NotificationRecipientTypeDto,
+  NotificationActionTypeDto,
+  NotificationActionDto,
+  NotificationPriorityDto,
+  NotificationDto,
+  NotificationsListResponse,
+  NotificationReadRequest,
+  MarkAllNotificationsReadResult,
+  NotificationDecisionDto,
+  NotificationActionRequestDto,
+} from './contracts/notifications.js';
+
+export {
+  notificationRecipientTypeSchema,
+  notificationActionTypeSchema,
+  notificationActionSchema,
+  notificationPrioritySchema,
+  notificationDtoSchema,
+  notificationsListResponseSchema,
+  notificationReadRequestSchema,
+  markAllNotificationsReadResultSchema,
+  notificationDecisionSchema,
+  notificationActionRequestSchema,
+} from './contracts/notifications.js';
