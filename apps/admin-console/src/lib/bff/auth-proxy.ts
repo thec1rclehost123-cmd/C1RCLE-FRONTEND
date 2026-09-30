@@ -88,8 +88,8 @@ export function assertCsrf(req: NextRequest): NextResponse | null {
       headerLen: header.length,
       headerPresent: req.headers.has(CSRF_HEADER),
       allCookieNames: req.cookies.getAll().map((c) => c.name),
-      env: process.env.NEXT_PUBLIC_ENVIRONMENT,
-      vercelEnv: process.env.VERCEL_ENV,
+      env: process.env['NEXT_PUBLIC_ENVIRONMENT'],
+      vercelEnv: process.env['VERCEL_ENV'],
       host: req.headers.get('host'),
     });
     return errorEnvelope('forbidden', 'CSRF check failed.', 403);
