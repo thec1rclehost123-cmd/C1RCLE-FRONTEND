@@ -93,8 +93,7 @@ export async function publishVenueEvent(
                 id: phase.id,
                 name: phase.name.trim() || `Phase ${phase.id}`,
                 priceInPaise: Math.round(phase.priceInPaise),
-                startDate: phase.startDate,
-                endDate: phase.endDate,
+                ...pricingPhaseWindowFromDraft(draft, phase),
                 quantity: phase.quantity ?? null,
               })),
             }
@@ -293,6 +292,46 @@ export function eventEndAtFromDraft(
   }
 
   return endDate.toISOString();
+}
+
+/**
+ * Pricing phases are entered in the editor as `DD-MM` partial dates, which the
+ * wire contract resolves to full ISO instants. Build the window in the event's
+ * year — it opens at `00:00:00.000Z` on the start date and closes at
+ * `00:00:00.000Z` the day after the end date (end-exclusive, matching the
+ * backend catalog fixtures).
+ */
+function pricingPhaseWindowFromDraft(
+  draft: Pick<EventEditorDraft, 'date'>,
+  phase: { readonly startDate: string; readonly endDate: string },
+): { startsAt: string; endsAt: string } {
+  const year = Number(draft.date.slice(0, 4));
+  const resolveDay = (ddmm: string): Date => {
+    const [dayPart, monthPart] = ddmm.split('-');
+    const day = Number(dayPart);
+    const month = Number(monthPart);
+    if (
+      !/^\d{2}-\d{2}$/.test(ddmm) ||
+      !Number.isInteger(month) ||
+      !Number.isInteger(day) ||
+      month < 1 ||
+      month > 12 ||
+      day < 1 ||
+      day > 31
+    ) {
+      throw new Error('Enter valid pricing phase dates (DD-MM).');
+    }
+    const instant = new Date(Date.UTC(year, month - 1, day));
+    if (instant.getUTCMonth() !== month - 1 || instant.getUTCDate() !== day) {
+      throw new Error('Enter valid pricing phase dates (DD-MM).');
+    }
+    return instant;
+  };
+
+  const startsAt = `${resolveDay(phase.startDate).toISOString().slice(0, 10)}T00:00:00.000Z`;
+  const close = resolveDay(phase.endDate);
+  close.setUTCDate(close.getUTCDate() + 1);
+  return { startsAt, endsAt: close.toISOString() };
 }
 
 type PosterContentType = 'image/jpeg' | 'image/png' | 'image/webp';
