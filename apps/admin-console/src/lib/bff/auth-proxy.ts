@@ -40,6 +40,44 @@ function newRequestId(): string {
   return crypto.randomUUID();
 }
 
+/** Name the frontend uses for the Better-Auth session cookie (see `rescopeSessionCookies`). */
+const SESSION_COOKIE_NAME = 'better-auth.session_token';
+
+/**
+ * A production gateway (`useSecureCookies`) reads ONLY the `__Secure-`
+ * prefixed session cookie name — it has no unprefixed fallback. This app
+ * always stores the unprefixed name in the browser (`rescopeSessionCookies`
+ * strips the prefix so Chrome will accept the cookie on non-production
+ * deployments), so any raw browser `Cookie` header forwarded to the gateway
+ * needs the `__Secure-` twin added back, or the gateway reports "No active
+ * session" for an otherwise perfectly valid, unexpired session — this was
+ * silently breaking every `/api/auth/refresh` and `/api/auth/logout` call in
+ * production. `getServerSession`'s own `withGatewayCookieName` in
+ * `@c1rcle/auth` already does this for the SSR bootstrap path, which is why
+ * only login itself ever appeared to work.
+ */
+function withGatewaySessionCookieName(
+  cookieHeader: string | null | undefined,
+): string | null | undefined {
+  if (cookieHeader === undefined || cookieHeader === null || cookieHeader.length === 0) {
+    return cookieHeader;
+  }
+  if (cookieHeader.includes(`__Secure-${SESSION_COOKIE_NAME}=`)) {
+    return cookieHeader;
+  }
+  const match = new RegExp(`(?:^|;)\\s*${SESSION_COOKIE_NAME.replace(/\./g, '\\.')}=([^;]+)`).exec(
+    cookieHeader,
+  );
+  if (match === null) {
+    return cookieHeader;
+  }
+  const value = match[1];
+  if (value === undefined) {
+    return cookieHeader;
+  }
+  return `${cookieHeader}; __Secure-${SESSION_COOKIE_NAME}=${value}`;
+}
+
 /** Flat error envelope, matching the gateway's shape (`{ code, message, status, requestId }`). */
 export function errorEnvelope(code: string, message: string, status: number): NextResponse {
   return NextResponse.json({ code, message, status, requestId: newRequestId() }, { status });
@@ -145,8 +183,9 @@ export async function forwardToGateway(path: string, init: ForwardInit): Promise
   if (init.body !== undefined) {
     headers['content-type'] = 'application/json';
   }
-  if (init.cookie !== undefined && init.cookie !== null && init.cookie.length > 0) {
-    headers['cookie'] = init.cookie;
+  const cookie = withGatewaySessionCookieName(init.cookie);
+  if (cookie !== undefined && cookie !== null && cookie.length > 0) {
+    headers['cookie'] = cookie;
   }
 
   return fetch(`${gatewayBaseUrl()}${path}`, {
