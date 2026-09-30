@@ -32,7 +32,6 @@ export const eventCompensationSchema = z.object({
 });
 export type EventCompensation = z.infer<typeof eventCompensationSchema>;
 
-
 export const eventDtoSchema = z.object({
   id: opaqueIdSchema,
   organizationId: opaqueIdSchema,
@@ -225,7 +224,6 @@ export const createTicketTierSchema = z
       .nullable()
       .optional(),
     commissionEligible: z.boolean().optional(),
-
   })
   .strict();
 export type CreateTicketTierRequest = z.infer<typeof createTicketTierSchema>;
@@ -302,8 +300,6 @@ export const commissionRateSchema = z.object({
   ratePercent: z.number().int().min(0).max(100),
   flatPaise: z.number().int().nonnegative(),
 });
-
-
 
 export const commissionTermsSchema = z.object({
   version: z.number().int().positive(),

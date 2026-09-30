@@ -50,7 +50,6 @@ export const onboardingDocumentSchema = z.object({
   reviewedBy: opaqueIdSchema.nullable(),
   reviewedAt: z.iso.datetime().nullable(),
   rejectionReason: z.string().nullable(),
-
 });
 
 export const onboardingRequestDtoSchema = z.object({
