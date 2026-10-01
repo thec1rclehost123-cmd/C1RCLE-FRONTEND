@@ -13,7 +13,10 @@ import {
 import type { OnboardingDocumentStatus } from '@/lib/admin/contract-types';
 import type { OnboardingRequestDto } from '@c1rcle/contracts';
 
-const DOCUMENT_STATUS_TONE: Record<OnboardingDocumentStatus, 'warning' | 'success' | 'destructive'> = {
+const DOCUMENT_STATUS_TONE: Record<
+  OnboardingDocumentStatus,
+  'warning' | 'success' | 'destructive'
+> = {
   pending: 'warning',
   verified: 'success',
   rejected: 'destructive',
@@ -51,8 +54,8 @@ export function OnboardingApplicationDetail({
         <div>
           <h2 className="text-base font-semibold">{profile.legalName}</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {shortId(application.id)} · {shortId(application.userId)} · {application.requestedType} ·{' '}
-            {application.plan}
+            {shortId(application.id)} · {shortId(application.userId)} · {application.requestedType}{' '}
+            · {application.plan}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -71,37 +74,81 @@ export function OnboardingApplicationDetail({
           <Field label="Status" value={ONBOARDING_STATUS_LABELS[application.status]} />
           <Field label="Requested type" value={application.requestedType} />
           <Field label="Plan" value={application.plan} />
-          <Field label="Submitted" value={application.submittedAt === null ? '—' : formatDateTime(application.submittedAt)} />
-          <Field label="Reviewed by" value={application.reviewedBy === null ? '—' : shortId(application.reviewedBy)} />
-          <Field label="Reviewed at" value={application.reviewedAt === null ? '—' : formatDateTime(application.reviewedAt)} />
+          <Field
+            label="Submitted"
+            value={application.submittedAt === null ? '—' : formatDateTime(application.submittedAt)}
+          />
+          <Field
+            label="Reviewed by"
+            value={application.reviewedBy === null ? '—' : shortId(application.reviewedBy)}
+          />
+          <Field
+            label="Reviewed at"
+            value={application.reviewedAt === null ? '—' : formatDateTime(application.reviewedAt)}
+          />
           <Field label="Review note" value={application.reviewNote ?? '—'} />
-          <Field label="Provisioned org" value={application.provisionedOrganizationId === null ? '—' : shortId(application.provisionedOrganizationId)} />
-          <Field label="Missing documents" value={application.missingDocuments.length === 0 ? 'None' : application.missingDocuments.join(', ')} />
+          <Field
+            label="Provisioned org"
+            value={
+              application.provisionedOrganizationId === null
+                ? '—'
+                : shortId(application.provisionedOrganizationId)
+            }
+          />
+          <Field
+            label="Missing documents"
+            value={
+              application.missingDocuments.length === 0
+                ? 'None'
+                : application.missingDocuments.join(', ')
+            }
+          />
           <Field label="Version" value={String(application.version)} />
           <Field label="Created" value={formatDateTime(application.createdAt)} />
           <Field label="Updated" value={formatDateTime(application.updatedAt)} />
         </dl>
 
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Applicant profile</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Applicant profile
+          </p>
           <dl className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Field label="Legal name" value={profile.legalName} />
             <Field label="Contact person" value={profile.contactPerson} />
             <Field label="Phone" value={profile.phone} />
             <Field label="City" value={profile.city} />
-            {profile.area === undefined || profile.area === '' ? null : <Field label="Area" value={profile.area} />}
-            {profile.website === undefined || profile.website === '' ? null : <Field label="Website" value={profile.website} />}
-            {profile.capacity === undefined || profile.capacity === null ? null : <Field label="Capacity" value={String(profile.capacity)} />}
-            {profile.instagram === undefined || profile.instagram === '' ? null : <Field label="Instagram" value={profile.instagram} />}
-            {profile.bio === undefined || profile.bio === '' ? null : <Field label="Bio" value={profile.bio} />}
-            {profile.businessType === undefined || profile.businessType === '' ? null : <Field label="Business type" value={profile.businessType} />}
-            {profile.registrationNumber === undefined || profile.registrationNumber === '' ? null : <Field label="Registration number" value={profile.registrationNumber} />}
-            {profile.entityType === undefined || profile.entityType === '' ? null : <Field label="Entity type" value={profile.entityType} />}
+            {profile.area === undefined || profile.area === '' ? null : (
+              <Field label="Area" value={profile.area} />
+            )}
+            {profile.website === undefined || profile.website === '' ? null : (
+              <Field label="Website" value={profile.website} />
+            )}
+            {profile.capacity === undefined || profile.capacity === null ? null : (
+              <Field label="Capacity" value={String(profile.capacity)} />
+            )}
+            {profile.instagram === undefined || profile.instagram === '' ? null : (
+              <Field label="Instagram" value={profile.instagram} />
+            )}
+            {profile.bio === undefined || profile.bio === '' ? null : (
+              <Field label="Bio" value={profile.bio} />
+            )}
+            {profile.businessType === undefined || profile.businessType === '' ? null : (
+              <Field label="Business type" value={profile.businessType} />
+            )}
+            {profile.registrationNumber === undefined ||
+            profile.registrationNumber === '' ? null : (
+              <Field label="Registration number" value={profile.registrationNumber} />
+            )}
+            {profile.entityType === undefined || profile.entityType === '' ? null : (
+              <Field label="Entity type" value={profile.entityType} />
+            )}
           </dl>
         </div>
 
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Documents</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Documents
+          </p>
           {application.documents.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">None uploaded</p>
           ) : (
@@ -113,7 +160,9 @@ export function OnboardingApplicationDetail({
                       <p className="text-sm font-medium">{document.label}</p>
                       <p className="text-xs text-muted-foreground">
                         uploaded {formatDateTime(document.uploadedAt)}
-                        {document.reviewedAt === null ? '' : ` · reviewed ${formatDateTime(document.reviewedAt)}`}
+                        {document.reviewedAt === null
+                          ? ''
+                          : ` · reviewed ${formatDateTime(document.reviewedAt)}`}
                         {document.reviewedBy === null ? '' : ` by ${shortId(document.reviewedBy)}`}
                       </p>
                     </div>
