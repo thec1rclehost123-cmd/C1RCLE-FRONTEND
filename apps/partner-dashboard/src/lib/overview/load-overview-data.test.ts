@@ -20,7 +20,10 @@ vi.mock('next/headers', () => ({
 }));
 
 /** A non-generic stand-in: the real client's methods are generic in the schema. */
-type WireGet = (options: { readonly path: string }) => Promise<unknown>;
+type WireGet = (options: {
+  readonly path: string;
+  readonly headers?: Readonly<Record<string, string>>;
+}) => Promise<unknown>;
 
 const getMock = vi.fn<WireGet>();
 const postMock = vi.fn<WireGet>();
@@ -113,6 +116,7 @@ describe('loadOverviewData', () => {
     expect(data.dataStatus).toBe('api');
     for (const call of getMock.mock.calls) {
       expect(call[0].path).toContain('/organizations/org_1/');
+      expect(call[0].headers).toEqual({ 'x-organization-id': 'org_1' });
     }
   });
 
