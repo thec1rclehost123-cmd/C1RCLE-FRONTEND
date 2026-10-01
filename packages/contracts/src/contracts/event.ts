@@ -238,7 +238,8 @@ export const createTicketTierSchema = z
           ctx.addIssue({
             code: 'custom',
             path: [key],
-            message: 'RSVP tickets cannot include price, pricing phases, door price, or commission.',
+            message:
+              'RSVP tickets cannot include price, pricing phases, door price, or commission.',
           });
       }
     } else if (tier.priceInPaise === undefined || tier.priceInPaise <= 0) {
