@@ -60,7 +60,7 @@ import {
   platformSettingsUpdateRequestSchema,
 } from '@c1rcle/contracts';
 
-import { getAdminApiClient, newIdempotencyKey } from '@/lib/api';
+import { getAdminApiClient, getAdminBffClient, newIdempotencyKey } from '@/lib/api';
 
 import type {
   AdminAction,
@@ -651,16 +651,24 @@ const versionResponseSchema = z.object({
  * directly: the gateway's `/api/v2/internal/{readiness,version}` are
  * deliberately locked behind a shared-secret header at the nginx edge (a
  * browser can never legitimately hold that secret), so the BFF route holds
- * it server-side and forwards the response same-origin.
+ * it server-side and forwards the response same-origin. The BFF relays the
+ * gateway's body with 200 even when readiness itself is failing, so a
+ * dependency that is down shows up in `checks` rather than as an error.
  */
-export async function getSystemReadiness(): Promise<z.infer<typeof readinessResponseSchema>> {
-  const response = await fetch('/api/health/readiness', { cache: 'no-store' });
-  return readinessResponseSchema.parse(await response.json());
+export function getSystemReadiness(): Promise<z.infer<typeof readinessResponseSchema>> {
+  return getAdminBffClient().get({
+    path: '/api/health/readiness',
+    schema: readinessResponseSchema,
+    retries: 0,
+  });
 }
 
-export async function getSystemVersion(): Promise<z.infer<typeof versionResponseSchema>> {
-  const response = await fetch('/api/health/version', { cache: 'no-store' });
-  return versionResponseSchema.parse(await response.json());
+export function getSystemVersion(): Promise<z.infer<typeof versionResponseSchema>> {
+  return getAdminBffClient().get({
+    path: '/api/health/version',
+    schema: versionResponseSchema,
+    retries: 0,
+  });
 }
 
 /* ─── Directory (venues / events / hosts / users) ─────────────────────────── */
