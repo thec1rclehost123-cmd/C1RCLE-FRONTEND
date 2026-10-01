@@ -15,6 +15,7 @@
     "CI",
     "ANALYZE",
     "SITE_URL",
+    "SMOKE_URL",
     "NEXT_PUBLIC_*",
     "GATEWAY_READINESS_TOKEN"
   ],
