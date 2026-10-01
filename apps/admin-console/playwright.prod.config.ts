@@ -13,7 +13,10 @@ import { defineConfig, devices } from '@playwright/test';
  * run this against a URL you have not already confirmed serves the commit
  * under test, or a pass just proves the PREVIOUS build still works.
  */
-const baseURL = process.env.SMOKE_URL;
+// Bracket access, not dot access: `noPropertyAccessFromIndexSignature` is on
+// in this repo, so `process.env.SMOKE_URL` is a TS4111 build error. Matches
+// `playwright.config.ts`.
+const baseURL = process.env['SMOKE_URL'];
 if (!baseURL) {
   throw new Error('playwright.prod.config.ts requires SMOKE_URL to point at the live deployment.');
 }
