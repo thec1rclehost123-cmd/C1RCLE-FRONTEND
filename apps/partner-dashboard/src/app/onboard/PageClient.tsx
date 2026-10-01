@@ -180,7 +180,10 @@ export function OnboardingPage() {
   const [approvalStatus, setApprovalStatus] = useState<
     'pending' | 'approved' | 'changes_requested' | 'rejected'
   >('pending');
-  const [reviewNote] = useState('');
+  // Backing data for the "changes requested" / "rejected" callouts below —
+  // the admin's actual note, not just the status label. Populated wherever
+  // `approvalStatus` is derived from a real `OnboardingRequestDto`.
+  const [reviewNote, setReviewNote] = useState('');
   const [submittedRequestId, setSubmittedRequestId] = useState<string | null>(null);
 
   // KYC step state — documents are uploaded/confirmed server-side as each
@@ -336,6 +339,7 @@ export function OnboardingPage() {
               setApprovalStatus(
                 application.status === 'submitted' ? 'pending' : application.status,
               );
+              setReviewNote(application.reviewNote ?? '');
               setStep('success');
               initialised.current = true;
               return;
@@ -409,6 +413,7 @@ export function OnboardingPage() {
             ? 'pending'
             : application.status,
         );
+        setReviewNote(application.reviewNote ?? '');
       } catch {
         /* silent */
       }
@@ -528,6 +533,7 @@ export function OnboardingPage() {
       if (application && application.status !== 'draft') {
         setSubmittedRequestId(application.id);
         setApprovalStatus(application.status === 'submitted' ? 'pending' : application.status);
+        setReviewNote(application.reviewNote ?? '');
         initialised.current = true;
         setStep('success');
         setLoading(false);
@@ -1734,10 +1740,24 @@ export function OnboardingPage() {
                   <h1 className="text-display-sm text-[var(--text-primary)] mb-4">
                     Changes Requested
                   </h1>
-                  <p className="text-body text-[var(--text-secondary)] mb-10 max-w-md mx-auto">
-                    {reviewNote ||
-                      'Our team has requested changes before this application can continue.'}
+                  <p className="text-body text-[var(--text-secondary)] mb-6 max-w-md mx-auto">
+                    Before we can continue, an admin needs you to fix something on your application.
                   </p>
+                  {/* Prominent callout, not just the status headline above — the
+                      applicant must see the admin's actual reason, verbatim, to
+                      know what to fix before resubmitting. */}
+                  <div className="p-5 rounded-2xl bg-[var(--state-warning-bg, #fbbf241a)] border border-[var(--state-warning, #f59e0b)]/30 mb-10 flex items-start gap-4 text-left max-w-md mx-auto">
+                    <AlertCircle className="h-6 w-6 text-[var(--state-warning, #f59e0b)] flex-shrink-0" />
+                    <div>
+                      <p className="text-[11px] font-semibold text-[var(--state-warning, #f59e0b)] uppercase tracking-wider mb-1">
+                        An admin requested changes
+                      </p>
+                      <p className="text-[14px] text-[var(--text-primary)] leading-relaxed">
+                        {reviewNote ||
+                          'No specific reason was provided. Please review your profile and documents, or contact support if you need more detail.'}
+                      </p>
+                    </div>
+                  </div>
                   <div className="flex flex-col gap-3">
                     <button
                       onClick={() => {

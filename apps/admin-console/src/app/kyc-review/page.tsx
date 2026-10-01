@@ -5,10 +5,9 @@ import { useState } from 'react';
 
 import { Button, EmptyState, ErrorState, LoadingState, TextField } from '@c1rcle/ui';
 
-import { OnboardingApplicationDetail } from '@/components/admin/onboarding-application-detail';
+import { OnboardingDetailDialog } from '@/components/admin/onboarding-detail-dialog';
 import { PageHeader } from '@/components/admin/page-header';
 import {
-  getOnboardingApplication,
   getOnboardingDocumentReadUrl,
   listOnboardingApplications,
   rejectOnboardingDocument,
@@ -23,6 +22,7 @@ import {
 } from '@/lib/admin/format';
 
 import type { OnboardingDocumentStatus } from '@/lib/admin/contract-types';
+import type { OnboardingRequestDto } from '@c1rcle/contracts';
 
 /**
  * KYC is document verification — "is this ID legitimate" — not the
@@ -57,7 +57,7 @@ export default function KycReviewDesk() {
   const queryClient = useQueryClient();
   const [rejecting, setRejecting] = useState<Rejecting | null>(null);
   const [reason, setReason] = useState('');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [viewingDetails, setViewingDetails] = useState<OnboardingRequestDto | null>(null);
 
   const submitted = useQuery({
     queryKey: ['admin', 'onboarding', 'submitted'],
@@ -66,17 +66,6 @@ export default function KycReviewDesk() {
   const changesRequested = useQuery({
     queryKey: ['admin', 'onboarding', 'changes_requested'],
     queryFn: () => listOnboardingApplications('changes_requested'),
-  });
-
-  const detail = useQuery({
-    queryKey: ['admin', 'onboarding', 'application', selectedId],
-    queryFn: () => {
-      if (selectedId === null) {
-        throw new Error('No application selected');
-      }
-      return getOnboardingApplication(selectedId);
-    },
-    enabled: selectedId !== null,
   });
 
   const applications = [...(submitted.data?.items ?? []), ...(changesRequested.data?.items ?? [])];
@@ -151,27 +140,27 @@ export default function KycReviewDesk() {
                     {shortId(application.userId)} · {application.profile.city}
                   </p>
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                  <StatusBadge
-                    label={ONBOARDING_STATUS_LABELS[application.status]}
-                    tone={onboardingStatusTone(application.status)}
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedId(application.id);
-                    }}
-                  >
-                    View all details
-                  </Button>
-                </div>
+                <StatusBadge
+                  label={ONBOARDING_STATUS_LABELS[application.status]}
+                  tone={onboardingStatusTone(application.status)}
+                />
               </div>
 
-              <p className="text-xs text-muted-foreground">
-                {application.requestedType} · {application.plan} · submitted{' '}
-                {application.submittedAt === null ? '—' : formatDateTime(application.submittedAt)}
-              </p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">
+                  {application.requestedType} · {application.plan} · submitted{' '}
+                  {application.submittedAt === null ? '—' : formatDateTime(application.submittedAt)}
+                </p>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setViewingDetails(application);
+                  }}
+                >
+                  View details
+                </Button>
+              </div>
 
               <div className="flex flex-col gap-2">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -189,24 +178,29 @@ export default function KycReviewDesk() {
                         key={document.label}
                         className="flex flex-col gap-2 rounded-md border border-border p-2"
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={viewDocumentMutation.isPending}
-                            onClick={() => {
-                              viewDocumentMutation.mutate({
-                                applicationId: application.id,
-                                label: document.label,
-                              });
-                            }}
-                          >
-                            {document.label}
-                          </Button>
-                          <StatusBadge
-                            label={DOCUMENT_STATUS_LABEL[document.status]}
-                            tone={DOCUMENT_STATUS_TONE[document.status]}
-                          />
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-sm font-medium capitalize">
+                            {document.label.replaceAll('_', ' ')}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <StatusBadge
+                              label={DOCUMENT_STATUS_LABEL[document.status]}
+                              tone={DOCUMENT_STATUS_TONE[document.status]}
+                            />
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={viewDocumentMutation.isPending}
+                              onClick={() => {
+                                viewDocumentMutation.mutate({
+                                  applicationId: application.id,
+                                  label: document.label,
+                                });
+                              }}
+                            >
+                              View
+                            </Button>
+                          </div>
                         </div>
                         {document.status === 'rejected' && document.rejectionReason !== null ? (
                           <p className="text-xs text-muted-foreground">
@@ -223,7 +217,7 @@ export default function KycReviewDesk() {
                               }}
                               placeholder="Why is this document rejected?"
                             />
-                            <div className="flex justify-end gap-2">
+                            <div className="flex flex-wrap justify-end gap-2">
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -247,7 +241,7 @@ export default function KycReviewDesk() {
                             </div>
                           </div>
                         ) : (
-                          <div className="flex justify-end gap-2">
+                          <div className="flex flex-wrap justify-end gap-2">
                             <Button
                               size="sm"
                               variant="outline"
@@ -297,24 +291,17 @@ export default function KycReviewDesk() {
         </p>
       ) : null}
 
-      {selectedId !== null && detail.isPending ? (
-        <LoadingState label="Loading application details…" />
-      ) : detail.isError ? (
-        <ErrorState
-          description="Application details could not be loaded. Please retry."
-          onRetry={() => void detail.refetch()}
-        />
-      ) : detail.data !== undefined ? (
-        <OnboardingApplicationDetail
-          application={detail.data}
-          onOpenDocument={(applicationId, label) => {
-            viewDocumentMutation.mutate({ applicationId, label });
-          }}
-          onClose={() => {
-            setSelectedId(null);
-          }}
-        />
-      ) : null}
+      <OnboardingDetailDialog
+        application={viewingDetails}
+        onClose={() => {
+          setViewingDetails(null);
+        }}
+        onViewDocument={(label) => {
+          if (viewingDetails === null) return;
+          viewDocumentMutation.mutate({ applicationId: viewingDetails.id, label });
+        }}
+        viewDocumentPending={viewDocumentMutation.isPending}
+      />
     </div>
   );
 }
