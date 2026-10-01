@@ -203,6 +203,137 @@ jobs:
           done
           exit $fail
 
+  # ── Merge-only: admin-console production verification + auto-rollback ──────
+  # The generic post-deploy-smoke job above only triggers on a push to
+  # `staging` and only checks that each app's URL returns 2xx/3xx — it never
+  # ran against `main`, which is the branch Vercel actually treats as
+  # `production` for this project (verified against the live Vercel API:
+  # the project's domains include a `-git-main-` alias and
+  # `latestDeployment.target` is `production`). That meant production
+  # deploys of the admin console had NO automated smoke coverage and NO
+  # rollback at all. This job closes that gap, mirroring the backend's
+  # `verify-deploy` job (wait for the right commit -> prove it works -> roll
+  # back if it doesn't -> file an incident) but for Vercel instead of Render.
+  #
+  # Requires a `VERCEL_TOKEN` repo secret (a Vercel Access Token scoped to
+  # this team) to confirm the exact commit deployed and to trigger a
+  # rollback. Without it, this job still runs the live smoke test against
+  # whatever is currently on the production domain (so a broken admin
+  # console is still caught and files an incident) but cannot verify it is
+  # testing the NEW build specifically, and cannot roll back automatically.
+  verify-admin-console-deploy:
+    name: Verify admin-console production deploy
+    needs: e2e
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: https://www.thec1rcle.com
+    permissions:
+      contents: read
+      issues: write # file an incident if smoke fails
+    env:
+      VERCEL_PROJECT_ID: prj_VvGU73UJ0pNytBWLQNLIyZhVSiB9
+      VERCEL_TEAM_ID: team_5Naid4VopvVpMMsdDhhCCv6x
+      SMOKE_URL: https://www.thec1rcle.com
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+
+      - name: Detect Vercel API credentials
+        id: vercel-auth
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -n "$VERCEL_TOKEN" ]; then
+            echo "has_token=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_token=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::VERCEL_TOKEN is not set — this job cannot confirm the exact commit deployed, and automatic rollback is disabled. Add a Vercel Access Token as the VERCEL_TOKEN repo secret to enable both."
+          fi
+
+      - name: Wait for this commit to deploy on Vercel
+        if: steps.vercel-auth.outputs.has_token == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          node scripts/ci/wait-for-vercel-deploy.mjs \
+            --project "$VERCEL_PROJECT_ID" --team "$VERCEL_TEAM_ID" \
+            --sha "$GITHUB_SHA" --timeout 900 --interval 15
+
+      # No token: best-effort grace period, same fallback the old
+      # post-deploy-smoke job used, so there is still SOME coverage.
+      - name: Grace period for Vercel to deploy (no token, cannot confirm commit)
+        if: steps.vercel-auth.outputs.has_token != 'true'
+        run: sleep 90
+
+      - name: Install Playwright browsers
+        working-directory: apps/admin-console
+        run: pnpm exec playwright install --with-deps chromium webkit
+
+      - name: Smoke test production (real browser, live URL)
+        id: smoke
+        working-directory: apps/admin-console
+        run: pnpm exec playwright test --config playwright.prod.config.ts
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: playwright-report-admin-console-prod
+          path: apps/admin-console/playwright-report/
+          retention-days: 14
+
+      - name: Roll back the failed deploy
+        if: failure() && steps.smoke.outcome == 'failure' && steps.vercel-auth.outputs.has_token == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          node scripts/ci/vercel-rollback.mjs \
+            --project "$VERCEL_PROJECT_ID" --team "$VERCEL_TEAM_ID" --sha "$GITHUB_SHA"
+
+      - name: File a production incident
+        if: failure()
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          ROLLBACK_ATTEMPTED: ${{ steps.vercel-auth.outputs.has_token }}
+        with:
+          script: |
+            const title = `Admin console production smoke tests failed for ${context.sha.slice(0, 7)}`;
+            const body = [
+              'Post-deploy verification failed for admin-console on `main`.',
+              '',
+              `- Commit: ${context.sha}`,
+              `- Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              '- Target: https://www.thec1rcle.com',
+              `- Automatic rollback attempted: ${process.env.ROLLBACK_ATTEMPTED}`,
+              '',
+              "Check the run's Playwright report artifact for which assertions failed.",
+            ].join('\n');
+            const existing = await github.rest.issues.listForRepo({
+              ...context.repo,
+              state: 'open',
+              labels: 'production-incident',
+            });
+            const open = existing.data.find((issue) => issue.title === title);
+            if (open) {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: open.number,
+                body: `Recurred:\n\n${body}`,
+              });
+            } else {
+              await github.rest.issues.create({
+                ...context.repo,
+                title,
+                body,
+                labels: ['production-incident'],
+              });
+            }
+
   # ── The single required status check for PRs ───────────────────────────────
   ci-ok:
     name: CI OK
