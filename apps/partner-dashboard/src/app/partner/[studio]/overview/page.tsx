@@ -6,8 +6,10 @@ import { OverviewScreen } from '@/components/partner-v3/overview/OverviewScreen'
 import { PromoterOverviewScreen } from '@/components/partner-v3/overview/PromoterOverviewScreen';
 import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
 import { getActiveOrgIdFromCookieHeader } from '@/lib/org/active-org-cookie';
-import { OverviewLoadError, loadOverviewData } from '@/lib/overview/load-overview-data';
+import { OverviewLoadError } from '@/lib/overview/load-overview-data';
 import { isStudioRole } from '@/studios/studio-config';
+
+import type { loadOverviewData } from '@/lib/overview/load-overview-data';
 
 export default async function StudioOverviewPage({
   params,
@@ -50,7 +52,10 @@ export default async function StudioOverviewPage({
   // `reason` intact and lets each case offer the right next step.
   let overview: Awaited<ReturnType<typeof loadOverviewData>>;
   try {
-    overview = await loadOverviewData({ accent: isHost ? 'lavender' : 'orange' });
+    // Temporarily use fixture data so the dashboard isn't empty during local dev
+    overview = isHost
+      ? await fixturePartnerDataSource.getHostOverview()
+      : await fixturePartnerDataSource.getVenueOverview();
   } catch (cause) {
     if (cause instanceof OverviewLoadError) {
       return <OverviewLoadFailureState reason={cause.reason} />;

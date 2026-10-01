@@ -61,6 +61,14 @@ export const serverEnvSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((value) => value === 'true'),
+  /**
+   * Shared secret the admin-console health BFF (`/api/health/*`) sends as
+   * `x-readiness-token` to reach the gateway's token-gated
+   * `/api/v2/internal/{readiness,version}`. Server-only — never give it a
+   * `NEXT_PUBLIC_` name. Its value is injected at deploy time, never
+   * committed. Optional: without it the health page reports unavailable.
+   */
+  GATEWAY_READINESS_TOKEN: z.string().min(1).optional(),
 });
 
 export type ClientEnv = z.infer<typeof clientEnvSchema>;

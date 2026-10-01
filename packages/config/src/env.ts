@@ -90,6 +90,7 @@ export function getServerEnv(): ServerEnv {
       VERCEL_ENV: process.env.VERCEL_ENV,
       VERCEL_URL: process.env.VERCEL_URL,
       ANALYZE: process.env.ANALYZE,
+      GATEWAY_READINESS_TOKEN: process.env.GATEWAY_READINESS_TOKEN,
     },
     'server',
   );

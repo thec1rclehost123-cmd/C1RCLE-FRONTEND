@@ -199,7 +199,7 @@ export const createTicketTierSchema = z
     description: z.string().max(2000).optional(),
     entryType: z.string().min(1).max(40).optional(),
     currency: z.string().length(3).optional(),
-    priceInPaise: z.number().int().nonnegative(),
+    priceInPaise: z.number().int().nonnegative().optional(),
     quantity: z.number().int().nonnegative(),
     salesStartAt: z.iso.datetime().nullable().optional(),
     salesEndAt: z.iso.datetime().nullable().optional(),
@@ -225,7 +225,31 @@ export const createTicketTierSchema = z
       .optional(),
     commissionEligible: z.boolean().optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((tier, ctx) => {
+    if (tier.accessType === 'RSVP') {
+      for (const key of [
+        'priceInPaise',
+        'pricingPhases',
+        'commissionEligible',
+        'doorPriceInPaise',
+      ] as const) {
+        if (tier[key] !== undefined)
+          ctx.addIssue({
+            code: 'custom',
+            path: [key],
+            message:
+              'RSVP tickets cannot include price, pricing phases, door price, or commission.',
+          });
+      }
+    } else if (tier.priceInPaise === undefined || tier.priceInPaise <= 0) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['priceInPaise'],
+        message: 'Paid tickets require a positive price.',
+      });
+    }
+  });
 export type CreateTicketTierRequest = z.infer<typeof createTicketTierSchema>;
 
 export const promoTypeSchema = z.enum(['public', 'private', 'single_use', 'multi_use']);

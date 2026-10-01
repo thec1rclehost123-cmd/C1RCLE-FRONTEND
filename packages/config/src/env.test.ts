@@ -67,6 +67,7 @@ describe('getServerEnv', () => {
     delete process.env.VERCEL_ENV;
     delete process.env.VERCEL_URL;
     delete process.env.ANALYZE;
+    delete process.env.GATEWAY_READINESS_TOKEN;
   });
 
   afterEach(() => {
@@ -75,6 +76,7 @@ describe('getServerEnv', () => {
     delete process.env.VERCEL_ENV;
     delete process.env.VERCEL_URL;
     delete process.env.ANALYZE;
+    delete process.env.GATEWAY_READINESS_TOKEN;
     vi.unstubAllGlobals();
   });
 
@@ -90,6 +92,7 @@ describe('getServerEnv', () => {
     process.env.SITE_URL = 'https://c1rcle.app';
     process.env.VERCEL_ENV = 'preview';
     process.env.VERCEL_URL = 'c1rcle-app-git-main.vercel.app';
+    process.env.GATEWAY_READINESS_TOKEN = 'readiness-secret';
     resetEnvCacheForTests();
 
     const env = getServerEnv();
@@ -97,6 +100,7 @@ describe('getServerEnv', () => {
     expect(env.SITE_URL).toBe('https://c1rcle.app');
     expect(env.VERCEL_ENV).toBe('preview');
     expect(env.VERCEL_URL).toBe('c1rcle-app-git-main.vercel.app');
+    expect(env.GATEWAY_READINESS_TOKEN).toBe('readiness-secret');
   });
 
   it('transforms the ANALYZE flag into a boolean', () => {
