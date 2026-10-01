@@ -61,6 +61,13 @@ export const serverEnvSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((value) => value === 'true'),
+  /**
+   * Shared secret the admin console's health-check BFF sends to the gateway's
+   * nginx-gated `/api/v2/internal/{readiness,version}` routes. Optional here
+   * — a missing token degrades that one BFF route to a 503, it does not fail
+   * app startup.
+   */
+  GATEWAY_READINESS_TOKEN: z.string().min(1).optional(),
 });
 
 export type ClientEnv = z.infer<typeof clientEnvSchema>;
