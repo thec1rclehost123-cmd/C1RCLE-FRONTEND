@@ -151,7 +151,7 @@ downstream actually reads that field, so it's now a fixed `0`.
 
 [`src/app/onboard/PageClient.tsx`](../../apps/partner-dashboard/src/app/onboard/PageClient.tsx)
 (42 lines changed) and
-[`src/app/verify/PageClient.tsx`](../../apps/partner-dashboard/src/app/verify/PageClient.tsx)
+`src/app/verify/PageClient.tsx` (route since removed)
 (21 lines changed) both still assume the old Firebase-shaped `user` object (`.uid`,
 `.getIdToken()`), which no longer exists now that `DashboardAuthProvider`'s `user` comes from the
 session store. Rebuilding either screen was out of scope for this slice, but they had to keep

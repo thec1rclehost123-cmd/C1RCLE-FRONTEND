@@ -1,5 +1,7 @@
 # Guest Portal frontend handoff
 
+> **Status as of 2026-10-02:** not purely fixture-backed any more. SEO/public event, venue and host reads use the gateway public routes (`src/lib/seo/public-data.ts`, `AuthoritativeEventView`), and the only BFF routes are `src/app/api/help/tickets*`. Checkout, payments, orders and wallet are still not wired and keep fixtures; the rules below remain binding for that wiring.
+
 This document defines the presentation boundary for the Guest Portal. The current UI is fixture-backed. Backend integration should replace route data sources and authentication state without changing the feature components or reintroducing client-side loading work that can run on the server.
 
 ## Integration rules

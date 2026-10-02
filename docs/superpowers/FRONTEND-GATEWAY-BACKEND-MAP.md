@@ -314,7 +314,7 @@ every other method is still a fixture or a throwing stub. That WIP is not on
 `GET/POST /cover-wallets` · `GET /cover-wallets/:walletId` ·
 `POST /cover-wallets/:walletId/{credit,debit,reconcile,terminate}`.
 
-🟠 honest **501** (Track G): `POST /door/override` · `GET /door/offline-manifest`
+🟠 (historical as of 2026-08-31; all of these are now live or superseded, see s10) honest **501** (Track G): `POST /door/override` · `GET /door/offline-manifest`
 (scanner-routes.ts ~372 / ~399) · `GET /door/stats` · `GET /door/stats/ws`
 (phase5-routes.ts) · `POST /cover-wallets/:walletId/{freeze,unfreeze}`
 (cover-wallet-routes.ts ~301 / ~323). Owners: `/door/override` +
@@ -448,3 +448,41 @@ frontend design spec `specs/2026-08-27-…` → (5) `C1RCLE-BACKEND/docs/api-con
 - [ ] Whether `GET /organizations` is actually membership-filtered on the firestore driver (the memory driver is not).
 - [ ] The `cached(<policy>)` policies per route and their TTLs.
 - [ ] `admin-console` + `guest-portal` surface maps (this doc is partner-dashboard only).
+
+---
+
+## 10. Status as of 2026-10-02 (newly live endpoints)
+
+Source: `C1RCLE-BACKEND` `origin/staging` `apps/api-gateway/src/routes/v2/route-manifest.ts` + the route files it registers. Sections 4-5 are the 2026-08-31 snapshot (4.5 was extended 2026-09-28); where they say BLOCKED / 501 / "not started", this section wins. Paths under `/api/v2`. Perm/rate columns not re-read per route: see `API_ROUTE_CATALOG.generated.md`.
+
+| Area                             | Endpoints                                                                                                                                                                                                     | Status                                                         | BE commit                       |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------- |
+| Public discovery (unauth)        | `GET /public/events`, `/public/events/:idOrSlug`, `/public/venues/:slug`, `/public/hosts/:slug`, `/public/discovery`, `/public/search`                                                                        | 🟢                                                             | `47fb48d`                       |
+| Checkout                         | `POST /checkout/quote`, `POST /checkout/holds`; RSVP free booking                                                                                                                                             | 🟢                                                             | `389d9ac`                       |
+| Payments                         | `POST /payments/attempts`, `POST /payments/:id/verify`, `POST /webhooks/payments/razorpay`                                                                                                                    | 🟢                                                             | `389d9ac`                       |
+| Orders / wallet                  | `GET /orders`, `/orders/:id`, `/orders/:id/status`; `GET /wallet`, `/wallet/tickets`, `/wallet/orders`                                                                                                        | 🟢                                                             | `a634c7f`                       |
+| Tickets                          | `GET /tickets/:id`; `GET /tickets/:ticketId/qr` (door routes)                                                                                                                                                 | 🟢                                                             | `a634c7f`                       |
+| Ticket transfer                  | `POST /tickets/:id/{transfer,claim,cancel-transfer}`                                                                                                                                                          | 🔴 not registered (no transfer state on `Entitlement`)         | n/a                             |
+| Finance                          | `/organizations/:orgId/finance/{balance,ledger,orders}`; `payouts` GET/POST + `/:payoutId`; `bank-accounts` GET/POST, `/:id/default`, DELETE; `disputes` GET/POST, `/:id`, `/:id/{review,resolve}`            | 🟢                                                             | `db32f0d`, `1f1d1b2`, `3dd0737` |
+| Leaderboard                      | `GET /leaderboard`, `GET /organizations/:orgId/leaderboard/me`                                                                                                                                                | 🟢                                                             | `6de3f5f`                       |
+| Analytics                        | `/organizations/:orgId/analytics/{overview,trends,calendar,events}`, `GET /events/:eventId/analytics`                                                                                                         | 🟢 (on staging via `b46d1f1`; `802334c` is not on staging)     | `0452c63`, `5959386`            |
+| Email OTP                        | `POST /auth/otp/{send,verify}`                                                                                                                                                                                | 🟢                                                             | `44983ba`, `e511de4`            |
+| Password reset                   | `POST /auth/forgot-password`, `POST /auth/reset-password`                                                                                                                                                     | 🟢                                                             | `34f6404`                       |
+| Phone verification               | no dedicated route; `POST /onboarding/verify-document` with `documentType: 'phone'` (FE BFF `app/api/auth/phone-verification`)                                                                                | 🟢                                                             | `39d94e7`                       |
+| KYC document review (admin)      | `GET /admin/onboarding/applications/:requestId/documents/:label/read-url`, `POST .../documents/:label/{verify,reject}`                                                                                        | 🟢                                                             | `54c9a98`, `1323d2e`            |
+| KYC approve gate                 | server-side "all docs verified before approve"                                                                                                                                                                | 🔴 **branch only**: `343048b`, `feat/kyc-document-review-gate` | n/a                             |
+| Door                             | `POST /door/override`, `GET /door/stats`, `GET /door/stats/stream` (SSE), `GET /door/offline-manifest`, `/door/offline-sync`, sessions, check-ins, devices, heartbeat, guests, wallet-qr/charge, ticket-sale  | 🟢 (was 501)                                                   | `0342d80`, `53727c8`, `efb8a17` |
+| Cover-wallet                     | `POST /cover-wallets/:walletId/{freeze,unfreeze}`                                                                                                                                                             | 🟢 (was 501)                                                   | `2ec1e61`                       |
+| Admin console (Phase 7)          | 15 `admin/*` route files: onboarding-review, refunds, payouts, disputes, directory, orders, tickets, promotions, promoters, analytics, venue/org/event/user actions, settings, support                        | 🟢                                                             | see ROADMAP Phase 7             |
+| Social / notifications (Phase 8) | `POST/DELETE /follows`, `GET /follows/me`, `/follows/:targetType/:targetId/status`; `GET /notifications/me`, `/unread-count`, `POST /read`, `/read-all`; partner inbox `/organizations/:orgId/notifications*` | 🟢                                                             | `e5fa729`                       |
+| Partner create-event v2          | events / previews / poster upload-url / cancel                                                                                                                                                                | 🟢                                                             | `e3d20fa`                       |
+
+`/door/stats/ws` is gone (superseded by SSE, D-028), not stubbed. scanner-app consumes `/door/stats/stream` (+15s poll) and does not use `/door/offline-manifest`. No 501 stubs remain in `routes/v2/**`.
+
+Corrections to older sections:
+
+- s4.6 / s5.3: all six former door 501s are closed (override, stats, freeze/unfreeze, offline-manifest, stats stream).
+- s5.1: checkout/orders/finance/admin/social are no longer BLOCKED. Ticket transfer still is.
+- s5.4: password reset IS in the gateway (`34f6404`); no partner-dashboard `/forgot-password` page yet.
+- s4.5: partner repo wiring is no longer "3 methods"; see SPRINT "Status as of 2026-10-02".
+- Guest-portal has no map section; it consumes only `/public/*` today and could now consume checkout/orders/wallet.

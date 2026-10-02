@@ -1,6 +1,6 @@
 # Admin Console — V2 Design & Decision Record (Phase 7)
 
-**Status:** proposed · **Date:** 2026-09-11 · **Owner:** platform ops + frontend
+**Status:** implemented (backend admin routes registered in `route-manifest.ts`; admin-console desks built — see `ADMIN-CONSOLE-GAP-CLOSURE-2026-09-11.md` and SPRINT status 2026-10-02) · **Date:** 2026-09-11 · **Owner:** platform ops + frontend
 
 Sources consulted:
 

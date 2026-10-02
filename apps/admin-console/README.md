@@ -5,7 +5,7 @@ Internal operations. Users, partners and platform oversight.
 **Audience:** C1RCLE staff only. Never exposed to the public internet.
 
 This application **builds, runs, tests and deploys entirely on its own**. It shares
-code with the other two applications only through `packages/*`, and it may never
+code with the other applications only through `packages/*`, and it may never
 import from `apps/*` — that is enforced by lint and by `pnpm boundaries`.
 
 ## Run it
@@ -13,7 +13,7 @@ import from `apps/*` — that is enforced by lint and by `pnpm boundaries`.
 ```bash
 cp .env.example .env.local     # then fill in the values
 pnpm install                   # from the repository root
-pnpm --filter @c1rcle/app_admin-console dev
+pnpm --filter @c1rcle/app-admin-console dev
 ```
 
 Dev server: <http://localhost:3002>
@@ -33,7 +33,7 @@ Dev server: <http://localhost:3002>
 Build only this app and the packages it actually uses:
 
 ```bash
-pnpm turbo run build --filter=@c1rcle/app_admin-console
+pnpm turbo run build --filter=@c1rcle/app-admin-console
 ```
 
 ## Layout
@@ -58,6 +58,6 @@ half-working page. See `.env.example`.
 
 ## Deployment
 
-Deployed independently of the other two applications. `vercel.json` pins the
+Deployed independently of the other applications. `vercel.json` pins the
 build to this directory; `Dockerfile` is the portable equivalent. A failure in
 this application cannot affect the others.

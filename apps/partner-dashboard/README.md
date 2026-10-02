@@ -5,7 +5,7 @@ The venue-operator application. Manage venues, availability and bookings.
 **Audience:** Authenticated partner staff.
 
 This application **builds, runs, tests and deploys entirely on its own**. It shares
-code with the other two applications only through `packages/*`, and it may never
+code with the other applications only through `packages/*`, and it may never
 import from `apps/*` — that is enforced by lint and by `pnpm boundaries`.
 
 ## Run it
@@ -13,7 +13,7 @@ import from `apps/*` — that is enforced by lint and by `pnpm boundaries`.
 ```bash
 cp .env.example .env.local     # then fill in the values
 pnpm install                   # from the repository root
-pnpm --filter @c1rcle/app_partner-dashboard dev
+pnpm --filter @c1rcle/app-partner-dashboard dev
 ```
 
 Dev server: <http://localhost:3001>
@@ -33,7 +33,7 @@ Dev server: <http://localhost:3001>
 Build only this app and the packages it actually uses:
 
 ```bash
-pnpm turbo run build --filter=@c1rcle/app_partner-dashboard
+pnpm turbo run build --filter=@c1rcle/app-partner-dashboard
 ```
 
 ## Layout
@@ -58,7 +58,7 @@ half-working page. See `.env.example`.
 
 ## Deployment
 
-Deployed independently of the other two applications. `vercel.json` pins the
+Deployed independently of the other applications. `vercel.json` pins the
 build to this directory; `Dockerfile` is the portable equivalent. A failure in
 this application cannot affect the others.
 
@@ -72,14 +72,12 @@ Create the project against the repository root, then set:
 | Include files outside root | **enabled** — the build reaches up to the workspace |
 | Framework Preset           | Next.js                                             |
 | Build / Install Command    | leave blank — `vercel.json` supplies both           |
-| Node.js Version            | 22.x or later (see root `engines`)                  |
+| Node.js Version            | 22.13+ or 24+ (see root `engines`)                  |
 
 Everything else comes from `vercel.json`, which runs the build through Turbo
 from the workspace root so the shared packages are built first.
 
-No environment variables are required to build or boot today: nothing in
-`src/` reads `process.env`. Set the `.env.example` values anyway so the
-contract is in place before the app starts calling a real API.
+Set `NEXT_PUBLIC_API_BASE_URL` (see `.env.example`; validated by `@c1rcle/config`) to the gateway, for example `https://circle-v2-backend.onrender.com`.
 
 Two things worth knowing:
 
@@ -89,8 +87,6 @@ Two things worth knowing:
 - `turbo.json` enables signed remote caching. It degrades to local-only when
   `TURBO_TOKEN` / `TURBO_TEAM` are absent, so the build does not depend on it.
 
-### Before this is a real deployment
+### Current data status
 
-`src/lib/firebase/client.ts` is a **mock** that accepts any password, and the
-routes under `src/app/api/` return fixtures. Both must be replaced with the
-real Firebase client and gateway before this is exposed to anyone.
+Auth, organization selection and onboarding run against the `/api/v2` gateway through `src/app/api/auth/*` and `src/app/api/bff/*`. Firebase is used only for client phone OTP (`src/lib/firebase/phone-auth.ts`). Many dashboard pages still read fixtures through `partnerRepositories` (`src/lib/partner/repositories.ts`); see `docs/superpowers/SPRINT-2026-08-31.md` "Status as of 2026-10-02" for the migration state.

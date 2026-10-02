@@ -269,3 +269,22 @@ NODE_OPTIONS=--dns-result-order=ipv4first pnpm dev      # :8080
 
 Memory driver (`STORAGE_DRIVER=memory`) is fine for unit work and fabricates a
 dev actor; the signed-URL and auth paths need `firestore`.
+
+---
+
+## Status as of 2026-10-02
+
+Verified against `origin/staging` of `C1RCLE-BACKEND`. Original text above is unchanged.
+
+| Task                            | Status   | Evidence                                                                                         |
+| ------------------------------- | -------- | ------------------------------------------------------------------------------------------------ |
+| A1 onboarding signed-URL upload | done     | BE `2a9a4b3`                                                                                     |
+| A2 `POST /door/override`        | done     | `0342d80`; `scanner-routes.ts` calls `ScannerService.overrideScan`                               |
+| A2 `GET /door/offline-manifest` | done     | `efb8a17` (signed manifest; the 501 is gone)                                                     |
+| B1 cover-wallet freeze/unfreeze | done     | `2ec1e61`                                                                                        |
+| B2 `GET /door/stats`            | done     | `53727c8`. `/door/stats/ws` superseded by SSE `GET /door/stats/stream` (D-028, `efb8a17`)        |
+| B3 razorpay boundary            | done     | `check-boundaries.mjs` clean on staging (re-run 2026-10-02); `cab7c56`                           |
+| B4 `any` bleed                  | enforced | `no-explicit-any: 'error'` in `eslint.config.mjs` (tests excepted); full `pnpm check` not re-run |
+| P0-A compare-and-set            | done     | D-015, `firestore/compare-and-set.ts`                                                            |
+
+Also on staging since: Phase 4 routes (`47fb48d`, `389d9ac`, `a634c7f`), Phase 6 finance (`db32f0d`..`6de3f5f`), Phase 7 admin backend, Phase 8 social (`e5fa729`), create-event v2 (`e3d20fa`), email OTP `44983ba`, phone verification `39d94e7`, password reset `34f6404`. **Not on staging:** KYC server-side approve gate `343048b` (branch `feat/kyc-document-review-gate`). See `SPRINT-2026-08-31.md` "Status as of 2026-10-02".

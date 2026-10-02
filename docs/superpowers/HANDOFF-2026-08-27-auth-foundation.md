@@ -1,5 +1,7 @@
 # HANDOFF — Circle1 V2: Frontend↔Gateway Auth Foundation
 
+> **Historical (2026-10-02):** the 2026-08-28 incident in the header is resolved (backend recovered and committed; Phases 4-8 live on staging). Keep for the knowledge base (s5-s7) and the Windows junction `cp -r`/`rm -rf` rule. Current status: `SPRINT-2026-08-31.md` "Status as of 2026-10-02".
+
 **Date:** 2026-08-27 (updated 2026-08-28)
 **Author state:** design spec + implementation plan + intern-task split all written & committed. Phase 1 (backend) built. **THEN an accidental `rm` during verification deleted `C1RCLE-BACKEND/packages/{core,contracts}` uncommitted WIP — see §12. Recovery in progress; frontend plan paused until the backend is coherent + committed.**
 

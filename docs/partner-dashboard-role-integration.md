@@ -1,5 +1,7 @@
 # Partner Dashboard role integration
 
+> **Status as of 2026-10-02:** `partnerRepositories` in `src/lib/partner/repositories.ts` is still bound to the fixture host/promoter repositories. `api-partner-repositories.ts` exists and is tested but is not the live binding, and the `/api/v1/partner/*` paths listed under "API adapter" are the adapter's expected shape, not backend routes: the gateway serves `/api/v2` (see `docs/superpowers/FRONTEND-GATEWAY-BACKEND-MAP.md` s10 and the backend route catalog). Remap them to v2 routes when wiring.
+
 ## Shared shell
 
 All partner roles use `PartnerDashboardLayout` with role configuration from `PARTNER_SHELL_CONFIG`.
