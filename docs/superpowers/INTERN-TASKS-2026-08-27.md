@@ -157,3 +157,19 @@ cd C1RCLE-FRONTEND
 # .env.local: NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
 pnpm --filter partner-dashboard dev                     # :3001
 ```
+
+---
+
+## Status as of 2026-10-02
+
+Evidence = `C1RCLE-FRONTEND` short SHAs on `origin/staging`. Original plan above is unchanged. Per-lane detail: `SPRINT-2026-08-31.md` "Status as of 2026-10-02".
+
+| Track | Status | Evidence / gap |
+| --- | --- | --- |
+| Prerequisite Phase 2 (contracts) | done | `ebe1df8`; mirror re-synced `3bdb6ce`, `439ad42`, `ee33a3f` |
+| Track 1 auth package + BFF | done | `85bce55`, `4924b47` (provider tests); BFF routes login/logout/refresh/session/signup/otp/phone-verification |
+| Track 2 app shell + CSP | done | `proxy.ts` nonce CSP, `session-provider.tsx`; `7ba2fdb`, `4b28d0b` |
+| Track 3 screens + mock teardown | done, one deviation | login `19e1a0d`/`29943a2`, wizard `a076044`/`f0443b2`, teardown `4d4c9b0`/`1ec508c`. Wizard has a phone-verification step (`6362601`), so `firebase@12.19.0` is deliberately kept for client phone OTP (sanctioned exception in `apps/partner-dashboard/eslint.config.ts`); the "git grep firebase empty" gate no longer applies |
+| Step 3 documents "deferred" state | superseded | real upload flow; BE `2a9a4b3` |
+| `DashboardAuthProvider` vs `session-context` | both exist | distinct files (341 / 210 lines); not an alias |
+| Phase 8 E2E | unverified | no FE record of a full signup -> studio run on real Firestore |
