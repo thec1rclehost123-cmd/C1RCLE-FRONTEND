@@ -35,21 +35,41 @@ export const partnershipDtoSchema = z.object({
   version: z.number().int().positive(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
+  /** Public-safe display enrichment (real backend names, never fabricated). */
+  hostName: z.string().min(1).max(200).nullish(),
+  hostSlug: z.string().min(1).max(60).nullish(),
+  venueName: z.string().min(1).max(200).nullish(),
+  venueSlug: z.string().min(1).max(60).nullish(),
+  venueCity: z.string().max(100).nullish(),
 });
 export type PartnershipDto = z.infer<typeof partnershipDtoSchema>;
 
 /**
- * `initiatedBy` says which side the CALLER is; the counterparty organization
- * is resolved server-side from the venue, never accepted from the client.
+ * `initiatedBy` says which side the CALLER is.
+ * - host-initiated: the caller IS the host; the venue's owning org is resolved
+ *   server-side from `venueId`.
+ * - venue-initiated: the caller IS the venue owner; the counterparty host org
+ *   must be named explicitly via `hostOrganizationId` (a venueId alone cannot
+ *   identify which host is being invited).
  */
 export const requestPartnershipSchema = z
   .object({
     venueId: opaqueIdSchema,
     initiatedBy: z.enum(['host', 'venue']),
+    hostOrganizationId: opaqueIdSchema.optional(),
     message: z.string().max(1000).optional(),
     venueShareRate: venueShareRateSchema.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.initiatedBy === 'venue' && !value.hostOrganizationId) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['hostOrganizationId'],
+        message: 'hostOrganizationId is required when initiatedBy is venue',
+      });
+    }
+  });
 export type RequestPartnershipRequest = z.infer<typeof requestPartnershipSchema>;
 
 export const resolvePartnershipSchema = z
@@ -201,7 +221,7 @@ const calendarDayDtoSchema = z.object({
 export const organizationEventCardDtoSchema = z.object({
   eventId: opaqueIdSchema,
   title: z.string(),
-  startAt: z.iso.datetime(),
+  startAt: z.iso.datetime({ offset: true }),
   /** `EventStatus`, unmapped — label wording is the client's business. */
   status: z.string(),
   venueId: opaqueIdSchema.nullable(),
@@ -265,12 +285,37 @@ export const referralLinkDtoSchema = z.object({
   eventId: opaqueIdSchema,
   promoterId: opaqueIdSchema,
   organizationId: opaqueIdSchema,
+  assignmentId: opaqueIdSchema.nullable(),
+  assignmentVersion: z.number().int().positive().nullable(),
+  termsSnapshot: z
+    .object({
+      version: z.number().int().positive(),
+      ratePercent: z.number().int().min(0).max(100),
+      flatPaise: z.number().int().nonnegative(),
+      tierRates: z
+        .record(
+          z.string(),
+          z.object({
+            ratePercent: z.number().int().min(0).max(100),
+            flatPaise: z.number().int().nonnegative(),
+          }),
+        )
+        .optional(),
+    })
+    .nullable(),
+  attributionSignature: z.string().nullable(),
+  eventTitle: z.string(),
+  campaignLabel: z.string(),
+  vanityPrefix: z.string(),
+  vanitySlug: z.string().nullable(),
   code: z.string().min(4).max(16),
   label: z.string().min(1).max(120),
   isActive: z.boolean(),
   /** Vanity counters. The authoritative attribution lives on the order. */
   clicks: z.number().int().nonnegative(),
   conversions: z.number().int().nonnegative(),
+  revenuePaise: z.number().int().nonnegative(),
+  commissionPaise: z.number().int().nonnegative(),
   version: z.number().int().positive(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
@@ -291,6 +336,29 @@ export const createReferralLinkSchema = z
   })
   .strict();
 export type CreateReferralLinkRequest = z.infer<typeof createReferralLinkSchema>;
+
+/* ─── Promoter Compensation Models ───────────────────────────────────────── */
+
+export const promoterRateTypeSchema = z.enum(['percentage', 'fixed']);
+export type PromoterRateType = z.infer<typeof promoterRateTypeSchema>;
+
+export const promoterCompensationModelSchema = z.enum(['standard', 'custom', 'salary']);
+export type PromoterCompensationModel = z.infer<typeof promoterCompensationModelSchema>;
+
+export const promoterCompensationRateSchema = z.object({
+  rateType: promoterRateTypeSchema,
+  rateValue: z.number().nonnegative(),
+});
+export type PromoterCompensationRate = z.infer<typeof promoterCompensationRateSchema>;
+
+export const promoterCompensationConfigSchema = z.object({
+  model: promoterCompensationModelSchema,
+  globalCommission: promoterCompensationRateSchema,
+  tierCommissions: z.record(z.string(), promoterCompensationRateSchema).optional(),
+  salaryAmount: z.number().nonnegative().optional(),
+  salaryNotes: z.string().optional(),
+});
+export type PromoterCompensationConfig = z.infer<typeof promoterCompensationConfigSchema>;
 
 /* ─── Promoter connections ───────────────────────────────────────────────── */
 
@@ -315,6 +383,12 @@ export const promoterConnectionDtoSchema = z.object({
   version: z.number().int().positive(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
+  /** Public-safe display enrichment (real backend names, never fabricated). */
+  promoterName: z.string().min(1).max(200).nullish(),
+  promoterSlug: z.string().min(1).max(60).nullish(),
+  targetName: z.string().min(1).max(200).nullish(),
+  targetSlug: z.string().min(1).max(60).nullish(),
+  targetCity: z.string().max(100).nullish(),
 });
 export type PromoterConnectionDto = z.infer<typeof promoterConnectionDtoSchema>;
 
@@ -331,3 +405,38 @@ export const requestConnectionSchema = z
   })
   .strict();
 export type RequestConnectionRequest = z.infer<typeof requestConnectionSchema>;
+
+/* ─── Partner discovery (real backend browse, no dummy profiles) ─────────── */
+
+export const discoverPartnerKindSchema = z.enum(['host', 'venue', 'promoter']);
+export type DiscoverPartnerKind = z.infer<typeof discoverPartnerKindSchema>;
+
+/**
+ * A real discoverable partner. Every display field comes from stored
+ * organizations/venues/public events — the API never fabricates names.
+ * `requestTarget` carries exactly what the connection-request endpoints need:
+ * - host/venue partnership → `{ venueId }` (+ host org is the caller or
+ *   `hostOrganizationId` for venue-initiated invites)
+ * - promoter connection → `{ counterpartyId, targetType }`
+ */
+export const discoverPartnerDtoSchema = z.object({
+  id: opaqueIdSchema,
+  kind: discoverPartnerKindSchema,
+  name: z.string().min(1).max(200),
+  slug: z.string().min(1).max(60),
+  city: z.string().max(100).nullable(),
+  verified: z.boolean(),
+  /** Organization id behind a host/promoter candidate; venue's owning org for venues. */
+  organizationId: opaqueIdSchema.nullable(),
+  /** Venue id behind a venue candidate (the partnership request key). */
+  venueId: opaqueIdSchema.nullable(),
+});
+export type DiscoverPartnerDto = z.infer<typeof discoverPartnerDtoSchema>;
+
+export const discoverPartnersQuerySchema = z.object({
+  type: discoverPartnerKindSchema.optional(),
+  q: z.string().min(1).max(200).optional(),
+  cursor: z.string().min(1).max(256).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+export type DiscoverPartnersQuery = z.infer<typeof discoverPartnersQuerySchema>;

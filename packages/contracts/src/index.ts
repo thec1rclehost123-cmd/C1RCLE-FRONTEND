@@ -31,8 +31,12 @@ export type {
   InviteMemberInput,
   VenueProfileDto,
   VenueSlotDto,
+  CreateVenueBlockInput,
   SlotRequestDto,
   CreateSlotRequestInput,
+  SlotRequestListResponse,
+  SlotRequestActor,
+  SlotRequestDetailDto,
 } from './contracts/organization.js';
 
 export {
@@ -47,8 +51,12 @@ export {
   inviteMemberSchema,
   venueProfileDtoSchema,
   venueSlotDtoSchema,
+  createVenueBlockSchema,
   slotRequestDtoSchema,
   createSlotRequestSchema,
+  slotRequestListResponseSchema,
+  slotRequestActorSchema,
+  slotRequestDetailDtoSchema,
 } from './contracts/organization.js';
 
 // Event + Catalog
@@ -59,17 +67,18 @@ export type {
   CreateEventInput,
   UpdateEventInput,
   CancelEventInput,
+  PosterUploadUrlRequest,
+  PosterUploadUrlDto,
   TicketTierDto,
   CreateTicketTierRequest,
+  PublicTicketTierDto,
+  PublicTicketTierListResponse,
   PromoCodeDto,
   CreatePromoCodeRequest,
   TablePackageDto,
   CreateTablePackageRequest,
   PromoterAssignmentDto,
   AssignPromoterRequest,
-  PosterUploadUrlDto,
-  PosterUploadUrlRequest,
-  PromoterAssignedEventDto,
 } from './contracts/event.js';
 
 export {
@@ -79,18 +88,19 @@ export {
   createEventSchema,
   updateEventSchema,
   cancelEventSchema,
+  posterUploadUrlRequestSchema,
+  posterUploadUrlDtoSchema,
   ticketTierStatusSchema,
   ticketTierDtoSchema,
   createTicketTierSchema,
+  publicTicketTierDtoSchema,
+  publicTicketTierListResponseSchema,
   promoCodeDtoSchema,
   createPromoCodeSchema,
   tablePackageDtoSchema,
   createTablePackageSchema,
   promoterAssignmentDtoSchema,
   assignPromoterSchema,
-  posterUploadUrlDtoSchema,
-  posterUploadUrlRequestSchema,
-  promoterAssignedEventDtoSchema,
 } from './contracts/event.js';
 
 // Partner (partnerships, promoters, referrals, analytics)
@@ -112,6 +122,9 @@ export type {
   CreateReferralLinkRequest,
   PromoterConnectionDto,
   RequestConnectionRequest,
+  DiscoverPartnerDto,
+  DiscoverPartnerKind,
+  DiscoverPartnersQuery,
 } from './contracts/partner.js';
 
 export {
@@ -134,6 +147,9 @@ export {
   createReferralLinkSchema,
   promoterConnectionDtoSchema,
   requestConnectionSchema,
+  discoverPartnerKindSchema,
+  discoverPartnerDtoSchema,
+  discoverPartnersQuerySchema,
 } from './contracts/partner.js';
 
 // Onboarding / KYC / Admin Authority
@@ -190,7 +206,7 @@ export {
   adminAuditRecordDtoSchema,
 } from './contracts/onboarding.js';
 
-// Checkout / Orders / Payments / Entitlements
+// Checkout / Orders / Payments / Entitlements / RSVP
 export type {
   PricingLineDto,
   PricingBreakdownDto,
@@ -202,6 +218,8 @@ export type {
   PaymentAttemptResponse,
   PaymentConfirmRequest,
   PaymentConfirmResponse,
+  RsvpRequest,
+  RsvpResponse,
   CheckoutOrderDto,
   OrderDto,
   OrdersListResponse,
@@ -229,6 +247,8 @@ export {
   paymentAttemptResponseSchema,
   paymentConfirmRequestSchema,
   paymentConfirmResponseSchema,
+  rsvpRequestSchema,
+  rsvpResponseSchema,
   checkoutOrderDtoSchema,
   orderDtoSchema,
   ordersListResponseSchema,
@@ -475,3 +495,30 @@ export {
   supportTicketQuerySchema,
   supportTicketIdParamSchema,
 } from './contracts/phase7.js';
+
+// Notifications (V2 partner inbox)
+export type {
+  NotificationRecipientTypeDto,
+  NotificationActionTypeDto,
+  NotificationActionDto,
+  NotificationPriorityDto,
+  NotificationDto,
+  NotificationsListResponse,
+  NotificationReadRequest,
+  MarkAllNotificationsReadResult,
+  NotificationDecisionDto,
+  NotificationActionRequestDto,
+} from './contracts/notifications.js';
+
+export {
+  notificationRecipientTypeSchema,
+  notificationActionTypeSchema,
+  notificationActionSchema,
+  notificationPrioritySchema,
+  notificationDtoSchema,
+  notificationsListResponseSchema,
+  notificationReadRequestSchema,
+  markAllNotificationsReadResultSchema,
+  notificationDecisionSchema,
+  notificationActionRequestSchema,
+} from './contracts/notifications.js';

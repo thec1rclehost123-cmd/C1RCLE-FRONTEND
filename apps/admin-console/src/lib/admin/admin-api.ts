@@ -60,7 +60,7 @@ import {
   platformSettingsUpdateRequestSchema,
 } from '@c1rcle/contracts';
 
-import { getAdminApiClient, newIdempotencyKey } from '@/lib/api';
+import { getAdminApiClient, getAdminBffClient, newIdempotencyKey } from '@/lib/api';
 
 import type {
   AdminAction,
@@ -627,19 +627,49 @@ export function updatePlatformSettings(
 /* ─── System health ───────────────────────────────────────────────────────────
  * Not part of the frozen `@c1rcle/contracts` wire — `/internal/*` are ops/probe
  * endpoints (unauthenticated by design, same ones a load balancer polls), not
- * business contract routes. Real checks only: v1's health screen claimed a
+ * business contract routes, so their schemas live here rather than in the
+ * generated contracts package. Real checks only: v1's health screen claimed a
  * "Vision AI Node" and "CDN Edge" status that didn't exist anywhere in the
  * codebase (see the V1 audit doc) — this surfaces exactly what
  * `createReadinessChecks` actually checks (Firestore, storage, Redis, payment
  * provider config), nothing invented for the UI.
- *
- * The fetch itself lives in `lib/bff/health-client.ts`, the one module
- * sanctioned to call this app's own same-origin `/api/health/*` BFF directly
- * (see that file's doc comment for why this one hop doesn't go through
- * @c1rcle/api-client).
  */
-export { fetchSystemReadiness as getSystemReadiness } from '@/lib/bff/health-client';
-export { fetchSystemVersion as getSystemVersion } from '@/lib/bff/health-client';
+const readinessResponseSchema = z.object({
+  ok: z.boolean(),
+  checks: z.record(z.string(), z.enum(['up', 'down'])),
+});
+
+const versionResponseSchema = z.object({
+  version: z.string(),
+  buildSha: z.string(),
+  commit: z.string(),
+  startedAt: z.string(),
+});
+
+/**
+ * Both routes below call this app's own `/api/health/*` BFF, not the gateway
+ * directly: the gateway's `/api/v2/internal/{readiness,version}` are
+ * deliberately locked behind a shared-secret header at the nginx edge (a
+ * browser can never legitimately hold that secret), so the BFF route holds
+ * it server-side and forwards the response same-origin. The BFF relays the
+ * gateway's body with 200 even when readiness itself is failing, so a
+ * dependency that is down shows up in `checks` rather than as an error.
+ */
+export function getSystemReadiness(): Promise<z.infer<typeof readinessResponseSchema>> {
+  return getAdminBffClient().get({
+    path: '/api/health/readiness',
+    schema: readinessResponseSchema,
+    retries: 0,
+  });
+}
+
+export function getSystemVersion(): Promise<z.infer<typeof versionResponseSchema>> {
+  return getAdminBffClient().get({
+    path: '/api/health/version',
+    schema: versionResponseSchema,
+    retries: 0,
+  });
+}
 
 /* ─── Directory (venues / events / hosts / users) ─────────────────────────── */
 

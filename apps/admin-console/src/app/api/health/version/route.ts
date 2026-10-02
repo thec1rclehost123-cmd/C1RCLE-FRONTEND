@@ -1,10 +1,12 @@
-import { NextResponse } from 'next/server';
+import { proxyGatewayHealth } from '@/lib/bff/health-proxy';
 
-import { fetchVersion } from '@/lib/bff/health-proxy';
+import type { NextRequest, NextResponse } from 'next/server';
 
-import type { NextRequest } from 'next/server';
-
-export async function GET(_req: NextRequest): Promise<NextResponse> {
-  const { status, body } = await fetchVersion();
-  return NextResponse.json(body, { status, headers: { 'cache-control': 'no-store' } });
+/**
+ * Proxies the gateway's token-gated `/api/v2/internal/version` check. See
+ * `lib/bff/health-proxy.ts` for why this can't be called directly from the
+ * browser.
+ */
+export function GET(_req: NextRequest): Promise<NextResponse> {
+  return proxyGatewayHealth('version');
 }

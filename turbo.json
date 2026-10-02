@@ -10,16 +10,15 @@
     "prettier.config.mjs",
     "tsconfig.json"
   ],
-  "globalEnv": [
-    "NODE_ENV",
-    "CI",
-    "ANALYZE",
-    "SITE_URL",
-    "SMOKE_URL",
-    "NEXT_PUBLIC_*",
+  "globalEnv": ["NODE_ENV", "CI", "ANALYZE", "SITE_URL", "NEXT_PUBLIC_*"],
+  "globalPassThroughEnv": [
+    "VERCEL",
+    "VERCEL_ENV",
+    "VERCEL_URL",
+    "TURBO_TOKEN",
+    "TURBO_TEAM",
     "GATEWAY_READINESS_TOKEN"
   ],
-  "globalPassThroughEnv": ["VERCEL", "VERCEL_ENV", "VERCEL_URL", "TURBO_TOKEN", "TURBO_TEAM"],
   "remoteCache": {
     "enabled": true,
     "signature": true

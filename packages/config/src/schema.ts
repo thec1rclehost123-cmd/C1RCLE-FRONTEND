@@ -62,10 +62,11 @@ export const serverEnvSchema = z.object({
     .default('false')
     .transform((value) => value === 'true'),
   /**
-   * Shared secret the admin console's health-check BFF sends to the gateway's
-   * nginx-gated `/api/v2/internal/{readiness,version}` routes. Optional here
-   * — a missing token degrades that one BFF route to a 503, it does not fail
-   * app startup.
+   * Shared secret the admin-console health BFF (`/api/health/*`) sends as
+   * `x-readiness-token` to reach the gateway's token-gated
+   * `/api/v2/internal/{readiness,version}`. Server-only — never give it a
+   * `NEXT_PUBLIC_` name. Its value is injected at deploy time, never
+   * committed. Optional: without it the health page reports unavailable.
    */
   GATEWAY_READINESS_TOKEN: z.string().min(1).optional(),
 });

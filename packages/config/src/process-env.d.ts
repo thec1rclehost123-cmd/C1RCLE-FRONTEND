@@ -28,5 +28,6 @@ declare namespace NodeJS {
     VERCEL_ENV?: string;
     VERCEL_URL?: string;
     ANALYZE?: string;
+    GATEWAY_READINESS_TOKEN?: string;
   }
 }

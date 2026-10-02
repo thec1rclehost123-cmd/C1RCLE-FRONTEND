@@ -37,6 +37,19 @@ export function getAdminApiClient() {
   return singleton;
 }
 
+let bffSingleton: ReturnType<typeof createApiClient> | undefined;
+
+/**
+ * Same-origin client for this app's own `app/api` BFF routes (e.g.
+ * `/api/health/*`), as opposed to the gateway. Those routes hold any
+ * server-side credential themselves, so no bearer token or reauth is
+ * involved here. Browser-only: the base URL is the current origin.
+ */
+export function getAdminBffClient() {
+  bffSingleton ??= createApiClient({ baseUrl: window.location.origin });
+  return bffSingleton;
+}
+
 /** One idempotency key per mutation — reusing a key replays the same command. */
 export function newIdempotencyKey(): string {
   return crypto.randomUUID();

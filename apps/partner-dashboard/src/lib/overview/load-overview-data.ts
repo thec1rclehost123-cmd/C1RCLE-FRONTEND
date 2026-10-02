@@ -12,7 +12,7 @@ import {
   getOrganizationOverview,
   getOrganizationTrends,
 } from '@/lib/overview/api-overview-repository';
-import { dayKeyOffset, monthKeyOffset, toOverviewData } from '@/lib/overview/overview-view-model';
+import { dayKeyOffset, toOverviewData } from '@/lib/overview/overview-view-model';
 // The PURE cookie module, not `@/lib/org/active-org`. The latter also exports
 // `setActiveOrg`, which imports the `@c1rcle/auth` barrel → `session-store` →
 // `useSyncExternalStore`; the RSC build rejects a client-only React API in a
@@ -143,7 +143,8 @@ export async function loadOverviewData(options: OverviewLoaderOptions): Promise<
         granularity: 'day',
       }),
       getOrganizationTrends(client, organizationId, {
-        from: monthKeyOffset(now, -24),
+        // The API accepts day bounds even when bucketing by month.
+        from: dayKeyOffset(now, -730),
         to: today,
         granularity: 'month',
       }),

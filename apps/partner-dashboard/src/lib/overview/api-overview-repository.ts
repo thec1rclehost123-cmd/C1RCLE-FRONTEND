@@ -36,10 +36,9 @@ export interface OverviewApiClient {
  * ─── Overview (Phase 1 analytics) ───────────────────────────────────────────
  *
  * The four reads behind `OverviewData`. Every route is `:organizationId`-scoped
- * and `requirePermission('organization.read')` server-side, so the path segment
- * is authoritative and no `X-Organization-Id` header is needed — contrast
- * `venue-repository.ts`, whose venue routes do demand that header. That is a
- * per-route decision, not a blanket rule.
+ * and `requirePermission('organization.read')` server-side. The gateway still
+ * requires the same organization ID in `X-Organization-Id` for tenancy
+ * validation, so every read sends both forms.
  *
  * The client is a **required first argument**, never a module import. The
  * overview screens are Server Components, and a repository that reached for the
@@ -59,6 +58,10 @@ function orgPath(organizationId: string, suffix: string): string {
   return `/api/v2/organizations/${encodeURIComponent(organizationId)}/analytics${suffix}`;
 }
 
+function orgHeaders(organizationId: string): Record<string, string> {
+  return { 'x-organization-id': organizationId };
+}
+
 /** Lifetime headline totals: events, revenue, tickets sold, check-ins. */
 export async function getOrganizationOverview(
   client: OverviewApiClient,
@@ -67,6 +70,7 @@ export async function getOrganizationOverview(
   return client.get({
     path: orgPath(organizationId, '/overview'),
     schema: organizationOverviewDtoSchema,
+    headers: orgHeaders(organizationId),
   });
 }
 
@@ -102,6 +106,7 @@ export async function getOrganizationTrends(
   return client.get({
     path: `${orgPath(organizationId, '/trends')}?${search.toString()}`,
     schema: organizationTrendsDtoSchema,
+    headers: orgHeaders(organizationId),
   });
 }
 
@@ -117,6 +122,7 @@ export async function getOrganizationCalendar(
   return client.get({
     path: `${orgPath(organizationId, '/calendar')}?${searchMonth(month)}`,
     schema: organizationCalendarDtoSchema,
+    headers: orgHeaders(organizationId),
   });
 }
 
@@ -139,5 +145,6 @@ export async function getOrganizationEventCards(
       limit: String(limit),
     }).toString()}`,
     schema: organizationEventCardListResponseSchema,
+    headers: orgHeaders(organizationId),
   });
 }
