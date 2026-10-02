@@ -236,7 +236,12 @@ jobs:
     env:
       VERCEL_PROJECT_ID: prj_VvGU73UJ0pNytBWLQNLIyZhVSiB9
       VERCEL_TEAM_ID: team_5Naid4VopvVpMMsdDhhCCv6x
-      SMOKE_URL: https://www.thec1rcle.com
+      # The project's stable Vercel alias, not www.thec1rcle.com: the custom
+      # domain sits behind a Cloudflare bot challenge ("Performing security
+      # verification") that blocks GitHub runners' headless browsers, so every
+      # smoke assertion saw the challenge page instead of the app. The alias
+      # serves the same production deployment.
+      SMOKE_URL: https://c1rcle-v2-admin-console.vercel.app
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
