@@ -1,5 +1,7 @@
 # Implementation Plan — Frontend↔Gateway Auth Foundation
 
+> **Historical (2026-10-02):** phases 1-8 are delivered; this plan is kept as the original sequencing. Current status: `../SPRINT-2026-08-31.md` "Status as of 2026-10-02".
+
 **Derives from:** `docs/superpowers/specs/2026-08-27-frontend-gateway-auth-foundation-design.md` (approved).
 **Context:** `docs/superpowers/HANDOFF-2026-08-27-auth-foundation.md` — read §6 (knowledge base) and §5 (copy-ready patterns) before starting any phase.
 **Repos:** `C1RCLE-BACKEND` @ `main` (Phase 1 only), `C1RCLE-FRONTEND` @ `staging` (Phases 2–8).

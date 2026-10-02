@@ -1,7 +1,7 @@
 # Frontend ↔ Gateway Auth Foundation — Design
 
 **Date:** 2026-08-27
-**Status:** Draft for review
+**Status:** Implemented (historical design; see `../SPRINT-2026-08-31.md` "Status as of 2026-10-02"; the `/session*` deferrals below were resolved by `/api/auth/*` BFF routes)
 **Scope:** Sub-projects A (`@c1rcle/auth`) + B (data-access convention), delivered as one vertical slice: the complete critical-path journey **signup → login → onboarding/KYC → select organization → land in the correct partner studio**, fully de-mocked, on real `/api/v2`.
 **Base branch:** `C1RCLE-FRONTEND` @ `staging`. Companion changes land in `C1RCLE-BACKEND` @ `main`.
 **Out of scope (later specs):** studio screen data (venue/host/promoter dashboards) = spec C; guest-portal de-mock = spec D; admin-console = spec E; backend Phase 5 completion = track G.

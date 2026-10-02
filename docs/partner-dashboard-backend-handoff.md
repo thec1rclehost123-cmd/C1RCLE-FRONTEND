@@ -1,5 +1,7 @@
 # Partner Dashboard backend handoff
 
+> **Status as of 2026-10-02:** the composition root is still fixture-bound (see `partner-dashboard-role-integration.md`). Backend routes now live under `/api/v2` (Phases 4-8 on staging); the adapter's `/api/v1/partner/*` paths must be remapped. Create-event v2, partnerships, referral links, analytics, finance and door routes exist on the backend; check the backend route catalog per endpoint.
+
 ## Composition root
 
 Frontend pages import `partnerRepositories` from `src/lib/partner/repositories.ts`. Replace the fixture bindings there with `createApiPartnerRepositories(...)` after supplying a `PartnerApiTransport` implemented by `@c1rcle/api-client` and runtime Zod decoders. The dashboard adapter intentionally contains no raw `fetch()` calls.
