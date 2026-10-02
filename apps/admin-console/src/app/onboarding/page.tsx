@@ -5,12 +5,11 @@ import { useState } from 'react';
 
 import { Button, EmptyState, ErrorState, LoadingState, TextField } from '@c1rcle/ui';
 
-import { OnboardingApplicationDetail } from '@/components/admin/onboarding-application-detail';
+import { OnboardingDetailDialog } from '@/components/admin/onboarding-detail-dialog';
 import { PageHeader } from '@/components/admin/page-header';
 import { StatusFilter } from '@/components/admin/status-filter';
 import {
   approveOnboardingApplication,
-  getOnboardingApplication,
   getOnboardingDocumentReadUrl,
   listOnboardingApplications,
   ONBOARDING_STATUSES,
@@ -69,22 +68,11 @@ export default function OnboardingDesk() {
   const [filter, setFilter] = useState<Filter>('submitted');
   const [reviewing, setReviewing] = useState<Reviewing | null>(null);
   const [note, setNote] = useState('');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [viewingDetails, setViewingDetails] = useState<OnboardingRequestDto | null>(null);
 
   const list = useQuery({
     queryKey: ['admin', 'onboarding', filter],
     queryFn: () => listOnboardingApplications(filter),
-  });
-
-  const detail = useQuery({
-    queryKey: ['admin', 'onboarding', 'application', selectedId],
-    queryFn: () => {
-      if (selectedId === null) {
-        throw new Error('No application selected');
-      }
-      return getOnboardingApplication(selectedId);
-    },
-    enabled: selectedId !== null,
   });
 
   const invalidate = () => {
@@ -208,20 +196,9 @@ export default function OnboardingDesk() {
                 const reviewable = IN_REVIEWABLE.includes(application.status);
                 const docsVerified = allRequiredDocumentsVerified(application);
                 return (
-                  <tr
-                    key={application.id}
-                    className={selectedId === application.id ? 'bg-muted/30' : undefined}
-                  >
+                  <tr key={application.id}>
                     <td className="px-4 py-3">
-                      <button
-                        type="button"
-                        className="text-left font-medium underline-offset-4 hover:underline"
-                        onClick={() => {
-                          setSelectedId(application.id);
-                        }}
-                      >
-                        {application.profile.legalName}
-                      </button>
+                      <p className="font-medium">{application.profile.legalName}</p>
                       <p className="font-mono text-xs text-muted-foreground">
                         {shortId(application.userId)} · {application.profile.city}
                       </p>
@@ -265,93 +242,106 @@ export default function OnboardingDesk() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {isReviewing ? (
-                        <div className="flex flex-col items-end gap-2">
-                          <TextField
-                            label="Note"
-                            value={note}
-                            onChange={(event) => {
-                              setNote(event.target.value);
-                            }}
-                            placeholder={
-                              reviewing.mode === 'changes'
-                                ? 'What should the applicant fix?'
-                                : 'Optional note'
-                            }
-                            className="w-72"
-                          />
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setReviewing(null);
-                                setNote('');
+                      <div className="flex flex-col items-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setViewingDetails(application);
+                          }}
+                        >
+                          View details
+                        </Button>
+                        {isReviewing ? (
+                          <div className="flex flex-col items-end gap-2">
+                            <TextField
+                              label="Note"
+                              value={note}
+                              onChange={(event) => {
+                                setNote(event.target.value);
                               }}
-                            >
-                              Cancel
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="primary"
-                              disabled={anyPending}
-                              onClick={confirmReview}
-                            >
-                              Confirm
-                            </Button>
-                          </div>
-                        </div>
-                      ) : reviewable ? (
-                        <div className="flex flex-col items-end gap-1">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="primary"
-                              disabled={!docsVerified}
-                              title={
-                                docsVerified
-                                  ? undefined
-                                  : 'All required documents must be verified on the KYC desk first'
+                              placeholder={
+                                reviewing.mode === 'changes'
+                                  ? 'What should the applicant fix?'
+                                  : 'Optional note'
                               }
-                              onClick={() => {
-                                setReviewing({ applicationId: application.id, mode: 'approve' });
-                                setNote('');
-                              }}
-                            >
-                              Approve
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setReviewing({ applicationId: application.id, mode: 'changes' });
-                                setNote('');
-                              }}
-                            >
-                              Request changes
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => {
-                                setReviewing({ applicationId: application.id, mode: 'reject' });
-                                setNote('');
-                              }}
-                            >
-                              Reject
-                            </Button>
+                              className="w-72"
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setReviewing(null);
+                                  setNote('');
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="primary"
+                                disabled={anyPending}
+                                onClick={confirmReview}
+                              >
+                                Confirm
+                              </Button>
+                            </div>
                           </div>
-                          {docsVerified ? null : (
-                            <p className="text-xs text-muted-foreground">Needs KYC verification</p>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="text-right text-xs text-muted-foreground">
-                          {application.provisionedOrganizationId === null
-                            ? '—'
-                            : `Org ${shortId(application.provisionedOrganizationId)}`}
-                        </p>
-                      )}
+                        ) : reviewable ? (
+                          <div className="flex flex-col items-end gap-1">
+                            <div className="flex flex-wrap justify-end gap-2">
+                              <Button
+                                size="sm"
+                                variant="primary"
+                                disabled={!docsVerified}
+                                title={
+                                  docsVerified
+                                    ? undefined
+                                    : 'All required documents must be verified on the KYC desk first'
+                                }
+                                onClick={() => {
+                                  setReviewing({ applicationId: application.id, mode: 'approve' });
+                                  setNote('');
+                                }}
+                              >
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setReviewing({ applicationId: application.id, mode: 'changes' });
+                                  setNote('');
+                                }}
+                              >
+                                Request changes
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => {
+                                  setReviewing({ applicationId: application.id, mode: 'reject' });
+                                  setNote('');
+                                }}
+                              >
+                                Reject
+                              </Button>
+                            </div>
+                            {docsVerified ? null : (
+                              <p className="text-xs text-muted-foreground">
+                                Needs KYC verification
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-right text-xs text-muted-foreground">
+                            {application.provisionedOrganizationId === null
+                              ? '—'
+                              : `Org ${shortId(application.provisionedOrganizationId)}`}
+                          </p>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -372,24 +362,17 @@ export default function OnboardingDesk() {
         </p>
       ) : null}
 
-      {selectedId !== null && detail.isPending ? (
-        <LoadingState label="Loading application details…" />
-      ) : detail.isError ? (
-        <ErrorState
-          description="Application details could not be loaded. Please retry."
-          onRetry={() => void detail.refetch()}
-        />
-      ) : detail.data !== undefined ? (
-        <OnboardingApplicationDetail
-          application={detail.data}
-          onOpenDocument={(applicationId, label) => {
-            viewDocumentMutation.mutate({ applicationId, label });
-          }}
-          onClose={() => {
-            setSelectedId(null);
-          }}
-        />
-      ) : null}
+      <OnboardingDetailDialog
+        application={viewingDetails}
+        onClose={() => {
+          setViewingDetails(null);
+        }}
+        onViewDocument={(label) => {
+          if (viewingDetails === null) return;
+          viewDocumentMutation.mutate({ applicationId: viewingDetails.id, label });
+        }}
+        viewDocumentPending={viewDocumentMutation.isPending}
+      />
     </div>
   );
 }
