@@ -64,7 +64,10 @@ export const nextConfig = defineConfig(
    * *runtime* code from unvalidated values, not to police the test runner.
    */
   {
-    files: ['playwright.config.ts', 'next.config.ts', 'e2e/**/*.ts'],
+    // `playwright*.config.ts`, not just `playwright.config.ts`: an app may have
+    // more than one Playwright config (e.g. a post-deploy one pointed at a live
+    // URL), and they are the same category of file.
+    files: ['playwright*.config.ts', 'next.config.ts', 'e2e/**/*.ts'],
     rules: {
       'no-restricted-syntax': 'off',
     },
