@@ -22,6 +22,7 @@ import {
 
 import { LoadingState } from '@/components/partner-v3/States';
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
+import { useNotifications } from '@/hooks/use-notifications';
 
 import { PARTNER_SHELL_CONFIG } from './config';
 import { isPartnerNavigationItemActive } from './partner-navigation';
@@ -95,6 +96,7 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
   };
 
   const membership = auth.profile?.activeMembership ?? null;
+  const notificationInbox = useNotifications(membership?.partnerId ?? null, partnerRole);
   const activeRole = normalizePartnerRole(membership?.partnerType);
   const user: unknown = auth.user;
 
@@ -359,6 +361,7 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
             <PartnerNotificationButton
               buttonRef={notificationButtonRef}
               open={notificationsOpen}
+              unreadCount={notificationInbox.unreadCount}
               onClick={() => {
                 setNotificationsOpen((open) => !open);
                 setAccountOpen(false);
@@ -388,7 +391,11 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
 
           <VenueNotificationDrawer
             open={notificationsOpen}
-            role={partnerRole}
+            surface={partnerRole}
+            views={notificationInbox.views}
+            onRead={(notificationId) => {
+              void notificationInbox.markRead(notificationId);
+            }}
             onClose={() => {
               setNotificationsOpen(false);
             }}

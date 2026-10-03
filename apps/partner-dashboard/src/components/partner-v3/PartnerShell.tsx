@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
+import { useNotifications } from '@/hooks/use-notifications';
 import { getStudioConfig, type StudioRole } from '@/studios/studio-config';
 
 import { MobileNavigation } from './MobileNavigation';
@@ -47,6 +48,8 @@ export function PartnerShell({
   const pathname = usePathname();
   const router = useRouter();
   const auth = useDashboardAuth();
+  const organizationId = auth.profile?.activeMembership?.partnerId ?? null;
+  const notificationInbox = useNotifications(organizationId, studio);
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigationLayout = useSyncExternalStore(
     subscribeToNavigationLayout,
@@ -55,6 +58,38 @@ export function PartnerShell({
   );
   const userName = auth.profile?.displayName ?? 'Partner';
   const appClass = styles['app'] ?? '';
+  const shellInteractionData = {
+    ...interactionData,
+    notifications: {
+      ...interactionData.notifications,
+      notifications: notificationInbox.views.map((notification) => ({
+        id: notification.id,
+        title: notification.title,
+        description: notification.summary,
+        time: notification.time,
+        type:
+          notification.category === 'finance'
+            ? ('payout' as const)
+            : notification.category === 'partners'
+              ? ('request' as const)
+              : notification.category === 'events'
+                ? ('operations' as const)
+                : ('system' as const),
+        icon:
+          notification.category === 'finance'
+            ? ('finance' as const)
+            : notification.category === 'partners'
+              ? ('partner' as const)
+              : notification.category === 'events'
+                ? ('request' as const)
+                : ('operations' as const),
+        ...(notification.destination ? { href: notification.destination } : {}),
+        unread: notification.unread,
+        decisionSupported: notification.decisionSupported,
+        category: notification.category === 'system' ? ('ops' as const) : notification.category,
+      })),
+    },
+  };
   const activeLabel =
     config.navigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
       ?.label ?? config.label;
@@ -106,7 +141,20 @@ export function PartnerShell({
           activeLabel={activeLabel}
           userName={userName}
           searchData={interactionData.search}
-          notificationsData={interactionData.notifications}
+          notificationsData={shellInteractionData.notifications}
+          notificationsLoading={notificationInbox.loading}
+          notificationsError={notificationInbox.error}
+          unreadNotificationCount={notificationInbox.unreadCount}
+          onNotificationRead={(id) => {
+            void notificationInbox.markRead(id);
+          }}
+          onMarkAllNotificationsRead={() => {
+            void notificationInbox.markAllRead();
+          }}
+          onRefreshNotifications={() => {
+            void notificationInbox.refresh();
+          }}
+          onNotificationAction={notificationInbox.performAction}
           navigationLayout={navigationLayout}
           mobileOpen={mobileOpen}
           onMobileToggle={() => {

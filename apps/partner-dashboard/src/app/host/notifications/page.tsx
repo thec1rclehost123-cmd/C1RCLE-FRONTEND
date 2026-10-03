@@ -1,5 +1,9 @@
-import { HostNotificationsScreen } from '@/components/host/HostWorkflowScreens';
+import { NotificationCenterScreen } from '@/components/venue/screens/NotificationCenterScreen';
+
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = { title: 'Notifications · Host Studio' };
 
 export default function HostNotificationsPage() {
-  return <HostNotificationsScreen />;
+  return <NotificationCenterScreen surface="host" />;
 }

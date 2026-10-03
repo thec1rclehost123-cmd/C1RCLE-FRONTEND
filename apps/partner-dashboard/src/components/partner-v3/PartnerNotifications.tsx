@@ -16,9 +16,11 @@ import styles from './partner-v3.module.css';
 
 import type {
   PartnerNotification,
+  PartnerNotificationCategory,
   PartnerNotificationIcon,
   PartnerNotificationsData,
 } from '@/data/partner-data-source';
+import type { NotificationDecisionDto } from '@c1rcle/contracts';
 
 const notificationIcons: Record<PartnerNotificationIcon, typeof BankIcon> = {
   finance: BankIcon,
@@ -28,15 +30,49 @@ const notificationIcons: Record<PartnerNotificationIcon, typeof BankIcon> = {
   request: InviteIcon,
 };
 
-export function PartnerNotifications({ data }: { readonly data: PartnerNotificationsData }) {
+const notificationTabs: readonly {
+  readonly id: 'all' | PartnerNotificationCategory;
+  readonly label: string;
+}[] = [
+  { id: 'all', label: 'All' },
+  { id: 'partners', label: 'Partners' },
+  { id: 'events', label: 'Events' },
+  { id: 'finance', label: 'Finance' },
+  { id: 'ops', label: 'Ops' },
+];
+
+export function PartnerNotifications({
+  data,
+  loading = false,
+  error = null,
+  unreadCount,
+  onRead,
+  onMarkAllRead,
+  onRefresh,
+  onAction,
+}: {
+  readonly data: PartnerNotificationsData;
+  readonly loading?: boolean;
+  readonly error?: string | null;
+  readonly unreadCount?: number;
+  readonly onRead?: (id: string) => void;
+  readonly onMarkAllRead?: () => void;
+  readonly onRefresh?: () => void;
+  readonly onAction?: (id: string, decision: NotificationDecisionDto) => Promise<unknown>;
+}) {
   const rootRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
-  const [read, setRead] = useState(false);
-  const unreadCount = read
-    ? 0
-    : data.notifications.filter((notification) => notification.unread).length;
+  const [activeTab, setActiveTab] = useState<'all' | PartnerNotificationCategory>('all');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const visibleUnreadCount =
+    unreadCount ?? data.notifications.filter((notification) => notification.unread).length;
+  const visibleNotifications =
+    activeTab === 'all'
+      ? data.notifications
+      : data.notifications.filter((notification) => notification.category === activeTab);
 
   const close = () => {
     setOpen(false);
@@ -75,14 +111,13 @@ export function PartnerNotifications({ data }: { readonly data: PartnerNotificat
         aria-controls="partner-notifications-panel"
         onClick={() => {
           setOpen((value) => !value);
-          setRead(true);
         }}
       >
         <NotificationIcon size={18} aria-hidden="true" />
-        {unreadCount ? (
+        {visibleUnreadCount ? (
           <span
             className={styles['notificationUnreadDot']}
-            aria-label={`${String(unreadCount)} unread notifications`}
+            aria-label={`${String(visibleUnreadCount)} unread notifications`}
           />
         ) : null}
       </button>
@@ -95,24 +130,77 @@ export function PartnerNotifications({ data }: { readonly data: PartnerNotificat
         >
           <header className={styles['notificationHeader']}>
             <strong>Notifications</strong>
-            <button ref={closeButtonRef} type="button" onClick={close}>
-              Close
-            </button>
+            <div className={styles['notificationHeaderActions']}>
+              {visibleUnreadCount > 0 && onMarkAllRead ? (
+                <button type="button" onClick={onMarkAllRead}>
+                  Mark all read
+                </button>
+              ) : null}
+              {onRefresh ? (
+                <button
+                  type="button"
+                  aria-label="Refresh notifications"
+                  onClick={onRefresh}
+                  disabled={loading}
+                >
+                  {loading ? 'Refreshing…' : 'Refresh'}
+                </button>
+              ) : null}
+              <button ref={closeButtonRef} type="button" onClick={close}>
+                Close
+              </button>
+            </div>
           </header>
-          {data.notifications.length ? (
+          <nav className={styles['notificationTabs']} aria-label="Notification categories">
+            {notificationTabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                aria-pressed={activeTab === tab.id}
+                className={activeTab === tab.id ? styles['notificationTabActive'] : ''}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+          {error || actionError ? (
+            <p className={styles['notificationError']} role="alert">
+              {actionError ?? error}
+            </p>
+          ) : null}
+          {visibleNotifications.length ? (
             <div className={styles['notificationList']}>
-              {data.notifications.map((notification) => (
+              {visibleNotifications.map((notification) => (
                 <NotificationRow
                   key={notification.id}
                   notification={notification}
-                  read={read}
+                  actionLoading={actionLoading === notification.id}
                   onClose={close}
+                  onRead={onRead}
+                  onAction={
+                    onAction
+                      ? async (decision) => {
+                          setActionLoading(notification.id);
+                          setActionError(null);
+                          try {
+                            await onAction(notification.id, decision);
+                          } catch {
+                            setActionError('Unable to complete this notification action.');
+                          } finally {
+                            setActionLoading(null);
+                          }
+                        }
+                      : undefined
+                  }
                 />
               ))}
             </div>
           ) : (
             <p className={styles['notificationEmpty']} role="status">
-              No new notifications.
+              {loading ? 'Loading notifications…' : 'No notifications.'}
             </p>
           )}
         </section>
@@ -123,12 +211,16 @@ export function PartnerNotifications({ data }: { readonly data: PartnerNotificat
 
 function NotificationRow({
   notification,
-  read,
+  actionLoading,
   onClose,
+  onRead,
+  onAction,
 }: {
   readonly notification: PartnerNotification;
-  readonly read: boolean;
+  readonly actionLoading: boolean;
   readonly onClose: () => void;
+  readonly onRead?: ((id: string) => void) | undefined;
+  readonly onAction?: ((decision: NotificationDecisionDto) => Promise<void>) | undefined;
 }) {
   const Icon = notificationIcons[notification.icon];
   const content = (
@@ -142,19 +234,56 @@ function NotificationRow({
         <Icon size={16} aria-hidden="true" />
       </span>
       <span className={styles['notificationCopy']}>
+        {notification.title ? <strong>{notification.title}</strong> : null}
         <span>{notification.description}</span>
         <time>{notification.time}</time>
       </span>
-      {notification.unread && !read ? (
-        <i className={styles['notificationDot']} aria-label="Unread" />
-      ) : null}
+      {notification.unread ? <i className={styles['notificationDot']} aria-label="Unread" /> : null}
     </>
   );
-  return notification.href ? (
-    <Link className={styles['notificationRow']} href={notification.href} onClick={onClose}>
-      {content}
-    </Link>
-  ) : (
-    <div className={styles['notificationRow']}>{content}</div>
+  return (
+    <article className={styles['notificationItem']}>
+      {notification.href ? (
+        <Link
+          className={styles['notificationRow']}
+          href={notification.href}
+          onClick={() => {
+            if (notification.unread) onRead?.(notification.id);
+            onClose();
+          }}
+        >
+          {content}
+        </Link>
+      ) : (
+        <button
+          className={styles['notificationRow']}
+          type="button"
+          onClick={() => {
+            if (notification.unread) onRead?.(notification.id);
+          }}
+        >
+          {content}
+        </button>
+      )}
+      {notification.href && notification.unread ? (
+        <button
+          className={styles['notificationMarkRead']}
+          type="button"
+          onClick={() => onRead?.(notification.id)}
+        >
+          Mark read
+        </button>
+      ) : null}
+      {notification.decisionSupported && onAction ? (
+        <div className={styles['notificationQuickActions']}>
+          <button type="button" disabled={actionLoading} onClick={() => void onAction('approve')}>
+            {actionLoading ? 'Saving…' : 'Approve'}
+          </button>
+          <button type="button" disabled={actionLoading} onClick={() => void onAction('reject')}>
+            Reject
+          </button>
+        </div>
+      ) : null}
+    </article>
   );
 }
