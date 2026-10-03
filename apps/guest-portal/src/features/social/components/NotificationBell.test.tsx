@@ -1,5 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { render, renderHook, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { useUnreadCount } from '../use-unread-count';
 
 import { NotificationBell } from './NotificationBell';
 
@@ -14,26 +16,45 @@ vi.mock('next/navigation', () => ({
 }));
 
 describe('NotificationBell', () => {
-  beforeEach(() => {
-    getUnreadCountAction.mockReset();
-  });
+  it('shows a capped unread badge', () => {
+    render(<NotificationBell count={12} />);
 
-  it('shows a capped unread badge once the count resolves', async () => {
-    getUnreadCountAction.mockResolvedValue(12);
-    render(<NotificationBell />);
-
-    expect(await screen.findByRole('link', { name: 'Notifications, 12 unread' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Notifications, 12 unread' })).toHaveAttribute(
       'href',
       '/notifications',
     );
     expect(screen.getByText('9+')).toBeInTheDocument();
   });
 
-  it('renders a plain inbox link for an anonymous guest', async () => {
-    getUnreadCountAction.mockResolvedValue(null);
-    render(<NotificationBell />);
+  it('renders a plain inbox link when there is no count', () => {
+    render(<NotificationBell count={null} />);
 
-    expect(await screen.findByRole('link', { name: 'Notifications' })).toBeInTheDocument();
-    expect(getUnreadCountAction).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('link', { name: 'Notifications' })).toBeInTheDocument();
+    expect(screen.queryByText('9+')).not.toBeInTheDocument();
+  });
+});
+
+describe('useUnreadCount', () => {
+  beforeEach(() => {
+    getUnreadCountAction.mockReset();
+  });
+
+  it('resolves the count from the server action', async () => {
+    getUnreadCountAction.mockResolvedValue(3);
+    const { result } = renderHook(() => useUnreadCount());
+
+    await waitFor(() => {
+      expect(result.current).toBe(3);
+    });
+  });
+
+  it('stays null for an anonymous guest or a failed read', async () => {
+    getUnreadCountAction.mockRejectedValue(new Error('offline'));
+    const { result } = renderHook(() => useUnreadCount());
+
+    await waitFor(() => {
+      expect(getUnreadCountAction).toHaveBeenCalledTimes(1);
+    });
+    expect(result.current).toBeNull();
   });
 });

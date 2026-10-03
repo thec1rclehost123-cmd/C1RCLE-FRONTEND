@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import { NotificationBell } from '@/features/social/components/NotificationBell';
+import { useUnreadCount } from '@/features/social/use-unread-count';
 
 import { navLinks } from './DesktopNavLinks';
 
@@ -18,9 +19,12 @@ export function NavbarActions({ isAuthenticated = false }: { isAuthenticated?: b
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const unreadCount = useUnreadCount();
+  // A resolved inbox count means the gateway accepted the session cookie.
+  const signedIn = isAuthenticated || unreadCount !== null;
   const isLoginPage = pathname === '/login';
-  const accountHref = isAuthenticated ? '/profile' : '/login';
-  const accountLabel = isAuthenticated ? 'PROFILE' : 'LOGIN';
+  const accountHref = signedIn ? '/profile' : '/login';
+  const accountLabel = signedIn ? 'PROFILE' : 'LOGIN';
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
@@ -67,7 +71,7 @@ export function NavbarActions({ isAuthenticated = false }: { isAuthenticated?: b
 
   return (
     <div className="pointer-events-auto flex shrink-0 items-center gap-3">
-      {!isLoginPage && <NotificationBell />}
+      {!isLoginPage && <NotificationBell count={unreadCount} />}
 
       {!isLoginPage && (
         <Link

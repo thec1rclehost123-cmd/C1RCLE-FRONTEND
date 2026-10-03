@@ -2,39 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
 
 import { NotificationIcon } from '@c1rcle/icons';
-
-import { getUnreadCountAction } from '../actions';
 
 /**
  * Navbar entry to the notification inbox. Always rendered (anonymous guests
  * land on login via the private-route proxy) so it never shifts the navbar;
  * the unread badge appears once the count resolves.
- *
- * The count is read through a Server Action because the session cookie is
- * httpOnly and the guest portal holds no browser-side token. It re-reads on
- * navigation so opening a notification clears the badge.
  */
-export function NotificationBell() {
+export function NotificationBell({ count }: { readonly count: number | null }) {
   const pathname = usePathname();
-  const [count, setCount] = useState<number | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    getUnreadCountAction()
-      .then((next) => {
-        if (!cancelled) setCount(next);
-      })
-      .catch(() => {
-        if (!cancelled) setCount(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [pathname]);
-
   const unread = count ?? 0;
   const label = unread > 0 ? `Notifications, ${String(unread)} unread` : 'Notifications';
 
