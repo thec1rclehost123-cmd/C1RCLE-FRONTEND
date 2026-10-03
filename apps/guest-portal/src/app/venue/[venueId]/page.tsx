@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { AuthoritativeVenueView } from '@/features/directory/components/AuthoritativePublicEntityView';
 import { VenueProfileView } from '@/features/directory/components/VenueProfileView';
 import { findVenuePublicProfileFixture } from '@/features/directory/fixtures/public-profile.fixture';
+import { loadFollowButtonState } from '@/features/social/load-follow-state';
 import { buildPublicMetadata } from '@/lib/seo/metadata';
 import { getPublicVenueForSeo, isEligiblePublicVenue } from '@/lib/seo/public-data';
 import { isProductionSeo } from '@/lib/seo/site';
@@ -55,7 +56,10 @@ export default async function VenueProfilePage({ params }: VenueProfilePageProps
   const { venueId } = await params;
   const slug = decodeURIComponent(venueId);
   const authoritativeVenue = await getPublicVenueForSeo(slug);
-  if (authoritativeVenue !== null) return <AuthoritativeVenueView venue={authoritativeVenue} />;
+  if (authoritativeVenue !== null) {
+    const followState = await loadFollowButtonState('venue', authoritativeVenue.id);
+    return <AuthoritativeVenueView venue={authoritativeVenue} followState={followState} />;
+  }
   const venue = isProductionSeo() ? undefined : findVenuePublicProfileFixture(slug);
 
   if (!venue) notFound();

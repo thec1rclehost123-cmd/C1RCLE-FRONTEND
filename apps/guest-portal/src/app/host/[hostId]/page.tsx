@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { AuthoritativeHostView } from '@/features/directory/components/AuthoritativePublicEntityView';
 import { HostProfileView } from '@/features/directory/components/HostProfileView';
 import { findHostPublicProfileFixture } from '@/features/directory/fixtures/public-profile.fixture';
+import { loadFollowButtonState } from '@/features/social/load-follow-state';
 import { buildPublicMetadata } from '@/lib/seo/metadata';
 import { getPublicHostForSeo, isEligiblePublicHost } from '@/lib/seo/public-data';
 import { isProductionSeo } from '@/lib/seo/site';
@@ -54,7 +55,10 @@ export default async function HostProfilePage({ params }: HostProfilePageProps) 
   const { hostId } = await params;
   const slug = decodeURIComponent(hostId);
   const authoritativeHost = await getPublicHostForSeo(slug);
-  if (authoritativeHost !== null) return <AuthoritativeHostView host={authoritativeHost} />;
+  if (authoritativeHost !== null) {
+    const followState = await loadFollowButtonState('host', authoritativeHost.id);
+    return <AuthoritativeHostView host={authoritativeHost} followState={followState} />;
+  }
   const host = isProductionSeo() ? undefined : findHostPublicProfileFixture(slug);
 
   if (!host) notFound();

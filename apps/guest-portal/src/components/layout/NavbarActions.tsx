@@ -4,7 +4,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
+import { NotificationBell } from '@/features/social/components/NotificationBell';
+
 import { navLinks } from './DesktopNavLinks';
+
+const activityLinks = [
+  { href: '/notifications', label: 'Notifications' },
+  { href: '/following', label: 'Following' },
+] as const;
 
 export function NavbarActions({ isAuthenticated = false }: { isAuthenticated?: boolean }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -60,6 +67,8 @@ export function NavbarActions({ isAuthenticated = false }: { isAuthenticated?: b
 
   return (
     <div className="pointer-events-auto flex shrink-0 items-center gap-3">
+      {!isLoginPage && <NotificationBell />}
+
       {!isLoginPage && (
         <Link
           href={accountHref}
@@ -120,6 +129,18 @@ export function NavbarActions({ isAuthenticated = false }: { isAuthenticated?: b
             })}
 
             <div className="my-4 h-px w-full bg-white/10" />
+
+            {activityLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={closeMenu}
+                aria-current={pathname.startsWith(link.href) ? 'page' : undefined}
+                className="text-sm font-black uppercase tracking-[0.2em] text-white/70 transition-colors duration-200 hover:text-white motion-reduce:transition-none"
+              >
+                {link.label}
+              </Link>
+            ))}
 
             <Link
               href={accountHref}

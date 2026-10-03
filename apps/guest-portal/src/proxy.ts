@@ -5,7 +5,15 @@ import { getClientEnv, getServerEnv } from '@c1rcle/config';
 import type { NextRequest } from 'next/server';
 
 const SESSION_COOKIE = 'better-auth.session_token';
-const PRIVATE_PREFIXES = ['/profile', '/tickets', '/help', '/checkout', '/confirmation'];
+const PRIVATE_PREFIXES = [
+  '/profile',
+  '/tickets',
+  '/help',
+  '/checkout',
+  '/confirmation',
+  '/notifications',
+  '/following',
+];
 
 function isPrivatePath(pathname: string): boolean {
   return PRIVATE_PREFIXES.some(
