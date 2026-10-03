@@ -138,6 +138,7 @@ export type {
   TablePackageDto,
   CreateTablePackageRequest,
   PromoterAssignmentDto,
+  PromoterAssignedEventDto,
   AssignPromoterRequest,
 } from './contracts/event.js';
 
@@ -160,6 +161,7 @@ export {
   tablePackageDtoSchema,
   createTablePackageSchema,
   promoterAssignmentDtoSchema,
+  promoterAssignedEventDtoSchema,
   assignPromoterSchema,
 } from './contracts/event.js';
 
@@ -690,6 +692,41 @@ export {
   eventPublicDetailDtoSchema,
   discoveryFeedDtoSchema,
 } from './contracts/public.js';
+
+// Phase 8: guest follow graph + notification inbox (session-scoped).
+// NotificationDto/notificationDtoSchema are aliased — the V2 partner-inbox
+// exports below use the same names for a distinct DTO (org-tenant inbox vs
+// guest follow notifications). Every other name here is already distinct
+// (this file pluralizes "notification[s]ListResponse" etc.), so only those
+// two need it.
+export type {
+  CreateFollowRequest,
+  FollowDto,
+  FollowListResponse,
+  FollowStatusDto,
+  FollowTargetTypeDto,
+  MarkNotificationsReadRequest,
+  MarkReadResultDto,
+  NotificationDto as SocialNotificationDto,
+  NotificationListResponse,
+  UnreadCountDto,
+} from './contracts/social.js';
+export {
+  createFollowSchema,
+  followDtoSchema,
+  followListResponseSchema,
+  followStatusDtoSchema,
+  followTargetParamsSchema,
+  followTargetTypeSchema,
+  listMyFollowsQuerySchema,
+  listNotificationsQuerySchema,
+  markNotificationsReadSchema,
+  markReadResultDtoSchema,
+  notificationDtoSchema as socialNotificationDtoSchema,
+  notificationListResponseSchema,
+  notificationTypeSchema,
+  unreadCountDtoSchema,
+} from './contracts/social.js';
 
 // Notifications (V2 partner inbox)
 export type {
