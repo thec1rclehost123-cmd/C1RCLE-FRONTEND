@@ -17,9 +17,12 @@ import type { PartnerRequest } from '@/data/partner-data-source';
 export function PartnerRequestCard({
   request,
   hostAccent = false,
+  organizationId,
 }: {
   readonly request: PartnerRequest;
   readonly hostAccent?: boolean;
+  /** Server-resolved org. Falls back to the active-org cookie when absent. */
+  readonly organizationId?: string;
 }) {
   const router = useRouter();
   const [pendingAction, setPendingAction] = useState<'approve' | 'reject' | null>(null);
@@ -29,21 +32,21 @@ export function PartnerRequestCard({
   const live = request.target ?? null;
 
   const answer = async (decision: 'approve' | 'reject'): Promise<void> => {
-    const organizationId = getActiveOrgId();
-    if (live === null || organizationId === null) return;
+    const resolvedOrgId = organizationId ?? getActiveOrgId();
+    if (live === null || resolvedOrgId === null) return;
     setPendingAction(decision);
     setError(null);
     try {
       if (live.graph === 'partnership') {
         await resolvePartnership(
-          organizationId,
+          resolvedOrgId,
           live.id,
           decision === 'approve' ? 'approve' : 'reject',
           undefined,
         );
       } else {
         await resolvePromoterConnection(
-          organizationId,
+          resolvedOrgId,
           live.id,
           decision === 'approve' ? 'approve' : 'reject',
           undefined,

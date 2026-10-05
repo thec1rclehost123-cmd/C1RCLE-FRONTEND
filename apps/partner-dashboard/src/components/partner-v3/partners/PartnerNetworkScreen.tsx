@@ -39,6 +39,8 @@ export interface PartnerNetworkScreenProps {
   readonly profileId?: string;
   readonly showSearch?: boolean;
   readonly hostAccent?: boolean;
+  /** Server-resolved org, handed to the request-card action islands. */
+  readonly organizationId?: string;
 }
 
 interface QueryState {
@@ -124,6 +126,7 @@ export function PartnerNetworkScreen({
   profileId,
   showSearch = true,
   hostAccent = false,
+  organizationId,
 }: PartnerNetworkScreenProps) {
   const state: QueryState = { segment, subView, search, profileId };
   const partnerSet =
@@ -236,6 +239,7 @@ export function PartnerNetworkScreen({
                   key={`${request.direction}-${request.id}`}
                   request={request}
                   hostAccent={hostAccent}
+                  {...(organizationId ? { organizationId } : {})}
                 />
               ))}
             </div>

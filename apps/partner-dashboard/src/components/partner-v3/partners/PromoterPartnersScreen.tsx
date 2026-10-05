@@ -74,11 +74,13 @@ export function PromoterPartnersScreen({
   tab = 'discover',
   filter = 'all',
   search = '',
+  organizationId,
 }: {
   readonly data: PromoterPartnersData;
   readonly tab?: PromoterPartnerTab;
   readonly filter?: PromoterPartnerFilter;
   readonly search?: string;
+  readonly organizationId?: string;
 }) {
   const state: PromoterPartnersQuery = { tab, filter, search };
   const hrefFor = (overrides: Partial<PromoterPartnersQuery> = {}) => {
@@ -195,7 +197,11 @@ export function PromoterPartnersScreen({
         ) : requests.length ? (
           <div className={styles['requestList']}>
             {requests.map((request) => (
-              <PartnerRequestCard key={`${request.direction}-${request.id}`} request={request} />
+              <PartnerRequestCard
+                key={`${request.direction}-${request.id}`}
+                request={request}
+                {...(organizationId ? { organizationId } : {})}
+              />
             ))}
           </div>
         ) : (

@@ -8,12 +8,14 @@ export function VenuePartnersScreen({
   subView = 'connected',
   search = '',
   profileId,
+  organizationId,
 }: {
   readonly data: VenuePartnersData;
   readonly segment?: PartnerSegment;
   readonly subView?: PartnerSubView;
   readonly search?: string;
   readonly profileId?: string;
+  readonly organizationId?: string;
 }) {
   return (
     <PartnerNetworkScreen
@@ -26,6 +28,7 @@ export function VenuePartnersScreen({
       subView={subView}
       search={search}
       {...(profileId ? { profileId } : {})}
+      {...(organizationId ? { organizationId } : {})}
     />
   );
 }

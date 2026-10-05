@@ -1,6 +1,8 @@
 import {
   discoverPartnerDtoSchema,
+  organizationDtoSchema,
   paginatedSchema,
+  partnerAccessDtoSchema,
   partnershipDtoSchema,
   promoterConnectionDtoSchema,
 } from '@c1rcle/contracts';
@@ -8,6 +10,8 @@ import {
 import type {
   DiscoverPartnerDto,
   DiscoverPartnerKind,
+  OrganizationDto,
+  PartnerAccessDto,
   PartnershipDto,
   PromoterConnectionDto,
 } from '@c1rcle/contracts';
@@ -78,4 +82,31 @@ export async function getDiscoverablePartners(
     headers: orgHeaders(organizationId),
   });
   return response.items;
+}
+
+/**
+ * Every organization the caller belongs to. Session-scoped, so it needs no
+ * organization context of its own — the entry point for resolving "which org
+ * am I acting as" without asking the user to pick one.
+ */
+export async function getMyOrganizations(
+  client: PartnerGraphApiClient,
+): Promise<readonly OrganizationDto[]> {
+  const response = await client.get({
+    path: '/api/v2/organizations',
+    schema: paginatedSchema(organizationDtoSchema),
+  });
+  return response.items;
+}
+
+/** Server-computed partner type (venue/host/promoter) for one organization. */
+export async function getOrganizationAccess(
+  client: PartnerGraphApiClient,
+  organizationId: string,
+): Promise<PartnerAccessDto> {
+  return client.get({
+    path: orgPath(organizationId, '/access'),
+    schema: partnerAccessDtoSchema,
+    headers: orgHeaders(organizationId),
+  });
 }

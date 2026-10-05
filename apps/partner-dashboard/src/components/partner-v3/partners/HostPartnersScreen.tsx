@@ -8,12 +8,14 @@ export function HostPartnersScreen({
   subView = 'connected',
   search = '',
   profileId,
+  organizationId,
 }: {
   readonly data: HostPartnersData;
   readonly segment?: PartnerSegment;
   readonly subView?: PartnerSubView;
   readonly search?: string;
   readonly profileId?: string;
+  readonly organizationId?: string;
 }) {
   return (
     <PartnerNetworkScreen
@@ -28,6 +30,7 @@ export function HostPartnersScreen({
       showSearch={false}
       hostAccent
       {...(profileId ? { profileId } : {})}
+      {...(organizationId ? { organizationId } : {})}
     />
   );
 }
