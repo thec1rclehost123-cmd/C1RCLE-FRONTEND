@@ -14,11 +14,11 @@ import { getClientEnv } from '@c1rcle/config';
 
 import { assertSameOrigin, errorEnvelope } from './gateway-proxy';
 
+import type { NextRequest } from 'next/server';
+
 function newRequestId(): string {
   return crypto.randomUUID();
 }
-
-import type { NextRequest } from 'next/server';
 
 export { assertSameOrigin, errorEnvelope };
 
