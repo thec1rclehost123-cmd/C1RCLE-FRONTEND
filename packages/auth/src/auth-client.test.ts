@@ -199,9 +199,10 @@ describe('auth-client', () => {
       await resetPassword({ token: 'tok', newPassword: 'password123' });
 
       const [url, init] = fetchMock.mock.calls[0] ?? [];
-      expect(String(url)).toContain('/api/auth/reset-password');
-      expect(String(url)).not.toContain('tok');
-      expect(JSON.parse(String((init as RequestInit).body))).toEqual({
+      expect(url).toEqual(expect.stringContaining('/api/auth/reset-password'));
+      expect(url).toEqual(expect.not.stringContaining('tok'));
+      if (typeof init?.body !== 'string') throw new Error('expected a JSON string body');
+      expect(JSON.parse(init.body)).toEqual({
         token: 'tok',
         newPassword: 'password123',
       });
