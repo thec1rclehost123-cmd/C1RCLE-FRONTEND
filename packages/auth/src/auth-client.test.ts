@@ -59,10 +59,10 @@ describe('auth-client', () => {
         expect.anything(),
       );
       const rawBody = fetchMock.mock.calls[0]?.[1]?.body;
-      const sentBody = JSON.parse(typeof rawBody === 'string' ? rawBody : '{}') as Record<
-        string,
-        unknown
-      >;
+      if (typeof rawBody !== 'string') {
+        throw new Error('Expected the request body to be a JSON string');
+      }
+      const sentBody = JSON.parse(rawBody) as Record<string, unknown>;
       expect(sentBody).not.toHaveProperty('role');
       expect(sentBody).toMatchObject({ email: 'a@b.com', displayName: 'A' });
 

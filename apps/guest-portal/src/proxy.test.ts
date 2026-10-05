@@ -29,6 +29,20 @@ describe('Guest Portal proxy', () => {
     expect(response.headers.get('x-robots-tag')).toBe('noindex, follow, noarchive');
   });
 
+  it.each(['/login', '/forgot-password', '/reset-password'])(
+    'keeps %s reachable without a session',
+    (pathname) => {
+      configure('production');
+
+      const request = new NextRequest(`https://thec1rcle.com${pathname}`);
+
+      const response = proxy(request);
+
+      expect(response.status).not.toBe(307);
+      expect(response.headers.get('location')).toBeNull();
+    },
+  );
+
   it('protects private HEAD requests used by crawlers and link checkers', () => {
     configure('production');
     const response = proxy(new NextRequest('https://thec1rcle.com/tickets', { method: 'HEAD' }));

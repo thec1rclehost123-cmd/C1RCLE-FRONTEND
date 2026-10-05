@@ -206,9 +206,7 @@ async function mockOnboardingNetwork(
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(
-          makeApplicationDto({ status: 'submitted', missingDocuments: [] }),
-        ),
+        body: JSON.stringify(makeApplicationDto({ status: 'submitted', missingDocuments: [] })),
       });
     });
   }
@@ -277,38 +275,61 @@ test.describe('Onboarding wizard — /onboard', () => {
     await page.goto('/onboard');
 
     // Step 1: Role selection
-    await expect(page.getByRole('heading', { name: /Choose your role|Partner Type/i })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: /Choose your role|Partner Type/i }),
+    ).toBeVisible();
     await page.getByRole('button', { name: /Venue/i }).click();
-    await page.getByRole('button', { name: /Continue|Next|Apply/i }).first().click();
+    await page
+      .getByRole('button', { name: /Continue|Next|Apply/i })
+      .first()
+      .click();
 
     // Step 2: Sign Up
     await expect(page.getByRole('heading', { name: /Create Your Account/i })).toBeVisible();
     await fillSignupForm(page);
-    await page.getByRole('button', { name: /Continue|Next|Sign Up/i }).first().click();
+    await page
+      .getByRole('button', { name: /Continue|Next|Sign Up/i })
+      .first()
+      .click();
 
     // Step 3: Email verification OTP
     await expect(page.getByText(/code|verification/i)).toBeVisible();
     await page.getByRole('textbox', { name: /code|OTP/i }).fill('123456');
-    await page.getByRole('button', { name: /Verify|Confirm/i }).first().click();
+    await page
+      .getByRole('button', { name: /Verify|Confirm/i })
+      .first()
+      .click();
 
     // Step 4: Phone verification — enter number, send, verify
     await expect(page.getByLabel(/Phone/i)).toBeVisible();
     await page.getByLabel(/Phone/i).fill('+919876543210');
-    await page.getByRole('button', { name: /Send|Get Code/i }).first().click();
+    await page
+      .getByRole('button', { name: /Send|Get Code/i })
+      .first()
+      .click();
     await page.getByRole('textbox', { name: /code|OTP/i }).fill('654321');
-    await page.getByRole('button', { name: /Verify|Confirm/i }).first().click();
+    await page
+      .getByRole('button', { name: /Verify|Confirm/i })
+      .first()
+      .click();
 
     // Step 5: Entity type
     await expect(page.getByRole('heading', { name: /Entity Type/i })).toBeVisible();
     await page.getByRole('button', { name: /Individual/i }).click();
-    await page.getByRole('button', { name: /Continue|Next/i }).first().click();
+    await page
+      .getByRole('button', { name: /Continue|Next/i })
+      .first()
+      .click();
 
     // Step 6: Details / Profile
     await expect(page.getByRole('heading', { name: /Details|Profile/i })).toBeVisible();
     await page.getByLabel(/Legal Name|Organization Name/i).fill('Test Venue Pvt Ltd');
     await page.getByLabel(/Contact Person/i).fill('John Doe');
     await page.getByRole('combobox', { name: /City/i }).selectOption('Mumbai');
-    await page.getByRole('button', { name: /Continue|Next/i }).first().click();
+    await page
+      .getByRole('button', { name: /Continue|Next/i })
+      .first()
+      .click();
 
     // Step 7: KYC Identity — upload documents
     await expect(page.getByRole('heading', { name: /Identity|KYC/i })).toBeVisible();
@@ -321,7 +342,10 @@ test.describe('Onboarding wizard — /onboard', () => {
         buffer: Buffer.from('fake-image-bytes'),
       });
     }
-    await page.getByRole('button', { name: /Submit|Continue|Next/i }).first().click();
+    await page
+      .getByRole('button', { name: /Submit|Continue|Next/i })
+      .first()
+      .click();
 
     // Step 8: Success screen
     await expect(
@@ -348,16 +372,20 @@ test.describe('Onboarding wizard — /onboard', () => {
 
     // Advance to signup step
     await page.getByRole('button', { name: /Venue/i }).click();
-    await page.getByRole('button', { name: /Continue|Next|Apply/i }).first().click();
+    await page
+      .getByRole('button', { name: /Continue|Next|Apply/i })
+      .first()
+      .click();
 
     // Attempt signup with conflicting email
     await fillSignupForm(page, { email: 'existing@example.com' });
-    await page.getByRole('button', { name: /Continue|Next|Sign Up/i }).first().click();
+    await page
+      .getByRole('button', { name: /Continue|Next|Sign Up/i })
+      .first()
+      .click();
 
     // The wizard shows "Welcome Back" or similar messaging and a login form
-    await expect(
-      page.getByText(/Welcome Back|already registered|existing account/i),
-    ).toBeVisible();
+    await expect(page.getByText(/Welcome Back|already registered|existing account/i)).toBeVisible();
     await expect(page.getByLabel(/Password/i)).toBeVisible();
   });
 
@@ -369,20 +397,38 @@ test.describe('Onboarding wizard — /onboard', () => {
     await page.goto('/onboard');
 
     await page.getByRole('button', { name: /Venue/i }).click();
-    await page.getByRole('button', { name: /Continue|Next|Apply/i }).first().click();
+    await page
+      .getByRole('button', { name: /Continue|Next|Apply/i })
+      .first()
+      .click();
     await fillSignupForm(page);
-    await page.getByRole('button', { name: /Continue|Next|Sign Up/i }).first().click();
+    await page
+      .getByRole('button', { name: /Continue|Next|Sign Up/i })
+      .first()
+      .click();
     await page.getByRole('textbox', { name: /code|OTP/i }).fill('123456');
-    await page.getByRole('button', { name: /Verify|Confirm/i }).first().click();
+    await page
+      .getByRole('button', { name: /Verify|Confirm/i })
+      .first()
+      .click();
     await page.getByLabel(/Phone/i).fill('+919876543210');
-    await page.getByRole('button', { name: /Send|Get Code/i }).first().click();
+    await page
+      .getByRole('button', { name: /Send|Get Code/i })
+      .first()
+      .click();
     await page.getByRole('textbox', { name: /code|OTP/i }).fill('654321');
-    await page.getByRole('button', { name: /Verify|Confirm/i }).first().click();
+    await page
+      .getByRole('button', { name: /Verify|Confirm/i })
+      .first()
+      .click();
 
     // Choose Business entity type
     await expect(page.getByRole('heading', { name: /Entity Type/i })).toBeVisible();
     await page.getByRole('button', { name: /Business|Company/i }).click();
-    await page.getByRole('button', { name: /Continue|Next/i }).first().click();
+    await page
+      .getByRole('button', { name: /Continue|Next/i })
+      .first()
+      .click();
 
     // The step navigator should now show Business and Signatory labels
     await expect(page.getByText(/Business/i)).toBeVisible();
@@ -396,29 +442,51 @@ test.describe('Onboarding wizard — /onboard', () => {
 
     // Navigate all the way to the KYC submit
     await page.getByRole('button', { name: /Venue/i }).click();
-    await page.getByRole('button', { name: /Continue|Next|Apply/i }).first().click();
+    await page
+      .getByRole('button', { name: /Continue|Next|Apply/i })
+      .first()
+      .click();
     await fillSignupForm(page);
-    await page.getByRole('button', { name: /Continue|Next|Sign Up/i }).first().click();
+    await page
+      .getByRole('button', { name: /Continue|Next|Sign Up/i })
+      .first()
+      .click();
     await page.getByRole('textbox', { name: /code|OTP/i }).fill('123456');
-    await page.getByRole('button', { name: /Verify|Confirm/i }).first().click();
+    await page
+      .getByRole('button', { name: /Verify|Confirm/i })
+      .first()
+      .click();
     await page.getByLabel(/Phone/i).fill('+919876543210');
-    await page.getByRole('button', { name: /Send|Get Code/i }).first().click();
+    await page
+      .getByRole('button', { name: /Send|Get Code/i })
+      .first()
+      .click();
     await page.getByRole('textbox', { name: /code|OTP/i }).fill('654321');
-    await page.getByRole('button', { name: /Verify|Confirm/i }).first().click();
+    await page
+      .getByRole('button', { name: /Verify|Confirm/i })
+      .first()
+      .click();
     await page.getByRole('button', { name: /Individual/i }).click();
-    await page.getByRole('button', { name: /Continue|Next/i }).first().click();
+    await page
+      .getByRole('button', { name: /Continue|Next/i })
+      .first()
+      .click();
     await page.getByLabel(/Legal Name|Organization Name/i).fill('Test Venue Pvt Ltd');
     await page.getByLabel(/Contact Person/i).fill('John Doe');
     await page.getByRole('combobox', { name: /City/i }).selectOption('Mumbai');
-    await page.getByRole('button', { name: /Continue|Next/i }).first().click();
+    await page
+      .getByRole('button', { name: /Continue|Next/i })
+      .first()
+      .click();
 
     // Try to submit on the KYC step without files
-    await page.getByRole('button', { name: /Submit/i }).first().click();
+    await page
+      .getByRole('button', { name: /Submit/i })
+      .first()
+      .click();
 
     // Error is shown
-    await expect(
-      page.getByText(/required documents|upload all|missing documents/i),
-    ).toBeVisible();
+    await expect(page.getByText(/required documents|upload all|missing documents/i)).toBeVisible();
   });
 });
 
@@ -429,9 +497,7 @@ test.describe('Onboarding wizard — /onboard', () => {
 // enforced spec.
 
 test.describe('Onboarding wizard — URL contract', () => {
-  test('email OTP send calls /api/auth/otp/send (BFF), not the raw gateway', async ({
-    page,
-  }) => {
+  test('email OTP send calls /api/auth/otp/send (BFF), not the raw gateway', async ({ page }) => {
     const bffHits: string[] = [];
     const gatewayDirectHits: string[] = [];
 
@@ -457,9 +523,15 @@ test.describe('Onboarding wizard — URL contract', () => {
     await page.goto('/onboard');
 
     await page.getByRole('button', { name: /Venue/i }).click();
-    await page.getByRole('button', { name: /Continue|Next|Apply/i }).first().click();
+    await page
+      .getByRole('button', { name: /Continue|Next|Apply/i })
+      .first()
+      .click();
     await fillSignupForm(page);
-    await page.getByRole('button', { name: /Continue|Next|Sign Up/i }).first().click();
+    await page
+      .getByRole('button', { name: /Continue|Next|Sign Up/i })
+      .first()
+      .click();
 
     // sendOtp() is called inside handleSignup — it MUST go through the BFF
     expect(bffHits).toContain('/api/auth/otp/send');
@@ -496,21 +568,42 @@ test.describe('Onboarding wizard — URL contract', () => {
 
     // Speed through to the details step
     await page.getByRole('button', { name: /Venue/i }).click();
-    await page.getByRole('button', { name: /Continue|Next|Apply/i }).first().click();
+    await page
+      .getByRole('button', { name: /Continue|Next|Apply/i })
+      .first()
+      .click();
     await fillSignupForm(page);
-    await page.getByRole('button', { name: /Continue|Next|Sign Up/i }).first().click();
+    await page
+      .getByRole('button', { name: /Continue|Next|Sign Up/i })
+      .first()
+      .click();
     await page.getByRole('textbox', { name: /code|OTP/i }).fill('123456');
-    await page.getByRole('button', { name: /Verify|Confirm/i }).first().click();
+    await page
+      .getByRole('button', { name: /Verify|Confirm/i })
+      .first()
+      .click();
     await page.getByLabel(/Phone/i).fill('+919876543210');
-    await page.getByRole('button', { name: /Send|Get Code/i }).first().click();
+    await page
+      .getByRole('button', { name: /Send|Get Code/i })
+      .first()
+      .click();
     await page.getByRole('textbox', { name: /code|OTP/i }).fill('654321');
-    await page.getByRole('button', { name: /Verify|Confirm/i }).first().click();
+    await page
+      .getByRole('button', { name: /Verify|Confirm/i })
+      .first()
+      .click();
     await page.getByRole('button', { name: /Individual/i }).click();
-    await page.getByRole('button', { name: /Continue|Next/i }).first().click();
+    await page
+      .getByRole('button', { name: /Continue|Next/i })
+      .first()
+      .click();
     await page.getByLabel(/Legal Name|Organization Name/i).fill('Test Venue Pvt Ltd');
     await page.getByLabel(/Contact Person/i).fill('John Doe');
     await page.getByRole('combobox', { name: /City/i }).selectOption('Mumbai');
-    await page.getByRole('button', { name: /Continue|Next/i }).first().click();
+    await page
+      .getByRole('button', { name: /Continue|Next/i })
+      .first()
+      .click();
 
     // At least one POST to an application-start endpoint should have fired
     expect(startHits.length).toBeGreaterThan(0);
@@ -550,17 +643,32 @@ test.describe('Onboarding wizard — URL contract', () => {
     await page.goto('/onboard');
 
     await page.getByRole('button', { name: /Venue/i }).click();
-    await page.getByRole('button', { name: /Continue|Next|Apply/i }).first().click();
+    await page
+      .getByRole('button', { name: /Continue|Next|Apply/i })
+      .first()
+      .click();
     await fillSignupForm(page);
-    await page.getByRole('button', { name: /Continue|Next|Sign Up/i }).first().click();
+    await page
+      .getByRole('button', { name: /Continue|Next|Sign Up/i })
+      .first()
+      .click();
     await page.getByRole('textbox', { name: /code|OTP/i }).fill('123456');
-    await page.getByRole('button', { name: /Verify|Confirm/i }).first().click();
+    await page
+      .getByRole('button', { name: /Verify|Confirm/i })
+      .first()
+      .click();
 
     // Phone OTP — send code, enter verification code
     await page.getByLabel(/Phone/i).fill('+919876543210');
-    await page.getByRole('button', { name: /Send|Get Code/i }).first().click();
+    await page
+      .getByRole('button', { name: /Send|Get Code/i })
+      .first()
+      .click();
     await page.getByRole('textbox', { name: /code|OTP/i }).fill('654321');
-    await page.getByRole('button', { name: /Verify|Confirm/i }).first().click();
+    await page
+      .getByRole('button', { name: /Verify|Confirm/i })
+      .first()
+      .click();
 
     // verify-document must go direct to gateway (no BFF wrapper exists — by design)
     expect(directGatewayHits).toContain('/api/v2/onboarding/verify-document');
