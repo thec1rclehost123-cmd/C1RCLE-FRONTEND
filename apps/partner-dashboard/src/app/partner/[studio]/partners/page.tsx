@@ -1,7 +1,12 @@
 import { HostPartnersScreen } from '@/components/partner-v3/partners/HostPartnersScreen';
 import { PromoterPartnersScreen } from '@/components/partner-v3/partners/PromoterPartnersScreen';
 import { VenuePartnersScreen } from '@/components/partner-v3/partners/VenuePartnersScreen';
-import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
+import {
+  loadHostPartnersData,
+  loadPromoterPartnersData,
+  loadVenuePartnersData,
+  StudioPartnersLoadError,
+} from '@/lib/partner/load-studio-partners';
 
 import { renderStudioSkeleton } from '../route-helpers';
 
@@ -11,6 +16,15 @@ import type {
   PromoterPartnerFilter,
   PromoterPartnerTab,
 } from '@/data/partner-data-source';
+
+function LoadFailureNotice({ message }: { readonly message: string }) {
+  return (
+    <section aria-label="Partners unavailable">
+      <h1>Partners</h1>
+      <p>{message}</p>
+    </section>
+  );
+}
 
 export default async function StudioPartnersPage({
   params,
@@ -44,7 +58,6 @@ export default async function StudioPartnersPage({
     view === 'discover' ? 'discover' : view === 'requests' ? 'requests' : 'connected';
   const profileId = getValue(query['profile']);
   if (studio === 'promoter') {
-    const data = await fixturePartnerDataSource.getPromoterPartners();
     const tabValue = getValue(query['tab']);
     const filterValue = getValue(query['filter']);
     const promoterTab: PromoterPartnerTab =
@@ -56,6 +69,20 @@ export default async function StudioPartnersPage({
         : 'discover';
     const promoterFilter: PromoterPartnerFilter =
       filterValue === 'venues' || filterValue === 'hosts' ? filterValue : 'all';
+    let data;
+    try {
+      data = await loadPromoterPartnersData();
+    } catch (cause) {
+      if (
+        cause instanceof StudioPartnersLoadError &&
+        (cause.reason === 'no-organization' || cause.reason === 'signed-out')
+      ) {
+        return <LoadFailureNotice message="Select an organization to see its partners." />;
+      }
+      return (
+        <LoadFailureNotice message="Could not load partners. Check your connection and reload the page." />
+      );
+    }
     return (
       <PromoterPartnersScreen
         data={data}
@@ -66,7 +93,20 @@ export default async function StudioPartnersPage({
     );
   }
   if (studio === 'host') {
-    const data = await fixturePartnerDataSource.getHostPartners();
+    let data;
+    try {
+      data = await loadHostPartnersData();
+    } catch (cause) {
+      if (
+        cause instanceof StudioPartnersLoadError &&
+        (cause.reason === 'no-organization' || cause.reason === 'signed-out')
+      ) {
+        return <LoadFailureNotice message="Select an organization to see its partners." />;
+      }
+      return (
+        <LoadFailureNotice message="Could not load partners. Check your connection and reload the page." />
+      );
+    }
     return (
       <HostPartnersScreen
         data={data}
@@ -78,7 +118,20 @@ export default async function StudioPartnersPage({
     );
   }
 
-  const data = await fixturePartnerDataSource.getVenuePartners();
+  let data;
+  try {
+    data = await loadVenuePartnersData();
+  } catch (cause) {
+    if (
+      cause instanceof StudioPartnersLoadError &&
+      (cause.reason === 'no-organization' || cause.reason === 'signed-out')
+    ) {
+      return <LoadFailureNotice message="Select an organization to see its partners." />;
+    }
+    return (
+      <LoadFailureNotice message="Could not load partners. Check your connection and reload the page." />
+    );
+  }
   return (
     <VenuePartnersScreen
       data={data}

@@ -82,7 +82,11 @@ export function PartnerProfilePanel({
         variant="primary"
         className={primaryButtonClassName}
         disabled
-        title="Partner actions are unavailable in fixture mode"
+        title={
+          partner.status === 'Partnered'
+            ? 'Event assignment is not available yet.'
+            : 'Choose one of your venues to send a connection request.'
+        }
       >
         {actionLabel}
       </Button>

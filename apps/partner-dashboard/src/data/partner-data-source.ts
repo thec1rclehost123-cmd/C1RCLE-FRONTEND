@@ -500,6 +500,15 @@ export interface PartnerRequest {
   readonly kind: PartnerKind;
   readonly direction: PartnerRequestDirection;
   readonly note: string;
+  /**
+   * Present only for rows read from the backend. The request card answers the
+   * request through this target; rows without one (fixtures, legacy callers)
+   * render their actions disabled.
+   */
+  readonly target?: {
+    readonly graph: 'partnership' | 'promoter-connection';
+    readonly id: string;
+  };
 }
 
 export interface StaffMember {
@@ -521,14 +530,14 @@ export interface PartnerRelationshipSet {
 }
 
 export interface VenuePartnersData {
-  readonly dataStatus: 'fixture';
+  readonly dataStatus: 'fixture' | 'api';
   readonly hosts: PartnerRelationshipSet;
   readonly promoters: PartnerRelationshipSet;
   readonly staff: readonly StaffMember[];
 }
 
 export interface HostPartnersData {
-  readonly dataStatus: 'fixture';
+  readonly dataStatus: 'fixture' | 'api';
   readonly venues: PartnerRelationshipSet;
   readonly promoters: PartnerRelationshipSet;
   readonly staff: readonly StaffMember[];
@@ -545,7 +554,7 @@ export interface PromoterPartnerRecord extends Omit<PartnerProfile, 'kind'> {
 }
 
 export interface PromoterPartnersData {
-  readonly dataStatus: 'fixture';
+  readonly dataStatus: 'fixture' | 'api';
   readonly activePartnersCount: number;
   readonly pendingPartnersCount: number;
   readonly venuesCount: number;

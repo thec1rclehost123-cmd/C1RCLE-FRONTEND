@@ -1,5 +1,13 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
 import { Avatar } from '@/components/partner-v3/Avatar';
 import { Button } from '@/components/partner-v3/Button';
+import { getActiveOrgId } from '@/lib/org/active-org';
+import { resolvePartnership } from '@/lib/partner/api-partnerships-repository';
+import { resolvePromoterConnection } from '@/lib/partner/promoter-connection-repository';
 
 import styles from './partners.module.css';
 import { PartnerStatusBadge } from './PartnerStatusBadge';
@@ -13,6 +21,42 @@ export function PartnerRequestCard({
   readonly request: PartnerRequest;
   readonly hostAccent?: boolean;
 }) {
+  const router = useRouter();
+  const [pendingAction, setPendingAction] = useState<'approve' | 'reject' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  // Rows read from the backend carry their mutation target; rows without one
+  // (fixtures, legacy callers) keep their actions disabled.
+  const live = request.target ?? null;
+
+  const answer = async (decision: 'approve' | 'reject'): Promise<void> => {
+    const organizationId = getActiveOrgId();
+    if (live === null || organizationId === null) return;
+    setPendingAction(decision);
+    setError(null);
+    try {
+      if (live.graph === 'partnership') {
+        await resolvePartnership(
+          organizationId,
+          live.id,
+          decision === 'approve' ? 'approve' : 'reject',
+          undefined,
+        );
+      } else {
+        await resolvePromoterConnection(
+          organizationId,
+          live.id,
+          decision === 'approve' ? 'approve' : 'reject',
+          undefined,
+        );
+      }
+      router.refresh();
+    } catch {
+      setError('Could not update the request. Check your connection and try again.');
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
   return (
     <article className={styles['requestCard']}>
       <div className={styles['partnerIdentity']}>
@@ -28,24 +72,31 @@ export function PartnerRequestCard({
           <p>{request.note}</p>
         </div>
       </div>
+      {error ? <p role="alert">{error}</p> : null}
       <div className={styles['requestActions']}>
         {request.direction === 'incoming' ? (
           <>
             <Button
               type="button"
               variant="ghost"
-              disabled
-              title="Request actions are unavailable in fixture mode"
+              disabled={live === null || pendingAction !== null}
+              title={live === null ? 'Request actions are unavailable in fixture mode' : 'Decline'}
+              onClick={() => {
+                void answer('reject');
+              }}
             >
-              Decline
+              {pendingAction === 'reject' ? 'Declining…' : 'Decline'}
             </Button>
             <Button
               type="button"
               variant="primary"
-              disabled
-              title="Request actions are unavailable in fixture mode"
+              disabled={live === null || pendingAction !== null}
+              title={live === null ? 'Request actions are unavailable in fixture mode' : 'Accept'}
+              onClick={() => {
+                void answer('approve');
+              }}
             >
-              Accept
+              {pendingAction === 'approve' ? 'Accepting…' : 'Accept'}
             </Button>
           </>
         ) : (
@@ -53,7 +104,7 @@ export function PartnerRequestCard({
             type="button"
             variant="secondary"
             disabled
-            title="Request actions are unavailable in fixture mode"
+            title="Reminders are not available yet"
           >
             Send reminder
           </Button>

@@ -102,7 +102,7 @@ function StaffList({
             type="button"
             variant="secondary"
             disabled
-            title="Staff access changes are unavailable in fixture mode"
+            title="Staff access changes are not available yet"
           >
             Manage access
           </Button>
