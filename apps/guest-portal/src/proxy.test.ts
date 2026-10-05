@@ -32,15 +32,6 @@ describe('Guest Portal proxy', () => {
   it('keeps the password-recovery pages reachable without a session', () => {
     configure('production');
     for (const path of ['/login', '/forgot-password', '/reset-password']) {
-      const response = proxy(new NextRequest());
-      expect(response.status).toBe(200);
-      expect(response.headers.get('location')).toBeNull();
-    }
-  });
-
-  it('keeps the password-recovery pages reachable without a session', () => {
-    configure('production');
-    for (const path of ['/login', '/forgot-password', '/reset-password']) {
       const response = proxy(new NextRequest('https://thec1rcle.com' + path));
       expect(response.status).toBe(200);
       expect(response.headers.get('location')).toBeNull();
