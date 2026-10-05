@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   CalendarIcon,
@@ -18,6 +18,8 @@ import {
 } from '@c1rcle/icons';
 
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
+import { getActiveOrgId } from '@/lib/org/active-org';
+import { listPartnerships, resolvePartnership } from '@/lib/partner/api-partnerships-repository';
 
 import { useOverlayFocus } from '../useOverlayFocus';
 import {
@@ -36,6 +38,7 @@ import type {
   VenuePartnerKind,
   VenuePartnershipRequest,
 } from '../venue-partners-model';
+import type { PartnershipDto } from '@c1rcle/contracts';
 
 const classNames = (...values: readonly (string | undefined)[]): string =>
   values.filter((value): value is string => Boolean(value)).join(' ');
@@ -48,6 +51,130 @@ const TAB_LINKS: readonly { readonly id: PartnersTab; readonly label: string }[]
   { id: 'discover', label: 'Discover' },
   { id: 'requests', label: 'Requests' },
 ];
+
+// ── Live partnerships (venue ↔ host) ───────────────────────────────────────
+// Same shape as `VenueSharePanel`: the org id comes from the active-org cookie,
+// every read/mutation is org-scoped server-side with `X-Organization-Id`, and
+// each mutation sends one `Idempotency-Key` per user intent. When there is no
+// active org (signed out, tests) the tab falls back to the fixture model so it
+// still renders honestly-disabled controls instead of a blank page.
+
+type LivePartnerships =
+  | { readonly mode: 'fixture' }
+  | { readonly mode: 'loading'; readonly organizationId: string }
+  | { readonly mode: 'error'; readonly organizationId: string; readonly reload: () => void }
+  | {
+      readonly mode: 'ready';
+      readonly organizationId: string;
+      readonly items: readonly PartnershipDto[];
+      readonly reload: () => void;
+    };
+
+function useLivePartnerships(): LivePartnerships {
+  const [state, setState] = useState<LivePartnerships>({ mode: 'fixture' });
+  const [nonce, setNonce] = useState(0);
+
+  useEffect(() => {
+    // Same shape as `VenueSharePanel`: state updates happen inside the async
+    // function's microtask continuation, never synchronously in the effect
+    // body, which is what `react-hooks/set-state-in-effect` requires.
+    // `cancelled` is read through a function because TS's control-flow
+    // narrowing can't see the cleanup closure's later mutation.
+    const lifecycle = { cancelled: false };
+    const isCancelled = (): boolean => lifecycle.cancelled;
+    void (async () => {
+      const orgId = getActiveOrgId();
+      if (orgId === null) {
+        if (!isCancelled()) setState({ mode: 'fixture' });
+        return;
+      }
+      if (!isCancelled()) setState({ mode: 'loading', organizationId: orgId });
+      try {
+        const items = await listPartnerships(orgId);
+        if (!isCancelled()) {
+          setState({
+            mode: 'ready',
+            organizationId: orgId,
+            items,
+            reload: () => {
+              setNonce((current) => current + 1);
+            },
+          });
+        }
+      } catch {
+        if (!isCancelled()) {
+          setState({
+            mode: 'error',
+            organizationId: orgId,
+            reload: () => {
+              setNonce((current) => current + 1);
+            },
+          });
+        }
+      }
+    })();
+    return () => {
+      lifecycle.cancelled = true;
+    };
+  }, [nonce]);
+
+  return state;
+}
+
+function shortOrgId(id: string): string {
+  return id.length <= 10 ? id : `${id.slice(0, 8)}…`;
+}
+
+function initialsOf(name: string): string {
+  const parts = name.split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? '?') + (parts[1]?.[0] ?? '')).toUpperCase();
+}
+
+function formatRequestedAt(iso: string): string {
+  const time = Date.parse(iso);
+  if (Number.isNaN(time)) return iso;
+  return new Date(time).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+/**
+ * The viewer here is always the venue side: venue-initiated rows are `sent`,
+ * everything else is `received`.
+ */
+function toLiveRequest(item: PartnershipDto): {
+  readonly row: VenuePartnershipRequest;
+  readonly partnershipId: string;
+} {
+  const direction: PartnershipRequestDirection = item.initiatedBy === 'venue' ? 'sent' : 'received';
+  const name = item.hostName ?? shortOrgId(item.hostOrganizationId);
+  const status: VenuePartnershipRequest['status'] =
+    item.status === 'pending'
+      ? 'pending'
+      : item.status === 'active'
+        ? 'accepted'
+        : item.status === 'rejected'
+          ? 'declined'
+          : 'cancelled';
+  return {
+    partnershipId: item.id,
+    row: {
+      id: item.id,
+      kind: 'host',
+      direction,
+      partnerName: name,
+      partnerInitials: initialsOf(name),
+      partnerCity: '—',
+      tone: 'violet',
+      verified: false,
+      status,
+      requestedAt: formatRequestedAt(item.createdAt),
+      note: item.message,
+    },
+  };
+}
 
 export function PartnersScreen({
   tab = 'connected',
@@ -63,6 +190,7 @@ export function PartnersScreen({
     auth.grantedPermissions.length === 0 ||
     auth.grantedPermissions.includes('*') ||
     auth.hasPermission('VIEW_PARTNERS');
+  const live = useLivePartnerships();
 
   if (!canView) {
     return (
@@ -73,9 +201,11 @@ export function PartnersScreen({
     );
   }
 
-  const pendingReceived = getPartnershipRequests('received').filter(
-    (item) => item.status === 'pending',
-  ).length;
+  const pendingReceived =
+    live.mode === 'ready'
+      ? live.items.filter((item) => item.status === 'pending' && item.initiatedBy !== 'venue')
+          .length
+      : getPartnershipRequests('received').filter((item) => item.status === 'pending').length;
 
   return (
     <section className={styles['page']}>
@@ -149,11 +279,11 @@ export function PartnersScreen({
       {tab === 'discover' ? (
         <DiscoverPartners kind={segment} />
       ) : tab === 'requests' ? (
-        <PartnershipRequests direction={requestView} />
+        <PartnershipRequests direction={requestView} live={live} />
       ) : tab === 'share' ? (
         <VenueSharePanel />
       ) : (
-        <ConnectedPartners kind={segment} />
+        <ConnectedPartners kind={segment} live={live} />
       )}
     </section>
   );
@@ -483,11 +613,50 @@ function DiscoverPartners({ kind }: { readonly kind: VenuePartnerKind }) {
 
 // ── Requests ────────────────────────────────────────────────────────────
 
-function PartnershipRequests({ direction }: { readonly direction: PartnershipRequestDirection }) {
+function PartnershipRequests({
+  direction,
+  live,
+}: {
+  readonly direction: PartnershipRequestDirection;
+  readonly live: LivePartnerships;
+}) {
   const [selected, setSelected] = useState<VenuePartnershipRequest | null>(null);
   const [confirmAction, setConfirmAction] = useState<'accept' | 'decline' | 'cancel' | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const requests = getPartnershipRequests(direction);
+
+  const liveRows = useMemo(
+    () =>
+      live.mode === 'ready'
+        ? live.items.map(toLiveRequest).filter(({ row }) => row.direction === direction)
+        : null,
+    [live, direction],
+  );
+
+  const handleResolved = useCallback(() => {
+    if (live.mode === 'ready') live.reload();
+    setConfirmAction(null);
+    setSelected(null);
+  }, [live]);
+
+  if (live.mode === 'loading') {
+    return <p className={styles['muted']}>Loading requests…</p>;
+  }
+  if (live.mode === 'error') {
+    return (
+      <>
+        <p className={styles['muted']}>Could not load requests. Try again in a moment.</p>
+        <button type="button" className={styles['secondaryAction']} onClick={live.reload}>
+          Retry
+        </button>
+      </>
+    );
+  }
+
+  const requests = liveRows ? liveRows.map(({ row }) => row) : getPartnershipRequests(direction);
+  const liveContext =
+    live.mode === 'ready' && selected
+      ? { organizationId: live.organizationId, partnershipId: selected.id }
+      : null;
 
   return (
     <>
@@ -569,6 +738,8 @@ function PartnershipRequests({ direction }: { readonly direction: PartnershipReq
       <RequestConfirmDialog
         request={selected}
         action={confirmAction}
+        live={liveContext}
+        onResolved={handleResolved}
         onClose={() => {
           setConfirmAction(null);
         }}
@@ -679,13 +850,19 @@ function RequestReviewDrawer({
 function RequestConfirmDialog({
   request,
   action,
+  live,
+  onResolved,
   onClose,
 }: {
   readonly request: VenuePartnershipRequest | null;
   readonly action: 'accept' | 'decline' | 'cancel' | null;
+  readonly live: { readonly organizationId: string; readonly partnershipId: string } | null;
+  readonly onResolved?: () => void;
   readonly onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   useOverlayFocus({ containerRef: ref, open: Boolean(action), onClose, lockScroll: true });
   if (!request || !action) return null;
   const copy =
@@ -700,6 +877,21 @@ function RequestConfirmDialog({
             body: 'They will be notified this request was declined.',
           }
         : { title: 'Cancel this request?', body: 'Your pending request will be withdrawn.' };
+  const liveEnabled = live !== null;
+  const resolveAction = action === 'accept' ? 'approve' : action === 'decline' ? 'reject' : 'end';
+  const confirm = async (): Promise<void> => {
+    if (live === null) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await resolvePartnership(live.organizationId, live.partnershipId, resolveAction, undefined);
+      onResolved?.();
+    } catch {
+      setError('Could not update the request. Check your connection and try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
   return (
     <div className={styles['modalBackdrop']}>
       <div
@@ -715,9 +907,17 @@ function RequestConfirmDialog({
         </button>
         <h2 id="request-confirm-title">{copy.title}</h2>
         <p>{copy.body}</p>
-        <p className={styles['unsupported']}>
-          This action requires the partnership mutation API, which is not connected yet.
-        </p>
+        {liveEnabled ? (
+          error ? (
+            <p className={styles['unsupported']} role="alert">
+              {error}
+            </p>
+          ) : null
+        ) : (
+          <p className={styles['unsupported']}>
+            This action requires the partnership mutation API, which is not connected yet.
+          </p>
+        )}
         <footer>
           <button type="button" onClick={onClose}>
             Close
@@ -725,10 +925,13 @@ function RequestConfirmDialog({
           <button
             type="button"
             className={styles['primary']}
-            disabled
-            title="Requires the partnership mutation API."
+            disabled={!liveEnabled || saving}
+            title={liveEnabled ? undefined : 'Requires the partnership mutation API.'}
+            onClick={() => {
+              void confirm();
+            }}
           >
-            Confirm
+            {saving ? 'Saving…' : 'Confirm'}
           </button>
         </footer>
       </div>
@@ -738,17 +941,92 @@ function RequestConfirmDialog({
 
 // ── Connected ───────────────────────────────────────────────────────────
 
-function ConnectedPartners({ kind }: { readonly kind: VenuePartnerKind }) {
+function ConnectedPartners({
+  kind,
+  live,
+}: {
+  readonly kind: VenuePartnerKind;
+  readonly live: LivePartnerships;
+}) {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<VenuePartner | null>(null);
+  const [selectedPartnershipId, setSelectedPartnershipId] = useState<string | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const partners = getVenuePartners(kind);
+
+  const liveHostPartners = useMemo(
+    () =>
+      live.mode === 'ready' && kind === 'host'
+        ? live.items
+            .filter((item) => item.status === 'active' || item.status === 'pending')
+            .map((item): { readonly partner: VenuePartner; readonly partnershipId: string } => {
+              const name = item.hostName ?? shortOrgId(item.hostOrganizationId);
+              return {
+                partnershipId: item.id,
+                partner: {
+                  id: item.id,
+                  kind: 'host',
+                  name,
+                  initials: initialsOf(name),
+                  city: '—',
+                  recentEvent: '—',
+                  recentEventDate: '—',
+                  status: item.status === 'active' ? 'Active' : 'Invite pending',
+                  phone: null,
+                  instagram: null,
+                  verified: false,
+                  tone: 'violet',
+                  credibility: { trackedEvents: 0, performanceValue: 0, rebookRate: 0 },
+                  eventHistory: [],
+                  eventType: null,
+                  experienceYears: 0,
+                  avgTicketsSold: null,
+                  avgAttendance: null,
+                  capacity: null,
+                  venuesWorkedWith: null,
+                  upcomingEvents: null,
+                  audienceReach: null,
+                  conversionRate: null,
+                  activeAccepting: item.status === 'active',
+                },
+              };
+            })
+        : null,
+    [live, kind],
+  );
+
+  const handleRemoved = useCallback(() => {
+    if (live.mode === 'ready') live.reload();
+    setSelected(null);
+    setSelectedPartnershipId(null);
+  }, [live]);
+
+  const partners = liveHostPartners
+    ? liveHostPartners.map(({ partner }) => partner)
+    : getVenuePartners(kind);
+  const liveRemove =
+    live.mode === 'ready' && kind === 'host' && selected && selectedPartnershipId
+      ? { organizationId: live.organizationId, partnershipId: selectedPartnershipId }
+      : null;
   const filtered = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase('en-IN');
     return normalized
       ? partners.filter((item) => item.name.toLocaleLowerCase('en-IN').includes(normalized))
       : partners;
   }, [partners, query]);
+
+  if (live.mode === 'loading' && kind === 'host') {
+    return <p className={styles['muted']}>Loading partners…</p>;
+  }
+  if (live.mode === 'error' && kind === 'host') {
+    return (
+      <>
+        <p className={styles['muted']}>Could not load partners. Try again in a moment.</p>
+        <button type="button" className={styles['secondaryAction']} onClick={live.reload}>
+          Retry
+        </button>
+      </>
+    );
+  }
 
   return (
     <>
@@ -806,6 +1084,10 @@ function ConnectedPartners({ kind }: { readonly kind: VenuePartnerKind }) {
                 onClick={(event) => {
                   triggerRef.current = event.currentTarget;
                   setSelected(item);
+                  setSelectedPartnershipId(
+                    liveHostPartners?.find(({ partner }) => partner.id === item.id)
+                      ?.partnershipId ?? null,
+                  );
                 }}
               >
                 View profile
@@ -819,8 +1101,11 @@ function ConnectedPartners({ kind }: { readonly kind: VenuePartnerKind }) {
         partner={selected}
         mode="connected"
         triggerRef={triggerRef}
+        liveRemove={liveRemove}
+        onRemoved={handleRemoved}
         onClose={() => {
           setSelected(null);
+          setSelectedPartnershipId(null);
         }}
       />
     </>
@@ -833,14 +1118,20 @@ function PartnerProfileDrawer({
   partner,
   mode,
   triggerRef,
+  liveRemove,
+  onRemoved,
   onClose,
 }: {
   readonly partner: VenuePartner | null;
   readonly mode: 'discover' | 'connected';
   readonly triggerRef: React.RefObject<HTMLButtonElement | null>;
+  readonly liveRemove?: { readonly organizationId: string; readonly partnershipId: string } | null;
+  readonly onRemoved?: () => void;
   readonly onClose: () => void;
 }) {
   const [showEvents, setShowEvents] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const drawerRef = useRef<HTMLElement>(null);
   useOverlayFocus({
     containerRef: drawerRef,
@@ -1037,11 +1328,43 @@ function PartnerProfileDrawer({
               <button
                 type="button"
                 className={styles['dangerAction']}
-                disabled
-                title="Removing a connection requires the partner mutation API."
+                disabled={!liveRemove || removing}
+                title={
+                  liveRemove
+                    ? undefined
+                    : 'Removing a connection requires the partner mutation API.'
+                }
+                onClick={() => {
+                  if (!liveRemove) return;
+                  setRemoving(true);
+                  setRemoveError(null);
+                  void (async () => {
+                    try {
+                      await resolvePartnership(
+                        liveRemove.organizationId,
+                        liveRemove.partnershipId,
+                        'end',
+                        undefined,
+                      );
+                      onRemoved?.();
+                    } catch {
+                      setRemoveError(
+                        'Could not remove the connection. Check your connection and try again.',
+                      );
+                    } finally {
+                      setRemoving(false);
+                    }
+                  })();
+                }}
               >
-                <DeleteIcon size={18} aria-hidden="true" /> Remove connection
+                <DeleteIcon size={18} aria-hidden="true" />{' '}
+                {removing ? 'Removing…' : 'Remove connection'}
               </button>
+              {removeError ? (
+                <p className={styles['unsupported']} role="alert">
+                  {removeError}
+                </p>
+              ) : null}
             </>
           )}
         </footer>

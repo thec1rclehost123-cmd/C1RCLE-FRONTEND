@@ -1,8 +1,8 @@
-import { paginatedSchema, partnershipDtoSchema } from '@c1rcle/contracts';
+import { discoverPartnerDtoSchema, paginatedSchema, partnershipDtoSchema } from '@c1rcle/contracts';
 
 import { apiClient } from '@/lib/api/client';
 
-import type { PartnershipDto } from '@c1rcle/contracts';
+import type { DiscoverPartnerDto, DiscoverPartnerKind, PartnershipDto } from '@c1rcle/contracts';
 
 /**
  * ─── Partnerships (venue ↔ host) ───────────────────────────────────────────
@@ -119,4 +119,26 @@ export async function setVenueShare(
     schema: partnershipDtoSchema,
     headers: commandHeaders(organizationId, idempotencyKey),
   });
+}
+
+/**
+ * Real organizations/venues the caller's org could connect with. Backs the
+ * Discover tab — previously the route 404'd and the tab read it as "no
+ * partners", so it was empty by construction, never by data.
+ */
+export async function discoverPartners(
+  organizationId: string,
+  query: { readonly type?: DiscoverPartnerKind; readonly q?: string; readonly limit?: number } = {},
+): Promise<DiscoverPartnerDto[]> {
+  const response = await apiClient.get({
+    path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/discover-partners`,
+    query: {
+      ...(query.type ? { type: query.type } : {}),
+      ...(query.q ? { q: query.q } : {}),
+      ...(query.limit !== undefined ? { limit: query.limit } : {}),
+    },
+    headers: orgHeaders(organizationId),
+    schema: paginatedSchema(discoverPartnerDtoSchema),
+  });
+  return response.items;
 }
