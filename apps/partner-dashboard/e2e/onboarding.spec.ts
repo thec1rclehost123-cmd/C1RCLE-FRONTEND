@@ -259,8 +259,14 @@ async function fillSignupForm(
   const name = opts.name ?? 'John Doe';
   const email = opts.email ?? 'test@example.com';
   const password = opts.password ?? 'Password1234';
-  await page.getByLabel(/Full Name|Display Name/i).fill(name);
-  await page.getByLabel(/Email/i).fill(email);
+
+  await expect(page.getByRole('heading', { name: /create your account/i })).toBeVisible();
+
+  const nameInput = page.getByRole('textbox', { name: /full name|display name|name/i });
+
+  await expect(nameInput).toBeVisible();
+  await nameInput.fill(name);
+  await page.getByLabel(/email/i).fill(email);
   await page.locator('input[type="password"]').first().fill(password);
 }
 
