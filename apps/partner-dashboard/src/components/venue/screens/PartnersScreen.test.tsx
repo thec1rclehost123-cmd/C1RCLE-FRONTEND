@@ -6,9 +6,12 @@ import { PartnersScreen } from './PartnersScreen';
 
 const mocks = vi.hoisted(() => ({
   canDo: vi.fn(() => true),
-  getActiveOrgId: vi.fn((): string | null => null),
+  getActiveOrgId: vi.fn((): string | null => 'org_venue'),
   listPartnerships: vi.fn<(...args: never[]) => Promise<unknown>>(),
   resolvePartnership: vi.fn<(...args: never[]) => Promise<unknown>>(),
+  listPromoterConnections: vi.fn<(...args: never[]) => Promise<unknown>>(),
+  resolvePromoterConnection: vi.fn<(...args: never[]) => Promise<unknown>>(),
+  discoverPartners: vi.fn<(...args: never[]) => Promise<unknown>>(),
 }));
 
 vi.mock('@c1rcle/icons', () => {
@@ -18,7 +21,6 @@ vi.mock('@c1rcle/icons', () => {
     CheckIcon: Icon,
     CloseIcon: Icon,
     DeleteIcon: Icon,
-    FilterIcon: Icon,
     LinkIcon: Icon,
     LocationIcon: Icon,
     PendingIcon: Icon,
@@ -45,130 +47,169 @@ vi.mock('@/lib/partner/api-partnerships-repository', () => ({
     mocks.listPartnerships(...args) as Promise<unknown>,
   resolvePartnership: (...args: never[]): Promise<unknown> =>
     mocks.resolvePartnership(...args) as Promise<unknown>,
+  discoverPartners: (...args: never[]): Promise<unknown> =>
+    mocks.discoverPartners(...args) as Promise<unknown>,
 }));
+
+vi.mock('@/lib/partner/promoter-connection-repository', () => ({
+  listPromoterConnections: (...args: never[]): Promise<unknown> =>
+    mocks.listPromoterConnections(...args) as Promise<unknown>,
+  resolvePromoterConnection: (...args: never[]): Promise<unknown> =>
+    mocks.resolvePromoterConnection(...args) as Promise<unknown>,
+  loadConnectedPromoterConnections: () => Promise.resolve([]),
+}));
+
+const partnership = {
+  id: 'part_live_1',
+  hostOrganizationId: 'org_host_1',
+  venueOrganizationId: 'org_venue',
+  venueId: 'venue_1',
+  initiatedBy: 'host',
+  status: 'pending',
+  message: 'Would love to bring Saturday Sessions to your rooftop.',
+  venueShareRate: null,
+  resolutionReason: null,
+  resolvedAt: null,
+  version: 1,
+  createdAt: '2026-09-20T10:00:00.000Z',
+  updatedAt: '2026-09-20T10:00:00.000Z',
+  hostName: 'Live Host Collective',
+  venueName: null,
+};
+
+const promoterConnection = {
+  id: 'conn_live_1',
+  promoterId: 'org_promoter_1',
+  targetId: 'org_venue',
+  targetType: 'venue',
+  initiatedBy: 'promoter',
+  status: 'pending',
+  message: null,
+  resolutionReason: null,
+  resolvedAt: null,
+  version: 1,
+  createdAt: '2026-09-21T10:00:00.000Z',
+  updatedAt: '2026-09-21T10:00:00.000Z',
+  promoterName: 'Live Promoter Crew',
+  promoterSlug: null,
+  targetName: null,
+  targetSlug: null,
+  targetCity: 'Mumbai',
+};
 
 describe('PartnersScreen', () => {
   beforeEach(() => {
-    mocks.getActiveOrgId.mockReturnValue(null);
+    mocks.getActiveOrgId.mockReturnValue('org_venue');
     mocks.listPartnerships.mockReset().mockResolvedValue([]);
     mocks.resolvePartnership.mockReset().mockResolvedValue({});
+    mocks.listPromoterConnections.mockReset().mockResolvedValue([]);
+    mocks.resolvePromoterConnection.mockReset().mockResolvedValue({});
+    mocks.discoverPartners.mockReset().mockResolvedValue([]);
   });
 
   describe('Connected', () => {
-    it('traps the profile drawer and restores focus to the View profile trigger on Escape', async () => {
-      const user = userEvent.setup();
+    it('renders only backend partnerships, never fixture rows', async () => {
+      mocks.listPartnerships.mockResolvedValue([
+        { ...partnership, status: 'active', hostName: 'Live Host Collective' },
+      ]);
       render(<PartnersScreen tab="connected" segment="host" />);
-      const trigger = screen.getAllByRole('button', { name: 'View profile' })[0]!;
-      await user.click(trigger);
-      expect(
-        screen.getByRole('dialog', { name: /Rhea Kapoor partner details/ }),
-      ).toBeInTheDocument();
-      await user.keyboard('{Escape}');
-      await waitFor(() => expect(trigger).toHaveFocus());
+
+      expect(await screen.findByText('Live Host Collective')).toBeInTheDocument();
+      expect(screen.queryByText('Rhea Kapoor')).not.toBeInTheDocument();
     });
 
-    it('shows host performance stats and expands hosted event history', async () => {
-      const user = userEvent.setup();
+    it('shows an empty state when the backend returns no partners', async () => {
       render(<PartnersScreen tab="connected" segment="host" />);
-      await user.click(screen.getAllByRole('button', { name: 'View profile' })[0]!);
 
-      const dialog = screen.getByRole('dialog', { name: /Rhea Kapoor partner details/ });
-      expect(within(dialog).getByRole('heading', { name: 'Performance' })).toBeInTheDocument();
-      expect(within(dialog).getByText('Events hosted')).toBeInTheDocument();
-      expect(within(dialog).getByText('Average tickets sold')).toBeInTheDocument();
-      const history = within(dialog).getByRole('button', { name: /See hosted events/ });
-      expect(history).toHaveAttribute('aria-expanded', 'false');
-
-      await user.click(history);
-      expect(history).toHaveAttribute('aria-expanded', 'true');
-      expect(within(dialog).getByText('Saturday Sessions')).toBeInTheDocument();
+      expect(await screen.findByText(/No connected hosts yet/)).toBeInTheDocument();
     });
 
-    it('keeps quick actions honestly disabled with no fake success', async () => {
-      const user = userEvent.setup();
+    it('asks to select an organization instead of showing dummy data', async () => {
+      mocks.getActiveOrgId.mockReturnValue(null);
       render(<PartnersScreen tab="connected" segment="host" />);
-      await user.click(screen.getAllByRole('button', { name: 'View profile' })[0]!);
+
+      expect(await screen.findByText(/Select an organization/)).toBeInTheDocument();
+      expect(mocks.listPartnerships).not.toHaveBeenCalled();
+    });
+
+    it('removes a live connection through the mutation API', async () => {
+      const user = userEvent.setup();
+      mocks.listPartnerships.mockResolvedValue([
+        { ...partnership, status: 'active', hostName: 'Live Host Collective' },
+      ]);
+      render(<PartnersScreen tab="connected" segment="host" />);
+      await user.click(await screen.findByRole('button', { name: 'View profile' }));
 
       const removeButton = screen.getByRole('button', { name: /Remove connection/ });
-      expect(removeButton).toBeDisabled();
-      expect(screen.queryByText(/removed successfully/i)).not.toBeInTheDocument();
+      expect(removeButton).toBeEnabled();
+      await user.click(removeButton);
+
+      await waitFor(() => {
+        expect(mocks.resolvePartnership).toHaveBeenCalledWith(
+          'org_venue',
+          'part_live_1',
+          'end',
+          undefined,
+        );
+      });
     });
   });
 
   describe('Discover', () => {
-    it('uses promoter-specific performance labels and keeps Connect honestly disabled', async () => {
-      const user = userEvent.setup();
-      render(<PartnersScreen tab="discover" segment="promoter" />);
-      await user.click(screen.getAllByRole('button', { name: 'View profile' })[0]!);
+    const discoveredHost = {
+      id: 'org_host_9',
+      kind: 'host',
+      name: 'Real Host Nine',
+      slug: 'real-host-nine',
+      city: 'Pune',
+      verified: true,
+      organizationId: 'org_host_9',
+      venueId: null,
+    };
 
-      expect(screen.getByRole('button', { name: /See promoted events/ })).toBeInTheDocument();
-      const connect = screen.getByRole('button', { name: /Connect/ });
-      expect(connect).toBeDisabled();
+    it('renders only discoverable profiles from the backend', async () => {
+      mocks.discoverPartners.mockResolvedValue([discoveredHost]);
+      render(<PartnersScreen tab="discover" segment="host" />);
+
+      expect(await screen.findByText('Real Host Nine')).toBeInTheDocument();
+      expect(screen.queryByText('Rhea Kapoor')).not.toBeInTheDocument();
+      expect(screen.queryByText('Kabir Malhotra')).not.toBeInTheDocument();
     });
 
-    it('filters results by verified status', async () => {
+    it('filters by verified status without fake facets', async () => {
       const user = userEvent.setup();
+      mocks.discoverPartners.mockResolvedValue([
+        discoveredHost,
+        { ...discoveredHost, id: 'org_host_10', name: 'Unverified Host', verified: false },
+      ]);
       render(<PartnersScreen tab="discover" segment="host" />);
-      await user.click(screen.getByRole('button', { name: /Filters/ }));
+      await screen.findByText('Real Host Nine');
+
       await user.click(screen.getByLabelText('Verified status only'));
-      expect(screen.queryByText('Kabir Malhotra')).not.toBeInTheDocument();
-      expect(screen.getByText('Rhea Kapoor')).toBeInTheDocument();
+      expect(screen.queryByText('Unverified Host')).not.toBeInTheDocument();
+      expect(screen.getByText('Real Host Nine')).toBeInTheDocument();
+    });
+
+    it('shows an empty state when nothing is discoverable', async () => {
+      render(<PartnersScreen tab="discover" segment="host" />);
+
+      expect(await screen.findByText(/No hosts to discover yet/)).toBeInTheDocument();
     });
   });
 
   describe('Requests', () => {
-    it('shows a pending-count badge on the Requests tab', () => {
-      render(<PartnersScreen tab="discover" segment="host" />);
-      const requestsTab = screen.getByRole('link', { name: /Requests/ });
-      expect(within(requestsTab).getByText('2')).toBeInTheDocument();
-    });
-
-    it('keeps accept/decline honestly disabled behind a confirm dialog', async () => {
-      const user = userEvent.setup();
-      render(<PartnersScreen tab="requests" requestView="received" />);
-      await user.click(screen.getAllByRole('button', { name: 'Review' })[0]!);
-      await user.click(screen.getByRole('button', { name: /Accept/ }));
-
-      expect(screen.getByText(/requires the partnership mutation API/i)).toBeInTheDocument();
-      const confirm = screen.getByRole('button', { name: 'Confirm' });
-      expect(confirm).toBeDisabled();
-    });
-  });
-
-  describe('Live partnerships', () => {
-    const livePartnership = {
-      id: 'part_live_1',
-      hostOrganizationId: 'org_host_1',
-      venueOrganizationId: 'org_venue',
-      venueId: 'venue_1',
-      initiatedBy: 'host',
-      status: 'pending',
-      message: 'Would love to bring Saturday Sessions to your rooftop.',
-      venueShareRate: null,
-      resolutionReason: null,
-      resolvedAt: null,
-      version: 1,
-      createdAt: '2026-09-20T10:00:00.000Z',
-      updatedAt: '2026-09-20T10:00:00.000Z',
-      hostName: 'Live Host Collective',
-      venueName: null,
-    };
-
-    beforeEach(() => {
-      mocks.getActiveOrgId.mockReturnValue('org_venue');
-    });
-
-    it('counts the pending badge from the API instead of fixtures', async () => {
-      mocks.listPartnerships.mockResolvedValue([livePartnership]);
+    it('counts the pending badge from both APIs', async () => {
+      mocks.listPartnerships.mockResolvedValue([partnership]);
+      mocks.listPromoterConnections.mockResolvedValue([promoterConnection]);
       render(<PartnersScreen tab="discover" segment="host" />);
 
       const requestsTab = screen.getByRole('link', { name: /Requests/ });
-      await waitFor(() => expect(within(requestsTab).getByText('1')).toBeInTheDocument());
+      await waitFor(() => expect(within(requestsTab).getByText('2')).toBeInTheDocument());
     });
 
-    it('enables Confirm and approves a received request through the mutation API', async () => {
+    it('approves a host request through the partnership mutation API', async () => {
       const user = userEvent.setup();
-      mocks.listPartnerships.mockResolvedValue([livePartnership]);
+      mocks.listPartnerships.mockResolvedValue([partnership]);
       render(<PartnersScreen tab="requests" requestView="received" />);
 
       await user.click(await screen.findByRole('button', { name: 'Review' }));
@@ -182,6 +223,25 @@ describe('PartnersScreen', () => {
         expect(mocks.resolvePartnership).toHaveBeenCalledWith(
           'org_venue',
           'part_live_1',
+          'approve',
+          undefined,
+        );
+      });
+    });
+
+    it('approves a promoter request through the promoter-connection mutation API', async () => {
+      const user = userEvent.setup();
+      mocks.listPromoterConnections.mockResolvedValue([promoterConnection]);
+      render(<PartnersScreen tab="requests" requestView="received" />);
+
+      await user.click(await screen.findByRole('button', { name: 'Review' }));
+      await user.click(screen.getByRole('button', { name: /Accept/ }));
+      await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+      await waitFor(() => {
+        expect(mocks.resolvePromoterConnection).toHaveBeenCalledWith(
+          'org_venue',
+          'conn_live_1',
           'approve',
           undefined,
         );
