@@ -4,6 +4,7 @@ import {
   assertCsrf,
   assertSameOrigin,
   clearCsrfCookie,
+  clearSessionCookie,
   forwardToGateway,
   rescopeSessionCookies,
 } from '@/lib/bff/auth-proxy';
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // re-scoping them to the FE origin clears them there too.
     rescopeSessionCookies(gatewayResponse, res);
   }
+  clearSessionCookie(res);
   clearCsrfCookie(res);
   return res;
 }

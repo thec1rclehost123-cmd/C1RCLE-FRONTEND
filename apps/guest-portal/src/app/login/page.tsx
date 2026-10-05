@@ -1,5 +1,4 @@
-// FIXTURE_ONLY: Temporary UI development page.
-// Must not be used as a production API fallback.
+import { Suspense } from 'react';
 
 import { buildPrivateMetadata } from '@/lib/seo/metadata';
 
@@ -9,9 +8,13 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = buildPrivateMetadata(
   'Login & Member Access',
-  'Sign in or create your member account to access THE C1RCLE.',
+  'Sign in to your member account to access THE C1RCLE.',
 );
 
 export default function LoginPage() {
-  return <LoginPageClient />;
+  return (
+    <Suspense fallback={null}>
+      <LoginPageClient />
+    </Suspense>
+  );
 }

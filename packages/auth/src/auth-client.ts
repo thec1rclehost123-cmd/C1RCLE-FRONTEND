@@ -2,8 +2,11 @@ import { createApiClient, isApiClientError } from '@c1rcle/api-client';
 import { getClientEnv } from '@c1rcle/config';
 import {
   authBridgeResponseSchema,
+  forgotPasswordRequestSchema,
   loginRequestSchema,
   noContentSchema,
+  passwordResetAckSchema,
+  resetPasswordRequestSchema,
   sessionSchema,
   signupRequestSchema,
 } from '@c1rcle/contracts';
@@ -202,4 +205,38 @@ export async function fetchSession(): Promise<void> {
   } catch {
     markAnonymous();
   }
+}
+
+/**
+ * Ask for a password-reset email. The BFF/gateway answer identically for
+ * known and unknown addresses (no account-existence oracle), so this resolves
+ * on any 2xx and only rejects on validation, rate-limit (429) or transport
+ * failure. Anonymous: no CSRF cookie exists yet, same-origin check guards it.
+ */
+export async function requestPasswordReset(email: string): Promise<void> {
+  const body = forgotPasswordRequestSchema.parse({ email });
+  await createAuthClient().post({
+    path: '/api/auth/forgot-password',
+    body,
+    schema: passwordResetAckSchema,
+  });
+}
+
+/**
+ * Complete a password reset with the emailed one-time token. The token is
+ * only ever placed in the request body, never a URL, header or log line.
+ */
+export async function resetPassword(input: {
+  readonly token: string;
+  readonly newPassword: string;
+}): Promise<void> {
+  const body = resetPasswordRequestSchema.parse({
+    token: input.token,
+    newPassword: input.newPassword,
+  });
+  await createAuthClient().post({
+    path: '/api/auth/reset-password',
+    body,
+    schema: passwordResetAckSchema,
+  });
 }

@@ -163,6 +163,21 @@ export function setCsrfCookie(res: NextResponse, token: string): void {
   });
 }
 
+/**
+ * Actively expires the frontend-scoped session cookie. Logout must not depend
+ * on the gateway: if its revoke call fails (or its response carries no
+ * `Set-Cookie`), the browser would otherwise keep a live session cookie.
+ */
+export function clearSessionCookie(res: NextResponse): void {
+  res.cookies.set(SESSION_COOKIE_NAME, '', {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isProduction(),
+    path: '/',
+    maxAge: 0,
+  });
+}
+
 export function clearCsrfCookie(res: NextResponse): void {
   res.cookies.set(csrfCookieName(), '', { path: '/', maxAge: 0 });
 }

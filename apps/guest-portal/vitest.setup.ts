@@ -33,6 +33,10 @@ vi.mock('@c1rcle/auth', () => ({
     mockSessionState.clearSession();
   },
   getAccessToken: () => mockSessionState.accessToken,
+  logout: () => {
+    mockSessionState.clearSession();
+    return Promise.resolve();
+  },
   useSession: () => ({
     isAuthenticated: mockSessionState.status === 'authenticated',
     isLoading: mockSessionState.status === 'unknown',

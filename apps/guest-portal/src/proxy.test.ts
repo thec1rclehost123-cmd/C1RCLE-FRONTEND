@@ -29,6 +29,24 @@ describe('Guest Portal proxy', () => {
     expect(response.headers.get('x-robots-tag')).toBe('noindex, follow, noarchive');
   });
 
+  it('keeps the password-recovery pages reachable without a session', () => {
+    configure('production');
+    for (const path of ['/login', '/forgot-password', '/reset-password']) {
+      const response = proxy(new NextRequest());
+      expect(response.status).toBe(200);
+      expect(response.headers.get('location')).toBeNull();
+    }
+  });
+
+  it('keeps the password-recovery pages reachable without a session', () => {
+    configure('production');
+    for (const path of ['/login', '/forgot-password', '/reset-password']) {
+      const response = proxy(new NextRequest('https://thec1rcle.com' + path));
+      expect(response.status).toBe(200);
+      expect(response.headers.get('location')).toBeNull();
+    }
+  });
+
   it('protects private HEAD requests used by crawlers and link checkers', () => {
     configure('production');
     const response = proxy(new NextRequest('https://thec1rcle.com/tickets', { method: 'HEAD' }));
@@ -45,6 +63,17 @@ describe('Guest Portal proxy', () => {
     );
     expect(response.headers.get('cache-control')).toBe('private, no-store');
     expect(response.headers.get('x-robots-tag')).toBe('noindex, follow, noarchive');
+  });
+
+  it('treats the __Secure- session cookie as authenticated', () => {
+    configure('production');
+    const response = proxy(
+      new NextRequest('https://thec1rcle.com/profile', {
+        headers: { cookie: '__Secure-better-auth.session_token=test-session' },
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get('location')).toBeNull();
   });
 
   it('marks every preview response noindex, nofollow and noarchive', () => {
