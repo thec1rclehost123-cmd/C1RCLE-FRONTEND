@@ -8,7 +8,6 @@ import {
   CheckIcon,
   CloseIcon,
   DeleteIcon,
-  FilterIcon,
   LinkIcon,
   LocationIcon,
   PendingIcon,
@@ -19,14 +18,17 @@ import {
 
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 import { getActiveOrgId } from '@/lib/org/active-org';
-import { listPartnerships, resolvePartnership } from '@/lib/partner/api-partnerships-repository';
+import {
+  discoverPartners,
+  listPartnerships,
+  resolvePartnership,
+} from '@/lib/partner/api-partnerships-repository';
+import {
+  listPromoterConnections,
+  resolvePromoterConnection,
+} from '@/lib/partner/promoter-connection-repository';
 
 import { useOverlayFocus } from '../useOverlayFocus';
-import {
-  getDiscoverablePartners,
-  getPartnershipRequests,
-  getVenuePartners,
-} from '../venue-partners-model';
 
 import styles from './VenuePartners.module.css';
 import { VenueSharePanel } from './VenueSharePanel';
@@ -38,7 +40,7 @@ import type {
   VenuePartnerKind,
   VenuePartnershipRequest,
 } from '../venue-partners-model';
-import type { PartnershipDto } from '@c1rcle/contracts';
+import type { DiscoverPartnerDto, PartnershipDto, PromoterConnectionDto } from '@c1rcle/contracts';
 
 const classNames = (...values: readonly (string | undefined)[]): string =>
   values.filter((value): value is string => Boolean(value)).join(' ');
@@ -52,26 +54,27 @@ const TAB_LINKS: readonly { readonly id: PartnersTab; readonly label: string }[]
   { id: 'requests', label: 'Requests' },
 ];
 
-// ── Live partnerships (venue ↔ host) ───────────────────────────────────────
+// ── Live partnerships (venue ↔ hosts, venue ↔ promoters) ────────────────────
 // Same shape as `VenueSharePanel`: the org id comes from the active-org cookie,
 // every read/mutation is org-scoped server-side with `X-Organization-Id`, and
-// each mutation sends one `Idempotency-Key` per user intent. When there is no
-// active org (signed out, tests) the tab falls back to the fixture model so it
-// still renders honestly-disabled controls instead of a blank page.
+// each mutation sends one `Idempotency-Key` per user intent. There is no
+// fixture fallback: without an active org the tab asks to select one, and with
+// one it renders only what the backend returns (loading / error / empty).
 
 type LivePartnerships =
-  | { readonly mode: 'fixture' }
+  | { readonly mode: 'no-org' }
   | { readonly mode: 'loading'; readonly organizationId: string }
   | { readonly mode: 'error'; readonly organizationId: string; readonly reload: () => void }
   | {
       readonly mode: 'ready';
       readonly organizationId: string;
-      readonly items: readonly PartnershipDto[];
+      readonly partnerships: readonly PartnershipDto[];
+      readonly promoterConnections: readonly PromoterConnectionDto[];
       readonly reload: () => void;
     };
 
 function useLivePartnerships(): LivePartnerships {
-  const [state, setState] = useState<LivePartnerships>({ mode: 'fixture' });
+  const [state, setState] = useState<LivePartnerships>({ mode: 'no-org' });
   const [nonce, setNonce] = useState(0);
 
   useEffect(() => {
@@ -85,17 +88,21 @@ function useLivePartnerships(): LivePartnerships {
     void (async () => {
       const orgId = getActiveOrgId();
       if (orgId === null) {
-        if (!isCancelled()) setState({ mode: 'fixture' });
+        if (!isCancelled()) setState({ mode: 'no-org' });
         return;
       }
       if (!isCancelled()) setState({ mode: 'loading', organizationId: orgId });
       try {
-        const items = await listPartnerships(orgId);
+        const [partnerships, promoterConnections] = await Promise.all([
+          listPartnerships(orgId),
+          listPromoterConnections({ organizationId: orgId }),
+        ]);
         if (!isCancelled()) {
           setState({
             mode: 'ready',
             organizationId: orgId,
-            items,
+            partnerships,
+            promoterConnections,
             reload: () => {
               setNonce((current) => current + 1);
             },
@@ -140,13 +147,20 @@ function formatRequestedAt(iso: string): string {
   });
 }
 
+type LiveTarget =
+  | { readonly graph: 'partnership'; readonly id: string }
+  | { readonly graph: 'promoter-connection'; readonly id: string };
+
 /**
  * The viewer here is always the venue side: venue-initiated rows are `sent`,
- * everything else is `received`.
+ * everything else is `received`. Display fields come only from the DTOs the
+ * backend enriches (`hostName`, `targetName`, …) — anything the API does not
+ * return renders as unavailable rather than invented.
  */
-function toLiveRequest(item: PartnershipDto): {
+function toPartnershipRequest(item: PartnershipDto): {
   readonly row: VenuePartnershipRequest;
-  readonly partnershipId: string;
+  readonly target: LiveTarget;
+  readonly createdAt: string;
 } {
   const direction: PartnershipRequestDirection = item.initiatedBy === 'venue' ? 'sent' : 'received';
   const name = item.hostName ?? shortOrgId(item.hostOrganizationId);
@@ -159,7 +173,8 @@ function toLiveRequest(item: PartnershipDto): {
           ? 'declined'
           : 'cancelled';
   return {
-    partnershipId: item.id,
+    target: { graph: 'partnership', id: item.id },
+    createdAt: item.createdAt,
     row: {
       id: item.id,
       kind: 'host',
@@ -173,6 +188,89 @@ function toLiveRequest(item: PartnershipDto): {
       requestedAt: formatRequestedAt(item.createdAt),
       note: item.message,
     },
+  };
+}
+
+function toPromoterRequest(item: PromoterConnectionDto): {
+  readonly row: VenuePartnershipRequest;
+  readonly target: LiveTarget;
+  readonly createdAt: string;
+} {
+  const direction: PartnershipRequestDirection =
+    item.initiatedBy === 'target' ? 'sent' : 'received';
+  const name = item.promoterName ?? shortOrgId(item.promoterId);
+  const status: VenuePartnershipRequest['status'] =
+    item.status === 'pending'
+      ? 'pending'
+      : item.status === 'active'
+        ? 'accepted'
+        : item.status === 'rejected'
+          ? 'declined'
+          : 'cancelled';
+  return {
+    target: { graph: 'promoter-connection', id: item.id },
+    createdAt: item.createdAt,
+    row: {
+      id: item.id,
+      kind: 'promoter',
+      direction,
+      partnerName: name,
+      partnerInitials: initialsOf(name),
+      partnerCity: item.targetCity ?? '—',
+      tone: 'rose',
+      verified: false,
+      status,
+      requestedAt: formatRequestedAt(item.createdAt),
+      note: item.message,
+    },
+  };
+}
+
+function toSparsePartner(
+  id: string,
+  kind: VenuePartnerKind,
+  name: string,
+  status: VenuePartner['status'],
+): VenuePartner {
+  return {
+    id,
+    kind,
+    name,
+    initials: initialsOf(name),
+    city: '—',
+    recentEvent: '—',
+    recentEventDate: '—',
+    status,
+    phone: null,
+    instagram: null,
+    verified: false,
+    tone: kind === 'host' ? 'violet' : 'rose',
+    credibility: { trackedEvents: 0, performanceValue: 0, rebookRate: 0 },
+    eventHistory: [],
+    eventType: null,
+    experienceYears: 0,
+    avgTicketsSold: null,
+    avgAttendance: null,
+    capacity: null,
+    venuesWorkedWith: null,
+    upcomingEvents: null,
+    audienceReach: null,
+    conversionRate: null,
+    activeAccepting: status === 'Active',
+  };
+}
+
+function toDiscoverablePartner(item: DiscoverPartnerDto): DiscoverablePartner {
+  return {
+    ...toSparsePartner(
+      item.id,
+      item.kind === 'promoter' ? 'promoter' : 'host',
+      item.name,
+      'Invite pending',
+    ),
+    city: item.city ?? '—',
+    verified: item.verified,
+    genre: '—',
   };
 }
 
@@ -203,9 +301,13 @@ export function PartnersScreen({
 
   const pendingReceived =
     live.mode === 'ready'
-      ? live.items.filter((item) => item.status === 'pending' && item.initiatedBy !== 'venue')
-          .length
-      : getPartnershipRequests('received').filter((item) => item.status === 'pending').length;
+      ? live.partnerships.filter(
+          (item) => item.status === 'pending' && item.initiatedBy !== 'venue',
+        ).length +
+        live.promoterConnections.filter(
+          (item) => item.status === 'pending' && item.initiatedBy !== 'target',
+        ).length
+      : 0;
 
   return (
     <section className={styles['page']}>
@@ -277,7 +379,7 @@ export function PartnersScreen({
       </div>
 
       {tab === 'discover' ? (
-        <DiscoverPartners kind={segment} />
+        <DiscoverPartners kind={segment} live={live} />
       ) : tab === 'requests' ? (
         <PartnershipRequests direction={requestView} live={live} />
       ) : tab === 'share' ? (
@@ -290,62 +392,88 @@ export function PartnersScreen({
 }
 
 // ── Discover ────────────────────────────────────────────────────────────
+// Only what `GET discover-partners` returns is filterable: name/city search,
+// city, and verified. Richer facets (genre, experience, volumes) need backend
+// browse fields that do not exist yet, so they are omitted rather than faked.
 
-interface DiscoverFilterState {
-  city: string;
-  eventType: string;
-  genre: string;
-  experience: string;
-  eventsTracked: string;
-  performance: string;
-  secondaryMetric: string;
-  verifiedOnly: boolean;
-  activeOnly: boolean;
+type LiveDiscover =
+  | { readonly mode: 'no-org' }
+  | { readonly mode: 'loading' }
+  | { readonly mode: 'error'; readonly reload: () => void }
+  | { readonly mode: 'ready'; readonly items: readonly DiscoverablePartner[] };
+
+function useLiveDiscover(organizationId: string | null, kind: VenuePartnerKind): LiveDiscover {
+  const [state, setState] = useState<LiveDiscover>({ mode: 'loading' });
+  const [nonce, setNonce] = useState(0);
+
+  useEffect(() => {
+    if (organizationId === null) {
+      return;
+    }
+    const lifecycle = { cancelled: false };
+    const isCancelled = (): boolean => lifecycle.cancelled;
+    void (async () => {
+      if (!isCancelled())
+        setState((current) => (current.mode === 'ready' ? current : { mode: 'loading' }));
+      try {
+        const rows = await discoverPartners(organizationId, {
+          type: kind === 'host' ? 'host' : 'promoter',
+          limit: 100,
+        });
+        if (!isCancelled()) {
+          setState({
+            mode: 'ready',
+            items: rows
+              .filter((item) =>
+                kind === 'host' ? item.kind !== 'promoter' : item.kind === 'promoter',
+              )
+              .map(toDiscoverablePartner),
+          });
+        }
+      } catch {
+        if (!isCancelled()) {
+          setState({
+            mode: 'error',
+            reload: () => {
+              setNonce((current) => current + 1);
+            },
+          });
+        }
+      }
+    })();
+    return () => {
+      lifecycle.cancelled = true;
+    };
+  }, [organizationId, kind, nonce]);
+
+  if (organizationId === null) return { mode: 'no-org' };
+  return state;
 }
 
-const DEFAULT_FILTERS: DiscoverFilterState = {
-  city: 'All cities',
-  eventType: 'All types',
-  genre: 'All genres',
-  experience: 'Any experience',
-  eventsTracked: 'Any',
-  performance: 'Any',
-  secondaryMetric: 'Any',
-  verifiedOnly: false,
-  activeOnly: false,
-};
-
-const EXPERIENCE_BUCKETS = ['Any experience', '0–2 years', '3–4 years', '5+ years'] as const;
-const COUNT_BUCKETS = ['Any', 'Under 10', '10–20', '20+'] as const;
-
-const matchesExperience = (years: number, bucket: string): boolean => {
-  if (bucket === '0–2 years') return years <= 2;
-  if (bucket === '3–4 years') return years >= 3 && years <= 4;
-  if (bucket === '5+ years') return years >= 5;
-  return true;
-};
-
-const matchesCount = (value: number, bucket: string): boolean => {
-  if (bucket === 'Under 10') return value < 10;
-  if (bucket === '10–20') return value >= 10 && value <= 20;
-  if (bucket === '20+') return value > 20;
-  return true;
-};
-
-function DiscoverPartners({ kind }: { readonly kind: VenuePartnerKind }) {
+function DiscoverPartners({
+  kind,
+  live,
+}: {
+  readonly kind: VenuePartnerKind;
+  readonly live: LivePartnerships;
+}) {
   const [query, setQuery] = useState('');
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filters, setFilters] = useState<DiscoverFilterState>(DEFAULT_FILTERS);
+  const [city, setCity] = useState('All cities');
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [selected, setSelected] = useState<DiscoverablePartner | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const partners = getDiscoverablePartners(kind);
+  const organizationId = live.mode === 'no-org' ? null : live.organizationId;
+  const discovered = useLiveDiscover(organizationId, kind);
   const isHost = kind === 'host';
 
-  const cities = ['All cities', ...new Set(partners.map((item) => item.city))];
-  const eventTypes = isHost
-    ? ['All types', ...new Set(partners.map((item) => item.eventType).filter(Boolean) as string[])]
-    : [];
-  const genres = ['All genres', ...new Set(partners.map((item) => item.genre))];
+  const partners = useMemo(
+    () => (discovered.mode === 'ready' ? discovered.items : []),
+    [discovered],
+  );
+  const cities = useMemo(
+    () => ['All cities', ...new Set(partners.map((item) => item.city))],
+    [partners],
+  );
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase('en-IN');
@@ -355,49 +483,28 @@ function DiscoverPartners({ kind }: { readonly kind: VenuePartnerKind }) {
         !`${item.name} ${item.city}`.toLocaleLowerCase('en-IN').includes(normalized)
       )
         return false;
-      if (filters.city !== 'All cities' && item.city !== filters.city) return false;
-      if (isHost && filters.eventType !== 'All types' && item.eventType !== filters.eventType)
-        return false;
-      if (filters.genre !== 'All genres' && item.genre !== filters.genre) return false;
-      if (!matchesExperience(item.experienceYears, filters.experience)) return false;
-      if (!matchesCount(item.credibility.trackedEvents, filters.eventsTracked)) return false;
-      if (filters.verifiedOnly && !item.verified) return false;
-      if (filters.activeOnly && !item.activeAccepting) return false;
-      if (isHost) {
-        const avgTickets = item.avgTicketsSold ?? 0;
-        if (filters.performance === 'Under 250' && avgTickets >= 250) return false;
-        if (filters.performance === '250–300' && (avgTickets < 250 || avgTickets > 300))
-          return false;
-        if (filters.performance === '300+' && avgTickets <= 300) return false;
-        const capacity = item.capacity ?? 0;
-        if (filters.secondaryMetric === 'Under 300' && capacity >= 300) return false;
-        if (filters.secondaryMetric === '300–330' && (capacity < 300 || capacity > 330))
-          return false;
-        if (filters.secondaryMetric === '330+' && capacity <= 330) return false;
-      } else {
-        const reach = item.audienceReach ?? 0;
-        if (filters.performance === 'Under 25k' && reach >= 25_000) return false;
-        if (filters.performance === '25k–40k' && (reach < 25_000 || reach > 40_000)) return false;
-        if (filters.performance === '40k+' && reach <= 40_000) return false;
-        const conversion = item.conversionRate ?? 0;
-        if (filters.secondaryMetric === 'Under 7%' && conversion >= 7) return false;
-        if (filters.secondaryMetric === '7–8%' && (conversion < 7 || conversion > 8)) return false;
-        if (filters.secondaryMetric === '8%+' && conversion <= 8) return false;
-      }
+      if (city !== 'All cities' && item.city !== city) return false;
+      if (verifiedOnly && !item.verified) return false;
       return true;
     });
-  }, [filters, isHost, partners, query]);
+  }, [partners, query, city, verifiedOnly]);
 
-  const activeFilterCount =
-    (filters.city !== DEFAULT_FILTERS.city ? 1 : 0) +
-    (filters.eventType !== DEFAULT_FILTERS.eventType ? 1 : 0) +
-    (filters.genre !== DEFAULT_FILTERS.genre ? 1 : 0) +
-    (filters.experience !== DEFAULT_FILTERS.experience ? 1 : 0) +
-    (filters.eventsTracked !== DEFAULT_FILTERS.eventsTracked ? 1 : 0) +
-    (filters.performance !== DEFAULT_FILTERS.performance ? 1 : 0) +
-    (filters.secondaryMetric !== DEFAULT_FILTERS.secondaryMetric ? 1 : 0) +
-    (filters.verifiedOnly ? 1 : 0) +
-    (filters.activeOnly ? 1 : 0);
+  if (discovered.mode === 'no-org') {
+    return <p className={styles['muted']}>Select an organization to discover new partners.</p>;
+  }
+  if (discovered.mode === 'loading') {
+    return <p className={styles['muted']}>Loading partners…</p>;
+  }
+  if (discovered.mode === 'error') {
+    return (
+      <>
+        <p className={styles['muted']}>Could not load partners. Try again in a moment.</p>
+        <button type="button" className={styles['secondaryAction']} onClick={discovered.reload}>
+          Retry
+        </button>
+      </>
+    );
+  }
 
   return (
     <>
@@ -417,9 +524,9 @@ function DiscoverPartners({ kind }: { readonly kind: VenuePartnerKind }) {
           <LocationIcon size={18} aria-hidden="true" />
           <span className={styles['srOnly']}>City</span>
           <select
-            value={filters.city}
+            value={city}
             onChange={(event) => {
-              setFilters((current) => ({ ...current, city: event.target.value }));
+              setCity(event.target.value);
             }}
           >
             {cities.map((item) => (
@@ -427,142 +534,17 @@ function DiscoverPartners({ kind }: { readonly kind: VenuePartnerKind }) {
             ))}
           </select>
         </label>
-        <button
-          type="button"
-          className={styles['filterToggle']}
-          aria-expanded={filtersOpen}
-          aria-controls="discover-filter-panel"
-          onClick={() => {
-            setFiltersOpen((current) => !current);
-          }}
-        >
-          <FilterIcon size={18} aria-hidden="true" />
-          Filters
-          {activeFilterCount > 0 ? <b>{activeFilterCount}</b> : null}
-        </button>
+        <label className={styles['filterCheckbox']}>
+          <input
+            type="checkbox"
+            checked={verifiedOnly}
+            onChange={(event) => {
+              setVerifiedOnly(event.target.checked);
+            }}
+          />
+          <span>Verified status only</span>
+        </label>
       </div>
-
-      {filtersOpen ? (
-        <div id="discover-filter-panel" className={styles['filterPanel']}>
-          {isHost ? (
-            <label>
-              <span>Event type</span>
-              <select
-                value={filters.eventType}
-                onChange={(event) => {
-                  setFilters((current) => ({ ...current, eventType: event.target.value }));
-                }}
-              >
-                {eventTypes.map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          <label>
-            <span>{isHost ? 'Music genre' : 'Event genres'}</span>
-            <select
-              value={filters.genre}
-              onChange={(event) => {
-                setFilters((current) => ({ ...current, genre: event.target.value }));
-              }}
-            >
-              {genres.map((item) => (
-                <option key={item}>{item}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Experience</span>
-            <select
-              value={filters.experience}
-              onChange={(event) => {
-                setFilters((current) => ({ ...current, experience: event.target.value }));
-              }}
-            >
-              {EXPERIENCE_BUCKETS.map((item) => (
-                <option key={item}>{item}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>{isHost ? 'Events hosted' : 'Events promoted'}</span>
-            <select
-              value={filters.eventsTracked}
-              onChange={(event) => {
-                setFilters((current) => ({ ...current, eventsTracked: event.target.value }));
-              }}
-            >
-              {COUNT_BUCKETS.map((item) => (
-                <option key={item}>{item}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>{isHost ? 'Average tickets sold' : 'Audience / reach'}</span>
-            <select
-              value={filters.performance}
-              onChange={(event) => {
-                setFilters((current) => ({ ...current, performance: event.target.value }));
-              }}
-            >
-              {(isHost
-                ? ['Any', 'Under 250', '250–300', '300+']
-                : ['Any', 'Under 25k', '25k–40k', '40k+']
-              ).map((item) => (
-                <option key={item}>{item}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>{isHost ? 'Capacity range' : 'Conversion performance'}</span>
-            <select
-              value={filters.secondaryMetric}
-              onChange={(event) => {
-                setFilters((current) => ({ ...current, secondaryMetric: event.target.value }));
-              }}
-            >
-              {(isHost
-                ? ['Any', 'Under 300', '300–330', '330+']
-                : ['Any', 'Under 7%', '7–8%', '8%+']
-              ).map((item) => (
-                <option key={item}>{item}</option>
-              ))}
-            </select>
-          </label>
-          <label className={styles['filterCheckbox']}>
-            <input
-              type="checkbox"
-              checked={filters.verifiedOnly}
-              onChange={(event) => {
-                setFilters((current) => ({ ...current, verifiedOnly: event.target.checked }));
-              }}
-            />
-            <span>Verified status only</span>
-          </label>
-          <label className={styles['filterCheckbox']}>
-            <input
-              type="checkbox"
-              checked={filters.activeOnly}
-              onChange={(event) => {
-                setFilters((current) => ({ ...current, activeOnly: event.target.checked }));
-              }}
-            />
-            <span>{isHost ? 'Active / accepting only' : 'Active / available only'}</span>
-          </label>
-          {activeFilterCount > 0 ? (
-            <button
-              type="button"
-              className={styles['clearFilters']}
-              onClick={() => {
-                setFilters(DEFAULT_FILTERS);
-              }}
-            >
-              Clear filters
-            </button>
-          ) : null}
-        </div>
-      ) : null}
 
       {filtered.length ? (
         <div className={styles['cardGrid']}>
@@ -581,7 +563,6 @@ function DiscoverPartners({ kind }: { readonly kind: VenuePartnerKind }) {
               <p>
                 {isHost ? 'Host' : 'Promoter'} · {item.city}
               </p>
-              <small>{item.genre}</small>
               <button
                 type="button"
                 onClick={(event) => {
@@ -594,6 +575,11 @@ function DiscoverPartners({ kind }: { readonly kind: VenuePartnerKind }) {
             </article>
           ))}
         </div>
+      ) : partners.length === 0 ? (
+        <p className={styles['muted']}>
+          No {isHost ? 'hosts' : 'promoters'} to discover yet. New profiles appear here once they
+          join.
+        </p>
       ) : (
         <p className={styles['muted']}>No {isHost ? 'hosts' : 'promoters'} match these filters.</p>
       )}
@@ -621,13 +607,19 @@ function PartnershipRequests({
   readonly live: LivePartnerships;
 }) {
   const [selected, setSelected] = useState<VenuePartnershipRequest | null>(null);
+  const [selectedTarget, setSelectedTarget] = useState<LiveTarget | null>(null);
   const [confirmAction, setConfirmAction] = useState<'accept' | 'decline' | 'cancel' | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
 
-  const liveRows = useMemo(
+  const rows = useMemo(
     () =>
       live.mode === 'ready'
-        ? live.items.map(toLiveRequest).filter(({ row }) => row.direction === direction)
+        ? [
+            ...live.partnerships.map(toPartnershipRequest),
+            ...live.promoterConnections.map(toPromoterRequest),
+          ]
+            .filter(({ row }) => row.direction === direction)
+            .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0))
         : null,
     [live, direction],
   );
@@ -636,8 +628,12 @@ function PartnershipRequests({
     if (live.mode === 'ready') live.reload();
     setConfirmAction(null);
     setSelected(null);
+    setSelectedTarget(null);
   }, [live]);
 
+  if (live.mode === 'no-org') {
+    return <p className={styles['muted']}>Select an organization to manage connection requests.</p>;
+  }
   if (live.mode === 'loading') {
     return <p className={styles['muted']}>Loading requests…</p>;
   }
@@ -652,10 +648,13 @@ function PartnershipRequests({
     );
   }
 
-  const requests = liveRows ? liveRows.map(({ row }) => row) : getPartnershipRequests(direction);
+  const requests = rows ? rows.map(({ row }) => row) : [];
   const liveContext =
-    live.mode === 'ready' && selected
-      ? { organizationId: live.organizationId, partnershipId: selected.id }
+    selected && selectedTarget
+      ? {
+          organizationId: live.organizationId,
+          target: selectedTarget,
+        }
       : null;
 
   return (
@@ -708,6 +707,9 @@ function PartnershipRequests({
                     onClick={(event) => {
                       triggerRef.current = event.currentTarget;
                       setSelected(item);
+                      setSelectedTarget(
+                        rows?.find(({ row }) => row.id === item.id)?.target ?? null,
+                      );
                     }}
                   >
                     Review
@@ -733,6 +735,7 @@ function PartnershipRequests({
         }}
         onClose={() => {
           setSelected(null);
+          setSelectedTarget(null);
         }}
       />
       <RequestConfirmDialog
@@ -856,7 +859,7 @@ function RequestConfirmDialog({
 }: {
   readonly request: VenuePartnershipRequest | null;
   readonly action: 'accept' | 'decline' | 'cancel' | null;
-  readonly live: { readonly organizationId: string; readonly partnershipId: string } | null;
+  readonly live: { readonly organizationId: string; readonly target: LiveTarget } | null;
   readonly onResolved?: () => void;
   readonly onClose: () => void;
 }) {
@@ -878,13 +881,27 @@ function RequestConfirmDialog({
           }
         : { title: 'Cancel this request?', body: 'Your pending request will be withdrawn.' };
   const liveEnabled = live !== null;
-  const resolveAction = action === 'accept' ? 'approve' : action === 'decline' ? 'reject' : 'end';
   const confirm = async (): Promise<void> => {
     if (live === null) return;
     setSaving(true);
     setError(null);
     try {
-      await resolvePartnership(live.organizationId, live.partnershipId, resolveAction, undefined);
+      if (live.target.graph === 'partnership') {
+        const resolveAction =
+          action === 'accept' ? 'approve' : action === 'decline' ? 'reject' : 'end';
+        await resolvePartnership(live.organizationId, live.target.id, resolveAction, undefined);
+      } else {
+        // `revoke` is the promoter's alone, so a venue withdrawing its own sent
+        // invite closes it via `block`, which is open to either side.
+        const resolveAction =
+          action === 'accept' ? 'approve' : action === 'decline' ? 'reject' : 'block';
+        await resolvePromoterConnection(
+          live.organizationId,
+          live.target.id,
+          resolveAction,
+          undefined,
+        );
+      }
       onResolved?.();
     } catch {
       setError('Could not update the request. Check your connection and try again.');
@@ -950,46 +967,35 @@ function ConnectedPartners({
 }) {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<VenuePartner | null>(null);
-  const [selectedPartnershipId, setSelectedPartnershipId] = useState<string | null>(null);
+  const [selectedTarget, setSelectedTarget] = useState<LiveTarget | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
 
-  const liveHostPartners = useMemo(
+  const liveEntries = useMemo(
     () =>
-      live.mode === 'ready' && kind === 'host'
-        ? live.items
-            .filter((item) => item.status === 'active' || item.status === 'pending')
-            .map((item): { readonly partner: VenuePartner; readonly partnershipId: string } => {
-              const name = item.hostName ?? shortOrgId(item.hostOrganizationId);
-              return {
-                partnershipId: item.id,
-                partner: {
-                  id: item.id,
-                  kind: 'host',
-                  name,
-                  initials: initialsOf(name),
-                  city: '—',
-                  recentEvent: '—',
-                  recentEventDate: '—',
-                  status: item.status === 'active' ? 'Active' : 'Invite pending',
-                  phone: null,
-                  instagram: null,
-                  verified: false,
-                  tone: 'violet',
-                  credibility: { trackedEvents: 0, performanceValue: 0, rebookRate: 0 },
-                  eventHistory: [],
-                  eventType: null,
-                  experienceYears: 0,
-                  avgTicketsSold: null,
-                  avgAttendance: null,
-                  capacity: null,
-                  venuesWorkedWith: null,
-                  upcomingEvents: null,
-                  audienceReach: null,
-                  conversionRate: null,
-                  activeAccepting: item.status === 'active',
-                },
-              };
-            })
+      live.mode === 'ready'
+        ? kind === 'host'
+          ? live.partnerships
+              .filter((item) => item.status === 'active' || item.status === 'pending')
+              .map((item): { readonly partner: VenuePartner; readonly target: LiveTarget } => ({
+                target: { graph: 'partnership', id: item.id },
+                partner: toSparsePartner(
+                  item.id,
+                  'host',
+                  item.hostName ?? shortOrgId(item.hostOrganizationId),
+                  item.status === 'active' ? 'Active' : 'Invite pending',
+                ),
+              }))
+          : live.promoterConnections
+              .filter((item) => item.status === 'active' || item.status === 'pending')
+              .map((item): { readonly partner: VenuePartner; readonly target: LiveTarget } => ({
+                target: { graph: 'promoter-connection', id: item.id },
+                partner: toSparsePartner(
+                  item.id,
+                  'promoter',
+                  item.promoterName ?? shortOrgId(item.promoterId),
+                  item.status === 'active' ? 'Active' : 'Invite pending',
+                ),
+              }))
         : null,
     [live, kind],
   );
@@ -997,15 +1003,16 @@ function ConnectedPartners({
   const handleRemoved = useCallback(() => {
     if (live.mode === 'ready') live.reload();
     setSelected(null);
-    setSelectedPartnershipId(null);
+    setSelectedTarget(null);
   }, [live]);
 
-  const partners = liveHostPartners
-    ? liveHostPartners.map(({ partner }) => partner)
-    : getVenuePartners(kind);
+  const partners = useMemo(
+    () => (liveEntries ? liveEntries.map(({ partner }) => partner) : []),
+    [liveEntries],
+  );
   const liveRemove =
-    live.mode === 'ready' && kind === 'host' && selected && selectedPartnershipId
-      ? { organizationId: live.organizationId, partnershipId: selectedPartnershipId }
+    live.mode === 'ready' && selected && selectedTarget
+      ? { organizationId: live.organizationId, target: selectedTarget }
       : null;
   const filtered = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase('en-IN');
@@ -1014,10 +1021,13 @@ function ConnectedPartners({
       : partners;
   }, [partners, query]);
 
-  if (live.mode === 'loading' && kind === 'host') {
+  if (live.mode === 'no-org') {
+    return <p className={styles['muted']}>Select an organization to see its connected partners.</p>;
+  }
+  if (live.mode === 'loading') {
     return <p className={styles['muted']}>Loading partners…</p>;
   }
-  if (live.mode === 'error' && kind === 'host') {
+  if (live.mode === 'error') {
     return (
       <>
         <p className={styles['muted']}>Could not load partners. Try again in a moment.</p>
@@ -1084,9 +1094,8 @@ function ConnectedPartners({
                 onClick={(event) => {
                   triggerRef.current = event.currentTarget;
                   setSelected(item);
-                  setSelectedPartnershipId(
-                    liveHostPartners?.find(({ partner }) => partner.id === item.id)
-                      ?.partnershipId ?? null,
+                  setSelectedTarget(
+                    liveEntries?.find(({ partner }) => partner.id === item.id)?.target ?? null,
                   );
                 }}
               >
@@ -1096,6 +1105,11 @@ function ConnectedPartners({
           </div>
         ))}
       </div>
+      {filtered.length === 0 ? (
+        <p className={styles['muted']}>
+          No connected {kind === 'host' ? 'hosts' : 'promoters'} yet. Accepted requests appear here.
+        </p>
+      ) : null}
       <PartnerProfileDrawer
         key={selected?.id ?? 'closed-connected'}
         partner={selected}
@@ -1105,7 +1119,7 @@ function ConnectedPartners({
         onRemoved={handleRemoved}
         onClose={() => {
           setSelected(null);
-          setSelectedPartnershipId(null);
+          setSelectedTarget(null);
         }}
       />
     </>
@@ -1125,7 +1139,7 @@ function PartnerProfileDrawer({
   readonly partner: VenuePartner | null;
   readonly mode: 'discover' | 'connected';
   readonly triggerRef: React.RefObject<HTMLButtonElement | null>;
-  readonly liveRemove?: { readonly organizationId: string; readonly partnershipId: string } | null;
+  readonly liveRemove?: { readonly organizationId: string; readonly target: LiveTarget } | null;
   readonly onRemoved?: () => void;
   readonly onClose: () => void;
 }) {
@@ -1256,32 +1270,36 @@ function PartnerProfileDrawer({
           {isHost && 'genre' in partner ? (
             <p className={styles['muted']}>Genres: {(partner as DiscoverablePartner).genre}</p>
           ) : null}
-          <button
-            type="button"
-            className={styles['historyToggle']}
-            aria-expanded={showEvents}
-            aria-controls={historyId}
-            onClick={() => {
-              setShowEvents((current) => !current);
-            }}
-          >
-            <span>
-              <CalendarIcon size={18} aria-hidden="true" /> See {eventVerb} events
-            </span>
-            <span aria-hidden="true">{showEvents ? '−' : '+'}</span>
-          </button>
-          {showEvents ? (
-            <div id={historyId} className={styles['eventHistory']}>
-              {partner.eventHistory.map((event) => (
-                <article key={event.id}>
-                  <div>
-                    <strong>{event.name}</strong>
-                    <span>{event.date}</span>
-                  </div>
-                  <small>{event.outcome}</small>
-                </article>
-              ))}
-            </div>
+          {partner.eventHistory.length > 0 ? (
+            <>
+              <button
+                type="button"
+                className={styles['historyToggle']}
+                aria-expanded={showEvents}
+                aria-controls={historyId}
+                onClick={() => {
+                  setShowEvents((current) => !current);
+                }}
+              >
+                <span>
+                  <CalendarIcon size={18} aria-hidden="true" /> See {eventVerb} events
+                </span>
+                <span aria-hidden="true">{showEvents ? '−' : '+'}</span>
+              </button>
+              {showEvents ? (
+                <div id={historyId} className={styles['eventHistory']}>
+                  {partner.eventHistory.map((event) => (
+                    <article key={event.id}>
+                      <div>
+                        <strong>{event.name}</strong>
+                        <span>{event.date}</span>
+                      </div>
+                      <small>{event.outcome}</small>
+                    </article>
+                  ))}
+                </div>
+              ) : null}
+            </>
           ) : null}
           {isHost && partner.upcomingEvents && partner.upcomingEvents.length > 0 ? (
             <div className={styles['upcomingList']}>
@@ -1302,7 +1320,7 @@ function PartnerProfileDrawer({
               type="button"
               className={styles['primary']}
               disabled
-              title="Sending connection requests requires the partnership mutation API."
+              title="Choose one of your venues to send a connection request."
             >
               <SendIcon size={18} aria-hidden="true" /> Connect
             </button>
@@ -1340,12 +1358,23 @@ function PartnerProfileDrawer({
                   setRemoveError(null);
                   void (async () => {
                     try {
-                      await resolvePartnership(
-                        liveRemove.organizationId,
-                        liveRemove.partnershipId,
-                        'end',
-                        undefined,
-                      );
+                      if (liveRemove.target.graph === 'partnership') {
+                        await resolvePartnership(
+                          liveRemove.organizationId,
+                          liveRemove.target.id,
+                          'end',
+                          undefined,
+                        );
+                      } else {
+                        // `revoke` is the promoter's alone; a venue removes the
+                        // connection via `block`, which is open to either side.
+                        await resolvePromoterConnection(
+                          liveRemove.organizationId,
+                          liveRemove.target.id,
+                          'block',
+                          undefined,
+                        );
+                      }
                       onRemoved?.();
                     } catch {
                       setRemoveError(
