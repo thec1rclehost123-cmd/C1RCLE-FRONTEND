@@ -209,7 +209,11 @@ describe('Partner onboarding wizard', () => {
 
       mocks.verifyDocument.mockResolvedValue({ passed: true });
       await user.click(screen.getByRole('button', { name: /verify phone/i }));
-      expect(await screen.findByText('Individual or Business?')).toBeInTheDocument();
+      // The advance runs confirm-OTP -> server check -> step transition; the
+      // default 1s findBy budget flakes under parallel CI load.
+      expect(
+        await screen.findByText('Individual or Business?', undefined, { timeout: 5000 }),
+      ).toBeInTheDocument();
       expect(mocks.verifyDocument).toHaveBeenLastCalledWith({
         documentType: 'phone',
         documentNumber: '+919876543210',
