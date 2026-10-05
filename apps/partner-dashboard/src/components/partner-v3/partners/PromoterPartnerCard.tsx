@@ -28,7 +28,11 @@ export function PromoterPartnerCard({ partner }: { readonly partner: PromoterPar
           type="button"
           variant="secondary"
           disabled
-          title="Partner relationship changes are unavailable in fixture mode"
+          title={
+            partner.actionLabel === 'Connected'
+              ? 'Event assignment is not available yet.'
+              : 'Sending connection requests from here is not available yet.'
+          }
         >
           {partner.actionLabel}
         </Button>

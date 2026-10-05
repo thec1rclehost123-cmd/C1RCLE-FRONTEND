@@ -122,7 +122,7 @@ export function PartnerStaffInviteDialog({ onClose }: { readonly onClose: () => 
           variant="primary"
           disabled={!email || !confirmed}
           onClick={() => {
-            setNotice('Staff invitations are unavailable in fixture mode. No invitation was sent.');
+            setNotice('Staff invitations are not available yet. No invitation was sent.');
           }}
         >
           Proceed

@@ -64,8 +64,8 @@ export function PartnerCard({
             disabled={!partner.status || partner.status !== 'Partnered'}
             title={
               partner.status === 'Partnered'
-                ? 'This action is unavailable in fixture mode'
-                : 'This relationship action is unavailable in fixture mode'
+                ? 'Event assignment is not available yet.'
+                : 'Choose one of your venues to send a connection request.'
             }
             onClick={onActionUnavailable}
           >

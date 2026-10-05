@@ -1,9 +1,13 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
 
 import { PromoterPartnersScreen } from './PromoterPartnersScreen';
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
 
 describe('PromoterPartnersScreen', () => {
   it('renders the Promoter summary, tabs, filters, and discover cards', async () => {
