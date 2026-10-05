@@ -1,13 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  discoverPartners,
   listPartnerships,
   requestPartnership,
   resolvePartnership,
   setVenueShare,
 } from './api-partnerships-repository';
 
-import type { PartnershipDto } from '@c1rcle/contracts';
+import type { DiscoverPartnerDto, PartnershipDto } from '@c1rcle/contracts';
 
 /**
  * Just enough of the real `RequestOptions` shape for these tests to read
@@ -181,5 +182,45 @@ describe('setVenueShare', () => {
     await setVenueShare('org_venue', 'part_1', 30, 'intent-share-1');
 
     expect(postMock.mock.calls[0]?.[0]?.headers['Idempotency-Key']).toBe('intent-share-1');
+  });
+});
+
+describe('discoverPartners', () => {
+  const discovered: DiscoverPartnerDto = {
+    id: 'org_host_1',
+    kind: 'host',
+    name: 'Rhea Kapoor Events',
+    slug: 'rhea-kapoor-events',
+    city: 'Mumbai',
+    verified: true,
+    organizationId: 'org_host_1',
+    venueId: null,
+  };
+
+  it('scopes the browse to the organization on both the path and the header', async () => {
+    getMock.mockResolvedValue({ items: [discovered] });
+
+    const rows = await discoverPartners('org_venue');
+
+    expect(rows).toEqual([discovered]);
+    expect(getMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: '/api/v2/organizations/org_venue/discover-partners',
+        headers: { 'X-Organization-Id': 'org_venue' },
+      }),
+    );
+  });
+
+  it('forwards the kind filter and search text instead of filtering client-side', async () => {
+    getMock.mockResolvedValue({ items: [] });
+
+    await discoverPartners('org_venue', { type: 'host', q: 'rhea', limit: 20 });
+
+    expect(getMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: '/api/v2/organizations/org_venue/discover-partners',
+        query: { type: 'host', q: 'rhea', limit: 20 },
+      }),
+    );
   });
 });
