@@ -220,6 +220,23 @@ describe('POST /api/auth/logout', () => {
     expect(res.status).toBe(204);
     expect((res.headers.get('set-cookie') ?? '').toLowerCase()).toContain('partner.c1rcle.csrf=;');
   });
+
+  it('expires the session cookie even when the gateway revoke call fails', async () => {
+    mockForward.mockRejectedValue(new Error('gateway down'));
+
+    const res = await logout(
+      post('/api/auth/logout', {
+        origin: APP_ORIGIN,
+        'x-csrf-token': 'tok',
+        cookie: 'partner.c1rcle.csrf=tok; better-auth.session_token=abc',
+      }),
+    );
+
+    expect(res.status).toBe(204);
+    const cleared = res.cookies.get('better-auth.session_token');
+    expect(cleared?.value).toBe('');
+    expect(res.headers.get('set-cookie') ?? '').toMatch(/better-auth\.session_token=;.*Max-Age=0/i);
+  });
 });
 
 describe('GET /api/auth/session', () => {

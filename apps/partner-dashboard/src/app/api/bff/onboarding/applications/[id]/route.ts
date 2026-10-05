@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import {
   assertCsrf,
+  assertPathId,
   assertSameOrigin,
   errorEnvelope,
   forwardToGateway,
@@ -37,6 +38,10 @@ export async function PATCH(req: NextRequest, ctx: RouteParams): Promise<NextRes
   }
 
   const { id } = await ctx.params;
+  const idError = assertPathId(id);
+  if (idError !== null) {
+    return idError;
+  }
   const { cookie, headers: authHeaders } = gatewayAuthInit(req);
   const gatewayResponse = await forwardToGateway(`/api/v2/onboarding/applications/${id}`, {
     method: 'PATCH',

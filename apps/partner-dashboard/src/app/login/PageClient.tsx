@@ -32,6 +32,7 @@ import {
 import { setActiveOrg } from '@/lib/org/active-org';
 import { getOrganizations } from '@/lib/org/org-repository';
 import { filterOrgsByPartnerType } from '@/lib/org/route-after-auth';
+import { safeNextPath } from '@/lib/safe-next-path';
 
 import type { WorkspaceType } from '@/lib/org/route-after-auth';
 
@@ -278,7 +279,7 @@ function LoginForm() {
 
   useEffect(() => {
     if (sessionState.status === 'authenticated' && sessionState.session?.user) {
-      const next = searchParams.get('next') ?? searchParams.get('callbackUrl');
+      const next = safeNextPath(searchParams.get('next') ?? searchParams.get('callbackUrl'));
       if (next) {
         router.replace(next);
       }
@@ -295,7 +296,7 @@ function LoginForm() {
     try {
       await login({ email, password });
 
-      const next = searchParams.get('next') ?? searchParams.get('callbackUrl');
+      const next = safeNextPath(searchParams.get('next') ?? searchParams.get('callbackUrl'));
       if (next) {
         router.push(next);
         return;

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import {
+  assertPathId,
   assertSameOrigin,
   forwardToGateway,
   gatewayAuthInit,
@@ -21,6 +22,10 @@ export async function GET(req: NextRequest, ctx: RouteParams): Promise<NextRespo
   }
 
   const { id } = await ctx.params;
+  const idError = assertPathId(id);
+  if (idError !== null) {
+    return idError;
+  }
   const { cookie, headers: authHeaders } = gatewayAuthInit(req);
   const gatewayResponse = await forwardToGateway(`/api/v2/organizations/${id}/access`, {
     method: 'GET',

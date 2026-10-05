@@ -153,6 +153,17 @@ export function assertCsrf(req: NextRequest): NextResponse | null {
   return null;
 }
 
+/**
+ * A dynamic `[id]` segment is URL-decoded by Next before it reaches the
+ * handler, so `..%2F..%2Fx` would otherwise be spliced into the gateway path.
+ * Gateway ids are opaque `[A-Za-z0-9_-]` tokens; anything else is rejected.
+ */
+export function assertPathId(id: string): NextResponse | null {
+  return /^[A-Za-z0-9_-]{1,128}$/.test(id)
+    ? null
+    : errorEnvelope('validation', 'Invalid identifier.', 400);
+}
+
 const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
 /**
@@ -203,6 +214,21 @@ export function setCsrfCookie(res: NextResponse, token: string): void {
     sameSite: 'strict',
     secure: isProduction(),
     path: '/',
+  });
+}
+
+/**
+ * Actively expires the frontend-scoped session cookie. Logout must not depend
+ * on the gateway: if its revoke call fails (or its response carries no
+ * `Set-Cookie`), the browser would otherwise keep a live session cookie.
+ */
+export function clearSessionCookie(res: NextResponse): void {
+  res.cookies.set(SESSION_COOKIE_NAME, '', {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isProduction(),
+    path: '/',
+    maxAge: 0,
   });
 }
 
@@ -384,17 +410,29 @@ function isFlatEnvelope(value: unknown): value is Record<string, unknown> {
  * account-existence-oracle suppression). Falls back to a generic envelope for
  * a non-JSON / malformed error body.
  */
-export function passThroughGatewayError(status: number, bodyText: string): NextResponse {
+export function passThroughGatewayError(
+  status: number,
+  bodyText: string,
+  retryAfter?: string | null,
+): NextResponse {
   let parsed: unknown;
   try {
     parsed = JSON.parse(bodyText) as unknown;
   } catch {
     parsed = undefined;
   }
-  if (isFlatEnvelope(parsed)) {
-    return NextResponse.json(parsed, { status });
+  const res = isFlatEnvelope(parsed)
+    ? NextResponse.json(parsed, { status })
+    : errorEnvelope('server', 'The authentication service is unavailable.', status);
+  if (status === 429 && retryAfter !== undefined && retryAfter !== null) {
+    res.headers.set('Retry-After', retryAfter);
   }
-  return errorEnvelope('server', 'The authentication service is unavailable.', status);
+  return res;
+}
+
+/** Generic 502 for a gateway that could not be reached (never echoes the cause). */
+export function gatewayUnreachable(): NextResponse {
+  return errorEnvelope('server', 'The authentication service is unavailable.', 502);
 }
 
 /** Parses a gateway success body. Callers only reach this on `response.ok`. */

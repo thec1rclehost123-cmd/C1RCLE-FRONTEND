@@ -14,6 +14,8 @@ import {
   rejectOnboardingDocument,
   verifyOnboardingDocument,
 } from '@/lib/admin/admin-api';
+import { describeAdminError } from '@/lib/admin/describe-error';
+import { useDocumentWindow } from '@/lib/admin/document-window';
 import {
   formatDateTime,
   onboardingStatusTone,
@@ -107,11 +109,15 @@ export default function KycReviewDesk() {
     },
   });
 
+  const docWindow = useDocumentWindow();
   const viewDocumentMutation = useMutation({
     mutationFn: ({ applicationId, label }: { applicationId: string; label: string }) =>
       getOnboardingDocumentReadUrl(applicationId, label),
     onSuccess: (grant) => {
-      window.open(grant.readUrl, '_blank', 'noopener,noreferrer');
+      docWindow.show(grant.readUrl);
+    },
+    onError: () => {
+      docWindow.abort();
     },
   });
 
@@ -195,6 +201,7 @@ export default function KycReviewDesk() {
                             variant="ghost"
                             disabled={viewDocumentMutation.isPending}
                             onClick={() => {
+                              docWindow.preOpen();
                               viewDocumentMutation.mutate({
                                 applicationId: application.id,
                                 label: document.label,
@@ -288,7 +295,10 @@ export default function KycReviewDesk() {
 
       {verifyMutation.isError || rejectMutation.isError ? (
         <p role="alert" className="text-sm text-destructive">
-          The document could not be updated. It is safe to retry.
+          {describeAdminError(
+            verifyMutation.error ?? rejectMutation.error,
+            'The document could not be updated. It is safe to retry.',
+          )}
         </p>
       ) : null}
       {viewDocumentMutation.isError ? (
@@ -308,6 +318,7 @@ export default function KycReviewDesk() {
         <OnboardingApplicationDetail
           application={detail.data}
           onOpenDocument={(applicationId, label) => {
+            docWindow.preOpen();
             viewDocumentMutation.mutate({ applicationId, label });
           }}
           onClose={() => {

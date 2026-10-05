@@ -44,9 +44,9 @@ export const doorEventSchema = z.object({
   id: z.string(),
   title: z.string(),
   slug: z.string(),
-  venueId: z.string(),
+  venueId: z.string().nullable(),
   startAt: z.string(),
-  endAt: z.string(),
+  endAt: z.string().nullable(),
   status: z.string(),
   capacity: z.number().nullable(),
 });

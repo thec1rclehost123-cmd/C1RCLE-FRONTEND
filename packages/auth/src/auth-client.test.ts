@@ -1,6 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { fetchSession, login, logout, refresh, signup } from './auth-client.js';
+import {
+  fetchSession,
+  login,
+  logout,
+  refresh,
+  requestPasswordReset,
+  resetPassword,
+  signup,
+} from './auth-client.js';
 import { useSessionStore } from './session-store.js';
 
 const user = {
@@ -161,6 +169,50 @@ describe('auth-client', () => {
       await fetchSession();
 
       expect(useSessionStore.getState().status).toBe('anonymous');
+    });
+  });
+
+  describe('password reset', () => {
+    it('posts the email to the forgot-password BFF route and resolves on the ack', async () => {
+      const fetchMock = stubFetch();
+      fetchMock.mockResolvedValue(jsonResponse({ status: true, message: 'ok' }));
+
+      await expect(requestPasswordReset('a@b.com')).resolves.toBeUndefined();
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/api/auth/forgot-password'),
+        expect.anything(),
+      );
+    });
+
+    it('rejects a malformed email before any network call', async () => {
+      const fetchMock = stubFetch();
+
+      await expect(requestPasswordReset('nope')).rejects.toThrow();
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('posts the token and new password in the body to reset-password', async () => {
+      const fetchMock = stubFetch();
+      fetchMock.mockResolvedValue(jsonResponse({ status: true }));
+
+      await resetPassword({ token: 'tok', newPassword: 'password123' });
+
+      const [url, init] = fetchMock.mock.calls[0] ?? [];
+      expect(url).toEqual(expect.stringContaining('/api/auth/reset-password'));
+      expect(url).toEqual(expect.not.stringContaining('tok'));
+      if (typeof init?.body !== 'string') throw new Error('expected a JSON string body');
+      expect(JSON.parse(init.body)).toEqual({
+        token: 'tok',
+        newPassword: 'password123',
+      });
+    });
+
+    it('rejects a too-short new password client-side', async () => {
+      const fetchMock = stubFetch();
+
+      await expect(resetPassword({ token: 'tok', newPassword: 'short' })).rejects.toThrow();
+      expect(fetchMock).not.toHaveBeenCalled();
     });
   });
 

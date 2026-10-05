@@ -5,6 +5,7 @@ import { getClientEnv, getServerEnv } from '@c1rcle/config';
 import type { NextRequest } from 'next/server';
 
 const SESSION_COOKIE = 'better-auth.session_token';
+const SECURE_SESSION_COOKIE = `__Secure-${SESSION_COOKIE}`;
 const PRIVATE_PREFIXES = ['/profile', '/tickets', '/help', '/checkout', '/confirmation'];
 
 function isPrivatePath(pathname: string): boolean {
@@ -39,7 +40,8 @@ export function proxy(request: NextRequest): NextResponse {
   if (
     (request.method === 'GET' || request.method === 'HEAD') &&
     isPrivatePath(url.pathname) &&
-    !request.cookies.has(SESSION_COOKIE)
+    !request.cookies.has(SESSION_COOKIE) &&
+    !request.cookies.has(SECURE_SESSION_COOKIE)
   ) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('next', url.pathname);

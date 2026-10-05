@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
+import { describeApiError } from '@/lib/api/describe-error';
 import { eventStartAtFromDraft } from '@/lib/events/venue-event-repository';
 
 import styles from './event-editor.module.css';
@@ -171,9 +172,7 @@ export function PartnerEventEditor({
       try {
         await onSubmit(draft);
       } catch (error) {
-        setSubmitError(
-          error instanceof Error ? error.message : 'The event could not be submitted.',
-        );
+        setSubmitError(describeApiError(error, 'The event could not be submitted.'));
       } finally {
         setSubmitting(false);
       }

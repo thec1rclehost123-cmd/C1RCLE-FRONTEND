@@ -1,6 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ApiClientError } from '@c1rcle/api-client';
+import { createEventSchema, createTicketTierSchema } from '@c1rcle/contracts';
+
 import { uploadToSignedUrl } from '@/lib/onboarding/uploadToSignedUrl';
 
 import {
@@ -295,5 +298,64 @@ describe('eventEndAtFromDraft', () => {
 
   it('returns null when no end time is present or invalid', () => {
     expect(eventEndAtFromDraft({ date: '2026-09-17', time: '9:30 PM' })).toBeNull();
+  });
+});
+
+describe('publishVenueEvent contract and error handling', () => {
+  it('sends bodies that satisfy the backend create-event and RSVP/paid tier contracts', async () => {
+    mocks.post
+      .mockResolvedValueOnce({ id: 'evt_1' })
+      .mockResolvedValueOnce({ id: 'tier_paid' })
+      .mockResolvedValueOnce({ id: 'tier_rsvp' })
+      .mockResolvedValueOnce({ id: 'evt_1' })
+      .mockResolvedValueOnce({ id: 'evt_1' });
+
+    await publishVenueEvent('org_1', {
+      ...draft,
+      ticketTiers: [
+        ...draft.ticketTiers,
+        { id: 'rsvp', name: 'Guest list', price: 0, quantity: 50, accessType: 'RSVP' },
+      ],
+    });
+
+    expect(createEventSchema.safeParse(mocks.post.mock.calls[0]?.[0].body).success).toBe(true);
+    const paid = createTicketTierSchema.safeParse(mocks.post.mock.calls[1]?.[0].body);
+    const rsvp = createTicketTierSchema.safeParse(mocks.post.mock.calls[2]?.[0].body);
+    expect(paid.success).toBe(true);
+    expect(rsvp.success).toBe(true);
+    const rsvpBody = mocks.post.mock.calls[2]?.[0].body as Record<string, unknown>;
+    expect(rsvpBody).not.toHaveProperty('priceInPaise');
+    expect(rsvpBody).not.toHaveProperty('pricingPhases');
+    expect(rsvpBody).not.toHaveProperty('doorPriceInPaise');
+  });
+
+  it('propagates a 422 from the gateway and never reaches review/publish or a fixture', async () => {
+    const failure = new ApiClientError({
+      code: 'validation',
+      message: 'Request validation failed.',
+      status: 422,
+      requestId: undefined,
+      fieldErrors: { startAt: ['Must be in the future'] },
+    });
+    mocks.post.mockRejectedValueOnce(failure);
+
+    await expect(publishVenueEvent('org_1', draft)).rejects.toBe(failure);
+    expect(mocks.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops after a failed tier create instead of publishing a half-built event', async () => {
+    const failure = new ApiClientError({
+      code: 'validation',
+      message: 'Request validation failed.',
+      status: 422,
+      requestId: undefined,
+      fieldErrors: { quantity: ['Too low'] },
+    });
+    mocks.post.mockResolvedValueOnce({ id: 'evt_1' }).mockRejectedValueOnce(failure);
+
+    await expect(publishVenueEvent('org_1', draft)).rejects.toBe(failure);
+    const paths = mocks.post.mock.calls.map(([options]) => options.path);
+    expect(paths).not.toContain('/api/v2/events/evt_1/review');
+    expect(paths).not.toContain('/api/v2/events/evt_1/publish');
   });
 });

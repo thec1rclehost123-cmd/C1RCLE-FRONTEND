@@ -15,7 +15,51 @@ import { getAccessToken, logout, refresh } from '@c1rcle/auth';
 
 const LOGIN_PATH = '/login';
 
-let singleton: ReturnType<typeof createApiClient> | undefined;
+type AdminClient = ReturnType<typeof createApiClient>;
+type MutatingMethod = 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+
+/**
+ * One idempotency key per user INTENT, not per call. The key is remembered by
+ * method + path + body and reused on every retry of the same attempt; it is
+ * dropped only after the request succeeds (so the next identical action is a
+ * new intent). A changed body (e.g. a different reject reason) is a new intent.
+ */
+export function withIntentKeys(client: AdminClient): AdminClient {
+  const inflight = new Map<string, string>();
+  const send = (method: MutatingMethod, options: Parameters<AdminClient['request']>[0]) => {
+    const headers = (options.headers ?? {}) as Record<string, string>;
+    const supplied = headers['idempotency-key'];
+    if (supplied === undefined) {
+      return client.request({ ...options, method });
+    }
+    const intent = `${method} ${options.path} ${JSON.stringify(options.body ?? null)}`;
+    const key = inflight.get(intent) ?? supplied;
+    inflight.set(intent, key);
+    return client
+      .request({ ...options, method, headers: { ...headers, 'idempotency-key': key } })
+      .then((result) => {
+        inflight.delete(intent);
+        return result;
+      });
+  };
+  const overrides: Record<string, unknown> = {
+    post: (o: never) => send('POST', o),
+    put: (o: never) => send('PUT', o),
+    patch: (o: never) => send('PATCH', o),
+    delete: (o: never) => send('DELETE', o),
+  };
+  return new Proxy(client, {
+    get(target, prop) {
+      if (typeof prop === 'string' && prop in overrides) {
+        return overrides[prop];
+      }
+      const value: unknown = Reflect.get(target, prop, target);
+      return typeof value === 'function' ? (value as () => unknown).bind(target) : value;
+    },
+  });
+}
+
+let singleton: AdminClient | undefined;
 let redirecting = false;
 
 export function getAdminApiClient() {

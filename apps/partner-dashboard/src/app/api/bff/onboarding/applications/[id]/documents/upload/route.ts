@@ -4,6 +4,7 @@ import { documentUploadUrlDtoSchema, onboardingDocumentLabelSchema } from '@c1rc
 
 import {
   assertCsrf,
+  assertPathId,
   assertSameOrigin,
   errorEnvelope,
   forwardToGateway,
@@ -51,6 +52,10 @@ export async function POST(req: NextRequest, ctx: RouteParams): Promise<NextResp
   }
 
   const { id } = await ctx.params;
+  const idError = assertPathId(id);
+  if (idError !== null) {
+    return idError;
+  }
   const label = onboardingDocumentLabelSchema.safeParse(req.nextUrl.searchParams.get('label'));
   if (!label.success) {
     return errorEnvelope('validation', 'A valid document label is required.', 400);
