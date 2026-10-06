@@ -5,16 +5,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 import { ErrorState, LoadingState } from '@/components/partner-v3/States';
 import {
-  getHostPartnersData,
-  getPromoterPartnersData,
-  getVenuePartnersData,
-} from '@/lib/api/partner-data';
-import {
   resolvePartnershipRequest,
   resolvePromoterRequest,
   sendPartnershipRequest,
   sendPromoterConnectionRequest,
 } from '@/lib/api/partner-actions';
+import {
+  getHostPartnersData,
+  getPromoterPartnersData,
+  getVenuePartnersData,
+} from '@/lib/api/partner-data';
 
 import { HostPartnersScreen } from './HostPartnersScreen';
 import { PromoterPartnersScreen } from './PromoterPartnersScreen';
@@ -76,7 +76,9 @@ export function StudioPartnersClient({
   const [state, setState] = useState<LoadState>({ status: 'loading' });
   const [retryCount, setRetryCount] = useState(0);
   const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
-  const [pendingRequestAction, setPendingRequestAction] = useState<'approve' | 'reject' | null>(null);
+  const [pendingRequestAction, setPendingRequestAction] = useState<'approve' | 'reject' | null>(
+    null,
+  );
   const [requestErrorId, setRequestErrorId] = useState<string | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [connectingPartnerId, setConnectingPartnerId] = useState<string | null>(null);
@@ -211,7 +213,9 @@ export function StudioPartnersClient({
         // Venue ↔ host partnership.
         await sendPartnershipRequest({
           studio: studio === 'venue' ? 'venue' : 'host',
-          candidateVenueId: (partner as PartnerRelationship).venueId ?? (partner.kind === 'venue' ? partner.id : null),
+          candidateVenueId:
+            (partner as PartnerRelationship).venueId ??
+            (partner.kind === 'venue' ? partner.id : null),
           candidateOrganizationId: partner.organizationId ?? partner.id,
         });
       };

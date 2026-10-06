@@ -38,12 +38,15 @@ export function PartnerCard({
   const isDiscover = !partner.status;
   const hasRequestTarget =
     partner.kind === 'venue'
-      ? Boolean(partner.venueId || partner.id)
+      ? Boolean(partner.venueId ?? partner.id)
       : Boolean(partner.organizationId);
   const canConnect = isDiscover && hasRequestTarget;
   const cardToneClass = `partnerCard${partner.cardTone.slice(0, 1).toUpperCase()}${partner.cardTone.slice(1)}`;
+  const classNames = [styles['partnerCard'], styles[cardToneClass]]
+    .filter((value): value is string => Boolean(value))
+    .join(' ');
   return (
-    <article className={`${styles['partnerCard']} ${styles[cardToneClass]}`}>
+    <article className={classNames}>
       <div className={styles['partnerCardArtwork']} aria-hidden="true">
         <span>{partner.initials}</span>
       </div>
@@ -83,7 +86,7 @@ export function PartnerCard({
             <Button
               type="button"
               variant="secondary"
-              disabled={!partner.status || partner.status !== 'Partnered'}
+              disabled={partner.status !== 'Partnered'}
               title={
                 partner.status === 'Partnered'
                   ? 'Event assignment is not available yet.'

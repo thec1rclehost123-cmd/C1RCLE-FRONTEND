@@ -1,11 +1,9 @@
-import { apiClient } from '@/lib/api/client';
-import { paginatedSchema } from '@c1rcle/api-client';
-import {
-  partnershipDtoSchema,
-  promoterConnectionDtoSchema,
-} from '@c1rcle/contracts';
-
 import { z } from 'zod';
+
+import { paginatedSchema } from '@c1rcle/api-client';
+import { partnershipDtoSchema, promoterConnectionDtoSchema } from '@c1rcle/contracts';
+
+import { apiClient } from '@/lib/api/client';
 
 function commandHeaders(organizationId: string, idempotencyKey?: string): Record<string, string> {
   return {
@@ -150,7 +148,7 @@ export async function resolvePromoterRequest(
     : rejectPromoterConnection(requestId, reason);
 }
 
-async function approvePartnership(partnershipId: string, reason?: string): Promise<{}> {
+async function approvePartnership(partnershipId: string, reason?: string): Promise<object> {
   const organizationId = await getOrgId();
   return apiClient.post({
     path: `/api/v2/partnerships/${encodeURIComponent(partnershipId)}/approve`,
@@ -160,7 +158,7 @@ async function approvePartnership(partnershipId: string, reason?: string): Promi
   });
 }
 
-async function rejectPartnership(partnershipId: string, reason?: string): Promise<{}> {
+async function rejectPartnership(partnershipId: string, reason?: string): Promise<object> {
   const organizationId = await getOrgId();
   return apiClient.post({
     path: `/api/v2/partnerships/${encodeURIComponent(partnershipId)}/reject`,
@@ -170,7 +168,7 @@ async function rejectPartnership(partnershipId: string, reason?: string): Promis
   });
 }
 
-async function approvePromoterConnection(connectionId: string): Promise<{}> {
+async function approvePromoterConnection(connectionId: string): Promise<object> {
   const organizationId = await getOrgId();
   return apiClient.post({
     path: `/api/v2/promoter-connections/${encodeURIComponent(connectionId)}/approve`,
@@ -179,7 +177,7 @@ async function approvePromoterConnection(connectionId: string): Promise<{}> {
   });
 }
 
-async function rejectPromoterConnection(connectionId: string, reason?: string): Promise<{}> {
+async function rejectPromoterConnection(connectionId: string, reason?: string): Promise<object> {
   const organizationId = await getOrgId();
   return apiClient.post({
     path: `/api/v2/promoter-connections/${encodeURIComponent(connectionId)}/reject`,

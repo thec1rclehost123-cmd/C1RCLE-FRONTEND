@@ -1,4 +1,3 @@
-import { apiClient } from '@/lib/api/client';
 import { paginatedSchema } from '@c1rcle/api-client';
 import {
   discoverPartnerDtoSchema,
@@ -6,23 +5,24 @@ import {
   promoterConnectionDtoSchema,
 } from '@c1rcle/contracts';
 
-import type {
-  DiscoverPartnerDto,
-  DiscoverPartnerKind,
-  PartnershipDto,
-  PromoterConnectionDto,
-} from '@c1rcle/contracts';
+import { apiClient } from '@/lib/api/client';
+import {
+  toHostPartnersData,
+  toPromoterPartnersData,
+  toVenuePartnersData,
+} from '@/lib/partner/studio-partners-view-model';
 
 import type {
   HostPartnersData,
   PromoterPartnersData,
   VenuePartnersData,
 } from '@/data/partner-data-source';
-import {
-  toHostPartnersData,
-  toPromoterPartnersData,
-  toVenuePartnersData,
-} from '@/lib/partner/studio-partners-view-model';
+import type {
+  DiscoverPartnerDto,
+  DiscoverPartnerKind,
+  PartnershipDto,
+  PromoterConnectionDto,
+} from '@c1rcle/contracts';
 
 function orgHeaders(organizationId: string): Record<string, string> {
   return { 'x-organization-id': organizationId };
@@ -75,7 +75,9 @@ export async function getDiscoverablePartners(
 }
 
 /** Venue ↔ host edges the organization is party to, either direction. */
-export async function getPartnershipsForOrg(organizationId: string): Promise<readonly PartnershipDto[]> {
+export async function getPartnershipsForOrg(
+  organizationId: string,
+): Promise<readonly PartnershipDto[]> {
   const response = await apiClient.get({
     path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/partnerships`,
     schema: paginatedSchema(partnershipDtoSchema),
@@ -85,7 +87,9 @@ export async function getPartnershipsForOrg(organizationId: string): Promise<rea
 }
 
 /** Promoter ↔ host/venue edges the organization is party to. */
-export async function getPromoterConnectionsForOrg(organizationId: string): Promise<readonly PromoterConnectionDto[]> {
+export async function getPromoterConnectionsForOrg(
+  organizationId: string,
+): Promise<readonly PromoterConnectionDto[]> {
   const response = await apiClient.get({
     path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/promoter-connections?limit=100`,
     schema: paginatedSchema(promoterConnectionDtoSchema),
@@ -113,7 +117,10 @@ export async function getDiscoverablePartnersForOrg(
 
 export type { PartnershipDto, PromoterConnectionDto, DiscoverPartnerDto, DiscoverPartnerKind };
 
-function buildDiscoverQuery(type: DiscoverPartnerKind | undefined, search: string): { readonly type?: DiscoverPartnerKind; readonly q?: string } {
+function buildDiscoverQuery(
+  type: DiscoverPartnerKind | undefined,
+  search: string,
+): { readonly type?: DiscoverPartnerKind; readonly q?: string } {
   if (type && search) return { type, q: search };
   if (type) return { type };
   if (search) return { q: search };
@@ -121,15 +128,14 @@ function buildDiscoverQuery(type: DiscoverPartnerKind | undefined, search: strin
 }
 
 /** Venue studio: hosts + promoters from partnerships/promoter-connections + discover. */
-export async function getVenuePartnersData(
-  search = '',
-): Promise<VenuePartnersData> {
-  const [partnerships, promoterConnections, discoveredHosts, discoveredPromoters] = await Promise.all([
-    getPartnerships(),
-    getPromoterConnections(),
-    getDiscoverablePartners(buildDiscoverQuery('host', search)),
-    getDiscoverablePartners(buildDiscoverQuery('promoter', search)),
-  ]);
+export async function getVenuePartnersData(search = ''): Promise<VenuePartnersData> {
+  const [partnerships, promoterConnections, discoveredHosts, discoveredPromoters] =
+    await Promise.all([
+      getPartnerships(),
+      getPromoterConnections(),
+      getDiscoverablePartners(buildDiscoverQuery('host', search)),
+      getDiscoverablePartners(buildDiscoverQuery('promoter', search)),
+    ]);
   return toVenuePartnersData({
     partnerships,
     promoterConnections,
@@ -139,15 +145,14 @@ export async function getVenuePartnersData(
 }
 
 /** Host studio: venues + promoters from partnerships/promoter-connections + discover. */
-export async function getHostPartnersData(
-  search = '',
-): Promise<HostPartnersData> {
-  const [partnerships, promoterConnections, discoveredVenues, discoveredPromoters] = await Promise.all([
-    getPartnerships(),
-    getPromoterConnections(),
-    getDiscoverablePartners(buildDiscoverQuery('venue', search)),
-    getDiscoverablePartners(buildDiscoverQuery('promoter', search)),
-  ]);
+export async function getHostPartnersData(search = ''): Promise<HostPartnersData> {
+  const [partnerships, promoterConnections, discoveredVenues, discoveredPromoters] =
+    await Promise.all([
+      getPartnerships(),
+      getPromoterConnections(),
+      getDiscoverablePartners(buildDiscoverQuery('venue', search)),
+      getDiscoverablePartners(buildDiscoverQuery('promoter', search)),
+    ]);
   return toHostPartnersData({
     partnerships,
     promoterConnections,
@@ -157,9 +162,7 @@ export async function getHostPartnersData(
 }
 
 /** Promoter studio: connections + discover. */
-export async function getPromoterPartnersData(
-  search = '',
-): Promise<PromoterPartnersData> {
+export async function getPromoterPartnersData(search = ''): Promise<PromoterPartnersData> {
   const organizationId = await getOrgId();
   const [promoterConnections, discovered] = await Promise.all([
     getPromoterConnections(),
