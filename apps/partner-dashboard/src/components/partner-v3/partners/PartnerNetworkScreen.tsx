@@ -41,6 +41,10 @@ export interface PartnerNetworkScreenProps {
   readonly hostAccent?: boolean;
   /** Server-resolved org, handed to the request-card action islands. */
   readonly organizationId?: string;
+  readonly connectingPartnerId?: string | null;
+  readonly connectErrorId?: string | null;
+  readonly connectError?: string | null;
+  readonly onConnect?: ((partner: PartnerRelationship) => void) | undefined;
 }
 
 interface QueryState {
@@ -127,6 +131,10 @@ export function PartnerNetworkScreen({
   showSearch = true,
   hostAccent = false,
   organizationId,
+  connectingPartnerId,
+  connectErrorId,
+  connectError,
+  onConnect,
 }: PartnerNetworkScreenProps) {
   const state: QueryState = { segment, subView, search, profileId };
   const partnerSet =
@@ -259,6 +267,9 @@ export function PartnerNetworkScreen({
                 partner={partner}
                 href={hrefFor({ profileId: partner.id })}
                 hostAccent={hostAccent}
+                connecting={connectingPartnerId === partner.id}
+                connectError={connectErrorId === partner.id ? connectError ?? null : null}
+                onConnect={onConnect}
               />
             ))}
           </div>
@@ -282,6 +293,9 @@ export function PartnerNetworkScreen({
             closeHref={hrefFor({ profileId: undefined })}
             {...(hostAccent ? { primaryButtonClassName: styles['hostPrimaryButton'] } : {})}
             hostAccent={hostAccent}
+            connecting={connectingPartnerId === profile.id}
+            connectError={connectErrorId === profile.id ? connectError ?? null : null}
+            onConnect={onConnect}
           />
         ) : null}
       </div>

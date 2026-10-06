@@ -13,18 +13,25 @@ export function PartnerProfilePanel({
   closeHref,
   primaryButtonClassName,
   hostAccent = false,
+  connecting = false,
+  connectError = null,
+  onConnect,
 }: {
   readonly partner: PartnerRelationship;
   readonly closeHref: string;
   readonly primaryButtonClassName?: string;
   readonly hostAccent?: boolean;
+  readonly connecting?: boolean;
+  readonly connectError?: string | null;
+  readonly onConnect?: ((partner: PartnerRelationship) => void) | undefined;
 }) {
   const actionLabel =
     partner.status === 'Partnered'
       ? partner.kind === 'promoter'
         ? 'Assign to event'
         : 'Request a date'
-      : 'Invite to partner';
+      : 'Connect';
+  const isDiscover = !partner.status;
   return (
     <aside className={styles['profilePanel']} aria-label={`${partner.name} profile`}>
       <div className={styles['profilePanelHeader']}>
@@ -77,19 +84,36 @@ export function PartnerProfilePanel({
           </div>
         </div>
       </div>
-      <Button
-        type="button"
-        variant="primary"
-        className={primaryButtonClassName}
-        disabled
-        title={
-          partner.status === 'Partnered'
-            ? 'Event assignment is not available yet.'
-            : 'Choose one of your venues to send a connection request.'
-        }
-      >
-        {actionLabel}
-      </Button>
+      {connectError ? (
+        <p role="alert" className={styles['requestError'] ?? ''}>
+          {connectError}
+        </p>
+      ) : null}
+      {isDiscover ? (
+        <Button
+          type="button"
+          variant="primary"
+          className={primaryButtonClassName}
+          disabled={connecting || !onConnect}
+          onClick={() => onConnect?.(partner)}
+        >
+          {connecting ? 'Connecting…' : 'Connect'}
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          variant="primary"
+          className={primaryButtonClassName}
+          disabled
+          title={
+            partner.status === 'Partnered'
+              ? 'Event assignment is not available yet.'
+              : 'Choose one of your venues to send a connection request.'
+          }
+        >
+          {actionLabel}
+        </Button>
+      )}
     </aside>
   );
 }

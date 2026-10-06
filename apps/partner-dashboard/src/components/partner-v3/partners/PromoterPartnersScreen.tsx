@@ -75,12 +75,20 @@ export function PromoterPartnersScreen({
   filter = 'all',
   search = '',
   organizationId,
+  connectingPartnerId,
+  connectErrorId,
+  connectError,
+  onConnectPartner,
 }: {
   readonly data: PromoterPartnersData;
   readonly tab?: PromoterPartnerTab;
   readonly filter?: PromoterPartnerFilter;
   readonly search?: string;
   readonly organizationId?: string;
+  readonly connectingPartnerId?: string | null;
+  readonly connectErrorId?: string | null;
+  readonly connectError?: string | null;
+  readonly onConnectPartner?: ((partner: PromoterPartnerRecord) => void) | undefined;
 }) {
   const state: PromoterPartnersQuery = { tab, filter, search };
   const hrefFor = (overrides: Partial<PromoterPartnersQuery> = {}) => {
@@ -185,7 +193,13 @@ export function PromoterPartnersScreen({
           records.length ? (
             <div className={styles['promoterPartnerGrid']}>
               {records.map((partner) => (
-                <PromoterPartnerCard key={partner.id} partner={partner} />
+                <PromoterPartnerCard
+                  key={partner.id}
+                  partner={partner}
+                  connecting={connectingPartnerId === partner.id}
+                  connectError={connectErrorId === partner.id ? connectError ?? null : null}
+                  onConnect={onConnectPartner}
+                />
               ))}
             </div>
           ) : (

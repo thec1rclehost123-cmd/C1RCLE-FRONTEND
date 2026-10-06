@@ -9,6 +9,10 @@ export function VenuePartnersScreen({
   search = '',
   profileId,
   organizationId,
+  connectingPartnerId,
+  connectErrorId,
+  connectError,
+  onConnectPartner,
 }: {
   readonly data: VenuePartnersData;
   readonly segment?: PartnerSegment;
@@ -16,6 +20,10 @@ export function VenuePartnersScreen({
   readonly search?: string;
   readonly profileId?: string;
   readonly organizationId?: string;
+  readonly connectingPartnerId?: string | null;
+  readonly connectErrorId?: string | null;
+  readonly connectError?: string | null;
+  readonly onConnectPartner?: ((partner: import('@/data/partner-data-source').PartnerRelationship) => void) | undefined;
 }) {
   return (
     <PartnerNetworkScreen
@@ -29,6 +37,10 @@ export function VenuePartnersScreen({
       search={search}
       {...(profileId ? { profileId } : {})}
       {...(organizationId ? { organizationId } : {})}
+      connectingPartnerId={connectingPartnerId ?? null}
+      connectErrorId={connectErrorId ?? null}
+      connectError={connectError ?? null}
+      onConnect={onConnectPartner}
     />
   );
 }

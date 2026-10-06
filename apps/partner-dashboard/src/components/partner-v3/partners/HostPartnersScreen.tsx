@@ -9,6 +9,10 @@ export function HostPartnersScreen({
   search = '',
   profileId,
   organizationId,
+  connectingPartnerId,
+  connectErrorId,
+  connectError,
+  onConnectPartner,
 }: {
   readonly data: HostPartnersData;
   readonly segment?: PartnerSegment;
@@ -16,6 +20,10 @@ export function HostPartnersScreen({
   readonly search?: string;
   readonly profileId?: string;
   readonly organizationId?: string;
+  readonly connectingPartnerId?: string | null;
+  readonly connectErrorId?: string | null;
+  readonly connectError?: string | null;
+  readonly onConnectPartner?: ((partner: import('@/data/partner-data-source').PartnerRelationship) => void) | undefined;
 }) {
   return (
     <PartnerNetworkScreen
@@ -31,6 +39,10 @@ export function HostPartnersScreen({
       hostAccent
       {...(profileId ? { profileId } : {})}
       {...(organizationId ? { organizationId } : {})}
+      connectingPartnerId={connectingPartnerId ?? null}
+      connectErrorId={connectErrorId ?? null}
+      connectError={connectError ?? null}
+      onConnect={onConnectPartner}
     />
   );
 }
