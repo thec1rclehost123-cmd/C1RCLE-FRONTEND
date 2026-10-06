@@ -318,6 +318,7 @@ export function PartnerNetworkScreen({
               {...(hostAccent ? { buttonClassName: styles['hostPrimaryButton'] } : {})}
               {...(studioCapability ? { defaultCapability: studioCapability } : {})}
               {...(onStaffChanged ? { onInvited: onStaffChanged } : {})}
+              {...(organizationId ? { organizationId } : {})}
               disabled={!staffCanManage}
               disabledTitle="You need staff-management access to invite staff"
             />

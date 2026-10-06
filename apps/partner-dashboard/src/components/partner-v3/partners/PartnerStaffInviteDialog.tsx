@@ -27,10 +27,12 @@ export function PartnerStaffInviteDialog({
   onClose,
   onInvited,
   defaultCapability,
+  organizationId,
 }: {
   readonly onClose: () => void;
   readonly onInvited?: (() => void) | undefined;
   readonly defaultCapability?: 'venue' | 'host' | undefined;
+  readonly organizationId?: string | undefined;
 }) {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<InviteRole>('member');
@@ -51,11 +53,6 @@ export function PartnerStaffInviteDialog({
   const canSubmit = email.trim().length > 0 && confirmed && !submitting;
 
   const handleProceed = () => {
-    const orgId = getActiveOrgId();
-    if (!orgId) {
-      setNotice('No active organization selected. Select an organization first.');
-      return;
-    }
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
       setNotice('Enter an email address to invite.');
@@ -63,20 +60,40 @@ export function PartnerStaffInviteDialog({
     }
     setSubmitting(true);
     setNotice('');
-    void staffApi
-      .createInvitation(orgId, {
-        email: trimmedEmail,
-        role,
-        ...(defaultCapability ? { capabilities: [defaultCapability] } : {}),
-      })
-      .then(() => {
+
+    const run = async () => {
+      let orgId = organizationId ?? getActiveOrgId();
+      if (!orgId) {
+        try {
+          const { resolveBrowserOrganizationId } = await import(
+            '@/lib/org/resolve-browser-organization'
+          );
+          orgId = await resolveBrowserOrganizationId(defaultCapability ?? 'venue');
+        } catch {
+          // ignore error
+        }
+      }
+      if (!orgId) {
+        setSubmitting(false);
+        setNotice('No active organization selected. Select an organization first.');
+        return;
+      }
+
+      try {
+        await staffApi.createInvitation(orgId, {
+          email: trimmedEmail,
+          role,
+          ...(defaultCapability ? { capabilities: [defaultCapability] } : {}),
+        });
         onInvited?.();
         onClose();
-      })
-      .catch((error: unknown) => {
+      } catch (error: unknown) {
         setSubmitting(false);
         setNotice(errorMessage(error));
-      });
+      }
+    };
+
+    void run();
   };
 
   return (
@@ -180,12 +197,14 @@ export function AddStaffButton({
   onInvited,
   disabled = false,
   disabledTitle,
+  organizationId,
 }: {
   readonly buttonClassName?: string;
   readonly defaultCapability?: 'venue' | 'host' | undefined;
   readonly onInvited?: (() => void) | undefined;
   readonly disabled?: boolean;
   readonly disabledTitle?: string | undefined;
+  readonly organizationId?: string | undefined;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -209,6 +228,7 @@ export function AddStaffButton({
           }}
           {...(onInvited ? { onInvited } : {})}
           {...(defaultCapability ? { defaultCapability } : {})}
+          {...(organizationId ? { organizationId } : {})}
         />
       ) : null}
     </>
