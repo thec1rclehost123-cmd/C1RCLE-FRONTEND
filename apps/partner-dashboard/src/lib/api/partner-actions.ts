@@ -4,11 +4,6 @@ import { partnershipDtoSchema, promoterConnectionDtoSchema } from '@c1rcle/contr
 
 import { z } from 'zod';
 
-import { paginatedSchema } from '@c1rcle/api-client';
-import { partnershipDtoSchema, promoterConnectionDtoSchema } from '@c1rcle/contracts';
-
-import { apiClient } from '@/lib/api/client';
-
 function commandHeaders(organizationId: string, idempotencyKey?: string): Record<string, string> {
   return {
     'X-Organization-Id': organizationId,
@@ -190,4 +185,3 @@ async function rejectPromoterConnection(connectionId: string, reason?: string): 
     headers: commandHeaders(organizationId),
   });
 }
-
