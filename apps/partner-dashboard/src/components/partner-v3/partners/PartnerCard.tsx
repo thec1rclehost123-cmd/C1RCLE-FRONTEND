@@ -13,7 +13,7 @@ const actionForStatus = (
   kind: PartnerRelationship['kind'],
 ) => {
   if (status === 'Partnered') return kind === 'promoter' ? 'Assign to event' : 'Request a date';
-  if (!status) return 'Invite to partner';
+  if (!status) return 'Connect';
   return 'Send reminder';
 };
 
@@ -22,22 +22,31 @@ export function PartnerCard({
   href,
   onActionUnavailable,
   hostAccent = false,
+  connecting = false,
+  connectError = null,
+  onConnect,
 }: {
   readonly partner: PartnerRelationship;
   readonly href: string;
-  readonly onActionUnavailable?: () => void;
+  readonly onActionUnavailable?: (() => void) | undefined;
   readonly hostAccent?: boolean;
+  readonly connecting?: boolean;
+  readonly connectError?: string | null | undefined;
+  readonly onConnect?: ((partner: PartnerRelationship) => void) | undefined;
 }) {
   const actionLabel = actionForStatus(partner.status, partner.kind);
+  const isDiscover = !partner.status;
+  const hasRequestTarget =
+    partner.kind === 'venue'
+      ? Boolean(partner.venueId ?? partner.id)
+      : Boolean(partner.organizationId);
+  const canConnect = isDiscover && hasRequestTarget;
+  const cardToneClass = `partnerCard${partner.cardTone.slice(0, 1).toUpperCase()}${partner.cardTone.slice(1)}`;
+  const classNames = [styles['partnerCard'], styles[cardToneClass]]
+    .filter((value): value is string => Boolean(value))
+    .join(' ');
   return (
-    <article
-      className={[
-        styles['partnerCard'],
-        styles[
-          `partnerCard${partner.cardTone.slice(0, 1).toUpperCase()}${partner.cardTone.slice(1)}`
-        ],
-      ].join(' ')}
-    >
+    <article className={classNames}>
       <div className={styles['partnerCardArtwork']} aria-hidden="true">
         <span>{partner.initials}</span>
       </div>
@@ -53,26 +62,43 @@ export function PartnerCard({
             <h3>{partner.name}</h3>
             <p>
               {partner.role}
-              {partner.genres.length ? ` · ${partner.genres.join(', ')}` : ''}
+              {partner.genres.length ? ` \u00b7 ${partner.genres.join(', ')}` : ''}
             </p>
           </div>
         </div>
+        {connectError ? (
+          <p role="alert" className={styles['requestError'] ?? ''}>
+            {connectError}
+          </p>
+        ) : null}
         <div className={styles['partnerCardActions']}>
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={!partner.status || partner.status !== 'Partnered'}
-            title={
-              partner.status === 'Partnered'
-                ? 'Event assignment is not available yet.'
-                : 'Choose one of your venues to send a connection request.'
-            }
-            onClick={onActionUnavailable}
-          >
-            {actionLabel}
-          </Button>
+          {canConnect ? (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={connecting || !onConnect}
+              title={`Send a connection request to ${partner.name}`}
+              onClick={() => onConnect?.(partner)}
+            >
+              {connecting ? 'Connecting\u2026' : 'Connect'}
+            </Button>
+          ) : !isDiscover ? (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={partner.status !== 'Partnered'}
+              title={
+                partner.status === 'Partnered'
+                  ? 'Event assignment is not available yet.'
+                  : 'Choose one of your venues to send a connection request.'
+              }
+              onClick={onActionUnavailable}
+            >
+              {actionLabel}
+            </Button>
+          ) : null}
           <Link className={styles['profileLink']} href={href}>
-            View profile <span aria-hidden="true">↗</span>
+            View profile <span aria-hidden="true">\u2197</span>
           </Link>
         </div>
       </div>
