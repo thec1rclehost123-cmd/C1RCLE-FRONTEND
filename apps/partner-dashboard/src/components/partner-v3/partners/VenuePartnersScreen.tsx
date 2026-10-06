@@ -1,6 +1,24 @@
-import { PartnerNetworkScreen } from './PartnerNetworkScreen';
+import { PartnerNetworkScreen, type PartnerRequestActions } from './PartnerNetworkScreen';
 
-import type { PartnerSegment, PartnerSubView, VenuePartnersData } from '@/data/partner-data-source';
+import type {
+  PartnerRelationship,
+  PartnerSegment,
+  PartnerSubView,
+  VenuePartnersData,
+} from '@/data/partner-data-source';
+
+type VenuePartnersScreenProps =
+  VenuePartnersDataProps &
+  PartnerRequestActions<PartnerRelationship>;
+
+interface VenuePartnersDataProps {
+  readonly data: VenuePartnersData;
+  readonly segment?: PartnerSegment;
+  readonly subView?: PartnerSubView;
+  readonly search?: string;
+  readonly profileId?: string;
+  readonly organizationId?: string;
+}
 
 export function VenuePartnersScreen({
   data,
@@ -9,22 +27,17 @@ export function VenuePartnersScreen({
   search = '',
   profileId,
   organizationId,
+  pendingRequestId,
+  pendingRequestAction,
+  requestErrorId,
+  requestError,
   connectingPartnerId,
   connectErrorId,
   connectError,
+  onApproveRequest,
+  onRejectRequest,
   onConnectPartner,
-}: {
-  readonly data: VenuePartnersData;
-  readonly segment?: PartnerSegment;
-  readonly subView?: PartnerSubView;
-  readonly search?: string;
-  readonly profileId?: string;
-  readonly organizationId?: string;
-  readonly connectingPartnerId?: string | null;
-  readonly connectErrorId?: string | null;
-  readonly connectError?: string | null;
-  readonly onConnectPartner?: ((partner: import('@/data/partner-data-source').PartnerRelationship) => void) | undefined;
-}) {
+}: VenuePartnersScreenProps) {
   return (
     <PartnerNetworkScreen
       data={{ primary: data.hosts, promoters: data.promoters, staff: data.staff }}
@@ -37,9 +50,15 @@ export function VenuePartnersScreen({
       search={search}
       {...(profileId ? { profileId } : {})}
       {...(organizationId ? { organizationId } : {})}
+      pendingRequestId={pendingRequestId ?? null}
+      pendingRequestAction={pendingRequestAction ?? null}
+      requestErrorId={requestErrorId ?? null}
+      requestError={requestError ?? null}
       connectingPartnerId={connectingPartnerId ?? null}
       connectErrorId={connectErrorId ?? null}
       connectError={connectError ?? null}
+      onApproveRequest={onApproveRequest}
+      onRejectRequest={onRejectRequest}
       onConnect={onConnectPartner}
     />
   );

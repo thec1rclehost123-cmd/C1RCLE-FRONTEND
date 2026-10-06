@@ -28,14 +28,19 @@ export function PartnerCard({
 }: {
   readonly partner: PartnerRelationship;
   readonly href: string;
-  readonly onActionUnavailable?: () => void;
+  readonly onActionUnavailable?: (() => void) | undefined;
   readonly hostAccent?: boolean;
   readonly connecting?: boolean;
-  readonly connectError?: string | null;
+  readonly connectError?: string | null | undefined;
   readonly onConnect?: ((partner: PartnerRelationship) => void) | undefined;
 }) {
   const actionLabel = actionForStatus(partner.status, partner.kind);
   const isDiscover = !partner.status;
+  const hasRequestTarget =
+    partner.kind === 'venue'
+      ? Boolean(partner.venueId || partner.id)
+      : Boolean(partner.organizationId);
+  const canConnect = isDiscover && hasRequestTarget;
   const cardToneClass = `partnerCard${partner.cardTone.slice(0, 1).toUpperCase()}${partner.cardTone.slice(1)}`;
   return (
     <article className={`${styles['partnerCard']} ${styles[cardToneClass]}`}>
@@ -64,17 +69,17 @@ export function PartnerCard({
           </p>
         ) : null}
         <div className={styles['partnerCardActions']}>
-          {isDiscover ? (
+          {canConnect ? (
             <Button
               type="button"
               variant="secondary"
               disabled={connecting || !onConnect}
-              title={onConnect ? `Send a connection request to ${partner.name}` : 'Connect'}
+              title={`Send a connection request to ${partner.name}`}
               onClick={() => onConnect?.(partner)}
             >
               {connecting ? 'Connecting\u2026' : 'Connect'}
             </Button>
-          ) : (
+          ) : !isDiscover ? (
             <Button
               type="button"
               variant="secondary"
@@ -88,7 +93,7 @@ export function PartnerCard({
             >
               {actionLabel}
             </Button>
-          )}
+          ) : null}
           <Link className={styles['profileLink']} href={href}>
             View profile <span aria-hidden="true">\u2197</span>
           </Link>

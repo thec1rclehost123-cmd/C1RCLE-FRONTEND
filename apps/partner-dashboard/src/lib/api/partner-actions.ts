@@ -5,8 +5,6 @@ import {
   promoterConnectionDtoSchema,
 } from '@c1rcle/contracts';
 
-import type { PartnershipDto, PromoterConnectionDto } from '@c1rcle/contracts';
-
 import { z } from 'zod';
 
 function commandHeaders(organizationId: string, idempotencyKey?: string): Record<string, string> {
@@ -132,7 +130,6 @@ export async function resolvePartnershipRequest(
   action: 'approve' | 'reject',
   reason?: string,
 ) {
-  const organizationId = await getOrgId();
   if (kind === 'promoter') {
     return action === 'approve'
       ? approvePromoterConnection(requestId)

@@ -487,10 +487,18 @@ export interface PartnerProfile {
   readonly upcomingEvents: readonly PartnerUpcomingEvent[];
   readonly verified: boolean;
   readonly cardTone: PartnerCardTone;
+
+  // Required by discovery/connect flows
+  readonly organizationId?: string | undefined;
+  readonly venueId?: string | undefined;
 }
 
 export interface PartnerRelationship extends PartnerProfile {
-  readonly status?: PartnerRelationshipStatus;
+  readonly status?: PartnerRelationshipStatus | undefined;
+
+  // Required by discovery/connect flows
+  readonly organizationId?: string | undefined;
+  readonly venueId?: string | undefined;
 }
 
 export interface PartnerRequest {

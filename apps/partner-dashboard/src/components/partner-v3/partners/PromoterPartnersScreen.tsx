@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/partner-v3/States';
 import { PartnerRequestCard } from './PartnerRequestCard';
 import styles from './partners.module.css';
 import { PromoterPartnerCard } from './PromoterPartnerCard';
+import type { PartnerRequestActions } from './PartnerNetworkScreen';
 
 import type {
   PartnerRequest,
@@ -69,27 +70,37 @@ const requestsForTab = (
         ? data.declined
         : [];
 
+
+
+type PromoterPartnersScreenProps =
+  PromoterPartnersDataProps &
+  PartnerRequestActions<PromoterPartnerRecord>;
+
+interface PromoterPartnersDataProps {
+  readonly data: PromoterPartnersData;
+  readonly tab?: PromoterPartnerTab;
+  readonly filter?: PromoterPartnerFilter;
+  readonly search?: string;
+  readonly organizationId?: string;
+}
+
 export function PromoterPartnersScreen({
   data,
   tab = 'discover',
   filter = 'all',
   search = '',
   organizationId,
+  pendingRequestId,
+  pendingRequestAction,
+  requestErrorId,
+  requestError,
   connectingPartnerId,
   connectErrorId,
   connectError,
+  onApproveRequest,
+  onRejectRequest,
   onConnectPartner,
-}: {
-  readonly data: PromoterPartnersData;
-  readonly tab?: PromoterPartnerTab;
-  readonly filter?: PromoterPartnerFilter;
-  readonly search?: string;
-  readonly organizationId?: string;
-  readonly connectingPartnerId?: string | null;
-  readonly connectErrorId?: string | null;
-  readonly connectError?: string | null;
-  readonly onConnectPartner?: ((partner: PromoterPartnerRecord) => void) | undefined;
-}) {
+}: PromoterPartnersScreenProps) {
   const state: PromoterPartnersQuery = { tab, filter, search };
   const hrefFor = (overrides: Partial<PromoterPartnersQuery> = {}) => {
     const next = { ...state, ...overrides };
@@ -214,6 +225,12 @@ export function PromoterPartnersScreen({
               <PartnerRequestCard
                 key={`${request.direction}-${request.id}`}
                 request={request}
+                pendingRequestId={pendingRequestId ?? null}
+                pendingRequestAction={pendingRequestAction ?? null}
+                requestErrorId={requestErrorId ?? null}
+                requestError={requestError ?? null}
+                onApproveRequest={onApproveRequest}
+                onRejectRequest={onRejectRequest}
                 {...(organizationId ? { organizationId } : {})}
               />
             ))}

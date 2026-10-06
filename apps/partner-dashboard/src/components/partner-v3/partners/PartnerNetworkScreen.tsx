@@ -16,6 +16,7 @@ import { AddStaffButton } from './PartnerStaffInviteDialog';
 import type {
   PartnerRelationship,
   PartnerRelationshipSet,
+  PartnerRequest,
   PartnerSegment,
   PartnerSubView,
   StaffMember,
@@ -26,6 +27,19 @@ export interface PartnerNetworkData {
   readonly promoters: PartnerRelationshipSet;
   readonly staff: readonly StaffMember[];
 }
+
+export type PartnerRequestActions<TPartner> = {
+  readonly pendingRequestId?: string | null;
+  readonly pendingRequestAction?: 'approve' | 'reject' | null;
+  readonly requestErrorId?: string | null;
+  readonly requestError?: string | null;
+  readonly connectingPartnerId?: string | null;
+  readonly connectErrorId?: string | null;
+  readonly connectError?: string | null;
+  readonly onApproveRequest?: ((request: PartnerRequest) => void) | undefined;
+  readonly onRejectRequest?: ((request: PartnerRequest) => void) | undefined;
+  readonly onConnectPartner?: ((partner: TPartner) => void) | undefined;
+};
 
 export interface PartnerNetworkScreenProps {
   readonly data: PartnerNetworkData;
@@ -41,10 +55,16 @@ export interface PartnerNetworkScreenProps {
   readonly hostAccent?: boolean;
   /** Server-resolved org, handed to the request-card action islands. */
   readonly organizationId?: string;
+  readonly pendingRequestId?: string | null;
+  readonly pendingRequestAction?: 'approve' | 'reject' | null;
+  readonly requestErrorId?: string | null;
+  readonly requestError?: string | null;
   readonly connectingPartnerId?: string | null;
   readonly connectErrorId?: string | null;
   readonly connectError?: string | null;
-  readonly onConnect?: ((partner: PartnerRelationship) => void) | undefined;
+  readonly onApproveRequest: ((request: PartnerRequest) => void) | undefined;
+  readonly onRejectRequest: ((request: PartnerRequest) => void) | undefined;
+  readonly onConnect: ((partner: PartnerRelationship) => void) | undefined;
 }
 
 interface QueryState {
@@ -131,9 +151,15 @@ export function PartnerNetworkScreen({
   showSearch = true,
   hostAccent = false,
   organizationId,
+  pendingRequestId,
+  pendingRequestAction,
+  requestErrorId,
+  requestError,
   connectingPartnerId,
   connectErrorId,
   connectError,
+  onApproveRequest,
+  onRejectRequest,
   onConnect,
 }: PartnerNetworkScreenProps) {
   const state: QueryState = { segment, subView, search, profileId };
@@ -247,6 +273,12 @@ export function PartnerNetworkScreen({
                   key={`${request.direction}-${request.id}`}
                   request={request}
                   hostAccent={hostAccent}
+                  pendingRequestId={pendingRequestId ?? null}
+                  pendingRequestAction={pendingRequestAction ?? null}
+                  requestErrorId={requestErrorId ?? null}
+                  requestError={requestError ?? null}
+                  onApproveRequest={onApproveRequest}
+                  onRejectRequest={onRejectRequest}
                   {...(organizationId ? { organizationId } : {})}
                 />
               ))}

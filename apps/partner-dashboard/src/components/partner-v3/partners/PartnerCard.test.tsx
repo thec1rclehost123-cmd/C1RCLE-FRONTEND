@@ -1,41 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { PartnerCard } from './PartnerCard';
 
 import type { PartnerRelationship } from '@/data/partner-data-source';
-
-const mocks = vi.hoisted(() => ({
-  refresh: vi.fn(),
-  getActiveOrgId: vi.fn((): string | null => 'org_venue'),
-  requestPartnership: vi.fn<(...args: never[]) => Promise<unknown>>(),
-  requestPromoterConnection: vi.fn<(...args: never[]) => Promise<unknown>>(),
-  getMyVenue: vi.fn<(...args: never[]) => Promise<unknown>>(),
-}));
-
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ refresh: mocks.refresh }),
-}));
-
-vi.mock('@/lib/org/active-org', () => ({
-  getActiveOrgId: () => mocks.getActiveOrgId(),
-}));
-
-vi.mock('@/lib/partner/api-partnerships-repository', () => ({
-  requestPartnership: (...args: never[]): Promise<unknown> =>
-    mocks.requestPartnership(...args) as Promise<unknown>,
-}));
-
-vi.mock('@/lib/partner/promoter-connection-repository', () => ({
-  requestPromoterConnection: (...args: never[]): Promise<unknown> =>
-    mocks.requestPromoterConnection(...args) as Promise<unknown>,
-}));
-
-vi.mock('@/lib/venue/venue-repository', () => ({
-  getMyVenue: (...args: never[]): Promise<unknown> =>
-    mocks.getMyVenue(...args) as Promise<unknown>,
-}));
 
 const discoverHost: PartnerRelationship = {
   id: 'org_host_9',
@@ -83,105 +52,86 @@ const discoverPromoter: PartnerRelationship = {
   organizationId: 'org_promoter_9',
 };
 
-describe('PartnerCard Connect', () => {
-  beforeEach(() => {
-    mocks.refresh.mockReset();
-    mocks.getActiveOrgId.mockReset();
-    mocks.getActiveOrgId.mockReturnValue('org_venue');
-    mocks.requestPartnership.mockReset();
-    mocks.requestPromoterConnection.mockReset();
-    mocks.getMyVenue.mockReset();
-  });
-
-  it('venue studio: invites a discovered host through its own venue', async () => {
+describe('PartnerCard', () => {
+  it('calls onConnect for a discovered host', async () => {
     const user = userEvent.setup();
-    mocks.getMyVenue.mockResolvedValue({ id: 'venue_1' });
-    mocks.requestPartnership.mockResolvedValue({});
-    render(<PartnerCard partner={discoverHost} href="#" studio="venue" />);
+    const onConnect = vi.fn();
+
+    render(
+      <PartnerCard
+        partner={discoverHost}
+        href="#"
+        onConnect={onConnect}
+      />,
+    );
 
     await user.click(screen.getByRole('button', { name: 'Connect' }));
 
-    await waitFor(() => {
-      expect(mocks.getMyVenue).toHaveBeenCalledWith('org_venue');
-      expect(mocks.requestPartnership).toHaveBeenCalledWith(
-        'org_venue',
-        expect.objectContaining({
-          venueId: 'venue_1',
-          initiatedBy: 'venue',
-          hostOrganizationId: 'org_host_9',
-        }),
-      );
-    });
-    expect(mocks.refresh).toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: 'Request sent' })).toBeDisabled();
+    expect(onConnect).toHaveBeenCalledWith(discoverHost);
   });
 
-  it('host studio: requests a discovered venue with the venue id as key', async () => {
+  it('calls onConnect for a discovered venue', async () => {
     const user = userEvent.setup();
-    mocks.requestPartnership.mockResolvedValue({});
+    const onConnect = vi.fn();
+
     render(
       <PartnerCard
         partner={discoverVenue}
         href="#"
-        studio="host"
-        organizationId="org_host"
+        onConnect={onConnect}
       />,
     );
 
     await user.click(screen.getByRole('button', { name: 'Connect' }));
 
-    await waitFor(() => {
-      expect(mocks.getMyVenue).not.toHaveBeenCalled();
-      expect(mocks.requestPartnership).toHaveBeenCalledWith(
-        'org_host',
-        expect.objectContaining({ venueId: 'venue_9', initiatedBy: 'host' }),
-      );
-    });
+    expect(onConnect).toHaveBeenCalledWith(discoverVenue);
   });
 
-  it('venue studio: invites a discovered promoter as the target side', async () => {
+  it('calls onConnect for a discovered promoter', async () => {
     const user = userEvent.setup();
-    mocks.requestPromoterConnection.mockResolvedValue({});
-    render(<PartnerCard partner={discoverPromoter} href="#" studio="venue" />);
+    const onConnect = vi.fn();
 
-    await user.click(screen.getByRole('button', { name: 'Connect' }));
-
-    await waitFor(() => {
-      expect(mocks.requestPromoterConnection).toHaveBeenCalledWith(
-        'org_venue',
-        expect.objectContaining({
-          counterpartyId: 'org_promoter_9',
-          targetType: 'venue',
-          initiatedBy: 'target',
-        }),
-      );
-    });
-  });
-
-  it('host studio: invites a discovered promoter with targetType host', async () => {
-    const user = userEvent.setup();
-    mocks.requestPromoterConnection.mockResolvedValue({});
     render(
       <PartnerCard
         partner={discoverPromoter}
         href="#"
-        studio="host"
-        organizationId="org_host"
+        onConnect={onConnect}
       />,
     );
 
     await user.click(screen.getByRole('button', { name: 'Connect' }));
 
-    await waitFor(() => {
-      expect(mocks.requestPromoterConnection).toHaveBeenCalledWith(
-        'org_host',
-        expect.objectContaining({
-          counterpartyId: 'org_promoter_9',
-          targetType: 'host',
-          initiatedBy: 'target',
-        }),
-      );
-    });
+    expect(onConnect).toHaveBeenCalledWith(discoverPromoter);
+  });
+
+  it('shows the connecting state', () => {
+    render(
+      <PartnerCard
+        partner={discoverHost}
+        href="#"
+        connecting
+        onConnect={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole('button', { name: 'Connecting…' }),
+    ).toBeDisabled();
+  });
+
+  it('shows a connection error', () => {
+    render(
+      <PartnerCard
+        partner={discoverHost}
+        href="#"
+        connectError="Create a venue before inviting hosts"
+        onConnect={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Create a venue before inviting hosts',
+    );
   });
 
   it('hides Connect when the discover row carries no request target', () => {
@@ -189,23 +139,39 @@ describe('PartnerCard Connect', () => {
       <PartnerCard
         partner={{ ...discoverHost, organizationId: undefined }}
         href="#"
-        studio="venue"
       />,
     );
 
     expect(screen.queryByRole('button', { name: 'Connect' })).not.toBeInTheDocument();
   });
 
-  it('shows an error when the venue has no venue to invite from', async () => {
+  it('renders profile link correctly', () => {
+    render(
+      <PartnerCard
+        partner={discoverHost}
+        href="/partner/profile/org_host_9"
+      />,
+    );
+
+    const link = screen.getByRole('link', { name: /View profile/ });
+    expect(link).toHaveAttribute('href', '/partner/profile/org_host_9');
+  });
+
+  it('renders status action and invokes onActionUnavailable for partnered status', async () => {
     const user = userEvent.setup();
-    mocks.getMyVenue.mockResolvedValue(null);
-    render(<PartnerCard partner={discoverHost} href="#" studio="venue" />);
+    const onActionUnavailable = vi.fn();
 
-    await user.click(screen.getByRole('button', { name: 'Connect' }));
+    render(
+      <PartnerCard
+        partner={{ ...discoverHost, status: 'Partnered' }}
+        href="#"
+        onActionUnavailable={onActionUnavailable}
+      />,
+    );
 
-    await waitFor(() => {
-      expect(screen.getByRole('alert')).toBeInTheDocument();
-    });
-    expect(mocks.requestPartnership).not.toHaveBeenCalled();
+    const actionButton = screen.getByRole('button', { name: 'Request a date' });
+    expect(actionButton).toBeInTheDocument();
+    await user.click(actionButton);
+    expect(onActionUnavailable).toHaveBeenCalled();
   });
 });

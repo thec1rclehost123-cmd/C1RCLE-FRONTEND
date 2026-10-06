@@ -1,6 +1,24 @@
-import { PartnerNetworkScreen } from './PartnerNetworkScreen';
+import { PartnerNetworkScreen, type PartnerRequestActions } from './PartnerNetworkScreen';
 
-import type { HostPartnersData, PartnerSegment, PartnerSubView } from '@/data/partner-data-source';
+import type {
+  PartnerRelationship,
+  PartnerSegment,
+  PartnerSubView,
+  HostPartnersData,
+} from '@/data/partner-data-source';
+
+type HostPartnersScreenProps =
+  HostPartnersDataProps &
+  PartnerRequestActions<PartnerRelationship>;
+
+interface HostPartnersDataProps {
+  readonly data: HostPartnersData;
+  readonly segment?: PartnerSegment;
+  readonly subView?: PartnerSubView;
+  readonly search?: string;
+  readonly profileId?: string;
+  readonly organizationId?: string;
+}
 
 export function HostPartnersScreen({
   data,
@@ -9,22 +27,17 @@ export function HostPartnersScreen({
   search = '',
   profileId,
   organizationId,
+  pendingRequestId,
+  pendingRequestAction,
+  requestErrorId,
+  requestError,
   connectingPartnerId,
   connectErrorId,
   connectError,
+  onApproveRequest,
+  onRejectRequest,
   onConnectPartner,
-}: {
-  readonly data: HostPartnersData;
-  readonly segment?: PartnerSegment;
-  readonly subView?: PartnerSubView;
-  readonly search?: string;
-  readonly profileId?: string;
-  readonly organizationId?: string;
-  readonly connectingPartnerId?: string | null;
-  readonly connectErrorId?: string | null;
-  readonly connectError?: string | null;
-  readonly onConnectPartner?: ((partner: import('@/data/partner-data-source').PartnerRelationship) => void) | undefined;
-}) {
+}: HostPartnersScreenProps) {
   return (
     <PartnerNetworkScreen
       data={{ primary: data.venues, promoters: data.promoters, staff: data.staff }}
@@ -39,9 +52,15 @@ export function HostPartnersScreen({
       hostAccent
       {...(profileId ? { profileId } : {})}
       {...(organizationId ? { organizationId } : {})}
+      pendingRequestId={pendingRequestId ?? null}
+      pendingRequestAction={pendingRequestAction ?? null}
+      requestErrorId={requestErrorId ?? null}
+      requestError={requestError ?? null}
       connectingPartnerId={connectingPartnerId ?? null}
       connectErrorId={connectErrorId ?? null}
       connectError={connectError ?? null}
+      onApproveRequest={onApproveRequest}
+      onRejectRequest={onRejectRequest}
       onConnect={onConnectPartner}
     />
   );
