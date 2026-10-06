@@ -2,6 +2,7 @@ import { createApiClient, isApiClientError } from '@c1rcle/api-client';
 import { getClientEnv } from '@c1rcle/config';
 import {
   authBridgeResponseSchema,
+  changePasswordSchema,
   forgotPasswordRequestSchema,
   loginRequestSchema,
   noContentSchema,
@@ -22,6 +23,11 @@ interface SignupInput {
 interface LoginInput {
   readonly email: string;
   readonly password: string;
+}
+
+interface ChangePasswordInput {
+  readonly currentPassword: string;
+  readonly newPassword: string;
 }
 
 /** Fixed, non-oracular message for any authentication failure. */
@@ -187,6 +193,29 @@ export async function logout(): Promise<void> {
     clearSession();
     clearActiveOrgHint();
   }
+}
+
+/**
+ * Rotate the account password (first-login rotation for staff-invitation
+ * temporary credentials, or a voluntary change later). Validated against
+ * `changePasswordSchema` before it leaves the browser. The gateway revokes
+ * every session on rotation (including this one) and signs straight back in,
+ * so the response carries a FRESH access token — stored like a login.
+ */
+export async function changePassword(input: ChangePasswordInput): Promise<void> {
+  const body = changePasswordSchema.parse({
+    currentPassword: input.currentPassword,
+    newPassword: input.newPassword,
+  });
+
+  const response = await createAuthClient().post({
+    path: '/api/auth/change-password',
+    body,
+    schema: authBridgeResponseSchema,
+    headers: csrfHeaders(),
+  });
+
+  setSession({ user: response.user }, response.accessToken, response.expiresAt);
 }
 
 /**

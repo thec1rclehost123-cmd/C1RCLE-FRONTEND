@@ -7,6 +7,7 @@ import { PartnersScreen } from './PartnersScreen';
 const mocks = vi.hoisted(() => ({
   canDo: vi.fn(() => true),
   getActiveOrgId: vi.fn((): string | null => 'org_venue'),
+  resolveOrg: vi.fn<(...args: never[]) => Promise<string | null>>(),
   listPartnerships: vi.fn<(...args: never[]) => Promise<unknown>>(),
   resolvePartnership: vi.fn<(...args: never[]) => Promise<unknown>>(),
   listPromoterConnections: vi.fn<(...args: never[]) => Promise<unknown>>(),
@@ -40,6 +41,11 @@ vi.mock('@/components/providers/DashboardAuthProvider', () => ({
 
 vi.mock('@/lib/org/active-org', () => ({
   getActiveOrgId: () => mocks.getActiveOrgId(),
+}));
+
+vi.mock('@/lib/org/resolve-browser-organization', () => ({
+  resolveBrowserOrganizationId: (...args: never[]): Promise<unknown> =>
+    mocks.resolveOrg(...args) as Promise<unknown>,
 }));
 
 vi.mock('@/lib/partner/api-partnerships-repository', () => ({
@@ -100,6 +106,10 @@ const promoterConnection = {
 describe('PartnersScreen', () => {
   beforeEach(() => {
     mocks.getActiveOrgId.mockReturnValue('org_venue');
+    mocks.resolveOrg.mockReset().mockImplementation((...args: never[]) => {
+      const direct = args[1] as unknown as string | null;
+      return Promise.resolve(direct);
+    });
     mocks.listPartnerships.mockReset().mockResolvedValue([]);
     mocks.resolvePartnership.mockReset().mockResolvedValue({});
     mocks.listPromoterConnections.mockReset().mockResolvedValue([]);
@@ -124,12 +134,24 @@ describe('PartnersScreen', () => {
       expect(await screen.findByText(/No connected hosts yet/)).toBeInTheDocument();
     });
 
-    it('asks to select an organization instead of showing dummy data', async () => {
+    it('asks to sign in instead of showing dummy data', async () => {
       mocks.getActiveOrgId.mockReturnValue(null);
       render(<PartnersScreen tab="connected" segment="host" />);
 
-      expect(await screen.findByText(/Select an organization/)).toBeInTheDocument();
+      expect(await screen.findByText(/Sign in/)).toBeInTheDocument();
       expect(mocks.listPartnerships).not.toHaveBeenCalled();
+    });
+
+    it('resolves the venue org from the session when the cookie is missing', async () => {
+      mocks.getActiveOrgId.mockReturnValue(null);
+      mocks.resolveOrg.mockResolvedValue('org_auto');
+      mocks.listPartnerships.mockResolvedValue([
+        { ...partnership, status: 'active', hostName: 'Live Host Collective' },
+      ]);
+      render(<PartnersScreen tab="connected" segment="host" />);
+
+      expect(await screen.findByText('Live Host Collective')).toBeInTheDocument();
+      expect(mocks.listPartnerships).toHaveBeenCalledWith('org_auto');
     });
 
     it('removes a live connection through the mutation API', async () => {

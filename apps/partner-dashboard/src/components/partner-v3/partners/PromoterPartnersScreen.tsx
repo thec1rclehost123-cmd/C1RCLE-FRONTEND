@@ -9,6 +9,7 @@ import { PartnerRequestCard } from './PartnerRequestCard';
 import styles from './partners.module.css';
 import { PromoterPartnerCard } from './PromoterPartnerCard';
 
+import type { PartnerRequestActions } from './PartnerNetworkScreen';
 import type {
   PartnerRequest,
   PromoterPartnerFilter,
@@ -69,17 +70,34 @@ const requestsForTab = (
         ? data.declined
         : [];
 
+type PromoterPartnersScreenProps = PromoterPartnersDataProps &
+  PartnerRequestActions<PromoterPartnerRecord>;
+
+interface PromoterPartnersDataProps {
+  readonly data: PromoterPartnersData;
+  readonly tab?: PromoterPartnerTab;
+  readonly filter?: PromoterPartnerFilter;
+  readonly search?: string;
+  readonly organizationId?: string;
+}
+
 export function PromoterPartnersScreen({
   data,
   tab = 'discover',
   filter = 'all',
   search = '',
-}: {
-  readonly data: PromoterPartnersData;
-  readonly tab?: PromoterPartnerTab;
-  readonly filter?: PromoterPartnerFilter;
-  readonly search?: string;
-}) {
+  organizationId,
+  pendingRequestId,
+  pendingRequestAction,
+  requestErrorId,
+  requestError,
+  connectingPartnerId,
+  connectErrorId,
+  connectError,
+  onApproveRequest,
+  onRejectRequest,
+  onConnectPartner,
+}: PromoterPartnersScreenProps) {
   const state: PromoterPartnersQuery = { tab, filter, search };
   const hrefFor = (overrides: Partial<PromoterPartnersQuery> = {}) => {
     const next = { ...state, ...overrides };
@@ -183,7 +201,13 @@ export function PromoterPartnersScreen({
           records.length ? (
             <div className={styles['promoterPartnerGrid']}>
               {records.map((partner) => (
-                <PromoterPartnerCard key={partner.id} partner={partner} />
+                <PromoterPartnerCard
+                  key={partner.id}
+                  partner={partner}
+                  connecting={connectingPartnerId === partner.id}
+                  connectError={connectErrorId === partner.id ? (connectError ?? null) : null}
+                  onConnect={onConnectPartner}
+                />
               ))}
             </div>
           ) : (
@@ -195,7 +219,17 @@ export function PromoterPartnersScreen({
         ) : requests.length ? (
           <div className={styles['requestList']}>
             {requests.map((request) => (
-              <PartnerRequestCard key={`${request.direction}-${request.id}`} request={request} />
+              <PartnerRequestCard
+                key={`${request.direction}-${request.id}`}
+                request={request}
+                pendingRequestId={pendingRequestId ?? null}
+                pendingRequestAction={pendingRequestAction ?? null}
+                requestErrorId={requestErrorId ?? null}
+                requestError={requestError ?? null}
+                onApproveRequest={onApproveRequest}
+                onRejectRequest={onRejectRequest}
+                {...(organizationId ? { organizationId } : {})}
+              />
             ))}
           </div>
         ) : (

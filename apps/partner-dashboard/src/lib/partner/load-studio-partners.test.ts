@@ -92,6 +92,19 @@ beforeEach(() => {
   getMock.mockReset();
   cookieMock.mockReturnValue('c1rcle.active-org=org_venue; session=abc');
   getMock.mockImplementation(({ path }) => {
+    if (path === '/api/v2/organizations') {
+      return Promise.resolve({
+        items: [{ id: 'org_venue' }, { id: 'org_host' }],
+        pageInfo: { hasNextPage: false },
+      });
+    }
+    if (path.includes('/access')) {
+      const organizationId = path.split('/')[3] ?? '';
+      return Promise.resolve({
+        organizationId,
+        partnerType: organizationId === 'org_host' ? 'host' : 'venue',
+      });
+    }
     if (path.includes('/partnerships')) {
       return Promise.resolve({ items: [PARTNERSHIP], pageInfo: { hasNextPage: false } });
     }
@@ -119,9 +132,42 @@ describe('loadVenuePartnersData', () => {
     );
   });
 
-  it('throws no-organization when no org is selected', async () => {
+  it('throws no-organization when the account has no orgs', async () => {
+    getMock.mockImplementation(({ path }) => {
+      if (path === '/api/v2/organizations') {
+        return Promise.resolve({ items: [], pageInfo: { hasNextPage: false } });
+      }
+      return Promise.reject(new Error(`unexpected path ${path}`));
+    });
     await expect(loadVenuePartnersData({ client, organizationId: null })).rejects.toMatchObject({
       reason: 'no-organization',
+    });
+  });
+
+  it('derives the venue org from the session when the cookie is missing', async () => {
+    cookieMock.mockReturnValue('session=abc');
+    const data = await loadVenuePartnersData({ client });
+
+    expect(data.hosts.connected.map((item) => item.name)).toEqual(['Real Host']);
+    expect(getMock).toHaveBeenCalledWith(
+      expect.objectContaining({ path: '/api/v2/organizations' }),
+    );
+  });
+
+  it('rejects a studio the session has no access to', async () => {
+    cookieMock.mockReturnValue('session=abc');
+    getMock.mockImplementation(({ path }) => {
+      if (path === '/api/v2/organizations') {
+        return Promise.resolve({ items: [{ id: 'org_host' }], pageInfo: { hasNextPage: false } });
+      }
+      if (path.includes('/access')) {
+        return Promise.resolve({ organizationId: 'org_host', partnerType: 'host' });
+      }
+      return Promise.reject(new Error(`unexpected path ${path}`));
+    });
+
+    await expect(loadVenuePartnersData({ client })).rejects.toMatchObject({
+      reason: 'forbidden',
     });
   });
 });

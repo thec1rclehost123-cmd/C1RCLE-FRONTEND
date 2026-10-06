@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { forwardToGateway } from '@/lib/bff/auth-proxy';
 
+import { POST as changePassword } from './change-password/route';
 import { POST as login } from './login/route';
 import { POST as logout } from './logout/route';
 import { POST as refresh } from './refresh/route';
@@ -197,6 +198,66 @@ describe('POST /api/auth/refresh', () => {
     const [calledPath, calledInit] = mockForward.mock.calls[0] ?? [];
     expect(calledPath).toBe('/api/v2/auth/refresh');
     expect(calledInit?.cookie ?? '').toContain('better-auth.session_token=sess_abc');
+  });
+});
+
+describe('POST /api/auth/change-password', () => {
+  it('rejects without a CSRF token', async () => {
+    const res = await changePassword(
+      post(
+        '/api/auth/change-password',
+        { origin: APP_ORIGIN },
+        { currentPassword: 'TempPass12345678', newPassword: 'brand-new-password-1' },
+      ),
+    );
+    expect(res.status).toBe(403);
+    expect(mockForward).not.toHaveBeenCalled();
+  });
+
+  it('forwards the rotation with the incoming cookie when the CSRF token matches', async () => {
+    mockForward.mockResolvedValue(
+      gatewayResponse({
+        user: { ...AUTH_BODY.user, mustChangePassword: false },
+        expiresAt: 1_900_000_000_000,
+      }),
+    );
+
+    const res = await changePassword(
+      post(
+        '/api/auth/change-password',
+        {
+          origin: APP_ORIGIN,
+          'x-csrf-token': 'tok',
+          cookie: 'partner.c1rcle.csrf=tok; better-auth.session_token=sess_abc',
+        },
+        { currentPassword: 'TempPass12345678', newPassword: 'brand-new-password-1' },
+      ),
+    );
+
+    expect(res.status).toBe(200);
+    const [calledPath, calledInit] = mockForward.mock.calls[0] ?? [];
+    expect(calledPath).toBe('/api/v2/auth/change-password');
+    expect(calledInit?.cookie ?? '').toContain('better-auth.session_token=sess_abc');
+  });
+
+  it('passes a wrong-current-password 400 through unchanged', async () => {
+    mockForward.mockResolvedValue(
+      gatewayResponse({ code: 'validation', message: 'Current password is incorrect', status: 400 }, { status: 400 }),
+    );
+
+    const res = await changePassword(
+      post(
+        '/api/auth/change-password',
+        {
+          origin: APP_ORIGIN,
+          'x-csrf-token': 'tok',
+          cookie: 'partner.c1rcle.csrf=tok; better-auth.session_token=sess_abc',
+        },
+        { currentPassword: 'wrong-password', newPassword: 'brand-new-password-1' },
+      ),
+    );
+
+    expect(res.status).toBe(400);
   });
 });
 

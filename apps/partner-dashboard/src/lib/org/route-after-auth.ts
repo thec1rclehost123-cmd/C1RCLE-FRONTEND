@@ -1,6 +1,9 @@
 import { resolvePartnerV3Path } from '@/components/partner-shell/partner-role-routing';
+import { isTabVisibleForAccess } from '@/lib/access/studio-tab-access';
+import { staffApi } from '@/lib/api/staff-api';
 import { setActiveOrg } from '@/lib/org/active-org';
 import { getOrganizations, getPartnerAccess } from '@/lib/org/org-repository';
+import { STUDIO_CONFIG } from '@/studios/studio-config';
 
 import type { OrganizationDto, PartnerAccessDto } from '@c1rcle/contracts';
 import type { useRouter } from 'next/navigation';
@@ -12,14 +15,6 @@ export type WorkspaceType = PartnerAccessDto['partnerType'];
  * not the partner type (venue/host/promoter) — that only comes back from the per-org access
  * endpoint. Routing must resolve it from there, never from `org.role`.
  */
-export async function resolveOrgOverviewPath(orgId: string): Promise<string> {
-  try {
-    const access = await getPartnerAccess(orgId);
-    return resolvePartnerV3Path(access.partnerType, 'overview') ?? '/partner/select-organization';
-  } catch {
-    return '/partner/select-organization';
-  }
-}
 
 /**
  * Resolves every org's `partnerType` (via the same per-org `/access` endpoint
@@ -54,14 +49,64 @@ export async function routeAfterAuth(router: ReturnType<typeof useRouter>): Prom
   try {
     const orgs = await getOrganizations();
     if (orgs.length === 0) {
+      if (await redirectToFirstPendingInvite(router)) return;
       router.push('/onboard');
     } else if (orgs.length === 1 && orgs[0]) {
       setActiveOrg(orgs[0].id);
-      router.push(await resolveOrgOverviewPath(orgs[0].id));
+      router.push(await resolveLandingPath(orgs[0].id));
     } else {
       router.push('/partner/select-organization');
     }
   } catch {
     router.push('/partner/select-organization');
+  }
+}
+
+/**
+ * The studio landing for an org: its first navigation tab the backend's
+ * per-role matrix does not withhold — so restricted roles (e.g. venue staff,
+ * whose matrix withholds overview) land on something they can actually use
+ * instead of a denial screen. Owners hit `overview`, exactly as before.
+ * Falls back to the picker when the access read fails.
+ */
+export async function resolveLandingPath(orgId: string): Promise<string> {
+  try {
+    const access = await getPartnerAccess(orgId);
+    const studio =
+      access.partnerType === 'host' ? 'host' : access.partnerType === 'promoter' ? 'promoter' : 'venue';
+    const first = STUDIO_CONFIG[studio].navigation.find((item) =>
+      isTabVisibleForAccess(item.href, access.tabVisibility),
+    );
+    return (
+      first?.href ??
+      resolvePartnerV3Path(access.partnerType, 'overview') ??
+      '/partner/select-organization'
+    );
+  } catch {
+    return '/partner/select-organization';
+  }
+}
+
+export const resolveOrgOverviewPath = resolveLandingPath;
+
+/**
+ * Sends a zero-org login to its first pending invitation's accept page.
+ * Returns true when it redirected. This is what keeps a freshly-invited
+ * login (valid credentials, no membership yet) out of `/onboard`: onboarding
+ * is for applicants, not invitees. Any failure falls through to the caller
+ * (which keeps its previous destination) — a broken lookup must never trap
+ * the user on a blank screen.
+ */
+export async function redirectToFirstPendingInvite(
+  router: Pick<ReturnType<typeof useRouter>, 'push' | 'replace'>,
+): Promise<boolean> {
+  try {
+    const { items } = await staffApi.listMyInvitations();
+    const first = items.find((invite) => invite.status === 'pending');
+    if (!first) return false;
+    router.push(`/invitations/${first.id}/accept`);
+    return true;
+  } catch {
+    return false;
   }
 }

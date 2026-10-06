@@ -20,6 +20,11 @@ vi.mock('@/lib/org/active-org', () => ({
   getActiveOrgId: getActiveOrgIdMock,
 }));
 
+vi.mock('@/lib/org/resolve-browser-organization', () => ({
+  resolveBrowserOrganizationId: (_partnerType: unknown, direct: string | null) =>
+    Promise.resolve(direct),
+}));
+
 const base: PartnershipDto = {
   id: 'part_1',
   hostOrganizationId: 'org_host_abcdefgh',
@@ -75,14 +80,12 @@ describe('parseVenueShareDraft', () => {
 });
 
 describe('VenueSharePanel', () => {
-  it('shows a pick-a-tenant message and issues no request when there is no active org', async () => {
+  it('shows a sign-in message and issues no request when there is no active org', async () => {
     getActiveOrgIdMock.mockReturnValue(null);
 
     render(<VenueSharePanel />);
 
-    expect(
-      await screen.findByText(/Select an organization to manage its venue share/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Sign in to manage its venue share/i)).toBeInTheDocument();
     expect(listPartnershipsMock).not.toHaveBeenCalled();
   });
 

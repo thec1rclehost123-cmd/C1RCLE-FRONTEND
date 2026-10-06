@@ -21,6 +21,7 @@ describe('@c1rcle/contracts (generated mirror)', () => {
         displayName: 'A',
         role: 'partner',
         avatarUrl: null,
+        mustChangePassword: false,
       },
       accessToken: 'tok',
     };
@@ -34,7 +35,14 @@ describe('@c1rcle/contracts (generated mirror)', () => {
 
   it('sessionSchema is { user, expiresAt } with no wrapper', () => {
     const parsed = sessionSchema.safeParse({
-      user: { id: 'u', email: 'a@b.com', displayName: 'A', role: 'partner', avatarUrl: null },
+      user: {
+        id: 'u',
+        email: 'a@b.com',
+        displayName: 'A',
+        role: 'partner',
+        avatarUrl: null,
+        mustChangePassword: false,
+      },
       expiresAt: 1_800_000_000_000,
     });
     expect(parsed.success).toBe(true);

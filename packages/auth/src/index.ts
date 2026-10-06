@@ -10,13 +10,13 @@ export {
 } from './session-store.js';
 export type { SessionState, SessionStatus } from './session-store.js';
 
-// Auth client exports
 export {
   signup,
   login,
   refresh,
   logout,
   fetchSession,
+  changePassword,
   requestPasswordReset,
   resetPassword,
 } from './auth-client.js';

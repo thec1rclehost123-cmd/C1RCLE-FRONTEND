@@ -7,6 +7,7 @@ import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
 import { PartnerShell } from './PartnerShell';
 
 const navigation = vi.hoisted(() => ({ pathname: '/partner/venue/overview' }));
+const authAccess = vi.hoisted(() => ({ tabVisibility: null as Record<string, boolean> | null }));
 const storedValues = new Map<string, string>();
 
 vi.mock('next/navigation', () => ({
@@ -18,6 +19,7 @@ vi.mock('@/components/providers/DashboardAuthProvider', () => ({
   useDashboardAuth: () => ({
     profile: { displayName: 'Rhea Kapoor' },
     signOut: vi.fn(),
+    tabVisibility: authAccess.tabVisibility,
   }),
 }));
 
@@ -39,6 +41,7 @@ describe('PartnerShell navigation layouts', () => {
 
   beforeEach(() => {
     navigation.pathname = '/partner/venue/overview';
+    authAccess.tabVisibility = null;
     window.localStorage.clear();
   });
 
@@ -91,5 +94,19 @@ describe('PartnerShell navigation layouts', () => {
       ).toBeInTheDocument();
     });
     expect(screen.getByRole('link', { name: 'Overview' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('hides navigation tabs the role matrix withholds', async () => {
+    authAccess.tabVisibility = { overview: false, finance: false, settings: false };
+    const interactionData = await fixturePartnerDataSource.getPartnerShellInteractions('venue');
+
+    render(<PartnerShell studio="venue" interactionData={interactionData}><div>Overview content</div></PartnerShell>);
+
+    expect(screen.queryByRole('link', { name: 'Overview' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Finance' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Settings' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Events' })).toBeInTheDocument();
+    // Segments with no backend opinion stay visible.
+    expect(screen.getByRole('link', { name: 'Marketing' })).toBeInTheDocument();
   });
 });

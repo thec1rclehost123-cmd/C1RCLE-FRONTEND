@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { getActiveOrgId } from '@/lib/org/active-org';
+import { resolveBrowserOrganizationId } from '@/lib/org/resolve-browser-organization';
 import { listPartnerships, setVenueShare } from '@/lib/partner/api-partnerships-repository';
 
 import styles from './VenuePartners.module.css';
@@ -106,7 +107,9 @@ export function VenueSharePanel() {
     const lifecycle = { cancelled: false };
     const isCancelled = (): boolean => lifecycle.cancelled;
     void (async () => {
-      const orgId = getActiveOrgId();
+      // No selection step exists — resolve from the session when the cookie
+      // is absent so a logged-in venue never sees a dead panel.
+      const orgId = await resolveBrowserOrganizationId('venue', getActiveOrgId());
       if (orgId === null) {
         setState('no-org');
         return;
@@ -166,7 +169,7 @@ export function VenueSharePanel() {
 
   if (state === 'loading') return <p className={styles['muted']}>Loading partnerships…</p>;
   if (state === 'no-org') {
-    return <p className={styles['muted']}>Select an organization to manage its venue share.</p>;
+    return <p className={styles['muted']}>Sign in to manage its venue share.</p>;
   }
   if (state === 'error') {
     return <p className={styles['muted']}>Could not load partnerships. Try again in a moment.</p>;

@@ -8,6 +8,8 @@ import { createServerApiClient } from '@/lib/api/server-client';
 import { getActiveOrgIdFromCookieHeader } from '@/lib/org/active-org-cookie';
 import {
   getDiscoverablePartners,
+  getMyOrganizations,
+  getOrganizationAccess,
   getPartnerships,
   getPromoterConnections,
 } from '@/lib/partner/partner-graph-repository';
@@ -60,6 +62,57 @@ export interface StudioPartnersLoaderOptions {
   readonly organizationId?: string | null;
 }
 
+/**
+ * Which organization the studio tab reads as. The cookie wins when present
+ * (explicit user choice); otherwise the org is derived from the session —
+ * login is venue/host/promoter directly, there is no selection step, so the
+ * first org whose server-computed partner type matches the studio is used.
+ * Throws `no-organization` when the account has no orgs at all and
+ * `forbidden` when none of them grants this studio's type.
+ *
+ * Exported so the route can resolve once up front and hand the id to both
+ * the data load (via options) and the client action islands as a prop —
+ * browser cookie reads are only a fallback there, never the source of truth.
+ */
+export async function resolveStudioOrganizationId(
+  client: ServerApiClient,
+  studio: 'venue' | 'host' | 'promoter',
+  options: StudioPartnersLoaderOptions,
+  cookieHeader: string,
+): Promise<string> {
+  const direct =
+    options.organizationId !== undefined
+      ? options.organizationId
+      : getActiveOrgIdFromCookieHeader(cookieHeader);
+  if (direct) return direct;
+
+  const orgs = await getMyOrganizations(client);
+  if (orgs.length === 0) {
+    throw new StudioPartnersLoadError(
+      'no-organization',
+      'This account has no organization yet — the partners tab has no tenant to read.',
+    );
+  }
+  const matches: string[] = [];
+  await Promise.all(
+    orgs.map(async (org) => {
+      try {
+        const access = await getOrganizationAccess(client, org.id);
+        if (access.partnerType === studio) matches.push(org.id);
+      } catch {
+        // An org the caller cannot reach (403, suspended) is dropped rather
+        // than surfaced — same rule as the login-time workspace picker.
+      }
+    }),
+  );
+  const pick = [...matches].sort()[0];
+  if (pick) return pick;
+  throw new StudioPartnersLoadError(
+    'forbidden',
+    `This account has no ${studio} access — none of its organizations grant it.`,
+  );
+}
+
 async function readGraph(client: ServerApiClient, organizationId: string) {
   const [partnerships, promoterConnections] = await Promise.all([
     getPartnerships(client, organizationId),
@@ -73,15 +126,15 @@ export async function loadVenuePartnersData(
 ): Promise<VenuePartnersData> {
   const cookieHeader = (await cookies()).toString();
   const client = options.client ?? createServerApiClient(cookieHeader);
-  const organizationId =
-    options.organizationId !== undefined
-      ? options.organizationId
-      : getActiveOrgIdFromCookieHeader(cookieHeader);
-
-  if (!organizationId) {
+  let organizationId: string;
+  try {
+    organizationId = await resolveStudioOrganizationId(client, 'venue', options, cookieHeader);
+  } catch (cause) {
+    if (cause instanceof StudioPartnersLoadError) throw cause;
     throw new StudioPartnersLoadError(
-      'no-organization',
-      'No active organization selected — the partners tab has no tenant to read.',
+      classifyStudioPartnersFailure(cause),
+      'Could not determine the venue organization for this session.',
+      { cause },
     );
   }
 
@@ -112,15 +165,15 @@ export async function loadHostPartnersData(
 ): Promise<HostPartnersData> {
   const cookieHeader = (await cookies()).toString();
   const client = options.client ?? createServerApiClient(cookieHeader);
-  const organizationId =
-    options.organizationId !== undefined
-      ? options.organizationId
-      : getActiveOrgIdFromCookieHeader(cookieHeader);
-
-  if (!organizationId) {
+  let organizationId: string;
+  try {
+    organizationId = await resolveStudioOrganizationId(client, 'host', options, cookieHeader);
+  } catch (cause) {
+    if (cause instanceof StudioPartnersLoadError) throw cause;
     throw new StudioPartnersLoadError(
-      'no-organization',
-      'No active organization selected — the partners tab has no tenant to read.',
+      classifyStudioPartnersFailure(cause),
+      'Could not determine the host organization for this session.',
+      { cause },
     );
   }
 
@@ -151,15 +204,15 @@ export async function loadPromoterPartnersData(
 ): Promise<PromoterPartnersData> {
   const cookieHeader = (await cookies()).toString();
   const client = options.client ?? createServerApiClient(cookieHeader);
-  const organizationId =
-    options.organizationId !== undefined
-      ? options.organizationId
-      : getActiveOrgIdFromCookieHeader(cookieHeader);
-
-  if (!organizationId) {
+  let organizationId: string;
+  try {
+    organizationId = await resolveStudioOrganizationId(client, 'promoter', options, cookieHeader);
+  } catch (cause) {
+    if (cause instanceof StudioPartnersLoadError) throw cause;
     throw new StudioPartnersLoadError(
-      'no-organization',
-      'No active organization selected — the partners tab has no tenant to read.',
+      classifyStudioPartnersFailure(cause),
+      'Could not determine the promoter organization for this session.',
+      { cause },
     );
   }
 

@@ -18,6 +18,7 @@ import {
 
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 import { getActiveOrgId } from '@/lib/org/active-org';
+import { resolveBrowserOrganizationId } from '@/lib/org/resolve-browser-organization';
 import {
   discoverPartners,
   listPartnerships,
@@ -55,11 +56,13 @@ const TAB_LINKS: readonly { readonly id: PartnersTab; readonly label: string }[]
 ];
 
 // ── Live partnerships (venue ↔ hosts, venue ↔ promoters) ────────────────────
-// Same shape as `VenueSharePanel`: the org id comes from the active-org cookie,
-// every read/mutation is org-scoped server-side with `X-Organization-Id`, and
-// each mutation sends one `Idempotency-Key` per user intent. There is no
-// fixture fallback: without an active org the tab asks to select one, and with
-// one it renders only what the backend returns (loading / error / empty).
+// Same shape as `VenueSharePanel`: the org id comes from the active-org cookie
+// or, when absent, resolves from the session (login is venue/host/promoter
+// directly — there is no selection step). Every read/mutation is org-scoped
+// server-side with `X-Organization-Id`, and each mutation sends one
+// `Idempotency-Key` per user intent. There is no fixture fallback: without a
+// resolvable org the tab asks to sign in, and with one it renders only what
+// the backend returns (loading / error / empty).
 
 type LivePartnerships =
   | { readonly mode: 'no-org' }
@@ -86,7 +89,9 @@ function useLivePartnerships(): LivePartnerships {
     const lifecycle = { cancelled: false };
     const isCancelled = (): boolean => lifecycle.cancelled;
     void (async () => {
-      const orgId = getActiveOrgId();
+      // No selection step exists — login is venue/host/promoter directly — so
+      // a missing cookie resolves from the session instead of blanking the tab.
+      const orgId = await resolveBrowserOrganizationId('venue', getActiveOrgId());
       if (orgId === null) {
         if (!isCancelled()) setState({ mode: 'no-org' });
         return;
@@ -490,7 +495,7 @@ function DiscoverPartners({
   }, [partners, query, city, verifiedOnly]);
 
   if (discovered.mode === 'no-org') {
-    return <p className={styles['muted']}>Select an organization to discover new partners.</p>;
+    return <p className={styles['muted']}>Sign in to discover new partners.</p>;
   }
   if (discovered.mode === 'loading') {
     return <p className={styles['muted']}>Loading partners…</p>;
@@ -632,7 +637,7 @@ function PartnershipRequests({
   }, [live]);
 
   if (live.mode === 'no-org') {
-    return <p className={styles['muted']}>Select an organization to manage connection requests.</p>;
+    return <p className={styles['muted']}>Sign in to manage connection requests.</p>;
   }
   if (live.mode === 'loading') {
     return <p className={styles['muted']}>Loading requests…</p>;
@@ -1022,7 +1027,7 @@ function ConnectedPartners({
   }, [partners, query]);
 
   if (live.mode === 'no-org') {
-    return <p className={styles['muted']}>Select an organization to see its connected partners.</p>;
+    return <p className={styles['muted']}>Sign in to see its connected partners.</p>;
   }
   if (live.mode === 'loading') {
     return <p className={styles['muted']}>Loading partners…</p>;

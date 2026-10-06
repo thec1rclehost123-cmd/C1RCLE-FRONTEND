@@ -17,33 +17,59 @@ import type { PartnerRequest } from '@/data/partner-data-source';
 export function PartnerRequestCard({
   request,
   hostAccent = false,
+  organizationId,
+  pendingRequestId,
+  pendingRequestAction,
+  requestErrorId,
+  requestError,
+  onApproveRequest,
+  onRejectRequest,
 }: {
   readonly request: PartnerRequest;
   readonly hostAccent?: boolean;
+  /** Server-resolved org. Falls back to the active-org cookie when absent. */
+  readonly organizationId?: string | undefined;
+  readonly pendingRequestId?: string | null | undefined;
+  readonly pendingRequestAction?: 'approve' | 'reject' | null | undefined;
+  readonly requestErrorId?: string | null | undefined;
+  readonly requestError?: string | null | undefined;
+  readonly onApproveRequest?: ((request: PartnerRequest) => void) | undefined;
+  readonly onRejectRequest?: ((request: PartnerRequest) => void) | undefined;
 }) {
   const router = useRouter();
-  const [pendingAction, setPendingAction] = useState<'approve' | 'reject' | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [internalPendingAction, setInternalPendingAction] = useState<'approve' | 'reject' | null>(
+    null,
+  );
+  const [internalError, setInternalError] = useState<string | null>(null);
+
   // Rows read from the backend carry their mutation target; rows without one
   // (fixtures, legacy callers) keep their actions disabled.
   const live = request.target ?? null;
 
+  const isPending =
+    (pendingRequestId === request.id && pendingRequestAction != null) ||
+    internalPendingAction !== null;
+  const currentAction =
+    pendingRequestId === request.id && pendingRequestAction != null
+      ? pendingRequestAction
+      : internalPendingAction;
+
   const answer = async (decision: 'approve' | 'reject'): Promise<void> => {
-    const organizationId = getActiveOrgId();
-    if (live === null || organizationId === null) return;
-    setPendingAction(decision);
-    setError(null);
+    const resolvedOrgId = organizationId ?? getActiveOrgId();
+    if (live === null || resolvedOrgId === null) return;
+    setInternalPendingAction(decision);
+    setInternalError(null);
     try {
       if (live.graph === 'partnership') {
         await resolvePartnership(
-          organizationId,
+          resolvedOrgId,
           live.id,
           decision === 'approve' ? 'approve' : 'reject',
           undefined,
         );
       } else {
         await resolvePromoterConnection(
-          organizationId,
+          resolvedOrgId,
           live.id,
           decision === 'approve' ? 'approve' : 'reject',
           undefined,
@@ -51,11 +77,30 @@ export function PartnerRequestCard({
       }
       router.refresh();
     } catch {
-      setError('Could not update the request. Check your connection and try again.');
+      setInternalError('Could not update the request. Check your connection and try again.');
     } finally {
-      setPendingAction(null);
+      setInternalPendingAction(null);
     }
   };
+
+  const handleApprove = () => {
+    if (onApproveRequest) {
+      onApproveRequest(request);
+      return;
+    }
+    void answer('approve');
+  };
+
+  const handleReject = () => {
+    if (onRejectRequest) {
+      onRejectRequest(request);
+      return;
+    }
+    void answer('reject');
+  };
+
+  const displayError =
+    requestErrorId === request.id && requestError != null ? requestError : internalError;
 
   return (
     <article className={styles['requestCard']}>
@@ -72,31 +117,27 @@ export function PartnerRequestCard({
           <p>{request.note}</p>
         </div>
       </div>
-      {error ? <p role="alert">{error}</p> : null}
+      {displayError ? <p role="alert">{displayError}</p> : null}
       <div className={styles['requestActions']}>
         {request.direction === 'incoming' ? (
           <>
             <Button
               type="button"
               variant="ghost"
-              disabled={live === null || pendingAction !== null}
+              disabled={live === null || isPending}
               title={live === null ? 'Request actions are unavailable in fixture mode' : 'Decline'}
-              onClick={() => {
-                void answer('reject');
-              }}
+              onClick={handleReject}
             >
-              {pendingAction === 'reject' ? 'Declining…' : 'Decline'}
+              {isPending && currentAction === 'reject' ? 'Declining…' : 'Decline'}
             </Button>
             <Button
               type="button"
               variant="primary"
-              disabled={live === null || pendingAction !== null}
+              disabled={live === null || isPending}
               title={live === null ? 'Request actions are unavailable in fixture mode' : 'Accept'}
-              onClick={() => {
-                void answer('approve');
-              }}
+              onClick={handleApprove}
             >
-              {pendingAction === 'approve' ? 'Accepting…' : 'Accept'}
+              {isPending && currentAction === 'approve' ? 'Accepting…' : 'Accept'}
             </Button>
           </>
         ) : (

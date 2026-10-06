@@ -631,6 +631,23 @@
   }
 }
 
+.requestSections {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+.requestSectionHeading {
+  margin: 0 0 10px;
+  color: var(--partner-v3-ink-muted);
+  font: 700 11px/1 var(--font-display), sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.staffSection {
+  display: grid;
+  gap: 28px;
+}
+
 .promoterPartnersScreen {
   min-width: 0;
 }

@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
+import { visibleStudioNavigation } from '@/lib/access/studio-tab-access';
 import { getStudioConfig, type StudioRole } from '@/studios/studio-config';
 
 import { MobileNavigation } from './MobileNavigation';
@@ -54,10 +55,14 @@ export function PartnerShell({
     getServerNavigationLayout,
   );
   const userName = auth.profile?.displayName ?? 'Partner';
+  // Role-limited navigation: tabs the backend's per-role matrix withholds
+  // never render. Fail-open while access is still loading (a null map shows
+  // every tab until the access read lands).
+  const visibleConfig = visibleStudioNavigation(config, auth.tabVisibility);
   const appClass = styles['app'] ?? '';
   const activeLabel =
-    config.navigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
-      ?.label ?? config.label;
+    visibleConfig.navigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
+      ?.label ?? visibleConfig.label;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -95,7 +100,7 @@ export function PartnerShell({
     >
       {navigationLayout === 'side' ? (
         <PartnerSidebar
-          config={config}
+          config={visibleConfig}
           pathname={pathname}
           onLayoutToggle={toggleNavigationLayout}
         />
@@ -118,7 +123,7 @@ export function PartnerShell({
         <main className={styles['content']}>{children}</main>
       </div>
       <MobileNavigation
-        config={config}
+        config={visibleConfig}
         pathname={pathname}
         open={mobileOpen}
         onClose={() => {
