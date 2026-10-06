@@ -15,14 +15,9 @@ test.describe('C1RCLE Partner Dashboard', () => {
 
   test('puts the returning-user action first in keyboard order', async ({ page }) => {
     await page.goto('/');
-    const returningUserLink = page.getByRole('link', { name: 'Already a User' });
-    // Wait for the auth gate to resolve so the first Tab starts from the real
-    // landing DOM — otherwise Tab fires while nothing is focusable and focus
-    // stays stuck on <body>.
-    await expect(returningUserLink).toBeVisible();
     await page.keyboard.press('Tab');
 
-    await expect(returningUserLink).toBeFocused();
+    await expect(page.getByRole('link', { name: 'Already a User' })).toBeFocused();
   });
 
   test('exposes every partner role on the login route', async ({ page }) => {
