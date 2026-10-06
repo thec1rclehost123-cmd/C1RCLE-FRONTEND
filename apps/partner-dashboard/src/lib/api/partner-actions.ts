@@ -1,8 +1,9 @@
-import { apiClient } from '@/lib/api/client';
+import { z } from 'zod';
+
 import { paginatedSchema } from '@c1rcle/api-client';
 import { partnershipDtoSchema, promoterConnectionDtoSchema } from '@c1rcle/contracts';
 
-import { z } from 'zod';
+import { apiClient } from '@/lib/api/client';
 
 function commandHeaders(organizationId: string, idempotencyKey?: string): Record<string, string> {
   return {
