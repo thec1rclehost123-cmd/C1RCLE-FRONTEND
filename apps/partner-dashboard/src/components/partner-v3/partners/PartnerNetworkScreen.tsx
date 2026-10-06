@@ -28,7 +28,7 @@ export interface PartnerNetworkData {
   readonly staff: readonly StaffMember[];
 }
 
-export type PartnerRequestActions<TPartner> = {
+export interface PartnerRequestActions<TPartner> {
   readonly pendingRequestId?: string | null;
   readonly pendingRequestAction?: 'approve' | 'reject' | null;
   readonly requestErrorId?: string | null;
@@ -39,7 +39,7 @@ export type PartnerRequestActions<TPartner> = {
   readonly onApproveRequest?: ((request: PartnerRequest) => void) | undefined;
   readonly onRejectRequest?: ((request: PartnerRequest) => void) | undefined;
   readonly onConnectPartner?: ((partner: TPartner) => void) | undefined;
-};
+}
 
 export interface PartnerNetworkScreenProps {
   readonly data: PartnerNetworkData;

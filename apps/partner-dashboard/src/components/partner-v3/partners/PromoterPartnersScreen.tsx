@@ -8,8 +8,8 @@ import { EmptyState } from '@/components/partner-v3/States';
 import { PartnerRequestCard } from './PartnerRequestCard';
 import styles from './partners.module.css';
 import { PromoterPartnerCard } from './PromoterPartnerCard';
-import type { PartnerRequestActions } from './PartnerNetworkScreen';
 
+import type { PartnerRequestActions } from './PartnerNetworkScreen';
 import type {
   PartnerRequest,
   PromoterPartnerFilter,
