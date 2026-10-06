@@ -37,7 +37,9 @@ export function PartnerRequestCard({
   readonly onRejectRequest?: ((request: PartnerRequest) => void) | undefined;
 }) {
   const router = useRouter();
-  const [internalPendingAction, setInternalPendingAction] = useState<'approve' | 'reject' | null>(null);
+  const [internalPendingAction, setInternalPendingAction] = useState<'approve' | 'reject' | null>(
+    null,
+  );
   const [internalError, setInternalError] = useState<string | null>(null);
 
   // Rows read from the backend carry their mutation target; rows without one
@@ -98,9 +100,7 @@ export function PartnerRequestCard({
   };
 
   const displayError =
-    requestErrorId === request.id && requestError != null
-      ? requestError
-      : internalError;
+    requestErrorId === request.id && requestError != null ? requestError : internalError;
 
   return (
     <article className={styles['requestCard']}>
@@ -117,9 +117,7 @@ export function PartnerRequestCard({
           <p>{request.note}</p>
         </div>
       </div>
-      {displayError ? (
-        <p role="alert">{displayError}</p>
-      ) : null}
+      {displayError ? <p role="alert">{displayError}</p> : null}
       <div className={styles['requestActions']}>
         {request.direction === 'incoming' ? (
           <>

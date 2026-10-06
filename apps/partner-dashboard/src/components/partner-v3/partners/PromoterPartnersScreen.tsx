@@ -70,10 +70,7 @@ const requestsForTab = (
         ? data.declined
         : [];
 
-
-
-type PromoterPartnersScreenProps =
-  PromoterPartnersDataProps &
+type PromoterPartnersScreenProps = PromoterPartnersDataProps &
   PartnerRequestActions<PromoterPartnerRecord>;
 
 interface PromoterPartnersDataProps {
@@ -208,7 +205,7 @@ export function PromoterPartnersScreen({
                   key={partner.id}
                   partner={partner}
                   connecting={connectingPartnerId === partner.id}
-                  connectError={connectErrorId === partner.id ? connectError ?? null : null}
+                  connectError={connectErrorId === partner.id ? (connectError ?? null) : null}
                   onConnect={onConnectPartner}
                 />
               ))}

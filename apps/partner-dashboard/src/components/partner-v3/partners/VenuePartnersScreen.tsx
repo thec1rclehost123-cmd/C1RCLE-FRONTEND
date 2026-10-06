@@ -7,9 +7,7 @@ import type {
   VenuePartnersData,
 } from '@/data/partner-data-source';
 
-type VenuePartnersScreenProps =
-  VenuePartnersDataProps &
-  PartnerRequestActions<PartnerRelationship>;
+type VenuePartnersScreenProps = VenuePartnersDataProps & PartnerRequestActions<PartnerRelationship>;
 
 interface VenuePartnersDataProps {
   readonly data: VenuePartnersData;

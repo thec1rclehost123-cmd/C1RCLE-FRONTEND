@@ -7,9 +7,7 @@ import type {
   HostPartnersData,
 } from '@/data/partner-data-source';
 
-type HostPartnersScreenProps =
-  HostPartnersDataProps &
-  PartnerRequestActions<PartnerRelationship>;
+type HostPartnersScreenProps = HostPartnersDataProps & PartnerRequestActions<PartnerRelationship>;
 
 interface HostPartnersDataProps {
   readonly data: HostPartnersData;

@@ -300,7 +300,7 @@ export function PartnerNetworkScreen({
                 href={hrefFor({ profileId: partner.id })}
                 hostAccent={hostAccent}
                 connecting={connectingPartnerId === partner.id}
-                connectError={connectErrorId === partner.id ? connectError ?? null : null}
+                connectError={connectErrorId === partner.id ? (connectError ?? null) : null}
                 onConnect={onConnect}
               />
             ))}
@@ -326,7 +326,7 @@ export function PartnerNetworkScreen({
             {...(hostAccent ? { primaryButtonClassName: styles['hostPrimaryButton'] } : {})}
             hostAccent={hostAccent}
             connecting={connectingPartnerId === profile.id}
-            connectError={connectErrorId === profile.id ? connectError ?? null : null}
+            connectError={connectErrorId === profile.id ? (connectError ?? null) : null}
             onConnect={onConnect}
           />
         ) : null}

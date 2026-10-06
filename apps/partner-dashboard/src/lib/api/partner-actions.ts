@@ -1,9 +1,6 @@
 import { apiClient } from '@/lib/api/client';
 import { paginatedSchema } from '@c1rcle/api-client';
-import {
-  partnershipDtoSchema,
-  promoterConnectionDtoSchema,
-} from '@c1rcle/contracts';
+import { partnershipDtoSchema, promoterConnectionDtoSchema } from '@c1rcle/contracts';
 
 import { z } from 'zod';
 

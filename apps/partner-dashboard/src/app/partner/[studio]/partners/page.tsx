@@ -1,6 +1,11 @@
 import { StudioPartnersClient } from '@/components/partner-v3/partners/StudioPartnersClient';
 
-import type { PartnerSegment, PartnerSubView, PromoterPartnerFilter, PromoterPartnerTab } from '@/data/partner-data-source';
+import type {
+  PartnerSegment,
+  PartnerSubView,
+  PromoterPartnerFilter,
+  PromoterPartnerTab,
+} from '@/data/partner-data-source';
 
 export default async function StudioPartnersPage({
   params,
@@ -10,8 +15,7 @@ export default async function StudioPartnersPage({
   readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { studio } = await params;
-  if (studio !== 'venue' && studio !== 'host' && studio !== 'promoter')
-    return null;
+  if (studio !== 'venue' && studio !== 'host' && studio !== 'promoter') return null;
 
   const query = await searchParams;
   const getValue = (value: string | string[] | undefined) =>
@@ -41,5 +45,15 @@ export default async function StudioPartnersPage({
   const promoterFilter: PromoterPartnerFilter =
     filterValue === 'venues' || filterValue === 'hosts' ? filterValue : 'all';
 
-  return <StudioPartnersClient studio={studio} segment={segment} subView={subView} search={getValue(query['search']) ?? ''} promoterTab={promoterTab} promoterFilter={promoterFilter} {...(profileId ? { profileId } : {})} />;
+  return (
+    <StudioPartnersClient
+      studio={studio}
+      segment={segment}
+      subView={subView}
+      search={getValue(query['search']) ?? ''}
+      promoterTab={promoterTab}
+      promoterFilter={promoterFilter}
+      {...(profileId ? { profileId } : {})}
+    />
+  );
 }

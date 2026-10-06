@@ -57,13 +57,7 @@ describe('PartnerCard', () => {
     const user = userEvent.setup();
     const onConnect = vi.fn();
 
-    render(
-      <PartnerCard
-        partner={discoverHost}
-        href="#"
-        onConnect={onConnect}
-      />,
-    );
+    render(<PartnerCard partner={discoverHost} href="#" onConnect={onConnect} />);
 
     await user.click(screen.getByRole('button', { name: 'Connect' }));
 
@@ -74,13 +68,7 @@ describe('PartnerCard', () => {
     const user = userEvent.setup();
     const onConnect = vi.fn();
 
-    render(
-      <PartnerCard
-        partner={discoverVenue}
-        href="#"
-        onConnect={onConnect}
-      />,
-    );
+    render(<PartnerCard partner={discoverVenue} href="#" onConnect={onConnect} />);
 
     await user.click(screen.getByRole('button', { name: 'Connect' }));
 
@@ -91,13 +79,7 @@ describe('PartnerCard', () => {
     const user = userEvent.setup();
     const onConnect = vi.fn();
 
-    render(
-      <PartnerCard
-        partner={discoverPromoter}
-        href="#"
-        onConnect={onConnect}
-      />,
-    );
+    render(<PartnerCard partner={discoverPromoter} href="#" onConnect={onConnect} />);
 
     await user.click(screen.getByRole('button', { name: 'Connect' }));
 
@@ -105,18 +87,9 @@ describe('PartnerCard', () => {
   });
 
   it('shows the connecting state', () => {
-    render(
-      <PartnerCard
-        partner={discoverHost}
-        href="#"
-        connecting
-        onConnect={vi.fn()}
-      />,
-    );
+    render(<PartnerCard partner={discoverHost} href="#" connecting onConnect={vi.fn()} />);
 
-    expect(
-      screen.getByRole('button', { name: 'Connecting…' }),
-    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Connecting…' })).toBeDisabled();
   });
 
   it('shows a connection error', () => {
@@ -129,29 +102,17 @@ describe('PartnerCard', () => {
       />,
     );
 
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'Create a venue before inviting hosts',
-    );
+    expect(screen.getByRole('alert')).toHaveTextContent('Create a venue before inviting hosts');
   });
 
   it('hides Connect when the discover row carries no request target', () => {
-    render(
-      <PartnerCard
-        partner={{ ...discoverHost, organizationId: undefined }}
-        href="#"
-      />,
-    );
+    render(<PartnerCard partner={{ ...discoverHost, organizationId: undefined }} href="#" />);
 
     expect(screen.queryByRole('button', { name: 'Connect' })).not.toBeInTheDocument();
   });
 
   it('renders profile link correctly', () => {
-    render(
-      <PartnerCard
-        partner={discoverHost}
-        href="/partner/profile/org_host_9"
-      />,
-    );
+    render(<PartnerCard partner={discoverHost} href="/partner/profile/org_host_9" />);
 
     const link = screen.getByRole('link', { name: /View profile/ });
     expect(link).toHaveAttribute('href', '/partner/profile/org_host_9');
