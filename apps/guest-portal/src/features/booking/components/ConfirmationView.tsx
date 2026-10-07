@@ -77,7 +77,10 @@ export function ConfirmationView({
                 </span>
               </div>
 
-              <h2 id="digital-pass-heading" className="mt-4 text-2xl font-black uppercase tracking-tight sm:text-3xl">
+              <h2
+                id="digital-pass-heading"
+                className="mt-4 text-2xl font-black uppercase tracking-tight sm:text-3xl"
+              >
                 {event.title}
               </h2>
 
@@ -96,7 +99,9 @@ export function ConfirmationView({
                     Venue
                   </p>
                   <p className="mt-1 text-sm font-bold text-white">{event.venue}</p>
-                  <p className="text-xs text-white/60">{event.address}, {event.city}</p>
+                  <p className="text-xs text-white/60">
+                    {event.address}, {event.city}
+                  </p>
                 </div>
 
                 <div>

@@ -3,7 +3,14 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 
-import { logout, markAnonymous, markHydrated, refresh, setSession, useSessionStore } from '@c1rcle/auth';
+import {
+  logout,
+  markAnonymous,
+  markHydrated,
+  refresh,
+  setSession,
+  useSessionStore,
+} from '@c1rcle/auth';
 
 import type { User } from '@c1rcle/contracts';
 

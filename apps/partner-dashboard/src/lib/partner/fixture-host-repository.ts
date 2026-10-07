@@ -8,8 +8,6 @@ import type {
   PartnerOrganizationSummary,
   PartnerProfile,
   PartnerRelationship,
-  PartnershipDto,
-  RequestPartnershipRequest,
 } from './contracts';
 
 const profile: PartnerProfile = {
@@ -19,35 +17,158 @@ const profile: PartnerProfile = {
   city: 'Pune',
   verified: true,
   completion: 92,
-  description: 'Independent culture collective producing intimate rooms, rooftop sessions and community-led nights.',
+  description:
+    'Independent culture collective producing intimate rooms, rooftop sessions and community-led nights.',
   categories: ['Live music', 'Indie', 'Culture'],
 };
 
 const events: readonly PartnerEventSummary[] = [
-  { id: 'rooftop-jazz', name: 'Rooftop Jazz', date: 'Fri, 18 Sep', time: '7:30 PM', venue: 'Skyline Social', host: profile.name, city: 'Pune', status: 'on-sale', category: 'Live music', ticketsSold: 184, capacity: 260, grossPaise: 14720000, checkIns: 0, accent: 'linear-gradient(135deg,#c15c98,#4a173b)' },
-  { id: 'after-hours', name: 'After Hours', date: 'Sat, 26 Sep', time: '10:00 PM', venue: 'The Docks', host: profile.name, city: 'Mumbai', status: 'scheduled', category: 'Electronic', ticketsSold: 92, capacity: 400, grossPaise: 9200000, checkIns: 0, accent: 'linear-gradient(135deg,#582fff,#160a54)' },
-  { id: 'soul-sunday', name: 'Soul Sunday', date: 'Sun, 4 Oct', time: '5:00 PM', venue: 'Garden Terrace', host: profile.name, city: 'Pune', status: 'draft', category: 'Sundowner', ticketsSold: 0, capacity: 220, grossPaise: 0, checkIns: 0, accent: 'linear-gradient(135deg,#ffb020,#783c00)' },
-  { id: 'mono-room', name: 'Mono Room', date: 'Fri, 10 Jul', time: '9:00 PM', venue: 'Basement 9', host: profile.name, city: 'Pune', status: 'completed', category: 'Alternative', ticketsSold: 208, capacity: 240, grossPaise: 16640000, checkIns: 196, accent: 'linear-gradient(135deg,#56616f,#15191f)' },
+  {
+    id: 'rooftop-jazz',
+    name: 'Rooftop Jazz',
+    date: 'Fri, 18 Sep',
+    time: '7:30 PM',
+    venue: 'Skyline Social',
+    host: profile.name,
+    city: 'Pune',
+    status: 'on-sale',
+    category: 'Live music',
+    ticketsSold: 184,
+    capacity: 260,
+    grossPaise: 14720000,
+    checkIns: 0,
+    accent: 'linear-gradient(135deg,#c15c98,#4a173b)',
+  },
+  {
+    id: 'after-hours',
+    name: 'After Hours',
+    date: 'Sat, 26 Sep',
+    time: '10:00 PM',
+    venue: 'The Docks',
+    host: profile.name,
+    city: 'Mumbai',
+    status: 'scheduled',
+    category: 'Electronic',
+    ticketsSold: 92,
+    capacity: 400,
+    grossPaise: 9200000,
+    checkIns: 0,
+    accent: 'linear-gradient(135deg,#582fff,#160a54)',
+  },
+  {
+    id: 'soul-sunday',
+    name: 'Soul Sunday',
+    date: 'Sun, 4 Oct',
+    time: '5:00 PM',
+    venue: 'Garden Terrace',
+    host: profile.name,
+    city: 'Pune',
+    status: 'draft',
+    category: 'Sundowner',
+    ticketsSold: 0,
+    capacity: 220,
+    grossPaise: 0,
+    checkIns: 0,
+    accent: 'linear-gradient(135deg,#ffb020,#783c00)',
+  },
+  {
+    id: 'mono-room',
+    name: 'Mono Room',
+    date: 'Fri, 10 Jul',
+    time: '9:00 PM',
+    venue: 'Basement 9',
+    host: profile.name,
+    city: 'Pune',
+    status: 'completed',
+    category: 'Alternative',
+    ticketsSold: 208,
+    capacity: 240,
+    grossPaise: 16640000,
+    checkIns: 196,
+    accent: 'linear-gradient(135deg,#56616f,#15191f)',
+  },
 ];
 
 const detailFor = (event: PartnerEventSummary): PartnerEventDetail => ({
   ...event,
-  description: 'A carefully programmed room designed around sound, conversation and the people who keep the city moving.',
+  description:
+    'A carefully programmed room designed around sound, conversation and the people who keep the city moving.',
   ticketTiers: [
-    { id: 'early', name: 'Early access', pricePaise: 60000, sold: Math.min(event.ticketsSold, 80), inventory: 80 },
-    { id: 'general', name: 'General admission', pricePaise: 80000, sold: Math.max(event.ticketsSold - 80, 0), inventory: Math.max(event.capacity - 80, 0) },
+    {
+      id: 'early',
+      name: 'Early access',
+      pricePaise: 60000,
+      sold: Math.min(event.ticketsSold, 80),
+      inventory: 80,
+    },
+    {
+      id: 'general',
+      name: 'General admission',
+      pricePaise: 80000,
+      sold: Math.max(event.ticketsSold - 80, 0),
+      inventory: Math.max(event.capacity - 80, 0),
+    },
   ],
   promoterCount: 6,
   salesTrend: [8, 14, 12, 21, 28, 34, 31, 46, 54, 62, 78, 91],
-  audienceCities: [{ label: event.city, value: 68 }, { label: 'Mumbai', value: 19 }, { label: 'Bengaluru', value: 8 }, { label: 'Other', value: 5 }],
-  attribution: [{ label: 'Host profile', clicks: 1460, tickets: 79 }, { label: 'Promoter links', clicks: 1120, tickets: 64 }, { label: 'Explore', clicks: 890, tickets: 41 }],
+  audienceCities: [
+    { label: event.city, value: 68 },
+    { label: 'Mumbai', value: 19 },
+    { label: 'Bengaluru', value: 8 },
+    { label: 'Other', value: 5 },
+  ],
+  attribution: [
+    { label: 'Host profile', clicks: 1460, tickets: 79 },
+    { label: 'Promoter links', clicks: 1120, tickets: 64 },
+    { label: 'Explore', clicks: 890, tickets: 41 },
+  ],
 });
 
 const relationships: readonly PartnerRelationship[] = [
-  { id: 'skyline', kind: 'venue', name: 'Skyline Social', city: 'Pune', verified: true, status: 'partnered', eventsTogether: 9, responseTime: '< 2 hours', categories: ['Rooftop', 'Live music'] },
-  { id: 'docks', kind: 'venue', name: 'The Docks', city: 'Mumbai', verified: true, status: 'partnered', eventsTogether: 4, responseTime: '< 1 day', categories: ['Warehouse', 'Electronic'] },
-  { id: 'nightowl', kind: 'promoter', name: 'Night Owl', city: 'Mumbai', verified: true, status: 'partnered', eventsTogether: 7, responseTime: '< 4 hours', categories: ['House', 'Rooftops'] },
-  { id: 'sonder', kind: 'promoter', name: 'Sonder Social', city: 'Pune', verified: false, status: 'pending', eventsTogether: 1, responseTime: '< 1 day', categories: ['Indie', 'Culture'] },
+  {
+    id: 'skyline',
+    kind: 'venue',
+    name: 'Skyline Social',
+    city: 'Pune',
+    verified: true,
+    status: 'partnered',
+    eventsTogether: 9,
+    responseTime: '< 2 hours',
+    categories: ['Rooftop', 'Live music'],
+  },
+  {
+    id: 'docks',
+    kind: 'venue',
+    name: 'The Docks',
+    city: 'Mumbai',
+    verified: true,
+    status: 'partnered',
+    eventsTogether: 4,
+    responseTime: '< 1 day',
+    categories: ['Warehouse', 'Electronic'],
+  },
+  {
+    id: 'nightowl',
+    kind: 'promoter',
+    name: 'Night Owl',
+    city: 'Mumbai',
+    verified: true,
+    status: 'partnered',
+    eventsTogether: 7,
+    responseTime: '< 4 hours',
+    categories: ['House', 'Rooftops'],
+  },
+  {
+    id: 'sonder',
+    kind: 'promoter',
+    name: 'Sonder Social',
+    city: 'Pune',
+    verified: false,
+    status: 'pending',
+    eventsTogether: 1,
+    responseTime: '< 1 day',
+    categories: ['Indie', 'Culture'],
+  },
 ];
 
 const finance: PartnerFinanceSummary = {
@@ -57,9 +178,27 @@ const finance: PartnerFinanceSummary = {
   nextPayout: 'Fri, 25 Sep',
   payoutAccount: 'HDFC ••4412',
   payouts: [
-    { id: 'pay-901', createdAt: '25 Aug', amountPaise: 6240000, status: 'paid', accountLabel: 'HDFC ••4412' },
-    { id: 'pay-902', createdAt: '25 Jul', amountPaise: 7180000, status: 'paid', accountLabel: 'HDFC ••4412' },
-    { id: 'pay-903', createdAt: '25 Sep', amountPaise: 8320000, status: 'scheduled', accountLabel: 'HDFC ••4412' },
+    {
+      id: 'pay-901',
+      createdAt: '25 Aug',
+      amountPaise: 6240000,
+      status: 'paid',
+      accountLabel: 'HDFC ••4412',
+    },
+    {
+      id: 'pay-902',
+      createdAt: '25 Jul',
+      amountPaise: 7180000,
+      status: 'paid',
+      accountLabel: 'HDFC ••4412',
+    },
+    {
+      id: 'pay-903',
+      createdAt: '25 Sep',
+      amountPaise: 8320000,
+      status: 'scheduled',
+      accountLabel: 'HDFC ••4412',
+    },
   ],
 };
 
@@ -67,9 +206,36 @@ const overview: HostOverview = {
   profile,
   nextEvent: events[0] ?? null,
   recentOrders: [
-    { id: 'host-order-1', eventId: 'rooftop-jazz', eventName: 'Rooftop Jazz', createdAt: '8 minutes ago', ticketCount: 2, channel: 'Explore', amountPaise: 160000, status: 'confirmed' },
-    { id: 'host-order-2', eventId: 'after-hours', eventName: 'After Hours', createdAt: '24 minutes ago', ticketCount: 3, channel: 'Partner link', amountPaise: 300000, status: 'confirmed' },
-    { id: 'host-order-3', eventId: 'rooftop-jazz', eventName: 'Rooftop Jazz', createdAt: 'Yesterday', ticketCount: 1, channel: 'Host profile', amountPaise: 80000, status: 'refunded' },
+    {
+      id: 'host-order-1',
+      eventId: 'rooftop-jazz',
+      eventName: 'Rooftop Jazz',
+      createdAt: '8 minutes ago',
+      ticketCount: 2,
+      channel: 'Explore',
+      amountPaise: 160000,
+      status: 'confirmed',
+    },
+    {
+      id: 'host-order-2',
+      eventId: 'after-hours',
+      eventName: 'After Hours',
+      createdAt: '24 minutes ago',
+      ticketCount: 3,
+      channel: 'Partner link',
+      amountPaise: 300000,
+      status: 'confirmed',
+    },
+    {
+      id: 'host-order-3',
+      eventId: 'rooftop-jazz',
+      eventName: 'Rooftop Jazz',
+      createdAt: 'Yesterday',
+      ticketCount: 1,
+      channel: 'Host profile',
+      amountPaise: 80000,
+      status: 'refunded',
+    },
   ],
   performance: [12, 18, 16, 27, 33, 42, 38, 51, 64, 72, 81, 96, 108, 124],
   calendar: [
@@ -85,10 +251,20 @@ const organizations: readonly PartnerOrganizationSummary[] = [
 ];
 
 export const fixtureHostRepository: HostRepository = {
-  getOrganizations() { return Promise.resolve(organizations); },
-  getOverview() { return Promise.resolve(overview); },
-  getEvents() { return Promise.resolve(events); },
-  getEvent(eventId) { return Promise.resolve(events.find((event) => event.id === eventId)).then((event) => event ? detailFor(event) : null); },
+  getOrganizations() {
+    return Promise.resolve(organizations);
+  },
+  getOverview() {
+    return Promise.resolve(overview);
+  },
+  getEvents() {
+    return Promise.resolve(events);
+  },
+  getEvent(eventId) {
+    return Promise.resolve(events.find((event) => event.id === eventId)).then((event) =>
+      event ? detailFor(event) : null,
+    );
+  },
   getEventAnalytics(eventId) {
     const event = events.find((candidate) => candidate.id === eventId);
     if (!event) return Promise.resolve(null);
@@ -101,64 +277,16 @@ export const fixtureHostRepository: HostRepository = {
     };
     return Promise.resolve(analytics);
   },
-  getPartners() { return Promise.resolve(relationships); },
-  getFinance() { return Promise.resolve(finance); },
-  getProfile() { return Promise.resolve(profile); },
-  requestPartnership(input) { return Promise.resolve().then(() => createFixturePartnership(input)); },
-  resolvePartnership(partnershipId, action, reason) {
-    return Promise.resolve().then(() => transitionFixturePartnership(partnershipId, action, reason));
+  getPartners() {
+    return Promise.resolve(relationships);
   },
-  getPartnerships() {
-    return Promise.resolve({
-      items: [...fixturePartnerships],
-      pageInfo: { hasNextPage: false },
-    });
+  getFinance() {
+    return Promise.resolve(finance);
   },
+  getProfile() {
+    return Promise.resolve(profile);
+  },
+  requestPartnership: () => Promise.reject(new Error('Not implemented')),
+  resolvePartnership: () => Promise.reject(new Error('Not implemented')),
+  getPartnerships: () => Promise.reject(new Error('Not implemented')),
 };
-
-/* ── In-memory venue↔host request lifecycle (fixture only) ─────────────────── */
-
-const fixturePartnerships: PartnershipDto[] = [];
-
-let fixturePartnershipSeq = 0;
-
-function createFixturePartnership(input: RequestPartnershipRequest): PartnershipDto {
-  fixturePartnershipSeq += 1;
-  const now = new Date().toISOString();
-  const partnership: PartnershipDto = {
-    id: `fixture-partnership-${fixturePartnershipSeq}`,
-    hostOrganizationId: input.initiatedBy === 'host' ? 'fixture-host-org' : (input.hostOrganizationId ?? 'fixture-host-org'),
-    venueOrganizationId: 'fixture-venue-org',
-    venueId: input.venueId,
-    initiatedBy: input.initiatedBy,
-    status: 'pending',
-    message: input.message ?? null,
-    resolutionReason: null,
-    resolvedAt: null,
-    version: 1,
-    createdAt: now,
-    updatedAt: now,
-  };
-  fixturePartnerships.push(partnership);
-  return partnership;
-}
-
-function transitionFixturePartnership(
-  partnershipId: string,
-  action: 'approve' | 'reject' | 'block' | 'end',
-  reason?: string,
-): PartnershipDto {
-  const partnership = fixturePartnerships.find((candidate) => candidate.id === partnershipId);
-  if (!partnership) throw new Error(`Partnership ${partnershipId} not found`);
-  const status = action === 'approve' ? 'active' : action === 'reject' ? 'rejected' : action === 'block' ? 'blocked' : 'ended';
-  const transitioned: PartnershipDto = {
-    ...partnership,
-    status,
-    resolutionReason: reason ?? null,
-    resolvedAt: new Date().toISOString(),
-    version: partnership.version + 1,
-    updatedAt: new Date().toISOString(),
-  };
-  fixturePartnerships.splice(fixturePartnerships.indexOf(partnership), 1, transitioned);
-  return transitioned;
-}

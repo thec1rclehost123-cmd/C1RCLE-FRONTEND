@@ -22,7 +22,16 @@ export interface OverviewEvent {
   readonly imageAlt?: string;
   readonly status: 'live' | 'draft' | 'past';
   readonly sold: number;
-  readonly capacity: number;
+  /**
+   * `null` when the venue never declared one.
+   *
+   * Deliberately not `0`: the screen computes `sold / capacity` for a
+   * sell-through percentage, and `0` would render as divide-by-zero rather than
+   * "not declared". A `0` is a real capacity only for a room that genuinely
+   * holds nobody, which the domain does not allow (`createVenue` rejects
+   * non-positive capacity).
+   */
+  readonly capacity: number | null;
 }
 
 export interface OverviewTrendSeries {
@@ -46,8 +55,8 @@ export interface OverviewActivity {
 export interface OverviewCalendarDay {
   readonly day: number;
   readonly eventCount?: number;
-  readonly isBlocked?: boolean;
   readonly isToday?: boolean;
+  readonly isBlocked?: boolean;
 }
 
 export interface OverviewNetworkMember {
@@ -61,10 +70,23 @@ export interface OverviewNetworkMember {
 }
 
 export interface OverviewData {
-  readonly dataStatus: 'fixture';
+  /**
+   * `api` once the screen is reading real endpoints. The screen renders a
+   * "Fixture data" badge from this, so leaving it at `fixture` while serving
+   * real numbers would be a lie told to the user, and setting it to `api` while
+   * still serving fixture numbers would be the same lie in reverse.
+   */
+  readonly dataStatus: 'fixture' | 'api';
   readonly todayLabel: string;
   readonly greeting: string;
-  readonly nextEvent: OverviewEvent & { readonly doorsLabel: string };
+  /**
+   * `doorsLabel` is optional because the backend has **no doors time**. An event
+   * carries `startAt`/`endAt` and nothing else — a "doors open at" field was
+   * never modelled, and inferring one (say, an hour before start) would put a
+   * time on the screen that no partner ever set. Absent means the card simply
+   * does not claim to know.
+   */
+  readonly nextEvent: OverviewEvent & { readonly doorsLabel?: string };
   readonly trends: readonly OverviewTrendSeries[];
   readonly recentActivity: readonly OverviewActivity[];
   readonly calendar: {
@@ -436,8 +458,7 @@ export interface PromoterEventsData {
 export type PartnerKind = 'host' | 'promoter' | 'venue';
 export type PartnerSegment = 'hosts' | 'venues' | 'promoters' | 'staff';
 export type PartnerSubView = 'connected' | 'discover' | 'requests';
-export type PartnerRelationshipStatus =
-  'Partnered' | 'Invite sent' | 'Waiting on them' | 'Action needed';
+export type PartnerRelationshipStatus = 'Partnered' | 'Invite sent' | 'Waiting on them';
 export type PartnerRequestDirection = 'incoming' | 'outgoing';
 export type PartnerCardTone = 'orange' | 'violet' | 'teal' | 'pink' | 'gold' | 'indigo' | 'slate';
 export type PartnerPermission =
@@ -466,13 +487,18 @@ export interface PartnerProfile {
   readonly upcomingEvents: readonly PartnerUpcomingEvent[];
   readonly verified: boolean;
   readonly cardTone: PartnerCardTone;
+
+  // Required by discovery/connect flows
+  readonly organizationId?: string | undefined;
+  readonly venueId?: string | undefined;
 }
 
 export interface PartnerRelationship extends PartnerProfile {
   readonly status?: PartnerRelationshipStatus | undefined;
-  /** Real backend ids for connection requests (never dummy). */
-  readonly organizationId?: string | null;
-  readonly venueId?: string | null;
+
+  // Required by discovery/connect flows
+  readonly organizationId?: string | undefined;
+  readonly venueId?: string | undefined;
 }
 
 export interface PartnerRequest {
@@ -482,6 +508,15 @@ export interface PartnerRequest {
   readonly kind: PartnerKind;
   readonly direction: PartnerRequestDirection;
   readonly note: string;
+  /**
+   * Present only for rows read from the backend. The request card answers the
+   * request through this target; rows without one (fixtures, legacy callers)
+   * render their actions disabled.
+   */
+  readonly target?: {
+    readonly graph: 'partnership' | 'promoter-connection';
+    readonly id: string;
+  };
 }
 
 export interface StaffMember {
@@ -491,6 +526,29 @@ export interface StaffMember {
   readonly role: string;
   readonly status: 'Active';
   readonly permissions: readonly PartnerPermission[];
+  /** Live backend identity (absent on fixture rows). */
+  readonly userId?: string | undefined;
+  readonly email?: string | null | undefined;
+  readonly backendRole?: 'owner' | 'admin' | 'manager' | 'member' | undefined;
+  readonly capabilities?: readonly string[] | undefined;
+}
+
+export type StaffInviteStatus = 'pending' | 'accepted' | 'revoked' | 'expired';
+
+export interface StaffInvite {
+  readonly id: string;
+  readonly email: string;
+  readonly role: 'owner' | 'admin' | 'manager' | 'member';
+  readonly capabilities: readonly string[];
+  readonly status: StaffInviteStatus;
+  readonly expiresAt: string;
+}
+
+export interface StaffAccess {
+  /** True when the viewer holds `staff.manage` (invitations list succeeded). */
+  readonly canManage: boolean;
+  /** Non-null when the staff slice failed but partnerships still rendered. */
+  readonly error?: string | null | undefined;
 }
 
 export interface PartnerRelationshipSet {
@@ -503,17 +561,21 @@ export interface PartnerRelationshipSet {
 }
 
 export interface VenuePartnersData {
-  readonly dataStatus: 'fixture' | 'api' | 'unavailable';
+  readonly dataStatus: 'fixture' | 'api';
   readonly hosts: PartnerRelationshipSet;
   readonly promoters: PartnerRelationshipSet;
   readonly staff: readonly StaffMember[];
+  readonly staffInvites?: readonly StaffInvite[] | undefined;
+  readonly staffAccess?: StaffAccess | undefined;
 }
 
 export interface HostPartnersData {
-  readonly dataStatus: 'fixture' | 'api' | 'unavailable';
+  readonly dataStatus: 'fixture' | 'api';
   readonly venues: PartnerRelationshipSet;
   readonly promoters: PartnerRelationshipSet;
   readonly staff: readonly StaffMember[];
+  readonly staffInvites?: readonly StaffInvite[] | undefined;
+  readonly staffAccess?: StaffAccess | undefined;
 }
 
 export type PromoterPartnerTab = 'discover' | 'active' | 'incoming' | 'pending' | 'declined';
@@ -524,13 +586,10 @@ export interface PromoterPartnerRecord extends Omit<PartnerProfile, 'kind'> {
   readonly kind: 'venue' | 'host';
   readonly state: PromoterPartnerState;
   readonly actionLabel: 'Connected' | 'Send Request';
-  /** Real backend ids for connection requests (never dummy). */
-  readonly organizationId?: string | null;
-  readonly venueId?: string | null;
 }
 
 export interface PromoterPartnersData {
-  readonly dataStatus: 'fixture' | 'api' | 'unavailable';
+  readonly dataStatus: 'fixture' | 'api';
   readonly activePartnersCount: number;
   readonly pendingPartnersCount: number;
   readonly venuesCount: number;
@@ -556,14 +615,35 @@ export interface FinanceMetric {
   readonly tone?: FinanceTone;
 }
 
+/**
+ * Payout destination.
+ *
+ * There is deliberately **no plaintext account number** on this type, and
+ * there never was one worth keeping: the backend stores only a `last4` and
+ * `bankAccountResponseSchema` exposes only `maskedAccountNumber`, so a field
+ * for the full number could only ever have been fed by a fixture. Keeping the
+ * type honest about that is the point — if a screen needs the number back, the
+ * fix is a re-authenticated reveal endpoint, not re-adding a string field
+ * that invites someone to type a real one into it.
+ */
 export interface FinanceBankAccount {
   readonly bankName: string;
+  /** Masked, e.g. `•••• 4412`. The only account number this app ever shows. */
   readonly displayNumber: string;
-  readonly accountNumber: string;
   readonly ifscCode: string;
   readonly accountHolder: string;
+  readonly verified: boolean;
 }
 
+/**
+ * A card on file for paying platform fees.
+ *
+ * OPTIONAL, and absent for every API-backed finance screen. Nothing in the
+ * backend stores a card: fees go through Razorpay, which tokenizes in a hosted
+ * field, and a CVC must never reach our servers under any design. So this type
+ * survives only for the fixture, and `FinanceBankCards` renders an honest
+ * "no card on file" state when it is missing rather than inventing a number.
+ */
 export interface FinancePaymentCard {
   readonly label: string;
   readonly displayNumber: string;
@@ -595,16 +675,24 @@ export interface FinanceOrder {
 }
 
 export interface PartnerFinanceData {
-  readonly dataStatus: 'fixture';
+  /**
+   * Which world this data came from. `'api'` means every field below is backed
+   * by a real read; `'fixture'` means it is a design placeholder. Screens branch
+   * on it to refuse to render values the API cannot supply (a card number, a
+   * plaintext account) rather than showing a convincing lie.
+   */
+  readonly dataStatus: 'fixture' | 'api';
   readonly accent: FinanceAccent;
   readonly availableBalance: string;
+  /** Period-over-period change, or an honest "nothing to compare" string. */
   readonly balanceDelta: string;
   readonly balanceDetail: string;
   readonly balanceTrend: readonly number[];
   readonly pendingBalance: FinanceMetric;
   readonly nextPayout: FinanceMetric;
   readonly bankAccount: FinanceBankAccount;
-  readonly paymentCard: FinancePaymentCard;
+  /** Fixture-only — see `FinancePaymentCard`. */
+  readonly paymentCard?: FinancePaymentCard;
   readonly payouts: readonly FinancePayout[];
   readonly orders: readonly FinanceOrder[];
 }
@@ -824,17 +912,9 @@ export interface CalendarEvent {
 
 export interface CalendarBlock {
   readonly id: string;
-  /** Start date (YYYY-MM-DD) of the blocked window. */
   readonly date: string;
-  /**
-   * Inclusive end date (YYYY-MM-DD) for multi-day / overnight blocks.
-   * Absent (or equal to `date`) means the block starts and ends the same day.
-   */
-  readonly endDate?: string | undefined;
   readonly reason: string;
-  /** Zero-padded 24-hour HH:MM on `date`. */
   readonly from: string;
-  /** Zero-padded 24-hour HH:MM on `endDate` (or `date` when single-day). */
   readonly to: string;
 }
 
@@ -940,7 +1020,6 @@ export interface EventEditorDraft {
   readonly date: string;
   readonly dateLabel: string;
   readonly time: string;
-  readonly endTime?: string;
   readonly genres: readonly string[];
   readonly artists: readonly string[];
   readonly artwork: PartnerEventArtwork;
@@ -949,17 +1028,16 @@ export interface EventEditorDraft {
   readonly tableType: 'none' | 'high' | 'low';
   readonly promoCodes: readonly string[];
   readonly pricingRule: string;
-  readonly earlyBirdDiscountPercent?: number;
-  readonly lateArrivalChargePercent?: number;
-  readonly lateArrivalNotes?: string;
   readonly compensation: 'standard' | 'custom' | 'salary';
   readonly commissionRate: number;
-  readonly tierCommissions?: Readonly<Record<string, number>>;
-  readonly promoterOverrides?: Readonly<Record<string, Readonly<Record<string, number>>>>;
-  /** Salary amount in rupees in the editor; the API receives integer paise. */
-  readonly salaryAmount: number;
-  readonly salaryPeriod: 'per_event' | 'per_day' | 'per_month';
   readonly salaryNotes: string;
+  readonly endTime?: string;
+  readonly tierCommissions?: Record<string, number>;
+  readonly salaryAmount?: number;
+  readonly salaryPeriod?: string;
+  readonly promoterOverrides?: Record<string, Record<string, number>>;
+  readonly earlyBirdDiscountPercent?: number;
+  readonly lateArrivalChargePercent?: number;
 }
 
 export interface EventEditorData {

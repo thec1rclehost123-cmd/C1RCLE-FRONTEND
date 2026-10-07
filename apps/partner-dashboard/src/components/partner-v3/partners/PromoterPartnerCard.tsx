@@ -19,9 +19,18 @@ export function PromoterPartnerCard({
   const isDiscover = partner.state === 'discover';
   return (
     <article className={styles['promoterPartnerCard']}>
-      <div className={[styles['promoterPartnerCover'], styles[`partnerCard${partner.cardTone[0]?.toUpperCase() ?? ''}${partner.cardTone.slice(1)}`]].join(' ')}>
+      <div
+        className={[
+          styles['promoterPartnerCover'],
+          styles[
+            `partnerCard${partner.cardTone[0]?.toUpperCase() ?? ''}${partner.cardTone.slice(1)}`
+          ],
+        ].join(' ')}
+      >
         <Badge className={styles['promoterKindBadge'] ?? ''}>{partner.kind.toUpperCase()}</Badge>
-        <span className={styles['promoterInitial']} aria-hidden="true">{partner.initials}</span>
+        <span className={styles['promoterInitial']} aria-hidden="true">
+          {partner.initials}
+        </span>
       </div>
       <div className={styles['promoterPartnerBody']}>
         <h2>{partner.name}</h2>
@@ -34,15 +43,23 @@ export function PromoterPartnerCard({
         {isDiscover ? (
           <Button
             type="button"
-            variant="secondary"
+            variant="primary"
             disabled={connecting || !onConnect}
-            title={onConnect ? `Send a connection request to ${partner.name}` : partner.actionLabel}
             onClick={() => onConnect?.(partner)}
           >
-            {connecting ? 'Connecting…' : partner.actionLabel}
+            {connecting ? 'Connecting…' : 'Connect'}
           </Button>
         ) : (
-          <Button type="button" variant="secondary" disabled title="Connected">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled
+            title={
+              partner.actionLabel === 'Connected'
+                ? 'Event assignment is not available yet.'
+                : 'Sending connection requests from here is not available yet.'
+            }
+          >
             {partner.actionLabel}
           </Button>
         )}

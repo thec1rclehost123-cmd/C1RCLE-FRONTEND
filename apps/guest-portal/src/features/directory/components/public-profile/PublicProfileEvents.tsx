@@ -16,11 +16,18 @@ export function PublicProfileEvents({
   title?: string;
 }) {
   return (
-    <section id="events" aria-labelledby="profile-events-heading" className="scroll-mt-28 py-20 sm:py-28">
+    <section
+      id="events"
+      aria-labelledby="profile-events-heading"
+      className="scroll-mt-28 py-20 sm:py-28"
+    >
       <PublicProfileSectionHeading eyebrow={eyebrow} title={title} id="profile-events-heading" />
 
       {events.length > 0 ? (
-        <div data-profile-reveal className="mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div
+          data-profile-reveal
+          className="mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        >
           {events.map((event) => (
             <DirectoryEventCard key={event.id} event={event} />
           ))}

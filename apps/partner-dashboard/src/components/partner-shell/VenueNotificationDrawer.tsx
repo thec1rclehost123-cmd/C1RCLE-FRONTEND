@@ -5,35 +5,38 @@ import { useRef } from 'react';
 
 import { CalendarIcon, CloseIcon, ForwardIcon } from '@c1rcle/icons';
 
+import { hostNotifications } from '@/components/host/host-studio-model';
 import { useOverlayFocus } from '@/components/venue/useOverlayFocus';
-
-import type { NotificationView } from '@/lib/notifications/notifications-view';
-
-const COMPACT_COUNT = 3;
+import { venueNotifications } from '@/components/venue/venue-notifications-model';
 
 export function VenueNotificationDrawer({
   open,
   onClose,
   trigger,
-  surface,
-  views,
-  onRead,
+  role = 'venue',
 }: {
   readonly open: boolean;
   readonly onClose: () => void;
   readonly trigger: React.RefObject<HTMLButtonElement | null>;
-  readonly surface: 'venue' | 'host' | 'promoter';
-  readonly views: readonly NotificationView[];
-  readonly onRead: (notificationId: string) => void;
+  readonly role?: 'venue' | 'host' | 'promoter';
 }) {
   const drawerRef = useRef<HTMLElement>(null);
   useOverlayFocus({ open, containerRef: drawerRef, restoreFocusRef: trigger, onClose });
-
   if (!open) return null;
-  const compact = [...views]
-    .sort((a, b) => Number(b.unread) - Number(a.unread))
-    .slice(0, COMPACT_COUNT);
-  const allHref = `/${surface}/notifications`;
+  const compact =
+    role === 'host'
+      ? hostNotifications.slice(0, 3).map((item) => ({
+          id: item.id,
+          title: item.title,
+          summary: item.body,
+          time: item.time,
+          destination: item.href,
+        }))
+      : role === 'venue'
+        ? venueNotifications.slice(0, 3)
+        : [];
+  const allHref =
+    role === 'host' ? '/host/notifications' : role === 'venue' ? '/venue/notifications' : null;
   return (
     <aside
       ref={drawerRef}
@@ -51,60 +54,24 @@ export function VenueNotificationDrawer({
       <div>
         {compact.length ? (
           compact.map((item) => (
-            <DrawerRow key={item.id} view={item} onRead={onRead} onClose={onClose} />
+            <Link key={item.id} href={item.destination ?? allHref ?? '#'} onClick={onClose}>
+              <CalendarIcon size={20} aria-hidden="true" />
+              <span>
+                <strong>{item.title}</strong>
+                <small>{item.summary}</small>
+              </span>
+              <time>{item.time}</time>
+            </Link>
           ))
         ) : (
           <p role="status">Notifications are not available for this workspace.</p>
         )}
       </div>
-      <Link className="partner-notification-all" href={allHref} onClick={onClose}>
-        View all notifications <ForwardIcon size={17} aria-hidden="true" />
-      </Link>
+      {allHref ? (
+        <Link className="partner-notification-all" href={allHref} onClick={onClose}>
+          View all notifications <ForwardIcon size={17} aria-hidden="true" />
+        </Link>
+      ) : null}
     </aside>
-  );
-}
-
-function DrawerRow({
-  view,
-  onRead,
-  onClose,
-}: {
-  readonly view: NotificationView;
-  readonly onRead: (notificationId: string) => void;
-  readonly onClose: () => void;
-}) {
-  const content = (
-    <>
-      <CalendarIcon size={20} aria-hidden="true" />
-      <span>
-        <strong>{view.title}</strong>
-        <small>{view.summary}</small>
-      </span>
-      <time>{view.time}</time>
-    </>
-  );
-  if (view.destination) {
-    return (
-      <Link
-        href={view.destination}
-        onClick={() => {
-          if (view.unread) onRead(view.id);
-          onClose();
-        }}
-      >
-        {content}
-      </Link>
-    );
-  }
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        if (view.unread) onRead(view.id);
-        onClose();
-      }}
-    >
-      {content}
-    </button>
   );
 }

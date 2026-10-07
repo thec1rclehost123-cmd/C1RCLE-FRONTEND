@@ -23,7 +23,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, Suspense } from 'react';
 
 import { isApiClientError } from '@c1rcle/api-client';
-import { login, logout, useSessionStore } from '@c1rcle/auth';
+import { login, useSessionStore } from '@c1rcle/auth';
 
 import {
   normalizePartnerRole,
@@ -31,7 +31,8 @@ import {
 } from '@/components/partner-shell/partner-role-routing';
 import { setActiveOrg } from '@/lib/org/active-org';
 import { getOrganizations } from '@/lib/org/org-repository';
-import { filterOrgsByPartnerType } from '@/lib/org/route-after-auth';
+import { filterOrgsByPartnerType, redirectToFirstPendingInvite } from '@/lib/org/route-after-auth';
+import { safeNextPath } from '@/lib/safe-next-path';
 
 import type { WorkspaceType } from '@/lib/org/route-after-auth';
 
@@ -51,7 +52,10 @@ const roleConfig = {
     label: 'Promoter',
     description: 'Sales & outreach',
   },
-} as const satisfies Record<WorkspaceType, { icon: typeof Building2; label: string; description: string }>;
+} as const satisfies Record<
+  WorkspaceType,
+  { icon: typeof Building2; label: string; description: string }
+>;
 
 /* Per-workspace ambient styling as static Tailwind classes — inline `style=` objects are banned
  * by the design-system lint rule (no-restricted-syntax), and Tailwind's JIT needs literals. */
@@ -64,8 +68,7 @@ const BLOB_CLASS: Record<WorkspaceType, string> = {
 const RING_BORDER: Record<WorkspaceType, string> = {
   venue:
     'border-t-[rgba(244,74,34,0.75)] border-r-transparent border-b-[rgba(244,74,34,0.25)] border-l-transparent',
-  host:
-    'border-t-[rgba(255,255,255,0.75)] border-r-transparent border-b-[rgba(255,255,255,0.25)] border-l-transparent',
+  host: 'border-t-[rgba(255,255,255,0.75)] border-r-transparent border-b-[rgba(255,255,255,0.25)] border-l-transparent',
   promoter:
     'border-t-[rgba(34,197,94,0.75)] border-r-transparent border-b-[rgba(34,197,94,0.25)] border-l-transparent',
 };
@@ -213,7 +216,9 @@ const SPARK_SHADOW: Record<WorkspaceType, readonly [string, string, string]> = {
 };
 
 /** Per-role ring colours for the sparkle field — tri-colour default, single colour once a workspace is picked. */
-function useRingColors(type: WorkspaceType | null): readonly [WorkspaceType, WorkspaceType, WorkspaceType] {
+function useRingColors(
+  type: WorkspaceType | null,
+): readonly [WorkspaceType, WorkspaceType, WorkspaceType] {
   if (type === 'venue') return ['venue', 'venue', 'venue'];
   if (type === 'host') return ['host', 'host', 'host'];
   if (type === 'promoter') return ['promoter', 'promoter', 'promoter'];
@@ -274,7 +279,13 @@ function LoginForm() {
 
   useEffect(() => {
     if (sessionState.status === 'authenticated' && sessionState.session?.user) {
-      const next = searchParams.get('next') ?? searchParams.get('callbackUrl');
+      const next = safeNextPath(searchParams.get('next') ?? searchParams.get('callbackUrl'));
+      if (sessionState.session.user.mustChangePassword) {
+        router.replace(
+          next ? `/change-password?next=${encodeURIComponent(next)}` : '/change-password',
+        );
+        return;
+      }
       if (next) {
         router.replace(next);
       }
@@ -291,7 +302,14 @@ function LoginForm() {
     try {
       await login({ email, password });
 
-      const next = searchParams.get('next') ?? searchParams.get('callbackUrl');
+      const next = safeNextPath(searchParams.get('next') ?? searchParams.get('callbackUrl'));
+      const freshUser = useSessionStore.getState().session?.user;
+      if (freshUser?.mustChangePassword) {
+        router.push(
+          next ? `/change-password?next=${encodeURIComponent(next)}` : '/change-password',
+        );
+        return;
+      }
       if (next) {
         router.push(next);
         return;
@@ -299,6 +317,9 @@ function LoginForm() {
 
       const orgs = await getOrganizations();
       if (orgs.length === 0) {
+        // A fresh login with no membership is usually an invitee who hasn't
+        // accepted yet — take them to the invite, not the applicant onboarding.
+        if (await redirectToFirstPendingInvite(router)) return;
         router.push(`/onboard?type=${userType}`);
         return;
       }
@@ -306,7 +327,9 @@ function LoginForm() {
       const matches = await filterOrgsByPartnerType(orgs, userType);
 
       if (matches.length === 0) {
-        await logout();
+        // Stay signed in: an invitee who picks the wrong workspace (venue
+        // finger, host team) just picks again — signing them out here forces
+        // a full re-login for a tap mistake.
         setError(
           `This account is not registered as a ${roleConfig[userType].label} workspace. Please select the correct workspace, or apply for access.`,
         );
@@ -315,7 +338,7 @@ function LoginForm() {
       }
 
       if (matches.length === 1 && matches[0]) {
-        await setActiveOrg(matches[0].id);
+        setActiveOrg(matches[0].id);
         router.push(resolvePartnerV3Path(userType) ?? '/partner/select-organization');
         return;
       }
@@ -334,7 +357,9 @@ function LoginForm() {
         }
         setError(err.message || 'Invalid email or password.');
       } else if (err instanceof Error && err.message === 'Authentication failed') {
-        setError('Invalid email or password. Please check your credentials or create a new account.');
+        setError(
+          'Invalid email or password. Please check your credentials or create a new account.',
+        );
       } else if (err instanceof Error) {
         setError(err.message);
       } else {
@@ -508,7 +533,9 @@ function LoginForm() {
                     <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--accent-primary)]">
                       {userType ? roleConfig[userType].label : ''} Workspace
                     </span>
-                    <h3 className="text-headline text-[var(--text-primary)] leading-tight">Sign in</h3>
+                    <h3 className="text-headline text-[var(--text-primary)] leading-tight">
+                      Sign in
+                    </h3>
                   </div>
                 </div>
 
@@ -587,7 +614,11 @@ function LoginForm() {
                         }}
                         className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-placeholder)] hover:text-[var(--text-secondary)] transition-colors"
                       >
-                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        {showPassword ? (
+                          <EyeOff className="h-5 w-5" />
+                        ) : (
+                          <Eye className="h-5 w-5" />
+                        )}
                       </button>
                     </div>
                     {fieldErrors['password'] && (

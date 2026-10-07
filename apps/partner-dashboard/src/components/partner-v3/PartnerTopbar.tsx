@@ -8,11 +8,8 @@ import { PartnerNotifications } from './PartnerNotifications';
 
 import { Avatar, IconButton } from './index';
 
-
 import type { PartnerNotificationsData, PartnerSearchData } from '@/data/partner-data-source';
-import type { NotificationDecisionDto } from '@c1rcle/contracts';
 import type { StudioConfig } from '@/studios/studio-config';
-
 
 export function PartnerTopbar({
   config,
@@ -20,13 +17,6 @@ export function PartnerTopbar({
   userName,
   searchData,
   notificationsData,
-  notificationsLoading,
-  notificationsError,
-  unreadNotificationCount,
-  onNotificationRead,
-  onMarkAllNotificationsRead,
-  onRefreshNotifications,
-  onNotificationAction,
   navigationLayout,
   mobileOpen,
   onMobileToggle,
@@ -38,13 +28,6 @@ export function PartnerTopbar({
   readonly userName: string;
   readonly searchData: PartnerSearchData;
   readonly notificationsData: PartnerNotificationsData;
-  readonly notificationsLoading: boolean;
-  readonly notificationsError: string | null;
-  readonly unreadNotificationCount: number;
-  readonly onNotificationRead: (id: string) => void;
-  readonly onMarkAllNotificationsRead: () => void;
-  readonly onRefreshNotifications: () => void;
-  readonly onNotificationAction: (id: string, decision: NotificationDecisionDto) => Promise<unknown>;
   readonly navigationLayout: 'side' | 'top';
   readonly mobileOpen: boolean;
   readonly onMobileToggle: () => void;
@@ -52,14 +35,25 @@ export function PartnerTopbar({
   readonly onSignOut: () => void;
 }) {
   return (
-    <header className={[styles['topbar'], navigationLayout === 'top' ? styles['topbarTopNavigation'] : ''].filter(Boolean).join(' ')}>
-      <IconButton label="Open navigation" className={styles['mobileMenuButton']} aria-expanded={mobileOpen} onClick={onMobileToggle}>
+    <header
+      className={[styles['topbar'], navigationLayout === 'top' ? styles['topbarTopNavigation'] : '']
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <IconButton
+        label="Open navigation"
+        className={styles['mobileMenuButton']}
+        aria-expanded={mobileOpen}
+        onClick={onMobileToggle}
+      >
         <MenuIcon size={18} aria-hidden="true" />
       </IconButton>
       {navigationLayout === 'top' ? (
         <>
           <div className={styles['topbarBrand']}>
-            <span className={styles['brandMark']} aria-hidden="true"><i /></span>
+            <span className={styles['brandMark']} aria-hidden="true">
+              <i />
+            </span>
             <span className={styles['brandText']}>
               <strong>THE C1RCLE</strong>
               <small>{config.label}</small>
@@ -70,14 +64,28 @@ export function PartnerTopbar({
               {config.navigation.map((item) => {
                 const active = item.label === activeLabel;
                 return (
-                  <Link key={item.href} href={item.href} className={[styles['topNavigationItem'], active ? styles['topNavigationItemActive'] : ''].filter(Boolean).join(' ')} aria-current={active ? 'page' : undefined}>
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={[
+                      styles['topNavigationItem'],
+                      active ? styles['topNavigationItemActive'] : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    aria-current={active ? 'page' : undefined}
+                  >
                     {item.label}
                   </Link>
                 );
               })}
             </div>
           </nav>
-          <div className={[styles['topbarIdentity'], styles['topModeMobileIdentity']].filter(Boolean).join(' ')}>
+          <div
+            className={[styles['topbarIdentity'], styles['topModeMobileIdentity']]
+              .filter(Boolean)
+              .join(' ')}
+          >
             <span>{activeLabel}</span>
             <small>{config.label}</small>
           </div>
@@ -90,23 +98,18 @@ export function PartnerTopbar({
       )}
       <div className={styles['topbarActions']}>
         <PartnerGlobalSearch data={searchData} />
-        <PartnerNotifications
-          data={notificationsData}
-          loading={notificationsLoading}
-          error={notificationsError}
-          unreadCount={unreadNotificationCount}
-          onRead={onNotificationRead}
-          onMarkAllRead={onMarkAllNotificationsRead}
-          onRefresh={onRefreshNotifications}
-          onAction={onNotificationAction}
-        />
+        <PartnerNotifications data={notificationsData} />
         <IconButton
           label={navigationLayout === 'side' ? 'Use top navigation' : 'Use side navigation'}
           className={styles['layoutSwitchButton']}
           aria-pressed={navigationLayout === 'top'}
           onClick={onLayoutToggle}
         >
-          {navigationLayout === 'side' ? <NavigationTopIcon size={17} aria-hidden="true" /> : <NavigationSideIcon size={17} aria-hidden="true" />}
+          {navigationLayout === 'side' ? (
+            <NavigationTopIcon size={17} aria-hidden="true" />
+          ) : (
+            <NavigationSideIcon size={17} aria-hidden="true" />
+          )}
         </IconButton>
         <div className={styles['accountMenu']}>
           <Avatar name={userName} size="small" />

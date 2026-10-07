@@ -18,9 +18,7 @@ import type { User } from '@c1rcle/contracts';
  *   import { cookies } from 'next/headers';
  *   const session = await getServerSession((await cookies()).toString());
  */
-export async function getServerSession(
-  cookieHeader: string,
-): Promise<{ user: User } | null> {
+export async function getServerSession(cookieHeader: string): Promise<{ user: User } | null> {
   if (!cookieHeader) {
     return null;
   }

@@ -172,8 +172,6 @@ export interface HostPublicProfile extends PublicProfileBase {
   series: readonly HostSeries[];
 }
 
-export type VenuePublicProfile =
-  | RestaurantVenuePublicProfile
-  | ExperienceVenuePublicProfile;
+export type VenuePublicProfile = RestaurantVenuePublicProfile | ExperienceVenuePublicProfile;
 
 export type PublicProfile = VenuePublicProfile | HostPublicProfile;

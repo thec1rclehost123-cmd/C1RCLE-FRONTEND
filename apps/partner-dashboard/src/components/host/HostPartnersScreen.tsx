@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 import { CheckIcon, LocationIcon } from '@c1rcle/icons';
 
@@ -15,14 +15,9 @@ import {
 
 import styles from '../venue/screens/VenuePartners.module.css';
 
-import {
-  fetchHostVenuePartners,
-  fetchHostPromoterPartners,
-  fetchHostVenueRequests,
-  fetchHostPromoterRequests,
-  type HostPartner,
-  type HostPartnerRequest,
-} from './host-partners-api';
+import { hostEvents, hostPartners, hostSlotRequests } from './host-studio-model';
+
+import type { HostPartnerRecord } from './host-studio-model';
 
 const s = (name: string) => styles[name] ?? name;
 
@@ -45,82 +40,35 @@ export function HostPartnersScreen({
 
   const [query, setQuery] = useState('');
   const [city, setCity] = useState('All cities');
-  const [subTab, setSubTab] = useState<'incoming' | 'sent'>('incoming');
-  const [selected, setSelected] = useState<HostPartner | null>(null);
+  const [subTab, setSubTab] = useState<'incoming' | 'sent'>('sent');
+  const [selected, setSelected] = useState<HostPartnerRecord | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
-
-  const [venuePartners, setVenuePartners] = useState<HostPartner[]>([]);
-  const [promoterPartners, setPromoterPartners] = useState<HostPartner[]>([]);
-  const [venueRequests, setVenueRequests] = useState<HostPartnerRequest[]>([]);
-  const [promoterRequests, setPromoterRequests] = useState<HostPartnerRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    let mounted = true;
-    async function loadData() {
-      setIsLoading(true);
-      try {
-        const [venues, promoters, venueReqs, promoterReqs] = await Promise.all([
-          fetchHostVenuePartners(),
-          fetchHostPromoterPartners(),
-          fetchHostVenueRequests(),
-          fetchHostPromoterRequests(),
-        ]);
-        if (mounted) {
-          setVenuePartners(venues);
-          setPromoterPartners(promoters);
-          setVenueRequests(venueReqs);
-          setPromoterRequests(promoterReqs);
-        }
-      } catch (error) {
-        console.error('Failed to load partner data:', error);
-      } finally {
-        if (mounted) setIsLoading(false);
-      }
-    }
-    loadData();
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   const kind = tab === 'promoters' ? 'promoter' : 'venue';
 
   const myPartners = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const base = kind === 'venue' 
-      ? venuePartners.filter(p => p.status !== 'Discover')
-      : promoterPartners.filter(p => p.status !== 'Discover');
+    const base = hostPartners.filter((p) => p.kind === kind && p.status !== 'Discover');
     if (!q) return base;
-    return base.filter(p => `${p.name} ${p.city}`.toLowerCase().includes(q));
-  }, [kind, query, venuePartners, promoterPartners]);
+    return base.filter((p) => `${p.name} ${p.city}`.toLowerCase().includes(q));
+  }, [kind, query]);
 
   const findPartners = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const base = kind === 'venue'
-      ? venuePartners.filter(p => p.status === 'Discover')
-      : promoterPartners.filter(p => p.status === 'Discover');
-    return base.filter(p => {
+    const base = hostPartners.filter((p) => p.kind === kind && p.status === 'Discover');
+    return base.filter((p) => {
       if (q && !`${p.name} ${p.city}`.toLowerCase().includes(q)) return false;
       if (city !== 'All cities' && p.city !== city) return false;
       return true;
     });
-  }, [kind, query, city, venuePartners, promoterPartners]);
+  }, [kind, query, city]);
 
-  const cities = ['All cities', ...new Set([...venuePartners, ...promoterPartners].map(p => p.city))];
-
-  const allRequests = [...venueRequests, ...promoterRequests];
-  const incomingRequests = allRequests.filter((r) => r.direction === 'incoming');
-  const sentRequests = allRequests.filter((r) => r.direction === 'sent');
-  const selectedRequests = subTab === 'sent' ? sentRequests : incomingRequests;
-
-  if (isLoading) {
-    return (
-      <div className={s('page')}>
-        <div className={s('loading')}>Loading partners...</div>
-      </div>
-    );
-  }
+  const cities = ['All cities', ...new Set(hostPartners.map((p) => p.city))];
+  const selectedLastEvent = selected
+    ? hostEvents
+        .filter((event) => event.venue === selected.name && event.status === 'Completed')
+        .at(-1)
+    : null;
 
   return (
     <div className={s('page')}>
@@ -128,7 +76,11 @@ export function HostPartnersScreen({
       <header className={s('header')}>
         <div>
           <h1>
-            {view === 'find' ? 'Find partners' : view === 'requests' ? 'Partnership requests' : 'Partners'}
+            {view === 'find'
+              ? 'Find partners'
+              : view === 'requests'
+                ? 'Partnership requests'
+                : 'Partners'}
           </h1>
           <p>
             {view === 'find'
@@ -196,11 +148,15 @@ export function HostPartnersScreen({
                   'Action',
                 ]}
               />
-              {myPartners.map(p => (
+              {myPartners.map((p) => (
                 <div key={p.id} className={s('partnerRow')} role="row">
                   <div role="cell" className={s('identity')}>
                     <span className={s('avatar')} data-tone="amber">
-                      {p.name.split(' ').map(w => w[0]).join('').slice(0, 2)}
+                      {p.name
+                        .split(' ')
+                        .map((w) => w[0])
+                        .join('')
+                        .slice(0, 2)}
                     </span>
                     <span>
                       <strong>{p.name}</strong>
@@ -214,16 +170,31 @@ export function HostPartnersScreen({
                     <strong>{p.eventsTogether} events</strong>
                   </span>
                   <span role="cell" className={s('eventCell')}>
-                    <strong>—</strong>
+                    {(() => {
+                      const lastEvent = hostEvents
+                        .filter((event) => event.venue === p.name && event.status === 'Completed')
+                        .at(-1);
+                      return lastEvent ? (
+                        <>
+                          <strong>{lastEvent.name}</strong>
+                          <small>{lastEvent.date}</small>
+                        </>
+                      ) : (
+                        <strong>—</strong>
+                      );
+                    })()}
                   </span>
-                  <span role="cell" className={p.status === 'Active' ? s('positive') : s('pending')}>
+                  <span
+                    role="cell"
+                    className={p.status === 'Active' ? s('positive') : s('pending')}
+                  >
                     {p.status}
                   </span>
                   <span role="cell">
                     <button
                       type="button"
                       className={s('secondaryAction')}
-                      onClick={e => {
+                      onClick={(e) => {
                         triggerRef.current = e.currentTarget;
                         setSelected(p);
                       }}
@@ -254,7 +225,7 @@ export function HostPartnersScreen({
                   setCity(e.target.value);
                 }}
               >
-                {cities.map(c => (
+                {cities.map((c) => (
                   <option key={c}>{c}</option>
                 ))}
               </select>
@@ -268,28 +239,36 @@ export function HostPartnersScreen({
             </section>
           ) : (
             <div className={s('cardGrid')}>
-              {findPartners.map(p => (
+              {findPartners.map((p) => (
                 <article key={p.id} className={s('partnerCard')}>
-                <div className={s('portrait')} data-tone="amber">
-                  <span>{p.name.split(' ').map(w => w[0]).join('').slice(0, 2)}</span>
-                  {p.verified ? (
-                    <em>
-                      <CheckIcon size={13} aria-hidden="true" /> Verified
-                    </em>
-                  ) : null}
-                </div>
-                <h2>{p.name}</h2>
-                <p>{p.kind === 'venue' ? 'Venue' : 'Promoter'} · {p.city}</p>
-                <small>{p.detail}</small>
-                <button
-                  type="button"
-                  onClick={e => {
-                    triggerRef.current = e.currentTarget;
-                    setSelected(p);
-                  }}
-                >
-                  View profile
-                </button>
+                  <div className={s('portrait')} data-tone="amber">
+                    <span>
+                      {p.name
+                        .split(' ')
+                        .map((w) => w[0])
+                        .join('')
+                        .slice(0, 2)}
+                    </span>
+                    {p.verified ? (
+                      <em>
+                        <CheckIcon size={13} aria-hidden="true" /> Verified
+                      </em>
+                    ) : null}
+                  </div>
+                  <h2>{p.name}</h2>
+                  <p>
+                    {p.kind === 'venue' ? 'Venue' : 'Promoter'} · {p.city}
+                  </p>
+                  <small>{p.detail}</small>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      triggerRef.current = e.currentTarget;
+                      setSelected(p);
+                    }}
+                  >
+                    View profile
+                  </button>
                 </article>
               ))}
             </div>
@@ -306,7 +285,7 @@ export function HostPartnersScreen({
                 setSubTab('sent');
               }}
             >
-              Sent {sentRequests.length}
+              Sent {hostSlotRequests.length}
             </button>
             <button
               type="button"
@@ -315,52 +294,80 @@ export function HostPartnersScreen({
                 setSubTab('incoming');
               }}
             >
-              Incoming {incomingRequests.length}
+              Incoming 1
             </button>
           </div>
 
-          {selectedRequests.length ? (
           <PartnerTable styles={styles} variant="requestTable" ariaLabel="Requests table">
             <PartnerTableHeader
               styles={styles}
               columns={['Partner', 'Type', 'Request', 'Date', 'Status', 'Action']}
             />
-            {selectedRequests.map(r => (
-              <div key={r.id} className={s('partnerRow')} role="row">
+            {subTab === 'sent' ? (
+              hostSlotRequests.map((r) => (
+                <div key={r.id} className={s('partnerRow')} role="row">
+                  <div role="cell" className={s('identity')}>
+                    <span>
+                      <strong>{r.venue}</strong>
+                      <small>Venue</small>
+                    </span>
+                  </div>
+                  <span role="cell" className={s('eventCell')}>
+                    <strong>Venue</strong>
+                    <small>Partner type</small>
+                  </span>
+                  <span role="cell" className={s('eventCell')}>
+                    <strong>{r.eventName}</strong>
+                    <small>Slot request</small>
+                  </span>
+                  <span role="cell" className={s('eventCell')}>
+                    <strong>{r.date}</strong>
+                    <small>Updated {r.updatedAt}</small>
+                  </span>
+                  <span
+                    role="cell"
+                    className={r.status === 'Accepted' ? s('positive') : s('pending')}
+                  >
+                    {r.status}
+                  </span>
+                  <span role="cell">
+                    <Link href={`/host/events/requests/${r.id}`} className={s('secondaryAction')}>
+                      View
+                    </Link>
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className={s('partnerRow')} role="row">
                 <div role="cell" className={s('identity')}>
                   <span>
-                    <strong>{r.partnerName}</strong>
-                    <small>{r.partnerCity}</small>
+                    <strong>Monsoon Sessions Invite</strong>
+                    <small>Sat, 16 Aug · 8:00 PM</small>
                   </span>
                 </div>
                 <span role="cell" className={s('eventCell')}>
-                  <strong>{r.kind === 'venue' ? 'Venue' : 'Promoter'}</strong>
-                  <small>{r.direction === 'sent' ? 'Sent' : 'Incoming'}</small>
+                  <strong>Harbour Room</strong>
+                  <small>Venue</small>
                 </span>
                 <span role="cell" className={s('eventCell')}>
-                  <strong>{r.eventName}</strong>
-                  <small>{r.direction === 'sent' ? 'Slot request' : 'Connection request'}</small>
+                  <strong>Monsoon Sessions Invite</strong>
+                  <small>Event invitation</small>
                 </span>
                 <span role="cell" className={s('eventCell')}>
-                  <strong>{r.eventDate}</strong>
-                  <small>Updated {r.updatedAt}</small>
+                  <strong>Sat, 16 Aug 2026</strong>
+                  <small>Incoming</small>
                 </span>
-                <span role="cell" className={r.status === 'Accepted' ? s('positive') : s('pending')}>
-                  {r.status}
+                <span role="cell" className={s('pending')}>
+                  Pending review
                 </span>
                 <span role="cell">
-                  <Link href={`/host/events/requests/${r.id}`} className={s('secondaryAction')}>
-                    View
+                  <Link href="/host/events/invitations" className={s('secondaryAction')}>
+                    Review
                   </Link>
                 </span>
               </div>
-            ))}
+            )}
           </PartnerTable>
-          ) : (
-            <p className={s('muted')}>
-              {subTab === 'incoming' ? 'No requests received yet.' : 'No requests sent yet.'}
-            </p>
-          )}
         </>
       )}
 
@@ -379,7 +386,15 @@ export function HostPartnersScreen({
             ? `${selected.kind === 'venue' ? 'Venue' : 'Promoter'} · ${selected.city}${selected.verified ? ' · Verified' : ''}`
             : ''
         }
-        initials={selected ? selected.name.split(' ').map(w => w[0]).join('').slice(0, 2) : ''}
+        initials={
+          selected
+            ? selected.name
+                .split(' ')
+                .map((w) => w[0])
+                .join('')
+                .slice(0, 2)
+            : ''
+        }
         tone="amber"
       >
         {selected ? (
@@ -400,7 +415,8 @@ export function HostPartnersScreen({
               <div>
                 <dt>Latest shared event</dt>
                 <dd>
-                  —
+                  {selectedLastEvent?.name ?? '—'}
+                  {selectedLastEvent ? <small>{selectedLastEvent.date}</small> : null}
                 </dd>
               </div>
             </dl>

@@ -1,3 +1,17 @@
+import type {
+  PartnershipDto,
+  PromoterConnectionDto,
+  RequestConnectionRequest,
+  RequestPartnershipRequest,
+} from '@c1rcle/contracts/client';
+
+export type {
+  PartnershipDto,
+  PromoterConnectionDto,
+  RequestConnectionRequest,
+  RequestPartnershipRequest,
+};
+
 export type PartnerRole = 'venue' | 'host' | 'promoter';
 export type PartnershipStatus = 'partnered' | 'pending' | 'discover';
 export type PromoterEventStatus =
@@ -14,12 +28,6 @@ export type PartnerQueryState =
   | 'stale'
   | 'partial';
 export type PartnerMutationState = 'idle' | 'confirming' | 'submitting' | 'succeeded' | 'failed';
-
-export type PartnershipStatusV2 = 'pending' | 'active' | 'rejected' | 'blocked' | 'ended';
-export type PromoterConnectionStatus = 'pending' | 'active' | 'rejected' | 'blocked' | 'revoked';
-export type PartnershipInitiatedBy = 'host' | 'venue';
-export type PromoterConnectionInitiatedBy = 'promoter' | 'target';
-export type PromoterConnectionTargetType = 'host' | 'venue';
 
 export interface PartnerPermissions {
   readonly capabilities: readonly string[];
@@ -122,76 +130,6 @@ export interface PartnerRelationship {
   readonly eventsTogether: number;
   readonly responseTime: string;
   readonly categories: readonly string[];
-}
-
-export interface PartnershipDto {
-  readonly id: string;
-  readonly hostOrganizationId: string;
-  readonly venueOrganizationId: string;
-  readonly venueId: string;
-  readonly initiatedBy: PartnershipInitiatedBy;
-  readonly status: PartnershipStatusV2;
-  readonly message: string | null;
-  readonly resolutionReason: string | null;
-  readonly resolvedAt: string | null;
-  readonly version: number;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-  /** Backend-enriched display names (null when the counterparty is gone). */
-  readonly hostName?: string | null | undefined;
-  readonly hostSlug?: string | null | undefined;
-  readonly venueName?: string | null | undefined;
-  readonly venueSlug?: string | null | undefined;
-  readonly venueCity?: string | null | undefined;
-}
-
-export interface PromoterConnectionDto {
-  readonly id: string;
-  readonly promoterId: string;
-  readonly targetId: string;
-  readonly targetType: PromoterConnectionTargetType;
-  readonly initiatedBy: PromoterConnectionInitiatedBy;
-  readonly status: PromoterConnectionStatus;
-  readonly message: string | null;
-  readonly resolutionReason: string | null;
-  readonly resolvedAt: string | null;
-  readonly version: number;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-  /** Backend-enriched display names (null when the counterparty is gone). */
-  readonly promoterName?: string | null | undefined;
-  readonly promoterSlug?: string | null | undefined;
-  readonly targetName?: string | null | undefined;
-  readonly targetSlug?: string | null | undefined;
-  readonly targetCity?: string | null | undefined;
-}
-
-export interface RequestPartnershipRequest {
-  readonly venueId: string;
-  readonly initiatedBy: PartnershipInitiatedBy;
-  /** Required when initiatedBy is 'venue': the host org being invited. */
-  readonly hostOrganizationId?: string;
-  readonly message?: string;
-}
-
-export interface RequestConnectionRequest {
-  readonly counterpartyId: string;
-  readonly targetType: PromoterConnectionTargetType;
-  readonly initiatedBy: PromoterConnectionInitiatedBy;
-  readonly message?: string;
-}
-
-export interface ResolvePartnershipRequest {
-  readonly reason?: string;
-}
-
-export interface PartnerAccessDto {
-  readonly organizationId: string;
-  readonly userId: string;
-  readonly partnerType: PartnerRole;
-  readonly role: string;
-  readonly permissions: readonly string[];
-  readonly tabVisibility: Readonly<Record<string, boolean>> | null;
 }
 
 export interface PartnerNotification {

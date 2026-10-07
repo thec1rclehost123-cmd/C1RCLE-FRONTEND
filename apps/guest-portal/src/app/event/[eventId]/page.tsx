@@ -35,11 +35,11 @@ async function getEventDetail(eventId: string): Promise<EventDetailFixture | nul
   const [venue, host] = await Promise.all([
     event.venueId
       ? client
-          .get({
-            path: `/api/v2/public/venues/by-id/${event.venueId}`,
-            schema: venueDtoSchema,
-          })
-          .catch(() => null)
+        .get({
+          path: `/api/v2/public/venues/by-id/${event.venueId}`,
+          schema: venueDtoSchema,
+        })
+        .catch(() => null)
       : null,
     client
       .get({
@@ -66,22 +66,9 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
   return {
     title: `${event.title} | THE C1RCLE`,
     description: event.summary,
-    alternates: { canonical },
-    robots: { index: false, follow: false },
-    openGraph: {
-      title: event.title,
-      description: event.summary,
-      type: 'website',
-      url: canonical,
-      images: [{ url: event.image, alt: event.title }],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: event.title,
-      description: event.summary,
-      images: [event.image],
-    },
-  };
+    image: event.image,
+    indexable: false,
+  });
 }
 
 export default async function EventDetailPage({ params }: EventDetailPageProps) {

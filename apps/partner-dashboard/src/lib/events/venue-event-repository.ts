@@ -46,25 +46,28 @@ export async function publishVenueEvent(
       startAt,
       endAt: eventEndAtFromDraft(draft),
       tags: [...new Set([...draft.genres, ...draft.artists])].slice(0, 50),
-      compensation: hasPaidTiers && draft.selectedPromoterIds.length
-        ? {
-          model: draft.compensation,
-          globalRatePercent:
-            draft.compensation === 'standard' ? Math.round(draft.commissionRate) : null,
-          tierRates:
-            draft.compensation === 'custom'
-              ? Object.fromEntries(
-                Object.entries(draft.tierCommissions ?? {}).filter(([id]) =>
-                  paidTierIds.has(id),
-                ),
-              )
-              : {},
-          salaryAmountPaise:
-            draft.compensation === 'salary' ? Math.round(draft.salaryAmount * 100) : null,
-          salaryPeriod: draft.compensation === 'salary' ? draft.salaryPeriod : null,
-          salaryNotes: draft.compensation === 'salary' ? draft.salaryNotes || null : null,
-        }
-        : null,
+      compensation:
+        hasPaidTiers && draft.selectedPromoterIds.length
+          ? {
+              model: draft.compensation,
+              globalRatePercent:
+                draft.compensation === 'standard' ? Math.round(draft.commissionRate) : null,
+              tierRates:
+                draft.compensation === 'custom'
+                  ? Object.fromEntries(
+                      Object.entries(draft.tierCommissions ?? {}).filter(([id]) =>
+                        paidTierIds.has(id),
+                      ),
+                    )
+                  : {},
+              salaryAmountPaise:
+                draft.compensation === 'salary'
+                  ? Math.round((draft.salaryAmount ?? 0) * 100)
+                  : null,
+              salaryPeriod: draft.compensation === 'salary' ? draft.salaryPeriod : null,
+              salaryNotes: draft.compensation === 'salary' ? draft.salaryNotes || null : null,
+            }
+          : null,
     }),
     schema: eventDtoSchema,
     headers: commandHeaders('event'),
@@ -88,15 +91,14 @@ export async function publishVenueEvent(
           : {}),
         ...(!isRsvp
           ? {
-            pricingPhases: (tier.pricingPhases ?? []).map((phase) => ({
-              id: phase.id,
-              name: phase.name.trim() || `Phase ${phase.id}`,
-              priceInPaise: Math.round(phase.priceInPaise),
-              startDate: phase.startDate,
-              endDate: phase.endDate,
-              quantity: phase.quantity ?? null,
-            })),
-          }
+              pricingPhases: (tier.pricingPhases ?? []).map((phase) => ({
+                id: phase.id,
+                name: phase.name.trim() || `Phase ${phase.id}`,
+                priceInPaise: Math.round(phase.priceInPaise),
+                ...pricingPhaseWindowFromDraft(draft, phase),
+                quantity: phase.quantity ?? null,
+              })),
+            }
           : {}),
         ...(tier.benefits ? { benefits: [...tier.benefits] } : {}),
         ...(tier.minAge != null ? { minAge: tier.minAge } : {}),
@@ -146,9 +148,7 @@ export async function publishVenueEvent(
       body: assignPromoterSchema.parse({
         promoterId,
         ratePercent:
-          hasPaidTiers && draft.compensation === 'standard'
-            ? Math.round(draft.commissionRate)
-            : 0,
+          hasPaidTiers && draft.compensation === 'standard' ? Math.round(draft.commissionRate) : 0,
         ...(draft.compensation === 'custom'
           ? {
             tierRates: Object.fromEntries(
@@ -202,6 +202,45 @@ export async function submitHostEventRequest(
   });
 }
 
+/**
+ * Pricing phases are entered in the editor as `DD-MM` partial dates, which the
+ * wire contract resolves to full ISO instants. Build the window in the event's
+ * year — it opens at `00:00:00.000Z` on the start date and closes at
+ * `00:00:00.000Z` the day after the end date (end-exclusive, matching the
+ * backend catalog fixtures).
+ */
+function pricingPhaseWindowFromDraft(
+  draft: Pick<EventEditorDraft, 'date'>,
+  phase: { readonly startDate: string; readonly endDate: string },
+): { startsAt: string; endsAt: string } {
+  const year = Number(draft.date.slice(0, 4));
+  const resolveDay = (ddmm: string): Date => {
+    const [dayPart, monthPart] = ddmm.split('-');
+    const day = Number(dayPart);
+    const month = Number(monthPart);
+    if (
+      !/^\d{2}-\d{2}$/.test(ddmm) ||
+      !Number.isInteger(month) ||
+      !Number.isInteger(day) ||
+      month < 1 ||
+      month > 12 ||
+      day < 1 ||
+      day > 31
+    ) {
+      throw new Error('Enter valid pricing phase dates (DD-MM).');
+    }
+    const instant = new Date(Date.UTC(year, month - 1, day));
+    if (instant.getUTCMonth() !== month - 1 || instant.getUTCDate() !== day) {
+      throw new Error('Enter valid pricing phase dates (DD-MM).');
+    }
+    return instant;
+  };
+
+  const startsAt = `${resolveDay(phase.startDate).toISOString().slice(0, 10)}T00:00:00.000Z`;
+  const close = resolveDay(phase.endDate);
+  close.setUTCDate(close.getUTCDate() + 1);
+  return { startsAt, endsAt: close.toISOString() };
+}
 
 type PosterContentType = 'image/jpeg' | 'image/png' | 'image/webp';
 
@@ -245,8 +284,7 @@ async function resolvePosterImageUrl(
   if (draft.artwork.file instanceof Blob) {
     blob = draft.artwork.file;
   } else {
-    // eslint-disable-next-line no-restricted-globals, no-restricted-syntax
-    const response = await fetch(draft.artwork.value);
+    const response = await globalThis.fetch(draft.artwork.value);
     blob = await response.blob();
   }
 
@@ -273,8 +311,7 @@ async function resolvePosterImageUrl(
   });
 
   const ext = contentType.split('/')[1] ?? 'jpg';
-  const fileName =
-    draft.artwork.alt?.includes('.') ? draft.artwork.alt : `poster.${ext}`;
+  const fileName = draft.artwork.alt?.includes('.') ? draft.artwork.alt : `poster.${ext}`;
 
   const file = new File([blob], fileName, { type: contentType });
   await uploadToSignedUrl(grant.uploadUrl, grant.headers, file);

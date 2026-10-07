@@ -17,7 +17,7 @@ export interface HostPayoutHistoryRow {
 
 export function mapHostPayoutAccount(value: string): HostPayoutAccountFields {
   const display = value.trim();
-  const match = display.match(/^(.*?)\s+(••\S+)$/);
+  const match = /^(.*?)\s+(••\S+)$/.exec(display);
 
   if (match?.[1] && match[2]) {
     return { display, bankName: match[1], maskedAccount: match[2] };

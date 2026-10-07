@@ -5,16 +5,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 import { ErrorState, LoadingState } from '@/components/partner-v3/States';
 import {
-  getHostPartnersFromApi,
-  getPromoterPartnersFromApi,
-  getVenuePartnersFromApi,
-} from '@/data/api-partner-data-source';
-import {
   resolvePartnershipRequest,
   resolvePromoterRequest,
   sendPartnershipRequest,
   sendPromoterConnectionRequest,
 } from '@/lib/api/partner-actions';
+import {
+  getHostPartnersData,
+  getPromoterPartnersData,
+  getVenuePartnersData,
+} from '@/lib/api/partner-data';
 
 import { HostPartnersScreen } from './HostPartnersScreen';
 import { PromoterPartnersScreen } from './PromoterPartnersScreen';
@@ -30,6 +30,7 @@ import type {
   PromoterPartnerRecord,
   PromoterPartnersData,
   PromoterPartnerTab,
+  StaffInvite,
   VenuePartnersData,
 } from '@/data/partner-data-source';
 
@@ -49,8 +50,9 @@ function errorMessage(error: unknown): string {
 /**
  * Client-only partners loader. All partner rows (venues, hosts, promoters)
  * come from the backend (`partnerships` + `promoter-connections` +
- * `discover-partners`); there is deliberately no fixture/dummy fallback — an
- * empty database renders empty states, never fabricated profiles.
+ * `discover-partners`); there is deliberately no fixture/dummy
+ * fallback — an empty database renders empty states, never
+ * fabricated profiles.
  */
 export function StudioPartnersClient({
   studio,
@@ -75,31 +77,36 @@ export function StudioPartnersClient({
   const [state, setState] = useState<LoadState>({ status: 'loading' });
   const [retryCount, setRetryCount] = useState(0);
   const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
-  const [pendingRequestAction, setPendingRequestAction] = useState<'approve' | 'reject' | null>(null);
+  const [pendingRequestAction, setPendingRequestAction] = useState<'approve' | 'reject' | null>(
+    null,
+  );
   const [requestErrorId, setRequestErrorId] = useState<string | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [connectingPartnerId, setConnectingPartnerId] = useState<string | null>(null);
   const [connectErrorId, setConnectErrorId] = useState<string | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
+  const [revokingInviteId, setRevokingInviteId] = useState<string | null>(null);
+  const [revokeErrorId, setRevokeErrorId] = useState<string | null>(null);
+  const [revokeError, setRevokeError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
     async function load() {
       try {
         if (studio === 'venue') {
-          const data = await getVenuePartnersFromApi(search);
+          const data = await getVenuePartnersData(search);
           if (mounted) {
             setVenueData(data);
             setState({ status: 'ready' });
           }
         } else if (studio === 'host') {
-          const data = await getHostPartnersFromApi(search);
+          const data = await getHostPartnersData(search);
           if (mounted) {
             setHostData(data);
             setState({ status: 'ready' });
           }
         } else {
-          const data = await getPromoterPartnersFromApi(search);
+          const data = await getPromoterPartnersData(search);
           if (mounted) {
             setPromoterData(data);
             setState({ status: 'ready' });
@@ -203,14 +210,16 @@ export function StudioPartnersClient({
             studio: 'promoter',
             candidateKind: partner.kind === 'venue' ? 'venue' : 'host',
             candidateOrganizationId: partner.organizationId ?? partner.id,
-            candidateVenueId: partner.venueId ?? null,
+            candidateVenueId: (partner as PartnerRelationship).venueId ?? null,
           });
           return;
         }
         // Venue ↔ host partnership.
         await sendPartnershipRequest({
           studio: studio === 'venue' ? 'venue' : 'host',
-          candidateVenueId: partner.venueId ?? (partner.kind === 'venue' ? partner.id : null),
+          candidateVenueId:
+            (partner as PartnerRelationship).venueId ??
+            (partner.kind === 'venue' ? partner.id : null),
           candidateOrganizationId: partner.organizationId ?? partner.id,
         });
       };
@@ -226,6 +235,31 @@ export function StudioPartnersClient({
         });
     },
     [reload, studio],
+  );
+
+  const handleRevokeInvite = useCallback(
+    (invite: StaffInvite) => {
+      setRevokingInviteId(invite.id);
+      setRevokeErrorId(null);
+      setRevokeError(null);
+      const run = async () => {
+        const { getActiveOrgId } = await import('@/lib/org/active-org');
+        const orgId = getActiveOrgId();
+        if (!orgId) throw new Error('No active organization selected');
+        const { staffApi } = await import('@/lib/api/staff-api');
+        await staffApi.revokeInvitation(invite.id);
+        reload();
+      };
+      void run()
+        .catch((err: unknown) => {
+          setRevokeErrorId(invite.id);
+          setRevokeError(errorMessage(err));
+        })
+        .finally(() => {
+          setRevokingInviteId(null);
+        });
+    },
+    [reload],
   );
 
   if (state.status === 'loading') {
@@ -280,6 +314,15 @@ export function StudioPartnersClient({
         onApproveRequest={handleApproveRequest}
         onRejectRequest={handleRejectRequest}
         onConnectPartner={handleConnectPartner}
+        staffInvites={venueData.staffInvites ?? []}
+        staffCanManage={venueData.staffAccess ? venueData.staffAccess.canManage : true}
+        staffError={venueData.staffAccess?.error ?? null}
+        revokingInviteId={revokingInviteId}
+        revokeErrorId={revokeErrorId}
+        revokeError={revokeError}
+        onRevokeInvite={handleRevokeInvite}
+        onStaffChanged={reload}
+        studioCapability="venue"
       />
     );
   }
@@ -302,6 +345,15 @@ export function StudioPartnersClient({
         onApproveRequest={handleApproveRequest}
         onRejectRequest={handleRejectRequest}
         onConnectPartner={handleConnectPartner}
+        staffInvites={hostData.staffInvites ?? []}
+        staffCanManage={hostData.staffAccess ? hostData.staffAccess.canManage : true}
+        staffError={hostData.staffAccess?.error ?? null}
+        revokingInviteId={revokingInviteId}
+        revokeErrorId={revokeErrorId}
+        revokeError={revokeError}
+        onRevokeInvite={handleRevokeInvite}
+        onStaffChanged={reload}
+        studioCapability="host"
       />
     );
   }

@@ -5,7 +5,17 @@ import { CloseIcon } from '@c1rcle/icons';
 import { IconButton } from './IconButton';
 import styles from './partner-v3.module.css';
 
-export function Drawer({ open, label, onClose, children }: { readonly open: boolean; readonly label: string; readonly onClose: () => void; readonly children: ReactNode }) {
+export function Drawer({
+  open,
+  label,
+  onClose,
+  children,
+}: {
+  readonly open: boolean;
+  readonly label: string;
+  readonly onClose: () => void;
+  readonly children: ReactNode;
+}) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -16,7 +26,12 @@ export function Drawer({ open, label, onClose, children }: { readonly open: bool
 
   return (
     <div className={styles['overlayRoot']} role="presentation">
-      <button type="button" className={styles['overlayScrim']} aria-label="Close navigation" onClick={onClose} />
+      <button
+        type="button"
+        className={styles['overlayScrim']}
+        aria-label="Close navigation"
+        onClick={onClose}
+      />
       <aside className={styles['drawer']} role="dialog" aria-modal="true" aria-label={label}>
         <div className={styles['drawerHeader']}>
           <span>{label}</span>

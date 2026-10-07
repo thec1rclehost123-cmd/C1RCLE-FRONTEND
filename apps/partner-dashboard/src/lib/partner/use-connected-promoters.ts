@@ -4,10 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { useSessionStore } from '@c1rcle/auth';
 
-import type { PromoterConnectionDto } from '@c1rcle/contracts';
-import type { EventEditorPromoterOption } from '@/data/partner-data-source';
-
 import { loadConnectedPromoterConnections } from './promoter-connection-repository';
+
+import type { EventEditorPromoterOption } from '@/data/partner-data-source';
 
 export interface ConnectedPromotersState {
   readonly data: readonly EventEditorPromoterOption[];
@@ -24,12 +23,12 @@ interface Result {
 
 const IDLE_RESULT: Result = { requestKey: null, data: [], error: null };
 
-function promoterOption(connection: PromoterConnectionDto): EventEditorPromoterOption {
-  const name = connection.promoterName?.trim() || `Promoter ${connection.promoterId.slice(-8)}`;
+function promoterOption(promoterId: string): EventEditorPromoterOption {
+  const label = promoterId.length > 2 ? promoterId.slice(-8) : promoterId;
   return {
-    id: connection.promoterId,
-    name,
-    initials: name.slice(0, 2).toUpperCase(),
+    id: promoterId,
+    name: `Promoter ${label}`,
+    initials: promoterId.slice(0, 2).toUpperCase(),
     role: 'Connected promoter',
   };
 }
@@ -55,7 +54,7 @@ export function useConnectedPromoters(
         if (!controller.signal.aborted) {
           setResult({
             requestKey,
-            data: connections.map((connection) => promoterOption(connection)),
+            data: connections.map((connection) => promoterOption(connection.promoterId)),
             error: null,
           });
         }
@@ -70,7 +69,9 @@ export function useConnectedPromoters(
         }
       });
 
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+    };
   }, [hydrated, organizationId, requestKey]);
 
   const currentResult = requestKey && result.requestKey === requestKey ? result : IDLE_RESULT;
@@ -79,6 +80,8 @@ export function useConnectedPromoters(
     data: currentResult.data,
     error: currentResult.error,
     loading: Boolean(requestKey) && (!hydrated || result.requestKey !== requestKey),
-    retry: () => setAttempt((value) => value + 1),
+    retry: () => {
+      setAttempt((value) => value + 1);
+    },
   };
 }

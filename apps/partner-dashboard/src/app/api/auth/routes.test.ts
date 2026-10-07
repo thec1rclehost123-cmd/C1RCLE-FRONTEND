@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { forwardToGateway } from '@/lib/bff/auth-proxy';
 
+import { POST as changePassword } from './change-password/route';
 import { POST as login } from './login/route';
 import { POST as logout } from './logout/route';
 import { POST as refresh } from './refresh/route';
@@ -63,17 +64,21 @@ describe('POST /api/auth/signup', () => {
     );
 
     const res = await signup(
-      post('/api/auth/signup', { origin: APP_ORIGIN }, {
-        email: 'a@b.com',
-        password: 'password123',
-        displayName: 'A',
-      }),
+      post(
+        '/api/auth/signup',
+        { origin: APP_ORIGIN },
+        {
+          email: 'a@b.com',
+          password: 'password123',
+          displayName: 'A',
+        },
+      ),
     );
 
     expect(res.status).toBe(201);
     await expect(res.json()).resolves.toMatchObject({ accessToken: 'tok_abc' });
     const setCookie = res.headers.get('set-cookie') ?? '';
-    expect(setCookie).toContain('c1rcle.csrf=');
+    expect(setCookie).toContain('partner.c1rcle.csrf=');
     expect(setCookie).toContain('better-auth.session_token=sess_abc');
     expect(setCookie.toLowerCase()).not.toContain('domain=');
     expect(setCookie.toLowerCase()).toContain('httponly');
@@ -116,7 +121,9 @@ describe('POST /api/auth/signup', () => {
       ),
     );
 
-    const res = await signup(post('/api/auth/signup', { origin: APP_ORIGIN }, { email: 'a@b.com' }));
+    const res = await signup(
+      post('/api/auth/signup', { origin: APP_ORIGIN }, { email: 'a@b.com' }),
+    );
 
     expect(res.status).toBe(422);
     await expect(res.json()).resolves.toMatchObject({
@@ -131,10 +138,14 @@ describe('POST /api/auth/signup', () => {
     mockForward.mockResolvedValue(gatewayResponse(AUTH_BODY, { status: 201 }));
 
     await signup(
-      post('/api/auth/signup', { origin: APP_ORIGIN }, {
-        email: 'secret@b.com',
-        password: 'hunter2xx',
-      }),
+      post(
+        '/api/auth/signup',
+        { origin: APP_ORIGIN },
+        {
+          email: 'secret@b.com',
+          password: 'hunter2xx',
+        },
+      ),
     );
 
     const logged = [...log.mock.calls, ...errorLog.mock.calls].flat().map((entry) => String(entry));
@@ -178,7 +189,7 @@ describe('POST /api/auth/refresh', () => {
       post('/api/auth/refresh', {
         origin: APP_ORIGIN,
         'x-csrf-token': 'tok',
-        cookie: 'c1rcle.csrf=tok; better-auth.session_token=sess_abc',
+        cookie: 'partner.c1rcle.csrf=tok; better-auth.session_token=sess_abc',
       }),
     );
 
@@ -187,6 +198,69 @@ describe('POST /api/auth/refresh', () => {
     const [calledPath, calledInit] = mockForward.mock.calls[0] ?? [];
     expect(calledPath).toBe('/api/v2/auth/refresh');
     expect(calledInit?.cookie ?? '').toContain('better-auth.session_token=sess_abc');
+  });
+});
+
+describe('POST /api/auth/change-password', () => {
+  it('rejects without a CSRF token', async () => {
+    const res = await changePassword(
+      post(
+        '/api/auth/change-password',
+        { origin: APP_ORIGIN },
+        { currentPassword: 'TempPass12345678', newPassword: 'brand-new-password-1' },
+      ),
+    );
+    expect(res.status).toBe(403);
+    expect(mockForward).not.toHaveBeenCalled();
+  });
+
+  it('forwards the rotation with the incoming cookie when the CSRF token matches', async () => {
+    mockForward.mockResolvedValue(
+      gatewayResponse({
+        user: { ...AUTH_BODY.user, mustChangePassword: false },
+        expiresAt: 1_900_000_000_000,
+      }),
+    );
+
+    const res = await changePassword(
+      post(
+        '/api/auth/change-password',
+        {
+          origin: APP_ORIGIN,
+          'x-csrf-token': 'tok',
+          cookie: 'partner.c1rcle.csrf=tok; better-auth.session_token=sess_abc',
+        },
+        { currentPassword: 'TempPass12345678', newPassword: 'brand-new-password-1' },
+      ),
+    );
+
+    expect(res.status).toBe(200);
+    const [calledPath, calledInit] = mockForward.mock.calls[0] ?? [];
+    expect(calledPath).toBe('/api/v2/auth/change-password');
+    expect(calledInit?.cookie ?? '').toContain('better-auth.session_token=sess_abc');
+  });
+
+  it('passes a wrong-current-password 400 through unchanged', async () => {
+    mockForward.mockResolvedValue(
+      gatewayResponse(
+        { code: 'validation', message: 'Current password is incorrect', status: 400 },
+        { status: 400 },
+      ),
+    );
+
+    const res = await changePassword(
+      post(
+        '/api/auth/change-password',
+        {
+          origin: APP_ORIGIN,
+          'x-csrf-token': 'tok',
+          cookie: 'partner.c1rcle.csrf=tok; better-auth.session_token=sess_abc',
+        },
+        { currentPassword: 'wrong-password', newPassword: 'brand-new-password-1' },
+      ),
+    );
+
+    expect(res.status).toBe(400);
   });
 });
 
@@ -203,12 +277,29 @@ describe('POST /api/auth/logout', () => {
       post('/api/auth/logout', {
         origin: APP_ORIGIN,
         'x-csrf-token': 'tok',
-        cookie: 'c1rcle.csrf=tok',
+        cookie: 'partner.c1rcle.csrf=tok',
       }),
     );
 
     expect(res.status).toBe(204);
-    expect((res.headers.get('set-cookie') ?? '').toLowerCase()).toContain('c1rcle.csrf=;');
+    expect((res.headers.get('set-cookie') ?? '').toLowerCase()).toContain('partner.c1rcle.csrf=;');
+  });
+
+  it('expires the session cookie even when the gateway revoke call fails', async () => {
+    mockForward.mockRejectedValue(new Error('gateway down'));
+
+    const res = await logout(
+      post('/api/auth/logout', {
+        origin: APP_ORIGIN,
+        'x-csrf-token': 'tok',
+        cookie: 'partner.c1rcle.csrf=tok; better-auth.session_token=abc',
+      }),
+    );
+
+    expect(res.status).toBe(204);
+    const cleared = res.cookies.get('better-auth.session_token');
+    expect(cleared?.value).toBe('');
+    expect(res.headers.get('set-cookie') ?? '').toMatch(/better-auth\.session_token=;.*Max-Age=0/i);
   });
 });
 

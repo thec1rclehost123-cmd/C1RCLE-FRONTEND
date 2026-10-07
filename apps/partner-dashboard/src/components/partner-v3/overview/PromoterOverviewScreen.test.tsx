@@ -31,8 +31,14 @@ describe('PromoterOverviewScreen', () => {
     expect(screen.getByRole('heading', { name: 'Latest Orders' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Upcoming Events' })).toBeInTheDocument();
     expect(screen.getByText('No assigned events yet.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'VIEW MORE' })).toHaveAttribute('href', '/partner/promoter/guests');
-    expect(screen.getByRole('link', { name: 'Open events →' })).toHaveAttribute('href', '/partner/promoter/events');
+    expect(screen.getByRole('link', { name: 'VIEW MORE' })).toHaveAttribute(
+      'href',
+      '/partner/promoter/guests',
+    );
+    expect(screen.getByRole('link', { name: 'Open events →' })).toHaveAttribute(
+      'href',
+      '/partner/promoter/events',
+    );
   });
 
   it('switches between Promoter performance metrics locally', async () => {
@@ -41,7 +47,12 @@ describe('PromoterOverviewScreen', () => {
     render(
       <PromoterOverviewScreen
         data={data}
-        links={{ events: '/events', guests: '/guests', analytics: '/analytics', finance: '/finance' }}
+        links={{
+          events: '/events',
+          guests: '/guests',
+          analytics: '/analytics',
+          finance: '/finance',
+        }}
       />,
     );
 

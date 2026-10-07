@@ -55,7 +55,10 @@ describe('Partner V3 global interactions', () => {
 
     await user.click(screen.getByRole('button', { name: 'Notifications' }));
     expect(screen.getByRole('dialog', { name: 'Notifications' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /payout of/i })).toHaveAttribute('href', '/partner/venue/finance');
+    expect(screen.getByRole('link', { name: /payout of/i })).toHaveAttribute(
+      'href',
+      '/partner/venue/finance',
+    );
 
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog', { name: 'Notifications' })).not.toBeInTheDocument();

@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useSessionStore } from '@c1rcle/auth';
+import { clearSession, useSessionStore } from '@c1rcle/auth';
 
 import TicketsPage from './page';
 
@@ -107,8 +107,8 @@ describe('TicketsPage real wallet', () => {
     mockApiGet.mockReset();
   });
 
-  it('renders the logged-out guest ticket showcase without wallet passes', () => {
-    render(<TicketsPage />);
+  it('renders the logged-out guest ticket showcase without wallet passes', async () => {
+    render(await TicketsPage());
 
     expect(screen.getByRole('heading', { level: 1, name: 'TICKETS' })).toBeInTheDocument();
     expect(

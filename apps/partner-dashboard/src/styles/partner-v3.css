@@ -19,15 +19,15 @@
   --partner-v3-shadow: 0 24px 60px rgb(0 0 0 / 60%);
 
   /* Legacy token aliases so V2-origin screens render correctly in the V3 shell */
-  --partner-text:       var(--partner-v3-ink);
-  --partner-muted:      var(--partner-v3-ink-muted);
-  --partner-accent:     var(--partner-v3-accent);
-  --partner-border:     var(--partner-v3-border);
+  --partner-text: var(--partner-v3-ink);
+  --partner-muted: var(--partner-v3-ink-muted);
+  --partner-accent: var(--partner-v3-accent);
+  --partner-border: var(--partner-v3-border);
   --partner-border-strong: var(--partner-v3-border-strong);
-  --partner-radius-lg:  var(--partner-v3-radius-lg);
-  --partner-shadow:     var(--partner-v3-shadow);
-  --dashboard-control:  var(--partner-v3-surface);
-  --dashboard-surface:  var(--partner-v3-background);
+  --partner-radius-lg: var(--partner-v3-radius-lg);
+  --partner-shadow: var(--partner-v3-shadow);
+  --dashboard-control: var(--partner-v3-surface);
+  --dashboard-surface: var(--partner-v3-background);
   --dashboard-selected: var(--partner-v3-surface-muted);
   --dashboard-radius-panel: var(--partner-v3-radius-lg);
   --dashboard-radius-button: 12px;
@@ -41,7 +41,9 @@
   gap: 12px;
   background: var(--partner-v3-background);
   color: var(--partner-v3-ink-muted);
-  font: 600 14px/1.4 var(--font-partner-v3), sans-serif;
+  font:
+    600 14px/1.4 var(--font-partner-v3),
+    sans-serif;
 }
 
 .partner-v3-spinner {
@@ -54,7 +56,9 @@
 }
 
 @keyframes partner-v3-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .partner-v3-organization {
@@ -80,13 +84,15 @@
   color: #ff8a55;
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: .14em;
+  letter-spacing: 0.14em;
 }
 
 .partner-v3-organization-panel h1 {
   margin: 12px 0 8px;
-  font: 700 32px/1.05 var(--font-display), sans-serif;
-  letter-spacing: -.035em;
+  font:
+    700 32px/1.05 var(--font-display),
+    sans-serif;
+  letter-spacing: -0.035em;
 }
 
 .partner-v3-organization-panel > p {
@@ -127,7 +133,7 @@
 
 .partner-v3-organization-choice:disabled {
   cursor: not-allowed;
-  opacity: .55;
+  opacity: 0.55;
 }
 
 .partner-v3-organization-choice > span {

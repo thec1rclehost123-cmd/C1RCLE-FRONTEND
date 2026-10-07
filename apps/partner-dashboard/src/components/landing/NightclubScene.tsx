@@ -9,7 +9,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 const COIN_COUNT = 22; // reduced for perf
 
 // ── Component ──────────────────────────────────────────────────────
-export default function NightclubScene() {
+export function NightclubScene() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -700,7 +700,12 @@ export default function NightclubScene() {
     addCrowdLight(2, 3.5, -7.0, '#FF4420', 1.4);
     addCrowdLight(0, 3.5, -8.0, '#FF3300', 1.2);
 
-    type CrowdFigure = { lArm: THREE.Mesh; rArm: THREE.Mesh; phase: number; bobSpeed: number };
+    interface CrowdFigure {
+      lArm: THREE.Mesh;
+      rArm: THREE.Mesh;
+      phase: number;
+      bobSpeed: number;
+    }
     const crowdFigures: CrowdFigure[] = [];
 
     // Seeded deterministic random (so same layout every load)
@@ -812,15 +817,14 @@ export default function NightclubScene() {
       if (!running) return;
       animId = requestAnimationFrame(animate);
 
-      timer.update(frameTime);
-      const elapsed = timer.getElapsed();
-
       // Once the nine-second camera reveal is complete, 30fps keeps the
       // ambience alive while cutting long-session main-thread/GPU work.
-      if (elapsed >= 9 && frameTime - lastRenderedAt < 32) return;
+      if (timer.getElapsed() >= 9 && frameTime - lastRenderedAt < 32) return;
       lastRenderedAt = frameTime;
+      timer.update(frameTime);
 
       const delta = Math.min(timer.getDelta(), 0.033);
+      const elapsed = timer.getElapsed();
       frameCount++;
 
       // ── Camera: tight on DJ → smooth zoom-out to reveal full party ──
@@ -971,7 +975,12 @@ export default function NightclubScene() {
 
       running = shouldRun;
       if (running) {
-        timer.reset();
+        // Clock.getDelta() used to swallow the time spent idle; Timer accrues
+        // elapsed on every update(), so freeze the timescale across the idle
+        // gap to stop the count from jumping on resume.
+        timer.setTimescale(0);
+        timer.update();
+        timer.setTimescale(1);
         animId = requestAnimationFrame(animate);
       } else {
         cancelAnimationFrame(animId);
@@ -1014,10 +1023,7 @@ export default function NightclubScene() {
       resizeObserver.disconnect();
       scene.traverse((object) => {
         if (!(object instanceof THREE.Mesh)) return;
-        const mesh = object as THREE.Mesh<
-          THREE.BufferGeometry,
-          THREE.Material | THREE.Material[]
-        >;
+        const mesh = object as THREE.Mesh;
         mesh.geometry.dispose();
         const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
         materials.forEach((material) => {
@@ -1034,5 +1040,5 @@ export default function NightclubScene() {
     };
   }, []);
 
-  return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
+  return <div ref={containerRef} className="h-full w-full" />;
 }

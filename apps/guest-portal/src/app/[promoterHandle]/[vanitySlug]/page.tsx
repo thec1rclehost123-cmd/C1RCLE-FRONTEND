@@ -1,6 +1,7 @@
-import { createApiClient } from '@c1rcle/api-client';
 import { notFound, redirect } from 'next/navigation';
 import { z } from 'zod';
+
+import { createApiClient } from '@c1rcle/api-client';
 
 const resolutionSchema = z.object({ eventSlug: z.string(), code: z.string() });
 

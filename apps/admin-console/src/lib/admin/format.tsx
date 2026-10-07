@@ -1,0 +1,420 @@
+import type {
+  AdminRefundRequestStatus,
+  AdminRole,
+  AdminAction,
+  AdminPayoutStatus,
+  DisputeStatus,
+  DisputeResolutionOutcome,
+  OrderStatus,
+  ProposalStatus,
+  OnboardingStatus,
+  EventStatus,
+  HostStatus,
+  VenueStatus,
+  TicketStatus,
+  PromoterAssignmentStatus,
+  SupportTicketStatus,
+  SupportTicketPriority,
+  SupportTicketCategory,
+} from '@/lib/admin/contract-types';
+
+export function formatPaise(paise: number): string {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(paise / 100);
+}
+
+export function formatDateTime(value: string): string {
+  return new Intl.DateTimeFormat('en-IN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
+}
+
+export function formatEpochMs(value: number): string {
+  return new Intl.DateTimeFormat('en-IN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
+}
+
+export const ADMIN_ROLE_LABELS: Record<AdminRole, string> = {
+  super: 'Super admin',
+  admin: 'Admin',
+  ops: 'Operations',
+  finance: 'Finance',
+  support: 'Support',
+};
+
+export const ADMIN_ACTION_LABELS: Record<AdminAction, string> = {
+  EVENT_PAUSE: 'Pause event (admin override)',
+  EVENT_RESUME: 'Resume event',
+  EVENT_FORCE_PAUSE: 'Force-pause event (admin override)',
+  ONBOARDING_APPROVE: 'Approve onboarding',
+  VENUE_SUSPEND: 'Suspend venue',
+  VENUE_REINSTATE: 'Reinstate venue',
+  ORGANIZATION_SUSPEND: 'Suspend organization',
+  ORGANIZATION_REINSTATE: 'Reinstate organization',
+  FINANCIAL_REFUND: 'Refund',
+  PAYOUT_BATCH_RUN: 'Run payout batch',
+  DISPUTE_RESOLVE: 'Resolve dispute',
+  USER_BAN: 'Ban user',
+  USER_UNBAN: 'Unban user',
+  PAYOUT_FREEZE: 'Freeze payout',
+  PAYOUT_RELEASE: 'Release payout',
+  ADMIN_PROVISION: 'Provision admin',
+  ADMIN_ROLE_UPDATE: 'Update admin role',
+  COMMISSION_ADJUST: 'Adjust commission',
+  PROMOTER_SUSPEND: 'Suspend promoter',
+  PROMOTER_REINSTATE: 'Reinstate promoter',
+};
+
+/**
+ * Labels for every action that can appear on an audit row. Keyed by string
+ * (not `AdminAction`) because the CSV export writes backend-internal actions
+ * like `ADMIN_EXPORT` that are not part of the wire `AdminAction` enum.
+ */
+export const AUDIT_ACTION_LABELS: Record<string, string> = {
+  ...ADMIN_ACTION_LABELS,
+  ADMIN_EXPORT: 'Export audit CSV',
+};
+
+export const PAYOUT_STATUS_LABELS: Record<AdminPayoutStatus, string> = {
+  requested: 'Requested',
+  processing: 'Processing',
+  paid: 'Paid',
+  failed: 'Failed',
+  frozen: 'Frozen',
+};
+
+export const VENUE_STATUS_LABELS: Record<VenueStatus, string> = {
+  active: 'Active',
+  suspended: 'Suspended',
+};
+
+export const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
+  draft: 'Draft',
+  review: 'Under review',
+  scheduled: 'Scheduled',
+  published: 'Published',
+  sales_paused: 'Sales paused',
+  started: 'Started',
+  ended: 'Ended',
+  archived: 'Archived',
+  cancelled: 'Cancelled',
+};
+
+export const HOST_STATUS_LABELS: Record<HostStatus, string> = {
+  active: 'Active',
+  suspended: 'Suspended',
+  archived: 'Archived',
+};
+
+export const PROPOSAL_STATUS_LABELS: Record<ProposalStatus, string> = {
+  pending: 'Pending',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  cancelled: 'Cancelled',
+};
+
+export const REFUND_STATUS_LABELS: Record<AdminRefundRequestStatus, string> = {
+  pending: 'Pending',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  settled: 'Settled',
+  failed: 'Failed',
+};
+
+export const ONBOARDING_STATUS_LABELS: Record<OnboardingStatus, string> = {
+  draft: 'Draft',
+  submitted: 'Submitted',
+  changes_requested: 'Changes requested',
+  approved: 'Approved',
+  rejected: 'Rejected',
+};
+
+type Tone = 'default' | 'success' | 'warning' | 'destructive' | 'muted' | 'urgent';
+
+const TONE_CLASSES: Record<Tone, string> = {
+  default: 'bg-muted text-foreground',
+  success: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
+  warning: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300',
+  destructive: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
+  muted: 'bg-muted text-muted-foreground',
+  // Reserved for the handful of states that mean "act on this now" —
+  // SLA-urgent tickets, not just anything red/destructive.
+  urgent: 'bg-urgent/15 text-urgent',
+};
+
+export function StatusBadge({
+  label,
+  tone = 'default',
+}: {
+  readonly label: string;
+  readonly tone?: Tone;
+}) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${TONE_CLASSES[tone]}`}
+    >
+      {label}
+    </span>
+  );
+}
+
+export function proposalStatusTone(status: ProposalStatus): Tone {
+  switch (status) {
+    case 'pending':
+      return 'warning';
+    case 'approved':
+      return 'success';
+    case 'rejected':
+      return 'destructive';
+    case 'cancelled':
+      return 'muted';
+  }
+}
+
+export function refundStatusTone(status: AdminRefundRequestStatus): Tone {
+  switch (status) {
+    case 'pending':
+      return 'warning';
+    case 'settled':
+      return 'success';
+    case 'approved':
+      return 'default';
+    case 'rejected':
+      return 'destructive';
+    case 'failed':
+      return 'destructive';
+  }
+}
+
+export function onboardingStatusTone(status: OnboardingStatus): Tone {
+  switch (status) {
+    case 'approved':
+      return 'success';
+    case 'rejected':
+      return 'destructive';
+    case 'draft':
+    case 'submitted':
+    case 'changes_requested':
+      return 'warning';
+  }
+}
+
+export function payoutStatusTone(status: AdminPayoutStatus): Tone {
+  switch (status) {
+    case 'paid':
+      return 'success';
+    case 'failed':
+      return 'destructive';
+    case 'frozen':
+      return 'warning';
+    case 'requested':
+    case 'processing':
+      return 'default';
+  }
+}
+
+export function venueStatusTone(status: VenueStatus): Tone {
+  switch (status) {
+    case 'active':
+      return 'success';
+    case 'suspended':
+      return 'destructive';
+  }
+}
+
+export function eventStatusTone(status: EventStatus): Tone {
+  switch (status) {
+    case 'published':
+    case 'started':
+      return 'success';
+    case 'scheduled':
+      return 'default';
+    case 'draft':
+    case 'ended':
+    case 'archived':
+      return 'muted';
+    case 'review':
+    case 'sales_paused':
+      return 'warning';
+    case 'cancelled':
+      return 'destructive';
+  }
+}
+
+export function hostStatusTone(status: HostStatus): Tone {
+  switch (status) {
+    case 'active':
+      return 'success';
+    case 'suspended':
+      return 'destructive';
+    case 'archived':
+      return 'muted';
+  }
+}
+
+const AUDIT_ACTION_TONES: Record<string, Tone> = {
+  ONBOARDING_APPROVE: 'success',
+  VENUE_SUSPEND: 'destructive',
+  FINANCIAL_REFUND: 'default',
+  PAYOUT_BATCH_RUN: 'default',
+  PAYOUT_FREEZE: 'warning',
+  PAYOUT_RELEASE: 'success',
+  ADMIN_PROVISION: 'default',
+  COMMISSION_ADJUST: 'default',
+};
+
+/** Tones an audit action. Unknown (backend-internal) actions stay muted. */
+export function auditActionTone(action: string): Tone {
+  return AUDIT_ACTION_TONES[action] ?? 'muted';
+}
+
+export function shortId(id: string): string {
+  return id.length > 12 ? `${id.slice(0, 12)}…` : id;
+}
+
+export const DISPUTE_STATUS_LABELS: Record<DisputeStatus, string> = {
+  open: 'Open',
+  under_review: 'Under review',
+  resolved: 'Resolved',
+};
+
+export const DISPUTE_RESOLUTION_LABELS: Record<DisputeResolutionOutcome, string> = {
+  upheld: 'Upheld',
+  denied: 'Denied',
+};
+
+export function disputeStatusTone(status: DisputeStatus): Tone {
+  switch (status) {
+    case 'open':
+      return 'warning';
+    case 'under_review':
+      return 'default';
+    case 'resolved':
+      return 'success';
+  }
+}
+
+export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  pending: 'Pending',
+  awaiting_payment: 'Awaiting payment',
+  paid: 'Paid',
+  expired: 'Expired',
+  cancelled: 'Cancelled',
+  failed: 'Failed',
+  refund_requested: 'Refund requested',
+  refunded: 'Refunded',
+};
+
+export function orderStatusTone(status: OrderStatus): Tone {
+  switch (status) {
+    case 'paid':
+      return 'success';
+    case 'refunded':
+      return 'muted';
+    case 'refund_requested':
+      return 'warning';
+    case 'awaiting_payment':
+      return 'warning';
+    case 'pending':
+      return 'default';
+    case 'expired':
+    case 'cancelled':
+      return 'muted';
+    case 'failed':
+      return 'destructive';
+  }
+}
+
+export const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
+  valid: 'Valid',
+  redeemed: 'Redeemed',
+  void: 'Void',
+};
+
+export function ticketStatusTone(status: TicketStatus): Tone {
+  switch (status) {
+    case 'valid':
+      return 'success';
+    case 'redeemed':
+      return 'default';
+    case 'void':
+      return 'muted';
+  }
+}
+
+export const PROMOTER_ASSIGNMENT_STATUS_LABELS: Record<PromoterAssignmentStatus, string> = {
+  active: 'Active',
+  ended: 'Ended',
+  suspended: 'Suspended',
+};
+
+export function promoterAssignmentStatusTone(status: PromoterAssignmentStatus): Tone {
+  switch (status) {
+    case 'active':
+      return 'success';
+    case 'suspended':
+      return 'warning';
+    case 'ended':
+      return 'muted';
+  }
+}
+
+export const SUPPORT_TICKET_STATUS_LABELS: Record<SupportTicketStatus, string> = {
+  open: 'Open',
+  in_progress: 'In progress',
+  waiting_on_customer: 'Waiting on customer',
+  escalated: 'Escalated',
+  resolved: 'Resolved',
+  closed: 'Closed',
+};
+
+export function supportTicketStatusTone(status: SupportTicketStatus): Tone {
+  switch (status) {
+    case 'open':
+      return 'warning';
+    case 'in_progress':
+    case 'waiting_on_customer':
+      return 'default';
+    case 'escalated':
+      return 'destructive';
+    case 'resolved':
+      return 'success';
+    case 'closed':
+      return 'muted';
+  }
+}
+
+export const SUPPORT_TICKET_PRIORITY_LABELS: Record<SupportTicketPriority, string> = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+  urgent: 'Urgent',
+};
+
+export function supportTicketPriorityTone(priority: SupportTicketPriority): Tone {
+  switch (priority) {
+    case 'urgent':
+      return 'urgent';
+    case 'high':
+      return 'warning';
+    case 'medium':
+      return 'default';
+    case 'low':
+      return 'muted';
+  }
+}
+
+export const SUPPORT_TICKET_CATEGORY_LABELS: Record<SupportTicketCategory, string> = {
+  account: 'Account',
+  billing: 'Billing',
+  order: 'Order',
+  event: 'Event',
+  technical: 'Technical',
+  other: 'Other',
+};

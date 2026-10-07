@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildEventDetailTabDestinations } from './EventDetailTabs';
 import { isEventDetailTabActive } from './EventDetailLayout';
+import { buildEventDetailTabDestinations } from './EventDetailTabs';
 
 describe('buildEventDetailTabDestinations', () => {
   it('creates one route destination for each approved event task tab', () => {

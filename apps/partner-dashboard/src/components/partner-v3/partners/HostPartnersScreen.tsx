@@ -1,23 +1,91 @@
-import { PartnerNetworkScreen } from './PartnerNetworkScreen';
+import { PartnerNetworkScreen, type PartnerRequestActions } from './PartnerNetworkScreen';
 
-import type { HostPartnersData, PartnerRelationship, PartnerRequest, PartnerSegment, PartnerSubView } from '@/data/partner-data-source';
+import type {
+  HostPartnersData,
+  PartnerRelationship,
+  PartnerSegment,
+  PartnerSubView,
+  StaffInvite,
+} from '@/data/partner-data-source';
 
-export function HostPartnersScreen({ data, segment = 'venues', subView = 'connected', search = '', profileId, pendingRequestId = null, pendingRequestAction = null, requestErrorId = null, requestError = null, connectingPartnerId = null, connectErrorId = null, connectError = null, onApproveRequest, onRejectRequest, onConnectPartner }: {
+export interface HostPartnersScreenProps extends PartnerRequestActions<PartnerRelationship> {
   readonly data: HostPartnersData;
   readonly segment?: PartnerSegment;
   readonly subView?: PartnerSubView;
   readonly search?: string;
   readonly profileId?: string;
-  readonly pendingRequestId?: string | null;
-  readonly pendingRequestAction?: 'approve' | 'reject' | null;
-  readonly requestErrorId?: string | null;
-  readonly requestError?: string | null;
-  readonly connectingPartnerId?: string | null;
-  readonly connectErrorId?: string | null;
-  readonly connectError?: string | null;
-  readonly onApproveRequest?: ((request: PartnerRequest) => void) | undefined;
-  readonly onRejectRequest?: ((request: PartnerRequest) => void) | undefined;
-  readonly onConnectPartner?: ((partner: PartnerRelationship) => void) | undefined;
-}) {
-  return <PartnerNetworkScreen data={{ primary: data.venues, promoters: data.promoters, staff: data.staff }} baseHref="/partner/host/partners" primarySegment="venues" primaryLabel="Venues" primarySubLabel="My Venues" segment={segment} subView={subView} search={search} showSearch={false} hostAccent {...(profileId ? { profileId } : {})} pendingRequestId={pendingRequestId} pendingRequestAction={pendingRequestAction} requestErrorId={requestErrorId} requestError={requestError} connectingPartnerId={connectingPartnerId} connectErrorId={connectErrorId} connectError={connectError} onApproveRequest={onApproveRequest} onRejectRequest={onRejectRequest} onConnectPartner={onConnectPartner} />;
+  readonly organizationId?: string;
+  readonly staffInvites?: readonly StaffInvite[];
+  readonly staffCanManage?: boolean;
+  readonly staffError?: string | null;
+  readonly revokingInviteId?: string | null;
+  readonly revokeErrorId?: string | null;
+  readonly revokeError?: string | null;
+  readonly onRevokeInvite?: ((invite: StaffInvite) => void) | undefined;
+  readonly onStaffChanged?: (() => void) | undefined;
+  readonly studioCapability?: 'venue' | 'host';
+}
+
+export function HostPartnersScreen({
+  data,
+  segment = 'venues',
+  subView = 'connected',
+  search = '',
+  profileId,
+  organizationId,
+  pendingRequestId,
+  pendingRequestAction,
+  requestErrorId,
+  requestError,
+  connectingPartnerId,
+  connectErrorId,
+  connectError,
+  onApproveRequest,
+  onRejectRequest,
+  onConnectPartner,
+  staffInvites = data.staffInvites ?? [],
+  staffCanManage = data.staffAccess ? data.staffAccess.canManage : true,
+  staffError = data.staffAccess?.error ?? null,
+  revokingInviteId = null,
+  revokeErrorId = null,
+  revokeError = null,
+  onRevokeInvite,
+  onStaffChanged,
+  studioCapability = 'host',
+}: HostPartnersScreenProps) {
+  return (
+    <PartnerNetworkScreen
+      data={{ primary: data.venues, promoters: data.promoters, staff: data.staff }}
+      baseHref="/partner/host/partners"
+      primarySegment="venues"
+      primaryLabel="Venues"
+      primarySubLabel="My Venues"
+      segment={segment}
+      subView={subView}
+      search={search}
+      showSearch={false}
+      hostAccent
+      {...(profileId ? { profileId } : {})}
+      {...(organizationId ? { organizationId } : {})}
+      pendingRequestId={pendingRequestId ?? null}
+      pendingRequestAction={pendingRequestAction ?? null}
+      requestErrorId={requestErrorId ?? null}
+      requestError={requestError ?? null}
+      connectingPartnerId={connectingPartnerId ?? null}
+      connectErrorId={connectErrorId ?? null}
+      connectError={connectError ?? null}
+      onApproveRequest={onApproveRequest}
+      onRejectRequest={onRejectRequest}
+      onConnect={onConnectPartner}
+      staffInvites={staffInvites}
+      staffCanManage={staffCanManage}
+      staffError={staffError}
+      revokingInviteId={revokingInviteId}
+      revokeErrorId={revokeErrorId}
+      revokeError={revokeError}
+      onRevokeInvite={onRevokeInvite}
+      onStaffChanged={onStaffChanged}
+      studioCapability={studioCapability}
+    />
+  );
 }

@@ -4,7 +4,6 @@ import { NextIcon, TicketIcon } from '@c1rcle/icons';
 
 import { EventInformationAccordion } from '../event-detail/EventInformationAccordion';
 import { EventLineChart } from '../event-detail/EventLineChart';
-
 import styles from '../event-detail/VenueEventDetail.module.css';
 
 import type { VenueEventSummaryModel } from '../event-detail-model';

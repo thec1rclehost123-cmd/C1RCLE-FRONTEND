@@ -16,10 +16,7 @@ export function normalizePartnerRole(value: unknown): PartnerDashboardRole | nul
   }
 }
 
-export function resolvePartnerDashboardPath(
-  value: unknown,
-  suffix?: string,
-): string | null {
+export function resolvePartnerDashboardPath(value: unknown, suffix?: string): string | null {
   const role = normalizePartnerRole(value);
   if (!role) return null;
 

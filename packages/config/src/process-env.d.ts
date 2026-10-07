@@ -16,6 +16,7 @@ declare namespace NodeJS {
     NEXT_PUBLIC_API_BASE_URL?: string;
     NEXT_PUBLIC_GUEST_PORTAL_URL?: string;
     NEXT_PUBLIC_APP_NAME?: string;
+    NEXT_PUBLIC_APP_ID?: string;
     NEXT_PUBLIC_ENVIRONMENT?: string;
     NEXT_PUBLIC_SENTRY_DSN?: string;
     NEXT_PUBLIC_FIREBASE_API_KEY?: string;
@@ -23,6 +24,10 @@ declare namespace NodeJS {
     NEXT_PUBLIC_FIREBASE_PROJECT_ID?: string;
     NEXT_PUBLIC_FIREBASE_TEST_PHONE?: string;
     NODE_ENV?: string;
+    SITE_URL?: string;
+    VERCEL_ENV?: string;
+    VERCEL_URL?: string;
     ANALYZE?: string;
+    GATEWAY_READINESS_TOKEN?: string;
   }
 }

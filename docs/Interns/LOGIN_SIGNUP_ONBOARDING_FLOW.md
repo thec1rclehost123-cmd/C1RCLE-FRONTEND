@@ -69,51 +69,51 @@ flowchart LR
 
 ### Principal frontend files
 
-| Responsibility | Path |
-|---|---|
-| Direct login UI and post-login routing | `src/app/login/PageClient.tsx` |
-| Standalone signup | `src/app/signup/page.tsx` |
-| Onboarding wizard and embedded login/signup | `src/app/onboard/PageClient.tsx` |
-| Onboarding auth context | `src/components/providers/DashboardAuthProvider.tsx` |
-| Session bootstrap, refresh, focus refresh, idle logout | `src/components/providers/session-provider.tsx` |
-| Browser-side gateway API composition | `src/lib/api/client.ts` |
-| Auth BFF routes | `src/app/api/auth/**/route.ts` |
-| Auth BFF security/cookie helpers | `src/lib/bff/auth-proxy.ts` |
-| Onboarding gateway repository | `src/lib/onboarding/onboarding-repository.ts` |
-| Email OTP client | `src/lib/onboarding/otp.ts` |
-| Firebase phone client | `src/lib/firebase/phone-auth.ts` |
-| Direct signed-URL upload | `src/lib/onboarding/uploadToSignedUrl.ts` |
-| Organization repository | `src/lib/org/org-repository.ts` |
-| Active-organization cookie | `src/lib/org/active-org.ts` |
-| Post-auth routing helpers | `src/lib/org/route-after-auth.ts` |
-| Edge route bouncer | `src/proxy.ts` |
-| Shared auth implementation | `../../packages/auth/src/auth-client.ts` |
-| In-memory auth state | `../../packages/auth/src/session-store.ts` |
-| Auth wire contracts | `../../packages/contracts/src/contracts/auth.ts` |
-| Onboarding wire contracts | `../../packages/contracts/src/contracts/onboarding.ts` |
+| Responsibility                                         | Path                                                   |
+| ------------------------------------------------------ | ------------------------------------------------------ |
+| Direct login UI and post-login routing                 | `src/app/login/PageClient.tsx`                         |
+| Standalone signup                                      | `src/app/signup/page.tsx`                              |
+| Onboarding wizard and embedded login/signup            | `src/app/onboard/PageClient.tsx`                       |
+| Onboarding auth context                                | `src/components/providers/DashboardAuthProvider.tsx`   |
+| Session bootstrap, refresh, focus refresh, idle logout | `src/components/providers/session-provider.tsx`        |
+| Browser-side gateway API composition                   | `src/lib/api/client.ts`                                |
+| Auth BFF routes                                        | `src/app/api/auth/**/route.ts`                         |
+| Auth BFF security/cookie helpers                       | `src/lib/bff/auth-proxy.ts`                            |
+| Onboarding gateway repository                          | `src/lib/onboarding/onboarding-repository.ts`          |
+| Email OTP client                                       | `src/lib/onboarding/otp.ts`                            |
+| Firebase phone client                                  | `src/lib/firebase/phone-auth.ts`                       |
+| Direct signed-URL upload                               | `src/lib/onboarding/uploadToSignedUrl.ts`              |
+| Organization repository                                | `src/lib/org/org-repository.ts`                        |
+| Active-organization cookie                             | `src/lib/org/active-org.ts`                            |
+| Post-auth routing helpers                              | `src/lib/org/route-after-auth.ts`                      |
+| Edge route bouncer                                     | `src/proxy.ts`                                         |
+| Shared auth implementation                             | `../../packages/auth/src/auth-client.ts`               |
+| In-memory auth state                                   | `../../packages/auth/src/session-store.ts`             |
+| Auth wire contracts                                    | `../../packages/contracts/src/contracts/auth.ts`       |
+| Onboarding wire contracts                              | `../../packages/contracts/src/contracts/onboarding.ts` |
 
 ### Principal backend files
 
 All backend paths below are relative to `C1RCLE-BACKEND`.
 
-| Responsibility | Path |
-|---|---|
-| Better Auth HTTP bridge | `apps/api-gateway/src/routes/v2/auth/index.ts` |
-| Better Auth configuration and request actor resolution | `apps/api-gateway/src/plugins/auth.ts` |
-| Email OTP HTTP routes | `apps/api-gateway/src/routes/v2/auth/otp-routes.ts` |
-| Email delivery adapter | `apps/api-gateway/src/lib/notifications/resend-email-sender.ts` |
-| Onboarding HTTP routes | `apps/api-gateway/src/routes/v2/onboarding.ts` |
-| Phone-token verifier | `apps/api-gateway/src/lib/verification/firebase-phone-verifier.ts` |
-| Rate-limit classes | `apps/api-gateway/src/plugins/rate-limit.ts` |
-| Email OTP application service | `packages/core/src/application/auth/email-otp-service.ts` |
-| Email OTP domain rules | `packages/core/src/domain/models/email-otp.ts` |
-| Email OTP Firestore repository | `packages/core/src/infrastructure/firestore/firestore-email-otp-repository.ts` |
-| Onboarding application service | `packages/core/src/application/onboarding/onboarding-service.ts` |
-| Onboarding state/domain rules | `packages/core/src/domain/models/onboarding.ts` |
-| Onboarding Firestore repository | `packages/core/src/infrastructure/firestore/firestore-onboarding-repository.ts` |
-| Signed URL implementation | `packages/core/src/infrastructure/firestore/firebase-object-storage.ts` |
-| Organization Firestore repository | `packages/core/src/infrastructure/firestore/firestore-organization-repository.ts` |
-| Admin approval route | `apps/api-gateway/src/routes/v2/admin/onboarding-review.ts` |
+| Responsibility                                         | Path                                                                              |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| Better Auth HTTP bridge                                | `apps/api-gateway/src/routes/v2/auth/index.ts`                                    |
+| Better Auth configuration and request actor resolution | `apps/api-gateway/src/plugins/auth.ts`                                            |
+| Email OTP HTTP routes                                  | `apps/api-gateway/src/routes/v2/auth/otp-routes.ts`                               |
+| Email delivery adapter                                 | `apps/api-gateway/src/lib/notifications/resend-email-sender.ts`                   |
+| Onboarding HTTP routes                                 | `apps/api-gateway/src/routes/v2/onboarding.ts`                                    |
+| Phone-token verifier                                   | `apps/api-gateway/src/lib/verification/firebase-phone-verifier.ts`                |
+| Rate-limit classes                                     | `apps/api-gateway/src/plugins/rate-limit.ts`                                      |
+| Email OTP application service                          | `packages/core/src/application/auth/email-otp-service.ts`                         |
+| Email OTP domain rules                                 | `packages/core/src/domain/models/email-otp.ts`                                    |
+| Email OTP Firestore repository                         | `packages/core/src/infrastructure/firestore/firestore-email-otp-repository.ts`    |
+| Onboarding application service                         | `packages/core/src/application/onboarding/onboarding-service.ts`                  |
+| Onboarding state/domain rules                          | `packages/core/src/domain/models/onboarding.ts`                                   |
+| Onboarding Firestore repository                        | `packages/core/src/infrastructure/firestore/firestore-onboarding-repository.ts`   |
+| Signed URL implementation                              | `packages/core/src/infrastructure/firestore/firebase-object-storage.ts`           |
+| Organization Firestore repository                      | `packages/core/src/infrastructure/firestore/firestore-organization-repository.ts` |
+| Admin approval route                                   | `apps/api-gateway/src/routes/v2/admin/onboarding-review.ts`                       |
 
 ---
 
@@ -495,7 +495,7 @@ No navigation away from `/onboard` occurs, so local onboarding state is preserve
 The embedded handler calls:
 
 ```ts
-authSignIn(otpEmail, loginPassword)
+authSignIn(otpEmail, loginPassword);
 ```
 
 `DashboardAuthProvider.signIn()` delegates to the same `@c1rcle/auth.login()` used by direct login. Therefore these are shared:
@@ -587,20 +587,20 @@ It does not check:
 
 ### 4.4 Direct-versus-onboarding login comparison
 
-| Concern | Direct `/login` | Login within `/onboard` |
-|---|---|---|
-| Shared credential API | Yes | Yes |
-| Workspace selected first | Yes | Yes |
-| Honors `next`/`callbackUrl` | Yes | No |
-| Lists organizations after login | Yes | No |
-| Validates chosen type against `/access` | Yes | No |
-| Logs out on type mismatch | Yes | No |
-| Queries onboarding application immediately | No, only after navigation to `/onboard` | Yes |
-| Resumes a draft | Through onboarding initialization | Immediately |
-| No application result | Routes into onboarding | Starts at phone verification |
-| Existing organization | Routes to matching dashboard | Not checked |
-| Error wording | Friendly invalid-credentials text | Shared `Authentication failed` text |
-| Preserves onboarding local state | Not applicable | Yes |
+| Concern                                    | Direct `/login`                         | Login within `/onboard`             |
+| ------------------------------------------ | --------------------------------------- | ----------------------------------- |
+| Shared credential API                      | Yes                                     | Yes                                 |
+| Workspace selected first                   | Yes                                     | Yes                                 |
+| Honors `next`/`callbackUrl`                | Yes                                     | No                                  |
+| Lists organizations after login            | Yes                                     | No                                  |
+| Validates chosen type against `/access`    | Yes                                     | No                                  |
+| Logs out on type mismatch                  | Yes                                     | No                                  |
+| Queries onboarding application immediately | No, only after navigation to `/onboard` | Yes                                 |
+| Resumes a draft                            | Through onboarding initialization       | Immediately                         |
+| No application result                      | Routes into onboarding                  | Starts at phone verification        |
+| Existing organization                      | Routes to matching dashboard            | Not checked                         |
+| Error wording                              | Friendly invalid-credentials text       | Shared `Authentication failed` text |
+| Preserves onboarding local state           | Not applicable                          | Yes                                 |
 
 The two routes share low-level authentication, but not their post-auth controller.
 
@@ -1242,11 +1242,11 @@ Admin approval:
 8. Sets timezone `Asia/Kolkata`.
 9. Applies plan fee:
 
-| Plan | Platform fee |
-|---|---:|
-| Basic | 15% |
-| Silver | 12% |
-| Diamond | 10% |
+| Plan    | Platform fee |
+| ------- | -----------: |
+| Basic   |          15% |
+| Silver  |          12% |
+| Diamond |          10% |
 
 10. Saves the organization to `v2_organizations`.
 11. Updates the request with approved status, reviewer, timestamp, note, and organization ID.
@@ -1274,31 +1274,31 @@ After the user returns to direct login, the provisioned organization is visible 
 
 ### Auth and BFF
 
-| Frontend route | Gateway route | Auth material | Request | Success |
-|---|---|---|---|---|
-| `POST /api/auth/signup` | `POST /api/v2/auth/signup` | None | `{email,password,displayName}` | 201 auth bridge and cookies |
-| `POST /api/auth/login` | `POST /api/v2/auth/login` | None | `{email,password}` | 200 auth bridge and cookies |
-| `POST /api/auth/refresh` | `POST /api/v2/auth/refresh` | Session cookie and CSRF | `null` | 200 auth bridge |
-| `POST /api/auth/logout` | `POST /api/v2/auth/logout` | Session cookie and CSRF | `null` | 204 |
-| `GET /api/auth/session` | `GET /api/v2/auth/session` | Session cookie | None | 200 session |
-| `POST /api/auth/otp/send` | `POST /api/v2/auth/otp/send` | None | `{email}` | 200 generic ack |
-| `POST /api/auth/otp/verify` | `POST /api/v2/auth/otp/verify` | None | `{email,code}` | 200 verified ack |
-| `POST /api/auth/phone-verification` | `POST /api/v2/onboarding/verify-document` | Cookie and CSRF | `{phoneNumber,idToken}` | 200 result; currently unused by wizard |
+| Frontend route                      | Gateway route                             | Auth material           | Request                        | Success                                |
+| ----------------------------------- | ----------------------------------------- | ----------------------- | ------------------------------ | -------------------------------------- |
+| `POST /api/auth/signup`             | `POST /api/v2/auth/signup`                | None                    | `{email,password,displayName}` | 201 auth bridge and cookies            |
+| `POST /api/auth/login`              | `POST /api/v2/auth/login`                 | None                    | `{email,password}`             | 200 auth bridge and cookies            |
+| `POST /api/auth/refresh`            | `POST /api/v2/auth/refresh`               | Session cookie and CSRF | `null`                         | 200 auth bridge                        |
+| `POST /api/auth/logout`             | `POST /api/v2/auth/logout`                | Session cookie and CSRF | `null`                         | 204                                    |
+| `GET /api/auth/session`             | `GET /api/v2/auth/session`                | Session cookie          | None                           | 200 session                            |
+| `POST /api/auth/otp/send`           | `POST /api/v2/auth/otp/send`              | None                    | `{email}`                      | 200 generic ack                        |
+| `POST /api/auth/otp/verify`         | `POST /api/v2/auth/otp/verify`            | None                    | `{email,code}`                 | 200 verified ack                       |
+| `POST /api/auth/phone-verification` | `POST /api/v2/onboarding/verify-document` | Cookie and CSRF         | `{phoneNumber,idToken}`        | 200 result; currently unused by wizard |
 
 ### Onboarding and routing
 
-| Method and path | Request | Result |
-|---|---|---|
-| `GET /api/v2/onboarding/me` | None | Open application or null |
-| `POST /api/v2/onboarding/applications` | `{requestedType,plan,profile}` plus idempotency | Create draft |
-| `PATCH /api/v2/onboarding/applications/:id` | Partial strict profile | Update profile |
-| `POST .../:id/documents/upload-url` | `{label,contentType}` | Signed PUT grant |
-| `PUT <signed URL>` | Raw file and returned headers | Store image |
-| `POST .../:id/documents` | `{label,storagePath}` plus idempotency | Record/replace metadata |
-| `POST /api/v2/onboarding/verify-document` | Document number/proof | Verification result and attempt log |
-| `POST .../:id/submit` | Idempotency key | Submitted application |
-| `GET /api/v2/organizations` | None | Paginated organizations |
-| `GET /api/v2/organizations/:id/access` | `x-organization-id` | Partner type and permissions |
+| Method and path                             | Request                                         | Result                              |
+| ------------------------------------------- | ----------------------------------------------- | ----------------------------------- |
+| `GET /api/v2/onboarding/me`                 | None                                            | Open application or null            |
+| `POST /api/v2/onboarding/applications`      | `{requestedType,plan,profile}` plus idempotency | Create draft                        |
+| `PATCH /api/v2/onboarding/applications/:id` | Partial strict profile                          | Update profile                      |
+| `POST .../:id/documents/upload-url`         | `{label,contentType}`                           | Signed PUT grant                    |
+| `PUT <signed URL>`                          | Raw file and returned headers                   | Store image                         |
+| `POST .../:id/documents`                    | `{label,storagePath}` plus idempotency          | Record/replace metadata             |
+| `POST /api/v2/onboarding/verify-document`   | Document number/proof                           | Verification result and attempt log |
+| `POST .../:id/submit`                       | Idempotency key                                 | Submitted application               |
+| `GET /api/v2/organizations`                 | None                                            | Paginated organizations             |
+| `GET /api/v2/organizations/:id/access`      | `x-organization-id`                             | Partner type and permissions        |
 
 ### Error envelope
 
@@ -1323,19 +1323,19 @@ Every expected successful JSON response is Zod-validated. A response-contract mi
 
 ## 8. Persistence summary
 
-| Data | Store | Operation |
-|---|---|---|
-| Auth users | `v2_auth_users` | Account record managed by Better Auth |
-| Password accounts | `v2_auth_accounts` | Credentials managed by Better Auth |
-| Sessions | `v2_auth_sessions` | Create/read/revoke via Better Auth |
-| Better Auth verification | `v2_auth_verification_tokens` | Adapter configured; separate from custom OTP |
-| Email OTP | `v2_email_otps` | Save, failed-attempt update, delete on success |
-| Applications | `v2_onboarding_requests` | Create, profile update, document metadata, status review |
-| Verification attempts | `v2_verification_attempts` | Append and rolling-window count |
-| Organizations | `v2_organizations` | Provision on approval, query by `memberIds` |
-| Idempotency | `v2_idempotency_records` | Replay protection for commands |
-| KYC image bytes | Firebase/GCS | Direct signed PUT |
-| Admin audit | `v2_admin_audit_logs` | Append-only review audit |
+| Data                     | Store                         | Operation                                                |
+| ------------------------ | ----------------------------- | -------------------------------------------------------- |
+| Auth users               | `v2_auth_users`               | Account record managed by Better Auth                    |
+| Password accounts        | `v2_auth_accounts`            | Credentials managed by Better Auth                       |
+| Sessions                 | `v2_auth_sessions`            | Create/read/revoke via Better Auth                       |
+| Better Auth verification | `v2_auth_verification_tokens` | Adapter configured; separate from custom OTP             |
+| Email OTP                | `v2_email_otps`               | Save, failed-attempt update, delete on success           |
+| Applications             | `v2_onboarding_requests`      | Create, profile update, document metadata, status review |
+| Verification attempts    | `v2_verification_attempts`    | Append and rolling-window count                          |
+| Organizations            | `v2_organizations`            | Provision on approval, query by `memberIds`              |
+| Idempotency              | `v2_idempotency_records`      | Replay protection for commands                           |
+| KYC image bytes          | Firebase/GCS                  | Direct signed PUT                                        |
+| Admin audit              | `v2_admin_audit_logs`         | Append-only review audit                                 |
 
 Application and organization persistence uses compare-and-set versioning.
 

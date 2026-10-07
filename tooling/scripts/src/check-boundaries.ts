@@ -237,6 +237,114 @@ function checkNoCycles(members: readonly WorkspaceMember[]): Violation[] {
   return violations;
 }
 
+/**
+ * Returns `source` with comment text and string/template-literal contents
+ * blanked to spaces (line structure preserved), so the plain-text
+ * single-owner scans below cannot be tripped by prose that merely *mentions*
+ * the tokens they forbid — an eslint-disable note ("…contains no
+ * `process.env` or `fetch()`"), a guidance comment, or a rule message string.
+ * Template-literal `${…}` interpolations are copied through unharmed: they can
+ * hold real code and must keep being checked.
+ */
+function stripCommentsAndStrings(source: string): string {
+  const chars = source.split('');
+  const out = chars.map(() => ' ');
+
+  /** Index just past the `}` that closes the `${…}` that starts at `start`. */
+  function interpolationEnd(start: number): number {
+    let depth = 1;
+    let i = start;
+
+    while (i < chars.length) {
+      const c = chars[i] ?? '';
+
+      if (c === '{') {
+        depth += 1;
+        i += 1;
+      } else if (c === '}') {
+        depth -= 1;
+        i += 1;
+        if (depth === 0) {
+          return i;
+        }
+      } else if (c === '"' || c === "'" || c === '`') {
+        const quote = c;
+        i += 1;
+        while (i < chars.length) {
+          if (chars[i] === '\\') {
+            i += 2;
+          } else if (chars[i] === quote) {
+            i += 1;
+            break;
+          } else {
+            i += 1;
+          }
+        }
+      } else {
+        i += 1;
+      }
+    }
+
+    return chars.length;
+  }
+
+  let i = 0;
+
+  while (i < chars.length) {
+    const c = chars[i] ?? '';
+    const n = chars[i + 1] ?? '';
+
+    if (c === '/' && n === '/') {
+      /* Line comment — blank to the end of the line. */
+      while (i < chars.length && chars[i] !== '\n') {
+        i += 1;
+      }
+      continue;
+    }
+
+    if (c === '/' && n === '*') {
+      /* Block comment — blank to its closing tag. */
+      i += 2;
+      while (i < chars.length) {
+        if (chars[i] === '*' && chars[i + 1] === '/') {
+          i += 2;
+          break;
+        }
+        i += 1;
+      }
+      continue;
+    }
+
+    if (c === '"' || c === "'" || c === '`') {
+      /* String / template literal — blank contents, keep `${…}` code. */
+      const quote = c;
+      i += 1;
+      while (i < chars.length) {
+        if (chars[i] === '\\') {
+          i += 2;
+        } else if (chars[i] === quote) {
+          i += 1;
+          break;
+        } else if (quote === '`' && chars[i] === '$' && (chars[i + 1] ?? '') === '{') {
+          const end = interpolationEnd(i + 2);
+          for (let j = i; j < end; j += 1) {
+            out[j] = chars[j] === '\n' ? '\n' : (chars[j] ?? ' ');
+          }
+          i = end;
+        } else {
+          i += 1;
+        }
+      }
+      continue;
+    }
+
+    out[i] = c === '\n' ? '\n' : c;
+    i += 1;
+  }
+
+  return out.join('');
+}
+
 /** Rule 5 — the network and the environment have exactly one owner each. */
 function checkSingleOwners(members: readonly WorkspaceMember[]): Violation[] {
   const violations: Violation[] = [];
@@ -275,7 +383,7 @@ function checkSingleOwners(members: readonly WorkspaceMember[]): Violation[] {
         continue;
       }
 
-      const source = readFileSync(file, 'utf8');
+      const source = stripCommentsAndStrings(readFileSync(file, 'utf8'));
 
       if (
         member.name !== NETWORK_OWNER &&
@@ -322,13 +430,32 @@ function checkNoBackendDependencies(members: readonly WorkspaceMember[]): Violat
     '@aws-sdk/client-s3',
   ];
 
+  /*
+   * One documented exception to the `firebase` ban: GCP Identity Platform
+   * (Firebase Auth) is used client-side for the partner onboarding wizard's
+   * phone-OTP step (`signInWithPhoneNumber` + `RecaptchaVerifier`). It is
+   * deliberately confined to a single module
+   * (`apps/partner-dashboard/src/lib/firebase/client.ts`), reads env only via
+   * `@c1rcle/config`, and is enforced further by that app's eslint
+   * `no-restricted-imports` rule. The backend independently verifies the
+   * resulting ID token server-side with `firebase-admin` (see the backend
+   * repo's `firebase-phone-verifier.ts`), so no server-side Firebase land
+   * here. All other entries — and any other member's `firebase` dep — stay
+   * forbidden.
+   */
+  const FIREBASE_CLIENT_SDK_EXCEPTION = `${WORKSPACE_SCOPE}/app-partner-dashboard`;
+
   return members.flatMap((member) => {
     const manifest = JSON.parse(readFileSync(join(member.dir, 'package.json'), 'utf8')) as {
       dependencies?: Record<string, string>;
     };
 
     return Object.keys(manifest.dependencies ?? {})
-      .filter((d) => FORBIDDEN.includes(d))
+      .filter(
+        (d) =>
+          FORBIDDEN.includes(d) &&
+          !(d === 'firebase' && member.name === FIREBASE_CLIENT_SDK_EXCEPTION),
+      )
       .map((d) => ({
         rule: 'frontend-only',
         file: relative(ROOT, join(member.dir, 'package.json')),

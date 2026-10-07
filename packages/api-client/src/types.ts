@@ -31,7 +31,7 @@ export type ReauthHandler = () => Promise<boolean>;
 
 export interface ApiClientConfig {
   readonly baseUrl: string;
-  /** Milliseconds before a request is aborted. Defaults to 15000. */
+  /** Milliseconds before a request is aborted. Defaults to 60000. */
   readonly timeoutMs?: number;
   /** Retry attempts for retryable failures. Defaults to 2. */
   readonly maxRetries?: number;
@@ -66,4 +66,47 @@ export interface RequestOptions<TResponse> {
   /** Overrides the client default for this call. */
   readonly timeoutMs?: number;
   readonly retries?: number;
+}
+
+/**
+ * Options for a raw-text GET (e.g. a CSV export). Deliberately schema-less:
+ * the caller wants the exact bytes, not a validated object.
+ */
+export interface TextRequestOptions {
+  readonly path: string;
+  readonly query?: Readonly<Record<string, string | number | boolean | undefined>>;
+  readonly signal?: AbortSignal;
+  /** Overrides the client default for this call. */
+  readonly timeoutMs?: number;
+  readonly retries?: number;
+}
+
+/**
+ * Options for an `EventStream` (Server-Sent Events) connection. Deliberately
+ * schema-less per call, same as `TextRequestOptions` — a stream carries
+ * several different named event types over its lifetime, so validating one
+ * fixed shape here would not fit; the caller validates per event name.
+ */
+export interface EventStreamOptions {
+  readonly path: string;
+  readonly query?: Readonly<Record<string, string | number | boolean | undefined>>;
+  readonly headers?: Readonly<Record<string, string>>;
+  readonly signal?: AbortSignal;
+  /**
+   * A stream is long-lived by nature — this bounds the *connection attempt*
+   * (mirrors every other call's `timeoutMs`), not the stream's lifetime.
+   * Defaults to the client's own `timeoutMs`, which is too short for most
+   * streams; callers should pass one comfortably above the server's own
+   * bounded stream lifetime, if it has one.
+   */
+  readonly timeoutMs?: number;
+}
+
+/** One SSE frame, already split into its `event:`/`data:` pair. Comment
+ * lines (bare `: keep-alive`) carry neither and are never surfaced. */
+export type EventStreamListener = (event: string, data: string) => void;
+
+export interface EventStreamHandle {
+  /** Aborts the underlying connection. Idempotent. */
+  readonly close: () => void;
 }

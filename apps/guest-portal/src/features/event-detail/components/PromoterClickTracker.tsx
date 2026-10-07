@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
-import { getApiClient } from '@c1rcle/api-client';
 import { z } from 'zod';
+
+import { getApiClient } from '@c1rcle/api-client';
 
 /** Counts the anonymous click; checkout independently verifies the code. */
 export function PromoterClickTracker({ eventSlug, code }: { eventSlug: string; code?: string }) {

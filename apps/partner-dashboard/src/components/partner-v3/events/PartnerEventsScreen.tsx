@@ -72,11 +72,18 @@ export function PartnerEventsScreen({
       if (status !== 'all' && event.status !== status) return false;
       if (party !== event.party) return false;
       if (!search) return true;
-      return `${event.name} ${event.tag} ${event.venue} ${event.host}`.toLowerCase().includes(search);
+      return `${event.name} ${event.tag} ${event.venue} ${event.host}`
+        .toLowerCase()
+        .includes(search);
     });
   }, [data.events, party, query, status]);
 
-  const updateUrl = (next: { readonly query?: string; readonly status?: PartnerEventStatusFilter; readonly party?: PartnerEventParty; readonly view?: PartnerEventView }) => {
+  const updateUrl = (next: {
+    readonly query?: string;
+    readonly status?: PartnerEventStatusFilter;
+    readonly party?: PartnerEventParty;
+    readonly view?: PartnerEventView;
+  }) => {
     const params = new URLSearchParams();
     const nextQuery = next.query ?? query;
     const nextStatus = next.status ?? status;
@@ -90,10 +97,22 @@ export function PartnerEventsScreen({
     router.replace(search ? `${pathname}?${search}` : pathname, { scroll: false });
   };
 
-  const onQueryChange = (value: string) => { setQuery(value); updateUrl({ query: value }); };
-  const onStatusChange = (value: PartnerEventStatusFilter) => { setStatus(value); updateUrl({ status: value }); };
-  const onPartyChange = (value: PartnerEventParty) => { setParty(value); updateUrl({ party: value }); };
-  const onViewChange = (value: PartnerEventView) => { setView(value); updateUrl({ view: value }); };
+  const onQueryChange = (value: string) => {
+    setQuery(value);
+    updateUrl({ query: value });
+  };
+  const onStatusChange = (value: PartnerEventStatusFilter) => {
+    setStatus(value);
+    updateUrl({ status: value });
+  };
+  const onPartyChange = (value: PartnerEventParty) => {
+    setParty(value);
+    updateUrl({ party: value });
+  };
+  const onViewChange = (value: PartnerEventView) => {
+    setView(value);
+    updateUrl({ view: value });
+  };
 
   const liveCount = data.events.filter((event) => event.status === 'Live').length;
   const draftCount = data.events.filter((event) => event.status === 'Draft').length;
@@ -105,15 +124,35 @@ export function PartnerEventsScreen({
         <header className={styles['pageHeader']}>
           <h1>Events</h1>
           <div className={styles['pageHeaderActions']}>
-            <Link className={styles['requestCount']} href={config.slotRequestsHref}><strong>{data.pendingRequestCount}</strong><span>Requests</span></Link>
-            <Link className={styles['headerAction']} href={config.slotRequestsHref}>Slot Requests <span aria-hidden="true">↗</span></Link>
-            <Link className={[styles['headerAction'], styles['createAction']].join(' ')} href={config.createEventHref}><AddIcon size={17} aria-hidden="true" />Create event</Link>
+            <Link className={styles['requestCount']} href={config.slotRequestsHref}>
+              <strong>{data.pendingRequestCount}</strong>
+              <span>Requests</span>
+            </Link>
+            <Link className={styles['headerAction']} href={config.slotRequestsHref}>
+              Slot Requests <span aria-hidden="true">↗</span>
+            </Link>
+            <Link
+              className={[styles['headerAction'], styles['createAction']].join(' ')}
+              href={config.createEventHref}
+            >
+              <AddIcon size={17} aria-hidden="true" />
+              Create event
+            </Link>
           </div>
         </header>
 
         <div className={styles['subTabs']} role="tablist" aria-label="Event views">
-          <Link className={styles['subTab']} href={pathname} role="tab" aria-selected="true">All events</Link>
-          <Link className={styles['subTab']} href={config.analyticsHref} role="tab" aria-selected="false">Analytics</Link>
+          <Link className={styles['subTab']} href={pathname} role="tab" aria-selected="true">
+            All events
+          </Link>
+          <Link
+            className={styles['subTab']}
+            href={config.analyticsHref}
+            role="tab"
+            aria-selected="false"
+          >
+            Analytics
+          </Link>
         </div>
 
         <EventFilterBar
@@ -130,18 +169,50 @@ export function PartnerEventsScreen({
           onViewChange={onViewChange}
         />
 
-        {visibleEvents.length === 0 ? <EventEmptyState filtered={Boolean(query.trim()) || status !== 'all' || party !== 'venue'} /> : view === 'list' ? (
-          <section className={styles['eventTable']} aria-label={`${config.eventSectionLabel} events list`}>
-            <div className={styles['eventTableHeader']}><span>Event</span><span>When</span><span>Tickets</span><span>Status</span><span>Action</span></div>
-            {visibleEvents.map((event) => <EventListRow key={event.id} event={event} href={`${config.eventsBaseHref}/${event.id}`} editHref={config.createEventHref} />)}
+        {visibleEvents.length === 0 ? (
+          <EventEmptyState
+            filtered={Boolean(query.trim()) || status !== 'all' || party !== 'venue'}
+          />
+        ) : view === 'list' ? (
+          <section
+            className={styles['eventTable']}
+            aria-label={`${config.eventSectionLabel} events list`}
+          >
+            <div className={styles['eventTableHeader']}>
+              <span>Event</span>
+              <span>When</span>
+              <span>Tickets</span>
+              <span>Status</span>
+              <span>Action</span>
+            </div>
+            {visibleEvents.map((event) => (
+              <EventListRow
+                key={event.id}
+                event={event}
+                href={`${config.eventsBaseHref}/${event.id}`}
+                editHref={config.createEventHref}
+              />
+            ))}
           </section>
         ) : (
-          <section className={styles['eventGrid']} aria-label={`${config.eventSectionLabel} events gallery`}>
-            {visibleEvents.map((event) => <EventCard key={event.id} event={event} href={`${config.eventsBaseHref}/${event.id}`} editHref={config.createEventHref} />)}
+          <section
+            className={styles['eventGrid']}
+            aria-label={`${config.eventSectionLabel} events gallery`}
+          >
+            {visibleEvents.map((event) => (
+              <EventCard
+                key={event.id}
+                event={event}
+                href={`${config.eventsBaseHref}/${event.id}`}
+                editHref={config.createEventHref}
+              />
+            ))}
           </section>
         )}
 
-        <div className={styles['srOnly']} aria-live="polite">{visibleEvents.length} events shown. {liveCount} live, {draftCount} drafts.</div>
+        <div className={styles['srOnly']} aria-live="polite">
+          {visibleEvents.length} events shown. {liveCount} live, {draftCount} drafts.
+        </div>
       </div>
     </PageContainer>
   );

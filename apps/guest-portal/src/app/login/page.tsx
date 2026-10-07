@@ -4,11 +4,10 @@ import { LoginPageClient } from './login-page-client';
 
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'Login & Member Access | THE C1RCLE',
-  description:
-    'Sign in or create your member account to access exclusive events, tickets, and night life experiences with THE C1RCLE.',
-};
+export const metadata: Metadata = buildPrivateMetadata(
+  'Login & Member Access',
+  'Sign in to your member account to access THE C1RCLE.',
+);
 
 interface LoginSearchParams {
   readonly mode?: string;

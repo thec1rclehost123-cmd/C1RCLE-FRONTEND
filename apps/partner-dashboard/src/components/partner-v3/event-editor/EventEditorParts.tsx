@@ -710,8 +710,14 @@ export function TicketTierEditor({
                         {(tier.pricingPhases ?? []).map((phase) => (
                           <div className={styles['phaseRow']} key={phase.id}>
                             <div className={styles['phaseField']}>
-                              <label className={styles['phaseLabel']}>Phase name</label>
+                              <label
+                                htmlFor={`phase-name-${phase.id}`}
+                                className={styles['phaseLabel']}
+                              >
+                                Phase name
+                              </label>
                               <input
+                                id={`phase-name-${phase.id}`}
                                 aria-label={`${phase.name} phase name`}
                                 value={phase.name}
                                 onChange={(event) => {
@@ -726,8 +732,14 @@ export function TicketTierEditor({
                               />
                             </div>
                             <div className={styles['phaseField']}>
-                              <label className={styles['phaseLabel']}>Price (₹)</label>
+                              <label
+                                htmlFor={`phase-price-${phase.id}`}
+                                className={styles['phaseLabel']}
+                              >
+                                Price (₹)
+                              </label>
                               <input
+                                id={`phase-price-${phase.id}`}
                                 aria-label={`${phase.name} phase price`}
                                 type="number"
                                 min="0"
@@ -747,8 +759,14 @@ export function TicketTierEditor({
                               />
                             </div>
                             <div className={styles['phaseField']}>
-                              <label className={styles['phaseLabel']}>Start date (DD-MM)</label>
+                              <label
+                                htmlFor={`phase-start-${phase.id}`}
+                                className={styles['phaseLabel']}
+                              >
+                                Start date (DD-MM)
+                              </label>
                               <input
+                                id={`phase-start-${phase.id}`}
                                 aria-label={`${phase.name} phase start date`}
                                 placeholder="DD-MM"
                                 inputMode="numeric"
@@ -766,22 +784,28 @@ export function TicketTierEditor({
                               />
                             </div>
                             <div className={styles['phaseField']}>
-                              <label className={styles['phaseLabel']}>End date (DD-MM)</label>
+                              <label
+                                htmlFor={`phase-end-${phase.id}`}
+                                className={styles['phaseLabel']}
+                              >
+                                End date (DD-MM)
+                              </label>
                               <input
+                                id={`phase-end-${phase.id}`}
                                 aria-label={`${phase.name} phase end date`}
                                 placeholder="DD-MM"
                                 inputMode="numeric"
                                 maxLength={5}
                                 value={phase.endDate}
-                                onChange={(event) =>
+                                onChange={(event) => {
                                   updateTier(tier.id, {
                                     pricingPhases: (tier.pricingPhases ?? []).map((item) =>
                                       item.id === phase.id
                                         ? { ...item, endDate: event.target.value }
                                         : item,
                                     ),
-                                  })
-                                }
+                                  });
+                                }}
                               />
                             </div>
                           </div>
@@ -951,12 +975,11 @@ export function EventPromoterSelector({
         next[promoterId] = { default: draft.commissionRate };
       } else if (draft.compensation === 'custom') {
         next[promoterId] = { ...tierCommissions };
-      } else if (draft.compensation === 'salary') {
-        next[promoterId] = { default: draft.salaryAmount };
       } else {
-        next[promoterId] = { default: draft.commissionRate };
+        next[promoterId] = { default: draft.salaryAmount ?? 0 };
       }
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
       delete next[promoterId];
     }
     update({ promoterOverrides: next });
@@ -979,11 +1002,13 @@ export function EventPromoterSelector({
     if (
       draft.compensation === 'custom' &&
       Object.keys(tierCommissions).length &&
+      // eslint-disable-next-line no-alert
       !window.confirm('All custom commission mappings will be deleted and replaced. Continue?')
     )
       return;
     if (
       draft.compensation === 'salary' &&
+      // eslint-disable-next-line no-alert
       !window.confirm('Salary-based payout settings will be removed. Continue?')
     )
       return;
@@ -998,7 +1023,7 @@ export function EventPromoterSelector({
   const calculatePromoterCommission = (promoterId: string): number => {
     const override = draft.promoterOverrides?.[promoterId];
     if (draft.compensation === 'standard') {
-      const rate = override?.default ?? draft.commissionRate;
+      const rate = override?.['default'] ?? draft.commissionRate;
       return (gross * rate) / 100;
     }
     if (draft.compensation === 'custom') {
@@ -1139,8 +1164,10 @@ export function EventPromoterSelector({
                           onChange={(event) => {
                             const value = event.target.value;
                             const next = { ...tierCommissions };
-                            if (value === '') delete next[tier.id];
-                            else next[tier.id] = numberValue(value);
+                            if (value === '') {
+                              // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+                              delete next[tier.id];
+                            } else next[tier.id] = numberValue(value);
                             update({ tierCommissions: next });
                           }}
                         />
@@ -1159,7 +1186,7 @@ export function EventPromoterSelector({
                   type="number"
                   min="0.01"
                   step="0.01"
-                  value={draft.salaryAmount || ''}
+                  value={draft.salaryAmount ?? ''}
                   onChange={(event) => {
                     update({ salaryAmount: numberValue(event.target.value) });
                   }}
@@ -1170,7 +1197,7 @@ export function EventPromoterSelector({
                   value={draft.salaryPeriod}
                   onChange={(event) => {
                     update({
-                      salaryPeriod: event.target.value as EventEditorDraft['salaryPeriod'],
+                      salaryPeriod: event.target.value,
                     });
                   }}
                 >
@@ -1207,7 +1234,7 @@ export function EventPromoterSelector({
                 {draft.selectedPromoterIds.map((promoterId) => {
                   const promoter = data.promoters.find((item) => item.id === promoterId);
                   const displayName =
-                    promoter?.name ||
+                    promoter?.name ??
                     (promoterId.length > 2 ? `Promoter ${promoterId.slice(-8)}` : promoterId);
                   const override = draft.promoterOverrides?.[promoterId];
                   const isCustomized = Boolean(override);
@@ -1225,7 +1252,7 @@ export function EventPromoterSelector({
                       <div className={styles['overrideHeader']}>
                         <div className={styles['overrideIdentity']}>
                           <span className={styles['promoterAvatar']} aria-hidden="true">
-                            {promoter?.initials || initialsFor(displayName)}
+                            {promoter?.initials ?? initialsFor(displayName)}
                           </span>
                           <div>
                             <strong>{displayName}</strong>
@@ -1256,7 +1283,7 @@ export function EventPromoterSelector({
                                   min="0"
                                   max="100"
                                   step="1"
-                                  value={String(override?.default ?? draft.commissionRate)}
+                                  value={String(override?.['default'] ?? draft.commissionRate)}
                                   onChange={(event) => {
                                     updatePromoterOverride(
                                       promoterId,
@@ -1302,7 +1329,7 @@ export function EventPromoterSelector({
                                 ))}
                               </div>
                             </div>
-                          ) : draft.compensation === 'salary' ? (
+                          ) : (
                             <label>
                               Custom Fixed Payout (₹)
                               <input
@@ -1310,7 +1337,7 @@ export function EventPromoterSelector({
                                 type="number"
                                 min="0"
                                 step="0.01"
-                                value={String(override?.default ?? draft.salaryAmount)}
+                                value={String(override?.['default'] ?? draft.salaryAmount)}
                                 onChange={(event) => {
                                   updatePromoterOverride(
                                     promoterId,
@@ -1320,7 +1347,7 @@ export function EventPromoterSelector({
                                 }}
                               />
                             </label>
-                          ) : null}
+                          )}
                         </div>
                       ) : null}
                     </div>

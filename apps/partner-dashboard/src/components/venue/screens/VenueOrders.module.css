@@ -203,29 +203,67 @@
   width: 6%;
 }
 
-.tableWrap table[data-order-kind='host'] th:nth-child(1) { width: 32%; }
-.tableWrap table[data-order-kind='host'] th:nth-child(2) { width: 22%; }
-.tableWrap table[data-order-kind='host'] th:nth-child(3) { width: 12%; }
-.tableWrap table[data-order-kind='host'] th:nth-child(4) { width: 14%; }
-.tableWrap table[data-order-kind='host'] th:nth-child(5) { width: 14%; }
-.tableWrap table[data-order-kind='host'] th:nth-child(6) { width: 6%; }
+.tableWrap table[data-order-kind='host'] th:nth-child(1) {
+  width: 32%;
+}
+.tableWrap table[data-order-kind='host'] th:nth-child(2) {
+  width: 22%;
+}
+.tableWrap table[data-order-kind='host'] th:nth-child(3) {
+  width: 12%;
+}
+.tableWrap table[data-order-kind='host'] th:nth-child(4) {
+  width: 14%;
+}
+.tableWrap table[data-order-kind='host'] th:nth-child(5) {
+  width: 14%;
+}
+.tableWrap table[data-order-kind='host'] th:nth-child(6) {
+  width: 6%;
+}
 
-.tableWrap table[data-order-kind='promoter'] th:nth-child(1) { width: 22%; }
-.tableWrap table[data-order-kind='promoter'] th:nth-child(2) { width: 17%; }
-.tableWrap table[data-order-kind='promoter'] th:nth-child(3) { width: 17%; }
-.tableWrap table[data-order-kind='promoter'] th:nth-child(4) { width: 10%; }
-.tableWrap table[data-order-kind='promoter'] th:nth-child(5) { width: 15%; }
-.tableWrap table[data-order-kind='promoter'] th:nth-child(6) { width: 13%; }
-.tableWrap table[data-order-kind='promoter'] th:nth-child(7) { width: 6%; }
+.tableWrap table[data-order-kind='promoter'] th:nth-child(1) {
+  width: 22%;
+}
+.tableWrap table[data-order-kind='promoter'] th:nth-child(2) {
+  width: 17%;
+}
+.tableWrap table[data-order-kind='promoter'] th:nth-child(3) {
+  width: 17%;
+}
+.tableWrap table[data-order-kind='promoter'] th:nth-child(4) {
+  width: 10%;
+}
+.tableWrap table[data-order-kind='promoter'] th:nth-child(5) {
+  width: 15%;
+}
+.tableWrap table[data-order-kind='promoter'] th:nth-child(6) {
+  width: 13%;
+}
+.tableWrap table[data-order-kind='promoter'] th:nth-child(7) {
+  width: 6%;
+}
 .tableWrap table[data-order-kind='promoter-links'] {
   min-width: 0;
 }
-.tableWrap table[data-order-kind='promoter-links'] th:nth-child(1) { width: 25%; }
-.tableWrap table[data-order-kind='promoter-links'] th:nth-child(2) { width: 30%; }
-.tableWrap table[data-order-kind='promoter-links'] th:nth-child(3) { width: 10%; }
-.tableWrap table[data-order-kind='promoter-links'] th:nth-child(4) { width: 10%; }
-.tableWrap table[data-order-kind='promoter-links'] th:nth-child(5) { width: 10%; }
-.tableWrap table[data-order-kind='promoter-links'] th:nth-child(6) { width: 120px; }
+.tableWrap table[data-order-kind='promoter-links'] th:nth-child(1) {
+  width: 25%;
+}
+.tableWrap table[data-order-kind='promoter-links'] th:nth-child(2) {
+  width: 30%;
+}
+.tableWrap table[data-order-kind='promoter-links'] th:nth-child(3) {
+  width: 10%;
+}
+.tableWrap table[data-order-kind='promoter-links'] th:nth-child(4) {
+  width: 10%;
+}
+.tableWrap table[data-order-kind='promoter-links'] th:nth-child(5) {
+  width: 10%;
+}
+.tableWrap table[data-order-kind='promoter-links'] th:nth-child(6) {
+  width: 120px;
+}
 .tableWrap table[data-order-kind='promoter-links'] td {
   min-width: 0;
   overflow: hidden;

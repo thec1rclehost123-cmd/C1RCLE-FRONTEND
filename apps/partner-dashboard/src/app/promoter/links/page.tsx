@@ -1,7 +1,7 @@
+import { getPrimaryPromoterEventLink } from '@/components/promoter/promoter-event-detail-model';
 import { PromoterLinkBuilder } from '@/components/promoter/PromoterLinkBuilder';
 import { PromoterLinksTable } from '@/components/promoter/PromoterLinksTable';
 import { partnerRepositories } from '@/lib/partner/repositories';
-import { getPrimaryPromoterEventLink } from '@/components/promoter/promoter-event-detail-model';
 
 import type { PromoterEventLinkRow } from '@/components/promoter/PromoterLinksTable';
 
@@ -16,9 +16,12 @@ export default async function PromoterLinksPage() {
       current.push(link);
       groups.set(link.eventId, current);
       return groups;
-    }, new Map<string, typeof links[number][]>()),
+    }, new Map<string, (typeof links)[number][]>()),
   ).map(([, eventLinksForEvent]): PromoterEventLinkRow => {
-    const primary = getPrimaryPromoterEventLink(eventLinksForEvent[0]?.eventId ?? '', eventLinksForEvent);
+    const primary = getPrimaryPromoterEventLink(
+      eventLinksForEvent[0]?.eventId ?? '',
+      eventLinksForEvent,
+    );
     if (!primary) throw new Error('Promoter link group must contain a link.');
     return {
       eventId: primary.eventId,

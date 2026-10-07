@@ -4,7 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
-import { useNotifications } from '@/hooks/use-notifications';
+import { visibleStudioNavigation } from '@/lib/access/studio-tab-access';
 import { getStudioConfig, type StudioRole } from '@/studios/studio-config';
 
 import { MobileNavigation } from './MobileNavigation';
@@ -35,40 +35,35 @@ const subscribeToNavigationLayout = (onStoreChange: () => void) => {
 
 const getServerNavigationLayout = (): PartnerNavigationLayout => 'side';
 
-export function PartnerShell({ studio, interactionData, children }: { readonly studio: StudioRole; readonly interactionData: PartnerShellInteractionData; readonly children: ReactNode }) {
+export function PartnerShell({
+  studio,
+  interactionData,
+  children,
+}: {
+  readonly studio: StudioRole;
+  readonly interactionData: PartnerShellInteractionData;
+  readonly children: ReactNode;
+}) {
   const config = getStudioConfig(studio);
   const pathname = usePathname();
   const router = useRouter();
   const auth = useDashboardAuth();
-  const organizationId = auth.profile?.activeMembership?.partnerId ?? null;
-  const notificationInbox = useNotifications(organizationId, studio);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const navigationLayout = useSyncExternalStore(subscribeToNavigationLayout, getStoredNavigationLayout, getServerNavigationLayout);
+  const navigationLayout = useSyncExternalStore(
+    subscribeToNavigationLayout,
+    getStoredNavigationLayout,
+    getServerNavigationLayout,
+  );
   const userName = auth.profile?.displayName ?? 'Partner';
+  // Role-limited navigation: tabs the backend's per-role matrix withholds
+  // never render. Fail-open while access is still loading (a null map shows
+  // every tab until the access read lands).
+  const visibleConfig = visibleStudioNavigation(config, auth.tabVisibility);
   const appClass = styles['app'] ?? '';
-  const shellInteractionData = {
-    ...interactionData,
-    notifications: {
-      ...interactionData.notifications,
-      notifications: notificationInbox.views.map((notification) => ({
-        id: notification.id,
-        title: notification.title,
-        description: notification.summary,
-        time: notification.time,
-        type: notification.category === 'finance' ? 'payout' as const
-          : notification.category === 'partners' ? 'request' as const
-            : notification.category === 'events' ? 'operations' as const : 'system' as const,
-        icon: notification.category === 'finance' ? 'finance' as const
-          : notification.category === 'partners' ? 'partner' as const
-            : notification.category === 'events' ? 'request' as const : 'operations' as const,
-        ...(notification.destination ? { href: notification.destination } : {}),
-        unread: notification.unread,
-        decisionSupported: notification.decisionSupported,
-        category: notification.category === 'system' ? 'ops' as const : notification.category,
-      })),
-    },
-  };
-  const activeLabel = config.navigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))?.label ?? config.label;
+  const activeLabel =
+    visibleConfig.navigation.find(
+      (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
+    )?.label ?? visibleConfig.label;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -77,7 +72,9 @@ export function PartnerShell({ studio, interactionData, children }: { readonly s
       }
     };
     window.addEventListener('keydown', onKeyDown);
-    return () => { window.removeEventListener('keydown', onKeyDown); };
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+    };
   }, []);
 
   const signOut = async () => {
@@ -92,31 +89,48 @@ export function PartnerShell({ studio, interactionData, children }: { readonly s
   };
 
   return (
-    <div className={[appClass, navigationLayout === 'top' ? styles['appTopNavigation'] : '', 'partner-v3-app'].filter(Boolean).join(' ')} data-navigation-layout={navigationLayout}>
-      {navigationLayout === 'side' ? <PartnerSidebar config={config} pathname={pathname} onLayoutToggle={toggleNavigationLayout} /> : null}
+    <div
+      className={[
+        appClass,
+        navigationLayout === 'top' ? styles['appTopNavigation'] : '',
+        'partner-v3-app',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      data-navigation-layout={navigationLayout}
+    >
+      {navigationLayout === 'side' ? (
+        <PartnerSidebar
+          config={visibleConfig}
+          pathname={pathname}
+          onLayoutToggle={toggleNavigationLayout}
+        />
+      ) : null}
       <div className={styles['main']}>
         <PartnerTopbar
           config={config}
           activeLabel={activeLabel}
           userName={userName}
           searchData={interactionData.search}
-          notificationsData={shellInteractionData.notifications}
-          notificationsLoading={notificationInbox.loading}
-          notificationsError={notificationInbox.error}
-          unreadNotificationCount={notificationInbox.unreadCount}
-          onNotificationRead={notificationInbox.markRead}
-          onMarkAllNotificationsRead={notificationInbox.markAllRead}
-          onRefreshNotifications={notificationInbox.refresh}
-          onNotificationAction={notificationInbox.performAction}
+          notificationsData={interactionData.notifications}
           navigationLayout={navigationLayout}
           mobileOpen={mobileOpen}
-          onMobileToggle={() => { setMobileOpen((value) => !value); }}
+          onMobileToggle={() => {
+            setMobileOpen((value) => !value);
+          }}
           onLayoutToggle={toggleNavigationLayout}
           onSignOut={() => void signOut()}
         />
         <main className={styles['content']}>{children}</main>
       </div>
-      <MobileNavigation config={config} pathname={pathname} open={mobileOpen} onClose={() => { setMobileOpen(false); }} />
+      <MobileNavigation
+        config={visibleConfig}
+        pathname={pathname}
+        open={mobileOpen}
+        onClose={() => {
+          setMobileOpen(false);
+        }}
+      />
     </div>
   );
 }

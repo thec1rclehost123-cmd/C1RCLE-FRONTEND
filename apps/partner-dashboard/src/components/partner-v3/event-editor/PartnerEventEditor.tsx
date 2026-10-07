@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
+import { describeApiError } from '@/lib/api/describe-error';
 import { eventStartAtFromDraft } from '@/lib/events/venue-event-repository';
 
 import styles from './event-editor.module.css';
@@ -109,11 +110,8 @@ export function PartnerEventEditor({
     ? (selectedVenueAvailability?.venue.name ?? 'Choose a partnered venue')
     : (data.venues.find((venue) => venue.id === draft.venueId)?.name ?? 'Your venue');
   const validationErrors = useMemo(
-    () => [
-      ...validateDraft(draft, isHost && mode === 'create', selectedSlotId),
-      ...validateCompensation(draft),
-    ],
-    [draft, isHost, mode, selectedSlotId],
+    () => [...validateDraft(draft, isHost && mode === 'create'), ...validateCompensation(draft)],
+    [draft, isHost, mode],
   );
 
   const updateQuery = (
@@ -159,10 +157,7 @@ export function PartnerEventEditor({
   const nextStep = async () => {
     const errors =
       currentStep === 'venue' || currentStep === 'basics' || currentStep === 'review'
-        ? [
-            ...validateDraft(draft, isHost && mode === 'create', selectedSlotId),
-            ...validateCompensation(draft),
-          ]
+        ? [...validateDraft(draft, isHost && mode === 'create'), ...validateCompensation(draft)]
         : [];
     if (errors.length) {
       setShowErrors(true);
@@ -177,9 +172,7 @@ export function PartnerEventEditor({
       try {
         await onSubmit(draft);
       } catch (error) {
-        setSubmitError(
-          error instanceof Error ? error.message : 'The event could not be submitted.',
-        );
+        setSubmitError(describeApiError(error, 'The event could not be submitted.'));
       } finally {
         setSubmitting(false);
       }
@@ -527,7 +520,7 @@ function draftFromInput(
   };
 }
 
-function validateDraft(draft: EventEditorDraft, host: boolean, selectedSlotId: string) {
+function validateDraft(draft: EventEditorDraft, host: boolean) {
   const errors: string[] = [];
   if (!draft.name.trim()) errors.push('Add an event name.');
   if (host && !draft.venueId) errors.push('Choose a partnered venue.');
@@ -564,10 +557,7 @@ function validateDraft(draft: EventEditorDraft, host: boolean, selectedSlotId: s
         errors.push(
           `Name pricing phase ${String(phaseIndex + 1)} in ${tier.name || `tier ${String(index + 1)}`}.`,
         );
-      if (
-        !/^\d{2}-\d{2}$/.test(phase.startDate) ||
-        !/^\d{2}-\d{2}$/.test(phase.endDate)
-      )
+      if (!/^\d{2}-\d{2}$/.test(phase.startDate) || !/^\d{2}-\d{2}$/.test(phase.endDate))
         errors.push(
           `Set valid start and end dates for ${phase.name || `pricing phase ${String(phaseIndex + 1)}`} in ${tier.name || `tier ${String(index + 1)}`}.`,
         );
@@ -600,7 +590,11 @@ function validateCompensation(draft: EventEditorDraft): readonly string[] {
           errors.push(`${tier.name} commission must be between 0% and 100%.`);
       });
   if (draft.compensation === 'salary') {
-    if (!Number.isFinite(draft.salaryAmount) || draft.salaryAmount <= 0)
+    if (
+      draft.salaryAmount === undefined ||
+      !Number.isFinite(draft.salaryAmount) ||
+      draft.salaryAmount <= 0
+    )
       errors.push('Salary amount must be greater than ₹0.');
   }
   return [...new Set(errors)];

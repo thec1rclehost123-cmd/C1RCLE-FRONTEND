@@ -8,7 +8,7 @@ import { DashboardAuthProvider, useDashboardAuth } from './DashboardAuthProvider
 
 const mocks = vi.hoisted(() => ({
   getActiveOrgId: vi.fn<() => string | null>(),
-  useSession: vi.fn<() => { isAuthenticated: boolean; isLoading: boolean; user: any }>(),
+  useSession: vi.fn<() => { isAuthenticated: boolean; isLoading: boolean; user: unknown }>(),
   orgAccess: {
     partnerType: 'venue',
     role: 'owner',

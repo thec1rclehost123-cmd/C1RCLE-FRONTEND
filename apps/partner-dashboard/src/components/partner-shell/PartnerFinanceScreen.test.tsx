@@ -6,10 +6,18 @@ import { PartnerFinanceScreen } from './PartnerFinanceScreen';
 
 import type { ReactNode } from 'react';
 
-
 vi.mock('next/link', () => ({
-  default: ({ children, href, ...props }: { readonly children: ReactNode; readonly href: string }) => (
-    <a href={href} {...props}>{children}</a>
+  default: ({
+    children,
+    href,
+    ...props
+  }: {
+    readonly children: ReactNode;
+    readonly href: string;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
   ),
 }));
 
@@ -90,12 +98,27 @@ describe('PartnerFinanceScreen', () => {
       <PartnerFinanceScreen
         {...baseProps}
         account={{ display: 'Payout account' }}
-        history={[{ id: 'pay-1', date: '11 Jul 2026', event: 'Neon Nights', status: 'Paid', amount: '₹32,800' }]}
-        secondarySections={[{
-          title: 'Campaign earnings',
-          columns: ['Event', 'Earnings'],
-          rows: [{ id: 'campaign-1', cells: [{ value: 'Neon Nights' }, { value: '₹7,560', emphasis: true }] }],
-        }]}
+        history={[
+          {
+            id: 'pay-1',
+            date: '11 Jul 2026',
+            event: 'Neon Nights',
+            status: 'Paid',
+            amount: '₹32,800',
+          },
+        ]}
+        secondarySections={[
+          {
+            title: 'Campaign earnings',
+            columns: ['Event', 'Earnings'],
+            rows: [
+              {
+                id: 'campaign-1',
+                cells: [{ value: 'Neon Nights' }, { value: '₹7,560', emphasis: true }],
+              },
+            ],
+          },
+        ]}
       />,
     );
 

@@ -154,15 +154,31 @@ export const ticketPricingPhaseSchema = z.object({
   quantity: z.number().int().nonnegative().nullable(),
 });
 
-/** Create input deliberately has no year; the gateway resolves it server-side. */
-export const createTicketPricingPhaseSchema = z.object({
-  id: z.string().min(1).max(64),
-  name: z.string().min(1).max(80),
-  priceInPaise: z.number().int().positive(),
-  startDate: z.string().regex(/^\d{2}-\d{2}$/),
-  endDate: z.string().regex(/^\d{2}-\d{2}$/),
-  quantity: z.number().int().nonnegative().nullable(),
-});
+/**
+ * Create input accepts either DD-MM partial dates (resolved server-side to
+ * the next occurrence in the organizer's local calendar) or full ISO
+ * datetimes. DD-MM, not MM-DD: matches `resolvePricingPhase` in
+ * `@c1rcle/core`'s event-catalog domain model, which parses the first
+ * segment as the day.
+ */
+export const createTicketPricingPhaseSchema = z.union([
+  z.object({
+    id: z.string().min(1).max(64),
+    name: z.string().min(1).max(80),
+    priceInPaise: z.number().int().positive(),
+    startDate: z.string().regex(/^\d{2}-\d{2}$/, 'DD-MM'),
+    endDate: z.string().regex(/^\d{2}-\d{2}$/, 'DD-MM'),
+    quantity: z.number().int().nonnegative().nullable(),
+  }),
+  z.object({
+    id: z.string().min(1).max(64),
+    name: z.string().min(1).max(80),
+    priceInPaise: z.number().int().positive(),
+    startsAt: z.iso.datetime(),
+    endsAt: z.iso.datetime(),
+    quantity: z.number().int().nonnegative().nullable(),
+  }),
+]);
 
 export const ticketTierDtoSchema = z.object({
   id: opaqueIdSchema,
@@ -241,7 +257,12 @@ const createTicketTierBaseSchema = z
 
 export const createTicketTierSchema = createTicketTierBaseSchema.superRefine((tier, ctx) => {
   if (tier.accessType === 'RSVP') {
-    for (const key of ['priceInPaise', 'pricingPhases', 'commissionEligible', 'doorPriceInPaise'] as const) {
+    for (const key of [
+      'priceInPaise',
+      'pricingPhases',
+      'commissionEligible',
+      'doorPriceInPaise',
+    ] as const) {
       if (tier[key] !== undefined)
         ctx.addIssue({
           code: 'custom',
@@ -371,6 +392,31 @@ export const assignPromoterSchema = z
   })
   .strict();
 export type AssignPromoterRequest = z.infer<typeof assignPromoterSchema>;
+
+/* ─── Public ticket-tier reads (guest checkout) ──────────────────────────── */
+
+/**
+ * Slim sell-surface projection of a ticket tier for anonymous guests. No
+ * internal bounds (`min/maxPerOrder`), no sales windows — just what checkout
+ * needs: identity, display, effective price, and live availability. Legacy
+ * tiers without `priceInPaise` price via `effectiveTierPricePaise` (domain).
+ */
+export const publicTicketTierDtoSchema = z.object({
+  id: opaqueIdSchema,
+  eventId: opaqueIdSchema,
+  name: z.string(),
+  description: z.string(),
+  priceInPaise: z.number().int().nonnegative(),
+  currency: z.string().length(3),
+  availableQuantity: z.number().int().nonnegative(),
+});
+export type PublicTicketTierDto = z.infer<typeof publicTicketTierDtoSchema>;
+
+/** `GET /public/events/:idOrSlug/tiers` — active tiers only, never paged. */
+export const publicTicketTierListResponseSchema = z.object({
+  items: z.array(publicTicketTierDtoSchema),
+});
+export type PublicTicketTierListResponse = z.infer<typeof publicTicketTierListResponseSchema>;
 
 /* ─── Public ticket-tier reads (guest checkout) ──────────────────────────── */
 

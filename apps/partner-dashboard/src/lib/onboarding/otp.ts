@@ -1,5 +1,9 @@
 import { createApiClient } from '@c1rcle/api-client';
-import { otpAckResponseSchema, otpSendRequestSchema, otpVerifyRequestSchema } from '@c1rcle/contracts/client';
+import {
+  otpAckResponseSchema,
+  otpSendRequestSchema,
+  otpVerifyRequestSchema,
+} from '@c1rcle/contracts/client';
 
 import { csrfHeaders } from '@/lib/onboarding/csrf';
 

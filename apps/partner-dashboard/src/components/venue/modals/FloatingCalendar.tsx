@@ -1,5 +1,13 @@
 'use client';
 
+/* eslint-disable no-restricted-syntax --
+   Calendar cell styles are assembled at runtime by the shared css() string helper in
+   src/components/venue/charts.ts and inline geometry (floating-calendar coordinates,
+   cell heights, event breakpoints) that cannot be expressed as static Tailwind utilities
+   without reworking the chart model — which is outside the 2026-09-11 partner-dashboard
+   lint fix scope. The JSX `style` selector is the only no-restricted-syntax entry this
+   file triggers (it contains no process.env or fetch()). */
+
 import { useCallback } from 'react';
 
 import { STATUS_DOT, css } from '../charts';

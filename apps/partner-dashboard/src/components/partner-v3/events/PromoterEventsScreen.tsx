@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import {
   CalendarIcon,
@@ -14,14 +14,12 @@ import {
 } from '@c1rcle/icons';
 
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
-import { loadPromoterLinkedEvents } from '@/lib/partner/promoter-events-api';
 
 import { EventEmptyState } from './EventEmptyState';
 import { EventPoster } from './EventPoster';
 import styles from './events.module.css';
 
-import type { PromoterEventsData, PromoterLinkedEvent } from '@/data/partner-data-source';
-import type { PromoterEvent } from '@/lib/partner/contracts';
+import type { PromoterEventsData } from '@/data/partner-data-source';
 
 type PromoterEventsTab = 'discover' | 'linked';
 
@@ -46,32 +44,14 @@ export function PromoterEventsScreen({
   const [city, setCity] = useState<PromoterCity>(
     cityOptions.includes(initialCity as PromoterCity) ? (initialCity as PromoterCity) : 'all',
   );
-  const [liveLinkedEvents, setLiveLinkedEvents] = useState<readonly PromoterLinkedEvent[] | null>(
-    null,
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    void loadPromoterLinkedEvents()
-      .then((events) => {
-        if (cancelled) return;
-        if (events.length > 0) setLiveLinkedEvents(events.map(toLinkedEvent));
-      })
-      .catch(() => null);
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const linkedEvents = liveLinkedEvents ?? data.linkedEvents;
 
   const visibleDiscoverEvents = useMemo(
     () => filterEvents(data.discoverEvents, query, city),
     [city, data.discoverEvents, query],
   );
   const visibleLinkedEvents = useMemo(
-    () => filterEvents(linkedEvents, query, city),
-    [city, linkedEvents, query],
+    () => filterEvents(data.linkedEvents, query, city),
+    [city, data.linkedEvents, query],
   );
   const eventHref = (eventId: string) => `${pathname}/${eventId}`;
 
@@ -131,8 +111,7 @@ export function PromoterEventsScreen({
                 onTabChange('linked');
               }}
             >
-              Linked Events{' '}
-              <span className={styles['promoterTabCount']}>{linkedEvents.length}</span>
+              Linked Events <span className={styles['promoterTabCount']}>{data.linkedCount}</span>
             </button>
           </div>
 
@@ -199,20 +178,6 @@ function filterEvents<
     if (city !== 'all' && event.city !== city) return false;
     return !search || `${event.name} ${event.venue}`.toLowerCase().includes(search);
   });
-}
-
-function toLinkedEvent(event: PromoterEvent): PromoterLinkedEvent {
-  return {
-    id: event.id,
-    name: event.name,
-    venue: `${event.venue}, ${event.city}`,
-    city: event.city,
-    clicks: event.clicks,
-    sales: event.tickets,
-    artwork: event.imageUrl
-      ? { type: 'image', value: event.imageUrl, alt: event.name }
-      : { type: 'gradient', value: 'eclipse' },
-  };
 }
 
 function DiscoverEventCard({
@@ -305,10 +270,6 @@ function LinkedEventCard({
             <LinkIcon size={13} aria-hidden="true" />
             {event.clicks} clicks · {event.sales} sales
           </div>
-        </Link>
-        <Link className={styles['promoterAction']} href={`${href}?tab=links`}>
-          <ForwardIcon size={14} aria-hidden="true" />
-          Generate Link
         </Link>
       </div>
     </article>

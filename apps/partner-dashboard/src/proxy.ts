@@ -40,10 +40,11 @@ const SECURE_SESSION_COOKIE = '__Secure-better-auth.session_token';
 
 /**
  * Paths that demand a session. Host/path-char gating is done in the handler.
- * `/onboard` is deliberately absent — it's the pre-signup entry point for
- * brand-new partners (role → OTP → account creation happens mid-wizard), so
- * gating it behind an existing session would bounce anonymous applicants
- * straight back to `/login` before they ever see the wizard.
+ *
+ * `/onboard` is deliberately NOT here: it is the public application wizard
+ * for prospective partners who have no account yet — its own `email_verify`
+ * step calls `signup()` to create the session mid-flow. Gating the page
+ * itself would make it impossible for a new applicant to ever reach it.
  */
 const AUTH_GATED_PREFIXES = ['/venue', '/host', '/promoter', '/partner', '/partner-network'];
 
@@ -52,13 +53,6 @@ const GATEWAY_ORIGIN = getClientEnv().NEXT_PUBLIC_API_BASE_URL.replace(/\/$/, ''
 
 /** Development-mode CSP needs `'unsafe-eval'` for React's dev error stacks. */
 const IS_DEV = getClientEnv().NEXT_PUBLIC_ENVIRONMENT === 'development';
-
-/**
- * Only relax the CSP for GCP Identity Platform / reCAPTCHA when the phone-
- * verification step is actually configured (see `lib/firebase/phone-auth.ts`)
- * — an environment with no Firebase project shouldn't get the wider allowlist.
- */
-const FIREBASE_ENABLED = Boolean(getClientEnv().NEXT_PUBLIC_FIREBASE_API_KEY);
 
 function isAuthGated(pathname: string): boolean {
   return AUTH_GATED_PREFIXES.some(
@@ -73,11 +67,11 @@ function buildContentSecurityPolicy(nonce: string): string {
     style-src 'self' 'unsafe-inline';
     img-src 'self' blob: data: https:;
     font-src 'self';
-    connect-src 'self' blob: ${GATEWAY_ORIGIN} https://storage.googleapis.com https://*.googleapis.com https://*.firebasestorage.app${FIREBASE_ENABLED ? ' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com' : ''};
-    ${FIREBASE_ENABLED ? "frame-src 'self' https://www.google.com https://recaptcha.google.com;" : ''}
+    connect-src 'self' blob: ${GATEWAY_ORIGIN} https://storage.googleapis.com https://*.googleapis.com https://www.google.com https://www.gstatic.com;
     object-src 'none';
     base-uri 'self';
     form-action 'self';
+    frame-src 'self' https://www.google.com/recaptcha/ https://recaptcha.net/recaptcha/;
     frame-ancestors 'none';
     upgrade-insecure-requests;
   `;

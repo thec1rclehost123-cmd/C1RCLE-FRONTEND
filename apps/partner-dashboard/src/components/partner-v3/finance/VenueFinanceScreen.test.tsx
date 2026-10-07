@@ -60,7 +60,9 @@ describe('VenueFinanceScreen', () => {
     await user.click(screen.getByRole('button', { name: 'Pending' }));
     expect(screen.getByText('Karan Shah')).toBeInTheDocument();
     expect(screen.queryByText('Priya Kapoor')).not.toBeInTheDocument();
-    expect(replace).toHaveBeenLastCalledWith('/partner/venue/finance?view=orders&status=pending', { scroll: false });
+    expect(replace).toHaveBeenLastCalledWith('/partner/venue/finance?view=orders&status=pending', {
+      scroll: false,
+    });
 
     await user.click(screen.getByRole('button', { name: 'Open actions for order #8821' }));
     expect(screen.getByRole('menuitem', { name: 'Refund' })).toBeDisabled();

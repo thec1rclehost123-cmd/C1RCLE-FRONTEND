@@ -8,7 +8,7 @@ import { Button } from '@/components/partner-v3/Button';
 
 import styles from './calendar.module.css';
 
-import type { BlockVenueDateInput } from '@/lib/api/calendar-api';
+import type { CreateVenueBlockInput } from '@/lib/calendar/venue-calendar-repository';
 
 const reasons = ['Private event', 'Maintenance', 'Other'] as const;
 const hours = Array.from({ length: 12 }, (_, index) => String(index + 1));
@@ -54,7 +54,7 @@ export function BlockDateDialog({
   readonly selectedDate?: string | undefined;
   readonly onClose: () => void;
   /** When provided, the "Block date" button is active and calls this on submit. */
-  readonly onBlock?: ((input: BlockVenueDateInput) => Promise<void>) | undefined;
+  readonly onBlock?: ((input: CreateVenueBlockInput) => Promise<void>) | undefined;
 }) {
   const initialDay = selectedDate?.slice(8, 10).replace(/^0/, '') ?? String(day);
   const [blockDay, setBlockDay] = useState(initialDay);
@@ -82,12 +82,10 @@ export function BlockDateDialog({
     }
     const startHhmm = to24Hour(fromHour, fromMinute, fromPeriod);
     const endHhmm = to24Hour(toHour, toMinute, toPeriod);
-    const startTime = toIso(monthKey, String(dayNumber), startHhmm);
-    const endTime = overnight
-      ? `${addDays(monthKey, dayNumber, 1)}T${endHhmm}:00.000Z`
-      : toIso(monthKey, String(dayNumber), endHhmm);
-    if (!overnight && endTime <= startTime) {
-      setSubmitError('End time must be after start time, or switch on "Ends next day" for an overnight block.');
+    if (!overnight && endHhmm <= startHhmm) {
+      setSubmitError(
+        'End time must be after start time, or switch on "Ends next day" for an overnight block.',
+      );
       return;
     }
     const label = reason === 'Other' && customReason.trim() ? customReason.trim() : reason;
@@ -95,10 +93,17 @@ export function BlockDateDialog({
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await onBlock({ label, startTime, endTime });
+      await onBlock({
+        reason: label,
+        date: toIso(monthKey, String(dayNumber), '00:00').slice(0, 10),
+        from: startHhmm,
+        to: endHhmm,
+      });
       onClose();
     } catch (err: unknown) {
-      setSubmitError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+      setSubmitError(
+        err instanceof Error ? err.message : 'Something went wrong. Please try again.',
+      );
     } finally {
       setSubmitting(false);
     }
@@ -106,8 +111,18 @@ export function BlockDateDialog({
 
   return (
     <div className={styles['dialogRoot']} role="presentation">
-      <button type="button" className={styles['dialogScrim']} aria-label="Close block date dialog" onClick={onClose} />
-      <section className={styles['blockDialog']} role="dialog" aria-modal="true" aria-labelledby="block-date-title">
+      <button
+        type="button"
+        className={styles['dialogScrim']}
+        aria-label="Close block date dialog"
+        onClick={onClose}
+      />
+      <section
+        className={styles['blockDialog']}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="block-date-title"
+      >
         <header>
           <h2 id="block-date-title">Block a date</h2>
           <button type="button" aria-label="Close block date dialog" onClick={onClose}>
@@ -122,7 +137,9 @@ export function BlockDateDialog({
               min="1"
               max="31"
               value={blockDay}
-              onChange={(event) => { setBlockDay(event.target.value); }}
+              onChange={(event) => {
+                setBlockDay(event.target.value);
+              }}
               placeholder="Day, e.g. 12"
             />
           </label>
@@ -149,7 +166,9 @@ export function BlockDateDialog({
               <button
                 type="button"
                 aria-pressed={overnight}
-                onClick={() => { setOvernight((value) => !value); }}
+                onClick={() => {
+                  setOvernight((value) => !value);
+                }}
               >
                 Ends next day
               </button>
@@ -167,7 +186,9 @@ export function BlockDateDialog({
                 <button
                   type="button"
                   aria-pressed={reason === option}
-                  onClick={() => { setReason(option); }}
+                  onClick={() => {
+                    setReason(option);
+                  }}
                   key={option}
                 >
                   {option}
@@ -177,14 +198,18 @@ export function BlockDateDialog({
             {reason === 'Other' ? (
               <input
                 value={customReason}
-                onChange={(event) => { setCustomReason(event.target.value); }}
+                onChange={(event) => {
+                  setCustomReason(event.target.value);
+                }}
                 placeholder="Describe the reason"
               />
             ) : null}
           </fieldset>
         </div>
         {submitError ? (
-          <p className={styles['blockError']} role="alert">{submitError}</p>
+          <p className={styles['blockError']} role="alert">
+            {submitError}
+          </p>
         ) : !onBlock ? (
           <p className={styles['unavailableNote']}>
             Calendar changes are unavailable until the connected availability service is enabled.
@@ -198,7 +223,9 @@ export function BlockDateDialog({
             type="button"
             variant="primary"
             disabled={!canSubmit}
-            onClick={() => { void handleSubmit(); }}
+            onClick={() => {
+              void handleSubmit();
+            }}
           >
             {submitting ? 'Blocking…' : 'Block date'}
           </Button>
@@ -229,14 +256,48 @@ function TimeField({
     <label>
       {label}
       <div className={styles['timeControls']}>
-        <select value={hour} onChange={(event) => { onHourChange(event.target.value); }}>
-          {hours.map((value) => <option value={value} key={value}>{value}</option>)}
+        <select
+          value={hour}
+          onChange={(event) => {
+            onHourChange(event.target.value);
+          }}
+        >
+          {hours.map((value) => (
+            <option value={value} key={value}>
+              {value}
+            </option>
+          ))}
         </select>
-        <select value={minute} onChange={(event) => { onMinuteChange(event.target.value); }}>
-          {minutes.map((value) => <option value={value} key={value}>{value}</option>)}
+        <select
+          value={minute}
+          onChange={(event) => {
+            onMinuteChange(event.target.value);
+          }}
+        >
+          {minutes.map((value) => (
+            <option value={value} key={value}>
+              {value}
+            </option>
+          ))}
         </select>
-        <button type="button" aria-pressed={period === 'AM'} onClick={() => { onPeriodChange('AM'); }}>AM</button>
-        <button type="button" aria-pressed={period === 'PM'} onClick={() => { onPeriodChange('PM'); }}>PM</button>
+        <button
+          type="button"
+          aria-pressed={period === 'AM'}
+          onClick={() => {
+            onPeriodChange('AM');
+          }}
+        >
+          AM
+        </button>
+        <button
+          type="button"
+          aria-pressed={period === 'PM'}
+          onClick={() => {
+            onPeriodChange('PM');
+          }}
+        >
+          PM
+        </button>
       </div>
     </label>
   );

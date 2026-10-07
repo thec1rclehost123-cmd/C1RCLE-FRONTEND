@@ -9,9 +9,10 @@ import { guestProfileDtoSchema } from '@c1rcle/contracts';
 
 import { apiClient } from '@/lib/api/client';
 
-import { LoginFormCard } from '../../features/auth/components/LoginFormCard';
-import { LoginHeroPanel } from '../../features/auth/components/LoginHeroPanel';
-import { loginFixture } from '../../features/auth/fixtures/login.fixture';
+import { isApiClientError } from '@c1rcle/api-client';
+import { login } from '@c1rcle/auth';
+
+import { safeNextPath } from '@/lib/auth/safe-next-path';
 
 import type {
   AuthMode,
@@ -351,6 +352,6 @@ export function LoginPageClient({ initialMode = 'login', nextPath = null }: Logi
           />
         </section>
       </div>
-    </div>
+    </AuthShell>
   );
 }

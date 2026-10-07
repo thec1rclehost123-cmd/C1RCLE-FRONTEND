@@ -1,9 +1,15 @@
+import { buildPublicMetadata } from '@/lib/seo/metadata';
+
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'Privacy Policy',
-  description: 'Privacy Policy for THE C1RCLE.',
-};
+export function generateMetadata(): Metadata {
+  return buildPublicMetadata({
+    path: '/privacy',
+    title: 'Privacy Policy',
+    description: 'Privacy information for THE C1RCLE.',
+    indexable: false,
+  });
+}
 
 export default function PrivacyPage() {
   return (

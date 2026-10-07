@@ -108,7 +108,6 @@ export {
   StickyNote as NoteIcon,
   Ticket as TicketIcon,
   TrendingUp as TrendUpIcon,
-  Upload as UploadIcon,
   User as GuestIcon,
   UserPlus as InviteIcon,
   Video as VideoIcon,
@@ -118,4 +117,22 @@ export {
   Wine as BottleServiceIcon,
 } from 'lucide-react';
 
+/**
+ * Onboarding / landing icon set.
+ *
+ * These are the icon needs of the partner onboarding wizard and the
+ * pre-login marketing/landing surfaces. Same rule as the sets above:
+ * names describe product meaning, which lets the underlying lucide asset
+ * be swapped without touching call sites.
+ */
+export {
+  Zap as InstantIcon,
+  CheckCircle2 as VerifiedTickIcon,
+  Briefcase as BusinessIcon,
+  ShieldCheck as ComplianceIcon,
+  Sparkles as AssistantIcon,
+  Building as CompanyIcon,
+} from 'lucide-react';
+
 export type { LucideProps as IconProps } from 'lucide-react';
+export {};

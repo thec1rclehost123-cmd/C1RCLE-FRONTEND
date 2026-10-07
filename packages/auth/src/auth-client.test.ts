@@ -1,6 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { fetchSession, login, logout, refresh, signup } from './auth-client.js';
+import {
+  changePassword,
+  fetchSession,
+  login,
+  logout,
+  refresh,
+  requestPasswordReset,
+  resetPassword,
+  signup,
+} from './auth-client.js';
 import { useSessionStore } from './session-store.js';
 
 const user = {
@@ -9,6 +18,7 @@ const user = {
   displayName: 'A',
   role: 'partner' as const,
   avatarUrl: null,
+  mustChangePassword: false,
 };
 
 const authBody = (over: Record<string, unknown> = {}) => ({
@@ -59,10 +69,10 @@ describe('auth-client', () => {
         expect.anything(),
       );
       const rawBody = fetchMock.mock.calls[0]?.[1]?.body;
-      const sentBody = JSON.parse(typeof rawBody === 'string' ? rawBody : '{}') as Record<
-        string,
-        unknown
-      >;
+      if (typeof rawBody !== 'string') {
+        throw new Error('Expected the request body to be a JSON string');
+      }
+      const sentBody = JSON.parse(rawBody) as Record<string, unknown>;
       expect(sentBody).not.toHaveProperty('role');
       expect(sentBody).toMatchObject({ email: 'a@b.com', displayName: 'A' });
 
@@ -161,6 +171,100 @@ describe('auth-client', () => {
       await fetchSession();
 
       expect(useSessionStore.getState().status).toBe('anonymous');
+    });
+  });
+
+  describe('password reset', () => {
+    it('posts the email to the forgot-password BFF route and resolves on the ack', async () => {
+      const fetchMock = stubFetch();
+      fetchMock.mockResolvedValue(jsonResponse({ status: true, message: 'ok' }));
+
+      await expect(requestPasswordReset('a@b.com')).resolves.toBeUndefined();
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/api/auth/forgot-password'),
+        expect.anything(),
+      );
+    });
+
+    it('rejects a malformed email before any network call', async () => {
+      const fetchMock = stubFetch();
+
+      await expect(requestPasswordReset('nope')).rejects.toThrow();
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('posts the token and new password in the body to reset-password', async () => {
+      const fetchMock = stubFetch();
+      fetchMock.mockResolvedValue(jsonResponse({ status: true }));
+
+      await resetPassword({ token: 'tok', newPassword: 'password123' });
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const calledInput = fetchMock.mock.calls[0]?.[0];
+      const calledUrl =
+        typeof calledInput === 'string'
+          ? calledInput
+          : calledInput instanceof URL
+            ? calledInput.toString()
+            : (calledInput?.url ?? '');
+      expect(calledUrl).toContain('/api/auth/reset-password');
+      expect(calledUrl).not.toContain('tok');
+
+      const rawBody = fetchMock.mock.calls[0]?.[1]?.body;
+      if (typeof rawBody !== 'string') {
+        throw new Error('Expected the request body to be a JSON string');
+      }
+      expect(JSON.parse(rawBody)).toEqual({
+        token: 'tok',
+        newPassword: 'password123',
+      });
+    });
+
+    it('rejects a too-short new password client-side', async () => {
+      const fetchMock = stubFetch();
+
+      await expect(resetPassword({ token: 'tok', newPassword: 'short' })).rejects.toThrow();
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('changePassword', () => {
+    it('rotates the password and stores the fresh session', async () => {
+      const fetchMock = stubFetch();
+      fetchMock.mockResolvedValue(
+        jsonResponse({
+          user: { ...user, mustChangePassword: false },
+          accessToken: 'tok_fresh',
+          expiresAt: 1_900_000_000_000,
+        }),
+      );
+
+      await changePassword({
+        currentPassword: 'TempPass12345678',
+        newPassword: 'brand-new-password-1',
+      });
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const calledInput = fetchMock.mock.calls[0]?.[0];
+      const calledUrl =
+        typeof calledInput === 'string'
+          ? calledInput
+          : calledInput instanceof URL
+            ? calledInput.pathname
+            : (calledInput?.url ?? '');
+      expect(calledUrl).toContain('/api/auth/change-password');
+      expect(useSessionStore.getState().session?.user.mustChangePassword).toBe(false);
+      expect(useSessionStore.getState().accessToken).toBe('tok_fresh');
+    });
+
+    it('rejects identical passwords before any network call', async () => {
+      const fetchMock = stubFetch();
+
+      await expect(
+        changePassword({ currentPassword: 'same-password-1', newPassword: 'same-password-1' }),
+      ).rejects.toThrow();
+      expect(fetchMock).not.toHaveBeenCalled();
     });
   });
 

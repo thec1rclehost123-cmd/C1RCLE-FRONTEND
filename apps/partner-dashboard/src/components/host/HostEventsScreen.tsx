@@ -6,9 +6,9 @@ import { useMemo, useRef, useState } from 'react';
 
 import { NextIcon, PreviousIcon, SearchIcon } from '@c1rcle/icons';
 
-import { hostEvents, hostSlotRequests } from './host-studio-model';
-
 import styles from '../venue/screens/VenueEvents.module.css';
+
+import { hostEvents, hostSlotRequests } from './host-studio-model';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -29,19 +29,38 @@ const STATUS_TONE = {
 } as const satisfies Record<string, 'success' | 'warning' | 'danger' | 'neutral'>;
 
 function statusTone(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
-  return STATUS_TONE[status as keyof typeof STATUS_TONE] ?? 'neutral';
+  return (
+    (STATUS_TONE as Record<string, 'success' | 'warning' | 'danger' | 'neutral'>)[status] ??
+    'neutral'
+  );
 }
 
 // ─── main component ────────────────────────────────────────────────────────
 
 export function HostEventsScreen({ tab = 'upcoming' }: { readonly tab?: string }) {
-  const activeTab = (tab as HostTab) in STATUS_TONE || tab === 'upcoming' || tab === 'live' || tab === 'invitations' || tab === 'requests' || tab === 'past' ? (tab as HostTab) : 'upcoming';
+  const activeTab =
+    (tab as HostTab) in STATUS_TONE ||
+    tab === 'upcoming' ||
+    tab === 'live' ||
+    tab === 'invitations' ||
+    tab === 'requests' ||
+    tab === 'past'
+      ? (tab as HostTab)
+      : 'upcoming';
   const [query, setQuery] = useState('');
 
   const TABS: { key: HostTab; label: string; count?: number }[] = [
-    { key: 'upcoming', label: 'Upcoming', count: hostEvents.filter(e => e.status === 'Upcoming').length },
-    { key: 'live', label: 'Live', count: hostEvents.filter(e => e.status === 'Live').length },
-    { key: 'invitations', label: 'Invitations', count: hostEvents.filter(e => e.status === 'Invitation').length },
+    {
+      key: 'upcoming',
+      label: 'Upcoming',
+      count: hostEvents.filter((e) => e.status === 'Upcoming').length,
+    },
+    { key: 'live', label: 'Live', count: hostEvents.filter((e) => e.status === 'Live').length },
+    {
+      key: 'invitations',
+      label: 'Invitations',
+      count: hostEvents.filter((e) => e.status === 'Invitation').length,
+    },
     { key: 'requests', label: 'Slot requests', count: hostSlotRequests.length },
     { key: 'past', label: 'Past' },
   ];
@@ -49,18 +68,21 @@ export function HostEventsScreen({ tab = 'upcoming' }: { readonly tab?: string }
   const filteredEvents = useMemo(() => {
     const q = query.trim().toLowerCase();
     const base =
-      activeTab === 'live' ? hostEvents.filter(e => e.status === 'Live')
-      : activeTab === 'past' ? hostEvents.filter(e => e.status === 'Completed')
-      : activeTab === 'invitations' ? hostEvents.filter(e => e.status === 'Invitation')
-      : hostEvents.filter(e => e.status === 'Upcoming');
+      activeTab === 'live'
+        ? hostEvents.filter((e) => e.status === 'Live')
+        : activeTab === 'past'
+          ? hostEvents.filter((e) => e.status === 'Completed')
+          : activeTab === 'invitations'
+            ? hostEvents.filter((e) => e.status === 'Invitation')
+            : hostEvents.filter((e) => e.status === 'Upcoming');
     if (!q) return base;
-    return base.filter(e => `${e.name} ${e.venue} ${e.city}`.toLowerCase().includes(q));
+    return base.filter((e) => `${e.name} ${e.venue} ${e.city}`.toLowerCase().includes(q));
   }, [activeTab, query]);
 
   const filteredRequests = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return hostSlotRequests;
-    return hostSlotRequests.filter(r => `${r.eventName} ${r.venue}`.toLowerCase().includes(q));
+    return hostSlotRequests.filter((r) => `${r.eventName} ${r.venue}`.toLowerCase().includes(q));
   }, [query]);
 
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -87,15 +109,20 @@ export function HostEventsScreen({ tab = 'upcoming' }: { readonly tab?: string }
             {TABS.map((item, index) => (
               <button
                 key={item.key}
-                ref={el => { tabRefs.current[index] = el; }}
+                ref={(el) => {
+                  tabRefs.current[index] = el;
+                }}
                 type="button"
                 role="tab"
                 aria-selected={activeTab === item.key}
                 tabIndex={activeTab === item.key ? 0 : -1}
                 onClick={() => {
+                  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- hard navigation intentionally refetches event counts on tab switch; router.push would leave stale tab data.
                   window.location.href = `/host/events?tab=${item.key}`;
                 }}
-                onKeyDown={e => onTabKeyDown(e, index)}
+                onKeyDown={(e) => {
+                  onTabKeyDown(e, index);
+                }}
               >
                 {item.label}
                 {item.count !== undefined ? <span>{item.count}</span> : null}
@@ -113,7 +140,9 @@ export function HostEventsScreen({ tab = 'upcoming' }: { readonly tab?: string }
           <input
             type="search"
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+            }}
             placeholder="Search events"
           />
         </label>
@@ -152,11 +181,7 @@ export function HostEventsScreen({ tab = 'upcoming' }: { readonly tab?: string }
 
 // ─── events table (Upcoming / Live / Past) ────────────────────────────────
 
-function EventsTable({
-  rows,
-}: {
-  readonly rows: typeof hostEvents;
-}) {
+function EventsTable({ rows }: { readonly rows: typeof hostEvents }) {
   if (rows.length === 0) {
     return (
       <section className={s('emptyState')}>
@@ -170,12 +195,12 @@ function EventsTable({
     <section className={s('eventTable')} aria-label="Hosted events list">
       <table>
         <colgroup>
-          <col style={{ width: '30%' }} />
-          <col style={{ width: '18%' }} />
-          <col style={{ width: '16%' }} />
-          <col style={{ width: '16%' }} />
-          <col style={{ width: '10%' }} />
-          <col style={{ width: '10%' }} />
+          <col className="w-[30%]" />
+          <col className="w-[18%]" />
+          <col className="w-[16%]" />
+          <col className="w-[16%]" />
+          <col className="w-[10%]" />
+          <col className="w-[10%]" />
         </colgroup>
         <thead>
           <tr>
@@ -184,7 +209,9 @@ function EventsTable({
             <th scope="col">When</th>
             <th scope="col">Guests</th>
             <th scope="col">Status</th>
-            <th scope="col" style={{ textAlign: 'right' }}>Action</th>
+            <th scope="col" className="text-right">
+              Action
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -238,7 +265,7 @@ function EventsTable({
   );
 }
 
-function GuestCell({ event }: { readonly event: typeof hostEvents[number] }) {
+function GuestCell({ event }: { readonly event: (typeof hostEvents)[number] }) {
   const confirmed = event.confirmed;
   const allocation = event.guests;
   if (confirmed !== null && allocation !== null) {
@@ -253,7 +280,7 @@ function GuestCell({ event }: { readonly event: typeof hostEvents[number] }) {
           value={pct}
           max={100}
           data-tone={tone}
-          aria-label={`${confirmed} of ${allocation} guests confirmed`}
+          aria-label={`${String(confirmed)} of ${String(allocation)} guests confirmed`}
         />
       </div>
     );
@@ -267,7 +294,7 @@ function GuestCell({ event }: { readonly event: typeof hostEvents[number] }) {
   }
   return (
     <div className={s('ticketCell')}>
-      <strong style={{ color: 'var(--dashboard-text-secondary)' }}>—</strong>
+      <strong className="text-[var(--dashboard-text-secondary)]">—</strong>
     </div>
   );
 }
@@ -288,12 +315,12 @@ function InvitationsTable({ rows }: { readonly rows: typeof hostEvents }) {
     <section className={s('eventTable')} aria-label="Venue invitations list">
       <table>
         <colgroup>
-          <col style={{ width: '30%' }} />
-          <col style={{ width: '18%' }} />
-          <col style={{ width: '16%' }} />
-          <col style={{ width: '16%' }} />
-          <col style={{ width: '10%' }} />
-          <col style={{ width: '10%' }} />
+          <col className="w-[30%]" />
+          <col className="w-[18%]" />
+          <col className="w-[16%]" />
+          <col className="w-[16%]" />
+          <col className="w-[10%]" />
+          <col className="w-[10%]" />
         </colgroup>
         <thead>
           <tr>
@@ -302,7 +329,9 @@ function InvitationsTable({ rows }: { readonly rows: typeof hostEvents }) {
             <th scope="col">Proposed date</th>
             <th scope="col">Guest allocation</th>
             <th scope="col">Status</th>
-            <th scope="col" style={{ textAlign: 'right' }}>Action</th>
+            <th scope="col" className="text-right">
+              Action
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -338,7 +367,7 @@ function InvitationsTable({ rows }: { readonly rows: typeof hostEvents }) {
               </td>
               <td data-label="Allocation">
                 <div className={s('ticketCell')}>
-                  <strong>{event.guests !== null ? `${event.guests} guests` : '—'}</strong>
+                  <strong>{event.guests !== null ? `${String(event.guests)} guests` : '—'}</strong>
                 </div>
               </td>
               <td data-label="Status">
@@ -375,12 +404,12 @@ function RequestsTable({ rows }: { readonly rows: typeof hostSlotRequests }) {
     <section className={s('eventTable')} aria-label="Slot requests list">
       <table>
         <colgroup>
-          <col style={{ width: '28%' }} />
-          <col style={{ width: '18%' }} />
-          <col style={{ width: '18%' }} />
-          <col style={{ width: '14%' }} />
-          <col style={{ width: '11%' }} />
-          <col style={{ width: '11%' }} />
+          <col className="w-[28%]" />
+          <col className="w-[18%]" />
+          <col className="w-[18%]" />
+          <col className="w-[14%]" />
+          <col className="w-[11%]" />
+          <col className="w-[11%]" />
         </colgroup>
         <thead>
           <tr>
@@ -389,18 +418,18 @@ function RequestsTable({ rows }: { readonly rows: typeof hostSlotRequests }) {
             <th scope="col">Requested slot</th>
             <th scope="col">Updated</th>
             <th scope="col">Status</th>
-            <th scope="col" style={{ textAlign: 'right' }}>Action</th>
+            <th scope="col" className="text-right">
+              Action
+            </th>
           </tr>
         </thead>
         <tbody>
-          {rows.map(request => (
+          {rows.map((request) => (
             <tr key={request.id} tabIndex={0}>
               <td data-label="Event">
                 <div className={s('whenCell')}>
                   <strong>{request.eventName}</strong>
-                  <span style={{ fontFamily: 'monospace', fontSize: '12px', opacity: 0.55 }}>
-                    {request.id}
-                  </span>
+                  <span className="font-mono text-xs opacity-[0.55]">{request.id}</span>
                 </div>
               </td>
               <td data-label="Venue">

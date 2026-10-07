@@ -8,7 +8,7 @@ import { useSessionStore } from '@c1rcle/auth';
 import { normalizePartnerRole } from '@/components/partner-shell/partner-role-routing';
 import { getActiveOrgId, setActiveOrg } from '@/lib/org/active-org';
 import { getOrganizations } from '@/lib/org/org-repository';
-import { resolveOrgOverviewPath } from '@/lib/org/route-after-auth';
+import { redirectToFirstPendingInvite, resolveLandingPath } from '@/lib/org/route-after-auth';
 
 import type { OrganizationDto } from '@c1rcle/contracts';
 
@@ -31,26 +31,29 @@ export default function SelectOrganizationPage() {
 
     let isMounted = true;
     getOrganizations()
-      .then((orgs) => {
+      .then(async (orgs) => {
         if (!isMounted) return;
         setOrganizations(orgs);
         setLoading(false);
 
         if (orgs.length === 0) {
+          // Same invitee-first rule as the login zero-org branch: a pending
+          // invite beats the applicant onboarding.
+          if (await redirectToFirstPendingInvite(router)) return;
           router.replace('/onboard');
         } else if (orgs.length === 1 && orgs[0]) {
           const singleOrg = orgs[0];
-          void setActiveOrg(singleOrg.id)
-            .then(() => resolveOrgOverviewPath(singleOrg.id))
-            .then((target) => {
-              router.replace(target);
-            });
+          setActiveOrg(singleOrg.id);
+          void resolveLandingPath(singleOrg.id).then((target) => {
+            router.replace(target);
+          });
         }
-
       })
       .catch((err: unknown) => {
         if (!isMounted) return;
-        setError(err instanceof Error ? err.message : 'Failed to load organizations. Please try again.');
+        setError(
+          err instanceof Error ? err.message : 'Failed to load organizations. Please try again.',
+        );
         setLoading(false);
       });
 
@@ -60,15 +63,15 @@ export default function SelectOrganizationPage() {
   }, [router, hydrated]);
 
   const handleSelectOrg = async (org: OrganizationDto) => {
-    await setActiveOrg(org.id);
+    setActiveOrg(org.id);
     // `org.role` is the caller's *staff* role (owner/admin/manager/member),
-    // never the partner type — resolveOrgOverviewPath asks the real
+    // never the partner type — resolveLandingPath asks the real
     // per-org /access endpoint instead (same helper /login and the
     // onboarding approval hop use, so all three never drift apart).
-    const fallbackRoute = await resolveOrgOverviewPath(org.id);
+    const fallbackRoute = await resolveLandingPath(org.id);
     const lastRoute =
       typeof window !== 'undefined'
-        ? window.localStorage.getItem(`partner:last-route:${org.id}`) ?? fallbackRoute
+        ? (window.localStorage.getItem(`partner:last-route:${org.id}`) ?? fallbackRoute)
         : fallbackRoute;
     // Full page load, not `router.push`: the auth provider initializes its
     // active-org state once from the cookie (`getActiveOrgId()` in its lazy
@@ -143,4 +146,3 @@ export default function SelectOrganizationPage() {
     </main>
   );
 }
-

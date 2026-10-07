@@ -4,9 +4,11 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import { logout } from '@c1rcle/auth';
+import { logout } from '@c1rcle/auth';
 
 export function SignOutControl() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [pending, setPending] = useState(false);
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
 
@@ -71,7 +73,10 @@ export function SignOutControl() {
               <button
                 type="button"
                 aria-label="Confirm sign out"
-                onClick={signOut}
+                disabled={pending}
+                onClick={() => {
+                  void signOut();
+                }}
                 className="inline-flex min-h-11 items-center justify-center rounded-full bg-white px-5 text-[9px] font-black uppercase tracking-[0.2em] text-black"
               >
                 Sign out

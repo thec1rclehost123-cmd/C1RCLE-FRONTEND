@@ -34,7 +34,11 @@ export function DashboardButton({
   readonly children: ReactNode;
   readonly tone?: 'primary' | 'secondary' | 'ghost';
 }) {
-  return <Link className={`pd-button pd-button--${tone}`} href={href}>{children}</Link>;
+  return (
+    <Link className={`pd-button pd-button--${tone}`} href={href}>
+      {children}
+    </Link>
+  );
 }
 
 export function MetricCard({
@@ -54,7 +58,10 @@ export function MetricCard({
     <article className={`pd-metric pd-metric--${tone}`}>
       <span>{label}</span>
       <strong>{value}</strong>
-      <footer>{trend ? <em>{trend}</em> : null}{detail ? <small>{detail}</small> : null}</footer>
+      <footer>
+        {trend ? <em>{trend}</em> : null}
+        {detail ? <small>{detail}</small> : null}
+      </footer>
     </article>
   );
 }
@@ -80,7 +87,10 @@ export function SectionHeading({
 }) {
   return (
     <div className="pd-section-heading">
-      <div><h2>{title}</h2>{description ? <p>{description}</p> : null}</div>
+      <div>
+        <h2>{title}</h2>
+        {description ? <p>{description}</p> : null}
+      </div>
       {action}
     </div>
   );
@@ -116,11 +126,31 @@ export function ErrorState({
   readonly description: string;
   readonly retryHref?: string;
 }) {
-  return <section className="pd-error-state" role="alert"><span aria-hidden="true">!</span><div><h2>{title}</h2><p>{description}</p></div>{retryHref ? <Link href={retryHref}>Try again</Link> : null}</section>;
+  return (
+    <section className="pd-error-state" role="alert">
+      <span aria-hidden="true">!</span>
+      <div>
+        <h2>{title}</h2>
+        <p>{description}</p>
+      </div>
+      {retryHref ? <Link href={retryHref}>Try again</Link> : null}
+    </section>
+  );
 }
 
 export function DashboardSkeleton({ cards = 4 }: { readonly cards?: number }) {
-  return <div className="pd-skeleton" role="status" aria-label="Loading dashboard content"><span /><strong /><section>{Array.from({ length: cards }, (_, index) => <i key={String(index)} />)}</section><article /></div>;
+  return (
+    <div className="pd-skeleton" role="status" aria-label="Loading dashboard content">
+      <span />
+      <strong />
+      <section>
+        {Array.from({ length: cards }, (_, index) => (
+          <i key={String(index)} />
+        ))}
+      </section>
+      <article />
+    </div>
+  );
 }
 
 export function DateRangeSelector({
@@ -130,7 +160,20 @@ export function DateRangeSelector({
   readonly active: '7d' | '30d' | '90d';
   readonly baseHref: string;
 }) {
-  return <nav className="pd-date-range" aria-label="Analytics date range">{(['7d', '30d', '90d'] as const).map((range) => <Link key={range} href={`${baseHref}${baseHref.includes('?') ? '&' : '?'}range=${range}`} className={active === range ? 'is-active' : undefined} aria-current={active === range ? 'page' : undefined}>{range === '7d' ? '7 days' : range === '30d' ? '30 days' : '90 days'}</Link>)}</nav>;
+  return (
+    <nav className="pd-date-range" aria-label="Analytics date range">
+      {(['7d', '30d', '90d'] as const).map((range) => (
+        <Link
+          key={range}
+          href={`${baseHref}${baseHref.includes('?') ? '&' : '?'}range=${range}`}
+          className={active === range ? 'is-active' : undefined}
+          aria-current={active === range ? 'page' : undefined}
+        >
+          {range === '7d' ? '7 days' : range === '30d' ? '30 days' : '90 days'}
+        </Link>
+      ))}
+    </nav>
+  );
 }
 
 export function AnalyticsChartCard({
@@ -146,7 +189,13 @@ export function AnalyticsChartCard({
   readonly label: string;
   readonly footer?: ReactNode;
 }) {
-  return <section className="pd-surface pd-chart-card"><SectionHeading title={title} description={description} /><MiniBars values={values} label={label} />{footer ? <footer>{footer}</footer> : null}</section>;
+  return (
+    <section className="pd-surface pd-chart-card">
+      <SectionHeading title={title} description={description} />
+      <MiniBars values={values} label={label} />
+      {footer ? <footer>{footer}</footer> : null}
+    </section>
+  );
 }
 
 export function PageTabs({
@@ -159,7 +208,12 @@ export function PageTabs({
   return (
     <nav className="pd-tabs" aria-label="Page sections">
       {items.map((item) => (
-        <Link key={item.value} href={item.href} className={item.value === active ? 'is-active' : undefined} aria-current={item.value === active ? 'page' : undefined}>
+        <Link
+          key={item.value}
+          href={item.href}
+          className={item.value === active ? 'is-active' : undefined}
+          aria-current={item.value === active ? 'page' : undefined}
+        >
           {item.label}
         </Link>
       ))}
@@ -167,14 +221,35 @@ export function PageTabs({
   );
 }
 
-export function MiniBars({ values, label }: { readonly values: readonly number[]; readonly label: string }) {
+export function MiniBars({
+  values,
+  label,
+}: {
+  readonly values: readonly number[];
+  readonly label: string;
+}) {
   const max = Math.max(...values, 1);
   const barWidth = 100 / Math.max(values.length, 1);
   return (
-    <svg className="pd-mini-bars" role="img" aria-label={label} viewBox="0 0 100 100" preserveAspectRatio="none">
+    <svg
+      className="pd-mini-bars"
+      role="img"
+      aria-label={label}
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+    >
       {values.map((value, index) => {
         const height = (value / max) * 92;
-        return <rect key={`${String(index)}-${String(value)}`} x={(index * barWidth) + (barWidth * .18)} y={100 - height} width={barWidth * .64} height={height} rx="1.2" />;
+        return (
+          <rect
+            key={`${String(index)}-${String(value)}`}
+            x={index * barWidth + barWidth * 0.18}
+            y={100 - height}
+            width={barWidth * 0.64}
+            height={height}
+            rx="1.2"
+          />
+        );
       })}
     </svg>
   );

@@ -27,15 +27,34 @@ describe('HostEventDetailScreen', () => {
     render(<HostEventDetailScreen data={data} />);
 
     expect(screen.getByRole('heading', { name: 'Neon Nights: Afrobeats' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /All events/ })).toHaveAttribute('href', '/partner/host/events');
-    expect(screen.getByRole('link', { name: 'Edit' })).toHaveAttribute('href', '/partner/host/events/neon-nights-afrobeats/edit');
-    expect(screen.getByRole('link', { name: 'Door Mode' })).toHaveAttribute('href', '/partner/host/door');
-    expect(screen.getByRole('link', { name: "Who's coming" })).toHaveAttribute('href', '/partner/host/events/neon-nights-afrobeats/guests');
-    expect(screen.getByRole('link', { name: 'Funnel' })).toHaveAttribute('href', '/partner/host/events/neon-nights-afrobeats/sales?view=funnel');
+    expect(screen.getByRole('link', { name: /All events/ })).toHaveAttribute(
+      'href',
+      '/partner/host/events',
+    );
+    expect(screen.getByRole('link', { name: 'Edit' })).toHaveAttribute(
+      'href',
+      '/partner/host/events/neon-nights-afrobeats/edit',
+    );
+    expect(screen.getByRole('link', { name: 'Door Mode' })).toHaveAttribute(
+      'href',
+      '/partner/host/door',
+    );
+    expect(screen.getByRole('link', { name: "Who's coming" })).toHaveAttribute(
+      'href',
+      '/partner/host/events/neon-nights-afrobeats/guests',
+    );
+    expect(screen.getByRole('link', { name: 'Funnel' })).toHaveAttribute(
+      'href',
+      '/partner/host/events/neon-nights-afrobeats/sales?view=funnel',
+    );
     expect(screen.getByRole('heading', { name: 'Sales summary' })).toBeInTheDocument();
     expect(screen.getByText('340 / 400')).toBeInTheDocument();
     expect(screen.getByText('58.6%')).toBeInTheDocument();
-    expect([...document.querySelectorAll('a')].every((link) => !link.getAttribute('href')?.startsWith('/partner/venue/'))).toBe(true);
+    expect(
+      [...document.querySelectorAll('a')].every(
+        (link) => !link.getAttribute('href')?.startsWith('/partner/venue/'),
+      ),
+    ).toBe(true);
   });
 
   it('returns no detail data for an unknown Host event id', async () => {

@@ -1834,10 +1834,15 @@ const venueFinanceData: VenueFinanceData = {
   },
   bankAccount: {
     bankName: 'HDFC Bank',
+    // Masked only. The full number was removed from this fixture when the
+    // finance screen was wired to the real API, because `FinanceBankAccount`
+    // no longer has a field for it — and a fixture that can still hold a
+    // plaintext account number is exactly how a real one eventually gets typed
+    // in somewhere.
     displayNumber: '5010 •••• •••• 4412',
-    accountNumber: '5010 0284 4412',
     ifscCode: 'HDFC0001234',
     accountHolder: 'Rhea Kapoor Events LLP',
+    verified: true,
   },
   paymentCard: {
     label: 'THE C1RCLE · Business',
@@ -2418,12 +2423,6 @@ const venueCalendarMonths: readonly CalendarMonth[] = [
     31,
     calendarEvents.filter((event) => event.date.startsWith('2026-08')),
   ),
-  makeCalendarMonth(
-    '2026-09',
-    'September 2026',
-    30,
-    calendarEvents.filter((event) => event.date.startsWith('2026-09')),
-  ),
 ];
 
 const venueCalendarData: VenueCalendarData = {
@@ -2495,9 +2494,12 @@ const calendarForVenue = (
 const hostAvailabilityData: HostAvailabilityData = {
   dataStatus: 'fixture',
   accent: 'lavender',
-  venues: hostVenueOptions.map((venue) => ({
+  venues: hostVenueOptions.map((venue, index) => ({
     venue,
-    months: addAvailabilitySlots(calendarForVenue(venue.name, venueCalendarMonths)),
+    months:
+      index === 0
+        ? addAvailabilitySlots(calendarForVenue(venue.name, venueCalendarMonths))
+        : addAvailabilitySlots([makeCalendarMonth('2026-07', 'July 2026', 31, [])]),
   })),
 };
 
@@ -2521,7 +2523,6 @@ const defaultEditorDraft = (role: 'venue' | 'host'): EventEditorDraft => ({
   date: '',
   dateLabel: 'No date picked yet',
   time: '9:00 PM',
-  endTime: '3:00 AM',
   genres: ['House', 'Club Night'],
   artists: [],
   artwork: { type: 'gradient', value: 'sunset' },
@@ -2534,15 +2535,8 @@ const defaultEditorDraft = (role: 'venue' | 'host'): EventEditorDraft => ({
   tableType: 'high',
   promoCodes: ['EARLYBIRD'],
   pricingRule: 'First 50 tickets · 15% off',
-  earlyBirdDiscountPercent: 15,
-  lateArrivalChargePercent: 10,
-  lateArrivalNotes: 'Entry after 11:00 PM · ₹500 door surcharge',
   compensation: 'standard',
   commissionRate: 15,
-  tierCommissions: {},
-  promoterOverrides: {},
-  salaryAmount: 0,
-  salaryPeriod: 'per_event',
   salaryNotes: '',
 });
 

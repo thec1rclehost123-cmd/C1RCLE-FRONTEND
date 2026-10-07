@@ -6,14 +6,37 @@ import { EventSummaryCard } from './EventSummaryCard';
 
 import type { EventSalesSummary as EventSalesSummaryData } from '@/data/partner-data-source';
 
-export function EventSalesSummary({ summary, accent = 'orange' }: { readonly summary: EventSalesSummaryData; readonly accent?: 'orange' | 'lavender' }) {
+export function EventSalesSummary({
+  summary,
+  accent = 'orange',
+}: {
+  readonly summary: EventSalesSummaryData;
+  readonly accent?: 'orange' | 'lavender';
+}) {
   return (
     <>
       <EventDetailSection title="Sales summary">
         <div className={styles['summaryGrid']}>
-          <EventSummaryCard accent={accent} label="Money made" value={summary.moneyMade} delta={summary.moneyDelta} trendPoints={summary.moneyTrend} icon={<TrendUpIcon size={13} aria-hidden="true" />} />
-          <EventSummaryCard accent={accent} label="Tickets sold" value={summary.ticketsSold} icon={<TicketIcon size={13} aria-hidden="true" />} />
-          <EventSummaryCard accent={accent} label="Refunds" value={summary.refunds} icon={<RefundIcon size={13} aria-hidden="true" />} />
+          <EventSummaryCard
+            accent={accent}
+            label="Money made"
+            value={summary.moneyMade}
+            delta={summary.moneyDelta}
+            trendPoints={summary.moneyTrend}
+            icon={<TrendUpIcon size={13} aria-hidden="true" />}
+          />
+          <EventSummaryCard
+            accent={accent}
+            label="Tickets sold"
+            value={summary.ticketsSold}
+            icon={<TicketIcon size={13} aria-hidden="true" />}
+          />
+          <EventSummaryCard
+            accent={accent}
+            label="Refunds"
+            value={summary.refunds}
+            icon={<RefundIcon size={13} aria-hidden="true" />}
+          />
         </div>
       </EventDetailSection>
 
@@ -21,8 +44,22 @@ export function EventSalesSummary({ summary, accent = 'orange' }: { readonly sum
         <div className={styles['tierList']}>
           {summary.tiers.map((tier) => (
             <div className={styles['tierRow']} key={tier.name}>
-              <div className={styles['tierRowHeader']}><span>{tier.name}</span><strong>{tier.count} · {tier.money}</strong></div>
-              <div className={styles['tierTrack']}><span className={[styles[`tierFill${tier.accent.charAt(0).toUpperCase()}${tier.accent.slice(1)}`], tierWidthClasses[tier.fillPercent]].filter(Boolean).join(' ')} /></div>
+              <div className={styles['tierRowHeader']}>
+                <span>{tier.name}</span>
+                <strong>
+                  {tier.count} · {tier.money}
+                </strong>
+              </div>
+              <div className={styles['tierTrack']}>
+                <span
+                  className={[
+                    styles[`tierFill${tier.accent.charAt(0).toUpperCase()}${tier.accent.slice(1)}`],
+                    tierWidthClasses[tier.fillPercent],
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                />
+              </div>
             </div>
           ))}
         </div>

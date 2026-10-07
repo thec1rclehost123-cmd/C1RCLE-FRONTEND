@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  normalizePartnerRole,
-  resolvePartnerDashboardPath,
-} from './partner-role-routing';
+import { normalizePartnerRole, resolvePartnerDashboardPath } from './partner-role-routing';
 
 describe('partner role routing', () => {
   it.each([
@@ -28,6 +25,8 @@ describe('partner role routing', () => {
     expect(resolvePartnerDashboardPath('club', 'overview')).toBe('/venue/overview');
     expect(resolvePartnerDashboardPath('host')).toBe('/host');
     expect(resolvePartnerDashboardPath('promoter', 'overview')).toBe('/promoter/overview');
-    expect(resolvePartnerDashboardPath('  PROMOTER  ', '/finance/orders/')).toBe('/promoter/finance/orders');
+    expect(resolvePartnerDashboardPath('  PROMOTER  ', '/finance/orders/')).toBe(
+      '/promoter/finance/orders',
+    );
   });
 });

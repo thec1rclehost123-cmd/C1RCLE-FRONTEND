@@ -50,9 +50,7 @@ export function useHostAvailability({
   );
   const requestKey = useMemo(
     () =>
-      enabled && organizationId
-        ? JSON.stringify({ attempt, monthKeys, organizationId })
-        : null,
+      enabled && organizationId ? JSON.stringify({ attempt, monthKeys, organizationId }) : null,
     [attempt, enabled, monthKeys, organizationId],
   );
 

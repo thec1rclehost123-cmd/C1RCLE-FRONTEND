@@ -52,13 +52,10 @@ vi.mock('@c1rcle/auth', () => ({
     session: mockSessionState.session,
     user: null,
   }),
-  useSessionStore: Object.assign(
-    () => mockSessionState,
-    {
-      getState: () => mockSessionState,
-      setState,
-    },
-  ),
+  useSessionStore: Object.assign(() => mockSessionState, {
+    getState: () => mockSessionState,
+    setState,
+  }),
 }));
 
 vi.mock('@c1rcle/providers', () => ({

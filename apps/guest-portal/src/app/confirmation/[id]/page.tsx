@@ -7,10 +7,12 @@ import { eventDtoSchema, orderDtoSchema, venueDtoSchema } from '@c1rcle/contract
 import { toBookingEventFixture } from '@/features/booking/booking-mapping';
 import { ConfirmationView } from '@/features/booking/components/ConfirmationView';
 import {
-  bookingConfirmationFixtures,
   findBookingConfirmationFixture,
   findBookingEventFixture,
 } from '@/features/booking/fixtures/booking.fixture';
+import { requireGuestSession } from '@/lib/auth/require-session';
+import { buildPrivateMetadata } from '@/lib/seo/metadata';
+import { isProductionSeo } from '@/lib/seo/site';
 
 import type {
   BookingConfirmationFixture,

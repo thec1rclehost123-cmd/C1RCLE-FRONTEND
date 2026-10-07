@@ -85,8 +85,7 @@ const restaurantProfile: VenuePublicProfile = {
     phone: '+91 20 4000 1188',
     instagram: '@skylinesocial',
     website: 'skylinesocial.in',
-    mapsHref:
-      'https://www.google.com/maps/search/?api=1&query=Skyline+Social+Koregaon+Park+Pune',
+    mapsHref: 'https://www.google.com/maps/search/?api=1&query=Skyline+Social+Koregaon+Park+Pune',
   },
   tags: ['Modern Indian', 'Cocktail bar', 'Listening room', 'Late dinner'],
   events: skylineDirectory.events,
@@ -180,7 +179,10 @@ function createExperienceVenueProfile(venueId: string): ExperienceVenuePublicPro
       title: venue.name,
       subtitle: venue.summary,
       locationLabel: venue.address,
-      statusLabel: venue.events.length > 0 ? `${String(venue.events.length)} upcoming` : 'Calendar opening soon',
+      statusLabel:
+        venue.events.length > 0
+          ? `${String(venue.events.length)} upcoming`
+          : 'Calendar opening soon',
       cover: {
         id: `${venue.id}-cover`,
         src: venue.coverImage,
@@ -227,13 +229,15 @@ function createExperienceVenueProfile(venueId: string): ExperienceVenuePublicPro
       {
         id: 'main-room',
         name: 'The main room',
-        description: 'A flexible, black-box floor with clean sightlines and room for a full-stage build.',
+        description:
+          'A flexible, black-box floor with clean sightlines and room for a full-stage build.',
         meta: isGlassHouse ? '250 standing' : 'Main floor',
       },
       {
         id: 'studio',
         name: isGlassHouse ? 'Gallery threshold' : 'Side room',
-        description: 'A quieter arrival space for installations, pop-ups, conversations, and private hosting.',
+        description:
+          'A quieter arrival space for installations, pop-ups, conversations, and private hosting.',
         meta: 'Modular layout',
       },
     ],
@@ -273,7 +277,8 @@ function createHostPublicProfile(hostId: string): HostPublicProfile {
       title: host.name,
       subtitle: host.tagline,
       locationLabel: `${host.neighborhood}, ${host.city}`,
-      statusLabel: host.events.length > 0 ? `${String(host.events.length)} events live` : 'Next drop soon',
+      statusLabel:
+        host.events.length > 0 ? `${String(host.events.length)} events live` : 'Next drop soon',
       cover: {
         id: `${host.id}-cover`,
         src: host.coverImage,
@@ -312,13 +317,15 @@ function createHostPublicProfile(hostId: string): HostPublicProfile {
       {
         id: 'night-starts',
         prompt: 'Our perfect night starts with…',
-        answer: 'A risky first track, the right light in the room, and everyone arriving before the headline set.',
+        answer:
+          'A risky first track, the right light in the room, and everyone arriving before the headline set.',
         image: nightlifeGallery[1],
       },
       {
         id: 'crowd',
         prompt: 'What makes our crowd different?',
-        answer: 'They show up curious. The music can change, the venue can change, but the generosity stays.',
+        answer:
+          'They show up curious. The music can change, the venue can change, but the generosity stays.',
       },
     ],
     gallery: nightlifeGallery,

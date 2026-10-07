@@ -5,12 +5,35 @@
  */
 import { ApiClientError, parseRetryAfterMs, statusToErrorCode } from './errors.js';
 
-import type { ApiClientConfig, RequestOptions } from './types.js';
+import type {
+  ApiClientConfig,
+  EventStreamHandle,
+  EventStreamListener,
+  EventStreamOptions,
+  HttpMethod,
+  RequestOptions,
+  TextRequestOptions,
+} from './types.js';
 import type { ApiErrorCode, RequestId } from '@c1rcle/types';
 
-const DEFAULT_TIMEOUT_MS = 15_000;
+const DEFAULT_TIMEOUT_MS = 60_000;
 const DEFAULT_MAX_RETRIES = 2;
 const RETRY_BASE_DELAY_MS = 250;
+
+/** The minimal transport surface both the JSON and raw-text calls satisfy. */
+interface SendOptions {
+  readonly method?: HttpMethod;
+  readonly path: string;
+  readonly query?: Readonly<Record<string, string | number | boolean | undefined>>;
+  readonly body?: unknown;
+  /** Raw payload sent as-is (e.g. a `File` whose bytes the BFF absorbs). When set, `body` is ignored. */
+  readonly rawBody?: BodyInit | null;
+  /** Content type for a `rawBody` upload. Defaults to `application/octet-stream`. */
+  readonly contentType?: string;
+  readonly headers?: Readonly<Record<string, string>>;
+  readonly signal?: AbortSignal;
+  readonly timeoutMs?: number;
+}
 const MAX_RETRY_AFTER_MS = 30_000;
 
 function newRequestId(): RequestId {
@@ -27,6 +50,19 @@ function buildUrl(baseUrl: string, path: string, query: RequestOptions<unknown>[
   }
 
   return url.toString();
+}
+
+/** Splits one SSE frame into its `event:`/`data:` lines and fires `onEvent`
+ * only when both are present — a bare comment line (`: keep-alive`) has
+ * neither and is correctly dropped rather than surfaced as an empty event. */
+function emitFrame(frame: string, onEvent: EventStreamListener): void {
+  let event: string | null = null;
+  let data: string | null = null;
+  for (const line of frame.split('\n')) {
+    if (line.startsWith('event:')) event = line.slice('event:'.length).trim();
+    else if (line.startsWith('data:')) data = line.slice('data:'.length).trim();
+  }
+  if (event !== null && data !== null) onEvent(event, data);
 }
 
 function delay(ms: number, signal: AbortSignal | undefined): Promise<void> {
@@ -107,15 +143,111 @@ export class ApiClient {
   }
 
   public async request<T>(options: RequestOptions<T>): Promise<T> {
+    return this.#run(() => this.#attemptJson(options, false), options);
+  }
+
+  /**
+   * Performs a raw-text GET and returns the response body string. Kept inside
+   * this module (the only one allowed to reach the network) so a CSV/octet
+   * download gets the same auth, retry, timeout and correlation-id behaviour
+   * as the JSON calls. No schema validation — the bytes are returned as-is.
+   */
+  public fetchText(options: TextRequestOptions): Promise<string> {
+    return this.#run(() => this.#attemptText(options, false), options);
+  }
+
+  /**
+   * Opens a Server-Sent Events connection through `#send` — the same
+   * base-URL resolution, auth header and error normalisation every other
+   * call gets, which is the whole reason this stays inside the one module
+   * allowed to reach `fetch`. Unlike the JSON/text calls there is no retry
+   * wrapper: a stream's reconnect policy (if any) belongs to the caller,
+   * which already knows what "the connection dropped" should mean for it.
+   *
+   * `onEvent` fires once per SSE frame (`event:`/`data:` pair); bare
+   * comment lines (`: keep-alive`) are not surfaced. `onClose` fires when
+   * the server ends the stream (`'done'`) or the connection fails
+   * (`'error'`) — never on a caller-initiated `close()`.
+   */
+  public openEventStream(
+    options: EventStreamOptions,
+    onEvent: EventStreamListener,
+    onClose?: (reason: 'done' | 'error', error?: unknown) => void,
+  ): EventStreamHandle {
+    const ownController = new AbortController();
+    const signal = options.signal
+      ? AbortSignal.any([options.signal, ownController.signal])
+      : ownController.signal;
+    // Read through a function, not a bare `signal.aborted` property access
+    // or a plain `let closed` flag — TS's control-flow narrowing otherwise
+    // statically (and wrongly) infers the value as always `false`, since it
+    // cannot see the mutation happening inside the separately-returned
+    // `close()` closure below or across the `await` points here.
+    const isAborted = (): boolean => signal.aborted;
+
+    void (async () => {
+      try {
+        const { response } = await this.#send(
+          {
+            method: 'GET',
+            path: options.path,
+            ...(options.query === undefined ? {} : { query: options.query }),
+            headers: { accept: 'text/event-stream', ...options.headers },
+            signal,
+            timeoutMs: options.timeoutMs ?? this.#timeoutMs,
+          },
+          false,
+        );
+        const body = response.body;
+        if (body === null) {
+          if (!isAborted()) onClose?.('error', new Error('Stream response had no body.'));
+          return;
+        }
+
+        const reader = body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (!isAborted()) {
+          const { done, value } = await reader.read();
+          if (done) {
+            if (!isAborted()) onClose?.('done');
+            return;
+          }
+          buffer += decoder.decode(value, { stream: true });
+
+          let separatorIndex = buffer.indexOf('\n\n');
+          while (separatorIndex !== -1) {
+            emitFrame(buffer.slice(0, separatorIndex), onEvent);
+            buffer = buffer.slice(separatorIndex + 2);
+            separatorIndex = buffer.indexOf('\n\n');
+          }
+        }
+      } catch (error) {
+        if (!isAborted()) onClose?.('error', error);
+      }
+    })();
+
+    return {
+      close: () => {
+        ownController.abort();
+      },
+    };
+  }
+
+  async #run<T>(
+    attempt: () => Promise<T>,
+    options: { method?: HttpMethod; retries?: number; signal?: AbortSignal },
+  ): Promise<T> {
     // Reads may retry once, but writes must not be replayed implicitly: a
     // timeout can happen after the server has already committed the write.
     const defaultRetries = options.method === 'GET' ? Math.min(this.#maxRetries, 1) : 0;
     const attempts = (options.retries ?? defaultRetries) + 1;
     let lastError: ApiClientError | undefined;
 
-    for (let attempt = 0; attempt < attempts; attempt += 1) {
+    for (let attemptIndex = 0; attemptIndex < attempts; attemptIndex += 1) {
       try {
-        return await this.#attempt(options);
+        return await attempt();
       } catch (error) {
         if (!(error instanceof ApiClientError) || !error.isRetryable) {
           throw error;
@@ -123,11 +255,11 @@ export class ApiClient {
 
         lastError = error;
 
-        if (attempt < attempts - 1) {
+        if (attemptIndex < attempts - 1) {
           const wait =
             error.retryAfterMs !== undefined
               ? Math.min(error.retryAfterMs, MAX_RETRY_AFTER_MS)
-              : RETRY_BASE_DELAY_MS * 2 ** attempt + Math.random() * RETRY_BASE_DELAY_MS;
+              : RETRY_BASE_DELAY_MS * 2 ** attemptIndex + Math.random() * RETRY_BASE_DELAY_MS;
           await delay(wait, options.signal);
         }
       }
@@ -136,7 +268,56 @@ export class ApiClient {
     throw lastError ?? this.#error('unknown', 'Request failed with no recorded error.');
   }
 
-  async #attempt<T>(options: RequestOptions<T>, isReauthRetry = false): Promise<T> {
+  async #attemptJson<T>(options: RequestOptions<T>, isReauthRetry: boolean): Promise<T> {
+    const { response, requestId } = await this.#send(options, isReauthRetry);
+
+    if (response.status === 204) {
+      return this.#parse(options.schema, undefined, requestId);
+    }
+
+    let payload: unknown;
+
+    try {
+      payload = await response.json();
+    } catch (cause) {
+      throw this.#error('parse', 'The server returned a malformed response.', {
+        requestId,
+        cause,
+      });
+    }
+
+    return this.#parse(options.schema, payload, requestId);
+  }
+
+  async #attemptText(options: TextRequestOptions, isReauthRetry: boolean): Promise<string> {
+    const { response, requestId } = await this.#send(
+      {
+        method: 'GET',
+        headers: { accept: 'text/csv' },
+        ...options,
+      },
+      isReauthRetry,
+    );
+
+    try {
+      return await response.text();
+    } catch (cause) {
+      throw this.#error('parse', 'The server returned a malformed response.', {
+        requestId,
+        cause,
+      });
+    }
+  }
+
+  /**
+   * The shared round trip: builds the URL, attaches auth/signals, performs the
+   * fetch, and normalises non-2xx responses (including the single 401 reauth
+   * replay). Returns the raw `Response`; callers decide how to read it.
+   */
+  async #send(
+    options: SendOptions,
+    isReauthRetry: boolean,
+  ): Promise<{ response: Response; requestId: RequestId }> {
     const requestId = newRequestId();
     const startedAt = Date.now();
     const timeoutMs = options.timeoutMs ?? this.#timeoutMs;
@@ -148,7 +329,13 @@ export class ApiClient {
     const token = await this.#config.getToken?.();
     const isRaw = options.rawBody !== undefined;
     const hasBody = options.body !== undefined || isRaw;
-    const requestBody = isRaw ? options.rawBody : hasBody ? JSON.stringify(options.body) : undefined;
+    const requestBody = isRaw
+      ? options.rawBody
+      : hasBody
+        ? JSON.stringify(options.body)
+        : undefined;
+
+    const orgMatch = /organizations\/([A-Za-z0-9_-]+)/.exec(options.path);
 
     let response: Response;
 
@@ -167,8 +354,9 @@ export class ApiClient {
               }
             : {}),
           ...(token !== null && token !== undefined ? { authorization: `Bearer ${token}` } : {}),
+          ...(orgMatch?.[1] ? { 'x-organization-id': orgMatch[1] } : {}),
           ...options.headers,
-        },
+        } as Record<string, string>,
         ...(requestBody !== undefined ? { body: requestBody } : {}),
       });
     } catch (cause) {
@@ -193,14 +381,10 @@ export class ApiClient {
     const correlationId = (response.headers.get('x-request-id') ?? requestId) as RequestId;
 
     if (!response.ok) {
-      if (
-        response.status === 401 &&
-        this.#config.reauth !== undefined &&
-        !isReauthRetry
-      ) {
+      if (response.status === 401 && this.#config.reauth !== undefined && !isReauthRetry) {
         const recovered = await this.#config.reauth();
         if (recovered) {
-          return this.#attempt(options, true);
+          return this.#send(options, true);
         }
       }
       const error = await this.#toHttpError(response, correlationId);
@@ -208,28 +392,12 @@ export class ApiClient {
       throw error;
     }
 
-    if (response.status === 204) {
-      this.#logTiming(options, requestId, response.status, startedAt);
-      return this.#parse(options.schema, undefined, correlationId);
-    }
-
-    let payload: unknown;
-
-    try {
-      payload = await response.json();
-    } catch (cause) {
-      throw this.#error('parse', 'The server returned a malformed response.', {
-        requestId: correlationId,
-        cause,
-      });
-    }
-
     this.#logTiming(options, correlationId, response.status, startedAt);
-    return this.#parse(options.schema, payload, correlationId);
+    return { response, requestId: correlationId };
   }
 
-  #logTiming<T>(
-    options: RequestOptions<T>,
+  #logTiming(
+    options: { readonly method?: HttpMethod; readonly path: string },
     requestId: RequestId,
     status: number,
     startedAt: number,
@@ -247,9 +415,11 @@ export class ApiClient {
     const result = schema.safeParse(payload);
 
     if (!result.success) {
+      // eslint-disable-next-line no-console
+      console.error('[API CLIENT ZOD ERROR]', result.error, payload);
       throw this.#error(
         'parse',
-        'The server response did not match the expected contract. This usually means the frontend and backend are out of sync.',
+        `The server response did not match the expected contract. This usually means the frontend and backend are out of sync. Zod Error: ${result.error.message}`,
         { requestId, cause: result.error },
       );
     }

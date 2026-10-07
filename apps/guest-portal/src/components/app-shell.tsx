@@ -5,7 +5,6 @@ import { RouteFooter } from './layout/RouteFooter';
 
 import type { ReactNode } from 'react';
 
-
 export function AppShell({ children }: { readonly children: ReactNode }) {
   return (
     <div className="relative flex min-h-screen w-full flex-col justify-between bg-black text-white selection:bg-[#FF4400]/30 selection:text-white">

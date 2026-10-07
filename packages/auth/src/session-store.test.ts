@@ -16,6 +16,7 @@ const mockUser = {
   displayName: 'Test User',
   role: 'partner' as const,
   avatarUrl: null,
+  mustChangePassword: false,
 };
 
 describe('session-store', () => {

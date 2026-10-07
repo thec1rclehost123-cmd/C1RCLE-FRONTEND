@@ -10,7 +10,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = { title: 'Partnerships · Venue Studio' };
 
 const parseTab = (value: string | string[] | undefined): PartnersTab =>
-  value === 'requests' || value === 'discover' ? value : 'connected';
+  value === 'requests' || value === 'discover' || value === 'share' ? value : 'connected';
 
 const parseSegment = (value: string | string[] | undefined): VenuePartnerKind =>
   value === 'promoter' ? 'promoter' : 'host';

@@ -21,12 +21,13 @@ describe('@c1rcle/contracts (generated mirror)', () => {
         displayName: 'A',
         role: 'partner',
         avatarUrl: null,
+        mustChangePassword: false,
       },
       accessToken: 'tok',
     };
-    expect(authBridgeResponseSchema.safeParse({ ...base, expiresAt: 1_800_000_000_000 }).success).toBe(
-      true,
-    );
+    expect(
+      authBridgeResponseSchema.safeParse({ ...base, expiresAt: 1_800_000_000_000 }).success,
+    ).toBe(true);
     expect(
       authBridgeResponseSchema.safeParse({ ...base, expiresAt: '2026-08-29T00:00:00Z' }).success,
     ).toBe(false);
@@ -34,7 +35,14 @@ describe('@c1rcle/contracts (generated mirror)', () => {
 
   it('sessionSchema is { user, expiresAt } with no wrapper', () => {
     const parsed = sessionSchema.safeParse({
-      user: { id: 'u', email: 'a@b.com', displayName: 'A', role: 'partner', avatarUrl: null },
+      user: {
+        id: 'u',
+        email: 'a@b.com',
+        displayName: 'A',
+        role: 'partner',
+        avatarUrl: null,
+        mustChangePassword: false,
+      },
       expiresAt: 1_800_000_000_000,
     });
     expect(parsed.success).toBe(true);

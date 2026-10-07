@@ -38,7 +38,15 @@ export interface SlotRequestScreenProps {
   readonly initialPreviewMode?: PreviewMode;
 }
 
-function makeHref(pathname: string, values: { readonly view?: RequestView; readonly request?: string; readonly panel?: ReviewPanel; readonly preview?: PreviewMode }) {
+function makeHref(
+  pathname: string,
+  values: {
+    readonly view?: RequestView;
+    readonly request?: string;
+    readonly panel?: ReviewPanel;
+    readonly preview?: PreviewMode;
+  },
+) {
   const params = new URLSearchParams();
   if (values.view === 'all') params.set('status', 'all');
   if (values.request) params.set('request', values.request);

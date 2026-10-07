@@ -14,8 +14,18 @@ import { getClientEnv } from '@c1rcle/config';
 
 import type { NextRequest } from 'next/server';
 
-/** Non-httpOnly double-submit token cookie. Readable by `@c1rcle/auth` so it can echo the header. */
-export const CSRF_COOKIE = 'c1rcle.csrf';
+/**
+ * Non-httpOnly double-submit token cookie. Readable by `@c1rcle/auth` so it
+ * can echo the header. Namespaced by `NEXT_PUBLIC_APP_ID` (must match
+ * `@c1rcle/auth`'s `csrfCookieName()`) so this doesn't collide with
+ * admin-console's/guest-portal's own CSRF cookie on shared-host dev ports.
+ * Resolved lazily (a function, not a module-level const) so
+ * `getClientEnv()`'s validation runs at first call, not at import time —
+ * important for tests that stub env vars in `beforeEach`.
+ */
+export function csrfCookieName(): string {
+  return `${getClientEnv().NEXT_PUBLIC_APP_ID}.c1rcle.csrf`;
+}
 export const CSRF_HEADER = 'x-csrf-token';
 
 function gatewayBaseUrl(): string {
@@ -74,21 +84,16 @@ function newRequestId(): string {
  * `getSession` accepts either. Authorization is relayed verbatim and never
  * read or logged.
  */
-export function gatewayAuthInit(
-  req: NextRequest,
-): { readonly cookie: string | null; readonly headers?: Readonly<Record<string, string>> } {
+export function gatewayAuthInit(req: NextRequest): {
+  readonly cookie: string | null;
+  readonly headers?: Readonly<Record<string, string>>;
+} {
   const authorization = req.headers.get('authorization');
-  const requestId = req.headers.get('x-request-id');
-  const headers: Record<string, string> = {};
-  if (authorization !== null && authorization.length > 0) {
-    headers['Authorization'] = authorization;
-  }
-  if (requestId !== null && requestId.length > 0) {
-    headers['x-request-id'] = requestId;
-  }
   return {
     cookie: req.headers.get('cookie'),
-    ...(Object.keys(headers).length > 0 ? { headers } : {}),
+    ...(authorization !== null && authorization.length > 0
+      ? { headers: { Authorization: authorization } }
+      : {}),
   };
 }
 
@@ -140,12 +145,23 @@ function timingSafeEqual(a: string, b: string): boolean {
 
 /** Double-submit: the `c1rcle.csrf` cookie must equal the `x-csrf-token` header. */
 export function assertCsrf(req: NextRequest): NextResponse | null {
-  const cookie = req.cookies.get(CSRF_COOKIE)?.value ?? '';
+  const cookie = req.cookies.get(csrfCookieName())?.value ?? '';
   const header = req.headers.get(CSRF_HEADER) ?? '';
   if (!timingSafeEqual(cookie, header)) {
     return errorEnvelope('forbidden', 'CSRF check failed.', 403);
   }
   return null;
+}
+
+/**
+ * A dynamic `[id]` segment is URL-decoded by Next before it reaches the
+ * handler, so `..%2F..%2Fx` would otherwise be spliced into the gateway path.
+ * Gateway ids are opaque `[A-Za-z0-9_-]` tokens; anything else is rejected.
+ */
+export function assertPathId(id: string): NextResponse | null {
+  return /^[A-Za-z0-9_-]{1,128}$/.test(id)
+    ? null
+    : errorEnvelope('validation', 'Invalid identifier.', 400);
 }
 
 const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
@@ -193,7 +209,7 @@ export function mintIdempotencyKey(): string {
 }
 
 export function setCsrfCookie(res: NextResponse, token: string): void {
-  res.cookies.set(CSRF_COOKIE, token, {
+  res.cookies.set(csrfCookieName(), token, {
     httpOnly: false,
     sameSite: 'strict',
     secure: isProduction(),
@@ -201,8 +217,23 @@ export function setCsrfCookie(res: NextResponse, token: string): void {
   });
 }
 
+/**
+ * Actively expires the frontend-scoped session cookie. Logout must not depend
+ * on the gateway: if its revoke call fails (or its response carries no
+ * `Set-Cookie`), the browser would otherwise keep a live session cookie.
+ */
+export function clearSessionCookie(res: NextResponse): void {
+  res.cookies.set(SESSION_COOKIE_NAME, '', {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isProduction(),
+    path: '/',
+    maxAge: 0,
+  });
+}
+
 export function clearCsrfCookie(res: NextResponse): void {
-  res.cookies.set(CSRF_COOKIE, '', { path: '/', maxAge: 0 });
+  res.cookies.set(csrfCookieName(), '', { path: '/', maxAge: 0 });
 }
 
 export interface ForwardInit {
@@ -382,17 +413,29 @@ function isFlatEnvelope(value: unknown): value is Record<string, unknown> {
  * account-existence-oracle suppression). Falls back to a generic envelope for
  * a non-JSON / malformed error body.
  */
-export function passThroughGatewayError(status: number, bodyText: string): NextResponse {
+export function passThroughGatewayError(
+  status: number,
+  bodyText: string,
+  retryAfter?: string | null,
+): NextResponse {
   let parsed: unknown;
   try {
     parsed = JSON.parse(bodyText) as unknown;
   } catch {
     parsed = undefined;
   }
-  if (isFlatEnvelope(parsed)) {
-    return NextResponse.json(parsed, { status });
+  const res = isFlatEnvelope(parsed)
+    ? NextResponse.json(parsed, { status })
+    : errorEnvelope('server', 'The authentication service is unavailable.', status);
+  if (status === 429 && retryAfter !== undefined && retryAfter !== null) {
+    res.headers.set('Retry-After', retryAfter);
   }
-  return errorEnvelope('server', 'The authentication service is unavailable.', status);
+  return res;
+}
+
+/** Generic 502 for a gateway that could not be reached (never echoes the cause). */
+export function gatewayUnreachable(): NextResponse {
+  return errorEnvelope('server', 'The authentication service is unavailable.', 502);
 }
 
 /** Parses a gateway success body. Callers only reach this on `response.ok`. */

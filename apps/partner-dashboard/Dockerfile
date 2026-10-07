@@ -27,9 +27,11 @@ COPY --from=pruner /repo/out/full/ .
 # NEXT_PUBLIC_* values are inlined at build time, so they must be present here.
 ARG NEXT_PUBLIC_API_BASE_URL
 ARG NEXT_PUBLIC_APP_NAME
+ARG NEXT_PUBLIC_APP_ID=partner
 ARG NEXT_PUBLIC_ENVIRONMENT
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL \
     NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME \
+    NEXT_PUBLIC_APP_ID=$NEXT_PUBLIC_APP_ID \
     NEXT_PUBLIC_ENVIRONMENT=$NEXT_PUBLIC_ENVIRONMENT
 
 RUN pnpm turbo run build --filter=@c1rcle/app-partner-dashboard

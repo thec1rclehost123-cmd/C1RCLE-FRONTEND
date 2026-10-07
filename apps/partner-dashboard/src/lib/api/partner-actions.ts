@@ -1,7 +1,23 @@
-import { partnershipApi, promoterConnectionApi } from './partner-connections';
-import { fetchOwnVenues } from './partner-discover';
+import { z } from 'zod';
 
-import type { PartnerKind } from '@/data/partner-data-source';
+import { paginatedSchema } from '@c1rcle/api-client';
+import { partnershipDtoSchema, promoterConnectionDtoSchema } from '@c1rcle/contracts';
+
+import { apiClient } from '@/lib/api/client';
+
+function commandHeaders(organizationId: string, idempotencyKey?: string): Record<string, string> {
+  return {
+    'X-Organization-Id': organizationId,
+    'Idempotency-Key': idempotencyKey ?? crypto.randomUUID(),
+  };
+}
+
+async function getOrgId(): Promise<string> {
+  const { getActiveOrgId } = await import('@/lib/org/active-org');
+  const id = getActiveOrgId();
+  if (!id) throw new Error('No active organization selected');
+  return id;
+}
 
 /**
  * Sends a venue↔host partnership request with the correct side semantics:
@@ -15,23 +31,35 @@ export async function sendPartnershipRequest(options: {
   readonly candidateOrganizationId?: string | null;
   readonly message?: string;
 }) {
+  const organizationId = await getOrgId();
+
   if (options.studio === 'host') {
     if (!options.candidateVenueId) throw new Error('Select a venue to connect with');
-    return partnershipApi.request({
-      venueId: options.candidateVenueId,
-      initiatedBy: 'host',
-      ...(options.message ? { message: options.message } : {}),
+    return apiClient.post({
+      path: '/api/v2/partnerships',
+      body: {
+        venueId: options.candidateVenueId,
+        initiatedBy: 'host',
+        ...(options.message ? { message: options.message } : {}),
+      },
+      schema: partnershipDtoSchema,
+      headers: commandHeaders(organizationId),
     });
   }
   if (!options.candidateOrganizationId) throw new Error('Select a host to invite');
   const ownVenues = await fetchOwnVenues();
   const venueId = ownVenues[0]?.id;
   if (!venueId) throw new Error('Create a venue before inviting hosts');
-  return partnershipApi.request({
-    venueId,
-    initiatedBy: 'venue',
-    hostOrganizationId: options.candidateOrganizationId,
-    ...(options.message ? { message: options.message } : {}),
+  return apiClient.post({
+    path: '/api/v2/partnerships',
+    body: {
+      venueId,
+      initiatedBy: 'venue',
+      hostOrganizationId: options.candidateOrganizationId,
+      ...(options.message ? { message: options.message } : {}),
+    },
+    schema: partnershipDtoSchema,
+    headers: commandHeaders(organizationId),
   });
 }
 
@@ -47,17 +75,24 @@ export async function sendPromoterConnectionRequest(options: {
   readonly candidateVenueId?: string | null;
   readonly message?: string;
 }) {
+  const organizationId = await getOrgId();
   const message = options.message ? { message: options.message } : {};
+
   if (options.studio === 'promoter') {
     // Promoter opens the conversation with a venue/host org.
     const counterpartyId = options.candidateOrganizationId;
     if (!counterpartyId) throw new Error('Select a venue or host to connect with');
     const targetType = options.candidateKind === 'venue' ? ('venue' as const) : ('host' as const);
-    return promoterConnectionApi.request({
-      counterpartyId,
-      targetType,
-      initiatedBy: 'promoter',
-      ...message,
+    return apiClient.post({
+      path: '/api/v2/promoter-connections',
+      body: {
+        counterpartyId,
+        targetType,
+        initiatedBy: 'promoter',
+        ...message,
+      },
+      schema: promoterConnectionDtoSchema,
+      headers: commandHeaders(organizationId),
     });
   }
   // Venue/host invites a promoter org.
@@ -65,28 +100,42 @@ export async function sendPromoterConnectionRequest(options: {
     throw new Error('Select a promoter to invite');
   }
   const targetType = options.studio === 'venue' ? ('venue' as const) : ('host' as const);
-  return promoterConnectionApi.request({
-    counterpartyId: options.candidateOrganizationId,
-    targetType,
-    initiatedBy: 'target',
-    ...message,
+  return apiClient.post({
+    path: '/api/v2/promoter-connections',
+    body: {
+      counterpartyId: options.candidateOrganizationId,
+      targetType,
+      initiatedBy: 'target',
+      ...message,
+    },
+    schema: promoterConnectionDtoSchema,
+    headers: commandHeaders(organizationId),
   });
+}
+
+async function fetchOwnVenues(): Promise<readonly { id: string }[]> {
+  const organizationId = await getOrgId();
+  const response = await apiClient.get({
+    path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/venues`,
+    schema: paginatedSchema(z.object({ id: z.string() })),
+  });
+  return response.items;
 }
 
 export async function resolvePartnershipRequest(
   requestId: string,
-  kind: PartnerKind,
+  kind: 'host' | 'venue' | 'promoter',
   action: 'approve' | 'reject',
   reason?: string,
 ) {
   if (kind === 'promoter') {
     return action === 'approve'
-      ? promoterConnectionApi.approve(requestId)
-      : promoterConnectionApi.reject(requestId, reason);
+      ? approvePromoterConnection(requestId)
+      : rejectPromoterConnection(requestId, reason);
   }
   return action === 'approve'
-    ? partnershipApi.approve(requestId, reason)
-    : partnershipApi.reject(requestId, reason);
+    ? approvePartnership(requestId, reason)
+    : rejectPartnership(requestId, reason);
 }
 
 export async function resolvePromoterRequest(
@@ -95,6 +144,45 @@ export async function resolvePromoterRequest(
   reason?: string,
 ) {
   return action === 'approve'
-    ? promoterConnectionApi.approve(requestId)
-    : promoterConnectionApi.reject(requestId, reason);
+    ? approvePromoterConnection(requestId)
+    : rejectPromoterConnection(requestId, reason);
+}
+
+async function approvePartnership(partnershipId: string, reason?: string): Promise<object> {
+  const organizationId = await getOrgId();
+  return apiClient.post({
+    path: `/api/v2/partnerships/${encodeURIComponent(partnershipId)}/approve`,
+    body: reason ? { reason } : undefined,
+    schema: partnershipDtoSchema,
+    headers: commandHeaders(organizationId),
+  });
+}
+
+async function rejectPartnership(partnershipId: string, reason?: string): Promise<object> {
+  const organizationId = await getOrgId();
+  return apiClient.post({
+    path: `/api/v2/partnerships/${encodeURIComponent(partnershipId)}/reject`,
+    body: reason ? { reason } : undefined,
+    schema: partnershipDtoSchema,
+    headers: commandHeaders(organizationId),
+  });
+}
+
+async function approvePromoterConnection(connectionId: string): Promise<object> {
+  const organizationId = await getOrgId();
+  return apiClient.post({
+    path: `/api/v2/promoter-connections/${encodeURIComponent(connectionId)}/approve`,
+    schema: promoterConnectionDtoSchema,
+    headers: commandHeaders(organizationId),
+  });
+}
+
+async function rejectPromoterConnection(connectionId: string, reason?: string): Promise<object> {
+  const organizationId = await getOrgId();
+  return apiClient.post({
+    path: `/api/v2/promoter-connections/${encodeURIComponent(connectionId)}/reject`,
+    body: reason ? { reason } : undefined,
+    schema: promoterConnectionDtoSchema,
+    headers: commandHeaders(organizationId),
+  });
 }

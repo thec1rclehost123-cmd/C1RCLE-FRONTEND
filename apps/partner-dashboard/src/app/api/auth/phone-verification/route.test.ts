@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { forwardToGateway } from '@/lib/bff/auth-proxy';
+import { csrfCookieName, forwardToGateway } from '@/lib/bff/auth-proxy';
 
 import { POST as phoneVerification } from './route';
 
@@ -45,7 +45,7 @@ afterEach(() => {
 const CSRF_HEADERS = {
   origin: APP_ORIGIN,
   'x-csrf-token': 'tok',
-  cookie: 'c1rcle.csrf=tok; better-auth.session_token=sess_abc',
+  cookie: `${csrfCookieName()}=tok; better-auth.session_token=sess_abc`,
 };
 
 describe('POST /api/auth/phone-verification', () => {
@@ -71,7 +71,12 @@ describe('POST /api/auth/phone-verification', () => {
 
   it('forwards documentType/documentNumber/proofToken to verify-document, with the session cookie', async () => {
     mockForward.mockResolvedValue(
-      gatewayResponse({ passed: true, provider: 'firebase-phone', reason: null, referenceId: 'uid_1' }),
+      gatewayResponse({
+        passed: true,
+        provider: 'firebase-phone',
+        reason: null,
+        referenceId: 'uid_1',
+      }),
     );
 
     const res = await phoneVerification(
@@ -97,9 +102,12 @@ describe('POST /api/auth/phone-verification', () => {
 
   it('passes a phone-mismatch failure straight through', async () => {
     mockForward.mockResolvedValue(
-      gatewayResponse(
-        { passed: false, provider: 'firebase-phone', reason: 'phone_mismatch', referenceId: null },
-      ),
+      gatewayResponse({
+        passed: false,
+        provider: 'firebase-phone',
+        reason: 'phone_mismatch',
+        referenceId: null,
+      }),
     );
     const res = await phoneVerification(
       post('/api/auth/phone-verification', CSRF_HEADERS, {

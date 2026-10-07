@@ -61,7 +61,8 @@ export const ticketsFixture: {
         time: '10:00 PM IST',
         venueName: 'BAYVIEW CLUB',
         city: 'MUMBAI',
-        posterUrl: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600&auto=format&fit=crop',
+        posterUrl:
+          'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600&auto=format&fit=crop',
         tierName: 'VIP ACCESS',
         isVip: true,
         ticketCount: 2,
@@ -76,7 +77,8 @@ export const ticketsFixture: {
         time: '09:00 PM IST',
         venueName: 'THE WAREHOUSE',
         city: 'PUNE',
-        posterUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&auto=format&fit=crop',
+        posterUrl:
+          'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&auto=format&fit=crop',
         tierName: 'GENERAL ADMISSION',
         isVip: false,
         ticketCount: 1,
@@ -93,7 +95,8 @@ export const ticketsFixture: {
         time: '10:00 PM IST',
         venueName: 'CLUB HYPNOTIC',
         city: 'BENGALURU',
-        posterUrl: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600&auto=format&fit=crop',
+        posterUrl:
+          'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600&auto=format&fit=crop',
         tierName: 'COUPLE PASS',
         isVip: false,
         ticketCount: 2,

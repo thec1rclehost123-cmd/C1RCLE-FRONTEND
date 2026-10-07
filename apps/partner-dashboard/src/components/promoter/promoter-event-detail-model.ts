@@ -1,8 +1,4 @@
-import type {
-  PromoterEvent,
-  PromoterOrder,
-  PromoterTrackingLink,
-} from '@/lib/partner/contracts';
+import type { PromoterEvent, PromoterOrder, PromoterTrackingLink } from '@/lib/partner/contracts';
 
 export function getPromoterEventLinks(
   eventId: string,

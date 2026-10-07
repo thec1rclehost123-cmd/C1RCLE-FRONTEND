@@ -2,7 +2,11 @@
 
 import { EmptyState, ErrorState } from '@/components/partner-v3/States';
 import { useVenueCalendar } from '@/lib/calendar/use-venue-calendar';
-import { blockVenueDate, currentMonthKey } from '@/lib/calendar/venue-calendar-repository';
+import {
+  blockVenueDate,
+  currentMonthKey,
+  type CreateVenueBlockInput,
+} from '@/lib/calendar/venue-calendar-repository';
 
 import { VenueCalendarScreen } from './VenueCalendarScreen';
 
@@ -54,7 +58,7 @@ export function VenueCalendarRoute({
       initialMonth={initialMonth ?? currentMonthKey()}
       {...(initialDate ? { initialDate } : {})}
       {...(initialDialog ? { initialDialog } : {})}
-      onBlockDate={async (input) => {
+      onBlockDate={async (input: CreateVenueBlockInput) => {
         await blockVenueDate({ organizationId, venueId, input });
         state.retry();
       }}

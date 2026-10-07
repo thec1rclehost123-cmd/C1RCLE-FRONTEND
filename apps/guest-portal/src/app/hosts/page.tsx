@@ -3,16 +3,27 @@ import {
   hostDirectoryFixtures,
   venueDirectoryFixtures,
 } from '@/features/directory/fixtures/directory.fixture';
+import { buildPublicMetadata } from '@/lib/seo/metadata';
+import { isProductionSeo } from '@/lib/seo/site';
 
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'Hosts & Venues | THE C1RCLE',
-  description: 'Meet the hosts shaping the calendar and the venues powering the C1RCLE circuit.',
-  alternates: { canonical: 'https://thec1rcle.com/hosts' },
-  robots: { follow: false, index: false },
-};
+export function generateMetadata(): Metadata {
+  return buildPublicMetadata({
+    path: '/hosts',
+    title: 'Hosts and Venues',
+    description: 'Discover public hosts and venues on THE C1RCLE.',
+    // Public list contracts do not yet expose verified/indexable entity states.
+    indexable: false,
+  });
+}
 
 export default function HostsPage() {
-  return <DirectoryLanding hosts={hostDirectoryFixtures} venues={venueDirectoryFixtures} />;
+  const production = isProductionSeo();
+  return (
+    <DirectoryLanding
+      hosts={production ? [] : hostDirectoryFixtures}
+      venues={production ? [] : venueDirectoryFixtures}
+    />
+  );
 }

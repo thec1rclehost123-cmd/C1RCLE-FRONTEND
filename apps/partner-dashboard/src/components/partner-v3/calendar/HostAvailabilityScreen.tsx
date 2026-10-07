@@ -57,7 +57,9 @@ export function HostAvailabilityScreen({
     const nextDate = next?.days.find((day) => day.day === 16)?.date ?? next?.days[0]?.date;
     if (next && nextDate) update({ month: next.key, date: nextDate });
   };
-  const createHref = `/partner/host/events/create?venue=${selectedVenue.venue.id}&date=${selectedDay.date}${selectedSlot ? `&slot=${selectedSlot.id}` : ''}`;
+  const createHref = selectedSlot
+    ? `/partner/host/events/create?venue=${selectedVenue.venue.id}&date=${selectedDay.date}&slot=${selectedSlot.id}`
+    : undefined;
   return (
     <div className={[styles['page'], styles['hostTheme']].join(' ')}>
       <div className={styles['topRow']}>
@@ -77,8 +79,7 @@ export function HostAvailabilityScreen({
         selectedVenueId={selectedVenue.venue.id}
         onSelect={(venueId) => {
           const nextVenue = data.venues.find((item) => item.venue.id === venueId);
-          const nextMonth =
-            nextVenue?.months.find((item) => item.key === month.key) ?? nextVenue?.months[0];
+          const nextMonth = nextVenue?.months[0];
           const nextDate =
             nextMonth?.days.find((day) => day.day === 16)?.date ?? nextMonth?.days[0]?.date;
           if (nextMonth && nextDate)

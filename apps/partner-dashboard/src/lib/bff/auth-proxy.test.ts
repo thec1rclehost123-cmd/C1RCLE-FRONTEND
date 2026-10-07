@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   assertCsrf,
+  assertPathId,
   assertSameOrigin,
   forwardToGateway,
   mintCsrfToken,
@@ -15,6 +16,7 @@ vi.mock('@c1rcle/config', () => ({
   getClientEnv: () => ({
     NEXT_PUBLIC_API_BASE_URL: 'https://circle-v2-backend.onrender.com',
     NEXT_PUBLIC_APP_NAME: 'partner-dashboard',
+    NEXT_PUBLIC_APP_ID: 'partner',
     NEXT_PUBLIC_ENVIRONMENT: 'development',
     NEXT_PUBLIC_SENTRY_DSN: null,
   }),
@@ -54,17 +56,17 @@ describe('assertSameOrigin', () => {
 
 describe('assertCsrf', () => {
   it('passes when the cookie and header match', () => {
-    const req = request({ 'x-csrf-token': 'tok-123', cookie: 'c1rcle.csrf=tok-123' });
+    const req = request({ 'x-csrf-token': 'tok-123', cookie: 'partner.c1rcle.csrf=tok-123' });
     expect(assertCsrf(req)).toBeNull();
   });
 
   it('rejects a mismatch', () => {
-    const req = request({ 'x-csrf-token': 'tok-123', cookie: 'c1rcle.csrf=different' });
+    const req = request({ 'x-csrf-token': 'tok-123', cookie: 'partner.c1rcle.csrf=different' });
     expect(assertCsrf(req)?.status).toBe(403);
   });
 
   it('rejects a missing token', () => {
-    expect(assertCsrf(request({ cookie: 'c1rcle.csrf=tok-123' }))?.status).toBe(403);
+    expect(assertCsrf(request({ cookie: 'partner.c1rcle.csrf=tok-123' }))?.status).toBe(403);
     expect(assertCsrf(request({ 'x-csrf-token': 'tok-123' }))?.status).toBe(403);
     expect(assertCsrf(request({}))?.status).toBe(403);
   });
@@ -125,7 +127,8 @@ describe('rescopeSessionCookies', () => {
     // encoded string straight into `res.cookies.set()` (which encodes again) is
     // exactly the bug: the browser ends up storing/replaying a token that never
     // matches the original, so `POST /api/auth/refresh` 401s every time.
-    const rawToken = 'AcdMb7pFISI1UyXTcorZLBeXYwURG1At.TJZdUTST1bVFtrlsvP7EYKlqcRTk/u/4t32xhZM26LI=';
+    const rawToken =
+      'AcdMb7pFISI1UyXTcorZLBeXYwURG1At.TJZdUTST1bVFtrlsvP7EYKlqcRTk/u/4t32xhZM26LI=';
     const gatewayResponse = new Response(null, { status: 200 });
     gatewayResponse.headers.append(
       'set-cookie',
@@ -205,5 +208,15 @@ describe('passThroughGatewayError', () => {
     const res = passThroughGatewayError(502, '<html>Bad Gateway</html>');
     expect(res.status).toBe(502);
     await expect(res.json()).resolves.toMatchObject({ code: 'server' });
+  });
+});
+
+describe('assertPathId', () => {
+  it('accepts opaque gateway ids', () => {
+    expect(assertPathId('app_01H-x_Y')).toBeNull();
+  });
+
+  it.each(['../admin', '..%2Fadmin', 'a/b', '', 'a?b=1', 'a b'])('rejects %j', (id) => {
+    expect(assertPathId(id)?.status).toBe(400);
   });
 });

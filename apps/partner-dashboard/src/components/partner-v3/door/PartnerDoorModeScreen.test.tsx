@@ -51,7 +51,11 @@ describe('PartnerDoorModeScreen', () => {
     expect(screen.getByRole('heading', { name: 'Door Mode' })).toBeInTheDocument();
     expect(screen.getByText('How full we are')).toBeInTheDocument();
     expect(screen.getByText('Aisha Menon')).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Check in' }).every((button) => (button as HTMLButtonElement).disabled)).toBe(true);
+    expect(
+      screen
+        .getAllByRole('button', { name: 'Check in' })
+        .every((button) => (button as HTMLButtonElement).disabled),
+    ).toBe(true);
     expect(screen.getByRole('button', { name: 'Check in walk-in' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Quick scan' })).toBeDisabled();
   });
@@ -62,7 +66,9 @@ describe('PartnerDoorModeScreen', () => {
     render(<PartnerDoorModeScreen data={data} />);
 
     await user.click(screen.getByRole('button', { name: 'Walk-ins' }));
-    expect(replace).toHaveBeenLastCalledWith('/partner/venue/door?filter=walk-in', { scroll: false });
+    expect(replace).toHaveBeenLastCalledWith('/partner/venue/door?filter=walk-in', {
+      scroll: false,
+    });
     const search = screen.getByPlaceholderText('Search name or scan ticket to check in');
     await user.type(search, 'Aisha');
     expect(replace).toHaveBeenLastCalledWith('/partner/venue/door?search=Aisha', { scroll: false });
@@ -75,7 +81,12 @@ describe('PartnerDoorModeScreen', () => {
     render(<PartnerDoorModeScreen data={data} />);
 
     expect(screen.getByText('Neon Nights: Afrobeats · Skyline Rooftop')).toBeInTheDocument();
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Active event' }), 'sunset-sessions-vol-4');
-    expect(replace).toHaveBeenCalledWith('/partner/host/door?event=sunset-sessions-vol-4', { scroll: false });
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Active event' }),
+      'sunset-sessions-vol-4',
+    );
+    expect(replace).toHaveBeenCalledWith('/partner/host/door?event=sunset-sessions-vol-4', {
+      scroll: false,
+    });
   });
 });

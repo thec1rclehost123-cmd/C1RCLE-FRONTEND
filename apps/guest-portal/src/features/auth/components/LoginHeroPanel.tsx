@@ -15,11 +15,14 @@ export const LoginHeroPanel: React.FC<LoginHeroPanelProps> = ({
     <div className="relative flex w-full flex-col items-center justify-center bg-[#FF4400] px-8 pb-16 pt-28 md:min-h-screen md:w-1/2 md:p-16 lg:w-3/5">
       {/* Main Bold Typography */}
       <div className="relative z-10 w-full text-center">
-        <h1 className="text-[14vw] font-black uppercase tracking-tighter leading-[0.8] text-black md:text-[10vw] lg:text-[9vw]">
+        <p
+          aria-hidden="true"
+          className="text-[14vw] font-black uppercase tracking-tighter leading-[0.8] text-black md:text-[10vw] lg:text-[9vw]"
+        >
           {headline[0]} <br />
           {headline[1]} <br />
           {headline[2]}
-        </h1>
+        </p>
       </div>
 
       {/* Bottom Tagline */}

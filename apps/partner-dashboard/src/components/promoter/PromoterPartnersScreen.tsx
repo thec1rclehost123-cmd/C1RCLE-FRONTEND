@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 import { CheckIcon, LocationIcon } from '@c1rcle/icons';
 
@@ -15,14 +15,7 @@ import {
 
 import styles from '../venue/screens/VenuePartners.module.css';
 
-import {
-  fetchPromoterVenuePartners,
-  fetchPromoterHostPartners,
-  fetchPromoterVenueRequests,
-  fetchPromoterHostRequests,
-  type PromoterPartner,
-  type PromoterRequest,
-} from './promoter-partners-api';
+import type { PromoterPartner } from '@/lib/partner/contracts';
 
 const s = (name: string) => styles[name] ?? name;
 
@@ -30,15 +23,15 @@ type PromoterTab = 'venues' | 'hosts';
 type PromoterView = 'my' | 'find' | 'requests';
 
 export function PromoterPartnersScreen({
+  partners,
   initialTab = 'venues',
   initialView = 'my',
 }: {
+  readonly partners: readonly PromoterPartner[];
   readonly initialTab?: string;
   readonly initialView?: string;
 }) {
-  const [tab, setTab] = useState<PromoterTab>(
-    initialTab === 'hosts' ? 'hosts' : 'venues',
-  );
+  const [tab, setTab] = useState<PromoterTab>(initialTab === 'hosts' ? 'hosts' : 'venues');
   const [view, setView] = useState<PromoterView>(
     initialView === 'find' ? 'find' : initialView === 'requests' ? 'requests' : 'my',
   );
@@ -49,77 +42,26 @@ export function PromoterPartnersScreen({
   const [selected, setSelected] = useState<PromoterPartner | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
 
-  const [venuePartners, setVenuePartners] = useState<PromoterPartner[]>([]);
-  const [hostPartners, setHostPartners] = useState<PromoterPartner[]>([]);
-  const [venueRequests, setVenueRequests] = useState<PromoterRequest[]>([]);
-  const [hostRequests, setHostRequests] = useState<PromoterRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    let mounted = true;
-    async function loadData() {
-      setIsLoading(true);
-      try {
-        const [venues, hosts, venueReqs, hostReqs] = await Promise.all([
-          fetchPromoterVenuePartners(),
-          fetchPromoterHostPartners(),
-          fetchPromoterVenueRequests(),
-          fetchPromoterHostRequests(),
-        ]);
-        if (mounted) {
-          setVenuePartners(venues);
-          setHostPartners(hosts);
-          setVenueRequests(venueReqs);
-          setHostRequests(hostReqs);
-        }
-      } catch (error) {
-        console.error('Failed to load partner data:', error);
-      } finally {
-        if (mounted) setIsLoading(false);
-      }
-    }
-    loadData();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
   const kind = tab === 'hosts' ? 'host' : 'venue';
 
   const myPartners = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const base = kind === 'venue'
-      ? venuePartners.filter(p => p.status === 'partnered')
-      : hostPartners.filter(p => p.status === 'partnered');
+    const base = partners.filter((p) => p.kind === kind && p.status === 'partnered');
     if (!q) return base;
-    return base.filter(p => `${p.name} ${p.city} ${p.category}`.toLowerCase().includes(q));
-  }, [kind, query, venuePartners, hostPartners]);
+    return base.filter((p) => `${p.name} ${p.city} ${p.category}`.toLowerCase().includes(q));
+  }, [kind, partners, query]);
 
   const findPartners = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const base = kind === 'venue'
-      ? venuePartners.filter(p => p.status !== 'partnered')
-      : hostPartners.filter(p => p.status !== 'partnered');
-    return base.filter(p => {
+    const base = partners.filter((p) => p.kind === kind && p.status !== 'partnered');
+    return base.filter((p) => {
       if (q && !`${p.name} ${p.city} ${p.category}`.toLowerCase().includes(q)) return false;
       if (city !== 'All cities' && p.city !== city) return false;
       return true;
     });
-  }, [kind, query, city, venuePartners, hostPartners]);
+  }, [kind, partners, query, city]);
 
-  const cities = ['All cities', ...new Set([...venuePartners, ...hostPartners].map(p => p.city))];
-
-  const selectedRequests = kind === 'venue' ? venueRequests : hostRequests;
-  const incomingRequests = selectedRequests.filter(r => r.direction === 'incoming');
-  const sentRequests = selectedRequests.filter(r => r.direction === 'sent');
-
-  if (isLoading) {
-    return (
-      <div className={s('page')}>
-        <div className={s('loading')}>Loading partners...</div>
-      </div>
-    );
-  }
+  const cities = ['All cities', ...new Set(partners.map((p) => p.city))];
 
   return (
     <div className={s('page')}>
@@ -127,7 +69,11 @@ export function PromoterPartnersScreen({
       <header className={s('header')}>
         <div>
           <h1>
-            {view === 'find' ? 'Find partners' : view === 'requests' ? 'Partnership requests' : 'Partners'}
+            {view === 'find'
+              ? 'Find partners'
+              : view === 'requests'
+                ? 'Partnership requests'
+                : 'Partners'}
           </h1>
           <p>
             {view === 'find'
@@ -195,11 +141,15 @@ export function PromoterPartnersScreen({
                   'Action',
                 ]}
               />
-              {myPartners.map(p => (
+              {myPartners.map((p) => (
                 <div key={p.id} className={s('partnerRow')} role="row">
                   <div role="cell" className={s('identity')}>
                     <span className={s('avatar')} data-tone="violet">
-                      {p.name.split(' ').map(w => w[0]).join('').slice(0, 2)}
+                      {p.name
+                        .split(' ')
+                        .map((w) => w[0])
+                        .join('')
+                        .slice(0, 2)}
                     </span>
                     <span>
                       <strong>{p.name}</strong>
@@ -222,7 +172,7 @@ export function PromoterPartnersScreen({
                     <button
                       type="button"
                       className={s('secondaryAction')}
-                      onClick={e => {
+                      onClick={(e) => {
                         triggerRef.current = e.currentTarget;
                         setSelected(p);
                       }}
@@ -253,7 +203,7 @@ export function PromoterPartnersScreen({
                   setCity(e.target.value);
                 }}
               >
-                {cities.map(c => (
+                {cities.map((c) => (
                   <option key={c}>{c}</option>
                 ))}
               </select>
@@ -267,28 +217,36 @@ export function PromoterPartnersScreen({
             </section>
           ) : (
             <div className={s('cardGrid')}>
-              {findPartners.map(p => (
+              {findPartners.map((p) => (
                 <article key={p.id} className={s('partnerCard')}>
-                <div className={s('portrait')} data-tone="violet">
-                  <span>{p.name.split(' ').map(w => w[0]).join('').slice(0, 2)}</span>
-                  {p.verified ? (
-                    <em>
-                      <CheckIcon size={13} aria-hidden="true" /> Verified
-                    </em>
-                  ) : null}
-                </div>
-                <h2>{p.name}</h2>
-                <p>{p.kind === 'venue' ? 'Venue' : 'Host'} · {p.city}</p>
-                <small>{p.category}</small>
-                <button
-                  type="button"
-                  onClick={e => {
-                    triggerRef.current = e.currentTarget;
-                    setSelected(p);
-                  }}
-                >
-                  View profile
-                </button>
+                  <div className={s('portrait')} data-tone="violet">
+                    <span>
+                      {p.name
+                        .split(' ')
+                        .map((w) => w[0])
+                        .join('')
+                        .slice(0, 2)}
+                    </span>
+                    {p.verified ? (
+                      <em>
+                        <CheckIcon size={13} aria-hidden="true" /> Verified
+                      </em>
+                    ) : null}
+                  </div>
+                  <h2>{p.name}</h2>
+                  <p>
+                    {p.kind === 'venue' ? 'Venue' : 'Host'} · {p.city}
+                  </p>
+                  <small>{p.category}</small>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      triggerRef.current = e.currentTarget;
+                      setSelected(p);
+                    }}
+                  >
+                    View profile
+                  </button>
                 </article>
               ))}
             </div>
@@ -305,7 +263,7 @@ export function PromoterPartnersScreen({
                 setSubTab('incoming');
               }}
             >
-              Incoming {incomingRequests.length}
+              Incoming 1
             </button>
             <button
               type="button"
@@ -314,7 +272,7 @@ export function PromoterPartnersScreen({
                 setSubTab('sent');
               }}
             >
-              Sent {sentRequests.length}
+              Sent 2
             </button>
           </div>
 
@@ -323,39 +281,104 @@ export function PromoterPartnersScreen({
               styles={styles}
               columns={['Partner', 'Type', 'Request', 'Date', 'Status', 'Action']}
             />
-            {(subTab === 'incoming' ? incomingRequests : sentRequests).map(r => (
-              <div key={r.id} className={s('partnerRow')} role="row">
+            {subTab === 'incoming' ? (
+              <div className={s('partnerRow')} role="row">
                 <div role="cell" className={s('identity')}>
-                  <span className={s('avatar')} data-tone="violet">
-                    {r.partnerName.split(' ').map(w => w[0]).join('').slice(0, 2)}
+                  <span className={s('avatar')} data-tone="amber">
+                    HS
                   </span>
                   <span>
-                    <strong>{r.partnerName}</strong>
-                    <small>{r.partnerCity}</small>
+                    <strong>High Spirits</strong>
+                    <small>Sunset Sessions · Sun 30 Aug</small>
                   </span>
                 </div>
                 <span role="cell" className={s('eventCell')}>
-                  <strong>{r.kind === 'venue' ? 'Venue' : 'Host'}</strong>
-                  <small>{r.direction === 'incoming' ? 'Incoming' : 'Sent'}</small>
+                  <strong>Host</strong>
+                  <small>Incoming</small>
                 </span>
                 <span role="cell" className={s('eventCell')}>
-                  <strong>{r.eventName}</strong>
-                  <small>{r.commission}</small>
+                  <strong>Sunset Sessions</strong>
+                  <small>Promoter invitation</small>
                 </span>
                 <span role="cell" className={s('eventCell')}>
-                  <strong>{r.eventDate}</strong>
-                  <small>{r.direction === 'incoming' ? 'Pending review' : 'Under review'}</small>
+                  <strong>Sun, 30 Aug</strong>
+                  <small>Pending review</small>
                 </span>
-                <span role="cell" className={r.status === 'accepted' ? s('positive') : s('pending')}>
-                  {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
+                <span role="cell" className={s('pending')}>
+                  Pending review
                 </span>
                 <span role="cell">
-                  <Link href={`/promoter/events/${r.eventName.toLowerCase().replace(/\s+/g, '-')}`} className={s('secondaryAction')}>
-                    View
+                  <Link href="/promoter/events/sunset-sessions" className={s('secondaryAction')}>
+                    Review
                   </Link>
                 </span>
               </div>
-            ))}
+            ) : (
+              <>
+                <div className={s('partnerRow')} role="row">
+                  <div role="cell" className={s('identity')}>
+                    <span className={s('avatar')} data-tone="violet">
+                      NW
+                    </span>
+                    <span>
+                      <strong>Neon Warehouse</strong>
+                      <small>Warehouse Ritual · Fri 4 Sep</small>
+                    </span>
+                  </div>
+                  <span role="cell" className={s('eventCell')}>
+                    <strong>Venue</strong>
+                    <small>Sent</small>
+                  </span>
+                  <span role="cell" className={s('eventCell')}>
+                    <strong>Warehouse Ritual</strong>
+                    <small>15% net sales</small>
+                  </span>
+                  <span role="cell" className={s('eventCell')}>
+                    <strong>Fri, 4 Sep</strong>
+                    <small>Under review</small>
+                  </span>
+                  <span role="cell" className={s('pending')}>
+                    Under review
+                  </span>
+                  <span role="cell">
+                    <Link href="/promoter/events/warehouse-ritual" className={s('secondaryAction')}>
+                      View
+                    </Link>
+                  </span>
+                </div>
+                <div className={s('partnerRow')} role="row">
+                  <div role="cell" className={s('identity')}>
+                    <span className={s('avatar')} data-tone="violet">
+                      TL
+                    </span>
+                    <span>
+                      <strong>The Loft</strong>
+                      <small>Terrace Theory · Sat 12 Sep</small>
+                    </span>
+                  </div>
+                  <span role="cell" className={s('eventCell')}>
+                    <strong>Venue</strong>
+                    <small>Sent</small>
+                  </span>
+                  <span role="cell" className={s('eventCell')}>
+                    <strong>Terrace Theory</strong>
+                    <small>₹220 / ticket</small>
+                  </span>
+                  <span role="cell" className={s('eventCell')}>
+                    <strong>Sat, 12 Sep</strong>
+                    <small>Under review</small>
+                  </span>
+                  <span role="cell" className={s('pending')}>
+                    Under review
+                  </span>
+                  <span role="cell">
+                    <Link href="/promoter/events/terrace-theory" className={s('secondaryAction')}>
+                      View
+                    </Link>
+                  </span>
+                </div>
+              </>
+            )}
           </PartnerTable>
         </>
       )}
@@ -375,7 +398,15 @@ export function PromoterPartnersScreen({
             ? `${selected.kind === 'venue' ? 'Venue' : 'Host'} · ${selected.city}${selected.verified ? ' · Verified' : ''}`
             : ''
         }
-        initials={selected ? selected.name.split(' ').map(w => w[0]).join('').slice(0, 2) : ''}
+        initials={
+          selected
+            ? selected.name
+                .split(' ')
+                .map((w) => w[0])
+                .join('')
+                .slice(0, 2)
+            : ''
+        }
         tone="violet"
       >
         {selected ? (

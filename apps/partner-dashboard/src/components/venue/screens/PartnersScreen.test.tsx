@@ -2,21 +2,17 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { clearCache } from '../venue-partners-api';
-
 import { PartnersScreen } from './PartnersScreen';
 
 const mocks = vi.hoisted(() => ({
   canDo: vi.fn(() => true),
-  partnershipList: vi.fn(),
-  promoterConnectionList: vi.fn(),
-  partnershipApprove: vi.fn(),
-  partnershipReject: vi.fn(),
-  partnershipEnd: vi.fn(),
-  promoterApprove: vi.fn(),
-  promoterReject: vi.fn(),
-  promoterRevoke: vi.fn(),
-  getActiveOrgId: vi.fn((): string | null => 'org_test'),
+  getActiveOrgId: vi.fn((): string | null => 'org_venue'),
+  resolveOrg: vi.fn<(...args: never[]) => Promise<string | null>>(),
+  listPartnerships: vi.fn<(...args: never[]) => Promise<unknown>>(),
+  resolvePartnership: vi.fn<(...args: never[]) => Promise<unknown>>(),
+  listPromoterConnections: vi.fn<(...args: never[]) => Promise<unknown>>(),
+  resolvePromoterConnection: vi.fn<(...args: never[]) => Promise<unknown>>(),
+  discoverPartners: vi.fn<(...args: never[]) => Promise<unknown>>(),
 }));
 
 vi.mock('@c1rcle/icons', () => {
@@ -26,7 +22,6 @@ vi.mock('@c1rcle/icons', () => {
     CheckIcon: Icon,
     CloseIcon: Icon,
     DeleteIcon: Icon,
-    FilterIcon: Icon,
     LinkIcon: Icon,
     LocationIcon: Icon,
     PendingIcon: Icon,
@@ -44,177 +39,244 @@ vi.mock('@/components/providers/DashboardAuthProvider', () => ({
   }),
 }));
 
-vi.mock('@/lib/api/partner-connections', () => ({
-  partnershipApi: {
-    list: mocks.partnershipList,
-    request: vi.fn(),
-    approve: mocks.partnershipApprove,
-    reject: mocks.partnershipReject,
-    block: vi.fn(),
-    end: mocks.partnershipEnd,
-  },
-  promoterConnectionApi: {
-    list: mocks.promoterConnectionList,
-    request: vi.fn(),
-    approve: mocks.promoterApprove,
-    reject: mocks.promoterReject,
-    block: vi.fn(),
-    revoke: mocks.promoterRevoke,
-  },
-}));
-
 vi.mock('@/lib/org/active-org', () => ({
-  getActiveOrgId: mocks.getActiveOrgId,
+  getActiveOrgId: () => mocks.getActiveOrgId(),
 }));
 
-vi.mock('@/lib/api/partner-discover', () => ({
-  fetchDiscoverPartners: vi.fn(() => Promise.resolve([])),
-  fetchOwnVenues: vi.fn(() => Promise.resolve([{ id: 'venue-1', status: 'active' }])),
+vi.mock('@/lib/org/resolve-browser-organization', () => ({
+  resolveBrowserOrganizationId: (...args: never[]): Promise<unknown> =>
+    mocks.resolveOrg(...args) as Promise<unknown>,
 }));
 
-const partnershipDto = (overrides: Record<string, unknown>) => ({
-  id: 'partnership-1',
-  hostOrganizationId: 'xxHOST01',
-  venueOrganizationId: 'org_test',
-  venueId: 'venue-1',
+vi.mock('@/lib/partner/api-partnerships-repository', () => ({
+  listPartnerships: (...args: never[]): Promise<unknown> =>
+    mocks.listPartnerships(...args) as Promise<unknown>,
+  resolvePartnership: (...args: never[]): Promise<unknown> =>
+    mocks.resolvePartnership(...args) as Promise<unknown>,
+  discoverPartners: (...args: never[]): Promise<unknown> =>
+    mocks.discoverPartners(...args) as Promise<unknown>,
+}));
+
+vi.mock('@/lib/partner/promoter-connection-repository', () => ({
+  listPromoterConnections: (...args: never[]): Promise<unknown> =>
+    mocks.listPromoterConnections(...args) as Promise<unknown>,
+  resolvePromoterConnection: (...args: never[]): Promise<unknown> =>
+    mocks.resolvePromoterConnection(...args) as Promise<unknown>,
+  loadConnectedPromoterConnections: () => Promise.resolve([]),
+}));
+
+const partnership = {
+  id: 'part_live_1',
+  hostOrganizationId: 'org_host_1',
+  venueOrganizationId: 'org_venue',
+  venueId: 'venue_1',
   initiatedBy: 'host',
-  status: 'active',
-  message: null,
+  status: 'pending',
+  message: 'Would love to bring Saturday Sessions to your rooftop.',
+  venueShareRate: null,
   resolutionReason: null,
   resolvedAt: null,
   version: 1,
-  createdAt: '2026-08-01T10:00:00.000Z',
-  updatedAt: '2026-08-02T10:00:00.000Z',
-  ...overrides,
-});
+  createdAt: '2026-09-20T10:00:00.000Z',
+  updatedAt: '2026-09-20T10:00:00.000Z',
+  hostName: 'Live Host Collective',
+  venueName: null,
+};
 
-const connectionDto = (overrides: Record<string, unknown>) => ({
-  id: 'connection-1',
-  promoterId: 'xxPROM01',
-  targetId: 'org_test',
+const promoterConnection = {
+  id: 'conn_live_1',
+  promoterId: 'org_promoter_1',
+  targetId: 'org_venue',
   targetType: 'venue',
   initiatedBy: 'promoter',
-  status: 'active',
+  status: 'pending',
   message: null,
   resolutionReason: null,
   resolvedAt: null,
   version: 1,
-  createdAt: '2026-08-03T10:00:00.000Z',
-  updatedAt: '2026-08-04T10:00:00.000Z',
-  ...overrides,
-});
+  createdAt: '2026-09-21T10:00:00.000Z',
+  updatedAt: '2026-09-21T10:00:00.000Z',
+  promoterName: 'Live Promoter Crew',
+  promoterSlug: null,
+  targetName: null,
+  targetSlug: null,
+  targetCity: 'Mumbai',
+};
 
-function mockPopulatedBackend() {
-  mocks.partnershipList.mockResolvedValue({
-    items: [
-      partnershipDto({ id: 'partnership-active' }),
-      partnershipDto({
-        id: 'partnership-pending-in',
-        status: 'pending',
-        initiatedBy: 'host',
-        message: 'Would love a July slot.',
-      }),
-      partnershipDto({
-        id: 'partnership-pending-out',
-        status: 'pending',
-        initiatedBy: 'venue',
-        message: 'Inviting you to our August series.',
-      }),
-    ],
-  });
-  mocks.promoterConnectionList.mockResolvedValue({
-    items: [
-      connectionDto({ id: 'connection-active' }),
-      connectionDto({
-        id: 'connection-pending-in',
-        status: 'pending',
-        initiatedBy: 'promoter',
-        message: 'Happy to share reach numbers.',
-      }),
-    ],
-  });
-  mocks.partnershipApprove.mockResolvedValue(partnershipDto({ id: 'partnership-pending-in', status: 'active' }));
-}
-
-beforeEach(() => {
-  clearCache();
-  vi.clearAllMocks();
-  mocks.getActiveOrgId.mockReturnValue('org_test');
-  mockPopulatedBackend();
-});
-
-describe('PartnersScreen (backend-only)', () => {
-  it('shows a loading state before backend data resolves', () => {
-    render(<PartnersScreen tab="connected" segment="host" />);
-    expect(screen.getByRole('status')).toHaveTextContent('Loading partners…');
+describe('PartnersScreen', () => {
+  beforeEach(() => {
+    mocks.getActiveOrgId.mockReturnValue('org_venue');
+    mocks.resolveOrg.mockReset().mockImplementation((...args: never[]) => {
+      const direct = args[1] as unknown as string | null;
+      return Promise.resolve(direct);
+    });
+    mocks.listPartnerships.mockReset().mockResolvedValue([]);
+    mocks.resolvePartnership.mockReset().mockResolvedValue({});
+    mocks.listPromoterConnections.mockReset().mockResolvedValue([]);
+    mocks.resolvePromoterConnection.mockReset().mockResolvedValue({});
+    mocks.discoverPartners.mockReset().mockResolvedValue([]);
   });
 
-  it('renders connected hosts from the backend and opens the profile drawer', async () => {
-    const user = userEvent.setup();
-    render(<PartnersScreen tab="connected" segment="host" />);
+  describe('Connected', () => {
+    it('renders only backend partnerships, never fixture rows', async () => {
+      mocks.listPartnerships.mockResolvedValue([
+        { ...partnership, status: 'active', hostName: 'Live Host Collective' },
+      ]);
+      render(<PartnersScreen tab="connected" segment="host" />);
 
-    // Backend-derived label (host org id suffix), never a fabricated profile.
-    const row = await screen.findByText('Host HOST01');
-    expect(row).toBeInTheDocument();
-    expect(screen.queryByText('Rhea Kapoor')).not.toBeInTheDocument();
-    expect(screen.queryByText('Kabir Malhotra')).not.toBeInTheDocument();
+      expect(await screen.findByText('Live Host Collective')).toBeInTheDocument();
+      expect(screen.queryByText('Rhea Kapoor')).not.toBeInTheDocument();
+    });
 
-    const trigger = screen.getAllByRole('button', { name: 'View profile' })[0]!;
-    await user.click(trigger);
-    expect(
-      screen.getByRole('dialog', { name: /Host HOST01 partner details/ }),
-    ).toBeInTheDocument();
-    await user.keyboard('{Escape}');
-    await waitFor(() => expect(trigger).toHaveFocus());
-  });
+    it('shows an empty state when the backend returns no partners', async () => {
+      render(<PartnersScreen tab="connected" segment="host" />);
 
-  it('renders connected promoters from the backend', async () => {
-    render(<PartnersScreen tab="connected" segment="promoter" />);
-    expect(await screen.findByText('Promoter PROM01')).toBeInTheDocument();
-    expect(screen.queryByText('Karan Shah')).not.toBeInTheDocument();
-  });
+      expect(await screen.findByText(/No connected hosts yet/)).toBeInTheDocument();
+    });
 
-  it('shows an empty state when the backend has no connected hosts', async () => {
-    mocks.partnershipList.mockResolvedValue({ items: [] });
-    mocks.promoterConnectionList.mockResolvedValue({ items: [] });
-    render(<PartnersScreen tab="connected" segment="host" />);
+    it('asks to sign in instead of showing dummy data', async () => {
+      mocks.getActiveOrgId.mockReturnValue(null);
+      render(<PartnersScreen tab="connected" segment="host" />);
 
-    expect(await screen.findByText('No connected hosts yet.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'View profile' })).not.toBeInTheDocument();
-  });
+      expect(await screen.findByText(/Sign in/)).toBeInTheDocument();
+      expect(mocks.listPartnerships).not.toHaveBeenCalled();
+    });
 
-  it('renders discover from the real backend browse endpoint (never dummy profiles)', async () => {
-    render(<PartnersScreen tab="discover" segment="host" />);
-    expect(await screen.findByText('No hosts match these filters.')).toBeInTheDocument();
-    expect(screen.queryByText('Rhea Kapoor')).not.toBeInTheDocument();
-  });
+    it('resolves the venue org from the session when the cookie is missing', async () => {
+      mocks.getActiveOrgId.mockReturnValue(null);
+      mocks.resolveOrg.mockResolvedValue('org_auto');
+      mocks.listPartnerships.mockResolvedValue([
+        { ...partnership, status: 'active', hostName: 'Live Host Collective' },
+      ]);
+      render(<PartnersScreen tab="connected" segment="host" />);
 
-  it('derives requests from non-active backend rows with a pending badge', async () => {
-    render(<PartnersScreen tab="discover" segment="host" />);
-    const requestsTab = await screen.findByRole('link', { name: /Requests/ });
-    // One pending received partnership + one pending received promoter connection.
-    expect(within(requestsTab).getByText('2')).toBeInTheDocument();
-  });
+      expect(await screen.findByText('Live Host Collective')).toBeInTheDocument();
+      expect(mocks.listPartnerships).toHaveBeenCalledWith('org_auto');
+    });
 
-  it('reviews a backend request and approves it through the partnership API', async () => {
-    const user = userEvent.setup();
-    render(<PartnersScreen tab="requests" requestView="received" />);
+    it('removes a live connection through the mutation API', async () => {
+      const user = userEvent.setup();
+      mocks.listPartnerships.mockResolvedValue([
+        { ...partnership, status: 'active', hostName: 'Live Host Collective' },
+      ]);
+      render(<PartnersScreen tab="connected" segment="host" />);
+      await user.click(await screen.findByRole('button', { name: 'View profile' }));
 
-    const reviews = await screen.findAllByRole('button', { name: 'Review' });
-    expect(reviews).toHaveLength(2);
-    expect(screen.getByText('Would love a July slot.')).toBeInTheDocument();
+      const removeButton = screen.getByRole('button', { name: /Remove connection/ });
+      expect(removeButton).toBeEnabled();
+      await user.click(removeButton);
 
-    await user.click(reviews[0]!);
-    await user.click(screen.getByRole('button', { name: /Accept/ }));
-    await user.click(screen.getByRole('button', { name: 'Confirm' }));
-
-    await waitFor(() => {
-      expect(mocks.partnershipApprove).toHaveBeenCalledWith('partnership-pending-in');
+      await waitFor(() => {
+        expect(mocks.resolvePartnership).toHaveBeenCalledWith(
+          'org_venue',
+          'part_live_1',
+          'end',
+          undefined,
+        );
+      });
     });
   });
 
-  it('shows sent requests derived from backend rows initiated by the venue', async () => {
-    render(<PartnersScreen tab="requests" requestView="sent" />);
-    expect(await screen.findByText('Inviting you to our August series.')).toBeInTheDocument();
+  describe('Discover', () => {
+    const discoveredHost = {
+      id: 'org_host_9',
+      kind: 'host',
+      name: 'Real Host Nine',
+      slug: 'real-host-nine',
+      city: 'Pune',
+      verified: true,
+      organizationId: 'org_host_9',
+      venueId: null,
+    };
+
+    it('renders only discoverable profiles from the backend', async () => {
+      mocks.discoverPartners.mockResolvedValue([discoveredHost]);
+      render(<PartnersScreen tab="discover" segment="host" />);
+
+      expect(await screen.findByText('Real Host Nine')).toBeInTheDocument();
+      expect(screen.queryByText('Rhea Kapoor')).not.toBeInTheDocument();
+      expect(screen.queryByText('Kabir Malhotra')).not.toBeInTheDocument();
+    });
+
+    it('filters by verified status without fake facets', async () => {
+      const user = userEvent.setup();
+      mocks.discoverPartners.mockResolvedValue([
+        discoveredHost,
+        { ...discoveredHost, id: 'org_host_10', name: 'Unverified Host', verified: false },
+      ]);
+      render(<PartnersScreen tab="discover" segment="host" />);
+      await screen.findByText('Real Host Nine');
+
+      await user.click(screen.getByLabelText('Verified status only'));
+      expect(screen.queryByText('Unverified Host')).not.toBeInTheDocument();
+      expect(screen.getByText('Real Host Nine')).toBeInTheDocument();
+    });
+
+    it('shows an empty state when nothing is discoverable', async () => {
+      render(<PartnersScreen tab="discover" segment="host" />);
+
+      expect(await screen.findByText(/No hosts to discover yet/)).toBeInTheDocument();
+    });
+  });
+
+  describe('Requests', () => {
+    it('counts the pending badge from both APIs', async () => {
+      mocks.listPartnerships.mockResolvedValue([partnership]);
+      mocks.listPromoterConnections.mockResolvedValue([promoterConnection]);
+      render(<PartnersScreen tab="discover" segment="host" />);
+
+      const requestsTab = screen.getByRole('link', { name: /Requests/ });
+      await waitFor(() => expect(within(requestsTab).getByText('2')).toBeInTheDocument());
+    });
+
+    it('approves a host request through the partnership mutation API', async () => {
+      const user = userEvent.setup();
+      mocks.listPartnerships.mockResolvedValue([partnership]);
+      render(<PartnersScreen tab="requests" requestView="received" />);
+
+      await user.click(await screen.findByRole('button', { name: 'Review' }));
+      await user.click(screen.getByRole('button', { name: /Accept/ }));
+
+      const confirm = screen.getByRole('button', { name: 'Confirm' });
+      expect(confirm).toBeEnabled();
+      await user.click(confirm);
+
+      await waitFor(() => {
+        expect(mocks.resolvePartnership).toHaveBeenCalledWith(
+          'org_venue',
+          'part_live_1',
+          'approve',
+          undefined,
+        );
+      });
+    });
+
+    it('approves a promoter request through the promoter-connection mutation API', async () => {
+      const user = userEvent.setup();
+      mocks.listPromoterConnections.mockResolvedValue([promoterConnection]);
+      render(<PartnersScreen tab="requests" requestView="received" />);
+
+      await user.click(await screen.findByRole('button', { name: 'Review' }));
+      await user.click(screen.getByRole('button', { name: /Accept/ }));
+      await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+      await waitFor(() => {
+        expect(mocks.resolvePromoterConnection).toHaveBeenCalledWith(
+          'org_venue',
+          'conn_live_1',
+          'approve',
+          undefined,
+        );
+      });
+    });
+
+    it('shows a retry when the requests read fails', async () => {
+      const user = userEvent.setup();
+      mocks.listPartnerships.mockRejectedValue(new Error('boom'));
+      render(<PartnersScreen tab="requests" requestView="received" />);
+
+      await user.click(await screen.findByRole('button', { name: 'Retry' }));
+      expect(mocks.listPartnerships).toHaveBeenCalledTimes(2);
+    });
   });
 });

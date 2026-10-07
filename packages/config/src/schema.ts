@@ -19,6 +19,14 @@ export const clientEnvSchema = z.object({
   NEXT_PUBLIC_GUEST_PORTAL_URL: url.default('https://thec1rcle.com'),
   NEXT_PUBLIC_APP_NAME: z.string().min(1),
   NEXT_PUBLIC_ENVIRONMENT: z.enum(['development', 'preview', 'production']),
+  /**
+   * Stable per-app slug (not the human-readable `NEXT_PUBLIC_APP_NAME`),
+   * used to namespace browser-scoped state — e.g. the CSRF cookie name — so
+   * guest-portal/partner-dashboard/admin-console don't collide when run
+   * together on shared-host dev ports (browsers key cookies by host only,
+   * not port).
+   */
+  NEXT_PUBLIC_APP_ID: z.enum(['guest', 'partner', 'admin']),
   NEXT_PUBLIC_SENTRY_DSN: url.optional(),
   /**
    * Firebase Web app config — client-side identifiers, not secrets (Firebase's
@@ -46,10 +54,21 @@ export const clientEnvSchema = z.object({
 /** Values that stay on the server. Never import this from a client component. */
 export const serverEnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  SITE_URL: url.optional(),
+  VERCEL_ENV: z.enum(['production', 'preview', 'development']).optional(),
+  VERCEL_URL: z.string().min(1).optional(),
   ANALYZE: z
     .enum(['true', 'false'])
     .default('false')
     .transform((value) => value === 'true'),
+  /**
+   * Shared secret the admin-console health BFF (`/api/health/*`) sends as
+   * `x-readiness-token` to reach the gateway's token-gated
+   * `/api/v2/internal/{readiness,version}`. Server-only — never give it a
+   * `NEXT_PUBLIC_` name. Its value is injected at deploy time, never
+   * committed. Optional: without it the health page reports unavailable.
+   */
+  GATEWAY_READINESS_TOKEN: z.string().min(1).optional(),
 });
 
 export type ClientEnv = z.infer<typeof clientEnvSchema>;

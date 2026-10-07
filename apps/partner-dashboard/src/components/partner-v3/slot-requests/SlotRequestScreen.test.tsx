@@ -81,6 +81,8 @@ describe('SlotRequestScreen', () => {
     expect(replace).toHaveBeenLastCalledWith('/partner/venue/slot-requests?request=venue-slot-bassline&panel=preview');
     view.rerender(<SlotRequestScreen direction="incoming" initialRequestId="venue-slot-bassline" initialPanel="preview" />);
     await user.click(screen.getByRole('button', { name: 'Mobile app' }));
-    expect(replace).toHaveBeenLastCalledWith('/partner/venue/slot-requests?request=venue-slot-bassline&panel=preview&preview=mobile');
+    expect(replace).toHaveBeenLastCalledWith(
+      '/partner/venue/slot-requests?request=venue-slot-bassline&panel=preview&preview=mobile',
+    );
   });
 });

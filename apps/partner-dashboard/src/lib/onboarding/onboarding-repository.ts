@@ -176,9 +176,7 @@ export async function submit(
  * Optional format check on a document's declared identity number — never rendered as "Verified",
  * only as a format-check pass, pending manual review (D-018).
  */
-export async function verifyDocument(
-  input: VerifyDocumentRequest,
-): Promise<VerificationResultDto> {
+export async function verifyDocument(input: VerifyDocumentRequest): Promise<VerificationResultDto> {
   return apiClient.post({
     path: '/api/v2/onboarding/verify-document',
     body: input,

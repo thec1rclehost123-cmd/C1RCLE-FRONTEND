@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "C1RCLE React Native",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ES2023"],
+    "moduleResolution": "Bundler",
+    "types": ["react-native", "jest"]
+  }
+}

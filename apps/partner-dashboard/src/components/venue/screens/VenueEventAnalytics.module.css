@@ -371,12 +371,6 @@
   background: var(--dashboard-accent);
   padding: 0 22px;
 }
-button:focus-visible,
-a:focus-visible,
-summary:focus-visible {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
-}
 @media (max-width: 950px) {
   .header {
     align-items: flex-start;

@@ -10,7 +10,7 @@ export default async function PromoterFinancePage() {
     partnerRepositories.promoter.getFinance(),
     partnerRepositories.promoter.getLinks(),
   ]);
-  const payoutAccountParts = finance.payoutAccount.match(/^(.*?)\s+(••\S+)$/);
+  const payoutAccountParts = /^(.*?)\s+(••\S+)$/.exec(finance.payoutAccount);
   const secondarySections: readonly PartnerFinanceSecondarySection[] = [
     {
       title: 'Campaign earnings',

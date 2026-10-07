@@ -37,7 +37,10 @@ describe('PartnerMarketingScreen', () => {
     expect(screen.getByText('Attendees selected')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /Start WhatsApp Campaign/ }));
 
-    expect(push).toHaveBeenCalledWith('/partner/venue/marketing?view=compose&broadcast=1&messageChannel=whatsapp', { scroll: false });
+    expect(push).toHaveBeenCalledWith(
+      '/partner/venue/marketing?view=compose&broadcast=1&messageChannel=whatsapp',
+      { scroll: false },
+    );
   });
 
   it('keeps search and event filters URL-backed', async () => {
@@ -48,11 +51,16 @@ describe('PartnerMarketingScreen', () => {
     const search = screen.getByPlaceholderText('Search attendee, email or phone...');
     await user.clear(search);
     await user.type(search, 'Aisha');
-    expect(replace).toHaveBeenLastCalledWith('/partner/venue/marketing?search=Aisha', { scroll: false });
+    expect(replace).toHaveBeenLastCalledWith('/partner/venue/marketing?search=Aisha', {
+      scroll: false,
+    });
     navigation.query = 'search=Aisha';
     await user.click(screen.getByRole('button', { name: /All Events/ }));
     await user.click(screen.getByRole('button', { name: /Bollywood Brunch/ }));
-    expect(replace).toHaveBeenLastCalledWith('/partner/venue/marketing?search=Aisha&event=bollywood-brunch', { scroll: false });
+    expect(replace).toHaveBeenLastCalledWith(
+      '/partner/venue/marketing?search=Aisha&event=bollywood-brunch',
+      { scroll: false },
+    );
   });
 
   it('uses Host partnered-event language and keeps delivery actions unavailable', async () => {
@@ -61,9 +69,14 @@ describe('PartnerMarketingScreen', () => {
     navigation.query = 'composer=1';
     render(<PartnerMarketingScreen data={data} />);
 
-    expect(screen.getByText('Guests at Neon Nights: Afrobeats · Skyline Rooftop')).toBeInTheDocument();
+    expect(
+      screen.getByText('Guests at Neon Nights: Afrobeats · Skyline Rooftop'),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Send to/ })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'WhatsApp' }));
-    expect(replace).toHaveBeenCalledWith('/partner/venue/marketing?composer=1&messageChannel=whatsapp', { scroll: false });
+    expect(replace).toHaveBeenCalledWith(
+      '/partner/venue/marketing?composer=1&messageChannel=whatsapp',
+      { scroll: false },
+    );
   });
 });

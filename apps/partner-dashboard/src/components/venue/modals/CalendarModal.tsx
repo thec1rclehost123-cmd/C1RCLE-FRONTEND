@@ -1,5 +1,13 @@
 'use client';
 
+/* eslint-disable no-restricted-syntax --
+   Calendar cell styles are assembled at runtime by the shared css() string helper in
+   src/components/venue/charts.ts from the status/event maps in src/components/venue/data.ts
+   (calendar geometry, event breakpoints, status tints, legend dot colors) and cannot be
+   expressed as static Tailwind utilities without reworking the chart model — which is outside
+   the 2026-09-11 partner-dashboard lint fix scope. The JSX `style` selector is the only
+   no-restricted-syntax entry this file triggers (it contains no process.env or fetch()). */
+
 import { STATUS_DOT, calCells, css } from '../charts';
 import { CAL_LEGEND, JULY_EVENTS, JULY_STATUS, WEEKDAYS } from '../data';
 import { Icon } from '../Icon';

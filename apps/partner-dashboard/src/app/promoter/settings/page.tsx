@@ -18,31 +18,41 @@ export default async function PromoterSettingsPage({
   ]);
   const accountParts = finance?.payoutAccount.split(' ');
   const linkParts = links[0]?.shortUrl.split('/');
-  return <PartnerSettingsScreen config={{
-    roleLabel: 'Promoter',
-    basePath: '/promoter/settings',
-    tabs: [
-      { id: 'profile', label: 'Promoter profile', icon: AccountIcon },
-      { id: 'payout', label: 'Payout account', icon: BankIcon },
-      { id: 'security', label: 'Security', icon: LockedIcon },
-    ],
-    profile: {
-      name: profile.name,
-      handle: profile.handle,
-      city: profile.city,
-      bio: profile.bio,
-      verified: profile.verified,
-      linkIdentity: linkParts?.length && linkParts.length > 1 ? linkParts[1] : undefined,
-    },
-    ...(finance
-      ? {
-          payout: {
-            bankName: accountParts?.[0],
-            maskedAccount: accountParts?.slice(1).join(' '),
-            status: finance.kycStatus === 'verified' ? 'Verified' : finance.kycStatus === 'pending' ? 'Pending' : 'Unavailable',
-            nextPayout: finance.nextPayout,
-          },
-        }
-      : {}),
-  }} tab={tab} />;
+  return (
+    <PartnerSettingsScreen
+      config={{
+        roleLabel: 'Promoter',
+        basePath: '/promoter/settings',
+        tabs: [
+          { id: 'profile', label: 'Promoter profile', icon: AccountIcon },
+          { id: 'payout', label: 'Payout account', icon: BankIcon },
+          { id: 'security', label: 'Security', icon: LockedIcon },
+        ],
+        profile: {
+          name: profile.name,
+          handle: profile.handle,
+          city: profile.city,
+          bio: profile.bio,
+          verified: profile.verified,
+          linkIdentity: linkParts?.length && linkParts.length > 1 ? linkParts[1] : undefined,
+        },
+        ...(finance
+          ? {
+              payout: {
+                bankName: accountParts?.[0],
+                maskedAccount: accountParts?.slice(1).join(' '),
+                status:
+                  finance.kycStatus === 'verified'
+                    ? 'Verified'
+                    : finance.kycStatus === 'pending'
+                      ? 'Pending'
+                      : 'Unavailable',
+                nextPayout: finance.nextPayout,
+              },
+            }
+          : {}),
+      }}
+      tab={tab}
+    />
+  );
 }

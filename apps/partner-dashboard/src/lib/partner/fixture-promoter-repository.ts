@@ -1,5 +1,4 @@
 import type {
-  PromoterConnectionDto,
   PromoterEvent,
   PromoterFinanceSummary,
   PromoterOverview,
@@ -8,7 +7,6 @@ import type {
   PromoterProfile,
   PromoterRepository,
   PromoterTrackingLink,
-  RequestConnectionRequest,
 } from './contracts';
 
 const profile: PromoterProfile = {
@@ -25,23 +23,174 @@ const profile: PromoterProfile = {
 };
 
 const linkedEvents: readonly PromoterEvent[] = [
-  { id: 'neon-nights', name: 'Neon Nights', date: 'Fri, 18 Jul', time: '9:00 PM', venue: 'Skyline Social', host: 'Rhea Kapoor Events', city: 'Mumbai', status: 'active', category: 'Afrobeats · House', commissionLabel: '₹180 / ticket', clicks: 1842, tickets: 56, earningsPaise: 1008000, conversion: 8.4, accent: 'linear-gradient(135deg,#ff5a1f,#6d1600)' },
-  { id: 'bassline-nights', name: 'Bassline Nights', date: 'Sat, 22 Aug', time: '11:00 PM', venue: 'The Docks', host: 'Pulse Collective', city: 'Mumbai', status: 'active', category: 'Bass · Techno', commissionLabel: '12% net sales', clicks: 982, tickets: 31, earningsPaise: 744000, conversion: 6.9, accent: 'linear-gradient(135deg,#582fff,#180c63)' },
-  { id: 'sunset-sessions', name: 'Sunset Sessions', date: 'Sun, 30 Aug', time: '5:30 PM', venue: 'Garden Terrace', host: 'High Spirits', city: 'Mumbai', status: 'invited', category: 'Disco · Sundowner', commissionLabel: '₹150 / ticket', clicks: 0, tickets: 0, earningsPaise: 0, conversion: 0, accent: 'linear-gradient(135deg,#ffb020,#7a3a00)' },
+  {
+    id: 'neon-nights',
+    name: 'Neon Nights',
+    date: 'Fri, 18 Jul',
+    time: '9:00 PM',
+    venue: 'Skyline Social',
+    host: 'Rhea Kapoor Events',
+    city: 'Mumbai',
+    status: 'active',
+    category: 'Afrobeats · House',
+    commissionLabel: '₹180 / ticket',
+    clicks: 1842,
+    tickets: 56,
+    earningsPaise: 1008000,
+    conversion: 8.4,
+    accent: 'linear-gradient(135deg,#ff5a1f,#6d1600)',
+  },
+  {
+    id: 'bassline-nights',
+    name: 'Bassline Nights',
+    date: 'Sat, 22 Aug',
+    time: '11:00 PM',
+    venue: 'The Docks',
+    host: 'Pulse Collective',
+    city: 'Mumbai',
+    status: 'active',
+    category: 'Bass · Techno',
+    commissionLabel: '12% net sales',
+    clicks: 982,
+    tickets: 31,
+    earningsPaise: 744000,
+    conversion: 6.9,
+    accent: 'linear-gradient(135deg,#582fff,#180c63)',
+  },
+  {
+    id: 'sunset-sessions',
+    name: 'Sunset Sessions',
+    date: 'Sun, 30 Aug',
+    time: '5:30 PM',
+    venue: 'Garden Terrace',
+    host: 'High Spirits',
+    city: 'Mumbai',
+    status: 'invited',
+    category: 'Disco · Sundowner',
+    commissionLabel: '₹150 / ticket',
+    clicks: 0,
+    tickets: 0,
+    earningsPaise: 0,
+    conversion: 0,
+    accent: 'linear-gradient(135deg,#ffb020,#7a3a00)',
+  },
 ];
 
 const discoverEvents: readonly PromoterEvent[] = [
-  { id: 'warehouse-ritual', name: 'Warehouse Ritual', date: 'Fri, 4 Sep', time: '10:00 PM', venue: 'Neon Warehouse', host: 'Afterdark Club', city: 'Mumbai', status: 'requested', category: 'Techno', commissionLabel: '15% net sales', clicks: 0, tickets: 0, earningsPaise: 0, conversion: 0, accent: 'linear-gradient(135deg,#0d7a6e,#03231f)' },
-  { id: 'terrace-theory', name: 'Terrace Theory', date: 'Sat, 12 Sep', time: '7:00 PM', venue: 'The Loft', host: 'Sonder Social', city: 'Pune', status: 'requested', category: 'Indie · House', commissionLabel: '₹220 / ticket', clicks: 0, tickets: 0, earningsPaise: 0, conversion: 0, accent: 'linear-gradient(135deg,#be185d,#3a071c)' },
-  { id: 'midnight-market', name: 'Midnight Market', date: 'Sat, 19 Sep', time: '8:00 PM', venue: 'Basement 9', host: 'City Culture Co.', city: 'Mumbai', status: 'requested', category: 'Culture · Food', commissionLabel: '10% net sales', clicks: 0, tickets: 0, earningsPaise: 0, conversion: 0, accent: 'linear-gradient(135deg,#4b5563,#111827)' },
+  {
+    id: 'warehouse-ritual',
+    name: 'Warehouse Ritual',
+    date: 'Fri, 4 Sep',
+    time: '10:00 PM',
+    venue: 'Neon Warehouse',
+    host: 'Afterdark Club',
+    city: 'Mumbai',
+    status: 'requested',
+    category: 'Techno',
+    commissionLabel: '15% net sales',
+    clicks: 0,
+    tickets: 0,
+    earningsPaise: 0,
+    conversion: 0,
+    accent: 'linear-gradient(135deg,#0d7a6e,#03231f)',
+  },
+  {
+    id: 'terrace-theory',
+    name: 'Terrace Theory',
+    date: 'Sat, 12 Sep',
+    time: '7:00 PM',
+    venue: 'The Loft',
+    host: 'Sonder Social',
+    city: 'Pune',
+    status: 'requested',
+    category: 'Indie · House',
+    commissionLabel: '₹220 / ticket',
+    clicks: 0,
+    tickets: 0,
+    earningsPaise: 0,
+    conversion: 0,
+    accent: 'linear-gradient(135deg,#be185d,#3a071c)',
+  },
+  {
+    id: 'midnight-market',
+    name: 'Midnight Market',
+    date: 'Sat, 19 Sep',
+    time: '8:00 PM',
+    venue: 'Basement 9',
+    host: 'City Culture Co.',
+    city: 'Mumbai',
+    status: 'requested',
+    category: 'Culture · Food',
+    commissionLabel: '10% net sales',
+    clicks: 0,
+    tickets: 0,
+    earningsPaise: 0,
+    conversion: 0,
+    accent: 'linear-gradient(135deg,#4b5563,#111827)',
+  },
 ];
 
 const partners: readonly PromoterPartner[] = [
-  { id: 'skyline', kind: 'venue', name: 'Skyline Social', city: 'Mumbai', category: 'Rooftop · 400 capacity', verified: true, status: 'partnered', eventsTogether: 12, responseTime: '< 2 hours', accent: 'linear-gradient(135deg,#ff5a1f,#7a2205)' },
-  { id: 'docks', kind: 'venue', name: 'The Docks', city: 'Mumbai', category: 'Warehouse · 600 capacity', verified: true, status: 'pending', eventsTogether: 3, responseTime: '< 1 day', accent: 'linear-gradient(135deg,#0d7a6e,#042b27)' },
-  { id: 'rhea', kind: 'host', name: 'Rhea Kapoor Events', city: 'Mumbai', category: 'House · Afrobeats', verified: true, status: 'partnered', eventsTogether: 8, responseTime: '< 3 hours', accent: 'linear-gradient(135deg,#be185d,#4c1028)' },
-  { id: 'pulse', kind: 'host', name: 'Pulse Collective', city: 'Mumbai', category: 'Bass · Techno', verified: true, status: 'partnered', eventsTogether: 5, responseTime: '< 4 hours', accent: 'linear-gradient(135deg,#582fff,#1d115a)' },
-  { id: 'sonder', kind: 'host', name: 'Sonder Social', city: 'Pune', category: 'Indie · Sundowners', verified: false, status: 'discover', eventsTogether: 0, responseTime: '< 1 day', accent: 'linear-gradient(135deg,#ffb020,#734600)' },
+  {
+    id: 'skyline',
+    kind: 'venue',
+    name: 'Skyline Social',
+    city: 'Mumbai',
+    category: 'Rooftop · 400 capacity',
+    verified: true,
+    status: 'partnered',
+    eventsTogether: 12,
+    responseTime: '< 2 hours',
+    accent: 'linear-gradient(135deg,#ff5a1f,#7a2205)',
+  },
+  {
+    id: 'docks',
+    kind: 'venue',
+    name: 'The Docks',
+    city: 'Mumbai',
+    category: 'Warehouse · 600 capacity',
+    verified: true,
+    status: 'pending',
+    eventsTogether: 3,
+    responseTime: '< 1 day',
+    accent: 'linear-gradient(135deg,#0d7a6e,#042b27)',
+  },
+  {
+    id: 'rhea',
+    kind: 'host',
+    name: 'Rhea Kapoor Events',
+    city: 'Mumbai',
+    category: 'House · Afrobeats',
+    verified: true,
+    status: 'partnered',
+    eventsTogether: 8,
+    responseTime: '< 3 hours',
+    accent: 'linear-gradient(135deg,#be185d,#4c1028)',
+  },
+  {
+    id: 'pulse',
+    kind: 'host',
+    name: 'Pulse Collective',
+    city: 'Mumbai',
+    category: 'Bass · Techno',
+    verified: true,
+    status: 'partnered',
+    eventsTogether: 5,
+    responseTime: '< 4 hours',
+    accent: 'linear-gradient(135deg,#582fff,#1d115a)',
+  },
+  {
+    id: 'sonder',
+    kind: 'host',
+    name: 'Sonder Social',
+    city: 'Pune',
+    category: 'Indie · Sundowners',
+    verified: false,
+    status: 'discover',
+    eventsTogether: 0,
+    responseTime: '< 1 day',
+    accent: 'linear-gradient(135deg,#ffb020,#734600)',
+  },
 ];
 
 const finance: PromoterFinanceSummary = {
@@ -57,25 +206,102 @@ const finance: PromoterFinanceSummary = {
     { id: 'pay-jun-13', date: '13 Jun 2026', amountPaise: 1760000, status: 'paid' },
   ],
   adjustments: [
-    { id: 'adj-neon-refund', eventName: 'Neon Nights', label: '2 refunded tickets', amountPaise: -36000, date: '16 Jul 2026' },
-    { id: 'adj-bassline-bonus', eventName: 'Bassline Nights', label: '30-ticket campaign bonus', amountPaise: 120000, date: '12 Jul 2026' },
+    {
+      id: 'adj-neon-refund',
+      eventName: 'Neon Nights',
+      label: '2 refunded tickets',
+      amountPaise: -36000,
+      date: '16 Jul 2026',
+    },
+    {
+      id: 'adj-bassline-bonus',
+      eventName: 'Bassline Nights',
+      label: '30-ticket campaign bonus',
+      amountPaise: 120000,
+      date: '12 Jul 2026',
+    },
   ],
 };
 
 const links: readonly PromoterTrackingLink[] = [
-  { id: 'lnk-instagram-neon', eventId: 'neon-nights', eventName: 'Neon Nights', channel: 'Instagram', label: 'Main story', shortUrl: 'c1rcle.in/zoya/neon', status: 'active', clicks: 1184, purchases: 42, earningsPaise: 756000 },
-  { id: 'lnk-whatsapp-neon', eventId: 'neon-nights', eventName: 'Neon Nights', channel: 'WhatsApp', label: 'Close friends', shortUrl: 'c1rcle.in/zoya/neon-wa', status: 'active', clicks: 658, purchases: 14, earningsPaise: 252000 },
-  { id: 'lnk-bassline-bio', eventId: 'bassline-nights', eventName: 'Bassline Nights', channel: 'Bio link', label: 'August bio', shortUrl: 'c1rcle.in/zoya/bassline', status: 'active', clicks: 982, purchases: 31, earningsPaise: 744000 },
+  {
+    id: 'lnk-instagram-neon',
+    eventId: 'neon-nights',
+    eventName: 'Neon Nights',
+    channel: 'Instagram',
+    label: 'Main story',
+    shortUrl: 'c1rcle.in/zoya/neon',
+    status: 'active',
+    clicks: 1184,
+    purchases: 42,
+    earningsPaise: 756000,
+  },
+  {
+    id: 'lnk-whatsapp-neon',
+    eventId: 'neon-nights',
+    eventName: 'Neon Nights',
+    channel: 'WhatsApp',
+    label: 'Close friends',
+    shortUrl: 'c1rcle.in/zoya/neon-wa',
+    status: 'active',
+    clicks: 658,
+    purchases: 14,
+    earningsPaise: 252000,
+  },
+  {
+    id: 'lnk-bassline-bio',
+    eventId: 'bassline-nights',
+    eventName: 'Bassline Nights',
+    channel: 'Bio link',
+    label: 'August bio',
+    shortUrl: 'c1rcle.in/zoya/bassline',
+    status: 'active',
+    clicks: 982,
+    purchases: 31,
+    earningsPaise: 744000,
+  },
 ];
 
 const overview: PromoterOverview = {
   profile,
   nextEvent: linkedEvents[0] ?? null,
   recentOrders: [
-    { id: 'order-4812', eventName: 'Neon Nights', createdAt: '4 minutes ago', ticketCount: 2, channel: 'Instagram · Main story', commissionPaise: 36000, status: 'confirmed' },
-    { id: 'order-4807', eventName: 'Bassline Nights', createdAt: '18 minutes ago', ticketCount: 3, channel: 'Bio link', commissionPaise: 72000, status: 'confirmed' },
-    { id: 'order-4799', eventName: 'Neon Nights', createdAt: '42 minutes ago', ticketCount: 1, channel: 'WhatsApp', commissionPaise: 18000, status: 'confirmed' },
-    { id: 'order-4760', eventName: 'Neon Nights', createdAt: 'Yesterday', ticketCount: 2, channel: 'Instagram · Main story', commissionPaise: -36000, status: 'refunded' },
+    {
+      id: 'order-4812',
+      eventName: 'Neon Nights',
+      createdAt: '4 minutes ago',
+      ticketCount: 2,
+      channel: 'Instagram · Main story',
+      commissionPaise: 36000,
+      status: 'confirmed',
+    },
+    {
+      id: 'order-4807',
+      eventName: 'Bassline Nights',
+      createdAt: '18 minutes ago',
+      ticketCount: 3,
+      channel: 'Bio link',
+      commissionPaise: 72000,
+      status: 'confirmed',
+    },
+    {
+      id: 'order-4799',
+      eventName: 'Neon Nights',
+      createdAt: '42 minutes ago',
+      ticketCount: 1,
+      channel: 'WhatsApp',
+      commissionPaise: 18000,
+      status: 'confirmed',
+    },
+    {
+      id: 'order-4760',
+      eventName: 'Neon Nights',
+      createdAt: 'Yesterday',
+      ticketCount: 2,
+      channel: 'Instagram · Main story',
+      commissionPaise: -36000,
+      status: 'refunded',
+    },
   ],
   performance: [18, 27, 22, 38, 41, 56, 63, 58, 74, 81, 96, 112, 108, 126],
   calendar: [
@@ -105,17 +331,36 @@ const networkProfile: PromoterNetworkProfileData = {
 };
 
 export const fixturePromoterRepository: PromoterRepository = {
-  getOverview() { return Promise.resolve(overview); },
-  getLinkedEvents() { return Promise.resolve(linkedEvents); },
-  discoverEvents() { return Promise.resolve(discoverEvents); },
-  getPartners() { return Promise.resolve(partners); },
-  getFinance() { return Promise.resolve(finance); },
-  getLinks() { return Promise.resolve(links); },
-  getProfile() { return Promise.resolve(profile); },
-  getNetworkProfile() { return Promise.resolve(networkProfile); },
+  getOverview() {
+    return Promise.resolve(overview);
+  },
+  getLinkedEvents() {
+    return Promise.resolve(linkedEvents);
+  },
+  discoverEvents() {
+    return Promise.resolve(discoverEvents);
+  },
+  getPartners() {
+    return Promise.resolve(partners);
+  },
+  getFinance() {
+    return Promise.resolve(finance);
+  },
+  getLinks() {
+    return Promise.resolve(links);
+  },
+  getProfile() {
+    return Promise.resolve(profile);
+  },
+  getNetworkProfile() {
+    return Promise.resolve(networkProfile);
+  },
   createTrackingLink(input) {
     const event = linkedEvents.find((candidate) => candidate.id === input.eventId);
-    const normalizedChannel = input.channel.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const normalizedChannel = input.channel
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
     const link: PromoterTrackingLink = {
       id: `preview-${input.eventId}-${normalizedChannel}`,
       eventId: input.eventId,
@@ -130,61 +375,7 @@ export const fixturePromoterRepository: PromoterRepository = {
     };
     return Promise.resolve(link);
   },
-  requestConnection(input) { return Promise.resolve().then(() => createFixtureConnection(input)); },
-  resolveConnection(connectionId, action, reason) {
-    return Promise.resolve().then(() => transitionFixtureConnection(connectionId, action, reason));
-  },
-  getPromoterConnections() {
-    return Promise.resolve({
-      items: [...fixtureConnections],
-      pageInfo: { hasNextPage: false },
-    });
-  },
+  requestConnection: () => Promise.reject(new Error('Not implemented')),
+  resolveConnection: () => Promise.reject(new Error('Not implemented')),
+  getPromoterConnections: () => Promise.reject(new Error('Not implemented')),
 };
-
-/* ── In-memory promoter↔host/venue request lifecycle (fixture only) ────────── */
-
-const fixtureConnections: PromoterConnectionDto[] = [];
-
-let fixtureConnectionSeq = 0;
-
-function createFixtureConnection(input: RequestConnectionRequest): PromoterConnectionDto {
-  fixtureConnectionSeq += 1;
-  const now = new Date().toISOString();
-  const connection: PromoterConnectionDto = {
-    id: `fixture-connection-${fixtureConnectionSeq}`,
-    promoterId: input.initiatedBy === 'promoter' ? 'fixture-promoter-org' : input.counterpartyId,
-    targetId: input.initiatedBy === 'promoter' ? input.counterpartyId : 'fixture-promoter-org',
-    targetType: input.targetType,
-    initiatedBy: input.initiatedBy,
-    status: 'pending',
-    message: input.message ?? null,
-    resolutionReason: null,
-    resolvedAt: null,
-    version: 1,
-    createdAt: now,
-    updatedAt: now,
-  };
-  fixtureConnections.push(connection);
-  return connection;
-}
-
-function transitionFixtureConnection(
-  connectionId: string,
-  action: 'approve' | 'reject' | 'block' | 'revoke',
-  reason?: string,
-): PromoterConnectionDto {
-  const connection = fixtureConnections.find((candidate) => candidate.id === connectionId);
-  if (!connection) throw new Error(`Connection ${connectionId} not found`);
-  const status = action === 'approve' ? 'active' : action === 'reject' ? 'rejected' : action === 'block' ? 'blocked' : 'revoked';
-  const transitioned: PromoterConnectionDto = {
-    ...connection,
-    status,
-    resolutionReason: reason ?? null,
-    resolvedAt: new Date().toISOString(),
-    version: connection.version + 1,
-    updatedAt: new Date().toISOString(),
-  };
-  fixtureConnections.splice(fixtureConnections.indexOf(connection), 1, transitioned);
-  return transitioned;
-}

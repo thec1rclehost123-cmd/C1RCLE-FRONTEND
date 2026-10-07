@@ -1,9 +1,15 @@
+import { buildPublicMetadata } from '@/lib/seo/metadata';
+
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'About',
-  description: 'About THE C1RCLE — Discover Life Offline.',
-};
+export function generateMetadata(): Metadata {
+  return buildPublicMetadata({
+    path: '/about',
+    title: 'About',
+    description: 'About THE C1RCLE — Discover Life Offline.',
+    indexable: false,
+  });
+}
 
 export default function AboutPage() {
   return (
