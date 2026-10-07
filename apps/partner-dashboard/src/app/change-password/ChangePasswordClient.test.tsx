@@ -39,7 +39,9 @@ vi.mock('@c1rcle/auth', () => ({
 }));
 
 function fillAndSubmit() {
-  fireEvent.change(screen.getByLabelText('Current password'), { target: { value: 'TempPass12345678' } });
+  fireEvent.change(screen.getByLabelText('Current password'), {
+    target: { value: 'TempPass12345678' },
+  });
   fireEvent.change(screen.getByLabelText('New password (min 8 characters)'), {
     target: { value: 'brand-new-password-1' },
   });
@@ -79,7 +81,9 @@ describe('ChangePasswordClient', () => {
   it('blocks mismatched confirmation client-side', () => {
     render(<ChangePasswordClient />);
 
-    fireEvent.change(screen.getByLabelText('Current password'), { target: { value: 'TempPass12345678' } });
+    fireEvent.change(screen.getByLabelText('Current password'), {
+      target: { value: 'TempPass12345678' },
+    });
     fireEvent.change(screen.getByLabelText('New password (min 8 characters)'), {
       target: { value: 'brand-new-password-1' },
     });

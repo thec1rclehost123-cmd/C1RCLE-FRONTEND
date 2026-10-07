@@ -238,23 +238,26 @@ export function StudioPartnersClient({
   );
 
   const handleRevokeInvite = useCallback(
-    async (invite: StaffInvite) => {
+    (invite: StaffInvite) => {
       setRevokingInviteId(invite.id);
       setRevokeErrorId(null);
       setRevokeError(null);
-      try {
+      const run = async () => {
         const { getActiveOrgId } = await import('@/lib/org/active-org');
         const orgId = getActiveOrgId();
         if (!orgId) throw new Error('No active organization selected');
         const { staffApi } = await import('@/lib/api/staff-api');
         await staffApi.revokeInvitation(invite.id);
         reload();
-      } catch (err: unknown) {
-        setRevokeErrorId(invite.id);
-        setRevokeError(errorMessage(err));
-      } finally {
-        setRevokingInviteId(null);
-      }
+      };
+      void run()
+        .catch((err: unknown) => {
+          setRevokeErrorId(invite.id);
+          setRevokeError(errorMessage(err));
+        })
+        .finally(() => {
+          setRevokingInviteId(null);
+        });
     },
     [reload],
   );

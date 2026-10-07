@@ -43,8 +43,14 @@ function buildHeaders(includeIdempotency = false): Record<string, string> {
 }
 
 export interface StaffApi {
-  listMembers(organizationId: string, params?: PaginationQuery): Promise<Paginated<OrganizationMemberDto>>;
-  listInvitations(organizationId: string, params?: PaginationQuery): Promise<Paginated<InvitationDto>>;
+  listMembers(
+    organizationId: string,
+    params?: PaginationQuery,
+  ): Promise<Paginated<OrganizationMemberDto>>;
+  listInvitations(
+    organizationId: string,
+    params?: PaginationQuery,
+  ): Promise<Paginated<InvitationDto>>;
   createInvitation(organizationId: string, body: CreateInvitationRequest): Promise<InvitationDto>;
   revokeInvitation(invitationId: string): Promise<InvitationDto>;
   /**

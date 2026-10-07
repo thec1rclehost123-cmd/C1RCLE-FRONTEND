@@ -27,12 +27,7 @@ export function PasswordChangeGuard({ children }: { readonly children: ReactNode
   );
 
   useEffect(() => {
-    if (
-      sessionState.hydrated &&
-      sessionState.status === 'authenticated' &&
-      mustChange &&
-      !exempt
-    ) {
+    if (sessionState.hydrated && sessionState.status === 'authenticated' && mustChange && !exempt) {
       router.replace(`/change-password?next=${encodeURIComponent(pathname)}`);
     }
   }, [sessionState.hydrated, sessionState.status, mustChange, exempt, pathname, router]);

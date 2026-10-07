@@ -12,7 +12,11 @@ import type { CreateInvitationRequest } from '@/lib/api/staff-api';
 
 type InviteRole = CreateInvitationRequest['role'];
 
-const ROLES: readonly { readonly value: InviteRole; readonly label: string; readonly hint: string }[] = [
+const ROLES: readonly {
+  readonly value: InviteRole;
+  readonly label: string;
+  readonly hint: string;
+}[] = [
   { value: 'member', label: 'Staff', hint: 'Roster access' },
   { value: 'manager', label: 'Manager', hint: 'Runs events & door' },
   { value: 'admin', label: 'Admin', hint: 'Can manage staff' },
@@ -65,9 +69,8 @@ export function PartnerStaffInviteDialog({
       let orgId = organizationId ?? getActiveOrgId();
       if (!orgId) {
         try {
-          const { resolveBrowserOrganizationId } = await import(
-            '@/lib/org/resolve-browser-organization'
-          );
+          const { resolveBrowserOrganizationId } =
+            await import('@/lib/org/resolve-browser-organization');
           orgId = await resolveBrowserOrganizationId(defaultCapability ?? 'venue');
         } catch {
           // ignore error
@@ -114,7 +117,10 @@ export function PartnerStaffInviteDialog({
           <div>
             <span className={styles['sectionKicker']}>Team access</span>
             <h2 id="add-staff-title">Add staff</h2>
-            <p>Invite a teammate by email. We&apos;ll send them a link to join with the role you pick.</p>
+            <p>
+              Invite a teammate by email. We&apos;ll send them a link to join with the role you
+              pick.
+            </p>
           </div>
           <IconButton label="Close add staff dialog" onClick={onClose}>
             ×
@@ -178,12 +184,7 @@ export function PartnerStaffInviteDialog({
             {notice}
           </p>
         ) : null}
-        <Button
-          type="button"
-          variant="primary"
-          disabled={!canSubmit}
-          onClick={handleProceed}
-        >
+        <Button type="button" variant="primary" disabled={!canSubmit} onClick={handleProceed}>
           {submitting ? 'Sending…' : 'Send invite'}
         </Button>
       </section>

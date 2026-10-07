@@ -48,7 +48,16 @@ describe('Partner staff section', () => {
 
   it('renders the live roster and pending invites with revoke', () => {
     const onRevokeInvite = vi.fn();
-    render(<VenuePartnersScreen data={makeData()} segment="staff" staffInvites={makeData().staffInvites ?? []} staffCanManage onRevokeInvite={onRevokeInvite} studioCapability="venue" />);
+    render(
+      <VenuePartnersScreen
+        data={makeData()}
+        segment="staff"
+        staffInvites={makeData().staffInvites ?? []}
+        staffCanManage
+        onRevokeInvite={onRevokeInvite}
+        studioCapability="venue"
+      />,
+    );
 
     expect(screen.getByText('Staff ABC123')).toBeInTheDocument();
     expect(screen.getByText('teammate@email.com')).toBeInTheDocument();
@@ -60,14 +69,31 @@ describe('Partner staff section', () => {
   });
 
   it('disables inviting without staff-management access', () => {
-    render(<VenuePartnersScreen data={makeData()} segment="staff" staffInvites={[]} staffCanManage={false} studioCapability="venue" />);
+    render(
+      <VenuePartnersScreen
+        data={makeData()}
+        segment="staff"
+        staffInvites={[]}
+        staffCanManage={false}
+        studioCapability="venue"
+      />,
+    );
 
     expect(screen.getByRole('button', { name: 'Add staff' })).toBeDisabled();
     expect(screen.getByText(/staff-management access/)).toBeInTheDocument();
   });
 
   it('shows a staff error instead of an empty grid', () => {
-    render(<VenuePartnersScreen data={makeData({ staff: [] })} segment="staff" staffInvites={[]} staffCanManage={false} staffError="backend down" studioCapability="venue" />);
+    render(
+      <VenuePartnersScreen
+        data={makeData({ staff: [] })}
+        segment="staff"
+        staffInvites={[]}
+        staffCanManage={false}
+        staffError="backend down"
+        studioCapability="venue"
+      />,
+    );
 
     expect(screen.getByText("Couldn't load staff")).toBeInTheDocument();
   });

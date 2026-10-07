@@ -242,7 +242,10 @@ describe('POST /api/auth/change-password', () => {
 
   it('passes a wrong-current-password 400 through unchanged', async () => {
     mockForward.mockResolvedValue(
-      gatewayResponse({ code: 'validation', message: 'Current password is incorrect', status: 400 }, { status: 400 }),
+      gatewayResponse(
+        { code: 'validation', message: 'Current password is incorrect', status: 400 },
+        { status: 400 },
+      ),
     );
 
     const res = await changePassword(

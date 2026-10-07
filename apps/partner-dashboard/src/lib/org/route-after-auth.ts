@@ -73,7 +73,11 @@ export async function resolveLandingPath(orgId: string): Promise<string> {
   try {
     const access = await getPartnerAccess(orgId);
     const studio =
-      access.partnerType === 'host' ? 'host' : access.partnerType === 'promoter' ? 'promoter' : 'venue';
+      access.partnerType === 'host'
+        ? 'host'
+        : access.partnerType === 'promoter'
+          ? 'promoter'
+          : 'venue';
     const first = STUDIO_CONFIG[studio].navigation.find((item) =>
       isTabVisibleForAccess(item.href, access.tabVisibility),
     );

@@ -100,7 +100,11 @@ describe('PartnerShell navigation layouts', () => {
     authAccess.tabVisibility = { overview: false, finance: false, settings: false };
     const interactionData = await fixturePartnerDataSource.getPartnerShellInteractions('venue');
 
-    render(<PartnerShell studio="venue" interactionData={interactionData}><div>Overview content</div></PartnerShell>);
+    render(
+      <PartnerShell studio="venue" interactionData={interactionData}>
+        <div>Overview content</div>
+      </PartnerShell>,
+    );
 
     expect(screen.queryByRole('link', { name: 'Overview' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Finance' })).not.toBeInTheDocument();

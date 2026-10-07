@@ -105,7 +105,9 @@ const relationshipRecords = (
 
 function staffChips(member: StaffMember): readonly string[] {
   if (member.capabilities && member.capabilities.length > 0) {
-    return member.backendRole ? [member.backendRole, ...member.capabilities] : [...member.capabilities];
+    return member.backendRole
+      ? [member.backendRole, ...member.capabilities]
+      : [...member.capabilities];
   }
   return member.permissions;
 }
@@ -153,7 +155,9 @@ function StaffList({
   }
 
   if (normalized && members.length === 0 && pendingInvites.length === 0) {
-    return <EmptyState title="No staff found" description="Try a different name or clear the search." />;
+    return (
+      <EmptyState title="No staff found" description="Try a different name or clear the search." />
+    );
   }
 
   return (
@@ -175,7 +179,9 @@ function StaffList({
                       {invite.role}
                       {invite.capabilities.length > 0 ? ` · ${invite.capabilities.join(', ')}` : ''}
                     </p>
-                    {revokeErrorId === invite.id && revokeError ? <p role="alert">{revokeError}</p> : null}
+                    {revokeErrorId === invite.id && revokeError ? (
+                      <p role="alert">{revokeError}</p>
+                    ) : null}
                   </div>
                 </div>
                 {canManage && onRevokeInvite ? (
@@ -221,7 +227,10 @@ function StaffList({
           ))}
         </div>
       ) : normalized ? (
-        <EmptyState title="No staff found" description="Try a different name or clear the search." />
+        <EmptyState
+          title="No staff found"
+          description="Try a different name or clear the search."
+        />
       ) : null}
       {!canManage ? (
         <p className={styles['dialogNotice']}>

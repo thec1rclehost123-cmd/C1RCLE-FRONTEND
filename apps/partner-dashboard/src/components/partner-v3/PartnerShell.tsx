@@ -61,8 +61,9 @@ export function PartnerShell({
   const visibleConfig = visibleStudioNavigation(config, auth.tabVisibility);
   const appClass = styles['app'] ?? '';
   const activeLabel =
-    visibleConfig.navigation.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
-      ?.label ?? visibleConfig.label;
+    visibleConfig.navigation.find(
+      (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
+    )?.label ?? visibleConfig.label;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

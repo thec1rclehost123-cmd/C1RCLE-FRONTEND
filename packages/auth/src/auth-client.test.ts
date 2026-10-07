@@ -200,10 +200,22 @@ describe('auth-client', () => {
 
       await resetPassword({ token: 'tok', newPassword: 'password123' });
 
-      const [url, init] = fetchMock.mock.calls[0] ?? [];
-      expect(String(url)).toContain('/api/auth/reset-password');
-      expect(String(url)).not.toContain('tok');
-      expect(JSON.parse(String((init as RequestInit).body))).toEqual({
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const calledInput = fetchMock.mock.calls[0]?.[0];
+      const calledUrl =
+        typeof calledInput === 'string'
+          ? calledInput
+          : calledInput instanceof URL
+            ? calledInput.toString()
+            : (calledInput?.url ?? '');
+      expect(calledUrl).toContain('/api/auth/reset-password');
+      expect(calledUrl).not.toContain('tok');
+
+      const rawBody = fetchMock.mock.calls[0]?.[1]?.body;
+      if (typeof rawBody !== 'string') {
+        throw new Error('Expected the request body to be a JSON string');
+      }
+      expect(JSON.parse(rawBody)).toEqual({
         token: 'tok',
         newPassword: 'password123',
       });
@@ -228,7 +240,10 @@ describe('auth-client', () => {
         }),
       );
 
-      await changePassword({ currentPassword: 'TempPass12345678', newPassword: 'brand-new-password-1' });
+      await changePassword({
+        currentPassword: 'TempPass12345678',
+        newPassword: 'brand-new-password-1',
+      });
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
       const calledInput = fetchMock.mock.calls[0]?.[0];
@@ -237,7 +252,7 @@ describe('auth-client', () => {
           ? calledInput
           : calledInput instanceof URL
             ? calledInput.pathname
-            : calledInput.url;
+            : (calledInput?.url ?? '');
       expect(calledUrl).toContain('/api/auth/change-password');
       expect(useSessionStore.getState().session?.user.mustChangePassword).toBe(false);
       expect(useSessionStore.getState().accessToken).toBe('tok_fresh');

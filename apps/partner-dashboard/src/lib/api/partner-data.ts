@@ -5,8 +5,8 @@ import {
   promoterConnectionDtoSchema,
 } from '@c1rcle/contracts';
 
-import { apiClient } from '@/lib/api/client';
 import { getStaffFromApi } from '@/data/api-partner-data-source';
+import { apiClient } from '@/lib/api/client';
 import {
   toHostPartnersData,
   toPromoterPartnersData,

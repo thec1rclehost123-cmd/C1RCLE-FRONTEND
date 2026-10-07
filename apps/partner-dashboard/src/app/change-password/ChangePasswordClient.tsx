@@ -48,7 +48,9 @@ export function ChangePasswordClient() {
         <EmptyState
           title="Sign in first"
           description="Sign in with your invitation credentials, then set your own password."
-          action={<Link href={`/login?next=${encodeURIComponent('/change-password')}`}>Sign in</Link>}
+          action={
+            <Link href={`/login?next=${encodeURIComponent('/change-password')}`}>Sign in</Link>
+          }
         />
       </PageContainer>
     );

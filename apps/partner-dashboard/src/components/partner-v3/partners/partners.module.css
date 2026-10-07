@@ -639,7 +639,9 @@
 .requestSectionHeading {
   margin: 0 0 10px;
   color: var(--partner-v3-ink-muted);
-  font: 700 11px/1 var(--font-display), sans-serif;
+  font:
+    700 11px/1 var(--font-display),
+    sans-serif;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -934,7 +936,9 @@
 .dialogHeader h2 {
   margin: 6px 0 5px;
   color: var(--partner-v3-ink, #fff);
-  font: 700 25px/1 var(--font-display), sans-serif;
+  font:
+    700 25px/1 var(--font-display),
+    sans-serif;
 }
 .dialogHeader p {
   margin: 0;

@@ -34,7 +34,8 @@ export function PartnerStudioFrame({
   const segment = lastPathSegment(pathname);
   const visibilityKey = visibilityKeyForSegment(segment);
   const tabLabel =
-    config.navigation.find((item) => item.href === pathname || pathname.startsWith(`${item.href}/`))?.label ?? segment;
+    config.navigation.find((item) => item.href === pathname || pathname.startsWith(`${item.href}/`))
+      ?.label ?? segment;
   const tabWithheld =
     visibilityKey !== null &&
     auth.tabVisibility !== null &&

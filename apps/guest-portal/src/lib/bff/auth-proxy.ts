@@ -8,7 +8,7 @@
  * Configuration still comes only from `@c1rcle/config`, never the raw
  * environment.
  */
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 import { getClientEnv } from '@c1rcle/config';
 
@@ -17,8 +17,6 @@ import { assertSameOrigin, errorEnvelope } from './gateway-proxy';
 function newRequestId(): string {
   return crypto.randomUUID();
 }
-
-import type { NextRequest } from 'next/server';
 
 export { assertSameOrigin, errorEnvelope };
 

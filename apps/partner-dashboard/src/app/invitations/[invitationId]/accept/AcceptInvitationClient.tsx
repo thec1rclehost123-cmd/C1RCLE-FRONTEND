@@ -72,7 +72,7 @@ export function AcceptInvitationClient({
     void staffApi
       .acceptInvitation(invitationId)
       .then(async (organization) => {
-        await setActiveOrg(organization.id);
+        setActiveOrg(organization.id);
         setState({ status: 'done', title: `You're on the ${organization.name} team` });
         // Straight into the studio — no workspace picker in between. The
         // overview path resolves from the org's own access record (venue team
@@ -88,7 +88,7 @@ export function AcceptInvitationClient({
             const { items } = await staffApi.listMyInvitations();
             const mine = items.find((invite) => invite.id === invitationId);
             if (mine) {
-              await setActiveOrg(mine.organizationId);
+              setActiveOrg(mine.organizationId);
               setState({ status: 'done', title: "You're already on this team" });
               router.replace(await resolveLandingPath(mine.organizationId));
               return;
@@ -168,7 +168,10 @@ export function AcceptInvitationClient({
 
   return (
     <PageContainer>
-      <EmptyState title="Accepting your invite…" description="One moment — we're adding you to the team." />
+      <EmptyState
+        title="Accepting your invite…"
+        description="One moment — we're adding you to the team."
+      />
     </PageContainer>
   );
 }

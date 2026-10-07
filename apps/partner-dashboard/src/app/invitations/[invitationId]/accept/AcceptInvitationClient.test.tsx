@@ -41,7 +41,10 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@/lib/api/staff-api', () => ({
-  staffApi: { acceptInvitation: mocks.acceptInvitation, listMyInvitations: mocks.listMyInvitations },
+  staffApi: {
+    acceptInvitation: mocks.acceptInvitation,
+    listMyInvitations: mocks.listMyInvitations,
+  },
 }));
 
 vi.mock('@/lib/org/route-after-auth', () => ({

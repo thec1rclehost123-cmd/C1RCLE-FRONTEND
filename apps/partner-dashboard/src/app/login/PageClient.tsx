@@ -281,7 +281,9 @@ function LoginForm() {
     if (sessionState.status === 'authenticated' && sessionState.session?.user) {
       const next = safeNextPath(searchParams.get('next') ?? searchParams.get('callbackUrl'));
       if (sessionState.session.user.mustChangePassword) {
-        router.replace(next ? `/change-password?next=${encodeURIComponent(next)}` : '/change-password');
+        router.replace(
+          next ? `/change-password?next=${encodeURIComponent(next)}` : '/change-password',
+        );
         return;
       }
       if (next) {
@@ -303,7 +305,9 @@ function LoginForm() {
       const next = safeNextPath(searchParams.get('next') ?? searchParams.get('callbackUrl'));
       const freshUser = useSessionStore.getState().session?.user;
       if (freshUser?.mustChangePassword) {
-        router.push(next ? `/change-password?next=${encodeURIComponent(next)}` : '/change-password');
+        router.push(
+          next ? `/change-password?next=${encodeURIComponent(next)}` : '/change-password',
+        );
         return;
       }
       if (next) {

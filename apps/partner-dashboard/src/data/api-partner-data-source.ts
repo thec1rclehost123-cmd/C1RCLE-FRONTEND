@@ -6,11 +6,7 @@
 
 import { staffApi } from '@/lib/api/staff-api';
 
-import type {
-  StaffAccess,
-  StaffInvite,
-  StaffMember,
-} from './partner-data-source';
+import type { StaffAccess, StaffInvite, StaffMember } from './partner-data-source';
 import type { InvitationDto, OrganizationMemberDto } from '@/lib/api/staff-api';
 
 function generateInitials(name: string): string {
@@ -49,7 +45,10 @@ function memberToStaffMember(member: OrganizationMemberDto): StaffMember {
     id: member.userId,
     name,
     initials: generateInitials(name),
-    role: member.capabilities.length > 0 ? `${roleLabel(member.role)} · ${member.capabilities.join(', ')}` : roleLabel(member.role),
+    role:
+      member.capabilities.length > 0
+        ? `${roleLabel(member.role)} · ${member.capabilities.join(', ')}`
+        : roleLabel(member.role),
     status: 'Active',
     permissions: [],
     userId: member.userId,
@@ -89,8 +88,15 @@ export async function getStaffFromApi(organizationId: string): Promise<StaffSlic
   ]);
 
   if (membersResult.status === 'rejected') {
-    const message = membersResult.reason instanceof Error ? membersResult.reason.message : String(membersResult.reason);
-    return { staff: emptyStaff, staffInvites: emptyStaffInvites, staffAccess: { canManage: false, error: message } };
+    const message =
+      membersResult.reason instanceof Error
+        ? membersResult.reason.message
+        : String(membersResult.reason);
+    return {
+      staff: emptyStaff,
+      staffInvites: emptyStaffInvites,
+      staffAccess: { canManage: false, error: message },
+    };
   }
 
   const staff = membersResult.value.items.map(memberToStaffMember);

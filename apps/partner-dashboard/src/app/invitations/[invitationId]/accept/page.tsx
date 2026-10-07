@@ -17,6 +17,10 @@ export default async function AcceptInvitationPage({
   const query = await searchParams;
   const rawEmail = query['email'];
   const emailHint =
-    typeof rawEmail === 'string' ? rawEmail : Array.isArray(rawEmail) ? (rawEmail[0] ?? null) : null;
+    typeof rawEmail === 'string'
+      ? rawEmail
+      : Array.isArray(rawEmail)
+        ? (rawEmail[0] ?? null)
+        : null;
   return <AcceptInvitationClient invitationId={invitationId} emailHint={emailHint} />;
 }
