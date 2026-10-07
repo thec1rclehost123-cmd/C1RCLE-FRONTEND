@@ -136,6 +136,10 @@ export function SlotRequestScreen({ direction, initialView = 'pending', initialR
     }
   }, [refresh]);
 
+  const handleAction = useCallback((id: string, kind: SlotRequestActionKind) => {
+    void runAction(id, kind);
+  }, [runAction]);
+
   const accent = data?.accent ?? (isIncoming ? 'orange' : 'lavender');
 
   return (
@@ -147,9 +151,9 @@ export function SlotRequestScreen({ direction, initialView = 'pending', initialR
         <nav className={styles['requestTabs']} aria-label="Slot request views"><button type="button" aria-pressed={visibleView === 'pending'} onClick={() => { selectView('pending'); }}>Pending <span>{counts.pending}</span></button><button type="button" aria-pressed={visibleView === 'all'} onClick={() => { selectView('all'); }}>All Requests <span>{data?.requests.length ?? 0}</span></button></nav>
         {loadError !== null && data === null ? <section className={styles['emptyState']}><span className={styles['emptyMark']} aria-hidden="true">!</span><h2>Could not load slot requests</h2><p>{loadError}</p><Button type="button" variant="secondary" onClick={() => { refresh(); }}>Try again</Button></section>
           : isLoading && data === null ? <section className={styles['emptyState']} aria-busy="true"><span className={styles['emptyMark']} aria-hidden="true">—</span><h2>Loading slot requests</h2><p>Fetching live requests…</p></section>
-          : visibleRequests.length ? <section className={styles['requestGrid']} aria-label={`${visibleView === 'pending' ? 'Pending' : 'All'} slot requests`}>{visibleRequests.map((request) => <SlotRequestCard key={request.id} request={request} busy={busyRequestId === request.id} actionError={actionError?.id === request.id ? actionError.message : null} onOpen={() => { openRequest(request); }} onAction={(id, kind) => { void runAction(id, kind); }} />)}</section>
+          : visibleRequests.length ? <section className={styles['requestGrid']} aria-label={`${visibleView === 'pending' ? 'Pending' : 'All'} slot requests`}>{visibleRequests.map((request) => <SlotRequestCard key={request.id} request={request} busy={busyRequestId === request.id} actionError={actionError?.id === request.id ? actionError.message : null} onOpen={() => { openRequest(request); }} onAction={handleAction} />)}</section>
           : <section className={styles['emptyState']}><span className={styles['emptyMark']} aria-hidden="true">—</span><h2>{isIncoming ? 'No pending requests' : 'No requests sent'}</h2><p>{isIncoming ? 'All event slot requests have been reviewed.' : 'Slot requests you send to venues will show up here.'}</p>{isIncoming ? <Button type="button" variant="secondary" disabled title="Sharing a venue link requires a connected venue profile">Share your venue link</Button> : <Link className={styles['emptyLink']} href="/partner/host/partners?tab=venues&view=discover">Browse venues</Link>}</section>}
-        {selectedRequest ? <SlotRequestReview request={selectedRequest} panel={initialPanel} previewMode={initialPreviewMode} onPanelChange={selectPanel} onPreviewModeChange={selectPreview} onClose={closeReview} busy={busyRequestId === selectedRequest.id} actionError={actionError?.id === selectedRequest.id ? actionError.message : null} onAction={(id, kind) => { void runAction(id, kind); }} /> : null}
+        {selectedRequest ? <SlotRequestReview request={selectedRequest} panel={initialPanel} previewMode={initialPreviewMode} onPanelChange={selectPanel} onPreviewModeChange={selectPreview} onClose={closeReview} busy={busyRequestId === selectedRequest.id} actionError={actionError?.id === selectedRequest.id ? actionError.message : null} onAction={handleAction} /> : null}
       </div>
     </PageContainer>
   );

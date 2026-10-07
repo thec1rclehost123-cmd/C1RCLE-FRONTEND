@@ -194,7 +194,7 @@ export async function submitHostEventRequest(
     name: draft.name.trim(),
     date: draft.date,
     time: draft.time,
-    endTime: draft.endTime,
+    ...(draft.endTime ? { endTime: draft.endTime } : {}),
     dateLabel: draft.dateLabel,
     genres: draft.genres,
     artists: draft.artists,

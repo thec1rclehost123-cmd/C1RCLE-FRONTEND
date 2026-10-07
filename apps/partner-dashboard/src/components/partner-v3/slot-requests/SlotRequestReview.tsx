@@ -18,21 +18,29 @@ import type { SlotRequest, SlotRequestActionKind } from '@/data/partner-data-sou
 type ReviewPanel = 'details' | 'preview';
 type PreviewMode = 'guest' | 'mobile';
 
+export interface SlotRequestReviewProps {
+  readonly request: SlotRequest;
+  readonly panel: ReviewPanel;
+  readonly previewMode: PreviewMode;
+  readonly busy?: boolean;
+  readonly actionError?: string | null;
+  readonly onPanelChange: (panel: ReviewPanel) => void;
+  readonly onPreviewModeChange: (mode: PreviewMode) => void;
+  readonly onClose: () => void;
+  readonly onAction?: (id: string, kind: SlotRequestActionKind) => void;
+}
+
 export function SlotRequestReview({
   request,
   panel,
   previewMode,
+  busy,
+  actionError,
   onPanelChange,
   onPreviewModeChange,
   onClose,
-}: {
-  readonly request: SlotRequest;
-  readonly panel: ReviewPanel;
-  readonly previewMode: PreviewMode;
-  readonly onPanelChange: (panel: ReviewPanel) => void;
-  readonly onPreviewModeChange: (mode: PreviewMode) => void;
-  readonly onClose: () => void;
-}) {
+  onAction,
+}: SlotRequestReviewProps) {
   const isIncoming = request.direction === 'incoming';
   const canDecide = isIncoming && request.status === 'pending';
   const canCancel = !isIncoming && request.status === 'approved';
@@ -117,36 +125,36 @@ export function SlotRequestReview({
           <Button type="button" variant="secondary" onClick={onClose}>
             Close
           </Button>
-          {request.status === 'pending' &&
-            (isIncoming ? (
-              <>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled
-                  title="Request decisions require the slot-request API"
-                >
-                  Decline
-                </Button>
-                <Button
-                  type="button"
-                  variant="primary"
-                  disabled
-                  title="Request decisions require the slot-request API"
-                >
-                  Accept
-                </Button>
-              </>
-            ) : (
+          {canDecide ? (
+            <>
               <Button
                 type="button"
                 variant="secondary"
-                disabled
-                title="Request cancellation requires the slot-request API"
+                disabled={busy}
+                onClick={() => onAction?.(request.id, 'reject')}
               >
-                Cancel request
+                Decline
               </Button>
-            ))}
+              <Button
+                type="button"
+                variant="primary"
+                disabled={busy}
+                onClick={() => onAction?.(request.id, 'accept')}
+              >
+                Accept
+              </Button>
+            </>
+          ) : null}
+          {canCancel ? (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={busy}
+              onClick={() => onAction?.(request.id, 'cancel')}
+            >
+              Cancel request
+            </Button>
+          ) : null}
         </footer>
         {actionError ? <p className={styles['actionError']} role="alert">{actionError}</p> : null}
       </section>
@@ -187,10 +195,10 @@ function Details({ request }: { readonly request: SlotRequest }) {
       <section className={styles['detailSection']}>
         <h3>Artists &amp; promoters</h3>
         <div className={styles['tagList']}>
-          {event.artists.map((artist) => (
+          {(event.artists ?? []).map((artist) => (
             <span key={artist}>{artist}</span>
           ))}
-          {event.promoters.map((promoter) => (
+          {(event.promoters ?? []).map((promoter) => (
             <span key={promoter}>{promoter}</span>
           ))}
         </div>
@@ -198,7 +206,7 @@ function Details({ request }: { readonly request: SlotRequest }) {
       <section className={styles['detailSection']}>
         <h3>Ticket tiers</h3>
         <div className={styles['tierList']}>
-          {event.tiers.map((tier) => (
+          {(event.tiers ?? []).map((tier) => (
             <div key={tier.name}>
               <span>
                 <strong>{tier.name}</strong>
@@ -212,7 +220,7 @@ function Details({ request }: { readonly request: SlotRequest }) {
       <section className={styles['detailSection']}>
         <h3>Dynamic pricing</h3>
         <div className={styles['tagList']}>
-          {event.pricing.map((price) => (
+          {(event.pricing ?? []).map((price) => (
             <span key={price}>{price}</span>
           ))}
         </div>

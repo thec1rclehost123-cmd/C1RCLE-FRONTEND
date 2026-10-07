@@ -8,13 +8,21 @@ import { SlotRequestStatusBadge } from './SlotRequestStatusBadge';
 
 import type { SlotRequest, SlotRequestActionKind } from '@/data/partner-data-source';
 
+export interface SlotRequestCardProps {
+  readonly request: SlotRequest;
+  readonly busy?: boolean;
+  readonly actionError?: string | null;
+  readonly onOpen: () => void;
+  readonly onAction?: (id: string, kind: SlotRequestActionKind) => void;
+}
+
 export function SlotRequestCard({
   request,
+  busy,
+  actionError,
   onOpen,
-}: {
-  readonly request: SlotRequest;
-  readonly onOpen: () => void;
-}) {
+  onAction,
+}: SlotRequestCardProps) {
   const isIncoming = request.direction === 'incoming';
   const canDecide = isIncoming && request.status === 'pending';
   const canCancel = !isIncoming && request.status === 'approved';
@@ -75,37 +83,43 @@ export function SlotRequestCard({
           <p className={styles['requestNote']}>{request.event.note}</p>
         </div>
       </button>
-      {request.status === 'pending' ? (
+      {canDecide || canCancel ? (
         <div className={styles['requestCardActions']}>
-          {isIncoming ? (
+          {canDecide ? (
             <>
               <Button
                 type="button"
                 variant="secondary"
-                disabled
-                title="Request decisions require the slot-request API"
+                disabled={busy}
+                onClick={() => onAction?.(request.id, 'reject')}
               >
                 Decline
               </Button>
               <Button
                 type="button"
                 variant="primary"
-                disabled
-                title="Request decisions require the slot-request API"
+                disabled={busy}
+                onClick={() => onAction?.(request.id, 'accept')}
               >
                 Accept
               </Button>
             </>
-          ) : (
+          ) : null}
+          {canCancel ? (
             <Button
               type="button"
               variant="secondary"
-              disabled
-              title="Request cancellation requires the slot-request API"
+              disabled={busy}
+              onClick={() => onAction?.(request.id, 'cancel')}
             >
               Cancel request
             </Button>
-          )}
+          ) : null}
+          {actionError ? (
+            <p className={styles['actionError']} role="alert">
+              {actionError}
+            </p>
+          ) : null}
         </div>
       ) : null}
     </article>

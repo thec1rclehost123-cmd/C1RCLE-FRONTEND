@@ -63,6 +63,7 @@ export const partnerNotificationSchema = z.object({
   time: z.string(),
   type: z.enum(['payout', 'request', 'marketing', 'operations', 'system']),
   icon: z.enum(['finance', 'partner', 'marketing', 'operations', 'request']),
+  category: z.enum(['partners', 'events', 'finance', 'ops']).optional(),
   href: z.string().optional(),
   unread: z.boolean(),
 });
@@ -103,6 +104,20 @@ export async function loadSlotRequestsData(
   });
 }
 
+function toNotificationCategory(type: string): PartnerNotification['category'] {
+  switch (type) {
+    case 'payout':
+      return 'finance';
+    case 'operations':
+      return 'ops';
+    case 'marketing':
+      return 'events';
+    case 'request':
+    default:
+      return 'partners';
+  }
+}
+
 export async function loadSlotRequestNotifications(
   direction: SlotRequestDirection,
 ): Promise<PartnerNotification[]> {
@@ -113,7 +128,10 @@ export async function loadSlotRequestNotifications(
     schema: slotRequestNotificationsSchema,
     timeoutMs: 30000,
   });
-  return data.notifications;
+  return data.notifications.map((notification) => ({
+    ...notification,
+    category: notification.category ?? toNotificationCategory(notification.type),
+  }));
 }
 
 export async function applySlotRequestAction(

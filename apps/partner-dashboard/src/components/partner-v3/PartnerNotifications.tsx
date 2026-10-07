@@ -12,8 +12,6 @@ import {
   PartnerIcon,
 } from '@c1rcle/icons';
 
-import { loadSlotRequestNotifications } from '@/lib/slot-requests/slot-request-repository';
-
 import styles from './partner-v3.module.css';
 
 import type {
