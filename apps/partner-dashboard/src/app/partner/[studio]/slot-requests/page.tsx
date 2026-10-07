@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
 
 import { SlotRequestScreen } from '@/components/partner-v3/slot-requests/SlotRequestScreen';
-import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
 
 import type { SlotRequestScreenProps } from '@/components/partner-v3/slot-requests/SlotRequestScreen';
 
@@ -23,14 +22,11 @@ export default async function StudioSlotRequestsPage({
     getValue(query['panel']) === 'preview' ? 'preview' : 'details';
   const previewMode: SlotRequestScreenProps['initialPreviewMode'] =
     getValue(query['preview']) === 'mobile' ? 'mobile' : 'guest';
-  const data =
-    studio === 'venue'
-      ? await fixturePartnerDataSource.getVenueSlotRequests()
-      : await fixturePartnerDataSource.getHostSlotRequests();
+  const direction = studio === 'venue' ? 'incoming' : 'outgoing';
   const requestId = getValue(query['request']);
   return (
     <SlotRequestScreen
-      data={data}
+      direction={direction}
       initialView={view}
       {...(requestId ? { initialRequestId: requestId } : {})}
       initialPanel={panel}

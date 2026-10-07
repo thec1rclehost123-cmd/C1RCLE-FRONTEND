@@ -1,5 +1,9 @@
+import { cookies } from 'next/headers';
+
+import { getServerSession } from '@c1rcle/auth/server-session';
+
 import { AppShell } from '@/components/app-shell';
-import { SessionBootstrap } from '@/components/session-bootstrap';
+import { SessionProvider } from '@/components/providers/session-provider';
 import { getMetadataBase, publicRobots } from '@/lib/seo/metadata';
 
 import './globals.css';
@@ -24,7 +28,9 @@ export const viewport: Viewport = {
   themeColor: '#000000',
 };
 
-export default function RootLayout({ children }: { readonly children: ReactNode }) {
+export default async function RootLayout({ children }: { readonly children: ReactNode }) {
+  const session = await getServerSession((await cookies()).toString());
+
   return (
     <html lang="en">
       <body className="min-h-dvh bg-black text-white antialiased">
@@ -35,8 +41,9 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
           Skip to content
         </a>
 
-        <SessionBootstrap />
-        <AppShell>{children}</AppShell>
+        <SessionProvider initialUser={session}>
+          <AppShell>{children}</AppShell>
+        </SessionProvider>
       </body>
     </html>
   );

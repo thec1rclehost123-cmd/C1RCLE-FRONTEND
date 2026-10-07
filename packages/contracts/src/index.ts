@@ -524,3 +524,7 @@ export {
   notificationDecisionSchema,
   notificationActionRequestSchema,
 } from './contracts/notifications.js';
+
+// Guest profile (guest-portal signup onboarding)
+export type { GuestProfileDto, UpsertGuestProfileRequest } from './contracts/guest-profile.js';
+export { guestProfileDtoSchema, upsertGuestProfileSchema } from './contracts/guest-profile.js';

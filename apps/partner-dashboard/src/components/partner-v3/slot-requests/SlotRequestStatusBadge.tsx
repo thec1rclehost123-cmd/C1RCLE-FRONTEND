@@ -6,6 +6,7 @@ const labels: Record<SlotRequestStatus, string> = {
   pending: 'Pending',
   approved: 'Approved',
   rejected: 'Rejected',
+  cancelled: 'Cancelled',
 };
 
 export function SlotRequestStatusBadge({ status }: { readonly status: SlotRequestStatus }) {
@@ -13,6 +14,7 @@ export function SlotRequestStatusBadge({ status }: { readonly status: SlotReques
     pending: styles['statusPending'],
     approved: styles['statusApproved'],
     rejected: styles['statusRejected'],
+    cancelled: styles['statusCancelled'],
   }[status];
   return (
     <span className={[styles['statusBadge'], statusClass].join(' ')}>

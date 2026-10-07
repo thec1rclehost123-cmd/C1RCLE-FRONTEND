@@ -84,7 +84,13 @@ describe('LoginPage', () => {
 
   it('shows a back-off message on rate limiting', async () => {
     mockLogin.mockRejectedValue(
-      new ApiClientError({ status: 429, code: statusToErrorCode(429), message: 'x' }),
+      new ApiClientError({
+        status: 429,
+        code: statusToErrorCode(429),
+        message: 'x',
+        requestId: undefined,
+        fieldErrors: undefined,
+      }),
     );
     render(<LoginPageClient />);
 

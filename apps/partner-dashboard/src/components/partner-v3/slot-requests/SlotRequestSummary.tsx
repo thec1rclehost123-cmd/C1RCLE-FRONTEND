@@ -6,6 +6,7 @@ const cards: readonly { readonly status: SlotRequestStatus; readonly label: stri
   { status: 'pending', label: 'Pending' },
   { status: 'approved', label: 'Approved' },
   { status: 'rejected', label: 'Rejected' },
+  { status: 'cancelled', label: 'Cancelled' },
 ];
 
 export function SlotRequestSummary({
@@ -13,16 +14,17 @@ export function SlotRequestSummary({
 }: {
   readonly counts: Readonly<Record<SlotRequestStatus, number>>;
 }) {
-  const toneClass = {
+  const toneClass: Record<SlotRequestStatus, string | undefined> = {
     pending: styles['summaryPending'],
     approved: styles['summaryApproved'],
     rejected: styles['summaryRejected'],
+    cancelled: styles['summaryRejected'],
   };
   return (
     <section className={styles['summaryGrid']} aria-label="Slot request summary">
       {cards.map((card) => (
         <article
-          className={[styles['summaryCard'], toneClass[card.status]].join(' ')}
+          className={[styles['summaryCard'], toneClass[card.status]].filter(Boolean).join(' ')}
           key={card.status}
         >
           <span>{card.label}</span>

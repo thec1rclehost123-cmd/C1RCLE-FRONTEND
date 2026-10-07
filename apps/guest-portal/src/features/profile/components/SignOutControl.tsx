@@ -24,14 +24,13 @@ export function SignOutControl() {
     };
   }, [dialogOpen]);
 
-  const signOut = async () => {
+  const signOut = () => {
     setPending(true);
-    // Revokes server-side and expires the httpOnly cookie; the BFF clears the
-    // cookie even if the gateway call fails, and local state is always cleared.
-    await logout();
-    setPending(false);
-    setDialogOpen(false);
-    router.replace('/login?next=/profile');
+    void logout().finally(() => {
+      setPending(false);
+      setDialogOpen(false);
+      router.replace('/login?next=/profile');
+    });
   };
 
   return (
@@ -76,9 +75,7 @@ export function SignOutControl() {
                 type="button"
                 aria-label="Confirm sign out"
                 disabled={pending}
-                onClick={() => {
-                  void signOut();
-                }}
+                onClick={signOut}
                 className="inline-flex min-h-11 items-center justify-center rounded-full bg-white px-5 text-[9px] font-black uppercase tracking-[0.2em] text-black"
               >
                 Sign out

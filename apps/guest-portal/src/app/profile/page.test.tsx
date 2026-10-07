@@ -90,9 +90,9 @@ describe('ProfilePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirm sign out' }));
 
     await waitFor(() => {
-      expect(replace).toHaveBeenCalledWith('/login?next=/profile');
+      expect(useSessionStore.getState().status).toBe('anonymous');
     });
-    expect(useSessionStore.getState().status).toBe('anonymous');
+    expect(replace).toHaveBeenCalledWith('/login?next=/profile');
   });
 
   it('provides a pure logged-out view with a safe return target', () => {

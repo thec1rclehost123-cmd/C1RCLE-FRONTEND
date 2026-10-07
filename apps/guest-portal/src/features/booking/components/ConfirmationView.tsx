@@ -52,7 +52,14 @@ export function ConfirmationView({
         >
           <div className="relative flex flex-col items-center justify-center p-6 text-center md:p-8">
             <div className="relative aspect-[3/4] w-full max-w-[240px] overflow-hidden rounded-2xl border border-white/10 shadow-2xl">
-              <Image src={event.image} alt={event.title} fill priority className="object-cover" />
+              <Image
+                src={event.image}
+                alt={event.title}
+                fill
+                unoptimized
+                priority
+                className="object-cover"
+              />
             </div>
             <p className="mt-4 text-[10px] font-black uppercase tracking-[0.2em] text-white/50">
               {event.category}

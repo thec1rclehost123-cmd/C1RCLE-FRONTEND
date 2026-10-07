@@ -11,7 +11,7 @@ export default function EventDetailNotFound() {
           This link has left the list
         </h1>
         <p className="mt-3 text-sm leading-6 text-white/55">
-          The event reference is missing, unavailable, or not part of this fixture preview.
+          The event is unpublished, sold out, removed, or the link is incorrect.
         </p>
         <Link
           href="/explore"

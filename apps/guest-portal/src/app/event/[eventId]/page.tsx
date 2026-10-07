@@ -1,66 +1,94 @@
 import { notFound } from 'next/navigation';
 
-import { AuthoritativeEventView } from '@/features/event-detail/components/AuthoritativeEventView';
+import { createApiClient } from '@c1rcle/api-client';
+import { eventDtoSchema, hostPublicDtoSchema, venueDtoSchema } from '@c1rcle/contracts';
+
 import { EventDetailView } from '@/features/event-detail/components/EventDetailView';
-import { findEventDetailFixture } from '@/features/event-detail/fixtures/event-detail.fixture';
-import { buildPublicMetadata } from '@/lib/seo/metadata';
-import { getPublicEventForSeo } from '@/lib/seo/public-data';
+import { toEventDetailFixture } from '@/features/event-detail/event-detail-mapping';
 import { isProductionSeo } from '@/lib/seo/site';
 
+import type { EventDetailFixture } from '@/features/event-detail/types/event-detail.types';
 import type { Metadata } from 'next';
 
 interface EventDetailPageProps {
   params: Promise<{ eventId: string }>;
 }
 
-export const dynamic = 'force-dynamic';
+/**
+ * Real published events only — `GET /api/v2/public/events/:idOrSlug` 404s
+ * drafts, review, scheduled, ended, archived, and cancelled events, so no
+ * dummy content can reach this page. Venue/host names resolve through the
+ * public by-id lookups; a missing venue/host renders honest placeholders.
+ */
+async function getEventDetail(eventId: string): Promise<EventDetailFixture | null> {
+  const client = createApiClient();
+
+  let event;
+  try {
+    event = await client.get({
+      path: `/api/v2/public/events/${encodeURIComponent(eventId)}`,
+      schema: eventDtoSchema,
+    });
+  } catch {
+    return null;
+  }
+
+  const [venue, host] = await Promise.all([
+    event.venueId
+      ? client
+          .get({
+            path: `/api/v2/public/venues/by-id/${event.venueId}`,
+            schema: venueDtoSchema,
+          })
+          .catch(() => null)
+      : null,
+    client
+      .get({
+        path: `/api/v2/public/hosts/by-id/${event.organizationId}`,
+        schema: hostPublicDtoSchema,
+      })
+      .catch(() => null),
+  ]);
+
+  return toEventDetailFixture(event, venue, host);
+}
 
 export async function generateMetadata({ params }: EventDetailPageProps): Promise<Metadata> {
   const { eventId } = await params;
-  const slug = decodeURIComponent(eventId);
-  const authoritativeDetail = await getPublicEventForSeo(slug);
-
-  if (authoritativeDetail !== null) {
-    return buildPublicMetadata({
-      path: `/event/${encodeURIComponent(authoritativeDetail.slug)}`,
-      title: authoritativeDetail.title,
-      description: authoritativeDetail.summary,
-      image: authoritativeDetail.imageUrl,
-    });
-  }
-
-  if (isProductionSeo()) notFound();
-
-  const event = findEventDetailFixture(slug);
-
+  const event = await getEventDetail(decodeURIComponent(eventId));
   if (!event) {
-    return buildPublicMetadata({
-      path: `/event/${encodeURIComponent(slug)}`,
-      title: 'Event unavailable',
+    if (isProductionSeo()) notFound();
+    return {
+      title: 'Event unavailable | THE C1RCLE',
       description: 'This C1RCLE event is unavailable or has been removed.',
-      indexable: false,
-    });
+      robots: { index: false, follow: false },
+    };
   }
-
-  return buildPublicMetadata({
-    path: `/event/${encodeURIComponent(event.slug)}`,
-    title: event.title,
+  const canonical = `https://thec1rcle.com/event/${encodeURIComponent(event.slug)}`;
+  return {
+    title: `${event.title} | THE C1RCLE`,
     description: event.summary,
-    image: event.image,
-    indexable: false,
-  });
+    alternates: { canonical },
+    robots: { index: false, follow: false },
+    openGraph: {
+      title: event.title,
+      description: event.summary,
+      type: 'website',
+      url: canonical,
+      images: [{ url: event.image, alt: event.title }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: event.title,
+      description: event.summary,
+      images: [event.image],
+    },
+  };
 }
 
 export default async function EventDetailPage({ params }: EventDetailPageProps) {
   const { eventId } = await params;
-  const slug = decodeURIComponent(eventId);
-  const authoritativeDetail = await getPublicEventForSeo(slug);
-
-  if (authoritativeDetail !== null) return <AuthoritativeEventView detail={authoritativeDetail} />;
-
-  const event = isProductionSeo() ? undefined : findEventDetailFixture(slug);
-
+  const event = await getEventDetail(decodeURIComponent(eventId));
   if (!event) notFound();
-
   return <EventDetailView event={event} />;
 }

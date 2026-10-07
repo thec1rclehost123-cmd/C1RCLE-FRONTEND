@@ -2,26 +2,36 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { BackIcon, RefreshIcon } from '@c1rcle/icons';
 
 import { Button } from '@/components/partner-v3/Button';
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
+import {
+  applySlotRequestAction,
+  loadSlotRequestsData,
+  type SlotRequestActionKind,
+} from '@/lib/slot-requests/slot-request-repository';
 
 import styles from './slot-requests.module.css';
 import { SlotRequestCard } from './SlotRequestCard';
 import { SlotRequestReview } from './SlotRequestReview';
 import { SlotRequestSummary } from './SlotRequestSummary';
 
-import type { SlotRequest, SlotRequestStatus, SlotRequestsData } from '@/data/partner-data-source';
+import type {
+  SlotRequest,
+  SlotRequestDirection,
+  SlotRequestStatus,
+  SlotRequestsData,
+} from '@/data/partner-data-source';
 
 type RequestView = 'pending' | 'all';
 type ReviewPanel = 'details' | 'preview';
 type PreviewMode = 'guest' | 'mobile';
 
 export interface SlotRequestScreenProps {
-  readonly data: SlotRequestsData;
+  readonly direction: SlotRequestDirection;
   readonly initialView?: RequestView;
   readonly initialRequestId?: string;
   readonly initialPanel?: ReviewPanel;
@@ -46,8 +56,12 @@ function makeHref(
   return query ? `${pathname}?${query}` : pathname;
 }
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Something went wrong.';
+}
+
 export function SlotRequestScreen({
-  data,
+  direction,
   initialView = 'pending',
   initialRequestId,
   initialPanel = 'details',
@@ -55,21 +69,69 @@ export function SlotRequestScreen({
 }: SlotRequestScreenProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const [data, setData] = useState<SlotRequestsData | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [busyRequestId, setBusyRequestId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<{
+    readonly id: string;
+    readonly message: string;
+  } | null>(null);
+
+  // The initial read runs directly inside the effect with `.then`/`.finally`
+  // callbacks — no synchronous setState in the effect body.
+  useEffect(() => {
+    let isMounted = true;
+    loadSlotRequestsData(direction)
+      .then((next) => {
+        if (isMounted) setData(next);
+      })
+      .catch((error: unknown) => {
+        if (isMounted) setLoadError(errorMessage(error));
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [direction]);
+
+  // Manual refresh: reuse the effect's promise pattern but with an explicit
+  // busy flag so the "Try again" / Refresh buttons show feedback.
+  const load = useCallback(async () => {
+    try {
+      setData(await loadSlotRequestsData(direction));
+    } catch (error) {
+      setLoadError(errorMessage(error));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [direction]);
+
+  const refresh = useCallback(() => {
+    setIsLoading(true);
+    setLoadError(null);
+    void load();
+  }, [load]);
+
   const visibleView = initialView;
   const selectedRequest = useMemo(
-    () => data.requests.find((request) => request.id === initialRequestId),
-    [data.requests, initialRequestId],
+    () => data?.requests.find((request) => request.id === initialRequestId),
+    [data?.requests, initialRequestId],
   );
-  const visibleRequests =
-    visibleView === 'pending'
+  const visibleRequests = data
+    ? visibleView === 'pending'
       ? data.requests.filter((request) => request.status === 'pending')
-      : data.requests;
+      : data.requests
+    : [];
   const counts: Record<SlotRequestStatus, number> = {
-    pending: data.requests.filter((request) => request.status === 'pending').length,
-    approved: data.requests.filter((request) => request.status === 'approved').length,
-    rejected: data.requests.filter((request) => request.status === 'rejected').length,
+    pending: data?.requests.filter((request) => request.status === 'pending').length ?? 0,
+    approved: data?.requests.filter((request) => request.status === 'approved').length ?? 0,
+    rejected: data?.requests.filter((request) => request.status === 'rejected').length ?? 0,
+    cancelled: data?.requests.filter((request) => request.status === 'cancelled').length ?? 0,
   };
-  const isIncoming = data.direction === 'incoming';
+  const isIncoming = direction === 'incoming';
   const closeReview = () => {
     router.push(makeHref(pathname, { view: visibleView }));
   };
@@ -90,10 +152,35 @@ export function SlotRequestScreen({
     router.replace(reviewQuery({ panel: 'preview', preview }));
   };
 
+  const runAction = useCallback(
+    async (slotRequestId: string, kind: SlotRequestActionKind) => {
+      setBusyRequestId(slotRequestId);
+      setActionError(null);
+      try {
+        await applySlotRequestAction(slotRequestId, kind);
+        refresh();
+      } catch (error) {
+        setActionError({ id: slotRequestId, message: errorMessage(error) });
+      } finally {
+        setBusyRequestId(null);
+      }
+    },
+    [refresh],
+  );
+
+  const handleAction = useCallback(
+    (id: string, kind: SlotRequestActionKind) => {
+      void runAction(id, kind);
+    },
+    [runAction],
+  );
+
+  const accent = data?.accent ?? (isIncoming ? 'orange' : 'lavender');
+
   return (
     <PageContainer>
       <div
-        className={[styles['page'], data.accent === 'lavender' ? styles['hostTheme'] : '']
+        className={[styles['page'], accent === 'lavender' ? styles['hostTheme'] : '']
           .filter(Boolean)
           .join(' ')}
       >
@@ -109,7 +196,7 @@ export function SlotRequestScreen({
             type="button"
             variant="ghost"
             onClick={() => {
-              window.location.reload();
+              refresh();
             }}
           >
             <RefreshIcon size={15} aria-hidden="true" />
@@ -145,10 +232,35 @@ export function SlotRequestScreen({
               selectView('all');
             }}
           >
-            All Requests <span>{data.requests.length}</span>
+            All Requests <span>{data?.requests.length ?? 0}</span>
           </button>
         </nav>
-        {visibleRequests.length ? (
+        {loadError !== null && data === null ? (
+          <section className={styles['emptyState']}>
+            <span className={styles['emptyMark']} aria-hidden="true">
+              !
+            </span>
+            <h2>Could not load slot requests</h2>
+            <p>{loadError}</p>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                refresh();
+              }}
+            >
+              Try again
+            </Button>
+          </section>
+        ) : isLoading && data === null ? (
+          <section className={styles['emptyState']} aria-busy="true">
+            <span className={styles['emptyMark']} aria-hidden="true">
+              —
+            </span>
+            <h2>Loading slot requests</h2>
+            <p>Fetching live requests…</p>
+          </section>
+        ) : visibleRequests.length ? (
           <section
             className={styles['requestGrid']}
             aria-label={`${visibleView === 'pending' ? 'Pending' : 'All'} slot requests`}
@@ -157,9 +269,12 @@ export function SlotRequestScreen({
               <SlotRequestCard
                 key={request.id}
                 request={request}
+                busy={busyRequestId === request.id}
+                actionError={actionError?.id === request.id ? actionError.message : null}
                 onOpen={() => {
                   openRequest(request);
                 }}
+                onAction={handleAction}
               />
             ))}
           </section>
@@ -201,6 +316,9 @@ export function SlotRequestScreen({
             onPanelChange={selectPanel}
             onPreviewModeChange={selectPreview}
             onClose={closeReview}
+            busy={busyRequestId === selectedRequest.id}
+            actionError={actionError?.id === selectedRequest.id ? actionError.message : null}
+            onAction={handleAction}
           />
         ) : null}
       </div>
