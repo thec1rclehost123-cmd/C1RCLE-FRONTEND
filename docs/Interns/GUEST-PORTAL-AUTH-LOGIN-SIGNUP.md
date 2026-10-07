@@ -73,43 +73,43 @@ account created at the end:
 
 ### New
 
-| File | Purpose |
-|---|---|
-| `src/lib/bff/auth-proxy.ts` | Sanctioned BFF proxy (only raw-`fetch` module) |
-| `src/app/api/auth/login/route.ts` | BFF → `POST /api/v2/auth/login` (200) |
-| `src/app/api/auth/signup/route.ts` | BFF → `POST /api/v2/auth/signup` (201) |
-| `src/app/api/auth/refresh/route.ts` | BFF → `POST /api/v2/auth/refresh` (CSRF) |
-| `src/app/api/auth/logout/route.ts` | BFF → `POST /api/v2/auth/logout` (204, best-effort) |
-| `src/app/api/auth/session/route.ts` | BFF → `GET /api/v2/auth/session` |
-| `src/app/api/auth/otp/send/route.ts` | BFF → `POST /api/v2/auth/otp/send` |
-| `src/app/api/auth/otp/verify/route.ts` | BFF → `POST /api/v2/auth/otp/verify` |
-| `src/lib/bff/bff-client.ts` | Same-origin BFF API client |
-| `src/lib/api/client.ts` | Gateway API client (Bearer + reauth) |
-| `src/components/providers/session-provider.tsx` | Session bootstrap (30-min idle logout) |
-| `src/app/signup/page.tsx` | Redirects to `/login?mode=signup` |
-| `.env.local` (git-ignored, local only) | `NEXT_PUBLIC_API_BASE_URL=http://localhost:4000` + app name/env |
+| File                                            | Purpose                                                         |
+| ----------------------------------------------- | --------------------------------------------------------------- |
+| `src/lib/bff/auth-proxy.ts`                     | Sanctioned BFF proxy (only raw-`fetch` module)                  |
+| `src/app/api/auth/login/route.ts`               | BFF → `POST /api/v2/auth/login` (200)                           |
+| `src/app/api/auth/signup/route.ts`              | BFF → `POST /api/v2/auth/signup` (201)                          |
+| `src/app/api/auth/refresh/route.ts`             | BFF → `POST /api/v2/auth/refresh` (CSRF)                        |
+| `src/app/api/auth/logout/route.ts`              | BFF → `POST /api/v2/auth/logout` (204, best-effort)             |
+| `src/app/api/auth/session/route.ts`             | BFF → `GET /api/v2/auth/session`                                |
+| `src/app/api/auth/otp/send/route.ts`            | BFF → `POST /api/v2/auth/otp/send`                              |
+| `src/app/api/auth/otp/verify/route.ts`          | BFF → `POST /api/v2/auth/otp/verify`                            |
+| `src/lib/bff/bff-client.ts`                     | Same-origin BFF API client                                      |
+| `src/lib/api/client.ts`                         | Gateway API client (Bearer + reauth)                            |
+| `src/components/providers/session-provider.tsx` | Session bootstrap (30-min idle logout)                          |
+| `src/app/signup/page.tsx`                       | Redirects to `/login?mode=signup`                               |
+| `.env.local` (git-ignored, local only)          | `NEXT_PUBLIC_API_BASE_URL=http://localhost:4000` + app name/env |
 
 ### Modified (rewritten or updated)
 
-| File | Change |
-|---|---|
-| `src/app/login/login-page-client.tsx` | Rewritten: credentials → OTP → (signup: identity → city → tastes → intent) state machine; email/password + OTP-gated `login()`/`signup()` (preferred name sent as `displayName`); `?next=` redirect, authed bounce, `initialMode`/`nextPath` props |
-| `src/app/login/page.tsx` | Async server page: resolves `mode`/`next` from `searchParams`, `key`-remount, `Suspense` |
-| `src/app/login/page.test.tsx` | 6 tests: email form, OTP gate → backend call, full signup onboarding (name/18+/city/3-tastes/intent → `signup()`), onboarding render, mode toggle, fixed OTP |
-| `src/features/auth/components/LoginFormCard.tsx` | Rewritten: credentials (email/password) + `OtpVerifyStep` + restored identity/city/tastes/intent branches + complete; provider buttons removed |
-| `src/features/auth/types/login.types.ts` | `AuthMode`, 7-step `AuthStep`, email + onboarding `LoginFormState`, restored `LoginFixtureData` |
-| `src/features/auth/fixtures/login.fixture.ts` | Hero + `defaultOtp: '123456'` + restored cities/tastes/intents |
-| `src/features/auth/components/CitySelectorStep.tsx` | Restored city grid (deleted earlier, brought back) |
-| `src/app/layout.tsx` | Async + `SessionProvider` server bootstrap |
-| `src/components/layout/NavbarActions.tsx` | Session-aware via `useSession()` |
-| `src/features/profile/components/SignOutControl.tsx` | Real `logout()` instead of local `clearSession()` |
-| `src/app/profile/page.test.tsx` | Awaits async sign-out |
-| `vitest.setup.ts` | `login/signup/logout/refresh/fetchSession` auth mocks |
+| File                                                 | Change                                                                                                                                                                                                                                             |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/app/login/login-page-client.tsx`                | Rewritten: credentials → OTP → (signup: identity → city → tastes → intent) state machine; email/password + OTP-gated `login()`/`signup()` (preferred name sent as `displayName`); `?next=` redirect, authed bounce, `initialMode`/`nextPath` props |
+| `src/app/login/page.tsx`                             | Async server page: resolves `mode`/`next` from `searchParams`, `key`-remount, `Suspense`                                                                                                                                                           |
+| `src/app/login/page.test.tsx`                        | 6 tests: email form, OTP gate → backend call, full signup onboarding (name/18+/city/3-tastes/intent → `signup()`), onboarding render, mode toggle, fixed OTP                                                                                       |
+| `src/features/auth/components/LoginFormCard.tsx`     | Rewritten: credentials (email/password) + `OtpVerifyStep` + restored identity/city/tastes/intent branches + complete; provider buttons removed                                                                                                     |
+| `src/features/auth/types/login.types.ts`             | `AuthMode`, 7-step `AuthStep`, email + onboarding `LoginFormState`, restored `LoginFixtureData`                                                                                                                                                    |
+| `src/features/auth/fixtures/login.fixture.ts`        | Hero + `defaultOtp: '123456'` + restored cities/tastes/intents                                                                                                                                                                                     |
+| `src/features/auth/components/CitySelectorStep.tsx`  | Restored city grid (deleted earlier, brought back)                                                                                                                                                                                                 |
+| `src/app/layout.tsx`                                 | Async + `SessionProvider` server bootstrap                                                                                                                                                                                                         |
+| `src/components/layout/NavbarActions.tsx`            | Session-aware via `useSession()`                                                                                                                                                                                                                   |
+| `src/features/profile/components/SignOutControl.tsx` | Real `logout()` instead of local `clearSession()`                                                                                                                                                                                                  |
+| `src/app/profile/page.test.tsx`                      | Awaits async sign-out                                                                                                                                                                                                                              |
+| `vitest.setup.ts`                                    | `login/signup/logout/refresh/fetchSession` auth mocks                                                                                                                                                                                              |
 
 ### Deleted
 
-| File | Reason |
-|---|---|
+| File                                         | Reason                            |
+| -------------------------------------------- | --------------------------------- |
 | `src/features/auth/components/PhoneStep.tsx` | Phone flow removed (kept deleted) |
 
 ---
@@ -173,7 +173,7 @@ browser-only anymore.
 ## 8. Real data on explore + event detail (no dummies)
 
 - `/explore` is an async Server Component fetching `GET
-  /api/v2/public/discovery` (published-only via `isPublic`) + per-venue
+/api/v2/public/discovery` (published-only via `isPublic`) + per-venue
   `GET /api/v2/public/venues/by-id/:venueId`, mapped by pure
   `features/explore/explore-mapping.ts` (paise/ISO untouched, honest
   fallbacks, cities derived from real venues). API failure → typed empty
