@@ -1,187 +1,108 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { login, signup } from '@c1rcle/auth';
-import { guestProfileDtoSchema } from '@c1rcle/contracts';
+import { ApiClientError, statusToErrorCode } from '@c1rcle/api-client';
+import { login } from '@c1rcle/auth';
 
-import { apiClient } from '@/lib/api/client';
+import { LoginPageClient } from './login-page-client';
 
-import { loginFixture } from '../../features/auth/fixtures/login.fixture';
-
-import { isValidFixtureOtp, LoginPageClient } from './login-page-client';
+const replace = vi.fn();
+const refreshRouter = vi.fn();
+let search = '';
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+  useRouter: () => ({ replace, refresh: refreshRouter }),
+  useSearchParams: () => new URLSearchParams(search),
 }));
 
-vi.mock('@/lib/api/client', () => ({
-  apiClient: { put: vi.fn() },
-}));
+vi.mock('@c1rcle/auth', () => ({ login: vi.fn() }));
 
-function completeSignupCredentials() {
-  fireEvent.change(screen.getByLabelText(/email address/i), {
-    target: { value: 'new@example.com' },
-  });
-  fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'longenough1' } });
-  fireEvent.click(screen.getByRole('button', { name: /^continue$/i }));
-  fireEvent.change(screen.getByLabelText(/enter verification code/i), {
-    target: { value: '123456' },
-  });
-  fireEvent.click(screen.getByRole('button', { name: /verify & continue/i }));
+const mockLogin = vi.mocked(login);
+
+function fill(email: string, password: string) {
+  fireEvent.change(screen.getByLabelText(/email address/i), { target: { value: email } });
+  fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: password } });
 }
 
 describe('LoginPage', () => {
-  it('renders the email and password login form without third-party providers', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    search = '';
+  });
+
+  it('renders a real email and password form with no fixture OTP or social stubs', () => {
     render(<LoginPageClient />);
 
-    expect(screen.getByText(/GET IN/i)).toBeInTheDocument();
-    expect(screen.getByText(loginFixture.hero.tagline)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /sign in/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /continue with apple/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /continue with google/i })).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /continue with phone number/i }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/mobile number/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/^password/i)).toBeInTheDocument();
+    expect(screen.queryByText(/demo code|fixture|preview|123456/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /forgot your password/i })).toHaveAttribute(
+      'href',
+      '/forgot-password',
+    );
   });
 
-  it('logs in directly with email and password, no verification code', async () => {
-    vi.mocked(login).mockResolvedValue(undefined);
+  it('signs in through @c1rcle/auth and returns to the validated next path', async () => {
+    search = 'next=/tickets';
+    mockLogin.mockResolvedValue(undefined);
     render(<LoginPageClient />);
 
-    fireEvent.change(screen.getByLabelText(/email address/i), {
-      target: { value: 'guest@example.com' },
-    });
-    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'password123' } });
-    fireEvent.click(screen.getByRole('button', { name: /^continue$/i }));
+    fill(' g@x.com ', 'password123');
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
 
     await waitFor(() => {
-      expect(login).toHaveBeenCalledWith({
-        email: 'guest@example.com',
-        password: 'password123',
-      });
+      expect(replace).toHaveBeenCalledWith('/tickets');
     });
-    expect(screen.queryByLabelText(/enter verification code/i)).not.toBeInTheDocument();
+    expect(mockLogin).toHaveBeenCalledWith({ email: 'g@x.com', password: 'password123' });
   });
 
-  it('signs up through onboarding and enforces the backend password minimum', async () => {
-    vi.mocked(signup).mockResolvedValue(undefined);
-    vi.mocked(apiClient.put).mockResolvedValue({
-      userId: 'user_1',
-      displayName: 'Aayush',
-      dateOfBirth: '2000-01-01',
-      city: 'Mumbai',
-      tastes: ['Rooftops', 'Live music', 'Art & culture'],
-      intents: ['Find events'],
-      createdAt: '2026-09-08T00:00:00.000Z',
-      updatedAt: '2026-09-08T00:00:00.000Z',
-    });
-    render(<LoginPageClient initialMode="signup" />);
+  it('ignores an open-redirect next target', async () => {
+    search = 'next=https://evil.example';
+    mockLogin.mockResolvedValue(undefined);
+    render(<LoginPageClient />);
 
-    fireEvent.change(screen.getByLabelText(/email address/i), {
-      target: { value: 'new@example.com' },
-    });
-    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'short' } });
-    fireEvent.click(screen.getByRole('button', { name: /^continue$/i }));
-    expect(screen.getByRole('alert')).toHaveTextContent(/at least 8 characters/i);
-    expect(signup).not.toHaveBeenCalled();
-
-    fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'longenough1' } });
-    fireEvent.click(screen.getByRole('button', { name: /^continue$/i }));
-    fireEvent.change(screen.getByLabelText(/enter verification code/i), {
-      target: { value: '123456' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: /verify & continue/i }));
-
-    // Identity: preferred name + 18+ check.
-    expect(screen.getByRole('heading', { name: /what should we call you/i })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /^continue$/i }));
-    expect(screen.getByRole('alert')).toHaveTextContent(/what we should call you/i);
-
-    fireEvent.change(screen.getByLabelText(/preferred name/i), { target: { value: 'Aayush' } });
-    fireEvent.change(screen.getByLabelText(/date of birth/i), {
-      target: { value: '2015-01-01' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: /^continue$/i }));
-    expect(screen.getByRole('alert')).toHaveTextContent(/at least 18 years old/i);
-
-    fireEvent.change(screen.getByLabelText(/date of birth/i), {
-      target: { value: '2000-01-01' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: /^continue$/i }));
-
-    // City.
-    expect(screen.getByRole('heading', { name: /where are you going out/i })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Mumbai' }));
-    fireEvent.click(screen.getByRole('button', { name: /^continue$/i }));
-
-    // Tastes: at least three.
-    expect(screen.getByRole('heading', { name: /what kind of nights/i })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /^continue$/i }));
-    expect(screen.getByRole('alert')).toHaveTextContent(/at least three/i);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Rooftops' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Live music' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Art & culture' }));
-    fireEvent.click(screen.getByRole('button', { name: /^continue$/i }));
-
-    // Intent: at least one, then the backend account is created.
-    expect(screen.getByRole('heading', { name: /what brings you here/i })).toBeInTheDocument();
-    expect(signup).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Find events' }));
-    fireEvent.click(screen.getByRole('button', { name: /^finish$/i }));
+    fill('g@x.com', 'password123');
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
 
     await waitFor(() => {
-      expect(signup).toHaveBeenCalledWith({
-        email: 'new@example.com',
-        password: 'longenough1',
-        displayName: 'Aayush',
-      });
+      expect(replace).toHaveBeenCalledWith('/profile');
     });
-    await waitFor(() => {
-      expect(apiClient.put).toHaveBeenCalledWith({
-        path: '/api/v2/profile/me',
-        body: {
-          displayName: 'Aayush',
-          dateOfBirth: '2000-01-01',
-          city: 'Mumbai',
-          tastes: ['Rooftops', 'Live music', 'Art & culture'],
-          intents: ['Find events'],
-        },
-        schema: guestProfileDtoSchema,
-      });
-    });
-    expect(signup).toHaveBeenCalledTimes(1);
   });
 
-  it('walks the restored onboarding steps after the demo code', () => {
-    vi.mocked(signup).mockResolvedValue(undefined);
-    render(<LoginPageClient initialMode="signup" />);
-    completeSignupCredentials();
+  it('shows one generic message for bad credentials and stays on the page', async () => {
+    mockLogin.mockRejectedValue(new Error('Authentication failed'));
+    render(<LoginPageClient />);
 
-    expect(screen.getByRole('heading', { name: /what should we call you/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/preferred name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/date of birth/i)).toBeInTheDocument();
+    fill('g@x.com', 'wrong');
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/incorrect email or password/i);
+    expect(replace).not.toHaveBeenCalled();
   });
 
-  it('toggles between login and signup modes inside the form', () => {
-    render(<LoginPageClient initialMode="login" />);
+  it('shows a back-off message on rate limiting', async () => {
+    mockLogin.mockRejectedValue(
+      new ApiClientError({
+        status: 429,
+        code: statusToErrorCode(429),
+        message: 'x',
+        requestId: undefined,
+        fieldErrors: undefined,
+      }),
+    );
+    render(<LoginPageClient />);
 
-    expect(screen.queryByPlaceholderText(/min. 8 characters/i)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /create an account/i }));
-    expect(screen.getByPlaceholderText(/min. 8 characters/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
-    expect(screen.queryByPlaceholderText(/min. 8 characters/i)).not.toBeInTheDocument();
+    fill('g@x.com', 'password123');
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/too many attempts/i);
   });
 
-  it('keeps the demo OTP fixed at 123456', () => {
-    expect(loginFixture.defaultOtp).toBe('123456');
-    expect(isValidFixtureOtp('123456')).toBe(true);
-    expect(isValidFixtureOtp('654321')).toBe(false);
-    expect(isValidFixtureOtp('12345')).toBe(false);
-    expect(isValidFixtureOtp('1234567')).toBe(false);
+  it('explains an expired session', () => {
+    search = 'next=/profile&reason=expired';
+    render(<LoginPageClient />);
+    expect(screen.getByRole('status')).toHaveTextContent(/session expired/i);
   });
 });

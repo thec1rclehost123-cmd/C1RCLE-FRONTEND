@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import { logout } from '@c1rcle/auth';
-import { logout } from '@c1rcle/auth';
 
 export function SignOutControl() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -26,7 +25,9 @@ export function SignOutControl() {
   }, [dialogOpen]);
 
   const signOut = () => {
+    setPending(true);
     void logout().finally(() => {
+      setPending(false);
       setDialogOpen(false);
       router.replace('/login?next=/profile');
     });

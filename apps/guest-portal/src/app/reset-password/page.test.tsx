@@ -74,7 +74,13 @@ describe('ResetPasswordClient', () => {
 
   it('maps a backend rejection to an expired-link message', async () => {
     mockReset.mockRejectedValue(
-      new ApiClientError({ status: 400, code: statusToErrorCode(400), message: 'bad token' }),
+      new ApiClientError({
+        status: 400,
+        code: statusToErrorCode(400),
+        message: 'bad token',
+        requestId: undefined,
+        fieldErrors: undefined,
+      }),
     );
     render(<ResetPasswordClient />);
     await waitFor(() => {

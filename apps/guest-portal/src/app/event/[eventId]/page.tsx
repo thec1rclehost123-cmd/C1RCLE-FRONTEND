@@ -5,6 +5,7 @@ import { eventDtoSchema, hostPublicDtoSchema, venueDtoSchema } from '@c1rcle/con
 
 import { EventDetailView } from '@/features/event-detail/components/EventDetailView';
 import { toEventDetailFixture } from '@/features/event-detail/event-detail-mapping';
+import { isProductionSeo } from '@/lib/seo/site';
 
 import type { EventDetailFixture } from '@/features/event-detail/types/event-detail.types';
 import type { Metadata } from 'next';
@@ -35,11 +36,11 @@ async function getEventDetail(eventId: string): Promise<EventDetailFixture | nul
   const [venue, host] = await Promise.all([
     event.venueId
       ? client
-        .get({
-          path: `/api/v2/public/venues/by-id/${event.venueId}`,
-          schema: venueDtoSchema,
-        })
-        .catch(() => null)
+          .get({
+            path: `/api/v2/public/venues/by-id/${event.venueId}`,
+            schema: venueDtoSchema,
+          })
+          .catch(() => null)
       : null,
     client
       .get({
@@ -56,6 +57,7 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
   const { eventId } = await params;
   const event = await getEventDetail(decodeURIComponent(eventId));
   if (!event) {
+    if (isProductionSeo()) notFound();
     return {
       title: 'Event unavailable | THE C1RCLE',
       description: 'This C1RCLE event is unavailable or has been removed.',
@@ -66,9 +68,22 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
   return {
     title: `${event.title} | THE C1RCLE`,
     description: event.summary,
-    image: event.image,
-    indexable: false,
-  });
+    alternates: { canonical },
+    robots: { index: false, follow: false },
+    openGraph: {
+      title: event.title,
+      description: event.summary,
+      type: 'website',
+      url: canonical,
+      images: [{ url: event.image, alt: event.title }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: event.title,
+      description: event.summary,
+      images: [event.image],
+    },
+  };
 }
 
 export default async function EventDetailPage({ params }: EventDetailPageProps) {

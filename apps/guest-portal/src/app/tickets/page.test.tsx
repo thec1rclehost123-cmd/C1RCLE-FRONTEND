@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { clearSession, useSessionStore } from '@c1rcle/auth';
+import { useSessionStore } from '@c1rcle/auth';
 
 import TicketsPage from './page';
 

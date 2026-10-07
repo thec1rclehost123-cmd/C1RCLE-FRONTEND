@@ -8,14 +8,30 @@
  * Configuration still comes only from `@c1rcle/config`, never the raw
  * environment.
  */
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 import { getClientEnv } from '@c1rcle/config';
 
-import type { NextRequest } from 'next/server';
+import { assertSameOrigin, errorEnvelope } from './gateway-proxy';
 
-/** Non-httpOnly double-submit token cookie. Readable by `@c1rcle/auth` so it can echo the header. */
-export const CSRF_COOKIE = 'c1rcle.csrf';
+function newRequestId(): string {
+  return crypto.randomUUID();
+}
+
+export { assertSameOrigin, errorEnvelope };
+
+/**
+ * Non-httpOnly double-submit token cookie. Readable by `@c1rcle/auth` so it
+ * can echo the header. Namespaced by `NEXT_PUBLIC_APP_ID` (must match
+ * `@c1rcle/auth`'s `csrfCookieName()`) so this doesn't collide with
+ * the other apps' CSRF cookies on shared-host dev ports.
+ * Resolved lazily (a function, not a module-level const) so
+ * `getClientEnv()`'s validation runs at first call, not at import time —
+ * important for tests that stub env vars in `beforeEach`.
+ */
+export function csrfCookieName(): string {
+  return `${getClientEnv().NEXT_PUBLIC_APP_ID}.c1rcle.csrf`;
+}
 export const CSRF_HEADER = 'x-csrf-token';
 
 function gatewayBaseUrl(): string {
@@ -63,32 +79,6 @@ function isProduction(): boolean {
   return getClientEnv().NEXT_PUBLIC_ENVIRONMENT === 'production';
 }
 
-function newRequestId(): string {
-  return crypto.randomUUID();
-}
-
-/** Flat error envelope, matching the gateway's shape (`{ code, message, status, requestId }`). */
-export function errorEnvelope(code: string, message: string, status: number): NextResponse {
-  return NextResponse.json({ code, message, status, requestId: newRequestId() }, { status });
-}
-
-/**
- * Rejects a request whose `Origin` is present and not this app's origin, or
- * whose `Sec-Fetch-Site` is `cross-site`. A missing `Origin` (same-origin GET,
- * server-to-server) is allowed through — the CSRF token check is the second
- * line for state-changing routes.
- */
-export function assertSameOrigin(req: NextRequest): NextResponse | null {
-  const origin = req.headers.get('origin');
-  if (origin !== null && origin !== req.nextUrl.origin) {
-    return errorEnvelope('forbidden', 'Cross-origin request rejected.', 403);
-  }
-  if (req.headers.get('sec-fetch-site') === 'cross-site') {
-    return errorEnvelope('forbidden', 'Cross-site request rejected.', 403);
-  }
-  return null;
-}
-
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length || a.length === 0) {
     return false;
@@ -102,12 +92,23 @@ function timingSafeEqual(a: string, b: string): boolean {
 
 /** Double-submit: the `c1rcle.csrf` cookie must equal the `x-csrf-token` header. */
 export function assertCsrf(req: NextRequest): NextResponse | null {
-  const cookie = req.cookies.get(CSRF_COOKIE)?.value ?? '';
+  const cookie = req.cookies.get(csrfCookieName())?.value ?? '';
   const header = req.headers.get(CSRF_HEADER) ?? '';
   if (!timingSafeEqual(cookie, header)) {
     return errorEnvelope('forbidden', 'CSRF check failed.', 403);
   }
   return null;
+}
+
+/**
+ * A dynamic `[id]` segment is URL-decoded by Next before it reaches the
+ * handler, so `..%2F..%2Fx` would otherwise be spliced into the gateway path.
+ * Gateway ids are opaque `[A-Za-z0-9_-]` tokens; anything else is rejected.
+ */
+export function assertPathId(id: string): NextResponse | null {
+  return /^[A-Za-z0-9_-]{1,128}$/.test(id)
+    ? null
+    : errorEnvelope('validation', 'Invalid identifier.', 400);
 }
 
 const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
@@ -144,7 +145,7 @@ export function mintCsrfToken(): string {
 }
 
 export function setCsrfCookie(res: NextResponse, token: string): void {
-  res.cookies.set(CSRF_COOKIE, token, {
+  res.cookies.set(csrfCookieName(), token, {
     httpOnly: false,
     sameSite: 'strict',
     secure: isProduction(),
@@ -152,12 +153,36 @@ export function setCsrfCookie(res: NextResponse, token: string): void {
   });
 }
 
+/**
+ * Actively expires the frontend-scoped session cookie. Logout must not depend
+ * on the gateway: if its revoke call fails (or its response carries no
+ * `Set-Cookie`), the browser would otherwise keep a live session cookie.
+ */
+export function clearSessionCookie(res: NextResponse): void {
+  res.cookies.set(SESSION_COOKIE_NAME, '', {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isProduction(),
+    path: '/',
+    maxAge: 0,
+  });
+  if (isProduction()) {
+    res.cookies.set(`__Secure-${SESSION_COOKIE_NAME}`, '', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: true,
+      path: '/',
+      maxAge: 0,
+    });
+  }
+}
+
 export function clearCsrfCookie(res: NextResponse): void {
-  res.cookies.set(CSRF_COOKIE, '', { path: '/', maxAge: 0 });
+  res.cookies.set(csrfCookieName(), '', { path: '/', maxAge: 0 });
 }
 
 export interface ForwardInit {
-  readonly method: 'GET' | 'POST' | 'PATCH';
+  readonly method: 'GET' | 'POST';
   readonly body?: unknown;
   readonly cookie?: string | null;
   /** Extra headers to forward verbatim (e.g. `Idempotency-Key`). */
@@ -265,9 +290,11 @@ export function rescopeSessionCookies(gatewayResponse: Response, res: NextRespon
      * gateway (useSecureCookies) emits `__Secure-better-auth.session_token` —
      * the browser only accepts names with that prefix over HTTPS AND with the
      * `Secure` attribute, so on an http://localhost dev origin the cookie is
-     * silently rejected. Stripping the prefix makes it store on any origin;
-     * `Secure` is still imposed in production where the frontend origin is
-     * HTTPS. `forwardToGateway` re-adds the prefixed twin for the gateway.
+     * silently rejected and the edge's presence check would redirect every
+     * `/onboard` request to `/login`. Stripping the prefix makes it store on
+     * any origin; `Secure` is still imposed in production where the frontend
+     * origin is HTTPS. `forwardToGateway` re-adds the prefixed twin for the
+     * gateway, which may expect it.
      */
     const name = parsed.name.replace(/^__Secure-/, '');
     names.push(name);
@@ -293,25 +320,56 @@ function isFlatEnvelope(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Passes a gateway error response through unchanged when it is already the
- * flat envelope (the gateway owns the messaging — including the login
- * account-existence-oracle suppression). Falls back to a generic envelope for
- * a non-JSON / malformed error body.
+ * Passes a gateway error through when it is already the flat envelope (the
+ * gateway owns the messaging, including the login account-existence-oracle
+ * suppression). Only the documented envelope fields are copied, so nothing
+ * else an upstream might attach (stack, hostnames) can reach the browser.
+ * A 429's `Retry-After` is relayed so the UI can back off. Anything that is
+ * not a flat envelope collapses to a generic one.
  */
-export function passThroughGatewayError(status: number, bodyText: string): NextResponse {
+export function passThroughGatewayError(
+  status: number,
+  bodyText: string,
+  retryAfter?: string | null,
+): NextResponse {
   let parsed: unknown;
   try {
     parsed = JSON.parse(bodyText) as unknown;
   } catch {
     parsed = undefined;
   }
+  const effective = status >= 400 && status <= 599 ? status : 502;
+  let res: NextResponse;
   if (isFlatEnvelope(parsed)) {
-    return NextResponse.json(parsed, { status });
+    const envelope: Record<string, unknown> = {
+      code: parsed['code'],
+      message: parsed['message'],
+      status: effective,
+      requestId: typeof parsed['requestId'] === 'string' ? parsed['requestId'] : newRequestId(),
+    };
+    if (typeof parsed['fieldErrors'] === 'object' && parsed['fieldErrors'] !== null) {
+      envelope['fieldErrors'] = parsed['fieldErrors'];
+    }
+    res = NextResponse.json(envelope, { status: effective });
+  } else {
+    res = errorEnvelope('server', 'The authentication service is unavailable.', effective);
   }
-  return errorEnvelope('server', 'The authentication service is unavailable.', status);
+  if (effective === 429 && retryAfter !== undefined && retryAfter !== null) {
+    res.headers.set('Retry-After', retryAfter);
+  }
+  return res;
 }
 
-/** Parses a gateway success body. Callers only reach this on `response.ok`. */
+/** Generic 502 for a gateway that could not be reached (never echoes the cause). */
+export function gatewayUnreachable(): NextResponse {
+  return errorEnvelope('server', 'The authentication service is unavailable.', 502);
+}
+
+/** Parses a gateway success body; `undefined` when it is not valid JSON. */
 export function parseJson(bodyText: string): unknown {
-  return JSON.parse(bodyText) as unknown;
+  try {
+    return JSON.parse(bodyText) as unknown;
+  } catch {
+    return undefined;
+  }
 }

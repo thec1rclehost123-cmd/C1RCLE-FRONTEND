@@ -4,6 +4,7 @@ import {
   assertSameOrigin,
   errorEnvelope,
   forwardToGateway,
+  gatewayUnreachable,
   mintCsrfToken,
   parseJson,
   passThroughGatewayError,
@@ -27,16 +28,29 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return errorEnvelope('validation', 'Request body must be valid JSON.', 400);
   }
 
-  const gatewayResponse = await forwardToGateway('/api/v2/auth/login', { method: 'POST', body });
+  let gatewayResponse: Response;
+  try {
+    gatewayResponse = await forwardToGateway('/api/v2/auth/login', { method: 'POST', body });
+  } catch {
+    return gatewayUnreachable();
+  }
   const bodyText = await gatewayResponse.text();
 
   if (!gatewayResponse.ok) {
     // The gateway already collapses every login 4xx to one generic message
-    // (account-existence oracle suppression) — pass it straight through.
-    return passThroughGatewayError(gatewayResponse.status, bodyText);
+    // (account-existence oracle suppression), so pass it straight through.
+    return passThroughGatewayError(
+      gatewayResponse.status,
+      bodyText,
+      gatewayResponse.headers.get('retry-after'),
+    );
   }
 
-  const res = NextResponse.json(parseJson(bodyText), { status: 200 });
+  const payload = parseJson(bodyText);
+  if (payload === undefined) {
+    return gatewayUnreachable();
+  }
+  const res = NextResponse.json(payload, { status: 200 });
   rescopeSessionCookies(gatewayResponse, res);
   setCsrfCookie(res, mintCsrfToken());
   return res;

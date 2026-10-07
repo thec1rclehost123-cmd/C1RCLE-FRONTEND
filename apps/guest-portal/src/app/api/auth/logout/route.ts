@@ -4,6 +4,7 @@ import {
   assertCsrf,
   assertSameOrigin,
   clearCsrfCookie,
+  clearSessionCookie,
   forwardToGateway,
   rescopeSessionCookies,
 } from '@/lib/bff/auth-proxy';
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   // Best-effort revoke: even if the gateway call fails, the local cookies are
-  // cleared and the client is logged out.
+  // expired and the browser is logged out.
   const gatewayResponse = await forwardToGateway('/api/v2/auth/logout', {
     method: 'POST',
     cookie: req.headers.get('cookie'),
@@ -29,10 +30,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const res = new NextResponse(null, { status: 204 });
   if (gatewayResponse !== null) {
-    // The gateway's logout response carries expired Set-Cookie headers;
-    // re-scoping them to the FE origin clears them there too.
     rescopeSessionCookies(gatewayResponse, res);
   }
+  // Unconditional: overrides anything the gateway (or its failure) left behind.
+  clearSessionCookie(res);
   clearCsrfCookie(res);
   return res;
 }

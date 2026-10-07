@@ -61,10 +61,6 @@ async function getCheckoutEvent(id: string): Promise<BookingEventFixture | null>
 }
 
 export async function generateMetadata({ params }: CheckoutPageProps): Promise<Metadata> {
-  if (isProductionSeo()) {
-    return buildPrivateMetadata('Checkout', 'Complete your event booking securely.');
-  }
-
   const { id } = await params;
   const event = await getCheckoutEvent(id);
   return {

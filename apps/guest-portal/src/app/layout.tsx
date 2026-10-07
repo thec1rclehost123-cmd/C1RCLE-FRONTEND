@@ -4,6 +4,7 @@ import { getServerSession } from '@c1rcle/auth/server-session';
 
 import { AppShell } from '@/components/app-shell';
 import { SessionProvider } from '@/components/providers/session-provider';
+import { getMetadataBase, publicRobots } from '@/lib/seo/metadata';
 
 import './globals.css';
 

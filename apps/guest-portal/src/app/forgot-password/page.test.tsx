@@ -34,7 +34,13 @@ describe('ForgotPasswordClient', () => {
 
   it('tells the user to wait on a 429', async () => {
     mockRequest.mockRejectedValue(
-      new ApiClientError({ status: 429, code: statusToErrorCode(429), message: 'x' }),
+      new ApiClientError({
+        status: 429,
+        code: statusToErrorCode(429),
+        message: 'x',
+        requestId: undefined,
+        fieldErrors: undefined,
+      }),
     );
     render(<ForgotPasswordClient />);
 
