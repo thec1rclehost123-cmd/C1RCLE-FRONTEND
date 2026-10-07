@@ -156,7 +156,11 @@ export function SlotRequestReview({
             </Button>
           ) : null}
         </footer>
-        {actionError ? <p className={styles['actionError']} role="alert">{actionError}</p> : null}
+        {actionError ? (
+          <p className={styles['actionError']} role="alert">
+            {actionError}
+          </p>
+        ) : null}
       </section>
     </div>
   );

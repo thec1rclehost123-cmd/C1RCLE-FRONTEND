@@ -5,7 +5,6 @@ import ExplorePage from './page';
 
 import type { EventDto, VenueDto } from '@c1rcle/contracts';
 
-
 const EVENT: EventDto = {
   id: 'evt_real_1',
   organizationId: 'org_1',
@@ -82,7 +81,9 @@ function mockFeed(items: EventDto[], venues: VenueDto[] = [VENUE]) {
     if (path === '/api/v2/public/discovery') {
       return Promise.resolve({ items });
     }
-    const venue = venues.find((candidate) => path === `/api/v2/public/venues/by-id/${candidate.id}`);
+    const venue = venues.find(
+      (candidate) => path === `/api/v2/public/venues/by-id/${candidate.id}`,
+    );
     return venue ? Promise.resolve(venue) : Promise.reject(new Error('not found'));
   });
 }

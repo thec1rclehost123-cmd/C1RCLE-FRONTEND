@@ -36,13 +36,18 @@ async function getExploreEvents(): Promise<ExploreEvent[]> {
 
   let items: EventDto[];
   try {
-    const feed = await client.get({ path: '/api/v2/public/discovery', schema: discoveryFeedDtoSchema });
+    const feed = await client.get({
+      path: '/api/v2/public/discovery',
+      schema: discoveryFeedDtoSchema,
+    });
     items = feed.items;
   } catch {
     return [];
   }
 
-  const venueIds = [...new Set(items.map((item) => item.venueId).filter((id): id is string => id !== null))];
+  const venueIds = [
+    ...new Set(items.map((item) => item.venueId).filter((id): id is string => id !== null)),
+  ];
   const venues = await Promise.all(
     venueIds.map((venueId) =>
       client
@@ -50,7 +55,9 @@ async function getExploreEvents(): Promise<ExploreEvent[]> {
         .catch(() => null),
     ),
   );
-  const venuesById = new Map(venues.filter((venue) => venue !== null).map((venue) => [venue.id, venue]));
+  const venuesById = new Map(
+    venues.filter((venue) => venue !== null).map((venue) => [venue.id, venue]),
+  );
 
   return items.map((item) =>
     toExploreEvent(item, item.venueId ? (venuesById.get(item.venueId) ?? null) : null),

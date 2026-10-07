@@ -15,11 +15,7 @@
  */
 import { eventEndAtFromDraft, eventStartAtFromDraft } from '@/lib/events/event-time';
 
-import {
-  forwardToGateway,
-  mintIdempotencyKey,
-  parseJson,
-} from './auth-proxy';
+import { forwardToGateway, mintIdempotencyKey, parseJson } from './auth-proxy';
 
 import type {
   SlotRequest,
@@ -81,7 +77,11 @@ function withIdempotency(ctx: GatewayContext): GatewayContext {
  * fast `GatewayError` instead of hanging the BFF until the browser aborts. */
 const GATEWAY_TIMEOUT_MS = 10_000;
 
-async function gatewayGet<T>(path: string, organizationId: string, ctx: GatewayContext): Promise<T> {
+async function gatewayGet<T>(
+  path: string,
+  organizationId: string,
+  ctx: GatewayContext,
+): Promise<T> {
   let response: Response;
   try {
     response = await forwardToGateway(path, {
@@ -91,7 +91,11 @@ async function gatewayGet<T>(path: string, organizationId: string, ctx: GatewayC
       signal: AbortSignal.timeout(GATEWAY_TIMEOUT_MS),
     });
   } catch {
-    throw new GatewayError(504, { code: 'server', message: 'The venue service did not respond in time.', status: 504 });
+    throw new GatewayError(504, {
+      code: 'server',
+      message: 'The venue service did not respond in time.',
+      status: 504,
+    });
   }
   const bodyText = await response.text();
   if (!response.ok) {
@@ -117,7 +121,11 @@ async function gatewayPost<T>(
       signal: AbortSignal.timeout(GATEWAY_TIMEOUT_MS),
     });
   } catch {
-    throw new GatewayError(504, { code: 'server', message: 'The venue service did not respond in time.', status: 504 });
+    throw new GatewayError(504, {
+      code: 'server',
+      message: 'The venue service did not respond in time.',
+      status: 504,
+    });
   }
   const bodyText = await response.text();
   if (!response.ok) {
@@ -200,7 +208,8 @@ function toUiEvent(
   }
   return {
     name: event.title,
-    description: (event.summary || event.description || '').trim() || 'No description provided yet.',
+    description:
+      (event.summary || event.description || '').trim() || 'No description provided yet.',
     date: formatDate(event.startAt),
     time: formatTime(event.startAt, event.endAt ?? null),
     venue: venueName,
@@ -238,7 +247,10 @@ function toUiRequest(
  * of the org's venues, each enriched with the host's drafted event + requester
  * name via the venue-owner detail endpoint.
  */
-async function loadIncoming(organizationId: string, ctx: GatewayContext): Promise<SlotRequestsData> {
+async function loadIncoming(
+  organizationId: string,
+  ctx: GatewayContext,
+): Promise<SlotRequestsData> {
   const entries = await fetchIncomingEntries(organizationId, ctx);
   return {
     dataStatus: 'live',
@@ -253,7 +265,10 @@ async function loadIncoming(organizationId: string, ctx: GatewayContext): Promis
  * with the host's own event and the target venue. Enrichment failures for a
  * deleted target are tolerated so a historical request stays visible.
  */
-async function loadOutgoing(organizationId: string, ctx: GatewayContext): Promise<SlotRequestsData> {
+async function loadOutgoing(
+  organizationId: string,
+  ctx: GatewayContext,
+): Promise<SlotRequestsData> {
   const entries = await fetchOutgoingEntries(organizationId, ctx);
   return {
     dataStatus: 'live',
@@ -283,9 +298,7 @@ async function mapWithConcurrency<T, R>(
       results[index] = await work(items[index] as T);
     }
   }
-  const workers = new Array(Math.min(limit, items.length))
-    .fill(null)
-    .map(() => worker());
+  const workers = new Array(Math.min(limit, items.length)).fill(null).map(() => worker());
   await Promise.all(workers);
   return results;
 }
@@ -385,7 +398,9 @@ async function fetchOutgoingEntries(
 
   const entries = page.items.map((dto) => {
     const event = dto.eventId ? (eventsById.get(dto.eventId) ?? null) : null;
-    const venueName = dto.venueId ? (venuesById.get(dto.venueId)?.name ?? dto.venueId) : dto.venueId;
+    const venueName = dto.venueId
+      ? (venuesById.get(dto.venueId)?.name ?? dto.venueId)
+      : dto.venueId;
     return {
       createdAt: dto.createdAt,
       request: toUiRequest(
@@ -494,7 +509,9 @@ export async function loadSlotRequestNotifications(
     direction === 'incoming'
       ? await fetchIncomingEntries(organizationId, ctx)
       : await fetchOutgoingEntries(organizationId, ctx);
-  return entries.map(toNotification).filter((entry): entry is PartnerNotificationDto => entry !== null);
+  return entries
+    .map(toNotification)
+    .filter((entry): entry is PartnerNotificationDto => entry !== null);
 }
 
 /* ─── Mutations ──────────────────────────────────────────────────────────── */
@@ -572,7 +589,12 @@ export async function submitHostSlotRequest(
   ctx: GatewayContext,
 ): Promise<HostSlotRequestSubmitResult> {
   const startAt = eventStartAtFromDraft(input);
-  if (!startAt) throw new GatewayError(400, { code: 'validation', message: 'Enter a valid event date and start time.', status: 400 });
+  if (!startAt)
+    throw new GatewayError(400, {
+      code: 'validation',
+      message: 'Enter a valid event date and start time.',
+      status: 400,
+    });
   const { organizationId } = input;
 
   const event = await gatewayPost<EventDto>(

@@ -1,7 +1,6 @@
 import type { ExploreCity, ExploreEvent } from './types/explore.types';
 import type { EventDto, VenueDto } from '@c1rcle/contracts';
 
-
 /**
  * ─── Backend → explore card mapping ──────────────────────────────────────────
  * Pure mapping from the public discovery wire DTOs (`GET

@@ -151,17 +151,17 @@ export async function publishVenueEvent(
           hasPaidTiers && draft.compensation === 'standard' ? Math.round(draft.commissionRate) : 0,
         ...(draft.compensation === 'custom'
           ? {
-            tierRates: Object.fromEntries(
-              Object.entries(draft.promoterOverrides?.[promoterId] ?? draft.tierCommissions ?? {})
-                .filter(([localTierId]) => paidTierIds.has(localTierId))
-                .map(([localTierId, rate]) => {
-                  const serverTierId = serverTierIds.get(localTierId);
-                  if (!serverTierId)
-                    throw new Error(`Commission tier ${localTierId} was not created.`);
-                  return [serverTierId, { ratePercent: rate, flatPaise: 0 }];
-                }),
-            ),
-          }
+              tierRates: Object.fromEntries(
+                Object.entries(draft.promoterOverrides?.[promoterId] ?? draft.tierCommissions ?? {})
+                  .filter(([localTierId]) => paidTierIds.has(localTierId))
+                  .map(([localTierId, rate]) => {
+                    const serverTierId = serverTierIds.get(localTierId);
+                    if (!serverTierId)
+                      throw new Error(`Commission tier ${localTierId} was not created.`);
+                    return [serverTierId, { ratePercent: rate, flatPaise: 0 }];
+                  }),
+              ),
+            }
           : {}),
       }),
       schema: promoterAssignmentDtoSchema,

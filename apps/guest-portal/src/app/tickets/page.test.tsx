@@ -107,8 +107,8 @@ describe('TicketsPage real wallet', () => {
     mockApiGet.mockReset();
   });
 
-  it('renders the logged-out guest ticket showcase without wallet passes', async () => {
-    render(await TicketsPage());
+  it('renders the logged-out guest ticket showcase without wallet passes', () => {
+    render(<TicketsPage />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'TICKETS' })).toBeInTheDocument();
     expect(

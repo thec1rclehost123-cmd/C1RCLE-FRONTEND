@@ -1,13 +1,15 @@
 import { notFound } from 'next/navigation';
 
 import { createApiClient } from '@c1rcle/api-client';
-import { eventDtoSchema, publicTicketTierListResponseSchema, venueDtoSchema } from '@c1rcle/contracts';
+import {
+  eventDtoSchema,
+  publicTicketTierListResponseSchema,
+  venueDtoSchema,
+} from '@c1rcle/contracts';
 
 import { toBookingEventFixture } from '@/features/booking/booking-mapping';
 import { CheckoutView } from '@/features/booking/components/CheckoutView';
-import {
-  findBookingEventFixture,
-} from '@/features/booking/fixtures/booking.fixture';
+import { findBookingEventFixture } from '@/features/booking/fixtures/booking.fixture';
 
 import type { BookingEventFixture } from '@/features/booking/types/booking.types';
 import type { Metadata } from 'next';

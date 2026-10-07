@@ -75,9 +75,7 @@ export function SignOutControl() {
                 type="button"
                 aria-label="Confirm sign out"
                 disabled={pending}
-                onClick={() => {
-                  void signOut();
-                }}
+                onClick={signOut}
                 className="inline-flex min-h-11 items-center justify-center rounded-full bg-white px-5 text-[9px] font-black uppercase tracking-[0.2em] text-black"
               >
                 Sign out

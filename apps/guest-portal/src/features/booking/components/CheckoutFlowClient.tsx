@@ -302,7 +302,10 @@ export function CheckoutFlowClient({
               </p>
             )}
             {rsvpError !== null && (
-              <p role="alert" className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-400">
+              <p
+                role="alert"
+                className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-400"
+              >
                 {rsvpError}
               </p>
             )}

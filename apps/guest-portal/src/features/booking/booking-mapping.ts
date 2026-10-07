@@ -2,7 +2,6 @@ import type { BookingEventFixture, BookingTicketTier } from './types/booking.typ
 import type { EventAccentTone } from '@/features/event-detail/types/event-detail.types';
 import type { EventDto, PublicTicketTierDto, VenueDto } from '@c1rcle/contracts';
 
-
 /**
  * ─── Backend → checkout mapping ──────────────────────────────────────────────
  * Pure mapping from the public event wire DTO (`GET

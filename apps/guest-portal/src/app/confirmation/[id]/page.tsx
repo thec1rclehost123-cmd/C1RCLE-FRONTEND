@@ -90,7 +90,10 @@ async function getRealConfirmation(
       tierName: line?.tierName ?? 'Admission',
       quantity: order.lines.reduce((total, entry) => total + entry.quantity, 0),
       total: { amountPaise: order.grandTotalPaise, currency: 'INR' },
-      referenceLabel: `RSVP-${order.id.replace(/[^A-Za-z0-9]/g, '').slice(0, 8).toUpperCase()}`,
+      referenceLabel: `RSVP-${order.id
+        .replace(/[^A-Za-z0-9]/g, '')
+        .slice(0, 8)
+        .toUpperCase()}`,
     },
     event: toBookingEventFixture(event, venue),
   };

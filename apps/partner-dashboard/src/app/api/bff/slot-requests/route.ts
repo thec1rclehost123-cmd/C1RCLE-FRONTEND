@@ -70,7 +70,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return errorEnvelope('validation', 'Request body must be valid JSON.', 400);
   }
   const draft = (body as { draft?: unknown }).draft as HostSlotRequestSubmitInput | undefined;
-  if (!draft || typeof draft.organizationId !== 'string' || !draft.organizationId || typeof draft.venueId !== 'string' || !draft.venueId || typeof draft.name !== 'string' || !draft.name.trim() || typeof draft.date !== 'string' || typeof draft.time !== 'string') {
+  if (
+    !draft ||
+    typeof draft.organizationId !== 'string' ||
+    !draft.organizationId ||
+    typeof draft.venueId !== 'string' ||
+    !draft.venueId ||
+    typeof draft.name !== 'string' ||
+    !draft.name.trim() ||
+    typeof draft.date !== 'string' ||
+    typeof draft.time !== 'string'
+  ) {
     return errorEnvelope('validation', 'A complete host event draft is required.', 400);
   }
 

@@ -5,7 +5,6 @@ import type {
 } from './types/event-detail.types';
 import type { EventDto, HostPublicDto, VenueDto } from '@c1rcle/contracts';
 
-
 /**
  * ─── Backend → event detail mapping ──────────────────────────────────────────
  * Pure mapping from the public wire DTOs (`GET /api/v2/public/events/:idOrSlug`

@@ -1,8 +1,4 @@
-import type {
-  TicketStatus,
-  TicketWalletData,
-  UserTicketItem,
-} from './types/tickets.types';
+import type { TicketStatus, TicketWalletData, UserTicketItem } from './types/tickets.types';
 import type { EntitlementDto, EventDto, VenueDto } from '@c1rcle/contracts';
 
 export interface WalletEventDetails {

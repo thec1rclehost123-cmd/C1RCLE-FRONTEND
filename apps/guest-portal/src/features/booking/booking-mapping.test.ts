@@ -4,7 +4,6 @@ import { toBookingEventFixture } from './booking-mapping';
 
 import type { EventDto, PublicTicketTierDto, VenueDto } from '@c1rcle/contracts';
 
-
 const EVENT: EventDto = {
   id: 'evt_1',
   organizationId: 'org_1',
@@ -67,10 +66,7 @@ describe('toBookingEventFixture', () => {
   });
 
   it('falls back honestly without inventing data', () => {
-    const mapped = toBookingEventFixture(
-      { ...EVENT, tags: [], imageUrl: null, summary: '' },
-      null,
-    );
+    const mapped = toBookingEventFixture({ ...EVENT, tags: [], imageUrl: null, summary: '' }, null);
     expect(mapped).toMatchObject({
       category: 'Events',
       image: '/c1rcle-logo.webp',

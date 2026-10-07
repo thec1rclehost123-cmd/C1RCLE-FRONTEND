@@ -8,7 +8,11 @@ import { useSession } from '@c1rcle/auth';
 
 import { navLinks } from './DesktopNavLinks';
 
-export function NavbarActions({ isAuthenticated: isAuthenticatedProp }: { isAuthenticated?: boolean }) {
+export function NavbarActions({
+  isAuthenticated: isAuthenticatedProp,
+}: {
+  isAuthenticated?: boolean;
+}) {
   const { isAuthenticated: isSessionAuthenticated } = useSession();
   const isAuthenticated = isAuthenticatedProp ?? isSessionAuthenticated;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

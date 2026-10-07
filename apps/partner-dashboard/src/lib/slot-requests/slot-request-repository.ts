@@ -6,7 +6,12 @@ import { bffClient } from '@/lib/bff/bff-client';
 import { csrfHeaders } from '@/lib/onboarding/csrf';
 import { getActiveOrgId } from '@/lib/org/active-org';
 
-import type { PartnerNotification, SlotRequestActionKind, SlotRequestDirection, SlotRequestsData } from '@/data/partner-data-source';
+import type {
+  PartnerNotification,
+  SlotRequestActionKind,
+  SlotRequestDirection,
+  SlotRequestsData,
+} from '@/data/partner-data-source';
 
 export type { SlotRequestActionKind };
 

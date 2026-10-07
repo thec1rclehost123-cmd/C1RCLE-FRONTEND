@@ -4,7 +4,6 @@ import { deriveCities, toCityKey, toExploreEvent } from './explore-mapping';
 
 import type { EventDto, VenueDto } from '@c1rcle/contracts';
 
-
 const EVENT: EventDto = {
   id: 'evt_1',
   organizationId: 'org_1',

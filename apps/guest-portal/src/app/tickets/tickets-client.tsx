@@ -3,11 +3,7 @@
 import React, { useEffect, useState } from 'react';
 
 import { useSession } from '@c1rcle/auth';
-import {
-  entitlementsListResponseSchema,
-  eventDtoSchema,
-  venueDtoSchema,
-} from '@c1rcle/contracts';
+import { entitlementsListResponseSchema, eventDtoSchema, venueDtoSchema } from '@c1rcle/contracts';
 
 import { apiClient } from '@/lib/api/client';
 import { bffClient } from '@/lib/bff/bff-client';

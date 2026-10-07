@@ -4,7 +4,6 @@ import { toEventDetailFixture } from './event-detail-mapping';
 
 import type { EventDto, HostPublicDto, VenueDto } from '@c1rcle/contracts';
 
-
 const EVENT: EventDto = {
   id: 'evt_1',
   organizationId: 'org_1',

@@ -1,14 +1,7 @@
 import { NextResponse } from 'next/server';
 
-import {
-  assertSameOrigin,
-  errorEnvelope,
-  gatewayAuthInit,
-} from '@/lib/bff/auth-proxy';
-import {
-  GatewayError,
-  loadSlotRequestNotifications,
-} from '@/lib/bff/slot-request-gateway';
+import { assertSameOrigin, errorEnvelope, gatewayAuthInit } from '@/lib/bff/auth-proxy';
+import { GatewayError, loadSlotRequestNotifications } from '@/lib/bff/slot-request-gateway';
 
 import type { SlotRequestDirection } from '@/data/partner-data-source';
 import type { NextRequest } from 'next/server';

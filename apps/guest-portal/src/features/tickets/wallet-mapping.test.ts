@@ -61,7 +61,9 @@ const VENUE: VenueDto = {
 
 const NOW = new Date('2026-09-23T12:00:00.000Z');
 
-function resolveFor(events: Record<string, EventDto>): (eventId: string) => Promise<WalletEventDetails | null> {
+function resolveFor(
+  events: Record<string, EventDto>,
+): (eventId: string) => Promise<WalletEventDetails | null> {
   return (eventId: string) => {
     const event = events[eventId];
     if (!event) return Promise.resolve(null);
@@ -95,7 +97,11 @@ describe('toTicketWalletData', () => {
   });
 
   it('sends redeemed, void, and ended events to history', async () => {
-    const endedEvent: EventDto = { ...FUTURE_EVENT, id: 'evt_past', endAt: '2026-01-02T00:00:00.000Z' };
+    const endedEvent: EventDto = {
+      ...FUTURE_EVENT,
+      id: 'evt_past',
+      endAt: '2026-01-02T00:00:00.000Z',
+    };
     const wallet = await toTicketWalletData(
       [
         { ...BASE_ENTITLEMENT, id: 'ENT-used', status: 'redeemed', scanCount: 1 },

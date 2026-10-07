@@ -74,12 +74,22 @@ describe('SlotRequestScreen', () => {
 
   it('renders a directly addressed request review and changes preview state in the URL', async () => {
     const user = userEvent.setup();
-    const view = render(<SlotRequestScreen direction="incoming" initialRequestId="venue-slot-bassline" />);
+    const view = render(
+      <SlotRequestScreen direction="incoming" initialRequestId="venue-slot-bassline" />,
+    );
 
     expect(await screen.findByRole('dialog', { name: 'Bassline Nights' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Live preview' }));
-    expect(replace).toHaveBeenLastCalledWith('/partner/venue/slot-requests?request=venue-slot-bassline&panel=preview');
-    view.rerender(<SlotRequestScreen direction="incoming" initialRequestId="venue-slot-bassline" initialPanel="preview" />);
+    expect(replace).toHaveBeenLastCalledWith(
+      '/partner/venue/slot-requests?request=venue-slot-bassline&panel=preview',
+    );
+    view.rerender(
+      <SlotRequestScreen
+        direction="incoming"
+        initialRequestId="venue-slot-bassline"
+        initialPanel="preview"
+      />,
+    );
     await user.click(screen.getByRole('button', { name: 'Mobile app' }));
     expect(replace).toHaveBeenLastCalledWith(
       '/partner/venue/slot-requests?request=venue-slot-bassline&panel=preview&preview=mobile',
