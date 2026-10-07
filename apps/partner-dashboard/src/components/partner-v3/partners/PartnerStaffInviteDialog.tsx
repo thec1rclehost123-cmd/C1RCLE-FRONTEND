@@ -3,22 +3,45 @@
 import { useEffect, useState } from 'react';
 
 import { Button, IconButton } from '@/components/partner-v3';
+import { staffApi } from '@/lib/api/staff-api';
+import { getActiveOrgId } from '@/lib/org/active-org';
 
 import styles from './partners.module.css';
 
-import type { PartnerPermission } from '@/data/partner-data-source';
+import type { CreateInvitationRequest } from '@/lib/api/staff-api';
 
-const permissions: readonly PartnerPermission[] = [
-  'Door check-in',
-  'Finance view',
-  'Event editing',
-  'Guest messaging',
+type InviteRole = CreateInvitationRequest['role'];
+
+const ROLES: readonly {
+  readonly value: InviteRole;
+  readonly label: string;
+  readonly hint: string;
+}[] = [
+  { value: 'member', label: 'Staff', hint: 'Roster access' },
+  { value: 'manager', label: 'Manager', hint: 'Runs events & door' },
+  { value: 'admin', label: 'Admin', hint: 'Can manage staff' },
 ];
 
-export function PartnerStaffInviteDialog({ onClose }: { readonly onClose: () => void }) {
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
+export function PartnerStaffInviteDialog({
+  onClose,
+  onInvited,
+  defaultCapability,
+  organizationId,
+}: {
+  readonly onClose: () => void;
+  readonly onInvited?: (() => void) | undefined;
+  readonly defaultCapability?: 'venue' | 'host' | undefined;
+  readonly organizationId?: string | undefined;
+}) {
   const [email, setEmail] = useState('');
-  const [selected, setSelected] = useState<PartnerPermission[]>(['Door check-in']);
+  const [role, setRole] = useState<InviteRole>('member');
   const [confirmed, setConfirmed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState('');
 
   useEffect(() => {
@@ -31,12 +54,49 @@ export function PartnerStaffInviteDialog({ onClose }: { readonly onClose: () => 
     };
   }, [onClose]);
 
-  const togglePermission = (permission: PartnerPermission) => {
-    setSelected((current) =>
-      current.includes(permission)
-        ? current.filter((item) => item !== permission)
-        : [...current, permission],
-    );
+  const canSubmit = email.trim().length > 0 && confirmed && !submitting;
+
+  const handleProceed = () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setNotice('Enter an email address to invite.');
+      return;
+    }
+    setSubmitting(true);
+    setNotice('');
+
+    const run = async () => {
+      let orgId = organizationId ?? getActiveOrgId();
+      if (!orgId) {
+        try {
+          const { resolveBrowserOrganizationId } =
+            await import('@/lib/org/resolve-browser-organization');
+          orgId = await resolveBrowserOrganizationId(defaultCapability ?? 'venue');
+        } catch {
+          // ignore error
+        }
+      }
+      if (!orgId) {
+        setSubmitting(false);
+        setNotice('No active organization selected. Select an organization first.');
+        return;
+      }
+
+      try {
+        await staffApi.createInvitation(orgId, {
+          email: trimmedEmail,
+          role,
+          ...(defaultCapability ? { capabilities: [defaultCapability] } : {}),
+        });
+        onInvited?.();
+        onClose();
+      } catch (error: unknown) {
+        setSubmitting(false);
+        setNotice(errorMessage(error));
+      }
+    };
+
+    void run();
   };
 
   return (
@@ -57,14 +117,17 @@ export function PartnerStaffInviteDialog({ onClose }: { readonly onClose: () => 
           <div>
             <span className={styles['sectionKicker']}>Team access</span>
             <h2 id="add-staff-title">Add staff</h2>
-            <p>Invite a teammate and set what they can access.</p>
+            <p>
+              Invite a teammate by email. We&apos;ll send them a link to join with the role you
+              pick.
+            </p>
           </div>
           <IconButton label="Close add staff dialog" onClick={onClose}>
             ×
           </IconButton>
         </div>
         <label className={styles['fieldLabel']} htmlFor="staff-email">
-          Contact
+          Email
           <input
             id="staff-email"
             type="email"
@@ -74,29 +137,30 @@ export function PartnerStaffInviteDialog({ onClose }: { readonly onClose: () => 
               setNotice('');
             }}
             placeholder="teammate@email.com"
+            autoComplete="email"
           />
         </label>
         <fieldset className={styles['permissionFieldset']}>
-          <legend>Access permissions</legend>
+          <legend>Role</legend>
           <div className={styles['permissionOptions']}>
-            {permissions.map((permission) => (
+            {ROLES.map((option) => (
               <button
-                key={permission}
+                key={option.value}
                 type="button"
                 className={[
                   styles['permissionToggle'],
-                  selected.includes(permission) ? styles['permissionToggleActive'] : '',
+                  role === option.value ? styles['permissionToggleActive'] : '',
                 ]
                   .filter(Boolean)
                   .join(' ')}
-                aria-pressed={selected.includes(permission)}
+                aria-pressed={role === option.value}
                 onClick={() => {
-                  togglePermission(permission);
+                  setRole(option.value);
                   setNotice('');
                 }}
               >
-                <span aria-hidden="true">{selected.includes(permission) ? '✓' : '+'}</span>
-                {permission}
+                <span aria-hidden="true">{role === option.value ? '✓' : '+'}</span>
+                {option.label} · {option.hint}
               </button>
             ))}
           </div>
@@ -110,29 +174,39 @@ export function PartnerStaffInviteDialog({ onClose }: { readonly onClose: () => 
               setNotice('');
             }}
           />{' '}
-          <span>I confirm this person should have the access selected above.</span>
+          <span>
+            I confirm this person should have {role === 'member' ? 'staff' : role} access
+            {defaultCapability ? ` on this ${defaultCapability} organisation` : ''}.
+          </span>
         </label>
         {notice ? (
           <p className={styles['dialogNotice']} role="status">
             {notice}
           </p>
         ) : null}
-        <Button
-          type="button"
-          variant="primary"
-          disabled={!email || !confirmed}
-          onClick={() => {
-            setNotice('Staff invitations are not available yet. No invitation was sent.');
-          }}
-        >
-          Proceed
+        <Button type="button" variant="primary" disabled={!canSubmit} onClick={handleProceed}>
+          {submitting ? 'Sending…' : 'Send invite'}
         </Button>
       </section>
     </div>
   );
 }
 
-export function AddStaffButton({ buttonClassName }: { readonly buttonClassName?: string }) {
+export function AddStaffButton({
+  buttonClassName,
+  defaultCapability,
+  onInvited,
+  disabled = false,
+  disabledTitle,
+  organizationId,
+}: {
+  readonly buttonClassName?: string;
+  readonly defaultCapability?: 'venue' | 'host' | undefined;
+  readonly onInvited?: (() => void) | undefined;
+  readonly disabled?: boolean;
+  readonly disabledTitle?: string | undefined;
+  readonly organizationId?: string | undefined;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -140,17 +214,22 @@ export function AddStaffButton({ buttonClassName }: { readonly buttonClassName?:
         type="button"
         variant="primary"
         className={buttonClassName}
+        disabled={disabled}
+        {...(disabled && disabledTitle ? { title: disabledTitle } : {})}
         onClick={() => {
           setOpen(true);
         }}
       >
         Add staff
       </Button>
-      {open ? (
+      {open && !disabled ? (
         <PartnerStaffInviteDialog
           onClose={() => {
             setOpen(false);
           }}
+          {...(onInvited ? { onInvited } : {})}
+          {...(defaultCapability ? { defaultCapability } : {})}
+          {...(organizationId ? { organizationId } : {})}
         />
       ) : null}
     </>

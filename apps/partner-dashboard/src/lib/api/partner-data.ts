@@ -5,6 +5,7 @@ import {
   promoterConnectionDtoSchema,
 } from '@c1rcle/contracts';
 
+import { getStaffFromApi } from '@/data/api-partner-data-source';
 import { apiClient } from '@/lib/api/client';
 import {
   toHostPartnersData,
@@ -127,38 +128,62 @@ function buildDiscoverQuery(
   return {};
 }
 
-/** Venue studio: hosts + promoters from partnerships/promoter-connections + discover. */
+/** Venue studio: hosts + promoters from partnerships/promoter-connections + discover + staff. */
 export async function getVenuePartnersData(search = ''): Promise<VenuePartnersData> {
-  const [partnerships, promoterConnections, discoveredHosts, discoveredPromoters] =
+  const organizationId = await getOrgId();
+  const [partnerships, promoterConnections, discoveredHosts, discoveredPromoters, staffSlice] =
     await Promise.all([
       getPartnerships(),
       getPromoterConnections(),
       getDiscoverablePartners(buildDiscoverQuery('host', search)),
       getDiscoverablePartners(buildDiscoverQuery('promoter', search)),
+      getStaffFromApi(organizationId).catch(() => ({
+        staff: [],
+        staffInvites: [],
+        staffAccess: { canManage: true },
+      })),
     ]);
-  return toVenuePartnersData({
+  const base = toVenuePartnersData({
     partnerships,
     promoterConnections,
     discoveredHosts,
     discoveredPromoters,
   });
+  return {
+    ...base,
+    staff: staffSlice.staff,
+    staffInvites: staffSlice.staffInvites,
+    staffAccess: staffSlice.staffAccess,
+  };
 }
 
-/** Host studio: venues + promoters from partnerships/promoter-connections + discover. */
+/** Host studio: venues + promoters from partnerships/promoter-connections + discover + staff. */
 export async function getHostPartnersData(search = ''): Promise<HostPartnersData> {
-  const [partnerships, promoterConnections, discoveredVenues, discoveredPromoters] =
+  const organizationId = await getOrgId();
+  const [partnerships, promoterConnections, discoveredVenues, discoveredPromoters, staffSlice] =
     await Promise.all([
       getPartnerships(),
       getPromoterConnections(),
       getDiscoverablePartners(buildDiscoverQuery('venue', search)),
       getDiscoverablePartners(buildDiscoverQuery('promoter', search)),
+      getStaffFromApi(organizationId).catch(() => ({
+        staff: [],
+        staffInvites: [],
+        staffAccess: { canManage: true },
+      })),
     ]);
-  return toHostPartnersData({
+  const base = toHostPartnersData({
     partnerships,
     promoterConnections,
     discoveredVenues,
     discoveredPromoters,
   });
+  return {
+    ...base,
+    staff: staffSlice.staff,
+    staffInvites: staffSlice.staffInvites,
+    staffAccess: staffSlice.staffAccess,
+  };
 }
 
 /** Promoter studio: connections + discover. */

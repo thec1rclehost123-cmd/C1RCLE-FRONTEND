@@ -68,7 +68,6 @@ function buildContentSecurityPolicy(nonce: string): string {
     img-src 'self' blob: data: https:;
     font-src 'self';
     connect-src 'self' blob: ${GATEWAY_ORIGIN} https://storage.googleapis.com https://*.googleapis.com https://www.google.com https://www.gstatic.com;
-    frame-src 'self' https://www.google.com https://recaptcha.net;
     object-src 'none';
     base-uri 'self';
     form-action 'self';

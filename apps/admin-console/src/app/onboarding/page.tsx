@@ -18,6 +18,8 @@ import {
   requestOnboardingChanges,
   statusFilterOptions,
 } from '@/lib/admin/admin-api';
+import { describeAdminError } from '@/lib/admin/describe-error';
+import { useDocumentWindow } from '@/lib/admin/document-window';
 import {
   formatDateTime,
   onboardingStatusTone,
@@ -122,11 +124,15 @@ export default function OnboardingDesk() {
     },
   });
 
+  const docWindow = useDocumentWindow();
   const viewDocumentMutation = useMutation({
     mutationFn: ({ applicationId, label }: { applicationId: string; label: string }) =>
       getOnboardingDocumentReadUrl(applicationId, label),
     onSuccess: (grant) => {
-      window.open(grant.readUrl, '_blank', 'noopener,noreferrer');
+      docWindow.show(grant.readUrl);
+    },
+    onError: () => {
+      docWindow.abort();
     },
   });
 
@@ -252,6 +258,7 @@ export default function OnboardingDesk() {
                               variant="ghost"
                               disabled={viewDocumentMutation.isPending}
                               onClick={() => {
+                                docWindow.preOpen();
                                 viewDocumentMutation.mutate({
                                   applicationId: application.id,
                                   label: document.label,
@@ -363,7 +370,10 @@ export default function OnboardingDesk() {
 
       {approveMutation.isError || rejectMutation.isError || changesMutation.isError ? (
         <p role="alert" className="text-sm text-destructive">
-          The review could not be saved. It is safe to retry.
+          {describeAdminError(
+            approveMutation.error ?? rejectMutation.error ?? changesMutation.error,
+            'The review could not be saved. It is safe to retry.',
+          )}
         </p>
       ) : null}
       {viewDocumentMutation.isError ? (
@@ -383,6 +393,7 @@ export default function OnboardingDesk() {
         <OnboardingApplicationDetail
           application={detail.data}
           onOpenDocument={(applicationId, label) => {
+            docWindow.preOpen();
             viewDocumentMutation.mutate({ applicationId, label });
           }}
           onClose={() => {

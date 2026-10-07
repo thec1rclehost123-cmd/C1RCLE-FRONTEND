@@ -4,18 +4,26 @@ import type {
   PartnerRelationship,
   PartnerSegment,
   PartnerSubView,
+  StaffInvite,
   VenuePartnersData,
 } from '@/data/partner-data-source';
 
-type VenuePartnersScreenProps = VenuePartnersDataProps & PartnerRequestActions<PartnerRelationship>;
-
-interface VenuePartnersDataProps {
+export interface VenuePartnersScreenProps extends PartnerRequestActions<PartnerRelationship> {
   readonly data: VenuePartnersData;
   readonly segment?: PartnerSegment;
   readonly subView?: PartnerSubView;
   readonly search?: string;
   readonly profileId?: string;
   readonly organizationId?: string;
+  readonly staffInvites?: readonly StaffInvite[];
+  readonly staffCanManage?: boolean;
+  readonly staffError?: string | null;
+  readonly revokingInviteId?: string | null;
+  readonly revokeErrorId?: string | null;
+  readonly revokeError?: string | null;
+  readonly onRevokeInvite?: ((invite: StaffInvite) => void) | undefined;
+  readonly onStaffChanged?: (() => void) | undefined;
+  readonly studioCapability?: 'venue' | 'host';
 }
 
 export function VenuePartnersScreen({
@@ -35,6 +43,15 @@ export function VenuePartnersScreen({
   onApproveRequest,
   onRejectRequest,
   onConnectPartner,
+  staffInvites = data.staffInvites ?? [],
+  staffCanManage = data.staffAccess ? data.staffAccess.canManage : true,
+  staffError = data.staffAccess?.error ?? null,
+  revokingInviteId = null,
+  revokeErrorId = null,
+  revokeError = null,
+  onRevokeInvite,
+  onStaffChanged,
+  studioCapability = 'venue',
 }: VenuePartnersScreenProps) {
   return (
     <PartnerNetworkScreen
@@ -58,6 +75,15 @@ export function VenuePartnersScreen({
       onApproveRequest={onApproveRequest}
       onRejectRequest={onRejectRequest}
       onConnect={onConnectPartner}
+      staffInvites={staffInvites}
+      staffCanManage={staffCanManage}
+      staffError={staffError}
+      revokingInviteId={revokingInviteId}
+      revokeErrorId={revokeErrorId}
+      revokeError={revokeError}
+      onRevokeInvite={onRevokeInvite}
+      onStaffChanged={onStaffChanged}
+      studioCapability={studioCapability}
     />
   );
 }

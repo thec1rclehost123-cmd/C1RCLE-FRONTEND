@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { clearSession, useSessionStore } from '@c1rcle/auth';
@@ -89,8 +89,10 @@ describe('ProfilePage', () => {
     expect(screen.getByRole('dialog', { name: 'End this session?' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Confirm sign out' }));
 
+    await waitFor(() => {
+      expect(replace).toHaveBeenCalledWith('/login?next=/profile');
+    });
     expect(useSessionStore.getState().status).toBe('anonymous');
-    expect(replace).toHaveBeenCalledWith('/login?next=/profile');
   });
 
   it('provides a pure logged-out view with a safe return target', () => {

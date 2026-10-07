@@ -526,6 +526,29 @@ export interface StaffMember {
   readonly role: string;
   readonly status: 'Active';
   readonly permissions: readonly PartnerPermission[];
+  /** Live backend identity (absent on fixture rows). */
+  readonly userId?: string | undefined;
+  readonly email?: string | null | undefined;
+  readonly backendRole?: 'owner' | 'admin' | 'manager' | 'member' | undefined;
+  readonly capabilities?: readonly string[] | undefined;
+}
+
+export type StaffInviteStatus = 'pending' | 'accepted' | 'revoked' | 'expired';
+
+export interface StaffInvite {
+  readonly id: string;
+  readonly email: string;
+  readonly role: 'owner' | 'admin' | 'manager' | 'member';
+  readonly capabilities: readonly string[];
+  readonly status: StaffInviteStatus;
+  readonly expiresAt: string;
+}
+
+export interface StaffAccess {
+  /** True when the viewer holds `staff.manage` (invitations list succeeded). */
+  readonly canManage: boolean;
+  /** Non-null when the staff slice failed but partnerships still rendered. */
+  readonly error?: string | null | undefined;
 }
 
 export interface PartnerRelationshipSet {
@@ -542,6 +565,8 @@ export interface VenuePartnersData {
   readonly hosts: PartnerRelationshipSet;
   readonly promoters: PartnerRelationshipSet;
   readonly staff: readonly StaffMember[];
+  readonly staffInvites?: readonly StaffInvite[] | undefined;
+  readonly staffAccess?: StaffAccess | undefined;
 }
 
 export interface HostPartnersData {
@@ -549,6 +574,8 @@ export interface HostPartnersData {
   readonly venues: PartnerRelationshipSet;
   readonly promoters: PartnerRelationshipSet;
   readonly staff: readonly StaffMember[];
+  readonly staffInvites?: readonly StaffInvite[] | undefined;
+  readonly staffAccess?: StaffAccess | undefined;
 }
 
 export type PromoterPartnerTab = 'discover' | 'active' | 'incoming' | 'pending' | 'declined';

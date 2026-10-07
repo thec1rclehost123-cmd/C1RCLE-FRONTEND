@@ -23,7 +23,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, Suspense } from 'react';
 
 import { isApiClientError } from '@c1rcle/api-client';
-import { login, logout, useSessionStore } from '@c1rcle/auth';
+import { login, useSessionStore } from '@c1rcle/auth';
 
 import {
   normalizePartnerRole,
@@ -31,7 +31,8 @@ import {
 } from '@/components/partner-shell/partner-role-routing';
 import { setActiveOrg } from '@/lib/org/active-org';
 import { getOrganizations } from '@/lib/org/org-repository';
-import { filterOrgsByPartnerType } from '@/lib/org/route-after-auth';
+import { filterOrgsByPartnerType, redirectToFirstPendingInvite } from '@/lib/org/route-after-auth';
+import { safeNextPath } from '@/lib/safe-next-path';
 
 import type { WorkspaceType } from '@/lib/org/route-after-auth';
 
@@ -278,7 +279,13 @@ function LoginForm() {
 
   useEffect(() => {
     if (sessionState.status === 'authenticated' && sessionState.session?.user) {
-      const next = searchParams.get('next') ?? searchParams.get('callbackUrl');
+      const next = safeNextPath(searchParams.get('next') ?? searchParams.get('callbackUrl'));
+      if (sessionState.session.user.mustChangePassword) {
+        router.replace(
+          next ? `/change-password?next=${encodeURIComponent(next)}` : '/change-password',
+        );
+        return;
+      }
       if (next) {
         router.replace(next);
       }
@@ -295,7 +302,14 @@ function LoginForm() {
     try {
       await login({ email, password });
 
-      const next = searchParams.get('next') ?? searchParams.get('callbackUrl');
+      const next = safeNextPath(searchParams.get('next') ?? searchParams.get('callbackUrl'));
+      const freshUser = useSessionStore.getState().session?.user;
+      if (freshUser?.mustChangePassword) {
+        router.push(
+          next ? `/change-password?next=${encodeURIComponent(next)}` : '/change-password',
+        );
+        return;
+      }
       if (next) {
         router.push(next);
         return;
@@ -303,6 +317,9 @@ function LoginForm() {
 
       const orgs = await getOrganizations();
       if (orgs.length === 0) {
+        // A fresh login with no membership is usually an invitee who hasn't
+        // accepted yet — take them to the invite, not the applicant onboarding.
+        if (await redirectToFirstPendingInvite(router)) return;
         router.push(`/onboard?type=${userType}`);
         return;
       }
@@ -310,7 +327,9 @@ function LoginForm() {
       const matches = await filterOrgsByPartnerType(orgs, userType);
 
       if (matches.length === 0) {
-        await logout();
+        // Stay signed in: an invitee who picks the wrong workspace (venue
+        // finger, host team) just picks again — signing them out here forces
+        // a full re-login for a tap mistake.
         setError(
           `This account is not registered as a ${roleConfig[userType].label} workspace. Please select the correct workspace, or apply for access.`,
         );

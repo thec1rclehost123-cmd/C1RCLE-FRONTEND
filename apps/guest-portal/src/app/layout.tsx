@@ -1,4 +1,5 @@
 import { AppShell } from '@/components/app-shell';
+import { SessionBootstrap } from '@/components/session-bootstrap';
 import { getMetadataBase, publicRobots } from '@/lib/seo/metadata';
 
 import './globals.css';
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { readonly children: ReactNode 
           Skip to content
         </a>
 
+        <SessionBootstrap />
         <AppShell>{children}</AppShell>
       </body>
     </html>

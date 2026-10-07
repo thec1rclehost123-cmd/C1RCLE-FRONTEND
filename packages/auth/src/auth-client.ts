@@ -2,8 +2,12 @@ import { createApiClient, isApiClientError } from '@c1rcle/api-client';
 import { getClientEnv } from '@c1rcle/config';
 import {
   authBridgeResponseSchema,
+  changePasswordSchema,
+  forgotPasswordRequestSchema,
   loginRequestSchema,
   noContentSchema,
+  passwordResetAckSchema,
+  resetPasswordRequestSchema,
   sessionSchema,
   signupRequestSchema,
 } from '@c1rcle/contracts';
@@ -19,6 +23,11 @@ interface SignupInput {
 interface LoginInput {
   readonly email: string;
   readonly password: string;
+}
+
+interface ChangePasswordInput {
+  readonly currentPassword: string;
+  readonly newPassword: string;
 }
 
 /** Fixed, non-oracular message for any authentication failure. */
@@ -187,6 +196,29 @@ export async function logout(): Promise<void> {
 }
 
 /**
+ * Rotate the account password (first-login rotation for staff-invitation
+ * temporary credentials, or a voluntary change later). Validated against
+ * `changePasswordSchema` before it leaves the browser. The gateway revokes
+ * every session on rotation (including this one) and signs straight back in,
+ * so the response carries a FRESH access token — stored like a login.
+ */
+export async function changePassword(input: ChangePasswordInput): Promise<void> {
+  const body = changePasswordSchema.parse({
+    currentPassword: input.currentPassword,
+    newPassword: input.newPassword,
+  });
+
+  const response = await createAuthClient().post({
+    path: '/api/auth/change-password',
+    body,
+    schema: authBridgeResponseSchema,
+    headers: csrfHeaders(),
+  });
+
+  setSession({ user: response.user }, response.accessToken, response.expiresAt);
+}
+
+/**
  * Re-read the current session from the BFF (`{ user, expiresAt }` only — no
  * token). Keeps whatever access token is already in memory. A 401 or any
  * other failure marks the store anonymous.
@@ -202,4 +234,38 @@ export async function fetchSession(): Promise<void> {
   } catch {
     markAnonymous();
   }
+}
+
+/**
+ * Ask for a password-reset email. The BFF/gateway answer identically for
+ * known and unknown addresses (no account-existence oracle), so this resolves
+ * on any 2xx and only rejects on validation, rate-limit (429) or transport
+ * failure. Anonymous: no CSRF cookie exists yet, same-origin check guards it.
+ */
+export async function requestPasswordReset(email: string): Promise<void> {
+  const body = forgotPasswordRequestSchema.parse({ email });
+  await createAuthClient().post({
+    path: '/api/auth/forgot-password',
+    body,
+    schema: passwordResetAckSchema,
+  });
+}
+
+/**
+ * Complete a password reset with the emailed one-time token. The token is
+ * only ever placed in the request body, never a URL, header or log line.
+ */
+export async function resetPassword(input: {
+  readonly token: string;
+  readonly newPassword: string;
+}): Promise<void> {
+  const body = resetPasswordRequestSchema.parse({
+    token: input.token,
+    newPassword: input.newPassword,
+  });
+  await createAuthClient().post({
+    path: '/api/auth/reset-password',
+    body,
+    schema: passwordResetAckSchema,
+  });
 }

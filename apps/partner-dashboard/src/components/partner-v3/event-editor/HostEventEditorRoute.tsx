@@ -81,7 +81,7 @@ export function HostEventEditorRoute({
   const artwork = data.artworkOptions[0] ?? data.defaultDraft.artwork;
   const liveData: EventEditorData = {
     ...data,
-    promoters: promoters.data.length ? promoters.data : data.promoters,
+    promoters: promoters.data,
     venues: state.data.venues.map((item, index) => ({
       id: item.venue.id,
       name: item.venue.name,

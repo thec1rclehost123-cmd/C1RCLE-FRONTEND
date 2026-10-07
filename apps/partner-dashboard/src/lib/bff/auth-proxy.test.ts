@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   assertCsrf,
+  assertPathId,
   assertSameOrigin,
   forwardToGateway,
   mintCsrfToken,
@@ -207,5 +208,15 @@ describe('passThroughGatewayError', () => {
     const res = passThroughGatewayError(502, '<html>Bad Gateway</html>');
     expect(res.status).toBe(502);
     await expect(res.json()).resolves.toMatchObject({ code: 'server' });
+  });
+});
+
+describe('assertPathId', () => {
+  it('accepts opaque gateway ids', () => {
+    expect(assertPathId('app_01H-x_Y')).toBeNull();
+  });
+
+  it.each(['../admin', '..%2Fadmin', 'a/b', '', 'a?b=1', 'a b'])('rejects %j', (id) => {
+    expect(assertPathId(id)?.status).toBe(400);
   });
 });

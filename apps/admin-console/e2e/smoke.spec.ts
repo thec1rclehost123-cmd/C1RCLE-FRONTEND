@@ -28,4 +28,14 @@ test.describe('C1RCLE Admin Console', () => {
     await expect(page.getByLabel('Password')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
   });
+
+  for (const path of ['/onboarding', '/kyc-review']) {
+    test(`gates the ${path} review desk behind sign-in`, async ({ page }) => {
+      await page.goto(path);
+
+      await expect(page).toHaveURL(/\/login$/);
+      await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: /Onboarding|KYC review/ })).toHaveCount(0);
+    });
+  }
 });

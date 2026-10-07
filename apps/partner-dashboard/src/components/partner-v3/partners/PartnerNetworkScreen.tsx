@@ -19,6 +19,7 @@ import type {
   PartnerRequest,
   PartnerSegment,
   PartnerSubView,
+  StaffInvite,
   StaffMember,
 } from '@/data/partner-data-source';
 
@@ -62,9 +63,18 @@ export interface PartnerNetworkScreenProps {
   readonly connectingPartnerId?: string | null;
   readonly connectErrorId?: string | null;
   readonly connectError?: string | null;
-  readonly onApproveRequest: ((request: PartnerRequest) => void) | undefined;
-  readonly onRejectRequest: ((request: PartnerRequest) => void) | undefined;
-  readonly onConnect: ((partner: PartnerRelationship) => void) | undefined;
+  readonly onApproveRequest?: ((request: PartnerRequest) => void) | undefined;
+  readonly onRejectRequest?: ((request: PartnerRequest) => void) | undefined;
+  readonly onConnect?: ((partner: PartnerRelationship) => void) | undefined;
+  readonly staffInvites?: readonly StaffInvite[];
+  readonly staffCanManage?: boolean;
+  readonly staffError?: string | null;
+  readonly revokingInviteId?: string | null;
+  readonly revokeErrorId?: string | null;
+  readonly revokeError?: string | null;
+  readonly onRevokeInvite?: ((invite: StaffInvite) => void) | undefined;
+  readonly onStaffChanged?: (() => void) | undefined;
+  readonly studioCapability?: 'venue' | 'host';
 }
 
 interface QueryState {
@@ -93,47 +103,140 @@ const relationshipRecords = (
     subView === 'connected' ? 'connected' : 'discover'
   ];
 
+function staffChips(member: StaffMember): readonly string[] {
+  if (member.capabilities && member.capabilities.length > 0) {
+    return member.backendRole
+      ? [member.backendRole, ...member.capabilities]
+      : [...member.capabilities];
+  }
+  return member.permissions;
+}
+
 function StaffList({
   staff,
+  invites,
   search,
+  canManage,
+  staffError,
+  revokingInviteId,
+  revokeErrorId,
+  revokeError,
+  onRevokeInvite,
 }: {
   readonly staff: readonly StaffMember[];
+  readonly invites: readonly StaffInvite[];
   readonly search: string;
+  readonly canManage: boolean;
+  readonly staffError: string | null;
+  readonly revokingInviteId: string | null;
+  readonly revokeErrorId: string | null;
+  readonly revokeError: string | null;
+  readonly onRevokeInvite?: ((invite: StaffInvite) => void) | undefined;
 }) {
-  const records = filterBySearch(staff, search);
-  if (!records.length)
+  const normalized = search.trim().toLowerCase();
+  const members = filterBySearch(staff, search);
+  const pendingInvites = invites.filter(
+    (invite) =>
+      invite.status === 'pending' &&
+      (!normalized || invite.email.toLowerCase().includes(normalized)),
+  );
+
+  if (staffError) {
+    return <EmptyState title="Couldn't load staff" description={staffError} />;
+  }
+
+  if (staff.length === 0 && pendingInvites.length === 0) {
+    return (
+      <EmptyState
+        title="No staff yet"
+        description="Invite your team by email — they appear here once they accept."
+      />
+    );
+  }
+
+  if (normalized && members.length === 0 && pendingInvites.length === 0) {
     return (
       <EmptyState title="No staff found" description="Try a different name or clear the search." />
     );
+  }
+
   return (
-    <div className={styles['staffGrid']}>
-      {records.map((member) => (
-        <article className={styles['staffCard']} key={member.id}>
-          <div className={styles['staffCardHeader']}>
-            <div className={styles['partnerIdentity']}>
-              <Avatar name={member.name} />
-              <div>
-                <h3>{member.name}</h3>
-                <p>{member.role}</p>
-              </div>
-            </div>
-            <Badge tone="success">{member.status}</Badge>
-          </div>
-          <div className={styles['permissionChips']}>
-            {member.permissions.map((permission) => (
-              <span key={permission}>{permission}</span>
+    <div className={styles['staffSection']}>
+      {pendingInvites.length > 0 ? (
+        <section>
+          <h2 className={styles['requestSectionHeading']}>Pending invites</h2>
+          <div className={styles['requestList']}>
+            {pendingInvites.map((invite) => (
+              <article className={styles['requestCard']} key={invite.id}>
+                <div className={styles['partnerIdentity']}>
+                  <Avatar name={invite.email} />
+                  <div>
+                    <div className={styles['requestNameRow']}>
+                      <h3>{invite.email}</h3>
+                      <Badge tone="neutral">Invite sent</Badge>
+                    </div>
+                    <p>
+                      {invite.role}
+                      {invite.capabilities.length > 0 ? ` · ${invite.capabilities.join(', ')}` : ''}
+                    </p>
+                    {revokeErrorId === invite.id && revokeError ? (
+                      <p role="alert">{revokeError}</p>
+                    ) : null}
+                  </div>
+                </div>
+                {canManage && onRevokeInvite ? (
+                  <div className={styles['requestActions']}>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={revokingInviteId === invite.id}
+                      onClick={() => {
+                        onRevokeInvite(invite);
+                      }}
+                    >
+                      {revokingInviteId === invite.id ? 'Revoking…' : 'Revoke'}
+                    </Button>
+                  </div>
+                ) : null}
+              </article>
             ))}
           </div>
-          <Button
-            type="button"
-            variant="secondary"
-            disabled
-            title="Staff access changes are not available yet"
-          >
-            Manage access
-          </Button>
-        </article>
-      ))}
+        </section>
+      ) : null}
+      {members.length > 0 ? (
+        <div className={styles['staffGrid']}>
+          {members.map((member) => (
+            <article className={styles['staffCard']} key={member.id}>
+              <div className={styles['staffCardHeader']}>
+                <div className={styles['partnerIdentity']}>
+                  <Avatar name={member.name} />
+                  <div>
+                    <h3>{member.name}</h3>
+                    <p>{member.role}</p>
+                  </div>
+                </div>
+                <Badge tone="success">{member.status}</Badge>
+              </div>
+              <div className={styles['permissionChips']}>
+                {staffChips(member).map((chip) => (
+                  <span key={chip}>{chip}</span>
+                ))}
+              </div>
+              {member.email ? <p>{member.email}</p> : null}
+            </article>
+          ))}
+        </div>
+      ) : normalized ? (
+        <EmptyState
+          title="No staff found"
+          description="Try a different name or clear the search."
+        />
+      ) : null}
+      {!canManage ? (
+        <p className={styles['dialogNotice']}>
+          Only team members with staff-management access can invite or revoke staff.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -151,16 +254,25 @@ export function PartnerNetworkScreen({
   showSearch = true,
   hostAccent = false,
   organizationId,
-  pendingRequestId,
-  pendingRequestAction,
-  requestErrorId,
-  requestError,
-  connectingPartnerId,
-  connectErrorId,
-  connectError,
+  pendingRequestId = null,
+  pendingRequestAction = null,
+  requestErrorId = null,
+  requestError = null,
+  connectingPartnerId = null,
+  connectErrorId = null,
+  connectError = null,
   onApproveRequest,
   onRejectRequest,
   onConnect,
+  staffInvites = [],
+  staffCanManage = true,
+  staffError = null,
+  revokingInviteId = null,
+  revokeErrorId = null,
+  revokeError = null,
+  onRevokeInvite,
+  onStaffChanged,
+  studioCapability,
 }: PartnerNetworkScreenProps) {
   const state: QueryState = { segment, subView, search, profileId };
   const partnerSet =
@@ -213,6 +325,11 @@ export function PartnerNetworkScreen({
           {segment === 'staff' ? (
             <AddStaffButton
               {...(hostAccent ? { buttonClassName: styles['hostPrimaryButton'] } : {})}
+              {...(studioCapability ? { defaultCapability: studioCapability } : {})}
+              {...(onStaffChanged ? { onInvited: onStaffChanged } : {})}
+              {...(organizationId ? { organizationId } : {})}
+              disabled={!staffCanManage}
+              disabledTitle="You need staff-management access to invite staff"
             />
           ) : null}
         </header>
@@ -249,8 +366,8 @@ export function PartnerNetworkScreen({
             <SearchInput
               name="search"
               defaultValue={search}
-              placeholder="Search partners"
-              aria-label="Search partners"
+              placeholder={segment === 'staff' ? 'Search staff' : 'Search partners'}
+              aria-label={segment === 'staff' ? 'Search staff' : 'Search partners'}
             />
             <Button type="submit" variant="secondary">
               Search
@@ -290,7 +407,17 @@ export function PartnerNetworkScreen({
             />
           )
         ) : segment === 'staff' ? (
-          <StaffList staff={data.staff} search={search} />
+          <StaffList
+            staff={data.staff}
+            invites={staffInvites}
+            search={search}
+            canManage={staffCanManage}
+            staffError={staffError}
+            revokingInviteId={revokingInviteId}
+            revokeErrorId={revokeErrorId}
+            revokeError={revokeError}
+            {...(onRevokeInvite ? { onRevokeInvite } : {})}
+          />
         ) : records.length ? (
           <div className={styles['partnerGrid']}>
             {records.map((partner) => (

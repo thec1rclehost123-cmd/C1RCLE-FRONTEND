@@ -33,11 +33,8 @@ describe('Guest Portal proxy', () => {
     'keeps %s reachable without a session',
     (pathname) => {
       configure('production');
-
       const request = new NextRequest(`https://thec1rcle.com${pathname}`);
-
       const response = proxy(request);
-
       expect(response.status).not.toBe(307);
       expect(response.headers.get('location')).toBeNull();
     },
@@ -59,6 +56,17 @@ describe('Guest Portal proxy', () => {
     );
     expect(response.headers.get('cache-control')).toBe('private, no-store');
     expect(response.headers.get('x-robots-tag')).toBe('noindex, follow, noarchive');
+  });
+
+  it('treats the __Secure- session cookie as authenticated', () => {
+    configure('production');
+    const response = proxy(
+      new NextRequest('https://thec1rcle.com/profile', {
+        headers: { cookie: '__Secure-better-auth.session_token=test-session' },
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get('location')).toBeNull();
   });
 
   it('marks every preview response noindex, nofollow and noarchive', () => {
