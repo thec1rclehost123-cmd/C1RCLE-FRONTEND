@@ -9,9 +9,13 @@ test.describe('C1RCLE Admin Console', () => {
     ).toBeVisible();
   });
 
-  test('exposes a keyboard skip link as the first stop', async ({ page }) => {
+  test('exposes a keyboard skip link as the first stop', async ({ page, browserName }) => {
     await page.goto('/');
-    await page.keyboard.press('Tab');
+    // macOS WebKit (Safari) skips links when tabbing unless Option is held;
+    // every other browser/OS tabs to the first link directly.
+    await page.keyboard.press(
+      browserName === 'webkit' && process.platform === 'darwin' ? 'Alt+Tab' : 'Tab',
+    );
 
     await expect(page.getByRole('link', { name: 'Skip to content' })).toBeFocused();
   });
