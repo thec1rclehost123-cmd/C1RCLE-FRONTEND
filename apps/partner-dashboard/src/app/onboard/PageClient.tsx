@@ -35,6 +35,7 @@ import {
   useEffect,
   useRef,
   useCallback,
+  useId,
   type ReactNode,
   type InputHTMLAttributes,
 } from 'react';
@@ -2010,15 +2011,21 @@ type FormInputProps = {
   error?: string | undefined;
 } & InputHTMLAttributes<HTMLInputElement>;
 
-function FormInput({ label, icon: Icon, error, ...props }: FormInputProps) {
+function FormInput({ label, icon: Icon, error, id, name, ...props }: FormInputProps) {
+  const autoId = useId();
+  const inputId = id ?? name ?? autoId;
   return (
     <div className="space-y-2">
-      <label className="input-label">{label}</label>
+      <label htmlFor={inputId} className="input-label">
+        {label}
+      </label>
       <div className="relative group">
         {Icon && (
           <Icon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--text-placeholder)] group-focus-within:text-[var(--accent-primary)] transition-colors" />
         )}
         <input
+          id={inputId}
+          name={name}
           className={`w-full bg-[var(--surface-secondary)] border rounded-xl text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] transition-all outline-none ${Icon ? 'pl-12 pr-4' : 'px-4'} py-3.5 hover:border-[var(--border-default)] focus:bg-[var(--surface-base)] focus:border-[var(--accent-primary)] focus:ring-3 focus:ring-[var(--accent-glow)] disabled:opacity-60 disabled:cursor-not-allowed ${error ? 'border-[var(--state-error)]' : 'border-[var(--border-subtle)]'}`}
           aria-invalid={error ? true : undefined}
           {...props}
@@ -2050,14 +2057,18 @@ function FormField({
   inputMode?: 'numeric' | 'text' | 'tel' | 'email' | 'url' | 'search' | undefined;
   disabled?: boolean;
 }) {
+  const inputId = useId();
   return (
     <div className="space-y-2">
-      <label className="input-label">{label}</label>
+      <label htmlFor={inputId} className="input-label">
+        {label}
+      </label>
       <div className="relative group">
         {Icon && (
           <Icon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--text-placeholder)] group-focus-within:text-[var(--accent-primary)] transition-colors" />
         )}
         <input
+          id={inputId}
           type={type}
           inputMode={inputMode}
           value={value ?? ''}
@@ -2259,10 +2270,14 @@ function OtpInput({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const inputId = useId();
   return (
     <div className="space-y-2">
-      <label className="input-label">{label}</label>
+      <label htmlFor={inputId} className="input-label">
+        {label}
+      </label>
       <input
+        id={inputId}
         type="text"
         inputMode="numeric"
         maxLength={6}
@@ -2292,11 +2307,15 @@ function FormSelect({
   options: { value: string; label: string }[];
   disabled?: boolean;
 }) {
+  const selectId = useId();
   return (
     <div className="space-y-2">
-      <label className="input-label">{label}</label>
+      <label htmlFor={selectId} className="input-label">
+        {label}
+      </label>
       <div className="relative">
         <select
+          id={selectId}
           value={value}
           onChange={(e) => {
             onChange(e.target.value);
@@ -2549,12 +2568,17 @@ function KycInputField({
   maxLength?: number;
 }) {
   const message = error ?? hint;
+  const inputId = useId();
   return (
     <div className="space-y-1.5">
-      <label className="text-[11px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">
+      <label
+        htmlFor={inputId}
+        className="text-[11px] font-black uppercase tracking-widest text-[var(--text-tertiary)]"
+      >
         {label}
       </label>
       <input
+        id={inputId}
         type={type}
         inputMode={inputMode}
         maxLength={maxLength}
@@ -2588,13 +2612,18 @@ function KycSelectField({
   options: { value: string; label: string }[];
   error?: string | undefined;
 }) {
+  const selectId = useId();
   return (
     <div className="space-y-1.5">
-      <label className="text-[11px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">
+      <label
+        htmlFor={selectId}
+        className="text-[11px] font-black uppercase tracking-widest text-[var(--text-tertiary)]"
+      >
         {label}
       </label>
       <div className="relative">
         <select
+          id={selectId}
           value={value}
           onChange={(e) => {
             onChange(e.target.value);
