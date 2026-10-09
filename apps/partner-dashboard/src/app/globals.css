@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400..900&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Hanken+Grotesk:wght@400..800&display=swap');
+
 /* Updated Tailwind CSS globals */
 @tailwind base;
 
@@ -93,6 +95,10 @@ body {
   --trend-neutral: #6b7280;
 
   /* ─── Typography Stack ─── */
+  --font-display: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif;
+  --font-body: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+  --font-partner-v3: 'Archivo', system-ui, -apple-system, sans-serif;
+  --font-archivo: 'Archivo', system-ui, -apple-system, sans-serif;
   --font-system:
     var(--font-body), -apple-system, blinkmacsystemfont, 'Segoe UI', roboto, sans-serif;
   --font-display-stack: var(--font-display), var(--font-system);

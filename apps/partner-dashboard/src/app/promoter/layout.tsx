@@ -1,5 +1,3 @@
-import { Archivo } from 'next/font/google';
-
 import { PromoterDashboardLayout } from '@/components/promoter/PromoterDashboardLayout';
 import { DashboardAuthProvider } from '@/components/providers/DashboardAuthProvider';
 
@@ -7,13 +5,6 @@ import './promoter.css';
 
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-
-const archivo = Archivo({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800', '900'],
-  display: 'swap',
-  variable: '--font-archivo',
-});
 
 export const metadata: Metadata = {
   title: 'Promoter Studio',
@@ -23,7 +14,7 @@ export const metadata: Metadata = {
 export default function PromoterLayout({ children }: { readonly children: ReactNode }) {
   return (
     <DashboardAuthProvider>
-      <div className={archivo.variable}>
+      <div>
         <PromoterDashboardLayout>{children}</PromoterDashboardLayout>
       </div>
     </DashboardAuthProvider>
