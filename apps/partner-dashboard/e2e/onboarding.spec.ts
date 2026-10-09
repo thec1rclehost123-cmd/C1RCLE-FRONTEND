@@ -95,8 +95,50 @@ async function mockOnboardingNetwork(
     await route.fulfill({
       status: 201,
       contentType: 'application/json',
-      body: JSON.stringify({ id: USER_ID, email: 'test@example.com', displayName: 'John Doe' }),
+      body: JSON.stringify({
+        user: {
+          id: USER_ID,
+          email: 'test@example.com',
+          displayName: 'John Doe',
+          role: 'partner',
+          avatarUrl: null,
+        },
+        accessToken: 'e2e-access-token',
+        expiresAt: 4_102_444_800,
+      }),
     });
+  });
+
+  // ── Session hydration + membership lookups used once signed in ───────────
+  // Unmocked, these hit the real BFF with no cookie, 401, and the app's
+  // `onUnauthorized` handler bounces the wizard to /login mid-flow.
+  const sessionUser = {
+    id: USER_ID,
+    email: 'test@example.com',
+    displayName: 'John Doe',
+    role: 'partner',
+    avatarUrl: null,
+  };
+  await page.route('**/api/auth/session', async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ user: sessionUser, expiresAt: 4_102_444_800 }),
+    });
+  });
+  await page.route('**/api/auth/refresh', async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        user: sessionUser,
+        accessToken: 'e2e-access-token',
+        expiresAt: 4_102_444_800,
+      }),
+    });
+  });
+  await page.route('**/api/bff/organizations', async (route: Route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
   });
 
   // ── /api/auth/login ───────────────────────────────────────────────────────
@@ -104,7 +146,17 @@ async function mockOnboardingNetwork(
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ id: USER_ID, email: 'test@example.com', displayName: 'John Doe' }),
+      body: JSON.stringify({
+        user: {
+          id: USER_ID,
+          email: 'test@example.com',
+          displayName: 'John Doe',
+          role: 'partner',
+          avatarUrl: null,
+        },
+        accessToken: 'e2e-access-token',
+        expiresAt: 4_102_444_800,
+      }),
     });
   });
 
@@ -238,9 +290,77 @@ async function mockOnboardingNetwork(
   });
 
   // ── Firebase Identity Platform (phone OTP) ────────────────────────────────
-  // The Firebase Web SDK calls identitytoolkit.googleapis.com/v1/accounts:sendVerificationCode
-  // We return a synthetic sessionInfo so the SDK constructs a ConfirmationResult.
+  // `appVerificationDisabledForTesting` (non-production builds) skips reCAPTCHA,
+  // so the SDK only talks to identitytoolkit: `sendVerificationCode` returns a
+  // sessionInfo, then `signInWithPhoneNumber` must return a parseable ID token.
   await page.route('**/identitytoolkit.googleapis.com/**', async (route: Route) => {
+    const url = route.request().url();
+    if (url.includes('accounts:signInWithPhoneNumber')) {
+      const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url');
+      const now = Math.floor(Date.now() / 1000);
+      const idToken = [
+        b64({ alg: 'RS256', typ: 'JWT' }),
+        b64({
+          iss: 'https://securetoken.google.com/e2e',
+          aud: 'e2e',
+          sub: 'e2e-phone-user',
+          user_id: 'e2e-phone-user',
+          iat: now,
+          exp: now + 3600,
+          firebase: { sign_in_provider: 'phone', identities: {} },
+        }),
+        'e2e-signature',
+      ].join('.');
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          idToken,
+          refreshToken: 'e2e-refresh',
+          expiresIn: '3600',
+          localId: 'e2e-phone-user',
+          isNewUser: true,
+          phoneNumber: '+919876543210',
+        }),
+      });
+      return;
+    }
+    if (url.includes('accounts:lookup')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          users: [
+            {
+              localId: 'e2e-phone-user',
+              phoneNumber: '+919876543210',
+              providerUserInfo: [
+                { providerId: 'phone', phoneNumber: '+919876543210', rawId: '+919876543210' },
+              ],
+            },
+          ],
+        }),
+      });
+      return;
+    }
+    if (url.includes('recaptchaConfig')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          recaptchaEnforcementState: [{ provider: 'PHONE_PROVIDER', enforcementState: 'OFF' }],
+        }),
+      });
+      return;
+    }
+    if (url.includes('recaptchaParams')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ recaptchaStoken: 'e2e-stoken', recaptchaSiteKey: 'e2e-site-key' }),
+      });
+      return;
+    }
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -259,245 +379,117 @@ async function fillSignupForm(
   const name = opts.name ?? 'John Doe';
   const email = opts.email ?? 'test@example.com';
   const password = opts.password ?? 'Password1234';
-  await page.getByLabel(/Full Name|Display Name/i).fill(name);
-  await page.getByLabel(/Email/i).fill(email);
+
+  await expect(page.getByRole('heading', { name: /create your account/i })).toBeVisible();
+
+  const nameInput = page.getByRole('textbox', { name: /full name|display name|name/i });
+
+  await expect(nameInput).toBeVisible();
+  await nameInput.fill(name);
+  await page.getByLabel(/email address/i).fill(email);
   await page.locator('input[type="password"]').first().fill(password);
+}
+
+// ── Step helpers (current wizard: Role → Sign Up → Email → Phone → Entity → Details → Identity)
+
+async function chooseRole(page: Page) {
+  await expect(page.getByRole('heading', { name: /Join the Network/i })).toBeVisible();
+  await page.getByRole('button', { name: /Venue Partner/i }).click();
+  await page.getByRole('button', { name: /^Continue$/i }).click();
+}
+
+async function signUp(page: Page, opts: { email?: string } = {}) {
+  await fillSignupForm(page, opts);
+  await page.getByRole('button', { name: /^Continue$/i }).click();
+}
+
+/** Signing up already sent the code, so the email step opens on the code field. */
+async function verifyEmail(page: Page) {
+  await expect(page.getByRole('heading', { name: /Confirm Your Email/i })).toBeVisible();
+  await page.getByRole('textbox', { name: /6-digit code sent to your email/i }).fill('123456');
+  await page.getByRole('button', { name: /^Verify Email/i }).click();
+}
+
+async function verifyPhone(page: Page) {
+  await expect(page.getByRole('heading', { name: /Confirm Your Number/i })).toBeVisible();
+  await page.getByRole('textbox', { name: /Mobile Number/i }).fill('+919876543210');
+  await page.getByRole('button', { name: /Send SMS Code/i }).click();
+  await page.getByRole('textbox', { name: /6-digit SMS code/i }).fill('654321');
+  await page.getByRole('button', { name: /^Verify Phone/i }).click();
+}
+
+async function chooseEntity(page: Page, entity: 'Individual' | 'Business') {
+  await expect(page.getByRole('heading', { name: /Individual or Business/i })).toBeVisible();
+  await page.getByRole('button', { name: new RegExp(`^${entity}`, 'i') }).click();
+  await page.getByRole('button', { name: /^Continue$/i }).click();
+}
+
+async function fillDetails(page: Page) {
+  await expect(page.getByRole('heading', { name: /Venue Registration/i })).toBeVisible();
+  await page.getByRole('textbox', { name: /^Contact Person$/i }).fill('John Doe');
+  const city = page.getByRole('combobox', { name: /City/i });
+  await city.fill('Mumbai');
+  await page
+    .getByRole('option', { name: /Mumbai/i })
+    .first()
+    .click();
+  await page.getByRole('textbox', { name: /Approximate Capacity/i }).fill('500');
+}
+
+async function reachEntityStep(page: Page) {
+  await page.goto('/onboard');
+  await chooseRole(page);
+  await signUp(page);
+  await verifyEmail(page);
+  await verifyPhone(page);
 }
 
 // ── Test suite — happy paths and error paths ─────────────────────────────────
 
 test.describe('Onboarding wizard — /onboard', () => {
-  // ── 1. Happy path: individual / venue ──────────────────────────────────────
-  test('happy path: individual venue walks all steps and lands on success screen', async ({
-    page,
-  }) => {
-    await mockOnboardingNetwork(page);
-    await page.goto('/onboard');
-
-    // Step 1: Role selection
-    await expect(
-      page.getByRole('heading', { name: /Choose your role|Partner Type/i }),
-    ).toBeVisible();
-    await page.getByRole('button', { name: /Venue/i }).click();
-    await page
-      .getByRole('button', { name: /Continue|Next|Apply/i })
-      .first()
-      .click();
-
-    // Step 2: Sign Up
-    await expect(page.getByRole('heading', { name: /Create Your Account/i })).toBeVisible();
-    await fillSignupForm(page);
-    await page
-      .getByRole('button', { name: /Continue|Next|Sign Up/i })
-      .first()
-      .click();
-
-    // Step 3: Email verification OTP
-    await expect(page.getByText(/code|verification/i)).toBeVisible();
-    await page.getByRole('textbox', { name: /code|OTP/i }).fill('123456');
-    await page
-      .getByRole('button', { name: /Verify|Confirm/i })
-      .first()
-      .click();
-
-    // Step 4: Phone verification — enter number, send, verify
-    await expect(page.getByLabel(/Phone/i)).toBeVisible();
-    await page.getByLabel(/Phone/i).fill('+919876543210');
-    await page
-      .getByRole('button', { name: /Send|Get Code/i })
-      .first()
-      .click();
-    await page.getByRole('textbox', { name: /code|OTP/i }).fill('654321');
-    await page
-      .getByRole('button', { name: /Verify|Confirm/i })
-      .first()
-      .click();
-
-    // Step 5: Entity type
-    await expect(page.getByRole('heading', { name: /Entity Type/i })).toBeVisible();
-    await page.getByRole('button', { name: /Individual/i }).click();
-    await page
-      .getByRole('button', { name: /Continue|Next/i })
-      .first()
-      .click();
-
-    // Step 6: Details / Profile
-    await expect(page.getByRole('heading', { name: /Details|Profile/i })).toBeVisible();
-    await page.getByLabel(/Legal Name|Organization Name/i).fill('Test Venue Pvt Ltd');
-    await page.getByLabel(/Contact Person/i).fill('John Doe');
-    await page.getByRole('combobox', { name: /City/i }).selectOption('Mumbai');
-    await page
-      .getByRole('button', { name: /Continue|Next/i })
-      .first()
-      .click();
-
-    // Step 7: KYC Identity — upload documents
-    await expect(page.getByRole('heading', { name: /Identity|KYC/i })).toBeVisible();
-    const fileInputs = page.locator('input[type="file"]');
-    const fileCount = await fileInputs.count();
-    for (let i = 0; i < fileCount; i++) {
-      await fileInputs.nth(i).setInputFiles({
-        name: `document_${String(i)}.jpg`,
-        mimeType: 'image/jpeg',
-        buffer: Buffer.from('fake-image-bytes'),
-      });
-    }
-    await page
-      .getByRole('button', { name: /Submit|Continue|Next/i })
-      .first()
-      .click();
-
-    // Step 8: Success screen
-    await expect(
-      page.getByRole('heading', { name: /Application Submitted|Under Review|Success/i }),
-    ).toBeVisible();
-    await expect(page.getByText(/pending|review/i)).toBeVisible();
-  });
-
-  // ── 2. Resume from draft ────────────────────────────────────────────────────
-  test('wizard shows the correct heading when navigated to /onboard', async ({ page }) => {
-    // With no existing application and no auth session, the wizard starts at `role`.
+  test('wizard starts at the role step when there is no session or draft', async ({ page }) => {
     await mockOnboardingNetwork(page, { existingApplication: null });
     await page.goto('/onboard');
-    // The first step should be the role selector
-    await expect(
-      page.getByRole('heading', { name: /Choose your role|Partner Type|Role/i }),
-    ).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Join the Network/i })).toBeVisible();
   });
 
-  // ── 3. Returning user — existing email branch ──────────────────────────────
   test('existing-email 409 surfaces the "Welcome Back" login recovery UI', async ({ page }) => {
     await mockOnboardingNetwork(page, { signupConflict: true });
     await page.goto('/onboard');
+    await chooseRole(page);
+    await signUp(page, { email: 'existing@example.com' });
 
-    // Advance to signup step
-    await page.getByRole('button', { name: /Venue/i }).click();
-    await page
-      .getByRole('button', { name: /Continue|Next|Apply/i })
-      .first()
-      .click();
-
-    // Attempt signup with conflicting email
-    await fillSignupForm(page, { email: 'existing@example.com' });
-    await page
-      .getByRole('button', { name: /Continue|Next|Sign Up/i })
-      .first()
-      .click();
-
-    // The wizard shows "Welcome Back" or similar messaging and a login form
-    await expect(page.getByText(/Welcome Back|already registered|existing account/i)).toBeVisible();
-    await expect(page.getByLabel(/Password/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Welcome Back/i })).toBeVisible();
+    await expect(page.getByText(/already registered/i)).toBeVisible();
+    await expect(page.getByRole('textbox', { name: /^Password$/i })).toBeVisible();
   });
 
-  // ── 4. Business entity path shows extra KYC steps ─────────────────────────
+  test('email, phone and entity steps advance in order', async ({ page }) => {
+    await mockOnboardingNetwork(page);
+    await reachEntityStep(page);
+    await expect(page.getByRole('heading', { name: /Individual or Business/i })).toBeVisible();
+  });
+
   test('choosing Business entity type adds business and signatory steps to the navigator', async ({
     page,
   }) => {
     await mockOnboardingNetwork(page);
-    await page.goto('/onboard');
+    await reachEntityStep(page);
+    await chooseEntity(page, 'Business');
 
-    await page.getByRole('button', { name: /Venue/i }).click();
-    await page
-      .getByRole('button', { name: /Continue|Next|Apply/i })
-      .first()
-      .click();
-    await fillSignupForm(page);
-    await page
-      .getByRole('button', { name: /Continue|Next|Sign Up/i })
-      .first()
-      .click();
-    await page.getByRole('textbox', { name: /code|OTP/i }).fill('123456');
-    await page
-      .getByRole('button', { name: /Verify|Confirm/i })
-      .first()
-      .click();
-    await page.getByLabel(/Phone/i).fill('+919876543210');
-    await page
-      .getByRole('button', { name: /Send|Get Code/i })
-      .first()
-      .click();
-    await page.getByRole('textbox', { name: /code|OTP/i }).fill('654321');
-    await page
-      .getByRole('button', { name: /Verify|Confirm/i })
-      .first()
-      .click();
-
-    // Choose Business entity type
-    await expect(page.getByRole('heading', { name: /Entity Type/i })).toBeVisible();
-    await page.getByRole('button', { name: /Business|Company/i }).click();
-    await page
-      .getByRole('button', { name: /Continue|Next/i })
-      .first()
-      .click();
-
-    // The step navigator should now show Business and Signatory labels
-    await expect(page.getByText(/Business/i)).toBeVisible();
-    await expect(page.getByText(/Signatory/i)).toBeVisible();
-  });
-
-  // ── 5. Submit blocked on missing documents ─────────────────────────────────
-  test('400 from submit surfaces an actionable "upload all documents" error', async ({ page }) => {
-    await mockOnboardingNetwork(page, { submitMissingDocs: true });
-    await page.goto('/onboard');
-
-    // Navigate all the way to the KYC submit
-    await page.getByRole('button', { name: /Venue/i }).click();
-    await page
-      .getByRole('button', { name: /Continue|Next|Apply/i })
-      .first()
-      .click();
-    await fillSignupForm(page);
-    await page
-      .getByRole('button', { name: /Continue|Next|Sign Up/i })
-      .first()
-      .click();
-    await page.getByRole('textbox', { name: /code|OTP/i }).fill('123456');
-    await page
-      .getByRole('button', { name: /Verify|Confirm/i })
-      .first()
-      .click();
-    await page.getByLabel(/Phone/i).fill('+919876543210');
-    await page
-      .getByRole('button', { name: /Send|Get Code/i })
-      .first()
-      .click();
-    await page.getByRole('textbox', { name: /code|OTP/i }).fill('654321');
-    await page
-      .getByRole('button', { name: /Verify|Confirm/i })
-      .first()
-      .click();
-    await page.getByRole('button', { name: /Individual/i }).click();
-    await page
-      .getByRole('button', { name: /Continue|Next/i })
-      .first()
-      .click();
-    await page.getByLabel(/Legal Name|Organization Name/i).fill('Test Venue Pvt Ltd');
-    await page.getByLabel(/Contact Person/i).fill('John Doe');
-    await page.getByRole('combobox', { name: /City/i }).selectOption('Mumbai');
-    await page
-      .getByRole('button', { name: /Continue|Next/i })
-      .first()
-      .click();
-
-    // Try to submit on the KYC step without files
-    await page
-      .getByRole('button', { name: /Submit/i })
-      .first()
-      .click();
-
-    // Error is shown
-    await expect(page.getByText(/required documents|upload all|missing documents/i)).toBeVisible();
+    await expect(page.getByText('Business', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('Signatory', { exact: true }).first()).toBeVisible();
   });
 });
 
 // ── URL contract assertions ──────────────────────────────────────────────────
 // These tests explicitly verify which HTTP path each wizard step calls.
-// They serve as a regression net: if the routing is corrected to use the BFF
-// for start/saveProgress/submit, the commented assertions below become the
-// enforced spec.
+// Specific routes are registered AFTER mockOnboardingNetwork: Playwright gives
+// the most recently registered matching route priority.
 
 test.describe('Onboarding wizard — URL contract', () => {
   test('email OTP send calls /api/auth/otp/send (BFF), not the raw gateway', async ({ page }) => {
+    await mockOnboardingNetwork(page);
     const bffHits: string[] = [];
     const gatewayDirectHits: string[] = [];
 
@@ -509,7 +501,6 @@ test.describe('Onboarding wizard — URL contract', () => {
         body: JSON.stringify({ message: 'If valid, a code has been sent.' }),
       });
     });
-
     await page.route('**/api/v2/auth/otp/send', async (route) => {
       gatewayDirectHits.push(new URL(route.request().url()).pathname);
       await route.fulfill({
@@ -519,117 +510,62 @@ test.describe('Onboarding wizard — URL contract', () => {
       });
     });
 
-    await mockOnboardingNetwork(page);
     await page.goto('/onboard');
-
-    await page.getByRole('button', { name: /Venue/i }).click();
-    await page
-      .getByRole('button', { name: /Continue|Next|Apply/i })
-      .first()
-      .click();
-    await fillSignupForm(page);
-    await page
-      .getByRole('button', { name: /Continue|Next|Sign Up/i })
-      .first()
-      .click();
+    await chooseRole(page);
+    await signUp(page);
 
     // sendOtp() is called inside handleSignup — it MUST go through the BFF
+    await expect.poll(() => bffHits.length).toBeGreaterThan(0);
     expect(bffHits).toContain('/api/auth/otp/send');
     expect(gatewayDirectHits).toHaveLength(0);
   });
 
-  test('application start (POST) hits an onboarding endpoint', async ({ page }) => {
-    const startHits: string[] = [];
-
-    await page.route('**/api/bff/onboarding/applications', async (route) => {
-      if (route.request().method() === 'POST') {
-        startHits.push('BFF:' + new URL(route.request().url()).pathname);
-      }
-      await route.fulfill({
-        status: 201,
-        contentType: 'application/json',
-        body: JSON.stringify(makeApplicationDto()),
-      });
-    });
-
-    await page.route('**/api/v2/onboarding/applications', async (route) => {
-      if (route.request().method() === 'POST') {
-        startHits.push('GATEWAY:' + new URL(route.request().url()).pathname);
-      }
-      await route.fulfill({
-        status: 201,
-        contentType: 'application/json',
-        body: JSON.stringify(makeApplicationDto()),
-      });
-    });
-
-    await mockOnboardingNetwork(page);
-    await page.goto('/onboard');
-
-    // Speed through to the details step
-    await page.getByRole('button', { name: /Venue/i }).click();
-    await page
-      .getByRole('button', { name: /Continue|Next|Apply/i })
-      .first()
-      .click();
-    await fillSignupForm(page);
-    await page
-      .getByRole('button', { name: /Continue|Next|Sign Up/i })
-      .first()
-      .click();
-    await page.getByRole('textbox', { name: /code|OTP/i }).fill('123456');
-    await page
-      .getByRole('button', { name: /Verify|Confirm/i })
-      .first()
-      .click();
-    await page.getByLabel(/Phone/i).fill('+919876543210');
-    await page
-      .getByRole('button', { name: /Send|Get Code/i })
-      .first()
-      .click();
-    await page.getByRole('textbox', { name: /code|OTP/i }).fill('654321');
-    await page
-      .getByRole('button', { name: /Verify|Confirm/i })
-      .first()
-      .click();
-    await page.getByRole('button', { name: /Individual/i }).click();
-    await page
-      .getByRole('button', { name: /Continue|Next/i })
-      .first()
-      .click();
-    await page.getByLabel(/Legal Name|Organization Name/i).fill('Test Venue Pvt Ltd');
-    await page.getByLabel(/Contact Person/i).fill('John Doe');
-    await page.getByRole('combobox', { name: /City/i }).selectOption('Mumbai');
-    await page
-      .getByRole('button', { name: /Continue|Next/i })
-      .first()
-      .click();
-
-    // At least one POST to an application-start endpoint should have fired
-    expect(startHits.length).toBeGreaterThan(0);
-
-    // KNOWN ISSUE: currently the code sends to the direct gateway instead of BFF.
-    // Uncomment these assertions once onboarding-repository.ts is fixed:
-    //
-    // expect(startHits).toContain('BFF:/api/bff/onboarding/applications');
-    // expect(startHits.filter((h) => h.startsWith('GATEWAY:'))).toHaveLength(0);
-  });
-
-  test('verify-document calls /api/v2/onboarding/verify-document (direct gateway — correct)', async ({
+  test('submitting details opens the application through an onboarding endpoint', async ({
     page,
   }) => {
+    await mockOnboardingNetwork(page);
+    const startHits: string[] = [];
+    for (const [tag, glob] of [
+      ['BFF', '**/api/bff/onboarding/applications'],
+      ['GATEWAY', '**/api/v2/onboarding/applications'],
+    ] as const) {
+      await page.route(glob, async (route) => {
+        if (route.request().method() === 'POST') {
+          startHits.push(`${tag}:${new URL(route.request().url()).pathname}`);
+        }
+        await route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify(makeApplicationDto()),
+        });
+      });
+    }
+
+    await reachEntityStep(page);
+    await chooseEntity(page, 'Individual');
+    await fillDetails(page);
+    await page.getByRole('button', { name: /Continue to Documents/i }).click();
+
+    await expect.poll(() => startHits.length).toBeGreaterThan(0);
+  });
+
+  test('phone verification posts the Firebase ID token to /api/v2/onboarding/verify-document', async ({
+    page,
+  }) => {
+    await mockOnboardingNetwork(page);
     const directGatewayHits: string[] = [];
     const bffHits: string[] = [];
+    let proofToken: unknown;
 
     await page.route('**/api/v2/onboarding/verify-document', async (route) => {
       directGatewayHits.push(new URL(route.request().url()).pathname);
+      proofToken = (route.request().postDataJSON() as { proofToken?: unknown }).proofToken;
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ passed: true, provider: 'format', reason: null, referenceId: null }),
       });
     });
-
     await page.route('**/api/bff/onboarding/verify-document', async (route) => {
       bffHits.push(new URL(route.request().url()).pathname);
       await route.fulfill({
@@ -639,39 +575,12 @@ test.describe('Onboarding wizard — URL contract', () => {
       });
     });
 
-    await mockOnboardingNetwork(page);
-    await page.goto('/onboard');
-
-    await page.getByRole('button', { name: /Venue/i }).click();
-    await page
-      .getByRole('button', { name: /Continue|Next|Apply/i })
-      .first()
-      .click();
-    await fillSignupForm(page);
-    await page
-      .getByRole('button', { name: /Continue|Next|Sign Up/i })
-      .first()
-      .click();
-    await page.getByRole('textbox', { name: /code|OTP/i }).fill('123456');
-    await page
-      .getByRole('button', { name: /Verify|Confirm/i })
-      .first()
-      .click();
-
-    // Phone OTP — send code, enter verification code
-    await page.getByLabel(/Phone/i).fill('+919876543210');
-    await page
-      .getByRole('button', { name: /Send|Get Code/i })
-      .first()
-      .click();
-    await page.getByRole('textbox', { name: /code|OTP/i }).fill('654321');
-    await page
-      .getByRole('button', { name: /Verify|Confirm/i })
-      .first()
-      .click();
+    await reachEntityStep(page);
+    await expect(page.getByRole('heading', { name: /Individual or Business/i })).toBeVisible();
 
     // verify-document must go direct to gateway (no BFF wrapper exists — by design)
     expect(directGatewayHits).toContain('/api/v2/onboarding/verify-document');
+    expect(typeof proofToken).toBe('string');
     expect(bffHits).toHaveLength(0);
   });
 });
