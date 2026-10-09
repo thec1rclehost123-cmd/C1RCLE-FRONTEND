@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import {
+  SESSION_COOKIE_NAME,
   assertCsrf,
   assertSameOrigin,
   errorEnvelope,
@@ -25,6 +26,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const originError = assertSameOrigin(req);
   if (originError !== null) {
     return originError;
+  }
+  const sessionToken =
+    req.cookies.get(SESSION_COOKIE_NAME)?.value ??
+    req.cookies.get(`__Secure-${SESSION_COOKIE_NAME}`)?.value;
+  if (!sessionToken) {
+    return errorEnvelope('unauthorized', 'Authentication required to RSVP.', 401);
   }
   const csrfError = assertCsrf(req);
   if (csrfError !== null) {

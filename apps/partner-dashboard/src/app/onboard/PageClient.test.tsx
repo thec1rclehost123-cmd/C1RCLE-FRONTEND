@@ -195,23 +195,26 @@ describe('Partner onboarding wizard', () => {
         expect(mocks.sendPhoneOtp).toHaveBeenCalledWith('+919876543210', 'phone-verify-recaptcha');
       });
 
-      await user.type(await screen.findByPlaceholderText('000000'), '123');
+      fireEvent.change(await screen.findByPlaceholderText('000000'), { target: { value: '123' } });
       await user.click(screen.getByRole('button', { name: /verify phone/i }));
       expect(await screen.findByText('Enter the 6-digit code.')).toBeInTheDocument();
       expect(mocks.confirmPhoneOtp).not.toHaveBeenCalled();
 
       mocks.confirmPhoneOtp.mockResolvedValue('id-token');
       mocks.verifyDocument.mockResolvedValue({ passed: false, reason: 'Number mismatch' });
-      fireEvent.change(screen.getByPlaceholderText('000000'), { target: { value: '123456' } });
+      fireEvent.change(await screen.findByPlaceholderText('000000'), {
+        target: { value: '123456' },
+      });
       await user.click(screen.getByRole('button', { name: /verify phone/i }));
       expect(await screen.findByText('Number mismatch')).toBeInTheDocument();
       expect(screen.queryByText('Individual or Business?')).not.toBeInTheDocument();
 
       mocks.verifyDocument.mockResolvedValue({ passed: true });
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /verify phone/i })).toBeEnabled();
+      });
       await user.click(screen.getByRole('button', { name: /verify phone/i }));
-      expect(
-        await screen.findByText('Individual or Business?', {}, { timeout: 10_000 }),
-      ).toBeInTheDocument();
+      expect(await screen.findByText('Individual or Business?')).toBeInTheDocument();
       expect(mocks.verifyDocument).toHaveBeenLastCalledWith({
         documentType: 'phone',
         documentNumber: '+919876543210',

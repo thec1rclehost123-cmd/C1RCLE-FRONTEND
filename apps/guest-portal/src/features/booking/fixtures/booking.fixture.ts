@@ -33,6 +33,7 @@ export const bookingEventFixtures: readonly BookingEventFixture[] = [
   {
     ...sharedEvent,
     id: 'neon-nights',
+    eventId: 'evt_neon_nights',
     title: 'Neon Nights',
     category: 'Nightlife',
     image: '/events/neon-nights.webp',
@@ -45,6 +46,7 @@ export const bookingEventFixtures: readonly BookingEventFixture[] = [
   {
     ...sharedEvent,
     id: 'rooftop-jazz',
+    eventId: 'evt_rooftop_jazz',
     title: 'Rooftop Jazz',
     category: 'Music',
     image: '/events/rooftop-jazz.webp',
@@ -57,6 +59,7 @@ export const bookingEventFixtures: readonly BookingEventFixture[] = [
   {
     ...sharedEvent,
     id: 'techno-bunker',
+    eventId: 'evt_techno_bunker',
     title: 'Techno Bunker',
     category: 'Afters',
     image: '/events/techno-bunker.webp',
@@ -69,6 +72,7 @@ export const bookingEventFixtures: readonly BookingEventFixture[] = [
   {
     ...sharedEvent,
     id: 'art-collective',
+    eventId: 'evt_art_collective',
     title: 'Art Collective',
     category: 'Art',
     image: '/events/art-collective.webp',
@@ -81,6 +85,7 @@ export const bookingEventFixtures: readonly BookingEventFixture[] = [
   {
     ...sharedEvent,
     id: 'indie-jam',
+    eventId: 'evt_indie_jam',
     title: 'Indie Jam',
     category: 'Live Music',
     image: '/events/indie-jam.webp',
@@ -93,6 +98,7 @@ export const bookingEventFixtures: readonly BookingEventFixture[] = [
   {
     ...sharedEvent,
     id: 'sunday-soul',
+    eventId: 'evt_sunday_soul',
     title: 'Sunday Soul',
     category: 'Community',
     image: '/events/sunday-soul.webp',
