@@ -1,4 +1,3 @@
-import { Archivo, Bricolage_Grotesque, Hanken_Grotesk } from 'next/font/google';
 import { cookies } from 'next/headers';
 
 import { getServerSession } from '@c1rcle/auth/server-session';
@@ -12,27 +11,6 @@ import '@/styles/partner-v3.css';
 
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
-
-const displayFont = Bricolage_Grotesque({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-display',
-  display: 'swap',
-});
-
-const bodyFont = Hanken_Grotesk({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-body',
-  display: 'swap',
-});
-
-const partnerV3Font = Archivo({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800', '900'],
-  variable: '--font-partner-v3',
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: {
@@ -56,12 +34,7 @@ export default async function RootLayout({ children }: { readonly children: Reac
   const session = await getServerSession((await cookies()).toString());
 
   return (
-    <html
-      lang="en"
-      className={`dark ${displayFont.variable} ${bodyFont.variable} ${partnerV3Font.variable}`}
-      data-scroll-behavior="smooth"
-      suppressHydrationWarning
-    >
+    <html lang="en" className="dark" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className="antialiased bg-[#0A0A0B] text-white">
         <SessionProvider initialUser={session}>
           <DashboardAuthProvider>

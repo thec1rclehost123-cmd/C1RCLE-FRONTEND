@@ -129,6 +129,7 @@ if (!FREE_EVENT_BASE) throw new Error('missing booking fixture');
 const FREE_EVENT: BookingEventFixture = {
   ...FREE_EVENT_BASE,
   id: 'rsvp-night',
+  eventId: 'evt_rsvp_night',
   ticketTiers: [
     {
       id: 'tier_rsvp_1',
@@ -165,12 +166,30 @@ describe('CheckoutView RSVP', () => {
     await waitFor(() => {
       expect(mockPost).toHaveBeenCalledWith({
         path: '/api/rsvp',
-        body: { eventId: 'rsvp-night', tierId: 'tier_rsvp_1' },
+        body: { eventId: 'evt_rsvp_night', tierId: 'tier_rsvp_1' },
         headers: {},
         schema: expect.anything() as unknown,
       });
       expect(mockPush).toHaveBeenCalledWith('/confirmation/RSVP-abc123');
     });
+  });
+
+  it('forwards the guest.c1rcle.csrf cookie as x-csrf-token header', async () => {
+    document.cookie = 'guest.c1rcle.csrf=test-csrf-token-123; path=/';
+    mockPost.mockResolvedValue({ order: { id: 'RSVP-csrf-test' } });
+    reachRsvpStep();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm RSVP →' }));
+
+    await waitFor(() => {
+      expect(mockPost).toHaveBeenCalledWith({
+        path: '/api/rsvp',
+        body: { eventId: 'evt_rsvp_night', tierId: 'tier_rsvp_1' },
+        headers: { 'x-csrf-token': 'test-csrf-token-123' },
+        schema: expect.anything() as unknown,
+      });
+    });
+    document.cookie = 'guest.c1rcle.csrf=; path=/; max-age=0';
   });
 
   it('shows the already-on-the-list state on a 409 duplicate', async () => {

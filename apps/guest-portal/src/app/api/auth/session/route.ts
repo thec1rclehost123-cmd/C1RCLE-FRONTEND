@@ -4,11 +4,14 @@ import {
   assertSameOrigin,
   clearCsrfCookie,
   clearSessionCookie,
+  csrfCookieName,
   errorEnvelope,
   forwardToGateway,
   gatewayUnreachable,
+  mintCsrfToken,
   parseJson,
   passThroughGatewayError,
+  setCsrfCookie,
 } from '@/lib/bff/auth-proxy';
 
 import type { NextRequest } from 'next/server';
@@ -46,5 +49,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
   const res = NextResponse.json(payload, { status: 200 });
   res.headers.set('Cache-Control', 'private, no-store');
+  if (!req.cookies.has(csrfCookieName()) && !req.cookies.has('c1rcle.csrf')) {
+    setCsrfCookie(res, mintCsrfToken());
+  }
   return res;
 }

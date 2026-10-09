@@ -73,6 +73,17 @@ export function VenueEventEditorRoute({
       <EmptyState
         title="No active venue"
         description="Create or activate a venue before creating an event."
+        action={
+          <button
+            type="button"
+            className="rounded-xl bg-[#FF4400] px-6 py-3 text-xs font-black uppercase tracking-widest text-white hover:bg-[#ff5b1f]"
+            onClick={() => {
+              state.retry();
+            }}
+          >
+            Retry
+          </button>
+        }
       />
     );
   }

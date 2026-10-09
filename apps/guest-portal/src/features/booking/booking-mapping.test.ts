@@ -44,6 +44,7 @@ describe('toBookingEventFixture', () => {
   it('maps wire fields into the checkout view model', () => {
     expect(toBookingEventFixture(EVENT, VENUE)).toEqual({
       id: 'sky-night',
+      eventId: 'evt_1',
       title: 'Sky Night',
       category: 'Music',
       image: 'https://example.com/poster.jpg',

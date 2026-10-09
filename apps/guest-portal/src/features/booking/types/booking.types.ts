@@ -15,6 +15,7 @@ export interface BookingTicketTier {
 
 export interface BookingEventFixture {
   id: string;
+  eventId: string;
   title: string;
   category: string;
   image: string;

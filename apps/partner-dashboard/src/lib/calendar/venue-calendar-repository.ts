@@ -1,6 +1,7 @@
 import { paginatedSchema } from '@c1rcle/api-client';
 import {
   eventDtoSchema,
+  organizationDtoSchema,
   venueDtoSchema,
   venueSlotDtoSchema,
   type EventDto,
@@ -118,7 +119,40 @@ export async function loadVenueCalendarWorkspace({
     schema: paginatedSchema(venueDtoSchema),
     ...(signal ? { signal } : {}),
   });
-  const venues = venueResponse.items.filter((venue) => venue.status === 'active');
+  let venues = venueResponse.items.filter((venue) => venue.status === 'active');
+  if (venues.length === 0) {
+    try {
+      const orgResponse = await apiClient.get({
+        path: `/api/v2/organizations/${encodeURIComponent(organizationId)}`,
+        headers: { 'x-organization-id': organizationId },
+        schema: organizationDtoSchema,
+        ...(signal ? { signal } : {}),
+      });
+      const name = orgResponse.name.trim() || 'Main Venue';
+      const rawBase =
+        (orgResponse.slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-'))
+          .replace(/^-|-$/g, '')
+          .slice(0, 32) || 'venue';
+      const suffix = organizationId
+        .replace(/[^a-z0-9]/gi, '')
+        .slice(-6)
+        .toLowerCase();
+      const slug = `${rawBase}-${suffix}`;
+      const createdVenue = await apiClient.post({
+        path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/venues`,
+        body: { name, slug, description: '' },
+        headers: {
+          'x-organization-id': organizationId,
+          'Idempotency-Key': crypto.randomUUID(),
+        },
+        schema: venueDtoSchema,
+        ...(signal ? { signal } : {}),
+      });
+      venues = [createdVenue];
+    } catch {
+      // Continue if auto-provision cannot complete
+    }
+  }
   const venue = venues.find((item) => item.id === venueId) ?? venues[0] ?? null;
 
   if (!venue || monthKeys.length === 0) {

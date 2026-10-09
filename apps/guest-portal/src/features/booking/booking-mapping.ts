@@ -34,6 +34,7 @@ export function toBookingEventFixture(
   const city = venue?.city ?? FALLBACK_CITY;
   return {
     id: event.slug,
+    eventId: event.id,
     title: event.title,
     category: event.tags[0] ?? FALLBACK_CATEGORY,
     image: event.imageUrl ?? FALLBACK_IMAGE,
