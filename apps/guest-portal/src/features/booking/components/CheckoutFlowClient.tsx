@@ -78,7 +78,7 @@ export function CheckoutFlowClient({
 
   function csrfHeader(): Record<string, string> {
     if (typeof document === 'undefined') return {};
-    const match = /(?:^|;\s*)c1rcle\.csrf=([^;]+)/.exec(document.cookie);
+    const match = /(?:^|;\s*)(?:[a-zA-Z0-9_-]+\.)?c1rcle\.csrf=([^;]+)/.exec(document.cookie);
     return match?.[1] ? { 'x-csrf-token': decodeURIComponent(match[1]) } : {};
   }
 
@@ -90,7 +90,7 @@ export function CheckoutFlowClient({
     try {
       const result = await bffClient.post({
         path: '/api/rsvp',
-        body: { eventId: event.id, tierId: ticket.id },
+        body: { eventId: event.eventId, tierId: ticket.id },
         headers: csrfHeader(),
         schema: rsvpResponseSchema,
       });

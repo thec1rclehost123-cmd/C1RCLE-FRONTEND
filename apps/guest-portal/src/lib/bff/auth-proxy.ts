@@ -92,7 +92,10 @@ function timingSafeEqual(a: string, b: string): boolean {
 
 /** Double-submit: the `c1rcle.csrf` cookie must equal the `x-csrf-token` header. */
 export function assertCsrf(req: NextRequest): NextResponse | null {
-  const cookie = req.cookies.get(csrfCookieName())?.value ?? '';
+  const cookie =
+    req.cookies.get(csrfCookieName())?.value ??
+    req.cookies.get('c1rcle.csrf')?.value ??
+    '';
   const header = req.headers.get(CSRF_HEADER) ?? '';
   if (!timingSafeEqual(cookie, header)) {
     return errorEnvelope('forbidden', 'CSRF check failed.', 403);
