@@ -129,10 +129,14 @@ export async function loadVenueCalendarWorkspace({
         ...(signal ? { signal } : {}),
       });
       const name = orgResponse.name.trim() || 'Main Venue';
-      const rawBase = (orgResponse.slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-'))
-        .replace(/^-|-$/g, '')
-        .slice(0, 32) || 'venue';
-      const suffix = organizationId.replace(/[^a-z0-9]/gi, '').slice(-6).toLowerCase();
+      const rawBase =
+        (orgResponse.slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-'))
+          .replace(/^-|-$/g, '')
+          .slice(0, 32) || 'venue';
+      const suffix = organizationId
+        .replace(/[^a-z0-9]/gi, '')
+        .slice(-6)
+        .toLowerCase();
       const slug = `${rawBase}-${suffix}`;
       const createdVenue = await apiClient.post({
         path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/venues`,

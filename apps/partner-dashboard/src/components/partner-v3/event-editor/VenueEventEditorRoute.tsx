@@ -78,7 +78,7 @@ export function VenueEventEditorRoute({
             type="button"
             className="rounded-xl bg-[#FF4400] px-6 py-3 text-xs font-black uppercase tracking-widest text-white hover:bg-[#ff5b1f]"
             onClick={() => {
-              void state.retry();
+              state.retry();
             }}
           >
             Retry

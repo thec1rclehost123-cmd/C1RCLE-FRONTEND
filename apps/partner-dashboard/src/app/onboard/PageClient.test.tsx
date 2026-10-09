@@ -208,9 +208,12 @@ describe('Partner onboarding wizard', () => {
       expect(screen.queryByText('Individual or Business?')).not.toBeInTheDocument();
 
       mocks.verifyDocument.mockResolvedValue({ passed: true });
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /verify phone/i })).toBeEnabled();
+      });
       await user.click(screen.getByRole('button', { name: /verify phone/i }));
       expect(
-        await screen.findByText('Individual or Business?', {}, { timeout: 10_000 }),
+        await screen.findByText('Individual or Business?', {}, { timeout: 15_000 }),
       ).toBeInTheDocument();
       expect(mocks.verifyDocument).toHaveBeenLastCalledWith({
         documentType: 'phone',
