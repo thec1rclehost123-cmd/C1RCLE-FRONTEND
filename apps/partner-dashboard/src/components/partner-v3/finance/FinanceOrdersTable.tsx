@@ -212,7 +212,10 @@ export function FinanceOrdersTable({
                 <td data-label="Event">{row.event}</td>
                 <td data-label="Tickets">{row.tickets}</td>
                 <td data-label="Total">
-                  <strong>{row.amount}</strong>
+                  <span className={styles['orderIdentity']}>
+                    <strong>{row.amount}</strong>
+                    {row.gst ? <small>incl. GST {row.gst}</small> : null}
+                  </span>
                 </td>
                 <td data-label="Status">
                   <PayoutStatusBadge status={row.status} />

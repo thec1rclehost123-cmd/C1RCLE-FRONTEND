@@ -194,6 +194,7 @@ export function toFinanceOrder(dto: FinanceOrderDto): FinanceOrder {
     // Net of refunds: a ₹1,000 order that was refunded shows as ₹0, because
     // that is the money the partner actually kept.
     amount: formatPaise(dto.grandTotalPaise - dto.refundedPaise),
+    gst: dto.gstPaise > 0 && dto.refundedPaise === 0 ? formatPaise(dto.gstPaise) : undefined,
     status: ORDER_STATUS_TO_BADGE[dto.status],
     avatarTone: avatarToneFor(dto.id),
   };
