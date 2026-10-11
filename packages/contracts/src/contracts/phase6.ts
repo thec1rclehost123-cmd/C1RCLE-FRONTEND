@@ -15,6 +15,8 @@ export const ledgerEntryDtoSchema = z.object({
   entryType: z.enum([
     'ticket_revenue',
     'platform_fee',
+    /** GST collected on the customer fee, shown on its own line (not platform revenue). */
+    'gst',
     'venue_share',
     'host_payout',
     'promoter_commission',
@@ -67,6 +69,12 @@ export const financeOrderDtoSchema = z.object({
   ticketCount: z.number().int().nonnegative(),
   currency: z.string().length(3),
   grandTotalPaise: z.number().int().nonnegative(),
+  /**
+   * The GST included in `grandTotalPaise` (charged on the customer fee).
+   * Optional with a 0 default so a gateway that predates the field still parses,
+   * in either deploy order.
+   */
+  gstPaise: z.number().int().nonnegative().optional().default(0),
   refundedPaise: z.number().int().nonnegative(),
   /** The full `OrderStatus` enum, unmapped — the client owns label wording. */
   status: z.enum([

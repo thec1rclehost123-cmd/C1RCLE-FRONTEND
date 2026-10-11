@@ -125,6 +125,7 @@ const order: FinanceOrderDto = {
   ticketCount: 3,
   currency: 'INR',
   grandTotalPaise: 250_000,
+  gstPaise: 0,
   refundedPaise: 0,
   status: 'paid',
   paidAt: '2026-09-01T10:05:00.000Z',
@@ -135,6 +136,22 @@ describe('toFinanceOrder', () => {
   it('shows the net amount, so a refunded order reads as what was kept', () => {
     const row = toFinanceOrder({ ...order, grandTotalPaise: 250_000, refundedPaise: 100_000 });
     expect(row.amount).toBe('₹1,500');
+  });
+
+  it('shows the GST included in the total as its own figure', () => {
+    // ₹2,500 total of which ₹135 is GST on the convenience fee.
+    const row = toFinanceOrder({ ...order, gstPaise: 13_500 });
+    expect(row.amount).toBe('₹2,500');
+    expect(row.gst).toBe('₹135');
+  });
+
+  it('shows no GST figure when the order carried none', () => {
+    expect(toFinanceOrder({ ...order, gstPaise: 0 }).gst).toBeUndefined();
+  });
+
+  it('omits GST on a refunded order, whose total is shown net and would no longer match it', () => {
+    const row = toFinanceOrder({ ...order, gstPaise: 13_500, refundedPaise: 100_000 });
+    expect(row.gst).toBeUndefined();
   });
 
   it('prefers the payment date, falling back to creation for unpaid orders', () => {

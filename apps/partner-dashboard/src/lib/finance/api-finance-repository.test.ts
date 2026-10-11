@@ -84,6 +84,7 @@ const order: FinanceOrderDto = {
   ticketCount: 3,
   currency: 'INR',
   grandTotalPaise: 2_500_00,
+  gstPaise: 13_500,
   refundedPaise: 0,
   status: 'paid',
   paidAt: '2026-09-01T10:05:00.000Z',
@@ -185,7 +186,8 @@ describe('listFinanceOrders', () => {
     const page = await listFinanceOrders(client, 'org_1');
 
     // The schema has no email/phone field at all, so there is nothing for the
-    // table to leak even if a future component tried to render it.
+    // table to leak even if a future component tried to render it. (`gstPaise`
+    // was added on purpose: it is a tax figure, not buyer data.)
     expect(Object.keys(page.items[0] ?? {}).sort()).toEqual([
       'buyerName',
       'createdAt',
@@ -193,6 +195,7 @@ describe('listFinanceOrders', () => {
       'eventId',
       'eventName',
       'grandTotalPaise',
+      'gstPaise',
       'id',
       'paidAt',
       'refundedPaise',
