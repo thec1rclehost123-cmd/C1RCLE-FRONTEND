@@ -11,6 +11,7 @@ import {
   PartnerIcon,
   NavigationTopIcon,
   SettingsIcon,
+  SupportIcon,
   TrendUpIcon,
 } from '@c1rcle/icons';
 
@@ -29,6 +30,7 @@ const ICONS = {
   guests: GuestIcon,
   analytics: TrendUpIcon,
   leaderboard: TrendUpIcon,
+  support: SupportIcon,
   settings: SettingsIcon,
 } satisfies Record<StudioIconName, typeof DashboardIcon>;
 

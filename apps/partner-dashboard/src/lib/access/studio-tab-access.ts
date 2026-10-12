@@ -23,6 +23,7 @@ const SEGMENT_VISIBILITY_KEYS: Readonly<Record<string, string>> = {
   partners: 'partners',
   presence: 'presence',
   finance: 'finance',
+  support: 'support',
   settings: 'settings',
   guests: 'guests',
   analytics: 'analytics',
