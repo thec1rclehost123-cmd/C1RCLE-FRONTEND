@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  normalizeTicket,
-  toShortTicketId,
-} from './support-repository';
+import { normalizeTicket, toShortTicketId } from './support-repository';
 
 import type { SupportTicketDto } from '@c1rcle/contracts';
 

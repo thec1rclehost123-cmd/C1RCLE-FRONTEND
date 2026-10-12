@@ -105,11 +105,7 @@ export const SUPPORT_DEPARTMENTS: readonly SupportDepartment[] = [
     id: 'analytics',
     name: 'Analytics',
     gatewayCategory: 'other',
-    subcategories: [
-      'Revenue Mismatch',
-      'Missing Reports',
-      'Incorrect Statistics',
-    ],
+    subcategories: ['Revenue Mismatch', 'Missing Reports', 'Incorrect Statistics'],
   },
   {
     id: 'technical',
@@ -127,9 +123,7 @@ export const SUPPORT_DEPARTMENTS: readonly SupportDepartment[] = [
 ] as const;
 
 export function findDepartmentByName(name: string): SupportDepartment | undefined {
-  return SUPPORT_DEPARTMENTS.find(
-    (dept) => dept.name.toLowerCase() === name.trim().toLowerCase(),
-  );
+  return SUPPORT_DEPARTMENTS.find((dept) => dept.name.toLowerCase() === name.trim().toLowerCase());
 }
 
 export function findDepartmentById(id: string): SupportDepartment | undefined {

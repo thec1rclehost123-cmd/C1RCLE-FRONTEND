@@ -6,6 +6,7 @@ import {
 } from '@c1rcle/contracts';
 
 import { bffClient } from '@/lib/bff/bff-client';
+
 import {
   findDepartmentByName,
   parseDepartmentFromSubject,
@@ -19,6 +20,13 @@ import type {
   SupportTicketPriority,
   SupportTicketStatus,
 } from '@c1rcle/contracts';
+
+const DEFAULT_DEPARTMENT = SUPPORT_DEPARTMENTS[0] ?? {
+  id: 'account',
+  name: 'Account',
+  gatewayCategory: 'account' as const,
+  subcategories: ['General'],
+};
 
 export interface PartnerSupportTicket {
   readonly id: string;
@@ -57,9 +65,8 @@ export function toShortTicketId(id: string): string {
 export function normalizeTicket(dto: SupportTicketDto): PartnerSupportTicket {
   const parsed = parseDepartmentFromSubject(dto.subject);
   const matchedDept = parsed.department ? findDepartmentByName(parsed.department) : undefined;
-  const defaultDept = SUPPORT_DEPARTMENTS[0]!;
   const fallbackDept =
-    SUPPORT_DEPARTMENTS.find((dept) => dept.gatewayCategory === dto.category) ?? defaultDept;
+    SUPPORT_DEPARTMENTS.find((dept) => dept.gatewayCategory === dto.category) ?? DEFAULT_DEPARTMENT;
 
   const department = matchedDept ? matchedDept.name : fallbackDept.name;
   const subcategory = parsed.subcategory ?? matchedDept?.subcategories[0] ?? 'General';
@@ -79,8 +86,8 @@ export function normalizeTicket(dto: SupportTicketDto): PartnerSupportTicket {
     priority: dto.priority,
     mergedInto: dto.mergedInto,
     mergedIntoShortId: dto.mergedInto ? toShortTicketId(dto.mergedInto) : null,
-    mergedFrom: dto.mergedFrom ?? [],
-    messages: dto.messages ?? [],
+    mergedFrom: dto.mergedFrom,
+    messages: dto.messages,
     createdAt: dto.createdAt,
     updatedAt: dto.updatedAt,
     isMerged,
@@ -95,7 +102,7 @@ export async function listPartnerTickets(): Promise<readonly PartnerSupportTicke
       path: '/api/bff/support/tickets',
       schema: supportTicketListResponseSchema,
     });
-    return (res.items ?? []).map(normalizeTicket);
+    return res.items.map(normalizeTicket);
   } catch {
     return FIXTURE_TICKETS;
   }
@@ -112,7 +119,7 @@ export async function getPartnerTicket(ticketId: string): Promise<PartnerSupport
 export async function createPartnerTicket(
   input: CreatePartnerTicketInput,
 ): Promise<PartnerSupportTicket> {
-  const department = findDepartmentByName(input.departmentName) ?? SUPPORT_DEPARTMENTS[0]!;
+  const department = findDepartmentByName(input.departmentName) ?? DEFAULT_DEPARTMENT;
   const fullSubject = `[${department.name} · ${input.subcategoryName}] ${input.subject.trim()}`;
 
   const payload = submitSupportTicketSchema.parse({

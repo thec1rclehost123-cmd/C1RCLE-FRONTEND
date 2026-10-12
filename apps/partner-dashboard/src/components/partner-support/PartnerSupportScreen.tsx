@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { AddIcon, CloseIcon, SearchIcon, SendIcon, SupportIcon } from '@c1rcle/icons';
 
@@ -16,9 +16,21 @@ import styles from './PartnerSupport.module.css';
 
 import type { PartnerSupportTicket } from '@/lib/support/support-repository';
 import type { SupportTicketPriority } from '@c1rcle/contracts';
+import type { SyntheticEvent } from 'react';
 
 interface PartnerSupportScreenProps {
   readonly initialTickets?: readonly PartnerSupportTicket[];
+}
+
+const DEFAULT_DEPT = SUPPORT_DEPARTMENTS[0] ?? {
+  id: 'account',
+  name: 'Account',
+  gatewayCategory: 'account' as const,
+  subcategories: ['General'],
+};
+
+function cls(...classes: readonly (string | undefined | null | false)[]): string {
+  return classes.filter(Boolean).join(' ');
 }
 
 export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenProps) {
@@ -33,10 +45,9 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
 
   // Form State
-  const defaultDepartment = SUPPORT_DEPARTMENTS[0]!;
-  const [departmentName, setDepartmentName] = useState<string>(defaultDepartment.name);
+  const [departmentName, setDepartmentName] = useState<string>(DEFAULT_DEPT.name);
   const [subcategoryName, setSubcategoryName] = useState<string>(
-    defaultDepartment.subcategories[0] ?? 'General',
+    DEFAULT_DEPT.subcategories[0] ?? 'General',
   );
   const [priority, setPriority] = useState<SupportTicketPriority>('medium');
   const [subject, setSubject] = useState('');
@@ -48,27 +59,32 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
   const [replyText, setReplyText] = useState('');
   const [replying, setReplying] = useState(false);
 
-  const loadTickets = useCallback(async () => {
-    try {
-      const items = await listPartnerTickets();
-      setTickets(items);
-    } catch {
-      // Fallback already handled inside repository
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    if (!initialTickets) {
-      void loadTickets();
+    let mounted = true;
+    async function load() {
+      try {
+        const items = await listPartnerTickets();
+        if (mounted) {
+          setTickets(items);
+          setLoading(false);
+        }
+      } catch {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
     }
-  }, [initialTickets, loadTickets]);
+    if (!initialTickets) {
+      void load();
+    }
+    return () => {
+      mounted = false;
+    };
+  }, [initialTickets]);
 
   const selectedDepartment = useMemo(
-    () =>
-      SUPPORT_DEPARTMENTS.find((dept) => dept.name === departmentName) ?? defaultDepartment,
-    [defaultDepartment, departmentName],
+    () => SUPPORT_DEPARTMENTS.find((dept) => dept.name === departmentName) ?? DEFAULT_DEPT,
+    [departmentName],
   );
 
   const handleDepartmentChange = (deptName: string) => {
@@ -101,12 +117,8 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
     return tickets.filter((t) => {
       const matchesFilter =
         filter === 'all' ||
-        (filter === 'active' &&
-          t.status !== 'closed' &&
-          t.status !== 'resolved' &&
-          !t.isMerged) ||
-        (filter === 'closed' &&
-          (t.status === 'closed' || t.status === 'resolved' || t.isMerged));
+        (filter === 'active' && t.status !== 'closed' && t.status !== 'resolved' && !t.isMerged) ||
+        (filter === 'closed' && (t.status === 'closed' || t.status === 'resolved' || t.isMerged));
 
       const matchesQuery =
         q.length === 0 ||
@@ -120,7 +132,7 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
     });
   }, [tickets, filter, query]);
 
-  const handleCreateSubmit = async (e: React.FormEvent) => {
+  const handleCreateSubmit = async (e: SyntheticEvent) => {
     e.preventDefault();
     if (subject.trim().length < 3) {
       setFormError('Subject must be at least 3 characters.');
@@ -156,7 +168,7 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
     }
   };
 
-  const handleReplySubmit = async (e: React.FormEvent) => {
+  const handleReplySubmit = async (e: SyntheticEvent) => {
     e.preventDefault();
     if (!selectedTicket || replyText.trim().length === 0 || selectedTicket.isMerged) return;
 
@@ -166,7 +178,7 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
       setTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
       setReplyText('');
     } catch {
-      // Gracefully handle or keep text
+      // Handled gracefully
     } finally {
       setReplying(false);
     }
@@ -174,37 +186,45 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
 
   const getStatusBadge = (ticket: PartnerSupportTicket) => {
     if (ticket.isMerged) {
-      return <span className={`${styles['statusPill']} ${styles['statusMerged']}`}>MERGED</span>;
+      return <span className={cls(styles['statusPill'], styles['statusMerged'])}>MERGED</span>;
     }
 
     switch (ticket.status) {
       case 'open':
-        return <span className={`${styles['statusPill']} ${styles['statusOpen']}`}>OPEN</span>;
+        return <span className={cls(styles['statusPill'], styles['statusOpen'])}>OPEN</span>;
       case 'in_progress':
         return (
-          <span className={`${styles['statusPill']} ${styles['statusInProgress']}`}>IN PROGRESS</span>
+          <span className={cls(styles['statusPill'], styles['statusInProgress'])}>IN PROGRESS</span>
         );
       case 'resolved':
         return (
-          <span className={`${styles['statusPill']} ${styles['statusResolved']}`}>RESOLVED</span>
+          <span className={cls(styles['statusPill'], styles['statusResolved'])}>RESOLVED</span>
+        );
+      case 'waiting_on_customer':
+        return (
+          <span className={cls(styles['statusPill'], styles['statusWaiting'])}>AWAITING REPLY</span>
+        );
+      case 'escalated':
+        return (
+          <span className={cls(styles['statusPill'], styles['statusEscalated'])}>ESCALATED</span>
         );
       case 'closed':
-      default:
-        return <span className={`${styles['statusPill']} ${styles['statusClosed']}`}>CLOSED</span>;
+        return <span className={cls(styles['statusPill'], styles['statusClosed'])}>CLOSED</span>;
     }
   };
 
   const getPriorityBadge = (p: SupportTicketPriority) => {
     switch (p) {
       case 'urgent':
-        return <span className={`${styles['priorityPill']} ${styles['priorityUrgent']}`}>URGENT</span>;
+        return (
+          <span className={cls(styles['priorityPill'], styles['priorityUrgent'])}>URGENT</span>
+        );
       case 'high':
-        return <span className={`${styles['priorityPill']} ${styles['priorityHigh']}`}>HIGH</span>;
-      case 'low':
-        return <span className={`${styles['priorityPill']} ${styles['priorityLow']}`}>LOW</span>;
+        return <span className={cls(styles['priorityPill'], styles['priorityHigh'])}>HIGH</span>;
       case 'medium':
-      default:
-        return <span className={`${styles['priorityPill']} ${styles['priorityMedium']}`}>MED</span>;
+        return <span className={cls(styles['priorityPill'], styles['priorityMedium'])}>MED</span>;
+      case 'low':
+        return <span className={cls(styles['priorityPill'], styles['priorityLow'])}>LOW</span>;
     }
   };
 
@@ -228,13 +248,16 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
           <span className={styles['eyebrow']}>Support Desk</span>
           <h1>Support Desk</h1>
           <p>
-            Submit operational requests, get assistance with events, payouts, and dashboard features.
+            Submit operational requests, get assistance with events, payouts, and dashboard
+            features.
           </p>
         </div>
         <button
           type="button"
           className={styles['primaryButton']}
-          onClick={() => setIsCreateModalOpen(true)}
+          onClick={() => {
+            setIsCreateModalOpen(true);
+          }}
           aria-label="Raise Support Ticket"
         >
           <AddIcon size={16} aria-hidden="true" />
@@ -261,13 +284,19 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
       {/* Main Ticket Panel */}
       <section className={styles['mainPanel']} aria-label="Support Tickets">
         <div className={styles['toolbar']}>
-          <div className={styles['filterTabs']} role="tablist" aria-label="Filter tickets by status">
+          <div
+            className={styles['filterTabs']}
+            role="tablist"
+            aria-label="Filter tickets by status"
+          >
             <button
               type="button"
               role="tab"
               aria-selected={filter === 'all'}
-              className={`${styles['filterTab']} ${filter === 'all' ? styles['active'] : ''}`}
-              onClick={() => setFilter('all')}
+              className={cls(styles['filterTab'], filter === 'all' && styles['active'])}
+              onClick={() => {
+                setFilter('all');
+              }}
             >
               All ({metrics.total})
             </button>
@@ -275,8 +304,10 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
               type="button"
               role="tab"
               aria-selected={filter === 'active'}
-              className={`${styles['filterTab']} ${filter === 'active' ? styles['active'] : ''}`}
-              onClick={() => setFilter('active')}
+              className={cls(styles['filterTab'], filter === 'active' && styles['active'])}
+              onClick={() => {
+                setFilter('active');
+              }}
             >
               Active ({metrics.active})
             </button>
@@ -284,8 +315,10 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
               type="button"
               role="tab"
               aria-selected={filter === 'closed'}
-              className={`${styles['filterTab']} ${filter === 'closed' ? styles['active'] : ''}`}
-              onClick={() => setFilter('closed')}
+              className={cls(styles['filterTab'], filter === 'closed' && styles['active'])}
+              onClick={() => {
+                setFilter('closed');
+              }}
             >
               Closed ({metrics.closed})
             </button>
@@ -297,7 +330,9 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
               type="text"
               placeholder="Search by topic, ID, department..."
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+              }}
               aria-label="Search support tickets"
             />
           </div>
@@ -320,23 +355,21 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
               <button
                 type="button"
                 className={styles['primaryButton']}
-                onClick={() => setIsCreateModalOpen(true)}
+                onClick={() => {
+                  setIsCreateModalOpen(true);
+                }}
               >
                 Raise a ticket
               </button>
             </div>
           ) : (
             filteredTickets.map((ticket) => (
-              <div
+              <button
+                type="button"
                 key={ticket.id}
                 className={styles['ticketRow']}
-                onClick={() => setSelectedTicketId(ticket.id)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    setSelectedTicketId(ticket.id);
-                  }
+                onClick={() => {
+                  setSelectedTicketId(ticket.id);
                 }}
                 aria-label={`View ticket #${ticket.shortId}: ${ticket.cleanSubject}`}
               >
@@ -355,7 +388,7 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
                   {getStatusBadge(ticket)}
                   <span className={styles['subBadge']}>{formatShortDate(ticket.createdAt)}</span>
                 </div>
-              </div>
+              </button>
             ))
           )}
         </div>
@@ -365,12 +398,19 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
       {selectedTicket && (
         <div
           className={styles['drawerBackdrop']}
-          onClick={() => setSelectedTicketId(null)}
           role="dialog"
           aria-modal="true"
           aria-labelledby="drawer-ticket-title"
         >
-          <div className={styles['drawer']} onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className={styles['backdropDismiss']}
+            aria-label="Close drawer"
+            onClick={() => {
+              setSelectedTicketId(null);
+            }}
+          />
+          <div className={styles['drawer']}>
             <header className={styles['drawerHeader']}>
               <div className={styles['drawerHeaderTitle']}>
                 <div className={styles['ticketMetaHeader']}>
@@ -384,14 +424,16 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
               <button
                 type="button"
                 className={styles['closeButton']}
-                onClick={() => setSelectedTicketId(null)}
+                onClick={() => {
+                  setSelectedTicketId(null);
+                }}
                 aria-label="Close ticket conversation"
               >
                 <CloseIcon size={20} aria-hidden="true" />
               </button>
             </header>
 
-            {/* Merge Notification Banner (per specs in ANIL_SUPPORT_TAB.md) */}
+            {/* Merge Notification Banner */}
             {selectedTicket.isMerged && (
               <div className={styles['mergeBanner']}>
                 <div className={styles['mergeBannerContent']}>
@@ -411,15 +453,18 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
                 return (
                   <div
                     key={msg.id}
-                    className={`${styles['messageBubble']} ${
-                      isCustomer ? styles['messagePartner'] : styles['messageAdmin']
-                    }`}
+                    className={cls(
+                      styles['messageBubble'],
+                      isCustomer ? styles['messagePartner'] : styles['messageAdmin'],
+                    )}
                   >
                     <div className={styles['messageHeader']}>
                       <span className={styles['senderName']}>
                         {isCustomer ? 'Partner Inquiry' : msg.senderName || 'C1RCLE Desk'}
                       </span>
-                      <span className={styles['messageTime']}>{formatShortDate(msg.createdAt)}</span>
+                      <span className={styles['messageTime']}>
+                        {formatShortDate(msg.createdAt)}
+                      </span>
                     </div>
                     {hasMergedPrefix && (
                       <span className={styles['mergedPrefixTag']}>Consolidated Message</span>
@@ -433,19 +478,26 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
             <footer className={styles['drawerFooter']}>
               {selectedTicket.isMerged || selectedTicket.status === 'closed' ? (
                 <div className={styles['lockedNotice']}>
-                  Replies are locked for this {selectedTicket.isMerged ? 'merged' : 'closed'} ticket.
+                  Replies are locked for this {selectedTicket.isMerged ? 'merged' : 'closed'}{' '}
+                  ticket.
                 </div>
               ) : (
-                <form className={styles['replyForm']} onSubmit={handleReplySubmit}>
+                <form
+                  className={styles['replyForm']}
+                  onSubmit={(e) => {
+                    void handleReplySubmit(e);
+                  }}
+                >
                   <textarea
-                    className={styles['textarea']}
-                    style={{ minHeight: '80px' }}
+                    className={cls(styles['textarea'], styles['replyTextarea'])}
                     placeholder="Type your response to the support team..."
                     value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
+                    onChange={(e) => {
+                      setReplyText(e.target.value);
+                    }}
                     aria-label="Reply to ticket"
                   />
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <div className={styles['replyActions']}>
                     <button
                       type="submit"
                       className={styles['primaryButton']}
@@ -466,12 +518,19 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
       {isCreateModalOpen && (
         <div
           className={styles['modalBackdrop']}
-          onClick={() => setIsCreateModalOpen(false)}
           role="dialog"
           aria-modal="true"
           aria-labelledby="raise-ticket-title"
         >
-          <div className={styles['modal']} onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className={styles['backdropDismiss']}
+            aria-label="Close modal"
+            onClick={() => {
+              setIsCreateModalOpen(false);
+            }}
+          />
+          <div className={styles['modal']}>
             <header className={styles['modalHeader']}>
               <div>
                 <h2 id="raise-ticket-title">Raise Support Ticket</h2>
@@ -480,19 +539,22 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
               <button
                 type="button"
                 className={styles['closeButton']}
-                onClick={() => setIsCreateModalOpen(false)}
+                onClick={() => {
+                  setIsCreateModalOpen(false);
+                }}
                 aria-label="Close raise ticket modal"
               >
                 <CloseIcon size={20} aria-hidden="true" />
               </button>
             </header>
 
-            <form className={styles['modalForm']} onSubmit={handleCreateSubmit}>
-              {formError && (
-                <div style={{ color: '#f87171', fontSize: '12px', fontWeight: 600 }}>
-                  {formError}
-                </div>
-              )}
+            <form
+              className={styles['modalForm']}
+              onSubmit={(e) => {
+                void handleCreateSubmit(e);
+              }}
+            >
+              {formError && <div className={styles['formError']}>{formError}</div>}
 
               {/* Department Selector */}
               <div className={styles['formGroup']}>
@@ -501,7 +563,9 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
                   id="dept-select"
                   className={styles['select']}
                   value={departmentName}
-                  onChange={(e) => handleDepartmentChange(e.target.value)}
+                  onChange={(e) => {
+                    handleDepartmentChange(e.target.value);
+                  }}
                 >
                   {SUPPORT_DEPARTMENTS.map((dept) => (
                     <option key={dept.id} value={dept.name}>
@@ -518,9 +582,11 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
                   id="sub-select"
                   className={styles['select']}
                   value={subcategoryName}
-                  onChange={(e) => setSubcategoryName(e.target.value)}
+                  onChange={(e) => {
+                    setSubcategoryName(e.target.value);
+                  }}
                 >
-                  {(selectedDepartment?.subcategories ?? []).map((sub) => (
+                  {selectedDepartment.subcategories.map((sub) => (
                     <option key={sub} value={sub}>
                       {sub}
                     </option>
@@ -530,16 +596,22 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
 
               {/* Priority Selector */}
               <div className={styles['formGroup']}>
-                <label>Priority</label>
-                <div className={styles['priorityGroup']}>
+                <span id="priority-label" className={styles['label']}>
+                  Priority
+                </span>
+                <div
+                  className={styles['priorityGroup']}
+                  role="group"
+                  aria-labelledby="priority-label"
+                >
                   {(['low', 'medium', 'high', 'urgent'] as const).map((p) => (
                     <button
                       type="button"
                       key={p}
-                      className={`${styles['priorityBtn']} ${
-                        priority === p ? styles['active'] : ''
-                      }`}
-                      onClick={() => setPriority(p)}
+                      className={cls(styles['priorityBtn'], priority === p && styles['active'])}
+                      onClick={() => {
+                        setPriority(p);
+                      }}
                     >
                       {p}
                     </button>
@@ -556,7 +628,9 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
                   className={styles['input']}
                   placeholder="Brief summary of the issue"
                   value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
+                  onChange={(e) => {
+                    setSubject(e.target.value);
+                  }}
                   required
                 />
               </div>
@@ -569,7 +643,9 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
                   className={styles['textarea']}
                   placeholder="Explain what happened, including any relevant event names, payout IDs, or error messages..."
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onChange={(e) => {
+                    setDescription(e.target.value);
+                  }}
                   required
                 />
               </div>
@@ -578,15 +654,13 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
                 <button
                   type="button"
                   className={styles['secondaryButton']}
-                  onClick={() => setIsCreateModalOpen(false)}
+                  onClick={() => {
+                    setIsCreateModalOpen(false);
+                  }}
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className={styles['primaryButton']}
-                  disabled={submitting}
-                >
+                <button type="submit" className={styles['primaryButton']} disabled={submitting}>
                   {submitting ? 'Submitting...' : 'Submit Ticket'}
                 </button>
               </div>

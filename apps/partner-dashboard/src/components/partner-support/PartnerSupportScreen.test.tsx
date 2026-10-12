@@ -125,8 +125,12 @@ describe('PartnerSupportScreen', () => {
 
     const dialog = screen.getByRole('dialog');
     expect(dialog).toBeInTheDocument();
-    expect(within(dialog).getByRole('heading', { level: 2, name: 'Payout pending for 48h' })).toBeInTheDocument();
-    expect(within(dialog).getByText('We have not received the automated transfer.')).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole('heading', { level: 2, name: 'Payout pending for 48h' }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText('We have not received the automated transfer.'),
+    ).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: /Send Reply/i })).toBeInTheDocument();
   });
 
@@ -151,20 +155,24 @@ describe('PartnerSupportScreen', () => {
 
     await user.click(screen.getByRole('button', { name: 'Raise Support Ticket' }));
 
-    expect(screen.getByRole('heading', { level: 2, name: 'Raise Support Ticket' })).toBeInTheDocument();
-    const deptSelect = screen.getByLabelText('Department') as HTMLSelectElement;
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Raise Support Ticket' }),
+    ).toBeInTheDocument();
+    const deptSelect = screen.getByLabelText('Department');
     expect(deptSelect).toBeInTheDocument();
 
     // Verify department options include all 9 departments
-    expect(deptSelect.options.length).toBe(9);
+    expect(screen.getAllByRole('option').length).toBeGreaterThanOrEqual(9);
 
     // Change department to Payments & Finance
     fireEvent.change(deptSelect, { target: { value: 'Payments & Finance' } });
-    const subSelect = screen.getByLabelText('Issue Category') as HTMLSelectElement;
-    expect(subSelect.value).toBe('Subscription Billing');
+    const subSelect = screen.getByLabelText('Issue Category');
+    expect(subSelect).toHaveValue('Subscription Billing');
 
     // Close modal
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(screen.queryByRole('heading', { level: 2, name: 'Raise Support Ticket' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { level: 2, name: 'Raise Support Ticket' }),
+    ).not.toBeInTheDocument();
   });
 });

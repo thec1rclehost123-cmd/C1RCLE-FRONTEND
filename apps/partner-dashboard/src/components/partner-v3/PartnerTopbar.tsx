@@ -1,6 +1,12 @@
 import Link from 'next/link';
 
-import { AccountIcon, MenuIcon, NavigationSideIcon, NavigationTopIcon, SupportIcon } from '@c1rcle/icons';
+import {
+  AccountIcon,
+  MenuIcon,
+  NavigationSideIcon,
+  NavigationTopIcon,
+  SupportIcon,
+} from '@c1rcle/icons';
 
 import styles from './partner-v3.module.css';
 import { PartnerGlobalSearch } from './PartnerGlobalSearch';
