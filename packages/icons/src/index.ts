@@ -115,6 +115,7 @@ export {
   CreditCard as CreditCardIcon,
   Wallet as WalletIcon,
   Wine as BottleServiceIcon,
+  LifeBuoy as SupportIcon,
 } from 'lucide-react';
 
 /**

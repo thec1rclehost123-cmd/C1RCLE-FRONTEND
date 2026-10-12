@@ -16,6 +16,7 @@ import {
   checkRegistrationNumber,
   checkWebsite,
   classifyRegistrationNumber,
+  formatIndianPhoneNumber,
   isKycIdType,
   isValidAadhaar,
   isValidEmail,
@@ -215,6 +216,29 @@ describe('phone', () => {
     expect(sanitizePhoneInput('+91 (98765) 43210')).toBe('+919876543210');
     expect(sanitizePhoneInput('91+987-654-3210')).toBe('+919876543210');
     expect(sanitizePhoneInput('abc')).toBe('');
+  });
+
+  it('formats in Indian mobile style with 10 digits max and 5-5 digit spacing', () => {
+    expect(formatIndianPhoneNumber('')).toBe('');
+    expect(formatIndianPhoneNumber('98765')).toBe('98765');
+    expect(formatIndianPhoneNumber('987654')).toBe('98765 4');
+    expect(formatIndianPhoneNumber('9876543210')).toBe('98765 43210');
+    // Stops after 10 digits
+    expect(formatIndianPhoneNumber('9876543210999')).toBe('98765 43210');
+    // With +91 prefix
+    expect(formatIndianPhoneNumber('+91')).toBe('+91');
+    expect(formatIndianPhoneNumber('+91 ')).toBe('+91 ');
+    expect(formatIndianPhoneNumber('+91 98765')).toBe('+91 98765');
+    expect(formatIndianPhoneNumber('+91 987654')).toBe('+91 98765 4');
+    expect(formatIndianPhoneNumber('+91 9876543210')).toBe('+91 98765 43210');
+    expect(formatIndianPhoneNumber('+919876543210')).toBe('+91 98765 43210');
+    expect(formatIndianPhoneNumber('+91 9876543210999')).toBe('+91 98765 43210');
+    // Strips trunk 0 on 11 digits
+    expect(formatIndianPhoneNumber('09876543210')).toBe('98765 43210');
+    // Non-digit characters
+    expect(formatIndianPhoneNumber('+91 (98765) 43210')).toBe('+91 98765 43210');
+    // Preserves international test numbers
+    expect(formatIndianPhoneNumber('+1 555 555 0100')).toBe('+1 555 555 0100');
   });
 
   it('is required on the profile step', () => {
