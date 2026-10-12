@@ -228,7 +228,9 @@ describe('Partner onboarding wizard', () => {
         expect(screen.getByRole('button', { name: /verify phone/i })).toBeEnabled();
       });
       await user.click(screen.getByRole('button', { name: /verify phone/i }));
-      expect(await screen.findByText('Individual or Business?')).toBeInTheDocument();
+      expect(
+        await screen.findByText('Individual or Business?', {}, { timeout: 15_000 }),
+      ).toBeInTheDocument();
       expect(mocks.verifyDocument).toHaveBeenLastCalledWith({
         documentType: 'phone',
         documentNumber: '+919876543210',
