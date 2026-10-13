@@ -77,6 +77,7 @@ import {
   normalizeAadhaar,
   normalizeInstagramHandle,
   parseCapacity,
+  formatIndianPhoneNumber,
   sanitizeIdentifier,
   sanitizeMultiline,
   sanitizePhoneInput,
@@ -500,7 +501,12 @@ export function OnboardingPage() {
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
   ) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === 'phone') {
+      setFormData((prev) => ({ ...prev, phone: formatIndianPhoneNumber(value) }));
+      return;
+    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   // Details-step profile fields — the UI speaks the server's profile-vocabulary
@@ -755,7 +761,7 @@ export function OnboardingPage() {
       const confirmation = await sendPhoneOtp(toE164(cleanPhone), PHONE_RECAPTCHA_CONTAINER_ID);
       setPhoneConfirmation(confirmation);
       setOtpPhoneSent(true);
-      setFormData((prev) => ({ ...prev, phone: dialablePhone }));
+      setFormData((prev) => ({ ...prev, phone: formatIndianPhoneNumber(dialablePhone) }));
       startCooldown(setPhoneCooldown, phoneCooldownRef);
     } catch (err) {
       setError(errorMessage(err, 'Could not send the SMS code. Please try again.'));
@@ -777,6 +783,7 @@ export function OnboardingPage() {
     setLoading(true);
     try {
       const cleanPhone = otpPhone.replace(/\s/g, '');
+      const dialablePhone = cleanPhone.startsWith('+') ? cleanPhone : `+91${cleanPhone}`;
       // Identity Platform confirming the code only proves the applicant holds
       // that Firebase-side session, not that it's their number — the ID token
       // it returns still has to be checked server-side against the applicant's
@@ -784,7 +791,7 @@ export function OnboardingPage() {
       const idToken = await confirmPhoneOtp(phoneConfirmation, otpPhoneCode);
       const result = await verifyDocument({
         documentType: 'phone',
-        documentNumber: cleanPhone,
+        documentNumber: dialablePhone,
         proofToken: idToken,
       });
       if (!result.passed) {
@@ -1213,14 +1220,11 @@ export function OnboardingPage() {
                   label="Mobile Number (with country code)"
                   icon={Phone}
                   type="tel"
+                  inputMode="tel"
+                  maxLength={15}
                   value={otpPhone}
                   onChange={(v) => {
-                    let sanitized = v.replace(/[^0-9+\s]/g, '');
-                    if (sanitized.indexOf('+') > 0) {
-                      const firstChar = sanitized[0] ?? '';
-                      sanitized = firstChar + sanitized.slice(1).replace(/\+/g, '');
-                    }
-                    setOtpPhone(sanitized);
+                    setOtpPhone(formatIndianPhoneNumber(v));
                   }}
                   placeholder="+91 98765 43210"
                   disabled={otpPhoneSent}
@@ -1526,6 +1530,8 @@ export function OnboardingPage() {
                       label="Phone Number"
                       icon={Phone}
                       type="tel"
+                      inputMode="tel"
+                      maxLength={15}
                       name="phone"
                       value={formData.phone}
                       onChange={handleInputChange}
@@ -2039,6 +2045,7 @@ function FormField({
   type = 'text',
   inputMode,
   disabled = false,
+  maxLength,
 }: {
   label: string;
   icon?: LucideIcon;
@@ -2049,6 +2056,7 @@ function FormField({
   type?: string;
   inputMode?: 'numeric' | 'text' | 'tel' | 'email' | 'url' | 'search' | undefined;
   disabled?: boolean;
+  maxLength?: number;
 }) {
   return (
     <div className="space-y-2">
@@ -2060,6 +2068,7 @@ function FormField({
         <input
           type={type}
           inputMode={inputMode}
+          maxLength={maxLength}
           value={value ?? ''}
           onChange={
             onChange
@@ -3134,16 +3143,14 @@ function KycSignatoryForm({
           label="Phone (optional)"
           value={phone}
           onChange={(v) => {
-            // Left as the applicant typed it (spaces/parentheses intact) — the
-            // dialable form is derived on submit, so the field stays readable.
-            setPhone(sanitizeText(v, 20));
+            setPhone(formatIndianPhoneNumber(v));
             clearError('phone');
           }}
           type="tel"
           inputMode="tel"
-          maxLength={20}
-          placeholder="+91 9876543210"
-          hint="7–15 digits, with an optional leading +."
+          maxLength={15}
+          placeholder="+91 98765 43210"
+          hint="10-digit Indian mobile number."
           error={errors['phone']}
         />
       </div>

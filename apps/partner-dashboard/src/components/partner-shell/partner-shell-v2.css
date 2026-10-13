@@ -404,6 +404,7 @@ body:has(
   gap: 16px;
 }
 .partner-notification-button,
+.partner-support-button,
 .partner-mobile-search-button,
 .partner-dashboard-shell-v2 .partner-account-button,
 .partner-dashboard-shell-v2 .partner-mobile-menu-button {
@@ -418,11 +419,19 @@ body:has(
   color: #d9dbde;
   background: transparent;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .partner-notification-button:hover,
+.partner-support-button:hover,
 .partner-mobile-search-button:hover {
   background: var(--dashboard-hover);
+  color: #fff;
+}
+
+.partner-support-button.is-active {
+  background: var(--dashboard-active, rgba(255, 255, 255, 0.08));
+  color: #fff;
 }
 .partner-notification-button span {
   position: absolute;

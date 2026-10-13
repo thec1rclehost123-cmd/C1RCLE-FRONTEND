@@ -1,6 +1,12 @@
 import Link from 'next/link';
 
-import { AccountIcon, MenuIcon, NavigationSideIcon, NavigationTopIcon } from '@c1rcle/icons';
+import {
+  AccountIcon,
+  MenuIcon,
+  NavigationSideIcon,
+  NavigationTopIcon,
+  SupportIcon,
+} from '@c1rcle/icons';
 
 import styles from './partner-v3.module.css';
 import { PartnerGlobalSearch } from './PartnerGlobalSearch';
@@ -98,6 +104,16 @@ export function PartnerTopbar({
       )}
       <div className={styles['topbarActions']}>
         <PartnerGlobalSearch data={searchData} />
+        {config.role !== 'promoter' ? (
+          <Link
+            href={`/partner/${config.role}/support`}
+            className={styles['iconButton']}
+            aria-label="Help & Support"
+            title="Help & Support"
+          >
+            <SupportIcon size={17} aria-hidden="true" />
+          </Link>
+        ) : null}
         <PartnerNotifications data={notificationsData} />
         <IconButton
           label={navigationLayout === 'side' ? 'Use top navigation' : 'Use side navigation'}

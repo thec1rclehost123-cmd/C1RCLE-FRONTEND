@@ -27,6 +27,8 @@ describe('partner navigation matching', () => {
     ['host', '/host/partners', 'Partners'],
     ['promoter', '/promoter/events/neon-nights?tab=orders', 'Events'],
     ['promoter', '/promoter/links', 'Links'],
+    ['venue', '/venue/support', 'Support'],
+    ['host', '/host/support', 'Support'],
     ['promoter', '/promoter/settings', 'Settings'],
   ] as const)(
     'activates only the expected %s navigation domain for %s',

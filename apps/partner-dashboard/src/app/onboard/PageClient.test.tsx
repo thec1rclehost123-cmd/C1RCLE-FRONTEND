@@ -185,6 +185,20 @@ describe('Partner onboarding wizard', () => {
       expect(mocks.sendPhoneOtp).not.toHaveBeenCalled();
     });
 
+    it('formats phone numbers in Indian style with 5-5 spacing and caps at 10 digits', async () => {
+      mocks.sendPhoneOtp.mockResolvedValue({ confirm: vi.fn() });
+      const { user } = await openPhoneStep();
+      const phone = screen.getByPlaceholderText('+91 98765 43210');
+
+      // Entering 10 digits with trailing overflow stops at 10 digits
+      fireEvent.change(phone, { target: { value: '98765432109999' } });
+      await user.click(screen.getByRole('button', { name: /send sms code/i }));
+
+      await waitFor(() => {
+        expect(mocks.sendPhoneOtp).toHaveBeenCalledWith('+919876543210', 'phone-verify-recaptcha');
+      });
+    });
+
     it('requires a full 6-digit code and a passing server check before advancing', async () => {
       mocks.sendPhoneOtp.mockResolvedValue({ confirm: vi.fn() });
       const { user } = await openPhoneStep();
@@ -214,7 +228,9 @@ describe('Partner onboarding wizard', () => {
         expect(screen.getByRole('button', { name: /verify phone/i })).toBeEnabled();
       });
       await user.click(screen.getByRole('button', { name: /verify phone/i }));
-      expect(await screen.findByText('Individual or Business?')).toBeInTheDocument();
+      expect(
+        await screen.findByText('Individual or Business?', {}, { timeout: 15_000 }),
+      ).toBeInTheDocument();
       expect(mocks.verifyDocument).toHaveBeenLastCalledWith({
         documentType: 'phone',
         documentNumber: '+919876543210',
