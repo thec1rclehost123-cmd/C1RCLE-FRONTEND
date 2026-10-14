@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { useState } from 'react';
 
 import { Avatar } from '@/components/partner-v3/Avatar';
 import { Badge } from '@/components/partner-v3/Badge';
@@ -11,7 +12,9 @@ import { PartnerCard } from './PartnerCard';
 import { PartnerProfilePanel } from './PartnerProfilePanel';
 import { PartnerRequestCard } from './PartnerRequestCard';
 import styles from './partners.module.css';
+import { PartnerStaffEditRoleDialog } from './PartnerStaffEditRoleDialog';
 import { AddStaffButton } from './PartnerStaffInviteDialog';
+import { useSessionStore } from '@c1rcle/auth';
 
 import type {
   PartnerRelationship,
@@ -75,6 +78,9 @@ export interface PartnerNetworkScreenProps {
   readonly onRevokeInvite?: ((invite: StaffInvite) => void) | undefined;
   readonly onStaffChanged?: (() => void) | undefined;
   readonly studioCapability?: 'venue' | 'host';
+  readonly isAdmin?: boolean;
+  readonly currentUserId?: string | undefined;
+  readonly currentUserEmail?: string | undefined;
 }
 
 interface QueryState {
@@ -112,11 +118,31 @@ function staffChips(member: StaffMember): readonly string[] {
   return member.permissions;
 }
 
+function formatJoinedDate(isoString?: string): string {
+  if (!isoString) return '';
+  try {
+    const date = new Date(isoString);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  } catch {
+    return '';
+  }
+}
+
 function StaffList({
   staff,
   invites,
   search,
   canManage,
+  isAdmin = canManage,
+  currentUserId,
+  currentUserEmail,
+  organizationId,
+  onStaffChanged,
   staffError,
   revokingInviteId,
   revokeErrorId,
@@ -127,12 +153,22 @@ function StaffList({
   readonly invites: readonly StaffInvite[];
   readonly search: string;
   readonly canManage: boolean;
+  readonly isAdmin?: boolean;
+  readonly currentUserId?: string | undefined;
+  readonly currentUserEmail?: string | undefined;
+  readonly organizationId?: string | undefined;
+  readonly onStaffChanged?: (() => void) | undefined;
   readonly staffError: string | null;
   readonly revokingInviteId: string | null;
   readonly revokeErrorId: string | null;
   readonly revokeError: string | null;
   readonly onRevokeInvite?: ((invite: StaffInvite) => void) | undefined;
 }) {
+  const sessionState = useSessionStore();
+  const sessionUser = sessionState.session?.user;
+  const effectiveUserId = currentUserId ?? sessionUser?.id;
+  const effectiveUserEmail = currentUserEmail ?? sessionUser?.email;
+  const [editingMember, setEditingMember] = useState<StaffMember | null>(null);
   const normalized = search.trim().toLowerCase();
   const members = filterBySearch(staff, search);
   const pendingInvites = invites.filter(
@@ -205,26 +241,73 @@ function StaffList({
       ) : null}
       {members.length > 0 ? (
         <div className={styles['staffGrid']}>
-          {members.map((member) => (
-            <article className={styles['staffCard']} key={member.id}>
-              <div className={styles['staffCardHeader']}>
-                <div className={styles['partnerIdentity']}>
-                  <Avatar name={member.name} />
-                  <div>
-                    <h3>{member.name}</h3>
-                    <p>{member.role}</p>
+          {members.map((member) => {
+            const isYou = Boolean(
+              (effectiveUserId &&
+                (member.userId === effectiveUserId || member.id === effectiveUserId)) ||
+                (effectiveUserEmail &&
+                  member.email &&
+                  member.email.toLowerCase() === effectiveUserEmail.toLowerCase()),
+            );
+            return (
+              <article className={styles['staffCard']} key={member.id}>
+                <div className={styles['staffCardHeader']}>
+                  <div className={styles['partnerIdentity']}>
+                    <Avatar name={member.name} />
+                    <div>
+                      <div className={styles['staffNameRow']}>
+                        <h3>{member.name}</h3>
+                        {isYou ? (
+                          <Badge tone="accent" className={styles['youTag']}>
+                            You
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <p className={styles['staffRoleText']}>{member.role}</p>
+                    </div>
                   </div>
+                  <Badge tone="success">{member.status}</Badge>
                 </div>
-                <Badge tone="success">{member.status}</Badge>
-              </div>
               <div className={styles['permissionChips']}>
                 {staffChips(member).map((chip) => (
                   <span key={chip}>{chip}</span>
                 ))}
               </div>
-              {member.email ? <p>{member.email}</p> : null}
+              <div className={styles['staffDetails']}>
+                {member.email ? (
+                  <p className={styles['staffDetailItem']}>
+                    <span className={styles['staffDetailLabel']}>Email:</span> {member.email}
+                  </p>
+                ) : null}
+                {member.joinedAt ? (
+                  <p className={styles['staffDetailItem']}>
+                    <span className={styles['staffDetailLabel']}>Joined:</span>{' '}
+                    {formatJoinedDate(member.joinedAt)}
+                  </p>
+                ) : null}
+              </div>
+              {isAdmin ? (
+                <div className={styles['staffCardActions']}>
+                  {member.backendRole === 'owner' ? (
+                    <span className={styles['ownerBadge']} title="Owner role cannot be changed">
+                      Owner (Primary)
+                    </span>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => {
+                        setEditingMember(member);
+                      }}
+                    >
+                      Edit role
+                    </Button>
+                  )}
+                </div>
+              ) : null}
             </article>
-          ))}
+          );
+        })}
         </div>
       ) : normalized ? (
         <EmptyState
@@ -236,6 +319,16 @@ function StaffList({
         <p className={styles['dialogNotice']}>
           Only team members with staff-management access can invite or revoke staff.
         </p>
+      ) : null}
+      {editingMember ? (
+        <PartnerStaffEditRoleDialog
+          member={editingMember}
+          onClose={() => {
+            setEditingMember(null);
+          }}
+          {...(onStaffChanged ? { onUpdated: onStaffChanged } : {})}
+          {...(organizationId ? { organizationId } : {})}
+        />
       ) : null}
     </div>
   );
@@ -273,6 +366,9 @@ export function PartnerNetworkScreen({
   onRevokeInvite,
   onStaffChanged,
   studioCapability,
+  isAdmin = staffCanManage,
+  currentUserId,
+  currentUserEmail,
 }: PartnerNetworkScreenProps) {
   const state: QueryState = { segment, subView, search, profileId };
   const partnerSet =
@@ -412,11 +508,16 @@ export function PartnerNetworkScreen({
             invites={staffInvites}
             search={search}
             canManage={staffCanManage}
+            isAdmin={isAdmin}
             staffError={staffError}
             revokingInviteId={revokingInviteId}
             revokeErrorId={revokeErrorId}
             revokeError={revokeError}
+            {...(currentUserId ? { currentUserId } : {})}
+            {...(currentUserEmail ? { currentUserEmail } : {})}
+            {...(organizationId ? { organizationId } : {})}
             {...(onRevokeInvite ? { onRevokeInvite } : {})}
+            {...(onStaffChanged ? { onStaffChanged } : {})}
           />
         ) : records.length ? (
           <div className={styles['partnerGrid']}>

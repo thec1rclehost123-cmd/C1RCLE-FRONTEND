@@ -24,6 +24,9 @@ export interface HostPartnersScreenProps extends PartnerRequestActions<PartnerRe
   readonly onRevokeInvite?: ((invite: StaffInvite) => void) | undefined;
   readonly onStaffChanged?: (() => void) | undefined;
   readonly studioCapability?: 'venue' | 'host';
+  readonly isAdmin?: boolean;
+  readonly currentUserId?: string | undefined;
+  readonly currentUserEmail?: string | undefined;
 }
 
 export function HostPartnersScreen({
@@ -52,6 +55,9 @@ export function HostPartnersScreen({
   onRevokeInvite,
   onStaffChanged,
   studioCapability = 'host',
+  isAdmin,
+  currentUserId,
+  currentUserEmail,
 }: HostPartnersScreenProps) {
   return (
     <PartnerNetworkScreen
@@ -86,6 +92,9 @@ export function HostPartnersScreen({
       onRevokeInvite={onRevokeInvite}
       onStaffChanged={onStaffChanged}
       studioCapability={studioCapability}
+      {...(isAdmin !== undefined ? { isAdmin } : {})}
+      {...(currentUserId ? { currentUserId } : {})}
+      {...(currentUserEmail ? { currentUserEmail } : {})}
     />
   );
 }

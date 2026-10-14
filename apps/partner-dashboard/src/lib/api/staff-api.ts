@@ -9,6 +9,7 @@ import {
   type OrganizationMemberDto,
   type Paginated,
   type PaginationQuery,
+  type UpdateMemberRoleRequest,
 } from '@c1rcle/contracts/client';
 
 import { getActiveOrgId } from '@/lib/org/active-org';
@@ -52,6 +53,11 @@ export interface StaffApi {
     params?: PaginationQuery,
   ): Promise<Paginated<InvitationDto>>;
   createInvitation(organizationId: string, body: CreateInvitationRequest): Promise<InvitationDto>;
+  updateMemberRole(
+    organizationId: string,
+    userId: string,
+    body: UpdateMemberRoleRequest,
+  ): Promise<OrganizationMemberDto>;
   revokeInvitation(invitationId: string): Promise<InvitationDto>;
   /**
    * Accepts an invitation as the signed-in invitee. Deliberately org-unscoped:
@@ -111,6 +117,14 @@ export const staffApi: StaffApi = {
       schema: invitationDtoSchema,
     }),
 
+  updateMemberRole: (organizationId, userId, body) =>
+    apiClient.patch({
+      path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/members/${encodeURIComponent(userId)}`,
+      body,
+      headers: buildHeaders(true),
+      schema: organizationMemberDtoSchema,
+    }),
+
   revokeInvitation: (invitationId) =>
     apiClient.post({
       path: `/api/v2/invitations/${encodeURIComponent(invitationId)}/revoke`,
@@ -133,4 +147,10 @@ export const staffApi: StaffApi = {
     }),
 };
 
-export type { CreateInvitationRequest, InvitationDto, OrganizationDto, OrganizationMemberDto };
+export type {
+  CreateInvitationRequest,
+  InvitationDto,
+  OrganizationDto,
+  OrganizationMemberDto,
+  UpdateMemberRoleRequest,
+};

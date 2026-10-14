@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 import { ErrorState, LoadingState } from '@/components/partner-v3/States';
+import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 import {
   resolvePartnershipRequest,
   resolvePromoterRequest,
@@ -71,6 +72,13 @@ export function StudioPartnersClient({
   readonly promoterTab: PromoterPartnerTab;
   readonly promoterFilter: PromoterPartnerFilter;
 }) {
+  const auth = useDashboardAuth();
+  const currentRole = auth.profile?.activeMembership?.role;
+  const isOrgAdmin = currentRole === 'admin' || currentRole === 'owner';
+  const activeOrganizationId = auth.profile?.activeMembership?.partnerId;
+  const currentUserId = auth.user?.id ?? auth.user?.uid ?? auth.profile?.uid ?? undefined;
+  const currentUserEmail = auth.user?.email ?? auth.profile?.email ?? undefined;
+
   const [venueData, setVenueData] = useState<VenuePartnersData | null>(null);
   const [hostData, setHostData] = useState<HostPartnersData | null>(null);
   const [promoterData, setPromoterData] = useState<PromoterPartnersData | null>(null);
@@ -323,6 +331,10 @@ export function StudioPartnersClient({
         onRevokeInvite={handleRevokeInvite}
         onStaffChanged={reload}
         studioCapability="venue"
+        isAdmin={isOrgAdmin}
+        {...(activeOrganizationId ? { organizationId: activeOrganizationId } : {})}
+        {...(currentUserId ? { currentUserId } : {})}
+        {...(currentUserEmail ? { currentUserEmail } : {})}
       />
     );
   }
@@ -354,6 +366,10 @@ export function StudioPartnersClient({
         onRevokeInvite={handleRevokeInvite}
         onStaffChanged={reload}
         studioCapability="host"
+        isAdmin={isOrgAdmin}
+        {...(activeOrganizationId ? { organizationId: activeOrganizationId } : {})}
+        {...(currentUserId ? { currentUserId } : {})}
+        {...(currentUserEmail ? { currentUserEmail } : {})}
       />
     );
   }
