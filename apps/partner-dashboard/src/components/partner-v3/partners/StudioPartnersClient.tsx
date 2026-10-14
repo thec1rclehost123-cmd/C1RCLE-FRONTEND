@@ -76,8 +76,8 @@ export function StudioPartnersClient({
   const currentRole = auth.profile?.activeMembership?.role;
   const isOrgAdmin = currentRole === 'admin' || currentRole === 'owner';
   const activeOrganizationId = auth.profile?.activeMembership?.partnerId;
-  const currentUserId = auth.user?.id ?? auth.user?.uid ?? auth.profile?.uid ?? undefined;
-  const currentUserEmail = auth.user?.email ?? auth.profile?.email ?? undefined;
+  const currentUserId = auth.profile?.uid;
+  const currentUserEmail = auth.profile?.email ?? undefined;
 
   const [venueData, setVenueData] = useState<VenuePartnersData | null>(null);
   const [hostData, setHostData] = useState<HostPartnersData | null>(null);

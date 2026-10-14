@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { useState } from 'react';
 
+import { useSessionStore } from '@c1rcle/auth';
+
 import { Avatar } from '@/components/partner-v3/Avatar';
 import { Badge } from '@/components/partner-v3/Badge';
 import { Button } from '@/components/partner-v3/Button';
@@ -14,7 +16,6 @@ import { PartnerRequestCard } from './PartnerRequestCard';
 import styles from './partners.module.css';
 import { PartnerStaffEditRoleDialog } from './PartnerStaffEditRoleDialog';
 import { AddStaffButton } from './PartnerStaffInviteDialog';
-import { useSessionStore } from '@c1rcle/auth';
 
 import type {
   PartnerRelationship,
@@ -242,13 +243,13 @@ function StaffList({
       {members.length > 0 ? (
         <div className={styles['staffGrid']}>
           {members.map((member) => {
-            const isYou = Boolean(
-              (effectiveUserId &&
-                (member.userId === effectiveUserId || member.id === effectiveUserId)) ||
-                (effectiveUserEmail &&
-                  member.email &&
-                  member.email.toLowerCase() === effectiveUserEmail.toLowerCase()),
-            );
+            const isSameUser =
+              Boolean(effectiveUserId) &&
+              (member.userId === effectiveUserId || member.id === effectiveUserId);
+            const isSameEmail =
+              Boolean(effectiveUserEmail) &&
+              member.email?.toLowerCase() === effectiveUserEmail?.toLowerCase();
+            const isYou = isSameUser || isSameEmail;
             return (
               <article className={styles['staffCard']} key={member.id}>
                 <div className={styles['staffCardHeader']}>
@@ -268,46 +269,46 @@ function StaffList({
                   </div>
                   <Badge tone="success">{member.status}</Badge>
                 </div>
-              <div className={styles['permissionChips']}>
-                {staffChips(member).map((chip) => (
-                  <span key={chip}>{chip}</span>
-                ))}
-              </div>
-              <div className={styles['staffDetails']}>
-                {member.email ? (
-                  <p className={styles['staffDetailItem']}>
-                    <span className={styles['staffDetailLabel']}>Email:</span> {member.email}
-                  </p>
-                ) : null}
-                {member.joinedAt ? (
-                  <p className={styles['staffDetailItem']}>
-                    <span className={styles['staffDetailLabel']}>Joined:</span>{' '}
-                    {formatJoinedDate(member.joinedAt)}
-                  </p>
-                ) : null}
-              </div>
-              {isAdmin ? (
-                <div className={styles['staffCardActions']}>
-                  {member.backendRole === 'owner' ? (
-                    <span className={styles['ownerBadge']} title="Owner role cannot be changed">
-                      Owner (Primary)
-                    </span>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => {
-                        setEditingMember(member);
-                      }}
-                    >
-                      Edit role
-                    </Button>
-                  )}
+                <div className={styles['permissionChips']}>
+                  {staffChips(member).map((chip) => (
+                    <span key={chip}>{chip}</span>
+                  ))}
                 </div>
-              ) : null}
-            </article>
-          );
-        })}
+                <div className={styles['staffDetails']}>
+                  {member.email ? (
+                    <p className={styles['staffDetailItem']}>
+                      <span className={styles['staffDetailLabel']}>Email:</span> {member.email}
+                    </p>
+                  ) : null}
+                  {member.joinedAt ? (
+                    <p className={styles['staffDetailItem']}>
+                      <span className={styles['staffDetailLabel']}>Joined:</span>{' '}
+                      {formatJoinedDate(member.joinedAt)}
+                    </p>
+                  ) : null}
+                </div>
+                {isAdmin ? (
+                  <div className={styles['staffCardActions']}>
+                    {member.backendRole === 'owner' ? (
+                      <span className={styles['ownerBadge']} title="Owner role cannot be changed">
+                        Owner (Primary)
+                      </span>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => {
+                          setEditingMember(member);
+                        }}
+                      >
+                        Edit role
+                      </Button>
+                    )}
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
         </div>
       ) : normalized ? (
         <EmptyState

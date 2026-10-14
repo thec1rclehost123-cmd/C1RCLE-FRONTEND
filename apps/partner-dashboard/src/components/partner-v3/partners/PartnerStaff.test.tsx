@@ -342,4 +342,3 @@ describe('Partner staff section', () => {
     expect(screen.queryByText('You')).not.toBeInTheDocument();
   });
 });
-
