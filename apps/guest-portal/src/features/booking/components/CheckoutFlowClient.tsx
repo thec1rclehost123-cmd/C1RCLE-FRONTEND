@@ -171,6 +171,11 @@ export function CheckoutFlowClient({
         // A new key forces a fresh quote, and the fresh quote a fresh attempt.
         setRequoteCount((count) => count + 1);
         break;
+      case 'refunded':
+        // Final: the money is already on its way back, so nothing is pending and
+        // there is nothing to retry against this hold.
+        setPayMessage(result.message);
+        break;
       case 'cancelled':
         setPayMessage(
           result.reason
@@ -506,11 +511,12 @@ export function CheckoutFlowClient({
             )}
             {payState === 'processing' && (
               <p role="status" className="text-xs leading-5 text-white/70">
-                Payment received. We are confirming your tickets and they will appear in{' '}
+                Payment received. We are confirming your tickets and they should appear in{' '}
                 <Link href="/tickets" className="underline hover:text-white">
                   My Tickets
                 </Link>{' '}
-                shortly. You will not be charged again.
+                within a few minutes. If they do not, contact support and quote your payment
+                confirmation from Razorpay.
               </p>
             )}
 
