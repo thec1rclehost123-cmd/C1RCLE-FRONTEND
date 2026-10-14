@@ -51,6 +51,8 @@ export type PaidCheckoutResult =
   /** Paid, but the server has not confirmed yet; the webhook will finish the job. */
   | { readonly kind: 'processing'; readonly ticketsReady: boolean }
   | { readonly kind: 'price_changed'; readonly grandTotalPaise: number }
+  /** The payment was captured but could not be honoured, and has been refunded in full. */
+  | { readonly kind: 'refunded'; readonly message: string }
   | { readonly kind: 'cancelled'; readonly reason?: string }
   | { readonly kind: 'unavailable' }
   | { readonly kind: 'error'; readonly message: string };
@@ -120,11 +122,29 @@ export async function runPaidCheckout(
       idempotencyKey: `${input.idempotencyKey}-verify`,
     });
     return { kind: 'confirmed', orderId: confirmed.order.id };
-  } catch {
-    // The redirect confirmation failed or timed out, but the money moved and
+  } catch (error) {
+    // The server may have answered "your payment arrived too late, the seats are
+    // gone, and it has been refunded". That is a final outcome, not something to
+    // wait out, so it must not be reported as "processing".
+    const refund = refundOutcome(error);
+    if (refund) return refund;
+    // Any other failure of the redirect confirmation: the money moved and
     // Razorpay's webhook confirms the same payment independently. Wait for it.
     return { kind: 'processing', ticketsReady: await deps.waitForTickets(input.eventId) };
   }
+}
+
+/**
+ * A 409 from verification whose message says the payment was refunded. Both are
+ * required: a 409 alone can also be an ordinary conflict, and a message alone
+ * could come from anywhere.
+ */
+function refundOutcome(error: unknown): PaidCheckoutResult | null {
+  if (typeof error !== 'object' || error === null) return null;
+  const { status } = errorFacts(error);
+  const message = 'message' in error && typeof error.message === 'string' ? error.message : '';
+  if (status === 409 && /refund/i.test(message)) return { kind: 'refunded', message };
+  return null;
 }
 
 function failureBeforePayment(error: unknown): PaidCheckoutResult {

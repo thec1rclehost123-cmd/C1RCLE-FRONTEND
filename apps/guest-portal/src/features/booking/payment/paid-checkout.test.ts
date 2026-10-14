@@ -194,4 +194,36 @@ describe('runPaidCheckout', () => {
       expect.objectContaining({ prefill: { name: 'A Buyer', email: 'b@example.com' } }),
     );
   });
+
+  describe('a payment that arrived too late and was refunded', () => {
+    const refundedError = Object.assign(
+      new Error(
+        'Your payment arrived after the reservation expired and the tickets are no longer available. It has been refunded in full.',
+      ),
+      { status: 409 },
+    );
+
+    it('is reported as refunded, with the server’s message, and never waits for tickets', async () => {
+      const d = deps({ verify: vi.fn().mockRejectedValue(refundedError) });
+
+      const result = await runPaidCheckout(d, input);
+
+      expect(result).toEqual({ kind: 'refunded', message: refundedError.message });
+      expect(d.waitForTickets).not.toHaveBeenCalled();
+    });
+
+    it('needs both the 409 and a refund message: other conflicts still wait for the webhook', async () => {
+      const otherConflict = deps({
+        verify: vi
+          .fn()
+          .mockRejectedValue(Object.assign(new Error('Version conflict'), { status: 409 })),
+      });
+      const wrongStatus = deps({
+        verify: vi.fn().mockRejectedValue(Object.assign(new Error('Refunded?'), { status: 500 })),
+      });
+
+      expect((await runPaidCheckout(otherConflict, input)).kind).toBe('processing');
+      expect((await runPaidCheckout(wrongStatus, input)).kind).toBe('processing');
+    });
+  });
 });

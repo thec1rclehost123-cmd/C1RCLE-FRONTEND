@@ -192,8 +192,24 @@ describe('paid checkout step', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180 →' }));
 
-    expect(await screen.findByText(/Payment received/)).toHaveTextContent('not be charged again');
+    expect(await screen.findByText(/Payment received/)).toHaveTextContent('contact support');
     expect(screen.getByRole('link', { name: 'My Tickets' })).toHaveAttribute('href', '/tickets');
+    expect(mocks.push).not.toHaveBeenCalled();
+  });
+
+  it('tells a buyer whose late payment was refunded that they were refunded, not that it is processing', async () => {
+    const message =
+      'Your payment arrived after the reservation expired and the tickets are no longer available. It has been refunded in full.';
+    mocks.deps = deps({
+      verify: vi.fn().mockRejectedValue(Object.assign(new Error(message), { status: 409 })),
+    });
+    toPaymentStep();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180 →' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('It has been refunded in full');
+    expect(screen.queryByText(/Payment received/)).not.toBeInTheDocument();
+    expect(mocks.deps.waitForTickets).not.toHaveBeenCalled();
     expect(mocks.push).not.toHaveBeenCalled();
   });
 
