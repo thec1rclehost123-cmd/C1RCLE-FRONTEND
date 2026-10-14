@@ -1,9 +1,5 @@
 import { paginatedSchema } from '@c1rcle/api-client';
-import {
-  promoterConnectionDtoSchema,
-  type PromoterConnectionDto,
-  type RequestConnectionRequest,
-} from '@c1rcle/contracts';
+import { promoterConnectionDtoSchema, type PromoterConnectionDto } from '@c1rcle/contracts';
 
 import { apiClient } from '@/lib/api/client';
 
@@ -59,23 +55,6 @@ export async function listPromoterConnections({
   });
 
   return response.items;
-}
-
-/**
- * Opens a promoter-connection request. One key per user intent — a retried
- * intent replays the key instead of opening a duplicate request.
- */
-export async function requestPromoterConnection(
-  organizationId: string,
-  input: RequestConnectionRequest,
-  idempotencyKey?: string,
-): Promise<PromoterConnectionDto> {
-  return apiClient.post({
-    path: '/api/v2/promoter-connections',
-    body: input,
-    schema: promoterConnectionDtoSchema,
-    headers: commandHeaders(organizationId, idempotencyKey),
-  });
 }
 
 /**

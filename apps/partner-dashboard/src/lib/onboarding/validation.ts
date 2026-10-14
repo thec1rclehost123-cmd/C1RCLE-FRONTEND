@@ -252,6 +252,60 @@ export function sanitizeIdentifier(raw: string, maxLength = MAX_REGISTRATION_NUM
 }
 
 /**
+ * Formats a phone number in Indian mobile style (10 digits max, 5-5 digit spacing):
+ * - Stops accepting digits after 10 national digits.
+ * - Formats with a clear space between the two 5-digit groups (e.g. "98765 43210" or "+91 98765 43210").
+ * - Preserves leading "+91 " prefix if present or being entered.
+ * - Allows clearing/backspacing through the prefix cleanly.
+ * - Leaves non-+91 international test numbers intact (e.g. Firebase "+1 555...").
+ */
+export function formatIndianPhoneNumber(raw: string): string {
+  if (!raw) return '';
+
+  // If user is clearing or typing prefix
+  if (raw === '+' || raw === '+9' || raw === '+91' || raw === '+91 ') {
+    return raw;
+  }
+
+  const trimmed = raw.trim();
+  if (!trimmed) return '';
+
+  // Allow international test numbers (e.g. +1 555 555 0100)
+  if (trimmed.startsWith('+') && !trimmed.startsWith('+91')) {
+    return raw;
+  }
+
+  const hasPlus91 = trimmed.startsWith('+91');
+
+  // Extract digits only
+  let digits = trimmed.replace(/\D/gu, '');
+
+  if (hasPlus91) {
+    if (digits.startsWith('91')) {
+      digits = digits.slice(2);
+    }
+  } else if (digits.length > 10 && digits.startsWith('91')) {
+    digits = digits.slice(2);
+  } else if (digits.length === 11 && digits.startsWith('0')) {
+    digits = digits.slice(1);
+  }
+
+  // Cap strictly at 10 digits
+  const nationalDigits = digits.slice(0, 10);
+
+  if (nationalDigits.length === 0) {
+    return hasPlus91 ? '+91 ' : '';
+  }
+
+  const firstFive = nationalDigits.slice(0, 5);
+  const remaining = nationalDigits.slice(5, 10);
+
+  const formattedDigits = remaining.length > 0 ? `${firstFive} ${remaining}` : firstFive;
+
+  return hasPlus91 ? `+91 ${formattedDigits}` : formattedDigits;
+}
+
+/**
  * Phone input reduced to dialable characters, with a single `+` pinned to the
  * front so `+91` survives whatever gets pasted or typed into the middle.
  */

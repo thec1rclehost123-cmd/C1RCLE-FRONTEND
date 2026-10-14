@@ -17,6 +17,7 @@ import {
   MenuIcon,
   SearchIcon,
   SettingsIcon,
+  SupportIcon,
   UsersIcon,
 } from '@c1rcle/icons';
 
@@ -35,6 +36,7 @@ import type { ComponentType } from 'react';
 const ICONS: Readonly<Record<string, ComponentType<IconProps>>> = {
   'calendar-days': CalendarIcon,
   'layout-dashboard': DashboardIcon,
+  'life-buoy': SupportIcon,
   link: LinkIcon,
   send: AnnouncementIcon,
   settings: SettingsIcon,
@@ -356,6 +358,17 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
             >
               <SearchIcon size={19} aria-hidden="true" />
             </button>
+            {partnerRole !== 'promoter' ? (
+              <Link
+                href={`/${partnerRole}/support`}
+                className={`partner-support-button${pathname.startsWith(`/${partnerRole}/support`) ? ' is-active' : ''}`}
+                aria-label="Support"
+                title="Support"
+                onClick={closeTransientUi}
+              >
+                <SupportIcon size={19} strokeWidth={1.7} aria-hidden="true" />
+              </Link>
+            ) : null}
             <PartnerNotificationButton
               buttonRef={notificationButtonRef}
               open={notificationsOpen}
@@ -413,6 +426,11 @@ export function PartnerDashboardLayout({ partnerRole, children }: PartnerDashboa
               <Link href={`/${partnerRole}/settings`} onClick={closeTransientUi}>
                 Profile & settings
               </Link>
+              {partnerRole !== 'promoter' ? (
+                <Link href={`/${partnerRole}/support`} onClick={closeTransientUi}>
+                  Help & support
+                </Link>
+              ) : null}
               {auth.memberships.length > 1 ? (
                 <Link href="/partner/select-organization" onClick={closeTransientUi}>
                   Switch organization
