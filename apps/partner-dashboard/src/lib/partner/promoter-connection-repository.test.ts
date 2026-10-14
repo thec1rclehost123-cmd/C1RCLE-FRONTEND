@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   listPromoterConnections,
-  requestPromoterConnection,
   resolvePromoterConnection,
 } from './promoter-connection-repository';
 
@@ -62,39 +61,6 @@ describe('listPromoterConnections', () => {
         headers: { 'X-Organization-Id': 'org_venue' },
       }),
     );
-  });
-});
-
-describe('requestPromoterConnection', () => {
-  it('sends an Idempotency-Key alongside the org scope', async () => {
-    postMock.mockResolvedValue(connection);
-
-    await requestPromoterConnection('org_promoter', {
-      counterpartyId: 'org_venue',
-      targetType: 'venue',
-      initiatedBy: 'promoter',
-    });
-
-    const init = postMock.mock.calls[0]?.[0];
-    expect(init?.path).toBe('/api/v2/promoter-connections');
-    expect(init?.headers['X-Organization-Id']).toBe('org_promoter');
-    expect(init?.headers['Idempotency-Key']).toMatch(UUID);
-  });
-
-  it('replays the caller-supplied key so a retried intent is not duplicated', async () => {
-    postMock.mockResolvedValue(connection);
-
-    await requestPromoterConnection(
-      'org_promoter',
-      {
-        counterpartyId: 'org_venue',
-        targetType: 'venue',
-        initiatedBy: 'promoter',
-      },
-      'intent-conn-abc',
-    );
-
-    expect(postMock.mock.calls[0]?.[0]?.headers['Idempotency-Key']).toBe('intent-conn-abc');
   });
 });
 

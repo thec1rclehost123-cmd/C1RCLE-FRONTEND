@@ -670,6 +670,12 @@ export interface FinanceOrder {
   readonly event: string;
   readonly tickets: number;
   readonly amount: string;
+  /**
+   * GST included in `amount`, formatted. Absent when the order carried none or
+   * has been refunded (the amount is then shown net, so a GST figure would no
+   * longer match it).
+   */
+  readonly gst?: string | undefined;
   readonly status: FinanceOrderStatus;
   readonly avatarTone: 'orange' | 'violet' | 'teal' | 'pink' | 'gold' | 'indigo';
 }

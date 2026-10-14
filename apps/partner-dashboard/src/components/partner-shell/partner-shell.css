@@ -204,6 +204,7 @@
   gap: 8px;
 }
 .partner-icon-button,
+.partner-support-button,
 .partner-account-button,
 .partner-mobile-menu-button {
   position: relative;
@@ -216,17 +217,20 @@
   color: var(--partner-text);
   background: rgb(20 20 20 / 82%);
   cursor: pointer;
+  text-decoration: none;
   transition:
     transform 120ms ease,
     border-color 160ms ease,
     background 160ms ease;
 }
 .partner-icon-button:hover,
+.partner-support-button:hover,
 .partner-account-button:hover {
   border-color: var(--partner-border-strong);
   background: #1b1b1b;
 }
 .partner-icon-button:active,
+.partner-support-button:active,
 .partner-account-button:active {
   transform: scale(0.96);
 }
