@@ -222,6 +222,7 @@
   padding: 0;
   margin: 0;
   cursor: pointer;
+  z-index: 0;
 }
 
 .ticketMain {
@@ -386,6 +387,8 @@
 }
 
 .modal {
+  position: relative;
+  z-index: 1;
   background: var(--dashboard-surface, #151517);
   border: 1px solid var(--partner-border-strong, rgb(255 255 255 / 11%));
   border-radius: var(--dashboard-radius-overlay, 20px);
@@ -550,6 +553,8 @@
 }
 
 .drawer {
+  position: relative;
+  z-index: 1;
   width: 100%;
   max-width: 580px;
   height: 100%;
