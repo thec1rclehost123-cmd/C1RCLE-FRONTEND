@@ -1,17 +1,22 @@
+import { z } from 'zod';
+
+import { isApiClientError } from '@c1rcle/api-client';
 import {
   checkoutHoldResponseSchema,
   checkoutQuoteResponseSchema,
   entitlementsListResponseSchema,
   paymentAttemptResponseSchema,
   paymentConfirmResponseSchema,
+  paymentRecoveryResponseSchema,
 } from '@c1rcle/contracts';
 
 import { bffClient } from '@/lib/bff/bff-client';
 
+import { pollAuthoritativePaymentStatus } from './payment-recovery-poll';
 import { openRazorpayCheckout } from './razorpay-checkout';
 
 import type { PaidCheckoutDeps } from './paid-checkout';
-import type { CheckoutQuoteResponse } from '@c1rcle/contracts';
+import type { CheckoutQuoteResponse, PaymentRecoveryResponse } from '@c1rcle/contracts';
 
 /** The double-submit CSRF token the auth BFF sets; echoed back on every write. */
 function csrfHeader(): Record<string, string> {
@@ -44,6 +49,39 @@ const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+
+const RECOVERY_POLL_ATTEMPTS = 15;
+const RECOVERY_POLL_INTERVAL_MS = 2_000;
+const recoveryClearedSchema = z.object({ cleared: z.literal(true) });
+
+export async function clearPaymentRecovery(): Promise<void> {
+  await bffClient.delete({ path: '/api/payments/recovery', schema: recoveryClearedSchema });
+}
+
+export async function pollPaymentRecovery(
+  eventId: string,
+  onStatus: (status: PaymentRecoveryResponse) => void,
+): Promise<PaymentRecoveryResponse | null> {
+  return pollAuthoritativePaymentStatus(
+    {
+      read: async () => {
+        try {
+          return await bffClient.get({
+            path: '/api/payments/recovery',
+            schema: paymentRecoveryResponseSchema,
+          });
+        } catch (error) {
+          if (isApiClientError(error) && error.status === 404) return null;
+          throw error;
+        }
+      },
+      pause: () => sleep(RECOVERY_POLL_INTERVAL_MS),
+    },
+    eventId,
+    onStatus,
+    RECOVERY_POLL_ATTEMPTS,
+  );
+}
 
 /**
  * After a payment whose redirect confirmation failed, Razorpay's webhook still

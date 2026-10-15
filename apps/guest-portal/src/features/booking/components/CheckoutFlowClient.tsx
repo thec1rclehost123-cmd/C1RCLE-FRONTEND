@@ -11,7 +11,12 @@ import { rsvpResponseSchema } from '@c1rcle/contracts';
 import { getEventAccentClasses } from '@/features/event-detail/eventDetailPalette';
 import { bffClient } from '@/lib/bff/bff-client';
 
-import { fetchQuote, paidCheckoutDeps } from '../payment/checkout-api';
+import {
+  clearPaymentRecovery,
+  fetchQuote,
+  paidCheckoutDeps,
+  pollPaymentRecovery,
+} from '../payment/checkout-api';
 import { runPaidCheckout } from '../payment/paid-checkout';
 
 import type { BookingEventFixture } from '../types/booking.types';
@@ -61,7 +66,11 @@ export function CheckoutFlowClient({
     quote: CheckoutQuoteResponse | null;
   } | null>(null);
   const [requoteCount, setRequoteCount] = useState(0);
-  const [payState, setPayState] = useState<PayState>('idle');
+  const [payState, setPayState] = useState<PayState>(() =>
+    event.purchasable && event.ticketTiers.some((tier) => tier.price.amountPaise > 0)
+      ? 'processing'
+      : 'idle',
+  );
   const [payMessage, setPayMessage] = useState<string | null>(null);
   // One key per checkout attempt: a double-click or a retry replays the same
   // hold and payment order instead of reserving and charging twice. A new
@@ -110,15 +119,64 @@ export function CheckoutFlowClient({
         ? 'error'
         : 'ready';
 
-  // Until the server has priced the selection, the summary shows an estimate.
-  // Once a quote arrives its numbers (fees and GST included) replace it.
-  const estimatedFeesPaise = Math.round(subtotalPaise * 0.05);
-  const previewFeesPaise = quote
+  // The hold id is retained only in an httpOnly, short-lived BFF cookie. On a
+  // reload, check the owner-scoped backend status before enabling another pay
+  // action, then poll for a bounded period without creating a hold or attempt.
+  useEffect(() => {
+    if (!event.purchasable || !event.ticketTiers.some((tier) => tier.price.amountPaise > 0)) return;
+    let cancelled = false;
+    void pollPaymentRecovery(event.eventId, (status) => {
+      if (cancelled) return;
+      setPayState('processing');
+      setPayMessage(
+        status.status === 'pending'
+          ? 'Your existing checkout is still pending. No new payment has been started.'
+          : 'Your payment is still processing. We are waiting for server confirmation.',
+      );
+    }).then(async (status) => {
+      if (cancelled) return;
+      if (!status) {
+        setPayState('idle');
+        setPayMessage(null);
+        return;
+      }
+      if (status.status === 'fulfilled') {
+        await clearPaymentRecovery().catch(() => undefined);
+        router.push(
+          status.orderId ? `/confirmation/${encodeURIComponent(status.orderId)}` : '/tickets',
+        );
+        return;
+      }
+      if (status.status === 'pending' || status.status === 'processing') {
+        setPayMessage('Your payment is still processing. You can safely refresh and check again.');
+        return;
+      }
+      await clearPaymentRecovery().catch(() => undefined);
+      setPayState('idle');
+      const messages = {
+        cancelled: 'The previous checkout was cancelled. You can start again.',
+        expired: 'The previous ticket hold expired. Review availability before trying again.',
+        failed: 'The previous payment did not complete. You can try again.',
+        refunded: 'The previous payment was refunded. No tickets were issued.',
+        requires_support:
+          'We could not reconcile the previous payment automatically. Contact support before trying again.',
+      } as const;
+      setPayMessage(messages[status.status]);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [event.eventId, event.purchasable, event.ticketTiers, router]);
+
+  // At the payment step every money value comes from the backend quote. While
+  // it is loading, show no locally recomputed fee or payable-total estimate.
+  const authoritativeFeesPaise = quote
     ? quote.platformFeePaise + quote.paymentFeePaise
-    : estimatedFeesPaise;
+    : isFreeBooking
+      ? 0
+      : null;
   const gstPaise = quote?.gstPaise ?? 0;
   const discountPaise = quote?.discountPaise ?? 0;
-  const previewTotalPaise = quote ? quote.grandTotalPaise : subtotalPaise + estimatedFeesPaise;
   // Price the selection on the server when the buyer reaches the payment step.
   useEffect(() => {
     if (!wantsQuote) return;
@@ -158,6 +216,7 @@ export function CheckoutFlowClient({
 
     switch (result.kind) {
       case 'confirmed':
+        await clearPaymentRecovery().catch(() => undefined);
         router.push(`/confirmation/${encodeURIComponent(result.orderId)}`);
         return;
       case 'processing':
@@ -175,6 +234,7 @@ export function CheckoutFlowClient({
         // Final: the money is already on its way back, so nothing is pending and
         // there is nothing to retry against this hold.
         setPayMessage(result.message);
+        await clearPaymentRecovery().catch(() => undefined);
         break;
       case 'cancelled':
         setPayMessage(
@@ -511,7 +571,8 @@ export function CheckoutFlowClient({
             )}
             {payState === 'processing' && (
               <p role="status" className="text-xs leading-5 text-white/70">
-                Payment received. We are confirming your tickets and they should appear in{' '}
+                Checkout in progress. We are checking server confirmation and any issued tickets
+                should appear in{' '}
                 <Link href="/tickets" className="underline hover:text-white">
                   My Tickets
                 </Link>{' '}
@@ -592,20 +653,26 @@ export function CheckoutFlowClient({
 
           <div className="mt-5 space-y-3 border-y border-white/10 py-5">
             {selectedTickets.length > 0 ? (
-              selectedTickets.map((ticket) => (
-                <div key={ticket.id} className="flex items-center justify-between gap-4 text-sm">
-                  <span className="text-white/55">
-                    {ticket.name} × {ticket.quantity}
-                  </span>
-                  <span className="font-bold text-white">
-                    <AnimatedValue
-                      value={moneyFormatter.format(
-                        (ticket.price.amountPaise * ticket.quantity) / 100,
-                      )}
-                    />
-                  </span>
-                </div>
-              ))
+              selectedTickets.map((ticket) => {
+                const quotedLine = quote?.lines.find((line) => line.tierId === ticket.id);
+                const lineDisplay =
+                  wantsQuote && !quotedLine
+                    ? '—'
+                    : moneyFormatter.format(
+                        (quotedLine?.subtotalPaise ?? ticket.price.amountPaise * ticket.quantity) /
+                          100,
+                      );
+                return (
+                  <div key={ticket.id} className="flex items-center justify-between gap-4 text-sm">
+                    <span className="text-white/55">
+                      {ticket.name} × {ticket.quantity}
+                    </span>
+                    <span className="font-bold text-white">
+                      <AnimatedValue value={lineDisplay} />
+                    </span>
+                  </div>
+                );
+              })
             ) : (
               <p className="text-xs uppercase tracking-[0.18em] text-white/25">
                 No tickets selected
@@ -617,7 +684,13 @@ export function CheckoutFlowClient({
             <div className="flex justify-between gap-4 text-white/45">
               <dt>Subtotal</dt>
               <dd>
-                <AnimatedValue value={moneyFormatter.format(subtotalPaise / 100)} />
+                <AnimatedValue
+                  value={
+                    wantsQuote && !quote
+                      ? '—'
+                      : moneyFormatter.format((quote?.subtotalPaise ?? subtotalPaise) / 100)
+                  }
+                />
               </dd>
             </div>
             {discountPaise > 0 && (
@@ -629,9 +702,15 @@ export function CheckoutFlowClient({
               </div>
             )}
             <div className="flex justify-between gap-4 text-white/45">
-              <dt>{quote ? 'Fees' : 'Fees (estimate)'}</dt>
+              <dt>Fees</dt>
               <dd>
-                <AnimatedValue value={moneyFormatter.format(previewFeesPaise / 100)} />
+                <AnimatedValue
+                  value={
+                    authoritativeFeesPaise === null
+                      ? '—'
+                      : moneyFormatter.format(authoritativeFeesPaise / 100)
+                  }
+                />
               </dd>
             </div>
             {gstPaise > 0 && (
@@ -647,7 +726,15 @@ export function CheckoutFlowClient({
                 Total
               </dt>
               <dd className="text-3xl font-black text-white">
-                <AnimatedValue value={moneyFormatter.format(previewTotalPaise / 100)} />
+                <AnimatedValue
+                  value={
+                    quote
+                      ? moneyFormatter.format(quote.grandTotalPaise / 100)
+                      : isFreeBooking
+                        ? moneyFormatter.format(0)
+                        : '—'
+                  }
+                />
               </dd>
             </div>
           </dl>

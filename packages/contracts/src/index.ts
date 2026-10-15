@@ -235,6 +235,7 @@ export type {
   PaymentVerificationResponse,
   RefundRequest,
   RefundResponse,
+  PaymentRecoveryResponse,
 } from './contracts/checkout.js';
 
 export {
@@ -247,6 +248,7 @@ export {
   checkoutHoldResponseSchema,
   paymentAttemptRequestSchema,
   paymentAttemptResponseSchema,
+  paymentRecoveryResponseSchema,
   paymentConfirmRequestSchema,
   paymentConfirmResponseSchema,
   rsvpRequestSchema,

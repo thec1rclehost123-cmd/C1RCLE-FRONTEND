@@ -6,14 +6,20 @@ import { CheckoutView } from './CheckoutView';
 import type { PaidCheckoutDeps } from '../payment/paid-checkout';
 import type { BookingEventFixture } from '../types/booking.types';
 
-const mocks = vi.hoisted(() => ({
-  push: vi.fn(),
-  fetchQuote: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
-  deps: {} as PaidCheckoutDeps,
-}));
+const mocks = vi.hoisted(() => {
+  const push = vi.fn();
+  return {
+    push,
+    router: { push },
+    fetchQuote: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+    pollPaymentRecovery: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+    clearPaymentRecovery: vi.fn<() => Promise<void>>(),
+    deps: {} as PaidCheckoutDeps,
+  };
+});
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mocks.push }),
+  useRouter: () => mocks.router,
   useSearchParams: () => new URLSearchParams(),
 }));
 
@@ -21,6 +27,8 @@ vi.mock('@/lib/bff/bff-client', () => ({ bffClient: { post: vi.fn(), get: vi.fn(
 
 vi.mock('../payment/checkout-api', () => ({
   fetchQuote: (...args: unknown[]) => mocks.fetchQuote(...args),
+  pollPaymentRecovery: (...args: unknown[]) => mocks.pollPaymentRecovery(...args),
+  clearPaymentRecovery: () => mocks.clearPaymentRecovery(),
   get paidCheckoutDeps() {
     return mocks.deps;
   },
@@ -95,10 +103,58 @@ function toPaymentStep(event: BookingEventFixture = LIVE_EVENT) {
 beforeEach(() => {
   mocks.push.mockReset();
   mocks.fetchQuote.mockReset().mockResolvedValue(quote());
+  mocks.pollPaymentRecovery.mockReset().mockResolvedValue(null);
+  mocks.clearPaymentRecovery.mockReset().mockResolvedValue(undefined);
   mocks.deps = deps();
 });
 
 describe('paid checkout step', () => {
+  it('recovers a fulfilled payment after refresh without creating a new hold or attempt', async () => {
+    mocks.pollPaymentRecovery.mockImplementation((_eventId, onStatus) => {
+      const status = {
+        holdId: 'hold_1',
+        eventId: 'evt_1',
+        status: 'fulfilled',
+        orderId: 'ord_recovered',
+        expiresAt: '2026-10-15T20:00:00.000Z',
+        updatedAt: '2026-10-15T19:59:00.000Z',
+      };
+      (onStatus as (value: typeof status) => void)(status);
+      return Promise.resolve(status);
+    });
+
+    render(<CheckoutView event={LIVE_EVENT} initialTierId="tier_1" />);
+
+    await waitFor(() => {
+      expect(mocks.push).toHaveBeenCalledWith('/confirmation/ord_recovered');
+    });
+    expect(mocks.deps.createHold).not.toHaveBeenCalled();
+    expect(mocks.deps.createAttempt).not.toHaveBeenCalled();
+    expect(mocks.clearPaymentRecovery).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a timed-out recovered payment in a safe processing state', async () => {
+    mocks.pollPaymentRecovery.mockImplementation((_eventId, onStatus) => {
+      const status = {
+        holdId: 'hold_1',
+        eventId: 'evt_1',
+        status: 'processing',
+        orderId: null,
+        expiresAt: '2026-10-15T20:00:00.000Z',
+        updatedAt: '2026-10-15T19:59:00.000Z',
+      };
+      (onStatus as (value: typeof status) => void)(status);
+      return Promise.resolve(status);
+    });
+
+    toPaymentStep();
+
+    expect(await screen.findByText(/safely refresh and check again/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Pay/ })).toBeDisabled();
+    expect(mocks.deps.createHold).not.toHaveBeenCalled();
+    expect(mocks.deps.createAttempt).not.toHaveBeenCalled();
+  });
+
   it('prices the selection on the server and shows its fees and GST, not an estimate', async () => {
     toPaymentStep();
 
@@ -117,7 +173,9 @@ describe('paid checkout step', () => {
     toPaymentStep();
 
     expect(screen.getByRole('button', { name: 'Pay →' })).toBeDisabled();
-    expect(screen.getByRole('status')).toHaveTextContent('Calculating your total');
+    expect(screen.getByText('Calculating your total…')).toBeInTheDocument();
+    expect(screen.queryByText('₹1,050')).not.toBeInTheDocument();
+    expect(screen.queryByText('Fees (estimate)')).not.toBeInTheDocument();
   });
 
   it('pays through the widget and goes to the real confirmation for the verified order', async () => {
@@ -192,7 +250,7 @@ describe('paid checkout step', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180 →' }));
 
-    expect(await screen.findByText(/Payment received/)).toHaveTextContent('contact support');
+    expect(await screen.findByText(/Checkout in progress/)).toHaveTextContent('contact support');
     expect(screen.getByRole('link', { name: 'My Tickets' })).toHaveAttribute('href', '/tickets');
     expect(mocks.push).not.toHaveBeenCalled();
   });
@@ -208,7 +266,7 @@ describe('paid checkout step', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180 →' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('It has been refunded in full');
-    expect(screen.queryByText(/Payment received/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Checkout in progress/)).not.toBeInTheDocument();
     expect(mocks.deps.waitForTickets).not.toHaveBeenCalled();
     expect(mocks.push).not.toHaveBeenCalled();
   });
@@ -231,7 +289,7 @@ describe('paid checkout step', () => {
     mocks.fetchQuote.mockRejectedValue(new Error('401'));
     toPaymentStep();
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('could not price your order');
+    expect(await screen.findByText(/could not price your order/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Pay →' })).toBeDisabled();
   });
 

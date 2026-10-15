@@ -92,14 +92,15 @@ describe('CheckoutView', () => {
     );
   });
 
-  it('renders fees and subtotal breakdown', () => {
+  it('does not invent a fee or payable total before a server quote', () => {
     const event = bookingEventFixtures[1];
     expect(event).toBeDefined();
     if (!event) return;
 
     render(<CheckoutView event={event} initialTierId="gallery-pass" />);
-    // No server quote yet, so the figure is labelled as an estimate.
-    expect(screen.getByText('Fees (estimate)')).toBeInTheDocument();
+    expect(screen.getByText('Fees')).toBeInTheDocument();
+    expect(screen.queryByText('Fees (estimate)')).not.toBeInTheDocument();
+    expect(screen.queryByText('₹40')).not.toBeInTheDocument();
   });
 
   it('keeps the paid preview path on its confirmation link', () => {
