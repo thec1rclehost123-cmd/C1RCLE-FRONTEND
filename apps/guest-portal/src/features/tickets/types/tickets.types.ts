@@ -24,7 +24,6 @@ export interface UserTicketItem {
   tierName: string;
   isVip?: boolean;
   ticketCount: number;
-  qrPayload: string;
   status: TicketStatus;
 }
 

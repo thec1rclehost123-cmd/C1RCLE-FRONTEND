@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import { CloseIcon, RefreshIcon, SearchIcon, TicketIcon } from '@c1rcle/icons';
 
 import { Button } from '@/components/partner-v3/Button';
+import { FixtureBadge } from '@/components/partner-v3/FixtureBadge';
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 
 import styles from './promoter-guests.module.css';
@@ -77,6 +78,7 @@ export function PromoterGuestsScreen({
           <div>
             <h1>Guest Stream</h1>
             <p>Guests attributed to your promoter links</p>
+            <FixtureBadge dataStatus={data.dataStatus} />
           </div>
           <div className={styles['headerActions']}>
             <Button

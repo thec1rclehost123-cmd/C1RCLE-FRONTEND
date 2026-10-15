@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { getActiveOrgId } from '@/lib/org/active-org';
 import { resolveBrowserOrganizationId } from '@/lib/org/resolve-browser-organization';
@@ -97,6 +97,11 @@ export function VenueSharePanel() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [rowError, setRowError] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
+  // B2: one Idempotency-Key per venue-share intent. Kept until the save
+  // succeeds so a retry of the same save replays instead of re-negotiating
+  // with a freshly minted key; cleared on success so a deliberate second edit
+  // starts a new intent.
+  const shareKeysRef = useRef(new Map<string, string>());
 
   useEffect(() => {
     // Same shape as `SettingsScreen`: the state updates happen inside the
@@ -144,10 +149,15 @@ export function VenueSharePanel() {
       setSavingId(partnership.id);
       setRowError(null);
       setSavedId(null);
-      // One key per user intent: held in a ref-free local so a retry of this
-      // same save replays rather than negotiating twice. A deliberate second
-      // edit generates a fresh key below.
-      const idempotencyKey = crypto.randomUUID();
+      // Reuse the per-intent key on retries of the same save; mint it the
+      // first time the row is saved.
+      const idempotencyKey =
+        shareKeysRef.current.get(partnership.id) ??
+        (() => {
+          const key = crypto.randomUUID();
+          shareKeysRef.current.set(partnership.id, key);
+          return key;
+        })();
       try {
         const updated = await setVenueShare(
           organizationId,
@@ -155,6 +165,7 @@ export function VenueSharePanel() {
           nextRate,
           idempotencyKey,
         );
+        shareKeysRef.current.delete(partnership.id);
         setPartnerships((current) => current.map((row) => (row.id === updated.id ? updated : row)));
         setDrafts((current) => ({ ...current, [updated.id]: toDraft(updated.venueShareRate) }));
         setSavedId(updated.id);

@@ -292,7 +292,7 @@ export function PartnersScreen({
   const canView =
     auth.grantedPermissions.length === 0 ||
     auth.grantedPermissions.includes('*') ||
-    auth.hasPermission('VIEW_PARTNERS');
+    auth.hasPermission('MANAGE_PARTNERSHIPS');
   const live = useLivePartnerships();
 
   if (!canView) {
@@ -871,6 +871,17 @@ function RequestConfirmDialog({
   const ref = useRef<HTMLDivElement>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // B2: one Idempotency-Key per (target, action) so a retry of the same
+  // resolve replays instead of double-applying via a freshly minted key.
+  const mutationKeysRef = useRef(new Map<string, string>());
+  const mutationKey = (intent: string): string => {
+    let key = mutationKeysRef.current.get(intent);
+    if (!key) {
+      key = crypto.randomUUID();
+      mutationKeysRef.current.set(intent, key);
+    }
+    return key;
+  };
   useOverlayFocus({ containerRef: ref, open: Boolean(action), onClose, lockScroll: true });
   if (!request || !action) return null;
   const copy =
@@ -894,18 +905,17 @@ function RequestConfirmDialog({
       if (live.target.graph === 'partnership') {
         const resolveAction =
           action === 'accept' ? 'approve' : action === 'decline' ? 'reject' : 'end';
-        await resolvePartnership(live.organizationId, live.target.id, resolveAction, undefined);
+        await resolvePartnership(live.organizationId, live.target.id, resolveAction, {
+          idempotencyKey: mutationKey(`${live.target.id}:resolve:${resolveAction}`),
+        });
       } else {
         // `revoke` is the promoter's alone, so a venue withdrawing its own sent
         // invite closes it via `block`, which is open to either side.
         const resolveAction =
           action === 'accept' ? 'approve' : action === 'decline' ? 'reject' : 'block';
-        await resolvePromoterConnection(
-          live.organizationId,
-          live.target.id,
-          resolveAction,
-          undefined,
-        );
+        await resolvePromoterConnection(live.organizationId, live.target.id, resolveAction, {
+          idempotencyKey: mutationKey(`${live.target.id}:resolve:${resolveAction}`),
+        });
       }
       onResolved?.();
     } catch {
@@ -1152,6 +1162,17 @@ function PartnerProfileDrawer({
   const [removing, setRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const drawerRef = useRef<HTMLElement>(null);
+  // B2: one Idempotency-Key per removal so a retry of the same remove replays
+  // instead of double-applying via a freshly minted key.
+  const removeKeysRef = useRef(new Map<string, string>());
+  const removeKey = (targetId: string): string => {
+    let key = removeKeysRef.current.get(targetId);
+    if (!key) {
+      key = crypto.randomUUID();
+      removeKeysRef.current.set(targetId, key);
+    }
+    return key;
+  };
   useOverlayFocus({
     containerRef: drawerRef,
     open: Boolean(partner),
@@ -1368,7 +1389,7 @@ function PartnerProfileDrawer({
                           liveRemove.organizationId,
                           liveRemove.target.id,
                           'end',
-                          undefined,
+                          { idempotencyKey: removeKey(liveRemove.target.id) },
                         );
                       } else {
                         // `revoke` is the promoter's alone; a venue removes the
@@ -1377,7 +1398,7 @@ function PartnerProfileDrawer({
                           liveRemove.organizationId,
                           liveRemove.target.id,
                           'block',
-                          undefined,
+                          { idempotencyKey: removeKey(liveRemove.target.id) },
                         );
                       }
                       onRemoved?.();

@@ -83,8 +83,10 @@ async function withVersionRecovery(
 /** The applicant's own application, if any. `null` before they have started. */
 export async function getMine(): Promise<OnboardingRequestDto | null> {
   // Read through the same-origin BFF (`/api/bff/onboarding/me`), which
-  // forwards the browser's httpOnly session cookie to the gateway — no bearer
-  // token involved, unlike the direct-gateway writes below.
+  // forwards the browser's httpOnly session cookie to the gateway. Every
+  // onboarding call below (start/autosave/submit/upload) goes through the BFF
+  // the same way — cookie-authenticated, CSRF-checked — so no bearer token is
+  // involved and the client never holds a cross-origin gateway URL.
   const response = await bffClient.get({
     path: '/api/bff/onboarding/me',
     schema: onboardingMeResponseSchema,
@@ -103,11 +105,11 @@ export async function start(
   input: StartOnboardingRequest,
   idempotencyKey: string,
 ): Promise<OnboardingRequestDto> {
-  const application = await apiClient.post({
-    path: '/api/v2/onboarding/applications',
+  const application = await bffClient.post({
+    path: '/api/bff/onboarding/applications',
     body: startOnboardingSchema.parse(input),
     schema: onboardingRequestDtoSchema,
-    headers: { 'Idempotency-Key': idempotencyKey },
+    headers: { ...csrfHeaders(), 'Idempotency-Key': idempotencyKey },
   });
   recordVersion(application.id, application);
   return application;
@@ -119,11 +121,11 @@ export async function saveProgress(
   patch: SaveOnboardingProgressRequest,
 ): Promise<OnboardingRequestDto> {
   return withVersionRecovery(requestId, (ifMatch) =>
-    apiClient.patch({
-      path: `/api/v2/onboarding/applications/${requestId}`,
+    bffClient.patch({
+      path: `/api/bff/onboarding/applications/${requestId}`,
       body: patch,
       schema: onboardingRequestDtoSchema,
-      headers: { ...ifMatch },
+      headers: { ...csrfHeaders(), ...ifMatch },
     }),
   );
 }
@@ -163,11 +165,11 @@ export async function submit(
   idempotencyKey: string,
 ): Promise<OnboardingRequestDto> {
   return withVersionRecovery(requestId, (ifMatch) =>
-    apiClient.post({
-      path: `/api/v2/onboarding/applications/${requestId}/submit`,
+    bffClient.post({
+      path: `/api/bff/onboarding/applications/${requestId}/submit`,
       body: null,
       schema: onboardingRequestDtoSchema,
-      headers: { 'Idempotency-Key': idempotencyKey, ...ifMatch },
+      headers: { ...csrfHeaders(), 'Idempotency-Key': idempotencyKey, ...ifMatch },
     }),
   );
 }

@@ -19,14 +19,25 @@ import type { EventDto } from '@c1rcle/contracts';
 
 export { eventEndAtFromDraft, eventStartAtFromDraft } from '@/lib/events/event-time';
 
+/**
+ * Publishes a venue event end-to-end (create event → tiers → review → publish).
+ *
+ * B2: `idempotencyKey` is minted ONCE per user intent by the flow (editor
+ * component) and reused across retries of the same publish. Every write here
+ * derives its `Idempotency-Key` from it, so a retry after a partial failure
+ * replays the same key at each step instead of minting fresh ones and
+ * duplicating the event. The fallback mint keeps legacy callers working but
+ * MUST NOT be used by a retrying caller.
+ */
 export async function publishVenueEvent(
   organizationId: string,
   draft: EventEditorDraft,
+  idempotencyKey?: string,
 ): Promise<EventDto> {
   const startAt = eventStartAtFromDraft(draft);
   if (!startAt) throw new Error('Enter a valid event date and start time.');
 
-  const workflowId = crypto.randomUUID();
+  const workflowId = idempotencyKey ?? crypto.randomUUID();
   const paidTierIds = new Set(
     draft.ticketTiers.filter((tier) => tier.accessType !== 'RSVP').map((tier) => tier.id),
   );
@@ -182,9 +193,15 @@ export async function publishVenueEvent(
   });
 }
 
+/**
+ * Submits a host slot request (BFF writes draft event + slot request). The
+ * caller mints the Idempotency-Key once per submit intent (B2) and reuses it
+ * across retries so the gateway's two writes cannot double-create.
+ */
 export async function submitHostEventRequest(
   organizationId: string,
   draft: EventEditorDraft,
+  idempotencyKey?: string,
 ): Promise<void> {
   const imageUrl = await resolvePosterImageUrl(organizationId, draft);
 
@@ -199,6 +216,7 @@ export async function submitHostEventRequest(
     genres: draft.genres,
     artists: draft.artists,
     posterPublicUrl: imageUrl ?? null,
+    idempotencyKey: idempotencyKey ?? crypto.randomUUID(),
   });
 }
 

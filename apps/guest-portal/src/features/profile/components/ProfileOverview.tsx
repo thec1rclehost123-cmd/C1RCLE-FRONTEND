@@ -1,6 +1,6 @@
-import type { ProfileFixture } from '../types/profile.types';
+import type { ProfileView } from '../types/profile.types';
 
-export function ProfileOverview({ profile }: { profile: ProfileFixture }) {
+export function ProfileOverview({ profile }: { profile: ProfileView }) {
   const allEvents = [...profile.upcomingEvents, ...profile.attendedEvents];
   const uniqueVenues = new Set(allEvents.map((event) => event.venue)).size;
 
@@ -46,20 +46,24 @@ export function ProfileOverview({ profile }: { profile: ProfileFixture }) {
         <dl className="mt-6 space-y-5">
           <div>
             <dt className="text-[8px] font-black uppercase tracking-[0.2em] text-white/30">City</dt>
-            <dd className="mt-1 text-sm font-bold text-white">{profile.identity.city}</dd>
+            <dd className="mt-1 text-sm font-bold text-white">{profile.identity.city || '—'}</dd>
           </div>
-          <div>
-            <dt className="text-[8px] font-black uppercase tracking-[0.2em] text-white/30">
-              Instagram
-            </dt>
-            <dd className="mt-1 text-sm font-bold text-white">@{profile.identity.instagram}</dd>
-          </div>
-          <div>
-            <dt className="text-[8px] font-black uppercase tracking-[0.2em] text-white/30">
-              Sign-in method
-            </dt>
-            <dd className="mt-1 text-sm font-bold text-white">{profile.identity.signInMethod}</dd>
-          </div>
+          {profile.identity.instagram ? (
+            <div>
+              <dt className="text-[8px] font-black uppercase tracking-[0.2em] text-white/30">
+                Instagram
+              </dt>
+              <dd className="mt-1 text-sm font-bold text-white">@{profile.identity.instagram}</dd>
+            </div>
+          ) : null}
+          {profile.identity.signInMethod ? (
+            <div>
+              <dt className="text-[8px] font-black uppercase tracking-[0.2em] text-white/30">
+                Sign-in method
+              </dt>
+              <dd className="mt-1 text-sm font-bold text-white">{profile.identity.signInMethod}</dd>
+            </div>
+          ) : null}
         </dl>
       </div>
     </section>

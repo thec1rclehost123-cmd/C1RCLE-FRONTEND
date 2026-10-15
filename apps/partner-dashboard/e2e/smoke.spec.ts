@@ -14,10 +14,14 @@ test.describe('C1RCLE Partner Dashboard', () => {
   });
 
   test('puts the returning-user action first in keyboard order', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    const returningUser = page.getByRole('link', { name: 'Already a User' });
+    // Wait for the first-paint HTML before moving focus; under parallel load the
+    // Tab can otherwise land before the link is focusable.
+    await expect(returningUser).toBeVisible();
     await page.keyboard.press('Tab');
 
-    await expect(page.getByRole('link', { name: 'Already a User' })).toBeFocused();
+    await expect(returningUser).toBeFocused();
   });
 
   test('exposes every partner role on the login route', async ({ page }) => {
@@ -28,10 +32,14 @@ test.describe('C1RCLE Partner Dashboard', () => {
     await expect(page.getByRole('button', { name: /Promoter/ })).toBeVisible();
   });
 
-  test('sends an unauthenticated /venue visit to /login with the return path', async ({ page }) => {
+  test('redirects an unauthenticated legacy /venue visit to /login via the V3 route', async ({
+    page,
+  }) => {
+    // H2: legacy trees redirect (307) into /partner/[studio] before the proxy
+    // gates, so the login return path is the V3 route, not the legacy one.
     await page.goto('/venue/events');
 
-    await expect(page).toHaveURL(/\/login\?next=%2Fvenue%2Fevents$/);
+    await expect(page).toHaveURL(/\/login\?next=%2Fpartner%2Fvenue%2Fevents$/);
     await expect(page.getByRole('button', { name: /Venue/ })).toBeVisible();
   });
 

@@ -220,8 +220,8 @@ export default function ScanScreen(): React.JSX.Element {
           seats: scanResult.confirmation.seats,
         });
       } else if (scanResult.status === 'consumed') {
-        const holderName = scanResult.entitlement.holderName ?? 'Guest';
-        pushRecent(holderName, scanResult.entitlement.tierName ?? 'General', true);
+        const holderName = scanResult.entitlement.holderName;
+        pushRecent(holderName, scanResult.entitlement.tierName, true);
         showToast(`${holderName} admitted`);
       } else {
         pushRecent('Unknown', scanResult.denyReason, false, scanResult.checkInId);

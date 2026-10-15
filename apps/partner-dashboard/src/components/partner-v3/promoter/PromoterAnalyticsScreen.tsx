@@ -5,6 +5,7 @@ import { useState } from 'react';
 
 import { LinkIcon, TrendUpIcon } from '@c1rcle/icons';
 
+import { FixtureBadge } from '@/components/partner-v3/FixtureBadge';
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 
 import styles from './promoter-analytics.module.css';
@@ -72,6 +73,8 @@ export function PromoterAnalyticsScreen({
             ))}
           </div>
         </header>
+
+        <FixtureBadge dataStatus={data.dataStatus} />
 
         <section className={styles['metrics']} aria-label="Promoter analytics summary">
           <Metric label="Total Clicks" value={data.totalClicks} />

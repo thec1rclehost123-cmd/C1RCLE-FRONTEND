@@ -8,6 +8,10 @@ import { apiClient } from '@/lib/api/client';
 function commandHeaders(organizationId: string, idempotencyKey?: string): Record<string, string> {
   return {
     'X-Organization-Id': organizationId,
+    // B2: callers mint ONE key per user intent (approve/reject/connect) and
+    // reuse it across retries of that same intent; the fallback exists only
+    // for callers that never retry, and MUST NOT be reached by a retrying
+    // gesture.
     'Idempotency-Key': idempotencyKey ?? crypto.randomUUID(),
   };
 }
@@ -30,6 +34,8 @@ export async function sendPartnershipRequest(options: {
   readonly candidateVenueId?: string | null;
   readonly candidateOrganizationId?: string | null;
   readonly message?: string;
+  /** B2: one key per connect intent, reused across retries. */
+  readonly idempotencyKey?: string;
 }) {
   const organizationId = await getOrgId();
 
@@ -43,7 +49,7 @@ export async function sendPartnershipRequest(options: {
         ...(options.message ? { message: options.message } : {}),
       },
       schema: partnershipDtoSchema,
-      headers: commandHeaders(organizationId),
+      headers: commandHeaders(organizationId, options.idempotencyKey),
     });
   }
   if (!options.candidateOrganizationId) throw new Error('Select a host to invite');
@@ -59,7 +65,7 @@ export async function sendPartnershipRequest(options: {
       ...(options.message ? { message: options.message } : {}),
     },
     schema: partnershipDtoSchema,
-    headers: commandHeaders(organizationId),
+    headers: commandHeaders(organizationId, options.idempotencyKey),
   });
 }
 
@@ -74,6 +80,8 @@ export async function sendPromoterConnectionRequest(options: {
   readonly candidateOrganizationId?: string | null;
   readonly candidateVenueId?: string | null;
   readonly message?: string;
+  /** B2: one key per connect intent, reused across retries. */
+  readonly idempotencyKey?: string;
 }) {
   const organizationId = await getOrgId();
   const message = options.message ? { message: options.message } : {};
@@ -92,7 +100,7 @@ export async function sendPromoterConnectionRequest(options: {
         ...message,
       },
       schema: promoterConnectionDtoSchema,
-      headers: commandHeaders(organizationId),
+      headers: commandHeaders(organizationId, options.idempotencyKey),
     });
   }
   // Venue/host invites a promoter org.
@@ -109,7 +117,7 @@ export async function sendPromoterConnectionRequest(options: {
       ...message,
     },
     schema: promoterConnectionDtoSchema,
-    headers: commandHeaders(organizationId),
+    headers: commandHeaders(organizationId, options.idempotencyKey),
   });
 }
 
@@ -127,62 +135,79 @@ export async function resolvePartnershipRequest(
   kind: 'host' | 'venue' | 'promoter',
   action: 'approve' | 'reject',
   reason?: string,
+  idempotencyKey?: string,
 ) {
   if (kind === 'promoter') {
     return action === 'approve'
-      ? approvePromoterConnection(requestId)
-      : rejectPromoterConnection(requestId, reason);
+      ? approvePromoterConnection(requestId, idempotencyKey)
+      : rejectPromoterConnection(requestId, reason, idempotencyKey);
   }
   return action === 'approve'
-    ? approvePartnership(requestId, reason)
-    : rejectPartnership(requestId, reason);
+    ? approvePartnership(requestId, reason, idempotencyKey)
+    : rejectPartnership(requestId, reason, idempotencyKey);
 }
 
 export async function resolvePromoterRequest(
   requestId: string,
   action: 'approve' | 'reject',
   reason?: string,
+  idempotencyKey?: string,
 ) {
   return action === 'approve'
-    ? approvePromoterConnection(requestId)
-    : rejectPromoterConnection(requestId, reason);
+    ? approvePromoterConnection(requestId, idempotencyKey)
+    : rejectPromoterConnection(requestId, reason, idempotencyKey);
 }
 
-async function approvePartnership(partnershipId: string, reason?: string): Promise<object> {
+async function approvePartnership(
+  partnershipId: string,
+  reason?: string,
+  idempotencyKey?: string,
+): Promise<object> {
   const organizationId = await getOrgId();
   return apiClient.post({
     path: `/api/v2/partnerships/${encodeURIComponent(partnershipId)}/approve`,
     body: reason ? { reason } : undefined,
     schema: partnershipDtoSchema,
-    headers: commandHeaders(organizationId),
+    headers: commandHeaders(organizationId, idempotencyKey),
   });
 }
 
-async function rejectPartnership(partnershipId: string, reason?: string): Promise<object> {
+async function rejectPartnership(
+  partnershipId: string,
+  reason?: string,
+  idempotencyKey?: string,
+): Promise<object> {
   const organizationId = await getOrgId();
   return apiClient.post({
     path: `/api/v2/partnerships/${encodeURIComponent(partnershipId)}/reject`,
     body: reason ? { reason } : undefined,
     schema: partnershipDtoSchema,
-    headers: commandHeaders(organizationId),
+    headers: commandHeaders(organizationId, idempotencyKey),
   });
 }
 
-async function approvePromoterConnection(connectionId: string): Promise<object> {
+async function approvePromoterConnection(
+  connectionId: string,
+  idempotencyKey?: string,
+): Promise<object> {
   const organizationId = await getOrgId();
   return apiClient.post({
     path: `/api/v2/promoter-connections/${encodeURIComponent(connectionId)}/approve`,
     schema: promoterConnectionDtoSchema,
-    headers: commandHeaders(organizationId),
+    headers: commandHeaders(organizationId, idempotencyKey),
   });
 }
 
-async function rejectPromoterConnection(connectionId: string, reason?: string): Promise<object> {
+async function rejectPromoterConnection(
+  connectionId: string,
+  reason?: string,
+  idempotencyKey?: string,
+): Promise<object> {
   const organizationId = await getOrgId();
   return apiClient.post({
     path: `/api/v2/promoter-connections/${encodeURIComponent(connectionId)}/reject`,
     body: reason ? { reason } : undefined,
     schema: promoterConnectionDtoSchema,
-    headers: commandHeaders(organizationId),
+    headers: commandHeaders(organizationId, idempotencyKey),
   });
 }

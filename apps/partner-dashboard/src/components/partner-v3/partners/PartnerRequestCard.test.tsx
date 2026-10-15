@@ -66,7 +66,9 @@ describe('PartnerRequestCard', () => {
         'org_venue',
         'part_1',
         'approve',
-        undefined,
+        expect.objectContaining({
+          idempotencyKey: expect.stringMatching(/^[A-Za-z0-9_-]+$/) as unknown as string,
+        }),
       );
     });
     expect(mocks.refresh).toHaveBeenCalled();
@@ -84,7 +86,9 @@ describe('PartnerRequestCard', () => {
         'org_venue',
         'conn_1',
         'reject',
-        undefined,
+        expect.objectContaining({
+          idempotencyKey: expect.stringMatching(/^[A-Za-z0-9_-]+$/) as unknown as string,
+        }),
       );
     });
   });

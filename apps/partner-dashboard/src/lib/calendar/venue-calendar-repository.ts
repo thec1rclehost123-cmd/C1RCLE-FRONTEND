@@ -35,6 +35,9 @@ export interface LoadVenueCalendarInput {
   readonly monthKeys: readonly string[];
   readonly venueId?: string;
   readonly signal?: AbortSignal;
+  /** B2: per-intent key re-used when the auto-provision retry re-creates a
+   * missing venue (guards against a double venue from a partial first pass). */
+  readonly idempotencyKey?: string;
 }
 
 export interface CreateVenueBlockInput {
@@ -48,10 +51,16 @@ export async function blockVenueDate({
   organizationId,
   venueId,
   input,
+  idempotencyKey,
 }: {
   readonly organizationId: string;
   readonly venueId: string;
   readonly input: CreateVenueBlockInput;
+  /** B2: minted once per block intent by the caller and re-used on retries so
+   * a retry after a partial failure cannot create the block twice. When
+   * omitted, a fresh key is generated per call (callers that retry MUST pass
+   * the same key). */
+  readonly idempotencyKey?: string;
 }): Promise<VenueSlotDto> {
   const range = venueBlockTimeRange(input);
   if (!range) throw new Error('Choose a valid date and time range.');
@@ -64,7 +73,7 @@ export async function blockVenueDate({
     body: { label, ...range },
     headers: {
       'x-organization-id': organizationId,
-      'Idempotency-Key': crypto.randomUUID(),
+      'Idempotency-Key': idempotencyKey ?? crypto.randomUUID(),
     },
     schema: venueSlotDtoSchema,
   });
@@ -111,6 +120,7 @@ export async function loadVenueCalendarWorkspace({
   monthKeys,
   venueId,
   signal,
+  idempotencyKey,
 }: LoadVenueCalendarInput): Promise<VenueCalendarWorkspace> {
   const venueResponse = await apiClient.get({
     path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/venues`,
@@ -143,7 +153,7 @@ export async function loadVenueCalendarWorkspace({
         body: { name, slug, description: '' },
         headers: {
           'x-organization-id': organizationId,
-          'Idempotency-Key': crypto.randomUUID(),
+          'Idempotency-Key': idempotencyKey ?? crypto.randomUUID(),
         },
         schema: venueDtoSchema,
         ...(signal ? { signal } : {}),
