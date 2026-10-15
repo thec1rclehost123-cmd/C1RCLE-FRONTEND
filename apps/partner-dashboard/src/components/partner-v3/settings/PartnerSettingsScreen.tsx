@@ -17,6 +17,7 @@ import {
   UsersIcon,
 } from '@c1rcle/icons';
 
+import { FixtureBadge } from '@/components/partner-v3/FixtureBadge';
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 
 import styles from './settings.module.css';
@@ -58,6 +59,7 @@ export function PartnerSettingsScreen({ data }: { readonly data: PartnerSettings
       <div className={styles['settingsPage']} data-accent={data.accent}>
         <header className={styles['settingsHeader']}>
           <h1>Settings</h1>
+          <FixtureBadge dataStatus={data.dataStatus} />
         </header>
         <nav className={styles['settingsTabs']} aria-label="Settings sections">
           {sections.map((item) => (

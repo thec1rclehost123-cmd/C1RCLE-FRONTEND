@@ -171,7 +171,9 @@ describe('PartnersScreen', () => {
           'org_venue',
           'part_live_1',
           'end',
-          undefined,
+          expect.objectContaining({
+            idempotencyKey: expect.stringMatching(/^[A-Za-z0-9_-]+$/) as unknown as string,
+          }),
         );
       });
     });
@@ -246,7 +248,9 @@ describe('PartnersScreen', () => {
           'org_venue',
           'part_live_1',
           'approve',
-          undefined,
+          expect.objectContaining({
+            idempotencyKey: expect.stringMatching(/^[A-Za-z0-9_-]+$/) as unknown as string,
+          }),
         );
       });
     });
@@ -265,7 +269,9 @@ describe('PartnersScreen', () => {
           'org_venue',
           'conn_live_1',
           'approve',
-          undefined,
+          expect.objectContaining({
+            idempotencyKey: expect.stringMatching(/^[A-Za-z0-9_-]+$/) as unknown as string,
+          }),
         );
       });
     });

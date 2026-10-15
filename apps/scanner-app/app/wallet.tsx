@@ -214,7 +214,7 @@ export default function WalletScreen(): React.JSX.Element {
       ) : (
         <>
           <View style={styles.walletCard}>
-            <Text style={styles.walletName}>{wallet.guestFirstName ?? 'Guest'}</Text>
+            <Text style={styles.walletName}>{wallet.guestFirstName}</Text>
             {/* Null balance means the venue hides balances. Showing 0 here
                 would be a different, wrong claim. */}
             {wallet.balancePaise === null ? (

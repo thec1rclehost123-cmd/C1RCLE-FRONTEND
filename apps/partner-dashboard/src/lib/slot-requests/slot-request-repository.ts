@@ -88,7 +88,12 @@ export interface HostSlotRequestSubmitInput {
   readonly dateLabel: string;
   readonly genres: readonly string[];
   readonly artists: readonly string[];
+  /** Public poster URL resolved on the client (null = gradient artwork). */
   readonly posterPublicUrl?: string | null;
+  /** B2: minted ONCE per submit intent and reused across retries of the same
+   * submit, so a retry after a partial failure cannot double-create the draft
+   * event or the slot request. */
+  readonly idempotencyKey: string;
 }
 
 function currentOrganizationId(): string {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { Avatar } from '@/components/partner-v3/Avatar';
 import { Button } from '@/components/partner-v3/Button';
@@ -41,6 +41,19 @@ export function PartnerRequestCard({
     null,
   );
   const [internalError, setInternalError] = useState<string | null>(null);
+  // B2: one Idempotency-Key per (request, decision) — a retry of the same
+  // approval/rejection reuses it, so a partial write is never re-applied via
+  // a freshly minted key.
+  const decisionKeysRef = useRef(new Map<string, string>());
+  const decisionKey = (decision: 'approve' | 'reject'): string => {
+    const intent = `${request.id}:${decision}`;
+    let key = decisionKeysRef.current.get(intent);
+    if (!key) {
+      key = crypto.randomUUID();
+      decisionKeysRef.current.set(intent, key);
+    }
+    return key;
+  };
 
   // Rows read from the backend carry their mutation target; rows without one
   // (fixtures, legacy callers) keep their actions disabled.
@@ -60,19 +73,20 @@ export function PartnerRequestCard({
     setInternalPendingAction(decision);
     setInternalError(null);
     try {
+      const key = decisionKey(decision);
       if (live.graph === 'partnership') {
         await resolvePartnership(
           resolvedOrgId,
           live.id,
           decision === 'approve' ? 'approve' : 'reject',
-          undefined,
+          { idempotencyKey: key },
         );
       } else {
         await resolvePromoterConnection(
           resolvedOrgId,
           live.id,
           decision === 'approve' ? 'approve' : 'reject',
-          undefined,
+          { idempotencyKey: key },
         );
       }
       router.refresh();

@@ -12,6 +12,7 @@ import {
 
 import { EventPoster } from '@/components/partner-v3/events/EventPoster';
 import { EventStatusBadge } from '@/components/partner-v3/events/EventStatusBadge';
+import { FixtureBadge } from '@/components/partner-v3/FixtureBadge';
 
 import styles from './event-detail.module.css';
 import { EventMetric } from './EventMetric';
@@ -73,6 +74,7 @@ export function EventDetailHeader({
               </span>
               <EventStatusBadge status={data.event.status} />
             </div>
+            <FixtureBadge dataStatus={data.dataStatus} />
           </div>
           <div className={styles['detailActions']}>
             <Link className={styles['detailActionSecondary']} href={editHref}>

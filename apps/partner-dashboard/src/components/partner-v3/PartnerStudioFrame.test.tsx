@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
 
@@ -7,6 +7,7 @@ import { PartnerStudioFrame } from './PartnerStudioFrame';
 
 const navigation = vi.hoisted(() => ({ pathname: '/partner/venue/finance' }));
 const authAccess = vi.hoisted(() => ({ tabVisibility: null as Record<string, boolean> | null }));
+const storedValues = new Map<string, string>();
 
 vi.mock('next/navigation', () => ({
   usePathname: () => navigation.pathname,
@@ -26,9 +27,28 @@ vi.mock('@/components/providers/DashboardAuthProvider', () => ({
   }),
 }));
 
+beforeAll(() => {
+  // jsdom in this workspace does not provide `window.localStorage` (see
+  // PartnerShell.test.tsx — same stub). PartnerStudioFrame renders PartnerShell,
+  // which reads the saved navigation layout on mount.
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: {
+      clear: () => {
+        storedValues.clear();
+      },
+      getItem: (key: string) => storedValues.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        storedValues.set(key, value);
+      },
+    },
+  });
+});
+
 beforeEach(() => {
   navigation.pathname = '/partner/venue/finance';
   authAccess.tabVisibility = null;
+  window.localStorage.clear();
 });
 
 describe('PartnerStudioFrame role gating', () => {

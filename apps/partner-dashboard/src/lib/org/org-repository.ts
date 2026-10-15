@@ -33,15 +33,22 @@ export async function getPartnerAccess(organizationId: string): Promise<PartnerA
 
 /**
  * Creates a new organization.
+ *
+ * B2: `idempotencyKey` is minted once per create intent by the caller's flow
+ * and re-used across retries; the fallback mint must not be used by a
+ * retrying caller (a fresh key on retry could double-create after a partial
+ * failure).
  */
-export async function createOrganization(input: CreateOrganizationInput): Promise<OrganizationDto> {
-  const idempotencyKey = crypto.randomUUID();
+export async function createOrganization(
+  input: CreateOrganizationInput,
+  idempotencyKey?: string,
+): Promise<OrganizationDto> {
   return apiClient.post({
     path: '/api/v2/organizations',
     body: input,
     schema: organizationDtoSchema,
     headers: {
-      'Idempotency-Key': idempotencyKey,
+      'Idempotency-Key': idempotencyKey ?? crypto.randomUUID(),
     },
   });
 }
