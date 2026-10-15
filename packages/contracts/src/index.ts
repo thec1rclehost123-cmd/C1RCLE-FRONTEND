@@ -215,6 +215,7 @@ export type {
   CheckoutQuoteRequest,
   CheckoutQuoteResponse,
   CheckoutHoldRequest,
+  CheckoutAttendee,
   CheckoutHoldResponse,
   PaymentAttemptRequest,
   PaymentAttemptResponse,
@@ -245,6 +246,7 @@ export {
   checkoutQuoteResponseSchema,
   cartReservationStatusSchema,
   checkoutHoldRequestSchema,
+  checkoutAttendeeSchema,
   checkoutHoldResponseSchema,
   paymentAttemptRequestSchema,
   paymentAttemptResponseSchema,
@@ -514,6 +516,10 @@ export type {
   NotificationActionRequestDto,
 } from './contracts/notifications.js';
 
+// Guest profile (guest-portal signup onboarding)
+export type { GuestProfileDto, UpsertGuestProfileRequest } from './contracts/guest-profile.js';
+export { guestProfileDtoSchema, upsertGuestProfileSchema } from './contracts/guest-profile.js';
+
 export {
   notificationRecipientTypeSchema,
   notificationActionTypeSchema,
@@ -526,7 +532,3 @@ export {
   notificationDecisionSchema,
   notificationActionRequestSchema,
 } from './contracts/notifications.js';
-
-// Guest profile (guest-portal signup onboarding)
-export type { GuestProfileDto, UpsertGuestProfileRequest } from './contracts/guest-profile.js';
-export { guestProfileDtoSchema, upsertGuestProfileSchema } from './contracts/guest-profile.js';

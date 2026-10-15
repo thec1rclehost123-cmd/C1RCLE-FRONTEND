@@ -572,6 +572,7 @@ export const ONBOARDING_STATUSES = [
 export const REFUND_STATUSES = [
   'pending',
   'approved',
+  'executing',
   'rejected',
   'settled',
   'failed',

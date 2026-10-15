@@ -122,6 +122,7 @@ export const PROPOSAL_STATUS_LABELS: Record<ProposalStatus, string> = {
 export const REFUND_STATUS_LABELS: Record<AdminRefundRequestStatus, string> = {
   pending: 'Pending',
   approved: 'Approved',
+  executing: 'Executing',
   rejected: 'Rejected',
   settled: 'Settled',
   failed: 'Failed',
@@ -185,6 +186,8 @@ export function refundStatusTone(status: AdminRefundRequestStatus): Tone {
       return 'success';
     case 'approved':
       return 'default';
+    case 'executing':
+      return 'warning';
     case 'rejected':
       return 'destructive';
     case 'failed':
