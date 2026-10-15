@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 import { ErrorState, LoadingState } from '@/components/partner-v3/States';
@@ -100,6 +100,18 @@ export function StudioPartnersClient({
   const [revokingMemberId, setRevokingMemberId] = useState<string | null>(null);
   const [revokeAccessErrorId, setRevokeAccessErrorId] = useState<string | null>(null);
   const [revokeAccessError, setRevokeAccessError] = useState<string | null>(null);
+  // B2: one Idempotency-Key per user intent (e.g. `requestId:approve`). A
+  // retry of the same gesture reuses the same key so a partial server-side
+  // write can never be double-applied via a fresh key.
+  const intentKeysRef = useRef(new Map<string, string>());
+  const intentKey = (intent: string): string => {
+    let key = intentKeysRef.current.get(intent);
+    if (!key) {
+      key = crypto.randomUUID();
+      intentKeysRef.current.set(intent, key);
+    }
+    return key;
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -152,10 +164,11 @@ export function StudioPartnersClient({
       setRequestErrorId(null);
       setRequestError(null);
       const run = async () => {
+        const key = intentKey(`${studio}:${request.kind}:${request.id}:approve`);
         if (studio === 'promoter') {
-          await resolvePromoterRequest(request.id, 'approve');
+          await resolvePromoterRequest(request.id, 'approve', undefined, key);
         } else {
-          await resolvePartnershipRequest(request.id, request.kind, 'approve');
+          await resolvePartnershipRequest(request.id, request.kind, 'approve', undefined, key);
         }
       };
       void run()
@@ -181,10 +194,11 @@ export function StudioPartnersClient({
       setRequestErrorId(null);
       setRequestError(null);
       const run = async () => {
+        const key = intentKey(`${studio}:${request.kind}:${request.id}:reject`);
         if (studio === 'promoter') {
-          await resolvePromoterRequest(request.id, 'reject');
+          await resolvePromoterRequest(request.id, 'reject', undefined, key);
         } else {
-          await resolvePartnershipRequest(request.id, request.kind, 'reject');
+          await resolvePartnershipRequest(request.id, request.kind, 'reject', undefined, key);
         }
       };
       void run()
@@ -214,6 +228,7 @@ export function StudioPartnersClient({
             studio,
             candidateKind: 'promoter',
             candidateOrganizationId: partner.organizationId ?? partner.id,
+            idempotencyKey: intentKey(`${studio}:connect:${partner.id}`),
           });
           return;
         }
@@ -223,6 +238,7 @@ export function StudioPartnersClient({
             candidateKind: partner.kind === 'venue' ? 'venue' : 'host',
             candidateOrganizationId: partner.organizationId ?? partner.id,
             candidateVenueId: (partner as PartnerRelationship).venueId ?? null,
+            idempotencyKey: intentKey(`${studio}:connect:${partner.id}`),
           });
           return;
         }
@@ -233,6 +249,7 @@ export function StudioPartnersClient({
             (partner as PartnerRelationship).venueId ??
             (partner.kind === 'venue' ? partner.id : null),
           candidateOrganizationId: partner.organizationId ?? partner.id,
+          idempotencyKey: intentKey(`${studio}:connect:${partner.id}`),
         });
       };
       void run()

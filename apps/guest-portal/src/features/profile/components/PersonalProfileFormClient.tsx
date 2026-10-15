@@ -16,9 +16,9 @@ function createDraft(identity: ProfileIdentity): PersonalProfileDraft {
   return {
     displayName: identity.displayName,
     city: identity.city,
-    instagram: identity.instagram,
-    phoneNumber: identity.phoneNumber,
-    gender: identity.gender,
+    instagram: identity.instagram ?? '',
+    phoneNumber: identity.phoneNumber ?? '',
+    gender: identity.gender ?? 'Prefer not to say',
   };
 }
 

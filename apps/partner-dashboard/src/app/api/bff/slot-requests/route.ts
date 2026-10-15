@@ -83,6 +83,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   ) {
     return errorEnvelope('validation', 'A complete host event draft is required.', 400);
   }
+  // B2: the Idempotency-Key is minted once by the client flow and replayed on
+  // retries. Require it here so the gateway cannot be handed an undefined
+  // per-write key by an out-of-date client.
+  if (
+    typeof draft.idempotencyKey !== 'string' ||
+    !/^[A-Za-z0-9_-]{8,128}$/.test(draft.idempotencyKey)
+  ) {
+    return errorEnvelope('validation', 'A valid idempotencyKey is required.', 400);
+  }
 
   const { cookie, headers: authHeaders } = gatewayAuthInit(req);
   try {

@@ -38,7 +38,7 @@ export function MarketingScreen({
   const canView =
     auth.grantedPermissions.length === 0 ||
     auth.grantedPermissions.includes('*') ||
-    auth.hasPermission('VIEW_MARKETING');
+    auth.hasPermission('MANAGE_PAGE_CONTENT');
 
   if (!canView) {
     return (

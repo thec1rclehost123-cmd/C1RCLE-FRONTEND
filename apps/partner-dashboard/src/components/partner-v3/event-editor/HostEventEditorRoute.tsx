@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useRef } from 'react';
 
 import { EmptyState, ErrorState, LoadingState } from '@/components/partner-v3/States';
 import { useHostAvailability } from '@/lib/calendar/use-host-availability';
@@ -28,6 +29,10 @@ export function HostEventEditorRoute({
   readonly initialSlotId?: string;
 }) {
   const router = useRouter();
+  // B2: one Idempotency-Key per submit intent — reused across retries of the
+  // same submit so a partial server-side write can never be duplicated by a
+  // fresh key, and discarded once the submit succeeds.
+  const workflowKeyRef = useRef<string | null>(null);
   const anchorMonth =
     initialDate && /^\d{4}-\d{2}-\d{2}$/.test(initialDate)
       ? initialDate.slice(0, 7)
@@ -96,7 +101,9 @@ export function HostEventEditorRoute({
   };
 
   const submitHostEvent = async (draft: EventEditorDraft) => {
-    await submitHostEventRequest(organizationId, draft);
+    workflowKeyRef.current ??= crypto.randomUUID();
+    await submitHostEventRequest(organizationId, draft, workflowKeyRef.current);
+    workflowKeyRef.current = null;
     const params = new URLSearchParams({ requested: 'true' });
     router.push(`/partner/host/slot-requests?${params.toString()}`);
   };

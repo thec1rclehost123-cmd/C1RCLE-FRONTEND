@@ -33,6 +33,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   useState,
   useEffect,
+  useId,
   useRef,
   useCallback,
   useId,
@@ -206,6 +207,12 @@ export function OnboardingPage() {
   >('pending');
   const [reviewNote] = useState('');
   const [submittedRequestId, setSubmittedRequestId] = useState<string | null>(null);
+  // B2: one Idempotency-Key per user intent — minted on the first click and
+  // reused across retries of that same click so a retry after a partial
+  // server-side write can never mint a fresh key and double-create (or
+  // double-submit) the application.
+  const startOnboardingKeyRef = useRef<string | null>(null);
+  const submitOnboardingKeyRef = useRef<string | null>(null);
 
   // KYC step state — documents are uploaded/confirmed server-side as each
   // KycFileZone completes; kycStepData is local UI bookkeeping only now.
@@ -832,7 +839,7 @@ export function OnboardingPage() {
           plan: DEFAULT_PLAN,
           profile: profilePayload(),
         },
-        crypto.randomUUID(),
+        (startOnboardingKeyRef.current ??= crypto.randomUUID()),
       );
       setSubmittedRequestId(application.id);
       setFieldErrors({});
@@ -874,7 +881,7 @@ export function OnboardingPage() {
         }
         const application = await submitOnboardingApplication(
           submittedRequestId,
-          crypto.randomUUID(),
+          (submitOnboardingKeyRef.current ??= crypto.randomUUID()),
         );
         setSubmittedRequestId(application.id);
         setApprovalStatus('pending');

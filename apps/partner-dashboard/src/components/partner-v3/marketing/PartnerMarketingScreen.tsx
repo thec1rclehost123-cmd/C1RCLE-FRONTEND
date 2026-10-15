@@ -3,6 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
+import { FixtureBadge } from '@/components/partner-v3/FixtureBadge';
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 
 import styles from './marketing.module.css';
@@ -191,6 +192,7 @@ export function PartnerMarketingScreen({ data }: { readonly data: MarketingData 
         <header className={styles['header']}>
           <div>
             <h1>Marketing</h1>
+            <FixtureBadge dataStatus={data.dataStatus} />
           </div>
           <div className={styles['headerActions']}>
             <button

@@ -15,6 +15,25 @@ import type { OnboardingRequestDto } from '@c1rcle/contracts';
 import type { ReactNode } from 'react';
 
 /**
+ * Per-UI-action → real `PartnerPermission` (the `/access` vocabulary, same
+ * enum the gateway derives from `partner-access.ts`). Unknown actions fail
+ * closed (`canDo` returns `false`), so a future action that still has no
+ * server permission is hidden rather than shown unrestricted.
+ */
+const ACTION_PERMISSIONS = {
+  canEditEvent: 'MANAGE_EVENTS',
+  canPublishEvent: 'MANAGE_EVENTS',
+  canSendMarketing: 'MANAGE_PAGE_CONTENT',
+  canManageDoorMode: 'SCAN_ENTRY',
+  canSendTicket: 'MANAGE_GUEST_OPS',
+  canApprovePromoter: 'MANAGE_PARTNERSHIPS',
+  canManageFinance: 'MANAGE_PAYOUTS',
+  canManageSettings: 'MANAGE_SETTINGS',
+  canManageStaff: 'MANAGE_STAFF',
+  canManageSecurity: 'MANAGE_STAFF',
+} as const;
+
+/**
  * ─── Real wiring, legacy-shaped context ──────────────────────────────────────
  *
  * This file used to run entirely against a mock Firebase client
@@ -32,16 +51,13 @@ import type { ReactNode } from 'react';
  * at their state):
  *  - `isBanned` has no backend concept in V2 yet (V1's `users/{uid}.isBanned`
  *    never got ported) — always `false` until that exists.
- *  - `actionPermissions`/`canDo` were a fine-grained per-action staff
- *    permission map (`canEditEvent`, `canManageDoorMode`, …) that V2's RBAC
- *    doesn't have a server-side equivalent for yet (it has coarse
- *    org-role/permission strings, not per-UI-action booleans). `canDo`
- *    keeps its original formula — "no map set ⇒ allow" — which is exactly
- *    what already ran for every owner in the old code; the difference is
- *    non-owner staff now also get it, since there is nothing server-side to
- *    restrict them with yet. This is a UI-visibility hint only, not the
- *    authorization boundary — the gateway's own RBAC still enforces the
- *    real permission check on every write regardless of what a button shows.
+ *  - The old per-action staff map (`canEditEvent`, `canManageDoorMode`, …) had
+ *    no server-side equivalent, so `canDo` used to short-circuit to "allow".
+ *    It now maps each action to the real `PartnerPermission` the gateway
+ *    grants via `/access` (see `ACTION_PERMISSIONS` below) and fails closed
+ *    for anything unlisted. This is still a UI-visibility hint only — the
+ *    gateway's own RBAC enforces the real permission check on every write
+ *    regardless of what a button shows.
  *
  * Also dropped, not silently kept broken: the old `mustChangePassword`
  * force-redirect (a staff-invite flow with no V2 backend field to read it
@@ -228,10 +244,15 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const canDo = useCallback(
-    // See the file-level comment: no per-action staff permission map exists
-    // server-side yet, so this always evaluates the "unrestricted" branch.
-    (_action: string) => true,
-    [],
+    (action: string) => {
+      const permission = ACTION_PERMISSIONS[action as keyof typeof ACTION_PERMISSIONS] as
+        string | undefined;
+      if (!permission) return false;
+      const granted = orgAccess.permissions;
+      if (granted.includes('*')) return true;
+      return orgAccess.hasPermission(permission);
+    },
+    [orgAccess],
   );
 
   const getIdToken = useCallback(() => Promise.resolve(getAccessToken() ?? ''), []);

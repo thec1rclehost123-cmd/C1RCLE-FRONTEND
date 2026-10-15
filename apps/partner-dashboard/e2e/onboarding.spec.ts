@@ -483,7 +483,9 @@ test.describe('Onboarding wizard — /onboard', () => {
 });
 
 // ── URL contract assertions ──────────────────────────────────────────────────
-// These tests explicitly verify which HTTP path each wizard step calls.
+// These tests verify which HTTP path each wizard step calls. They serve as a
+// regression net: start/saveProgress/submit must go through the same-origin BFF
+// (only verify-document may call the gateway directly).
 // Specific routes are registered AFTER mockOnboardingNetwork: Playwright gives
 // the most recently registered matching route priority.
 
@@ -520,7 +522,7 @@ test.describe('Onboarding wizard — URL contract', () => {
     expect(gatewayDirectHits).toHaveLength(0);
   });
 
-  test('submitting details opens the application through an onboarding endpoint', async ({
+  test('submitting details opens the application through the BFF, never the direct gateway', async ({
     page,
   }) => {
     await mockOnboardingNetwork(page);
@@ -547,6 +549,11 @@ test.describe('Onboarding wizard — URL contract', () => {
     await page.getByRole('button', { name: /Continue to Documents/i }).click();
 
     await expect.poll(() => startHits.length).toBeGreaterThan(0);
+
+    // H3: the wizard opens the application through the same-origin BFF; a
+    // direct-gateway POST would mean onboarding-repository.ts regressed.
+    expect(startHits).toContain('BFF:/api/bff/onboarding/applications');
+    expect(startHits.filter((h) => h.startsWith('GATEWAY:'))).toHaveLength(0);
   });
 
   test('phone verification posts the Firebase ID token to /api/v2/onboarding/verify-document', async ({

@@ -1,6 +1,7 @@
 import { AddIcon, ChevronDownIcon, CreditCardIcon, RefreshIcon, WalletIcon } from '@c1rcle/icons';
 
 import { Button } from '@/components/partner-v3/Button';
+import { FixtureBadge } from '@/components/partner-v3/FixtureBadge';
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 
 import styles from './promoter-finance.module.css';
@@ -31,6 +32,8 @@ export function PromoterFinanceScreen({ data }: { readonly data: PromoterFinance
             </span>
           </div>
         </header>
+
+        <FixtureBadge dataStatus={data.dataStatus} />
 
         <div className={styles['financeGrid']}>
           <div className={styles['leftColumn']}>

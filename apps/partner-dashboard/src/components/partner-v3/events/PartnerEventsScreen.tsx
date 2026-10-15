@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react';
 import { AddIcon } from '@c1rcle/icons';
 
 import styles from '@/components/partner-v3/events/events.module.css';
+import { FixtureBadge } from '@/components/partner-v3/FixtureBadge';
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 
 import { EventCard } from './EventCard';
@@ -140,6 +141,8 @@ export function PartnerEventsScreen({
             </Link>
           </div>
         </header>
+
+        <FixtureBadge dataStatus={data.dataStatus} />
 
         <div className={styles['subTabs']} role="tablist" aria-label="Event views">
           <Link className={styles['subTab']} href={pathname} role="tab" aria-selected="true">

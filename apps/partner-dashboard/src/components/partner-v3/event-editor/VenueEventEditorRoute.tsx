@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useRef } from 'react';
 
 import { EmptyState, ErrorState, LoadingState } from '@/components/partner-v3/States';
 import { useVenueCalendar } from '@/lib/calendar/use-venue-calendar';
@@ -29,6 +30,11 @@ export function VenueEventEditorRoute({
   readonly initialSlotId?: string;
 }) {
   const router = useRouter();
+  // B2: one Idempotency-Key per publish intent — minted on first submit and
+  // reused across retries of the same publish (a retry after a partial
+  // failure must not re-run with a fresh key and duplicate the event), then
+  // discarded once the publish succeeds.
+  const workflowKeyRef = useRef<string | null>(null);
   const anchorMonth =
     initialDate && /^\d{4}-\d{2}-\d{2}$/.test(initialDate)
       ? initialDate.slice(0, 7)
@@ -110,7 +116,9 @@ export function VenueEventEditorRoute({
   const usableInitialDate =
     requestedDay && canSelectEventDate(requestedDay.state, 'venue') ? initialDate : undefined;
   const publishEvent = async (draft: EventEditorDraft) => {
-    await publishVenueEvent(organizationId, draft);
+    workflowKeyRef.current ??= crypto.randomUUID();
+    await publishVenueEvent(organizationId, draft, workflowKeyRef.current);
+    workflowKeyRef.current = null;
     const params = new URLSearchParams({ month: draft.date.slice(0, 7), date: draft.date });
     router.push(`/partner/venue/calendar?${params.toString()}`);
   };

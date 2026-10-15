@@ -83,10 +83,23 @@ const REAL_VENUE = {
   updatedAt: '2026-09-01T00:00:00.000Z',
 };
 
+const ENTRY_QR = {
+  qrPayload: 'ENT-rsvp-1:1791800000:deadbeefdeadbeef',
+  expiresAt: '2026-12-10T12:00:30.000Z',
+  refreshIntervalSec: 30,
+};
+
 function mockWalletFeed(entitlements: unknown[] = [ENTITLEMENT]) {
-  mockBffGet.mockResolvedValue({
-    items: entitlements,
-    pageInfo: { page: 1, pageSize: 50, total: entitlements.length, hasNextPage: false },
+  mockBffGet.mockImplementation((arg: unknown) => {
+    const { path } = arg as { path: string };
+    if (path === '/api/wallet/tickets') {
+      return Promise.resolve({
+        items: entitlements,
+        pageInfo: { page: 1, pageSize: 50, total: entitlements.length, hasNextPage: false },
+      });
+    }
+    if (path === '/api/tickets/ENT-rsvp-1/qr') return Promise.resolve(ENTRY_QR);
+    return Promise.reject(new Error(`unexpected bff path ${path}`));
   });
   mockApiGet.mockImplementation((arg: unknown) => {
     const { path } = arg as { path: string };
@@ -181,6 +194,14 @@ describe('TicketsPage real wallet', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     // Tier shows on both the card and the open preview.
     expect(screen.getAllByText('General Admission')).toHaveLength(2);
+
+    // The preview carries the holder's real rotating code, not a fixture id.
+    const qr = await screen.findByRole('img', { name: 'Entry code for RSVP Night' });
+    expect(qr).toBeInTheDocument();
+    expect(mockBffGet).toHaveBeenCalledWith(
+      expect.objectContaining({ path: '/api/tickets/ENT-rsvp-1/qr' }),
+    );
+    expect(await screen.findByText(/Refreshes every 30s/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Close ticket view' }));
     await waitFor(() => {

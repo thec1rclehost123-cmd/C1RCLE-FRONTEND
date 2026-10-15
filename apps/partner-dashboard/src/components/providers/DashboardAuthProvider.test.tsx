@@ -69,6 +69,8 @@ function Probe() {
       <span data-testid="approved">{String(auth.isApproved)}</span>
       <span data-testid="banned">{String(auth.isBanned)}</span>
       <span data-testid="candoAny">{String(auth.canDo('anything'))}</span>
+      <span data-testid="candoEditEvent">{String(auth.canDo('canEditEvent'))}</span>
+      <span data-testid="candoStaff">{String(auth.canDo('canManageStaff'))}</span>
       <span data-testid="memberships">{auth.memberships.length}</span>
     </div>
   );
@@ -127,9 +129,10 @@ describe('DashboardAuthProvider', () => {
     expect(screen.getByTestId('approved')).toHaveTextContent('false');
     // No isBanned backend concept exists in V2 yet — always false, documented in the provider.
     expect(screen.getByTestId('banned')).toHaveTextContent('false');
-    // No per-action staff permission map exists server-side yet — canDo is
-    // always unrestricted (documented in the provider's file-level comment).
-    expect(screen.getByTestId('candoAny')).toHaveTextContent('true');
+    // Unmapped / unknown actions fail closed — no button is shown for a
+    // permission the server never defined (see ACTION_PERMISSIONS).
+    expect(screen.getByTestId('candoAny')).toHaveTextContent('false');
+    expect(screen.getByTestId('candoStaff')).toHaveTextContent('false');
     expect(screen.getByTestId('memberships')).toHaveTextContent('0');
   });
 
@@ -193,5 +196,59 @@ describe('DashboardAuthProvider', () => {
     expect(screen.getByTestId('memberships')).toHaveTextContent('1');
     expect(screen.getByTestId('approved')).toHaveTextContent('true');
     expect(mockSetActiveOrg).toHaveBeenCalledWith('org_1');
+  });
+
+  it('evaluates canDo against the granted /access permissions (owner vs member)', async () => {
+    mockUseSession.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      user: { id: 'usr_1', email: 'a@b.com', displayName: 'A' },
+    });
+    mockGetOrganizations.mockResolvedValue([
+      {
+        id: 'org_1',
+        name: 'Only Org',
+        slug: 'only-org',
+        role: 'owner',
+        status: 'active',
+        version: 1,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+    ]);
+    mockGetPartnerAccess.mockResolvedValue({
+      organizationId: 'org_1',
+      userId: 'usr_1',
+      partnerType: 'venue',
+      role: 'owner',
+      permissions: ['MANAGE_EVENTS', 'SCAN_ENTRY'],
+      tabVisibility: null,
+    });
+    mockGetMyOnboardingRequest.mockResolvedValue(null);
+    mockUseOrgAccess.mockReturnValue({
+      partnerType: 'venue',
+      role: 'owner',
+      permissions: ['MANAGE_EVENTS', 'SCAN_ENTRY'],
+      tabVisibility: null,
+      isLoading: false,
+      error: null,
+      isSuspended: false,
+      hasPermission: (p) => ['MANAGE_EVENTS', 'SCAN_ENTRY'].includes(p),
+      tabVisible: () => true,
+    });
+
+    render(
+      <DashboardAuthProvider>
+        <Probe />
+      </DashboardAuthProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    // Owner granted the write permission → the action shows.
+    expect(screen.getByTestId('candoEditEvent')).toHaveTextContent('true');
+    // Owner does NOT hold MANAGE_STAFF → the action stays hidden.
+    expect(screen.getByTestId('candoStaff')).toHaveTextContent('false');
+    // 'anything' has no mapping → fail closed.
+    expect(screen.getByTestId('candoAny')).toHaveTextContent('false');
   });
 });
