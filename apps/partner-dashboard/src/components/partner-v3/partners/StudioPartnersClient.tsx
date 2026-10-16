@@ -32,6 +32,7 @@ import type {
   PromoterPartnersData,
   PromoterPartnerTab,
   StaffInvite,
+  StaffMember,
   VenuePartnersData,
 } from '@/data/partner-data-source';
 
@@ -274,7 +275,7 @@ export function StudioPartnersClient({
   );
 
   const handleRevokeMemberAccess = useCallback(
-    (member: import('@/data/partner-data-source').StaffMember) => {
+    (member: StaffMember) => {
       const targetUserId = member.userId ?? member.id;
       setRevokingMemberId(targetUserId);
       setRevokeAccessErrorId(null);

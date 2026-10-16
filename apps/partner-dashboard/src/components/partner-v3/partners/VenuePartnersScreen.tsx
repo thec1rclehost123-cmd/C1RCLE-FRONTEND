@@ -5,6 +5,7 @@ import type {
   PartnerSegment,
   PartnerSubView,
   StaffInvite,
+  StaffMember,
   VenuePartnersData,
 } from '@/data/partner-data-source';
 
@@ -31,7 +32,7 @@ export interface VenuePartnersScreenProps extends PartnerRequestActions<PartnerR
   readonly revokingMemberId?: string | null;
   readonly revokeAccessErrorId?: string | null;
   readonly revokeAccessError?: string | null;
-  readonly onRevokeMemberAccess?: ((member: import('@/data/partner-data-source').StaffMember) => void) | undefined;
+  readonly onRevokeMemberAccess?: ((member: StaffMember) => void) | undefined;
 }
 
 export function VenuePartnersScreen({

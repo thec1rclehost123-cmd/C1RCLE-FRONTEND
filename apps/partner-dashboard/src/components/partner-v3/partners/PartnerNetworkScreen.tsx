@@ -174,9 +174,8 @@ function RevokeAccessConfirmDialog({
         </div>
         <div className={styles['revokeConfirmBody']}>
           <p>
-            This will remove{' '}
-            <span className={styles['revokeConfirmName']}>{member.name}</span>{' '}
-            from your organization. They will immediately lose all access.
+            This will remove <span className={styles['revokeConfirmName']}>{member.name}</span> from
+            your organization. They will immediately lose all access.
           </p>
           <p>Current role: {member.role}</p>
         </div>
@@ -367,7 +366,7 @@ function StaffList({
                     </p>
                   ) : null}
                 </div>
-{isAdmin ? (
+                {isAdmin ? (
                   <div className={styles['staffCardActions']}>
                     {member.backendRole === 'owner' ? (
                       <span className={styles['ownerBadge']} title="Owner role cannot be changed">
@@ -439,7 +438,9 @@ function StaffList({
       {revokingMemberCandidate ? (
         <RevokeAccessConfirmDialog
           member={revokingMemberCandidate}
-          revoking={revokingMemberId === (revokingMemberCandidate.userId ?? revokingMemberCandidate.id)}
+          revoking={
+            revokingMemberId === (revokingMemberCandidate.userId ?? revokingMemberCandidate.id)
+          }
           revokeError={
             revokeAccessErrorId === (revokingMemberCandidate.userId ?? revokingMemberCandidate.id)
               ? revokeAccessError
