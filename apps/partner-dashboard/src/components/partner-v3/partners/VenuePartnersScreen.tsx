@@ -5,6 +5,7 @@ import type {
   PartnerSegment,
   PartnerSubView,
   StaffInvite,
+  StaffMember,
   VenuePartnersData,
 } from '@/data/partner-data-source';
 
@@ -24,6 +25,14 @@ export interface VenuePartnersScreenProps extends PartnerRequestActions<PartnerR
   readonly onRevokeInvite?: ((invite: StaffInvite) => void) | undefined;
   readonly onStaffChanged?: (() => void) | undefined;
   readonly studioCapability?: 'venue' | 'host';
+  readonly isAdmin?: boolean;
+  readonly currentUserId?: string | undefined;
+  readonly currentUserEmail?: string | undefined;
+  /** For revoking active members (not invites) */
+  readonly revokingMemberId?: string | null;
+  readonly revokeAccessErrorId?: string | null;
+  readonly revokeAccessError?: string | null;
+  readonly onRevokeMemberAccess?: ((member: StaffMember) => void) | undefined;
 }
 
 export function VenuePartnersScreen({
@@ -52,6 +61,13 @@ export function VenuePartnersScreen({
   onRevokeInvite,
   onStaffChanged,
   studioCapability = 'venue',
+  isAdmin,
+  currentUserId,
+  currentUserEmail,
+  revokingMemberId = null,
+  revokeAccessErrorId = null,
+  revokeAccessError = null,
+  onRevokeMemberAccess,
 }: VenuePartnersScreenProps) {
   return (
     <PartnerNetworkScreen
@@ -84,6 +100,13 @@ export function VenuePartnersScreen({
       onRevokeInvite={onRevokeInvite}
       onStaffChanged={onStaffChanged}
       studioCapability={studioCapability}
+      {...(isAdmin !== undefined ? { isAdmin } : {})}
+      {...(currentUserId ? { currentUserId } : {})}
+      {...(currentUserEmail ? { currentUserEmail } : {})}
+      revokingMemberId={revokingMemberId}
+      revokeAccessErrorId={revokeAccessErrorId}
+      revokeAccessError={revokeAccessError}
+      {...(onRevokeMemberAccess ? { onRevokeMemberAccess } : {})}
     />
   );
 }

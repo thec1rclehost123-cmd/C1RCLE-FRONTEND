@@ -245,14 +245,16 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     session.isLoading || (session.isAuthenticated && (dataLoading || orgAccess.isLoading));
 
   const authContextValue = useMemo<AuthContextValue>(() => {
+    const matchedMembership = memberships.find((m) => m.partnerId === activeOrgId);
     const activeMembership: PartnerMembership | null =
-      activeOrgId && orgAccess.partnerType && session.user
+      activeOrgId && session.user
         ? {
             uid: session.user.id,
             partnerId: activeOrgId,
-            partnerType: orgAccess.partnerType as PartnerType,
-            role: toStaffRole(orgAccess.role ?? 'member'),
+            partnerType: orgAccess.partnerType ?? matchedMembership?.partnerType ?? 'venue',
+            role: matchedMembership?.role ?? toStaffRole(orgAccess.role ?? 'member'),
             isActive: true,
+            partnerName: matchedMembership?.partnerName,
           }
         : null;
 

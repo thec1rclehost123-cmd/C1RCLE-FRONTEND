@@ -1,4 +1,7 @@
 import Link from 'next/link';
+import { useState } from 'react';
+
+import { useSessionStore } from '@c1rcle/auth';
 
 import { Avatar } from '@/components/partner-v3/Avatar';
 import { Badge } from '@/components/partner-v3/Badge';
@@ -11,6 +14,7 @@ import { PartnerCard } from './PartnerCard';
 import { PartnerProfilePanel } from './PartnerProfilePanel';
 import { PartnerRequestCard } from './PartnerRequestCard';
 import styles from './partners.module.css';
+import { PartnerStaffEditRoleDialog } from './PartnerStaffEditRoleDialog';
 import { AddStaffButton } from './PartnerStaffInviteDialog';
 
 import type {
@@ -75,6 +79,14 @@ export interface PartnerNetworkScreenProps {
   readonly onRevokeInvite?: ((invite: StaffInvite) => void) | undefined;
   readonly onStaffChanged?: (() => void) | undefined;
   readonly studioCapability?: 'venue' | 'host';
+  readonly isAdmin?: boolean;
+  readonly currentUserId?: string | undefined;
+  readonly currentUserEmail?: string | undefined;
+  /** For revoking active members (not invites) */
+  readonly revokingMemberId?: string | null;
+  readonly revokeAccessErrorId?: string | null;
+  readonly revokeAccessError?: string | null;
+  readonly onRevokeMemberAccess?: ((member: StaffMember) => void) | undefined;
 }
 
 interface QueryState {
@@ -112,27 +124,131 @@ function staffChips(member: StaffMember): readonly string[] {
   return member.permissions;
 }
 
+function formatJoinedDate(isoString?: string): string {
+  if (!isoString) return '';
+  try {
+    const date = new Date(isoString);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  } catch {
+    return '';
+  }
+}
+
+function RevokeAccessConfirmDialog({
+  member,
+  revoking,
+  revokeError,
+  onConfirm,
+  onClose,
+}: {
+  readonly member: StaffMember;
+  readonly revoking: boolean;
+  readonly revokeError: string | null;
+  readonly onConfirm: (member: StaffMember) => void;
+  readonly onClose: () => void;
+}) {
+  return (
+    <div className={styles['dialogRoot']} role="presentation">
+      <button
+        type="button"
+        className={styles['dialogScrim']}
+        aria-label="Close revoke access dialog"
+        onClick={onClose}
+      />
+      <section
+        className={[styles['staffDialog'], styles['revokeConfirmDialog']].join(' ')}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="revoke-access-title"
+      >
+        <div className={styles['dialogHeader']}>
+          <div>
+            <span className={styles['sectionKicker']}>Team access</span>
+            <h2 id="revoke-access-title">Revoke access?</h2>
+          </div>
+        </div>
+        <div className={styles['revokeConfirmBody']}>
+          <p>
+            This will remove <span className={styles['revokeConfirmName']}>{member.name}</span> from
+            your organization. They will immediately lose all access.
+          </p>
+          <p>Current role: {member.role}</p>
+        </div>
+        {revokeError ? (
+          <p className={styles['revokeErrorNotice']} role="alert">
+            {revokeError}
+          </p>
+        ) : null}
+        <div className={styles['revokeConfirmActions']}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={revoking}>
+            Cancel
+          </Button>
+          <button
+            type="button"
+            className={styles['buttonDanger']}
+            disabled={revoking}
+            onClick={() => {
+              onConfirm(member);
+            }}
+          >
+            {revoking ? 'Revoking…' : 'Revoke access'}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function StaffList({
   staff,
   invites,
   search,
   canManage,
+  isAdmin = canManage,
+  currentUserId,
+  currentUserEmail,
+  organizationId,
+  onStaffChanged,
   staffError,
   revokingInviteId,
   revokeErrorId,
   revokeError,
   onRevokeInvite,
+  revokingMemberId,
+  revokeAccessErrorId,
+  revokeAccessError,
+  onRevokeMemberAccess,
 }: {
   readonly staff: readonly StaffMember[];
   readonly invites: readonly StaffInvite[];
   readonly search: string;
   readonly canManage: boolean;
+  readonly isAdmin?: boolean;
+  readonly currentUserId?: string | undefined;
+  readonly currentUserEmail?: string | undefined;
+  readonly organizationId?: string | undefined;
+  readonly onStaffChanged?: (() => void) | undefined;
   readonly staffError: string | null;
   readonly revokingInviteId: string | null;
   readonly revokeErrorId: string | null;
   readonly revokeError: string | null;
   readonly onRevokeInvite?: ((invite: StaffInvite) => void) | undefined;
+  readonly revokingMemberId: string | null;
+  readonly revokeAccessErrorId: string | null;
+  readonly revokeAccessError: string | null;
+  readonly onRevokeMemberAccess?: ((member: StaffMember) => void) | undefined;
 }) {
+  const sessionState = useSessionStore();
+  const sessionUser = sessionState.session?.user;
+  const effectiveUserId = currentUserId ?? sessionUser?.id;
+  const effectiveUserEmail = currentUserEmail ?? sessionUser?.email;
+  const [editingMember, setEditingMember] = useState<StaffMember | null>(null);
+  const [revokingMemberCandidate, setRevokingMemberCandidate] = useState<StaffMember | null>(null);
   const normalized = search.trim().toLowerCase();
   const members = filterBySearch(staff, search);
   const pendingInvites = invites.filter(
@@ -205,26 +321,98 @@ function StaffList({
       ) : null}
       {members.length > 0 ? (
         <div className={styles['staffGrid']}>
-          {members.map((member) => (
-            <article className={styles['staffCard']} key={member.id}>
-              <div className={styles['staffCardHeader']}>
-                <div className={styles['partnerIdentity']}>
-                  <Avatar name={member.name} />
-                  <div>
-                    <h3>{member.name}</h3>
-                    <p>{member.role}</p>
+          {members.map((member) => {
+            const isSameUser =
+              Boolean(effectiveUserId) &&
+              (member.userId === effectiveUserId || member.id === effectiveUserId);
+            const isSameEmail =
+              Boolean(effectiveUserEmail) &&
+              member.email?.toLowerCase() === effectiveUserEmail?.toLowerCase();
+            const isYou = isSameUser || isSameEmail;
+            return (
+              <article className={styles['staffCard']} key={member.id}>
+                <div className={styles['staffCardHeader']}>
+                  <div className={styles['partnerIdentity']}>
+                    <Avatar name={member.name} />
+                    <div>
+                      <div className={styles['staffNameRow']}>
+                        <h3>{member.name}</h3>
+                        {isYou ? (
+                          <Badge tone="accent" className={styles['youTag']}>
+                            You
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <p className={styles['staffRoleText']}>{member.role}</p>
+                    </div>
                   </div>
+                  <Badge tone="success">{member.status}</Badge>
                 </div>
-                <Badge tone="success">{member.status}</Badge>
-              </div>
-              <div className={styles['permissionChips']}>
-                {staffChips(member).map((chip) => (
-                  <span key={chip}>{chip}</span>
-                ))}
-              </div>
-              {member.email ? <p>{member.email}</p> : null}
-            </article>
-          ))}
+                <div className={styles['permissionChips']}>
+                  {staffChips(member).map((chip) => (
+                    <span key={chip}>{chip}</span>
+                  ))}
+                </div>
+                <div className={styles['staffDetails']}>
+                  {member.email ? (
+                    <p className={styles['staffDetailItem']}>
+                      <span className={styles['staffDetailLabel']}>Email:</span> {member.email}
+                    </p>
+                  ) : null}
+                  {member.joinedAt ? (
+                    <p className={styles['staffDetailItem']}>
+                      <span className={styles['staffDetailLabel']}>Joined:</span>{' '}
+                      {formatJoinedDate(member.joinedAt)}
+                    </p>
+                  ) : null}
+                </div>
+                {isAdmin ? (
+                  <div className={styles['staffCardActions']}>
+                    {member.backendRole === 'owner' ? (
+                      <span className={styles['ownerBadge']} title="Owner role cannot be changed">
+                        Owner (Primary)
+                      </span>
+                    ) : (
+                      <>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => {
+                            setEditingMember(member);
+                          }}
+                        >
+                          Edit role
+                        </Button>
+                        {!isYou && onRevokeMemberAccess ? (
+                          <div className={styles['staffCardActionsRight']}>
+                            <button
+                              type="button"
+                              className={styles['buttonDanger']}
+                              disabled={revokingMemberId === (member.userId ?? member.id)}
+                              title="Revoke this member's access"
+                              onClick={() => {
+                                setRevokingMemberCandidate(member);
+                              }}
+                            >
+                              {revokingMemberId === (member.userId ?? member.id)
+                                ? 'Revoking…'
+                                : 'Revoke access'}
+                            </button>
+                            {revokeAccessErrorId === (member.userId ?? member.id) &&
+                            revokeAccessError ? (
+                              <p role="alert" className={styles['revokeErrorNotice']}>
+                                {revokeAccessError}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </>
+                    )}
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
         </div>
       ) : normalized ? (
         <EmptyState
@@ -236,6 +424,36 @@ function StaffList({
         <p className={styles['dialogNotice']}>
           Only team members with staff-management access can invite or revoke staff.
         </p>
+      ) : null}
+      {editingMember ? (
+        <PartnerStaffEditRoleDialog
+          member={editingMember}
+          onClose={() => {
+            setEditingMember(null);
+          }}
+          {...(onStaffChanged ? { onUpdated: onStaffChanged } : {})}
+          {...(organizationId ? { organizationId } : {})}
+        />
+      ) : null}
+      {revokingMemberCandidate ? (
+        <RevokeAccessConfirmDialog
+          member={revokingMemberCandidate}
+          revoking={
+            revokingMemberId === (revokingMemberCandidate.userId ?? revokingMemberCandidate.id)
+          }
+          revokeError={
+            revokeAccessErrorId === (revokingMemberCandidate.userId ?? revokingMemberCandidate.id)
+              ? revokeAccessError
+              : null
+          }
+          onClose={() => {
+            setRevokingMemberCandidate(null);
+          }}
+          onConfirm={(member) => {
+            onRevokeMemberAccess?.(member);
+            setRevokingMemberCandidate(null);
+          }}
+        />
       ) : null}
     </div>
   );
@@ -273,6 +491,13 @@ export function PartnerNetworkScreen({
   onRevokeInvite,
   onStaffChanged,
   studioCapability,
+  isAdmin = staffCanManage,
+  currentUserId,
+  currentUserEmail,
+  revokingMemberId = null,
+  revokeAccessErrorId = null,
+  revokeAccessError = null,
+  onRevokeMemberAccess,
 }: PartnerNetworkScreenProps) {
   const state: QueryState = { segment, subView, search, profileId };
   const partnerSet =
@@ -412,11 +637,20 @@ export function PartnerNetworkScreen({
             invites={staffInvites}
             search={search}
             canManage={staffCanManage}
+            isAdmin={isAdmin}
             staffError={staffError}
             revokingInviteId={revokingInviteId}
             revokeErrorId={revokeErrorId}
             revokeError={revokeError}
+            {...(currentUserId ? { currentUserId } : {})}
+            {...(currentUserEmail ? { currentUserEmail } : {})}
+            {...(organizationId ? { organizationId } : {})}
             {...(onRevokeInvite ? { onRevokeInvite } : {})}
+            {...(onStaffChanged ? { onStaffChanged } : {})}
+            revokingMemberId={revokingMemberId}
+            revokeAccessErrorId={revokeAccessErrorId}
+            revokeAccessError={revokeAccessError}
+            {...(onRevokeMemberAccess ? { onRevokeMemberAccess } : {})}
           />
         ) : records.length ? (
           <div className={styles['partnerGrid']}>
