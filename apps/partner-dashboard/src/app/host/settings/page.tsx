@@ -1,9 +1,9 @@
+import { redirect } from 'next/navigation';
+
 import { AccountIcon, BankIcon, CalendarIcon, LockedIcon } from '@c1rcle/icons';
 
-import { mapHostPayoutAccount } from '@/components/host/host-finance-mapping';
 import { hostAvailability, hostProfile } from '@/components/host/host-studio-model';
 import { PartnerSettingsScreen } from '@/components/partner-shell/PartnerSettingsScreen';
-import { partnerRepositories } from '@/lib/partner/repositories';
 
 export default async function HostSettingsPage({
   searchParams,
@@ -19,8 +19,7 @@ export default async function HostSettingsPage({
     requestedTab === 'security'
       ? requestedTab
       : 'profile';
-  const finance = tab === 'payout' ? await partnerRepositories.host.getFinance() : null;
-  const payoutAccount = finance ? mapHostPayoutAccount(finance.payoutAccount) : null;
+  if (tab === 'payout') redirect('/partner/host/finance?view=bank');
   return (
     <PartnerSettingsScreen
       config={{
@@ -48,14 +47,6 @@ export default async function HostSettingsPage({
           time: slot.time,
           venue: hostAvailability.venueName,
         })),
-        ...(finance && payoutAccount
-          ? {
-              payout: {
-                ...payoutAccount,
-                nextPayout: finance.nextPayout,
-              },
-            }
-          : {}),
       }}
       tab={tab}
     />

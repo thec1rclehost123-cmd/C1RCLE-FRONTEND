@@ -194,6 +194,11 @@ describe('toFinancePayout', () => {
     status: 'paid',
     failureReason: null,
     processedAt: '2026-07-18T06:00:00.000Z',
+    transferReference: null,
+    transferredAt: null,
+    transferMethod: null,
+    transferProof: null,
+    approvedBy: null,
     createdAt: '2026-07-17T06:00:00.000Z',
   };
 
@@ -391,6 +396,11 @@ describe('toNextPayoutMetric', () => {
     status: 'requested',
     failureReason: null,
     processedAt: null,
+    transferReference: null,
+    transferredAt: null,
+    transferMethod: null,
+    transferProof: null,
+    approvedBy: null,
     createdAt: '2026-07-17T06:00:00.000Z',
   };
 
@@ -431,12 +441,23 @@ describe('toNextPayoutMetric', () => {
 const balances: BalanceSummaryResponse = {
   availablePaise: 486_200,
   pendingPaise: 120_000,
+  reservedPaise: 50_000,
+  heldPaise: 25_000,
+  paidPaise: 300_000,
   lifetimePaise: 1_200_000,
+  holds: {
+    reservePaise: 25_000,
+    cancellationPaise: 0,
+    chargebackPaise: 0,
+    reconciliationPaise: 0,
+  },
+  readModel: 'financial_journal_v2',
 };
 
 describe('toPartnerFinanceData', () => {
   it('marks the result as API-backed', () => {
     const data = toPartnerFinanceData({
+      organizationId: 'org_1',
       accent: 'orange',
       balances,
       ledger: [],
@@ -445,6 +466,11 @@ describe('toPartnerFinanceData', () => {
       orders: [order],
     });
     expect(data.dataStatus).toBe('api');
+    expect(data.payoutRequest).toEqual({
+      organizationId: 'org_1',
+      availablePaise: balances.availablePaise,
+      bankAccountId: bank.id,
+    });
   });
 
   it('omits paymentCard entirely — no card is stored, so none is invented', () => {
@@ -495,7 +521,21 @@ describe('toPartnerFinanceData', () => {
   it('renders a zero balance as a real zero, not an empty tile', () => {
     const data = toPartnerFinanceData({
       accent: 'orange',
-      balances: { availablePaise: 0, pendingPaise: 0, lifetimePaise: 0 },
+      balances: {
+        availablePaise: 0,
+        pendingPaise: 0,
+        reservedPaise: 0,
+        heldPaise: 0,
+        paidPaise: 0,
+        lifetimePaise: 0,
+        holds: {
+          reservePaise: 0,
+          cancellationPaise: 0,
+          chargebackPaise: 0,
+          reconciliationPaise: 0,
+        },
+        readModel: 'financial_journal_v2',
+      },
       ledger: [],
       payouts: [],
       bankAccounts: [],
@@ -532,6 +572,15 @@ describe('toPartnerFinanceData', () => {
           status: 'paid',
           failureReason: null,
           processedAt: '2026-07-18T00:00:00.000Z',
+          transferReference: 'UTR-1',
+          transferredAt: '2026-07-18T00:00:00.000Z',
+          transferMethod: 'bank_transfer',
+          transferProof: {
+            sha256: 'a'.repeat(64),
+            contentType: 'application/pdf',
+            sizeBytes: 128,
+          },
+          approvedBy: 'admin_2',
           createdAt: '2026-07-17T00:00:00.000Z',
         },
       ],

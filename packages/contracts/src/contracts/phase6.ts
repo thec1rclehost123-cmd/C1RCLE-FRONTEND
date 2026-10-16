@@ -32,7 +32,17 @@ export const ledgerEntryListResponseSchema = paginatedSchema(ledgerEntryDtoSchem
 export const balanceSummaryResponseSchema = z.object({
   availablePaise: z.number().int(),
   pendingPaise: z.number().int().nonnegative(),
+  reservedPaise: z.number().int().nonnegative(),
+  heldPaise: z.number().int().nonnegative(),
+  paidPaise: z.number().int().nonnegative(),
   lifetimePaise: z.number().int().nonnegative(),
+  holds: z.object({
+    reservePaise: z.number().int().nonnegative(),
+    cancellationPaise: z.number().int().nonnegative(),
+    chargebackPaise: z.number().int().nonnegative(),
+    reconciliationPaise: z.number().int().nonnegative(),
+  }),
+  readModel: z.enum(['legacy_ledger_v1', 'financial_journal_v2']),
 });
 export type BalanceSummaryResponse = z.infer<typeof balanceSummaryResponseSchema>;
 
@@ -107,6 +117,17 @@ export const payoutResponseSchema = z.object({
   status: z.enum(['requested', 'processing', 'paid', 'failed', 'frozen']),
   failureReason: z.string().nullable(),
   processedAt: z.iso.datetime().nullable(),
+  transferReference: z.string().nullable(),
+  transferredAt: z.iso.datetime().nullable(),
+  transferMethod: z.string().nullable(),
+  transferProof: z
+    .object({
+      sha256: z.string().regex(/^[a-f0-9]{64}$/),
+      contentType: z.string().min(1).max(120),
+      sizeBytes: z.number().int().positive(),
+    })
+    .nullable(),
+  approvedBy: opaqueIdSchema.nullable(),
   createdAt: z.iso.datetime(),
 });
 export type PayoutResponse = z.infer<typeof payoutResponseSchema>;
@@ -130,6 +151,20 @@ export const runPayoutBatchSchema = z
   })
   .strict();
 export type RunPayoutBatchInput = z.infer<typeof runPayoutBatchSchema>;
+
+export const completeManualPayoutSchema = z
+  .object({
+    transferReference: z.string().trim().min(1).max(120),
+    transferredAt: z.iso.datetime(),
+    transferMethod: z.enum(['bank_transfer', 'neft', 'rtgs', 'imps', 'upi']),
+    proof: z.object({
+      sha256: z.string().regex(/^[a-f0-9]{64}$/i),
+      contentType: z.string().trim().min(1).max(120),
+      sizeBytes: z.number().int().positive(),
+    }),
+  })
+  .strict();
+export type CompleteManualPayoutInput = z.infer<typeof completeManualPayoutSchema>;
 
 export const payoutBatchResultSchema = z.object({
   processed: z.array(payoutResponseSchema),
@@ -224,6 +259,16 @@ export const requestRefundSchema = z
     orderId: opaqueIdSchema,
     amountPaise: z.number().int().positive(),
     reason: z.string().min(1).max(2000),
+    ticketLines: z
+      .array(
+        z.object({
+          tierId: opaqueIdSchema,
+          quantity: z.number().int().positive(),
+        }),
+      )
+      .min(1)
+      .max(100)
+      .optional(),
   })
   .strict();
 export type RequestRefundInput = z.infer<typeof requestRefundSchema>;
@@ -257,6 +302,9 @@ export const adminRefundRequestDtoSchema = z.object({
   amountPaise: z.number().int().positive(),
   requestedBy: opaqueIdSchema,
   reason: z.string(),
+  scope: z.enum(['amount_only', 'ticket_lines']),
+  ticketLines: z.array(z.object({ tierId: opaqueIdSchema, quantity: z.number().int().positive() })),
+  targetEntitlementIds: z.array(opaqueIdSchema),
   approversRequired: z.number().int().nonnegative(),
   approvals: z.array(adminRefundApprovalDtoSchema),
   status: adminRefundRequestStatusSchema,
@@ -273,6 +321,103 @@ export const adminRefundRequestDtoSchema = z.object({
 export type AdminRefundRequestDto = z.infer<typeof adminRefundRequestDtoSchema>;
 
 export const adminRefundRequestListResponseSchema = paginatedSchema(adminRefundRequestDtoSchema);
+
+// Persisted finance reconciliation
+export const reconciliationRunStatusSchema = z.enum(['running', 'completed', 'failed']);
+export const reconciliationDiscrepancyKindSchema = z.enum([
+  'captured_payment_without_order',
+  'paid_order_without_capture',
+  'paid_order_without_ticket',
+  'ticket_without_paid_order',
+  'missing_journal',
+  'duplicate_journal',
+  'unbalanced_journal',
+  'amount_mismatch',
+  'currency_mismatch',
+  'provider_order_mismatch',
+  'refund_mismatch',
+  'chargeback_mismatch',
+  'stale_pending_payment',
+  'payout_mismatch',
+]);
+export const reconciliationDiscrepancyStateSchema = z.enum([
+  'open',
+  'finance_review',
+  'support_required',
+  'resolved',
+]);
+const reconciliationEvidenceValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
+export const reconciliationRunDtoSchema = z.object({
+  id: opaqueIdSchema,
+  status: reconciliationRunStatusSchema,
+  requestedBy: opaqueIdSchema,
+  startedAt: z.iso.datetime(),
+  completedAt: z.iso.datetime().nullable(),
+  scannedCounts: z.record(z.string(), z.number().int().nonnegative()),
+  discrepancyCount: z.number().int().nonnegative(),
+  failureReason: z.string().nullable(),
+});
+export const reconciliationDiscrepancyDtoSchema = z.object({
+  id: opaqueIdSchema,
+  runId: opaqueIdSchema,
+  kind: reconciliationDiscrepancyKindSchema,
+  state: reconciliationDiscrepancyStateSchema,
+  organizationId: opaqueIdSchema.nullable(),
+  orderId: opaqueIdSchema.nullable(),
+  paymentId: z.string().nullable(),
+  payoutId: opaqueIdSchema.nullable(),
+  amountPaise: z.number().int().nonnegative().nullable(),
+  currency: z.string().nullable(),
+  evidence: z.record(z.string(), reconciliationEvidenceValueSchema),
+  repair: z.literal('recheck_evidence').nullable(),
+  resolutionReason: z.string().nullable(),
+  resolvedBy: opaqueIdSchema.nullable(),
+  resolvedAt: z.iso.datetime().nullable(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+});
+export const reconciliationRunListResponseSchema = paginatedSchema(reconciliationRunDtoSchema);
+export const reconciliationDiscrepancyListResponseSchema = paginatedSchema(
+  reconciliationDiscrepancyDtoSchema,
+);
+export const resolveReconciliationDiscrepancySchema = z
+  .object({ reason: z.string().trim().min(1).max(2000) })
+  .strict();
+
+export type ReconciliationRunDto = z.infer<typeof reconciliationRunDtoSchema>;
+export type ReconciliationDiscrepancyDto = z.infer<typeof reconciliationDiscrepancyDtoSchema>;
+export type ResolveReconciliationDiscrepancyInput = z.infer<
+  typeof resolveReconciliationDiscrepancySchema
+>;
+
+export const providerChargebackDtoSchema = z.object({
+  disputeId: z.string().min(1),
+  paymentId: z.string().min(1),
+  orderId: opaqueIdSchema.nullable(),
+  organizationId: opaqueIdSchema.nullable(),
+  amountPaise: z.number().int().positive(),
+  amountDeductedPaise: z.number().int().nonnegative(),
+  currency: z.string().length(3),
+  status: z.enum(['open', 'under_review', 'won', 'lost', 'closed']),
+  reasonCode: z.string().nullable(),
+  reasonDescription: z.string().nullable(),
+  respondBy: z.iso.datetime().nullable(),
+  phase: z.enum(['fraud', 'retrieval', 'chargeback', 'pre_arbitration', 'arbitration']).nullable(),
+  evidenceState: z.enum(['none', 'submitted']),
+  providerOccurredAt: z.iso.datetime().nullable(),
+});
+export const providerChargebackListResponseSchema = paginatedSchema(providerChargebackDtoSchema);
+export type ProviderChargebackDto = z.infer<typeof providerChargebackDtoSchema>;
+
+export const financialAdjustmentResultSchema = z.object({
+  adjustmentId: opaqueIdSchema,
+  organizationId: opaqueIdSchema,
+  amountPaise: z.number().int().positive(),
+  direction: z.enum(['credit', 'debit']),
+  journalId: opaqueIdSchema,
+  postedAt: z.iso.datetime(),
+});
+export type FinancialAdjustmentResult = z.infer<typeof financialAdjustmentResultSchema>;
 
 // Leaderboard
 export const leaderboardPeriodTypeSchema = z.enum(['all_time', 'month', 'week']);

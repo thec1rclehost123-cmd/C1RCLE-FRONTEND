@@ -53,7 +53,10 @@ export const NAV_SECTIONS: readonly NavSection[] = [
       { label: 'Support', href: '/support', icon: 'notification' },
       { label: 'Refunds', href: '/refunds', icon: 'refund' },
       { label: 'Disputes', href: '/disputes', icon: 'warning' },
+      { label: 'Chargebacks', href: '/chargebacks', icon: 'warning' },
       { label: 'Payouts', href: '/payouts', icon: 'bank' },
+      { label: 'Reconciliation', href: '/reconciliation', icon: 'list' },
+      { label: 'Adjustments', href: '/adjustments', icon: 'wallet' },
     ],
   },
   {

@@ -1826,6 +1826,26 @@ const venueFinanceData: VenueFinanceData = {
     detail: 'Clears within 2 days',
     tone: 'warning',
   },
+  reservedBalance: {
+    label: 'Payout reserved',
+    value: '₹4,86,200',
+    detail: 'Requested transfer',
+    tone: 'warning',
+  },
+  heldBalance: {
+    label: 'On hold',
+    value: '₹0',
+    detail: 'No active finance holds',
+    tone: 'neutral',
+  },
+  paidBalance: {
+    label: 'Paid out',
+    value: '₹13,27,000',
+    detail: 'Completed transfers',
+    tone: 'positive',
+  },
+  readModel: 'legacy_ledger_v1',
+  payoutRequest: null,
   nextPayout: {
     label: 'Next payout',
     value: 'Fri, Jul 18',
@@ -1857,7 +1877,7 @@ const venueFinanceData: VenueFinanceData = {
       id: 'payout-jul-18',
       date: 'Fri, Jul 18',
       detail: 'Scheduled · Neon Nights + 2 events',
-      status: 'Scheduled',
+      status: 'Requested',
       amount: '₹4,86,200',
     },
     {
