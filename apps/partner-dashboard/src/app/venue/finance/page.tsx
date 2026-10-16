@@ -1,9 +1,5 @@
-import { FinanceScreen } from '@/components/venue/screens/FinanceScreen';
-
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = { title: 'Finance · Venue Studio' };
+import { redirect } from 'next/navigation';
 
 export default function VenueFinancePage() {
-  return <FinanceScreen />;
+  redirect('/partner/venue/finance');
 }

@@ -2,9 +2,8 @@ import { notFound } from 'next/navigation';
 
 import { FinanceLoadFailureState } from '@/components/partner-v3/finance/FinanceLoadFailureState';
 import { HostFinanceScreen } from '@/components/partner-v3/finance/HostFinanceScreen';
-import { PromoterFinanceScreen } from '@/components/partner-v3/finance/PromoterFinanceScreen';
+import { PartnerFinanceScreen } from '@/components/partner-v3/finance/PartnerFinanceScreen';
 import { VenueFinanceScreen } from '@/components/partner-v3/finance/VenueFinanceScreen';
-import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
 import { FinanceLoadError, loadFinanceData } from '@/lib/finance/load-finance-data';
 
 import type {
@@ -24,16 +23,6 @@ export default async function StudioFinancePage({
   const { studio } = await params;
   if (studio !== 'venue' && studio !== 'host' && studio !== 'promoter') {
     notFound();
-  }
-
-  // Promoters get their own screen (leaderboard-shaped, not a payouts desk), and
-  // `PromoterFinanceData` is a different model from `PartnerFinanceData` — so it
-  // is not on this loader's path yet. Left on the fixture deliberately rather
-  // than force-fed partner-shaped data that would misreport a commission as a
-  // balance.
-  if (studio === 'promoter') {
-    const data = await fixturePartnerDataSource.getPromoterFinance();
-    return <PromoterFinanceScreen data={data} />;
   }
 
   const query = await searchParams;
@@ -88,5 +77,11 @@ export default async function StudioFinancePage({
     direction,
   };
 
-  return studio === 'host' ? <HostFinanceScreen {...props} /> : <VenueFinanceScreen {...props} />;
+  return studio === 'host' ? (
+    <HostFinanceScreen {...props} />
+  ) : studio === 'promoter' ? (
+    <PartnerFinanceScreen {...props} baseHref="/partner/promoter/finance" />
+  ) : (
+    <VenueFinanceScreen {...props} />
+  );
 }

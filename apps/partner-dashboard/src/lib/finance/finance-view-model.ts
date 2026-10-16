@@ -159,11 +159,11 @@ const ORDER_STATUS_TO_BADGE: Record<FinanceOrderDto['status'], FinanceOrderStatu
 };
 
 const PAYOUT_STATUS_TO_BADGE: Record<PayoutResponse['status'], FinancePayoutStatus> = {
-  requested: 'Scheduled',
-  processing: 'Scheduled',
+  requested: 'Requested',
+  processing: 'Processing',
   paid: 'Paid',
-  failed: 'Paid',
-  frozen: 'Scheduled',
+  failed: 'Failed',
+  frozen: 'Frozen',
 };
 
 const PAYOUT_STATUS_TO_TONE: Record<PayoutResponse['status'], FinanceTone> = {
@@ -212,7 +212,9 @@ export function toFinancePayout(payout: PayoutResponse): FinancePayout {
           : payout.status === 'processing'
             ? 'Processing at the bank'
             : payout.status === 'paid'
-              ? 'Paid to your bank account'
+              ? payout.transferReference
+                ? `Paid · transfer ${payout.transferReference}`
+                : 'Paid to your bank account'
               : 'Scheduled',
     status: PAYOUT_STATUS_TO_BADGE[payout.status],
     amount: formatPaise(payout.amountPaise),
@@ -352,6 +354,7 @@ export function toNextPayoutMetric(payouts: readonly PayoutResponse[]): FinanceM
 /* ─── Assembly ─────────────────────────────────────────────────────────────── */
 
 export interface FinanceScreenInput {
+  readonly organizationId?: string;
   readonly accent: FinanceAccent;
   readonly balances: BalanceSummaryResponse;
   readonly ledger: readonly LedgerEntryDto[];
@@ -389,6 +392,31 @@ export function toPartnerFinanceData(input: FinanceScreenInput): PartnerFinanceD
     tone: balances.pendingPaise > 0 ? 'warning' : 'neutral',
   };
 
+  const reservedBalance: FinanceMetric = {
+    label: 'Payout reserved',
+    value: formatPaise(balances.reservedPaise),
+    detail: 'Requested or processing transfer',
+    tone: balances.reservedPaise > 0 ? 'warning' : 'neutral',
+  };
+  const holdParts = [
+    balances.holds.reservePaise > 0 ? 'policy reserve' : null,
+    balances.holds.cancellationPaise > 0 ? 'cancelled event' : null,
+    balances.holds.chargebackPaise > 0 ? 'chargeback' : null,
+    balances.holds.reconciliationPaise > 0 ? 'reconciliation' : null,
+  ].filter((part): part is string => part !== null);
+  const heldBalance: FinanceMetric = {
+    label: 'On hold',
+    value: formatPaise(balances.heldPaise),
+    detail: holdParts.length === 0 ? 'No active finance holds' : holdParts.join(' · '),
+    tone: balances.heldPaise > 0 ? 'warning' : 'neutral',
+  };
+  const paidBalance: FinanceMetric = {
+    label: 'Paid out',
+    value: formatPaise(balances.paidPaise),
+    detail: 'Completed transfers',
+    tone: balances.paidPaise > 0 ? 'positive' : 'neutral',
+  };
+
   return {
     dataStatus: 'api',
     accent: input.accent,
@@ -397,6 +425,17 @@ export function toPartnerFinanceData(input: FinanceScreenInput): PartnerFinanceD
     balanceDetail: `${formatPaise(balances.lifetimePaise)} earned all time`,
     balanceTrend: toBalanceTrend(ledger),
     pendingBalance,
+    reservedBalance,
+    heldBalance,
+    paidBalance,
+    readModel: balances.readModel,
+    payoutRequest: input.organizationId
+      ? {
+          organizationId: input.organizationId,
+          availablePaise: balances.availablePaise,
+          bankAccountId: defaultAccount?.id ?? null,
+        }
+      : null,
     nextPayout: toNextPayoutMetric(payouts),
     bankAccount: toFinanceBankAccount(defaultAccount),
     // Intentionally absent: there is no card on file, and no card number or

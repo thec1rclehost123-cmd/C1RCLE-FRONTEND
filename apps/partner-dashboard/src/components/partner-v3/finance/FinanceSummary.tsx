@@ -1,17 +1,12 @@
 import Link from 'next/link';
 
-import {
-  RequestPayoutIcon,
-  ScheduledPayoutIcon,
-  SettingsIcon,
-  TrendUpIcon,
-  WithdrawIcon,
-} from '@c1rcle/icons';
+import { ScheduledPayoutIcon, SettingsIcon, TrendUpIcon, WithdrawIcon } from '@c1rcle/icons';
 
 import { Button } from '@/components/partner-v3/Button';
 
 import styles from './finance.module.css';
 import { FinanceMetric } from './FinanceMetric';
+import { PayoutRequestAction } from './PayoutRequestAction';
 
 import type { PartnerFinanceData } from '@/data/partner-data-source';
 
@@ -83,14 +78,7 @@ export function FinanceSummary({
               >
                 <WithdrawIcon size={16} aria-hidden="true" /> Withdraw
               </Button>
-              <Button
-                className={styles['financeSecondaryAction']}
-                variant="secondary"
-                disabled
-                title="Payout requests require the payout mutation API."
-              >
-                <RequestPayoutIcon size={16} aria-hidden="true" /> Request payout
-              </Button>
+              <PayoutRequestAction request={data.payoutRequest} />
             </div>
           </div>
         </section>
@@ -123,6 +111,18 @@ export function FinanceSummary({
         <FinanceMetric
           metric={data.pendingBalance}
           icon={<span className={styles['hourglassIcon']}>⌛</span>}
+        />
+        <FinanceMetric
+          metric={data.heldBalance}
+          icon={<span className={styles['hourglassIcon']}>!</span>}
+        />
+        <FinanceMetric
+          metric={data.reservedBalance}
+          icon={<span className={styles['hourglassIcon']}>→</span>}
+        />
+        <FinanceMetric
+          metric={data.paidBalance}
+          icon={<span className={styles['hourglassIcon']}>✓</span>}
         />
         <FinanceMetric metric={data.nextPayout} icon={<ScheduledPayoutIcon size={20} />} />
       </div>

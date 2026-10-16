@@ -26,6 +26,12 @@ export interface BookingEventFixture {
   city: string;
   doorNote: string;
   ticketTiers: readonly BookingTicketTier[];
+  /**
+   * True only for a published event whose real ticket tiers loaded, so a hold
+   * and payment can reference them. Fixtures and the price-derived fallback tier
+   * are previews and must not reach a payment provider.
+   */
+  purchasable?: boolean;
 }
 
 export interface BookingConfirmationFixture {

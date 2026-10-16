@@ -145,6 +145,7 @@ export async function loadFinanceData(options: FinanceLoaderOptions): Promise<Pa
   }
 
   return toPartnerFinanceData({
+    organizationId,
     accent: options.accent,
     balances: balance,
     ledger: ledger.items,
