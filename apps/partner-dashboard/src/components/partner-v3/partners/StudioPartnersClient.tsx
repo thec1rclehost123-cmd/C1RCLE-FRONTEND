@@ -96,6 +96,9 @@ export function StudioPartnersClient({
   const [revokingInviteId, setRevokingInviteId] = useState<string | null>(null);
   const [revokeErrorId, setRevokeErrorId] = useState<string | null>(null);
   const [revokeError, setRevokeError] = useState<string | null>(null);
+  const [revokingMemberId, setRevokingMemberId] = useState<string | null>(null);
+  const [revokeAccessErrorId, setRevokeAccessErrorId] = useState<string | null>(null);
+  const [revokeAccessError, setRevokeAccessError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -270,6 +273,32 @@ export function StudioPartnersClient({
     [reload],
   );
 
+  const handleRevokeMemberAccess = useCallback(
+    (member: import('@/data/partner-data-source').StaffMember) => {
+      const targetUserId = member.userId ?? member.id;
+      setRevokingMemberId(targetUserId);
+      setRevokeAccessErrorId(null);
+      setRevokeAccessError(null);
+      const run = async () => {
+        const { getActiveOrgId } = await import('@/lib/org/active-org');
+        const orgId = getActiveOrgId();
+        if (!orgId) throw new Error('No active organization selected');
+        const { staffApi } = await import('@/lib/api/staff-api');
+        await staffApi.removeMember(orgId, targetUserId);
+        reload();
+      };
+      void run()
+        .catch((err: unknown) => {
+          setRevokeAccessErrorId(targetUserId);
+          setRevokeAccessError(err instanceof Error ? err.message : String(err));
+        })
+        .finally(() => {
+          setRevokingMemberId(null);
+        });
+    },
+    [reload],
+  );
+
   if (state.status === 'loading') {
     return (
       <PageContainer>
@@ -332,6 +361,10 @@ export function StudioPartnersClient({
         onStaffChanged={reload}
         studioCapability="venue"
         isAdmin={isOrgAdmin}
+        revokingMemberId={revokingMemberId}
+        revokeAccessErrorId={revokeAccessErrorId}
+        revokeAccessError={revokeAccessError}
+        onRevokeMemberAccess={handleRevokeMemberAccess}
         {...(activeOrganizationId ? { organizationId: activeOrganizationId } : {})}
         {...(currentUserId ? { currentUserId } : {})}
         {...(currentUserEmail ? { currentUserEmail } : {})}
@@ -367,6 +400,10 @@ export function StudioPartnersClient({
         onStaffChanged={reload}
         studioCapability="host"
         isAdmin={isOrgAdmin}
+        revokingMemberId={revokingMemberId}
+        revokeAccessErrorId={revokeAccessErrorId}
+        revokeAccessError={revokeAccessError}
+        onRevokeMemberAccess={handleRevokeMemberAccess}
         {...(activeOrganizationId ? { organizationId: activeOrganizationId } : {})}
         {...(currentUserId ? { currentUserId } : {})}
         {...(currentUserEmail ? { currentUserEmail } : {})}

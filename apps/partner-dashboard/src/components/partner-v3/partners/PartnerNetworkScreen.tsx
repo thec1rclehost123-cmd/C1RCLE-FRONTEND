@@ -82,6 +82,11 @@ export interface PartnerNetworkScreenProps {
   readonly isAdmin?: boolean;
   readonly currentUserId?: string | undefined;
   readonly currentUserEmail?: string | undefined;
+  /** For revoking active members (not invites) */
+  readonly revokingMemberId?: string | null;
+  readonly revokeAccessErrorId?: string | null;
+  readonly revokeAccessError?: string | null;
+  readonly onRevokeMemberAccess?: ((member: StaffMember) => void) | undefined;
 }
 
 interface QueryState {
@@ -134,6 +139,72 @@ function formatJoinedDate(isoString?: string): string {
   }
 }
 
+function RevokeAccessConfirmDialog({
+  member,
+  revoking,
+  revokeError,
+  onConfirm,
+  onClose,
+}: {
+  readonly member: StaffMember;
+  readonly revoking: boolean;
+  readonly revokeError: string | null;
+  readonly onConfirm: (member: StaffMember) => void;
+  readonly onClose: () => void;
+}) {
+  return (
+    <div className={styles['dialogRoot']} role="presentation">
+      <button
+        type="button"
+        className={styles['dialogScrim']}
+        aria-label="Close revoke access dialog"
+        onClick={onClose}
+      />
+      <section
+        className={[styles['staffDialog'], styles['revokeConfirmDialog']].join(' ')}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="revoke-access-title"
+      >
+        <div className={styles['dialogHeader']}>
+          <div>
+            <span className={styles['sectionKicker']}>Team access</span>
+            <h2 id="revoke-access-title">Revoke access?</h2>
+          </div>
+        </div>
+        <div className={styles['revokeConfirmBody']}>
+          <p>
+            This will remove{' '}
+            <span className={styles['revokeConfirmName']}>{member.name}</span>{' '}
+            from your organization. They will immediately lose all access.
+          </p>
+          <p>Current role: {member.role}</p>
+        </div>
+        {revokeError ? (
+          <p className={styles['revokeErrorNotice']} role="alert">
+            {revokeError}
+          </p>
+        ) : null}
+        <div className={styles['revokeConfirmActions']}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={revoking}>
+            Cancel
+          </Button>
+          <button
+            type="button"
+            className={styles['buttonDanger']}
+            disabled={revoking}
+            onClick={() => {
+              onConfirm(member);
+            }}
+          >
+            {revoking ? 'Revoking…' : 'Revoke access'}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function StaffList({
   staff,
   invites,
@@ -149,6 +220,10 @@ function StaffList({
   revokeErrorId,
   revokeError,
   onRevokeInvite,
+  revokingMemberId,
+  revokeAccessErrorId,
+  revokeAccessError,
+  onRevokeMemberAccess,
 }: {
   readonly staff: readonly StaffMember[];
   readonly invites: readonly StaffInvite[];
@@ -164,12 +239,17 @@ function StaffList({
   readonly revokeErrorId: string | null;
   readonly revokeError: string | null;
   readonly onRevokeInvite?: ((invite: StaffInvite) => void) | undefined;
+  readonly revokingMemberId: string | null;
+  readonly revokeAccessErrorId: string | null;
+  readonly revokeAccessError: string | null;
+  readonly onRevokeMemberAccess?: ((member: StaffMember) => void) | undefined;
 }) {
   const sessionState = useSessionStore();
   const sessionUser = sessionState.session?.user;
   const effectiveUserId = currentUserId ?? sessionUser?.id;
   const effectiveUserEmail = currentUserEmail ?? sessionUser?.email;
   const [editingMember, setEditingMember] = useState<StaffMember | null>(null);
+  const [revokingMemberCandidate, setRevokingMemberCandidate] = useState<StaffMember | null>(null);
   const normalized = search.trim().toLowerCase();
   const members = filterBySearch(staff, search);
   const pendingInvites = invites.filter(
@@ -287,22 +367,47 @@ function StaffList({
                     </p>
                   ) : null}
                 </div>
-                {isAdmin ? (
+{isAdmin ? (
                   <div className={styles['staffCardActions']}>
                     {member.backendRole === 'owner' ? (
                       <span className={styles['ownerBadge']} title="Owner role cannot be changed">
                         Owner (Primary)
                       </span>
                     ) : (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => {
-                          setEditingMember(member);
-                        }}
-                      >
-                        Edit role
-                      </Button>
+                      <>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => {
+                            setEditingMember(member);
+                          }}
+                        >
+                          Edit role
+                        </Button>
+                        {!isYou && onRevokeMemberAccess ? (
+                          <div className={styles['staffCardActionsRight']}>
+                            <button
+                              type="button"
+                              className={styles['buttonDanger']}
+                              disabled={revokingMemberId === (member.userId ?? member.id)}
+                              title="Revoke this member's access"
+                              onClick={() => {
+                                setRevokingMemberCandidate(member);
+                              }}
+                            >
+                              {revokingMemberId === (member.userId ?? member.id)
+                                ? 'Revoking…'
+                                : 'Revoke access'}
+                            </button>
+                            {revokeAccessErrorId === (member.userId ?? member.id) &&
+                            revokeAccessError ? (
+                              <p role="alert" className={styles['revokeErrorNotice']}>
+                                {revokeAccessError}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </>
                     )}
                   </div>
                 ) : null}
@@ -329,6 +434,24 @@ function StaffList({
           }}
           {...(onStaffChanged ? { onUpdated: onStaffChanged } : {})}
           {...(organizationId ? { organizationId } : {})}
+        />
+      ) : null}
+      {revokingMemberCandidate ? (
+        <RevokeAccessConfirmDialog
+          member={revokingMemberCandidate}
+          revoking={revokingMemberId === (revokingMemberCandidate.userId ?? revokingMemberCandidate.id)}
+          revokeError={
+            revokeAccessErrorId === (revokingMemberCandidate.userId ?? revokingMemberCandidate.id)
+              ? revokeAccessError
+              : null
+          }
+          onClose={() => {
+            setRevokingMemberCandidate(null);
+          }}
+          onConfirm={(member) => {
+            onRevokeMemberAccess?.(member);
+            setRevokingMemberCandidate(null);
+          }}
         />
       ) : null}
     </div>
@@ -370,6 +493,10 @@ export function PartnerNetworkScreen({
   isAdmin = staffCanManage,
   currentUserId,
   currentUserEmail,
+  revokingMemberId = null,
+  revokeAccessErrorId = null,
+  revokeAccessError = null,
+  onRevokeMemberAccess,
 }: PartnerNetworkScreenProps) {
   const state: QueryState = { segment, subView, search, profileId };
   const partnerSet =
@@ -519,6 +646,10 @@ export function PartnerNetworkScreen({
             {...(organizationId ? { organizationId } : {})}
             {...(onRevokeInvite ? { onRevokeInvite } : {})}
             {...(onStaffChanged ? { onStaffChanged } : {})}
+            revokingMemberId={revokingMemberId}
+            revokeAccessErrorId={revokeAccessErrorId}
+            revokeAccessError={revokeAccessError}
+            {...(onRevokeMemberAccess ? { onRevokeMemberAccess } : {})}
           />
         ) : records.length ? (
           <div className={styles['partnerGrid']}>

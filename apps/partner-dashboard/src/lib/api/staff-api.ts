@@ -13,8 +13,10 @@ import {
 } from '@c1rcle/contracts/client';
 
 import { getActiveOrgId } from '@/lib/org/active-org';
+import { z } from 'zod';
 
 import { apiClient } from './client';
+
 
 const memberListSchema = paginatedSchema(organizationMemberDtoSchema);
 const invitationListSchema = paginatedSchema(invitationDtoSchema);
@@ -58,6 +60,12 @@ export interface StaffApi {
     userId: string,
     body: UpdateMemberRoleRequest,
   ): Promise<OrganizationMemberDto>;
+  /**
+   * Permanently removes an active member from the organization.
+   * Owners cannot be removed (backend returns 422).
+   * Requires `staff.manage`.
+   */
+  removeMember(organizationId: string, userId: string): Promise<void>;
   revokeInvitation(invitationId: string): Promise<InvitationDto>;
   /**
    * Accepts an invitation as the signed-in invitee. Deliberately org-unscoped:
@@ -124,6 +132,15 @@ export const staffApi: StaffApi = {
       headers: buildHeaders(true),
       schema: organizationMemberDtoSchema,
     }),
+
+  removeMember: async (organizationId, userId) => {
+    await apiClient.delete({
+      path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/members/${encodeURIComponent(userId)}`,
+      headers: buildHeaders(true),
+      // 204 No Content — schema is required by api-client; result is discarded.
+      schema: z.unknown(),
+    });
+  },
 
   revokeInvitation: (invitationId) =>
     apiClient.post({

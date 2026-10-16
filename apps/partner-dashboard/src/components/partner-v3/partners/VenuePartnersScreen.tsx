@@ -27,6 +27,11 @@ export interface VenuePartnersScreenProps extends PartnerRequestActions<PartnerR
   readonly isAdmin?: boolean;
   readonly currentUserId?: string | undefined;
   readonly currentUserEmail?: string | undefined;
+  /** For revoking active members (not invites) */
+  readonly revokingMemberId?: string | null;
+  readonly revokeAccessErrorId?: string | null;
+  readonly revokeAccessError?: string | null;
+  readonly onRevokeMemberAccess?: ((member: import('@/data/partner-data-source').StaffMember) => void) | undefined;
 }
 
 export function VenuePartnersScreen({
@@ -58,6 +63,10 @@ export function VenuePartnersScreen({
   isAdmin,
   currentUserId,
   currentUserEmail,
+  revokingMemberId = null,
+  revokeAccessErrorId = null,
+  revokeAccessError = null,
+  onRevokeMemberAccess,
 }: VenuePartnersScreenProps) {
   return (
     <PartnerNetworkScreen
@@ -93,6 +102,10 @@ export function VenuePartnersScreen({
       {...(isAdmin !== undefined ? { isAdmin } : {})}
       {...(currentUserId ? { currentUserId } : {})}
       {...(currentUserEmail ? { currentUserEmail } : {})}
+      revokingMemberId={revokingMemberId}
+      revokeAccessErrorId={revokeAccessErrorId}
+      revokeAccessError={revokeAccessError}
+      {...(onRevokeMemberAccess ? { onRevokeMemberAccess } : {})}
     />
   );
 }

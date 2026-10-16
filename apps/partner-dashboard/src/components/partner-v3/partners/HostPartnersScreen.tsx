@@ -27,6 +27,11 @@ export interface HostPartnersScreenProps extends PartnerRequestActions<PartnerRe
   readonly isAdmin?: boolean;
   readonly currentUserId?: string | undefined;
   readonly currentUserEmail?: string | undefined;
+  /** For revoking active members (not invites) */
+  readonly revokingMemberId?: string | null;
+  readonly revokeAccessErrorId?: string | null;
+  readonly revokeAccessError?: string | null;
+  readonly onRevokeMemberAccess?: ((member: import('@/data/partner-data-source').StaffMember) => void) | undefined;
 }
 
 export function HostPartnersScreen({
@@ -58,6 +63,10 @@ export function HostPartnersScreen({
   isAdmin,
   currentUserId,
   currentUserEmail,
+  revokingMemberId = null,
+  revokeAccessErrorId = null,
+  revokeAccessError = null,
+  onRevokeMemberAccess,
 }: HostPartnersScreenProps) {
   return (
     <PartnerNetworkScreen
@@ -95,6 +104,10 @@ export function HostPartnersScreen({
       {...(isAdmin !== undefined ? { isAdmin } : {})}
       {...(currentUserId ? { currentUserId } : {})}
       {...(currentUserEmail ? { currentUserEmail } : {})}
+      revokingMemberId={revokingMemberId}
+      revokeAccessErrorId={revokeAccessErrorId}
+      revokeAccessError={revokeAccessError}
+      {...(onRevokeMemberAccess ? { onRevokeMemberAccess } : {})}
     />
   );
 }
