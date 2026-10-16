@@ -15,7 +15,7 @@ import { PartnerProfilePanel } from './PartnerProfilePanel';
 import { PartnerRequestCard } from './PartnerRequestCard';
 import styles from './partners.module.css';
 import { PartnerStaffEditRoleDialog } from './PartnerStaffEditRoleDialog';
-import { AddStaffButton } from './PartnerStaffInviteDialog';
+import { AddStaffButton, PartnerStaffInviteDialog } from './PartnerStaffInviteDialog';
 
 import type {
   PartnerRelationship,
@@ -249,6 +249,7 @@ function StaffList({
   const effectiveUserEmail = currentUserEmail ?? sessionUser?.email;
   const [editingMember, setEditingMember] = useState<StaffMember | null>(null);
   const [revokingMemberCandidate, setRevokingMemberCandidate] = useState<StaffMember | null>(null);
+  const [reinvitingCandidate, setReinvitingCandidate] = useState<StaffInvite | null>(null);
   const normalized = search.trim().toLowerCase();
   const members = filterBySearch(staff, search);
   const pendingInvites = invites.filter(
@@ -257,11 +258,32 @@ function StaffList({
       (!normalized || invite.email.toLowerCase().includes(normalized)),
   );
 
+  const activeMemberEmails = new Set(staff.map((m) => m.email?.toLowerCase()).filter(Boolean));
+  const pendingInviteEmails = new Set(
+    invites.filter((i) => i.status === 'pending').map((i) => i.email.toLowerCase()),
+  );
+
+  const revokedMap = new Map<string, StaffInvite>();
+  for (const invite of invites) {
+    if (invite.status === 'revoked') {
+      const emailLower = invite.email.toLowerCase();
+      if (!activeMemberEmails.has(emailLower) && !pendingInviteEmails.has(emailLower)) {
+        if (!revokedMap.has(emailLower)) {
+          revokedMap.set(emailLower, invite);
+        }
+      }
+    }
+  }
+
+  const revokedStaff = Array.from(revokedMap.values()).filter(
+    (invite) => !normalized || invite.email.toLowerCase().includes(normalized),
+  );
+
   if (staffError) {
     return <EmptyState title="Couldn't load staff" description={staffError} />;
   }
 
-  if (staff.length === 0 && pendingInvites.length === 0) {
+  if (staff.length === 0 && pendingInvites.length === 0 && revokedStaff.length === 0) {
     return (
       <EmptyState
         title="No staff yet"
@@ -270,7 +292,12 @@ function StaffList({
     );
   }
 
-  if (normalized && members.length === 0 && pendingInvites.length === 0) {
+  if (
+    normalized &&
+    members.length === 0 &&
+    pendingInvites.length === 0 &&
+    revokedStaff.length === 0
+  ) {
     return (
       <EmptyState title="No staff found" description="Try a different name or clear the search." />
     );
@@ -311,6 +338,45 @@ function StaffList({
                       }}
                     >
                       {revokingInviteId === invite.id ? 'Revoking…' : 'Revoke'}
+                    </Button>
+                  </div>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+      {revokedStaff.length > 0 ? (
+        <section>
+          <h2 className={styles['requestSectionHeading']}>
+            Revoked access ({revokedStaff.length})
+          </h2>
+          <div className={styles['requestList']}>
+            {revokedStaff.map((item) => (
+              <article className={styles['requestCard']} key={item.id}>
+                <div className={styles['partnerIdentity']}>
+                  <Avatar name={item.email} />
+                  <div>
+                    <div className={styles['requestNameRow']}>
+                      <h3>{item.email}</h3>
+                      <Badge tone="warning">Revoked</Badge>
+                    </div>
+                    <p>
+                      {item.role}
+                      {item.capabilities.length > 0 ? ` · ${item.capabilities.join(', ')}` : ''}
+                    </p>
+                  </div>
+                </div>
+                {canManage ? (
+                  <div className={styles['requestActions']}>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => {
+                        setReinvitingCandidate(item);
+                      }}
+                    >
+                      Add again
                     </Button>
                   </div>
                 ) : null}
@@ -452,6 +518,33 @@ function StaffList({
           onConfirm={(member) => {
             onRevokeMemberAccess?.(member);
             setRevokingMemberCandidate(null);
+          }}
+        />
+      ) : null}
+      {reinvitingCandidate ? (
+        <PartnerStaffInviteDialog
+          initialEmail={reinvitingCandidate.email}
+          initialRole={
+            reinvitingCandidate.role === 'admin' ||
+            reinvitingCandidate.role === 'manager' ||
+            reinvitingCandidate.role === 'member'
+              ? reinvitingCandidate.role
+              : 'member'
+          }
+          defaultCapability={
+            reinvitingCandidate.capabilities.includes('venue')
+              ? 'venue'
+              : reinvitingCandidate.capabilities.includes('host')
+                ? 'host'
+                : undefined
+          }
+          {...(organizationId ? { organizationId } : {})}
+          onClose={() => {
+            setReinvitingCandidate(null);
+          }}
+          onInvited={() => {
+            setReinvitingCandidate(null);
+            onStaffChanged?.();
           }}
         />
       ) : null}
