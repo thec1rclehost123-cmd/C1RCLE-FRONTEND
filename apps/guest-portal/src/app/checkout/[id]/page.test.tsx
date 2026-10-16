@@ -85,7 +85,6 @@ describe('CheckoutView', () => {
     const reviewButton = screen.getByRole('button', { name: 'Proceed to payment →' });
     expect(reviewButton).toBeEnabled();
     fireEvent.click(reviewButton);
-    fireEvent.click(screen.getByRole('button', { name: 'UPI / Instant' }));
 
     expect(screen.getByRole('link', { name: 'Complete Payment →' })).toHaveAttribute(
       'href',
@@ -93,13 +92,15 @@ describe('CheckoutView', () => {
     );
   });
 
-  it('renders fees and subtotal breakdown', () => {
+  it('does not invent a fee or payable total before a server quote', () => {
     const event = bookingEventFixtures[1];
     expect(event).toBeDefined();
     if (!event) return;
 
     render(<CheckoutView event={event} initialTierId="gallery-pass" />);
     expect(screen.getByText('Fees')).toBeInTheDocument();
+    expect(screen.queryByText('Fees (estimate)')).not.toBeInTheDocument();
+    expect(screen.queryByText('₹40')).not.toBeInTheDocument();
   });
 
   it('keeps the paid preview path on its confirmation link', () => {
