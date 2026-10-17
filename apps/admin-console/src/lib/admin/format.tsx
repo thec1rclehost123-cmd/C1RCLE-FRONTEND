@@ -58,6 +58,7 @@ export const ADMIN_ACTION_LABELS: Record<AdminAction, string> = {
   ORGANIZATION_SUSPEND: 'Suspend organization',
   ORGANIZATION_REINSTATE: 'Reinstate organization',
   FINANCIAL_REFUND: 'Refund',
+  TAX_RULE_UPDATE: 'Change tax rules',
   PAYOUT_BATCH_RUN: 'Run payout batch',
   DISPUTE_RESOLVE: 'Resolve dispute',
   USER_BAN: 'Ban user',
@@ -79,6 +80,9 @@ export const ADMIN_ACTION_LABELS: Record<AdminAction, string> = {
 export const AUDIT_ACTION_LABELS: Record<string, string> = {
   ...ADMIN_ACTION_LABELS,
   ADMIN_EXPORT: 'Export audit CSV',
+  'TAX_RULE.create': 'Draft tax rule',
+  'TAX_RULE.enable': 'Enable tax rule',
+  'TAX_RULE.retire': 'Retire tax rule',
 };
 
 export const PAYOUT_STATUS_LABELS: Record<AdminPayoutStatus, string> = {
