@@ -63,7 +63,14 @@ describe('toBookingEventFixture', () => {
           maximumQuantity: 10,
         },
       ],
+      // Only the price-derived fallback tier here, which is not a real tier id.
+      purchasable: false,
     });
+  });
+
+  it('is purchasable only when real ticket tiers loaded', () => {
+    expect(toBookingEventFixture(EVENT, VENUE, null).purchasable).toBe(false);
+    expect(toBookingEventFixture(EVENT, VENUE, []).purchasable).toBe(true);
   });
 
   it('falls back honestly without inventing data', () => {

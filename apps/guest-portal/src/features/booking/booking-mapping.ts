@@ -45,6 +45,7 @@ export function toBookingEventFixture(
     city,
     doorNote: 'Entry rules are set by the host and shown at checkout.',
     ticketTiers: tiers !== null ? toRealTiers(tiers) : [toFallbackTier(event)],
+    purchasable: tiers !== null,
   };
 }
 
