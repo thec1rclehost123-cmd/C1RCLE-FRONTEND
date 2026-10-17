@@ -203,11 +203,92 @@ jobs:
           done
           exit $fail
 
+  # ── Cross-repo contract parity ──────────────────────────────────────────────
+  # The wire contract has two copies: this repo's `@c1rcle/contracts`,
+  # `@c1rcle/types` and `@c1rcle/api-client`, and the backend's
+  # `packages/contracts`. `scripts/contract-parity.mjs` (in the backend repo)
+  # parses shared fixtures with both and fails on accept/reject disagreement.
+  # The backend CI runs it for backend PRs; this job covers the other direction
+  # so a frontend-only schema change cannot drift silently.
+  #
+  # Compares against the backend branch this PR targets (staging -> staging,
+  # main -> main). The backend repo is private: set the BACKEND_REPO_TOKEN
+  # secret (read access to C1RCLE-BACKEND). Without it the checkout fails and
+  # this job fails loudly rather than skipping. Deliberately not
+  # `continue-on-error`.
+  changes:
+    name: Detect contract changes
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      contracts: ${{ steps.filter.outputs.contracts }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - id: filter
+        uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3
+        with:
+          filters: |
+            contracts:
+              - 'packages/contracts/**'
+              - 'packages/types/**'
+              - 'packages/api-client/**'
+              - '.github/workflows/ci.yml'
+
+  contract-parity:
+    name: Contract parity (backend)
+    needs: changes
+    if: needs.changes.outputs.contracts == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          path: frontend
+          persist-credentials: false
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          repository: ${{ vars.BACKEND_REPO || 'thec1rclehost123-cmd/C1RCLE-BACKEND' }}
+          ref: ${{ vars.BACKEND_REF || github.base_ref }}
+          token: ${{ secrets.BACKEND_REPO_TOKEN || github.token }}
+          path: backend
+          persist-credentials: false
+
+      # The repos pin different pnpm majors (frontend 10, backend 11) and Node
+      # versions, so corepack picks each repo's own `packageManager` instead of
+      # one global pnpm. The parity script needs Node >= 22.15
+      # (`module.registerHooks`); Node 24 satisfies it.
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 24
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Build backend contracts
+        working-directory: backend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter @c1rcle/contracts build
+
+      - name: Build frontend contracts
+        working-directory: frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter @c1rcle/contracts build
+          pnpm --filter @c1rcle/api-client build
+
+      # Exit 0 = agree, 1 = drift, 2 = cannot check (missing dists).
+      - name: Compare contracts
+        working-directory: backend
+        run: node scripts/contract-parity.mjs --frontend "$GITHUB_WORKSPACE/frontend"
+
   # ── The single required status check for PRs ───────────────────────────────
   ci-ok:
     name: CI OK
     if: always() && github.event_name == 'pull_request'
-    needs: [gate]
+    needs: [gate, contract-parity]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
