@@ -32,14 +32,22 @@ export function PartnerStaffInviteDialog({
   onInvited,
   defaultCapability,
   organizationId,
+  initialEmail,
+  initialRole,
 }: {
   readonly onClose: () => void;
   readonly onInvited?: (() => void) | undefined;
   readonly defaultCapability?: 'venue' | 'host' | undefined;
   readonly organizationId?: string | undefined;
+  readonly initialEmail?: string | undefined;
+  readonly initialRole?: InviteRole | undefined;
 }) {
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState<InviteRole>('member');
+  const [email, setEmail] = useState(initialEmail ?? '');
+  const [role, setRole] = useState<InviteRole>(
+    initialRole === 'admin' || initialRole === 'manager' || initialRole === 'member'
+      ? initialRole
+      : 'member',
+  );
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState('');
@@ -116,10 +124,11 @@ export function PartnerStaffInviteDialog({
         <div className={styles['dialogHeader']}>
           <div>
             <span className={styles['sectionKicker']}>Team access</span>
-            <h2 id="add-staff-title">Add staff</h2>
+            <h2 id="add-staff-title">{initialEmail ? 'Add staff again' : 'Add staff'}</h2>
             <p>
-              Invite a teammate by email. We&apos;ll send them a link to join with the role you
-              pick.
+              {initialEmail
+                ? 'Re-invite this staff member. A new invitation will be sent with fresh temporary credentials.'
+                : "Invite a teammate by email. We'll send them a link to join with the role you pick."}
             </p>
           </div>
           <IconButton label="Close add staff dialog" onClick={onClose}>
