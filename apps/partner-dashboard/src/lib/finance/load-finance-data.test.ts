@@ -30,7 +30,21 @@ const postMock = vi.fn<WireGet>();
 // stay precisely typed where the assertions actually read them.
 const client = { get: getMock, post: postMock } as unknown as ServerApiClient;
 
-const BALANCE = { availablePaise: 486_200, pendingPaise: 0, lifetimePaise: 1_200_000 };
+const BALANCE = {
+  availablePaise: 486_200,
+  pendingPaise: 0,
+  reservedPaise: 0,
+  heldPaise: 0,
+  paidPaise: 0,
+  lifetimePaise: 1_200_000,
+  holds: {
+    reservePaise: 0,
+    cancellationPaise: 0,
+    chargebackPaise: 0,
+    reconciliationPaise: 0,
+  },
+  readModel: 'financial_journal_v2' as const,
+};
 const PAGE = { items: [], pageInfo: { page: 1, pageSize: 50, total: 0, hasNextPage: false } };
 
 beforeEach(() => {

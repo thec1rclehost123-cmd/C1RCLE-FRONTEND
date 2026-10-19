@@ -1,9 +1,5 @@
-import { VenueOrdersScreen } from '@/components/venue/screens/VenueOrdersScreen';
+import { redirect } from 'next/navigation';
 
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = { title: 'Orders · Finance · Venue Studio' };
-
-export default function VenueOrdersPage() {
-  return <VenueOrdersScreen />;
+export default function VenueFinanceOrdersPage() {
+  redirect('/partner/venue/finance?view=orders');
 }

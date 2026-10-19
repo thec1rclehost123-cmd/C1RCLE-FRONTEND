@@ -59,6 +59,7 @@ export const ADMIN_ACTION_LABELS: Record<AdminAction, string> = {
   ORGANIZATION_REINSTATE: 'Reinstate organization',
   FINANCIAL_REFUND: 'Refund',
   PAYOUT_BATCH_RUN: 'Run payout batch',
+  PAYOUT_COMPLETE: 'Complete manual payout',
   DISPUTE_RESOLVE: 'Resolve dispute',
   USER_BAN: 'Ban user',
   USER_UNBAN: 'Unban user',
@@ -67,6 +68,7 @@ export const ADMIN_ACTION_LABELS: Record<AdminAction, string> = {
   ADMIN_PROVISION: 'Provision admin',
   ADMIN_ROLE_UPDATE: 'Update admin role',
   COMMISSION_ADJUST: 'Adjust commission',
+  FINANCIAL_ADJUSTMENT: 'Post financial adjustment',
   PROMOTER_SUSPEND: 'Suspend promoter',
   PROMOTER_REINSTATE: 'Reinstate promoter',
 };
@@ -122,6 +124,7 @@ export const PROPOSAL_STATUS_LABELS: Record<ProposalStatus, string> = {
 export const REFUND_STATUS_LABELS: Record<AdminRefundRequestStatus, string> = {
   pending: 'Pending',
   approved: 'Approved',
+  executing: 'Executing',
   rejected: 'Rejected',
   settled: 'Settled',
   failed: 'Failed',
@@ -185,6 +188,8 @@ export function refundStatusTone(status: AdminRefundRequestStatus): Tone {
       return 'success';
     case 'approved':
       return 'default';
+    case 'executing':
+      return 'warning';
     case 'rejected':
       return 'destructive';
     case 'failed':

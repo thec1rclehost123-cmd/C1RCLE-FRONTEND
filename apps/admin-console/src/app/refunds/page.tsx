@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/admin/page-header';
 import { StatusFilter } from '@/components/admin/status-filter';
 import {
   approveRefund,
+  executeRefund,
   exportRefundsCsv,
   listRefunds,
   REFUND_STATUSES,
@@ -69,6 +70,11 @@ export default function RefundsDesk() {
     },
   });
 
+  const executeMutation = useMutation({
+    mutationFn: (refundId: string) => executeRefund(refundId),
+    onSuccess: invalidate,
+  });
+
   const stagedAmount = (total: number) => formatPaise(total);
 
   const exportMutation = useMutation({
@@ -80,7 +86,7 @@ export default function RefundsDesk() {
       <div className="flex items-start justify-between gap-4">
         <PageHeader
           title="Refunds"
-          description="Refund requests follow the v1 thresholds — under ₹500 auto-settles, under ₹5,000 needs one finance admin, above that needs two. Decisions here execute the actual money movement."
+          description="Approve the request first, then execute the provider refund. A refund is settled only after authoritative provider confirmation; failed or uncertain attempts remain visible and safe to retry."
         />
         <div className="flex items-center gap-2">
           <StatusFilter
@@ -231,6 +237,19 @@ export default function RefundsDesk() {
                           </Button>
                         )}
                       </div>
+                    ) : request.status === 'approved' || request.status === 'failed' ? (
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          variant={request.status === 'failed' ? 'outline' : 'primary'}
+                          disabled={executeMutation.isPending}
+                          onClick={() => {
+                            executeMutation.mutate(request.id);
+                          }}
+                        >
+                          {request.status === 'failed' ? 'Retry provider refund' : 'Execute refund'}
+                        </Button>
+                      </div>
                     ) : (
                       <p className="text-right text-xs text-muted-foreground">
                         {request.providerRefundId === null
@@ -246,7 +265,7 @@ export default function RefundsDesk() {
         </div>
       )}
 
-      {approveMutation.isError || rejectMutation.isError ? (
+      {approveMutation.isError || rejectMutation.isError || executeMutation.isError ? (
         <p role="alert" className="text-sm text-destructive">
           The decision could not be saved. It is safe to retry — the request is idempotency-keyed.
         </p>

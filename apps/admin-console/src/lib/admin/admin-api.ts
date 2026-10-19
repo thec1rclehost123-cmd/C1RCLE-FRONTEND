@@ -30,18 +30,25 @@ import {
   adminVenueDtoSchema,
   adminVenueListResponseSchema,
   approveOnboardingResultSchema,
+  completeManualPayoutSchema,
   adminResolveDisputeSchema,
   assignSupportTicketSchema,
   changeSupportTicketPrioritySchema,
   disputeListResponseSchema,
   disputeResponseSchema,
   documentReadUrlDtoSchema,
+  financialAdjustmentResultSchema,
   mergeSupportTicketSchema,
   onboardingRequestDtoSchema,
   paginatedSchema,
   payoutBatchResultSchema,
   payoutListResponseSchema,
   payoutResponseSchema,
+  reconciliationDiscrepancyDtoSchema,
+  reconciliationDiscrepancyListResponseSchema,
+  type reconciliationDiscrepancyStateSchema,
+  reconciliationRunDtoSchema,
+  resolveReconciliationDiscrepancySchema,
   platformAdminDtoSchema,
   proposedActionDtoSchema,
   proposeActionSchema,
@@ -58,6 +65,9 @@ import {
   supportTicketMessageSchema,
   platformSettingsDtoSchema,
   platformSettingsUpdateRequestSchema,
+  providerChargebackListResponseSchema,
+  type adminPromoDtoSchema,
+  type adminPromoterAssignmentDtoSchema,
 } from '@c1rcle/contracts';
 
 import { getAdminApiClient, getAdminBffClient, newIdempotencyKey } from '@/lib/api';
@@ -78,7 +88,6 @@ import type {
   SupportTicketPriority,
   SupportTicketCategory,
 } from '@/lib/admin/contract-types';
-import type { adminPromoDtoSchema, adminPromoterAssignmentDtoSchema } from '@c1rcle/contracts';
 
 /* ─── Local response schemas ───────────────────────────────────────────────── */
 
@@ -354,6 +363,14 @@ export function rejectRefund(refundId: string, reason: string): Promise<RefundOu
   });
 }
 
+export function executeRefund(refundId: string): Promise<RefundOutcome> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/refunds/${refundId}/execute`,
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: refundOutcomeSchema,
+  });
+}
+
 export interface RequestRefundInput {
   readonly orderId: string;
   readonly amountPaise: number;
@@ -572,6 +589,7 @@ export const ONBOARDING_STATUSES = [
 export const REFUND_STATUSES = [
   'pending',
   'approved',
+  'executing',
   'rejected',
   'settled',
   'failed',
@@ -884,6 +902,18 @@ export function runPayoutBatch(
   });
 }
 
+export function completeManualPayout(
+  payoutId: string,
+  input: z.infer<typeof completeManualPayoutSchema>,
+): Promise<z.infer<typeof payoutResponseSchema>> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/payouts/${payoutId}/complete`,
+    body: completeManualPayoutSchema.parse(input),
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: payoutResponseSchema,
+  });
+}
+
 export const PAYOUT_STATUSES = [
   'requested',
   'processing',
@@ -891,6 +921,74 @@ export const PAYOUT_STATUSES = [
   'failed',
   'frozen',
 ] satisfies AdminPayoutStatus[];
+
+/* ─── Financial reconciliation ───────────────────────────────────────────── */
+
+export type ReconciliationDiscrepancyState = z.infer<typeof reconciliationDiscrepancyStateSchema>;
+export type ReconciliationDiscrepancyPage = z.infer<
+  typeof reconciliationDiscrepancyListResponseSchema
+>;
+
+export function listReconciliationDiscrepancies(
+  state: ReconciliationDiscrepancyState | 'all' = 'open',
+  limit = 100,
+): Promise<ReconciliationDiscrepancyPage> {
+  return getAdminApiClient().get({
+    path: '/api/v2/admin/reconciliation/discrepancies',
+    query: { ...(state === 'all' ? {} : { state }), limit },
+    schema: reconciliationDiscrepancyListResponseSchema,
+  });
+}
+
+export function runReconciliation(): Promise<z.infer<typeof reconciliationRunDtoSchema>> {
+  return getAdminApiClient().post({
+    path: '/api/v2/admin/reconciliation/runs',
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: reconciliationRunDtoSchema,
+  });
+}
+
+export function retryReconciliationDiscrepancy(
+  discrepancyId: string,
+): Promise<z.infer<typeof reconciliationRunDtoSchema>> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/reconciliation/discrepancies/${discrepancyId}/retry`,
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: reconciliationRunDtoSchema,
+  });
+}
+
+export function resolveReconciliationDiscrepancy(
+  discrepancyId: string,
+  reason: string,
+): Promise<ReconciliationDiscrepancyPage['items'][number]> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/reconciliation/discrepancies/${discrepancyId}/resolve`,
+    body: resolveReconciliationDiscrepancySchema.parse({ reason }),
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: reconciliationDiscrepancyDtoSchema,
+  });
+}
+
+export type ProviderChargebackPage = z.infer<typeof providerChargebackListResponseSchema>;
+
+export function listProviderChargebacks(limit = 100): Promise<ProviderChargebackPage> {
+  return getAdminApiClient().get({
+    path: '/api/v2/admin/chargebacks',
+    query: { limit },
+    schema: providerChargebackListResponseSchema,
+  });
+}
+
+export function postApprovedFinancialAdjustment(
+  proposalId: string,
+): Promise<z.infer<typeof financialAdjustmentResultSchema>> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/proposals/${proposalId}/post-financial-adjustment`,
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: financialAdjustmentResultSchema,
+  });
+}
 
 /* ─── Support desk (Phase 7 tickets) ──────────────────────────────────────── */
 

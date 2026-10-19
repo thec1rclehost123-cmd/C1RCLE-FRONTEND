@@ -1,5 +1,5 @@
-import { HostFinanceScreen } from '@/components/host/HostFinanceScreen';
+import { redirect } from 'next/navigation';
 
 export default function HostFinancePage() {
-  return <HostFinanceScreen />;
+  redirect('/partner/host/finance');
 }
