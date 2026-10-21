@@ -18,6 +18,8 @@
     "@c1rcle/api-client": "workspace:*",
     "@expo-google-fonts/anton": "^0.4.1",
     "@expo-google-fonts/archivo": "^0.4.1",
+    "@noble/curves": "2.4.0",
+    "@noble/hashes": "2.4.0",
     "@react-navigation/bottom-tabs": "^7.4.0",
     "expo": "~55.0.0",
     "expo-blur": "~55.0.18",
@@ -47,9 +49,32 @@
     "@babel/core": "^7.28.0",
     "@c1rcle/eslint-config": "workspace:*",
     "@c1rcle/tsconfig": "workspace:*",
+    "@jest/globals": "29.7.0",
     "@types/react": "^19.0.0",
     "jest": "^29.7.0",
     "jest-expo": "~55.0.0",
     "typescript": "5.9.3"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {
+      "\\.[jt]sx?$": [
+        "babel-jest",
+        {
+          "presets": [
+            "babel-preset-expo"
+          ]
+        }
+      ]
+    },
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    },
+    "transformIgnorePatterns": [
+      "/node_modules/(?!(\\.pnpm/[^/]*/node_modules/)?@noble/)"
+    ],
+    "testMatch": [
+      "<rootDir>/src/**/*.test.ts"
+    ]
   }
 }
