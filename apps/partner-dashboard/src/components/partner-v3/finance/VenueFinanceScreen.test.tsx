@@ -43,7 +43,7 @@ describe('VenueFinanceScreen', () => {
 
     expect(screen.getByRole('heading', { name: 'Finance' })).toBeInTheDocument();
     expect(screen.getByText('Available balance')).toBeInTheDocument();
-    expect(screen.getAllByText('₹4,86,200')).toHaveLength(2);
+    expect(screen.getAllByText('₹4,86,200')).toHaveLength(3);
     expect(screen.getByRole('heading', { name: 'Payout history' })).toBeInTheDocument();
     expect(screen.getByText(/Neon Nights \+ 2 events/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Withdraw/ })).toBeDisabled();

@@ -1,3 +1,5 @@
+import { redirect } from 'next/navigation';
+
 import { AccountIcon, BankIcon, LockedIcon } from '@c1rcle/icons';
 
 import { PartnerSettingsScreen } from '@/components/partner-shell/PartnerSettingsScreen';
@@ -11,12 +13,11 @@ export default async function PromoterSettingsPage({
   const params = await searchParams;
   const requestedTab = params['tab'];
   const tab = requestedTab === 'payout' || requestedTab === 'security' ? requestedTab : 'profile';
-  const [profile, finance, links] = await Promise.all([
+  if (tab === 'payout') redirect('/partner/promoter/finance?view=bank');
+  const [profile, links] = await Promise.all([
     partnerRepositories.promoter.getProfile(),
-    tab === 'payout' ? partnerRepositories.promoter.getFinance() : Promise.resolve(null),
     tab === 'profile' ? partnerRepositories.promoter.getLinks() : Promise.resolve([]),
   ]);
-  const accountParts = finance?.payoutAccount.split(' ');
   const linkParts = links[0]?.shortUrl.split('/');
   return (
     <PartnerSettingsScreen
@@ -36,21 +37,6 @@ export default async function PromoterSettingsPage({
           verified: profile.verified,
           linkIdentity: linkParts?.length && linkParts.length > 1 ? linkParts[1] : undefined,
         },
-        ...(finance
-          ? {
-              payout: {
-                bankName: accountParts?.[0],
-                maskedAccount: accountParts?.slice(1).join(' '),
-                status:
-                  finance.kycStatus === 'verified'
-                    ? 'Verified'
-                    : finance.kycStatus === 'pending'
-                      ? 'Pending'
-                      : 'Unavailable',
-                nextPayout: finance.nextPayout,
-              },
-            }
-          : {}),
       }}
       tab={tab}
     />

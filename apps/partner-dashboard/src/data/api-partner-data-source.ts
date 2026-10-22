@@ -36,6 +36,9 @@ function roleLabel(role: OrganizationMemberDto['role']): string {
 }
 
 function memberDisplayName(member: OrganizationMemberDto): string {
+  if (member.name && member.name.trim().length > 0) {
+    return member.name.trim();
+  }
   return `Staff ${member.userId.slice(-6).toUpperCase()}`;
 }
 
@@ -52,9 +55,10 @@ function memberToStaffMember(member: OrganizationMemberDto): StaffMember {
     status: 'Active',
     permissions: [],
     userId: member.userId,
-    email: null,
+    email: member.email ?? null,
     backendRole: member.role,
     capabilities: [...member.capabilities],
+    joinedAt: member.joinedAt,
   };
 }
 

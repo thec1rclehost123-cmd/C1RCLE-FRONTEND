@@ -9,6 +9,7 @@ import { Button, EmptyState, ErrorState, LoadingState, TextField } from '@c1rcle
 import { PageHeader } from '@/components/admin/page-header';
 import { StatusFilter } from '@/components/admin/status-filter';
 import {
+  completeManualPayout,
   listPayouts,
   PAYOUT_STATUSES,
   raiseProposal,
@@ -33,6 +34,16 @@ interface Raising {
   readonly mode: 'freeze' | 'release';
 }
 
+interface Completing {
+  readonly payoutId: string;
+  readonly transferReference: string;
+  readonly transferredAt: string;
+  readonly transferMethod: 'bank_transfer' | 'neft' | 'rtgs' | 'imps' | 'upi';
+  readonly proofSha256: string;
+  readonly proofContentType: string;
+  readonly proofSizeBytes: string;
+}
+
 /** Payouts that can still be pushed through the payment provider. */
 const RUNNABLE = new Set<AdminPayoutStatus>(['requested', 'processing', 'failed']);
 
@@ -43,6 +54,7 @@ export default function PayoutsDesk() {
   const [reason, setReason] = useState('');
   const [raisedFor, setRaisedFor] = useState<string | null>(null);
   const [running, setRunning] = useState<string | null>(null);
+  const [completing, setCompleting] = useState<Completing | null>(null);
 
   const list = useQuery({
     queryKey: ['admin', 'payouts', filter],
@@ -79,6 +91,26 @@ export default function PayoutsDesk() {
       setRaisedFor(raising?.payoutId ?? null);
       setRaising(null);
       setReason('');
+      invalidate();
+    },
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: () => {
+      if (!completing) throw new Error('No payout selected');
+      return completeManualPayout(completing.payoutId, {
+        transferReference: completing.transferReference.trim(),
+        transferredAt: new Date(completing.transferredAt).toISOString(),
+        transferMethod: completing.transferMethod,
+        proof: {
+          sha256: completing.proofSha256.trim().toLowerCase(),
+          contentType: completing.proofContentType.trim(),
+          sizeBytes: Number(completing.proofSizeBytes),
+        },
+      });
+    },
+    onSuccess: () => {
+      setCompleting(null);
       invalidate();
     },
   });
@@ -172,7 +204,108 @@ export default function PayoutsDesk() {
                       {payout.processedAt === null ? '—' : formatDateTime(payout.processedAt)}
                     </td>
                     <td className="px-4 py-3">
-                      {isRaising ? (
+                      {completing?.payoutId === payout.id ? (
+                        <div className="flex flex-col items-end gap-2">
+                          <TextField
+                            label="Transfer reference"
+                            value={completing.transferReference}
+                            onChange={(event) => {
+                              setCompleting({
+                                ...completing,
+                                transferReference: event.target.value,
+                              });
+                            }}
+                            className="w-72"
+                          />
+                          <TextField
+                            label="Transferred at"
+                            type="datetime-local"
+                            value={completing.transferredAt}
+                            onChange={(event) => {
+                              setCompleting({ ...completing, transferredAt: event.target.value });
+                            }}
+                            className="w-72"
+                          />
+                          <label className="flex w-72 flex-col gap-1 text-left text-xs">
+                            Transfer method
+                            <select
+                              className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                              value={completing.transferMethod}
+                              onChange={(event) => {
+                                setCompleting({
+                                  ...completing,
+                                  transferMethod: event.target
+                                    .value as Completing['transferMethod'],
+                                });
+                              }}
+                            >
+                              <option value="bank_transfer">Bank transfer</option>
+                              <option value="neft">NEFT</option>
+                              <option value="rtgs">RTGS</option>
+                              <option value="imps">IMPS</option>
+                              <option value="upi">UPI</option>
+                            </select>
+                          </label>
+                          <TextField
+                            label="Proof SHA-256"
+                            value={completing.proofSha256}
+                            onChange={(event) => {
+                              setCompleting({ ...completing, proofSha256: event.target.value });
+                            }}
+                            className="w-72"
+                          />
+                          <div className="flex w-72 gap-2">
+                            <TextField
+                              label="Proof type"
+                              value={completing.proofContentType}
+                              onChange={(event) => {
+                                setCompleting({
+                                  ...completing,
+                                  proofContentType: event.target.value,
+                                });
+                              }}
+                            />
+                            <TextField
+                              label="Bytes"
+                              type="number"
+                              value={completing.proofSizeBytes}
+                              onChange={(event) => {
+                                setCompleting({
+                                  ...completing,
+                                  proofSizeBytes: event.target.value,
+                                });
+                              }}
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setCompleting(null);
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              size="sm"
+                              disabled={
+                                completeMutation.isPending ||
+                                !completing.transferReference.trim() ||
+                                !completing.transferredAt ||
+                                !/^[a-f0-9]{64}$/i.test(completing.proofSha256.trim()) ||
+                                !completing.proofContentType.trim() ||
+                                Number(completing.proofSizeBytes) <= 0
+                              }
+                              onClick={() => {
+                                completeMutation.mutate();
+                              }}
+                            >
+                              Record transfer
+                            </Button>
+                          </div>
+                        </div>
+                      ) : isRaising ? (
                         <div className="flex flex-col items-end gap-2">
                           <TextField
                             label="Reason (required)"
@@ -232,6 +365,25 @@ export default function PayoutsDesk() {
                               Running…
                             </Button>
                           ) : null}
+                          {payout.status === 'processing' ? (
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              onClick={() => {
+                                setCompleting({
+                                  payoutId: payout.id,
+                                  transferReference: '',
+                                  transferredAt: '',
+                                  transferMethod: 'bank_transfer',
+                                  proofSha256: '',
+                                  proofContentType: 'application/pdf',
+                                  proofSizeBytes: '',
+                                });
+                              }}
+                            >
+                              Record transfer
+                            </Button>
+                          ) : null}
                           {payout.status === 'frozen' ? (
                             <Button
                               size="sm"
@@ -266,7 +418,7 @@ export default function PayoutsDesk() {
         </div>
       )}
 
-      {runMutation.isError || raiseMutation.isError ? (
+      {runMutation.isError || raiseMutation.isError || completeMutation.isError ? (
         <p role="alert" className="text-sm text-destructive">
           The action could not be completed. It is safe to retry — the request is idempotency-keyed.
         </p>

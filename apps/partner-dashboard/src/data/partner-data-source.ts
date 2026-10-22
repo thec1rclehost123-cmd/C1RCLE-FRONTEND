@@ -531,6 +531,7 @@ export interface StaffMember {
   readonly email?: string | null | undefined;
   readonly backendRole?: 'owner' | 'admin' | 'manager' | 'member' | undefined;
   readonly capabilities?: readonly string[] | undefined;
+  readonly joinedAt?: string | undefined;
 }
 
 export type StaffInviteStatus = 'pending' | 'accepted' | 'revoked' | 'expired';
@@ -604,7 +605,7 @@ export interface PromoterPartnersData {
 export type FinanceView = 'payouts' | 'orders' | 'bank';
 export type FinanceDateRange = 'current' | 'all';
 export type FinanceAccent = 'orange' | 'lavender';
-export type FinancePayoutStatus = 'Paid' | 'Scheduled';
+export type FinancePayoutStatus = 'Paid' | 'Requested' | 'Processing' | 'Failed' | 'Frozen';
 export type FinanceOrderStatus = 'Confirmed' | 'Pending' | 'Refunded' | 'Cancelled';
 export type FinanceTone = 'positive' | 'warning' | 'negative' | 'neutral';
 
@@ -695,6 +696,16 @@ export interface PartnerFinanceData {
   readonly balanceDetail: string;
   readonly balanceTrend: readonly number[];
   readonly pendingBalance: FinanceMetric;
+  readonly reservedBalance: FinanceMetric;
+  readonly heldBalance: FinanceMetric;
+  readonly paidBalance: FinanceMetric;
+  readonly readModel: 'legacy_ledger_v1' | 'financial_journal_v2';
+  /** Present only for API-backed screens that can submit a real payout intent. */
+  readonly payoutRequest: {
+    readonly organizationId: string;
+    readonly availablePaise: number;
+    readonly bankAccountId: string | null;
+  } | null;
   readonly nextPayout: FinanceMetric;
   readonly bankAccount: FinanceBankAccount;
   /** Fixture-only — see `FinancePaymentCard`. */
