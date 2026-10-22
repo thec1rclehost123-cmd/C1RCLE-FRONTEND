@@ -553,10 +553,6 @@ export {
   notificationActionRequestSchema,
 } from './contracts/notifications.js';
 
-// Guest profile (guest-portal signup onboarding)
-export type { GuestProfileDto, UpsertGuestProfileRequest } from './contracts/guest-profile.js';
-export { guestProfileDtoSchema, upsertGuestProfileSchema } from './contracts/guest-profile.js';
-
 // Admin finance controls: tax rules + payment reconciliation
 export type {
   TaxRuleKind,
