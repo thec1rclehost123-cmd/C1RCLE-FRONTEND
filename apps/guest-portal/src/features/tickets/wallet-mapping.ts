@@ -93,7 +93,6 @@ export async function toTicketWalletData(
       tierName: first.tierName,
       isVip: /vip/i.test(first.tierName),
       ticketCount: group.length,
-      qrPayload: first.id,
       status,
     };
 

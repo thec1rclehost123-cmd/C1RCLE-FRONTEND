@@ -36,7 +36,7 @@ export function SlotRequestsScreen({
   const canView =
     auth.grantedPermissions.length === 0 ||
     auth.grantedPermissions.includes('*') ||
-    auth.hasPermission('VIEW_EVENTS');
+    auth.hasPermission('MANAGE_EVENTS');
   const canManage = auth.canDo('canEditEvent');
   const shown = useMemo(() => filterSlotRequests(tab, query), [query, tab]);
 

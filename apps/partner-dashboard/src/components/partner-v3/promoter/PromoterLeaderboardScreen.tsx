@@ -5,6 +5,7 @@ import { useState } from 'react';
 
 import { RatingIcon } from '@c1rcle/icons';
 
+import { FixtureBadge } from '@/components/partner-v3/FixtureBadge';
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 
 import styles from './promoter-leaderboard.module.css';
@@ -41,6 +42,7 @@ export function PromoterLeaderboardScreen({
           <span className={styles['eyebrow']}>Performance network</span>
           <h1>PROMOTER LEADERBOARD</h1>
           <p>See who is moving the most tickets through their links.</p>
+          <FixtureBadge dataStatus={data.dataStatus} />
         </header>
         <div className={styles['filters']}>
           <select

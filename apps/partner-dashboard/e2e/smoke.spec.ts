@@ -33,10 +33,14 @@ test.describe('C1RCLE Partner Dashboard', () => {
     await expect(page.getByRole('button', { name: /Promoter/ })).toBeVisible();
   });
 
-  test('sends an unauthenticated /venue visit to /login with the return path', async ({ page }) => {
+  test('redirects an unauthenticated legacy /venue visit to /login via the V3 route', async ({
+    page,
+  }) => {
+    // H2: legacy trees redirect (307) into /partner/[studio] before the proxy
+    // gates, so the login return path is the V3 route, not the legacy one.
     await page.goto('/venue/events');
 
-    await expect(page).toHaveURL(/\/login\?next=%2Fvenue%2Fevents$/);
+    await expect(page).toHaveURL(/\/login\?next=%2Fpartner%2Fvenue%2Fevents$/);
     await expect(page.getByRole('button', { name: /Venue/ })).toBeVisible();
   });
 

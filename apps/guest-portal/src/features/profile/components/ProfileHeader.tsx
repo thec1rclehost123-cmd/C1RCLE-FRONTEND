@@ -7,7 +7,18 @@ const joinedFormatter = new Intl.DateTimeFormat('en-IN', {
   year: 'numeric',
 });
 
+function joinedLabel(memberSince: string | undefined): string | null {
+  if (!memberSince) return null;
+  const parsed = Date.parse(memberSince);
+  if (Number.isNaN(parsed)) return null;
+  return `Joined ${joinedFormatter.format(parsed)}`;
+}
+
 export function ProfileHeader({ identity }: { identity: ProfileIdentity }) {
+  const subtitle = [identity.city || null, joinedLabel(identity.memberSince)]
+    .filter((part): part is string => part !== null)
+    .join(' · ');
+
   return (
     <header className="relative overflow-hidden rounded-[2rem] border border-[#FF4400]/25 bg-[linear-gradient(125deg,rgba(255,68,0,0.18),rgba(11,11,11,0.96)_48%,rgba(116,57,160,0.15))] p-6 shadow-[0_28px_90px_rgba(255,68,0,0.12)] sm:p-9 lg:p-11">
       <div className="pointer-events-none absolute -right-20 -top-24 size-72 rounded-full bg-[#FF4400]/15 blur-[90px]" />
@@ -31,9 +42,9 @@ export function ProfileHeader({ identity }: { identity: ProfileIdentity }) {
             <h1 className="text-5xl font-black uppercase leading-[0.86] tracking-[-0.065em] text-white sm:text-7xl">
               {identity.displayName}
             </h1>
-            <p className="mt-4 text-sm font-semibold text-white/50">
-              {identity.city} · Joined {joinedFormatter.format(new Date(identity.memberSince))}
-            </p>
+            {subtitle ? (
+              <p className="mt-4 text-sm font-semibold text-white/50">{subtitle}</p>
+            ) : null}
           </div>
         </div>
 

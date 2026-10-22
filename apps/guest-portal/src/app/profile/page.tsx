@@ -1,10 +1,5 @@
 import { PrivateDataUnavailable } from '@/components/private/PrivateDataUnavailable';
-import { ProfileEvents } from '@/features/profile/components/ProfileEvents';
-import { ProfileHeader } from '@/features/profile/components/ProfileHeader';
-import { ProfileOverview } from '@/features/profile/components/ProfileOverview';
-import { ProfileSectionNav } from '@/features/profile/components/ProfileSectionNav';
-import { ProfileSettings } from '@/features/profile/components/ProfileSettings';
-import { profileFixture } from '@/features/profile/fixtures/profile.fixture';
+import { ProfileClient } from '@/features/profile/components/ProfileClient';
 import { requireGuestSession } from '@/lib/auth/require-session';
 import { buildPrivateMetadata } from '@/lib/seo/metadata';
 import { isProductionSeo } from '@/lib/seo/site';
@@ -48,38 +43,26 @@ function resolveSettingsSection(value: string | undefined): ProfileSettingsSecti
   return value === 'account' ? 'account' : 'personal';
 }
 
+/**
+ * The session is enforced here (server) and the `user` is handed to
+ * `ProfileClient`, so the header shows real identity on the first paint while
+ * the profile document and the guest's events are read on the client — the same
+ * BFF/public-read split the tickets screen uses. No fixture data is involved.
+ */
 export default async function ProfilePage({ searchParams }: ProfilePageProps = {}) {
-  await requireGuestSession('/profile');
+  const { user } = await requireGuestSession('/profile');
   if (isProductionSeo()) return <PrivateDataUnavailable title="Profile unavailable" />;
   const params = (await searchParams) ?? {};
   const activeSection = resolveProfileSection(firstValue(params.view));
   const activeEventFilter = resolveEventFilter(firstValue(params.filter));
   const activeSettingsSection = resolveSettingsSection(firstValue(params.section));
-  const profileEvents =
-    activeEventFilter === 'attended'
-      ? profileFixture.attendedEvents
-      : profileFixture.upcomingEvents;
 
   return (
-    <div className="relative z-10 min-h-screen px-4 pb-24 pt-28 text-white sm:px-6 sm:pt-32 lg:px-8">
-      <div className="mx-auto max-w-[1280px]">
-        <ProfileHeader identity={profileFixture.identity} />
-
-        <div className="my-7 sm:my-9">
-          <ProfileSectionNav activeSection={activeSection} />
-        </div>
-
-        {activeSection === 'overview' && <ProfileOverview profile={profileFixture} />}
-        {activeSection === 'events' && (
-          <ProfileEvents activeFilter={activeEventFilter} events={profileEvents} />
-        )}
-        {activeSection === 'settings' && (
-          <ProfileSettings
-            activeSection={activeSettingsSection}
-            identity={profileFixture.identity}
-          />
-        )}
-      </div>
-    </div>
+    <ProfileClient
+      user={user}
+      activeSection={activeSection}
+      activeEventFilter={activeEventFilter}
+      activeSettingsSection={activeSettingsSection}
+    />
   );
 }

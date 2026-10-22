@@ -73,24 +73,28 @@ function AccountSecurityPanel({ identity }: { identity: ProfileIdentity }) {
           Sign-in identity
         </p>
         <dl className="mt-6 grid gap-6 sm:grid-cols-2">
-          <div>
-            <dt className="text-[8px] font-black uppercase tracking-[0.2em] text-white/30">
-              Method
-            </dt>
-            <dd className="mt-2 text-sm font-bold text-white">{identity.signInMethod}</dd>
-          </div>
+          {identity.signInMethod ? (
+            <div>
+              <dt className="text-[8px] font-black uppercase tracking-[0.2em] text-white/30">
+                Method
+              </dt>
+              <dd className="mt-2 text-sm font-bold text-white">{identity.signInMethod}</dd>
+            </div>
+          ) : null}
           <div>
             <dt className="text-[8px] font-black uppercase tracking-[0.2em] text-white/30">
               Email
             </dt>
-            <dd className="mt-2 break-all text-sm font-bold text-white">{identity.email}</dd>
+            <dd className="mt-2 break-all text-sm font-bold text-white">{identity.email || '—'}</dd>
           </div>
-          <div>
-            <dt className="text-[8px] font-black uppercase tracking-[0.2em] text-white/30">
-              Phone
-            </dt>
-            <dd className="mt-2 text-sm font-bold text-white">{identity.phoneNumber}</dd>
-          </div>
+          {identity.phoneNumber ? (
+            <div>
+              <dt className="text-[8px] font-black uppercase tracking-[0.2em] text-white/30">
+                Phone
+              </dt>
+              <dd className="mt-2 text-sm font-bold text-white">{identity.phoneNumber}</dd>
+            </div>
+          ) : null}
         </dl>
         <p className="mt-7 border-t border-white/10 pt-5 text-xs leading-6 text-white/35">
           Security and recovery follow the sign-in method connected to this account.

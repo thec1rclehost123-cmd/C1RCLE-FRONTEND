@@ -572,6 +572,10 @@ export interface HostSlotRequestSubmitInput {
   readonly artists: readonly string[];
   /** Public poster URL resolved on the client (null = gradient artwork). */
   readonly posterPublicUrl?: string | null;
+  /** B2: minted ONCE per submit intent by the caller and reused across retries
+   * of the same submit; both gateway writes derive their per-write
+   * `Idempotency-Key` from it so a retry can never double-create one record. */
+  readonly idempotencyKey: string;
 }
 
 export interface HostSlotRequestSubmitResult {
@@ -581,8 +585,10 @@ export interface HostSlotRequestSubmitResult {
 
 /**
  * Creates the host's draft event, then submits a slot request to the target
- * venue — both against the gateway from the server. Each write mints its own
- * `Idempotency-Key` so a client retry cannot double-create either record.
+ * venue — both against the gateway from the server. The caller supplies ONE
+ * `idempotencyKey` for the whole submit intent (B2); it is expanded to a
+ * per-write key, so both records are protected by the same dedup boundary and
+ * a client retry with the original key cannot double-create either.
  */
 export async function submitHostSlotRequest(
   input: HostSlotRequestSubmitInput,
@@ -595,7 +601,7 @@ export async function submitHostSlotRequest(
       message: 'Enter a valid event date and start time.',
       status: 400,
     });
-  const { organizationId } = input;
+  const { organizationId, idempotencyKey } = input;
 
   const event = await gatewayPost<EventDto>(
     `/api/v2/organizations/${encodeURIComponent(organizationId)}/events`,
@@ -608,7 +614,7 @@ export async function submitHostSlotRequest(
       endAt: eventEndAtFromDraft(input),
       tags: [...new Set([...input.genres, ...input.artists])].slice(0, 50),
     },
-    { ...ctx, headers: { ...ctx.headers, 'Idempotency-Key': mintIdempotencyKey() } },
+    { ...ctx, headers: { ...ctx.headers, 'Idempotency-Key': `${idempotencyKey}-event` } },
   );
 
   const slotRequest = await gatewayPost<SlotRequestDto>(
@@ -618,7 +624,7 @@ export async function submitHostSlotRequest(
       eventId: event.id,
       message: `Host request for "${input.name.trim()}" on ${input.dateLabel}`,
     },
-    { ...ctx, headers: { ...ctx.headers, 'Idempotency-Key': mintIdempotencyKey() } },
+    { ...ctx, headers: { ...ctx.headers, 'Idempotency-Key': `${idempotencyKey}-slot-request` } },
   );
 
   return { eventId: event.id, slotRequestId: slotRequest.id };

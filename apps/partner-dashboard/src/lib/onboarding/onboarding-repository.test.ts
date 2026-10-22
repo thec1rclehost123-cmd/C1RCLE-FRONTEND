@@ -25,13 +25,14 @@ const mocks = vi.hoisted(() => ({
   apiPatch: vi.fn<(o: Options) => Promise<unknown>>(),
   bffGet: vi.fn<(o: Options) => Promise<unknown>>(),
   bffPost: vi.fn<(o: Options) => Promise<unknown>>(),
+  bffPatch: vi.fn<(o: Options) => Promise<unknown>>(),
 }));
 
 vi.mock('@/lib/api/client', () => ({
   apiClient: { post: mocks.apiPost, patch: mocks.apiPatch },
 }));
 vi.mock('@/lib/bff/bff-client', () => ({
-  bffClient: { get: mocks.bffGet, post: mocks.bffPost },
+  bffClient: { get: mocks.bffGet, post: mocks.bffPost, patch: mocks.bffPatch },
 }));
 vi.mock('@/lib/onboarding/csrf', () => ({ csrfHeaders: () => ({ 'x-csrf-token': 'csrf-1' }) }));
 
@@ -56,8 +57,16 @@ const dto = (version: number, extra: Record<string, unknown> = {}) => ({
 });
 
 const png = () => new File([new Uint8Array([1, 2, 3])], 'id.png', { type: 'image/png' });
-const lastHeaders = (fn: typeof mocks.apiPost, call = -1) =>
-  fn.mock.calls.at(call)?.[0].headers ?? {};
+const lastHeaders = (
+  fn: { readonly mock: { readonly calls: readonly (readonly [Options])[] } },
+  call = -1,
+): Readonly<Record<string, string>> => fn.mock.calls.at(call)?.[0].headers ?? {};
+
+const profile = {
+  requestedType: 'venue' as const,
+  plan: 'basic' as const,
+  profile: { legalName: 'Acme', contactPerson: 'A', phone: '+919876543210', city: 'Pune' },
+};
 
 describe('onboarding repository', () => {
   beforeEach(() => {
@@ -70,9 +79,9 @@ describe('onboarding repository', () => {
     expect(mine?.id).toBe('req_1');
     expect(mocks.bffGet.mock.calls[0]?.[0].path).toBe('/api/bff/onboarding/me');
 
-    mocks.apiPatch.mockResolvedValue(dto(5));
+    mocks.bffPatch.mockResolvedValue(dto(5));
     await saveProgress('req_1', { city: 'Mumbai' });
-    expect(lastHeaders(mocks.apiPatch)).toMatchObject({ 'If-Match': '4' });
+    expect(lastHeaders(mocks.bffPatch)).toMatchObject({ 'If-Match': '4' });
   });
 
   it('getMine returns null before an application exists', async () => {
@@ -80,39 +89,39 @@ describe('onboarding repository', () => {
     await expect(getMine()).resolves.toBeNull();
   });
 
-  it('start sends the Idempotency-Key and seeds the version', async () => {
-    mocks.apiPost.mockResolvedValue(dto(1));
-    await start(
-      {
-        requestedType: 'venue',
-        plan: 'basic',
-        profile: { legalName: 'Acme', contactPerson: 'A', phone: '+919876543210', city: 'Pune' },
-      },
-      'idem-start',
-    );
-    expect(mocks.apiPost.mock.calls[0]?.[0].path).toBe('/api/v2/onboarding/applications');
-    expect(lastHeaders(mocks.apiPost)).toMatchObject({ 'Idempotency-Key': 'idem-start' });
+  it('start goes through the BFF with csrf + Idempotency-Key and seeds the version', async () => {
+    mocks.bffPost.mockResolvedValue(dto(1));
+    await start(profile, 'idem-start');
+    expect(mocks.bffPost.mock.calls[0]?.[0].path).toBe('/api/bff/onboarding/applications');
+    expect(lastHeaders(mocks.bffPost)).toMatchObject({
+      'x-csrf-token': 'csrf-1',
+      'Idempotency-Key': 'idem-start',
+    });
 
-    mocks.apiPatch.mockResolvedValue(dto(2));
+    mocks.bffPatch.mockResolvedValue(dto(2));
     await saveProgress('req_1', { bio: 'x' });
-    expect(lastHeaders(mocks.apiPatch)).toMatchObject({ 'If-Match': '1' });
+    expect(lastHeaders(mocks.bffPatch)).toMatchObject({ 'If-Match': '1' });
+  });
+
+  it('autosave goes through the BFF with csrf', async () => {
+    mocks.bffGet.mockResolvedValue({ request: dto(3) });
+    await getMine();
+    mocks.bffPatch.mockResolvedValue(dto(4));
+    await saveProgress('req_1', { city: 'Mumbai' });
+
+    const call = mocks.bffPatch.mock.calls.at(-1)?.[0];
+    expect(call?.path).toBe('/api/bff/onboarding/applications/req_1');
+    expect(call?.headers).toMatchObject({ 'x-csrf-token': 'csrf-1', 'If-Match': '3' });
   });
 
   it('uploads a document through the BFF with label, csrf, idempotency key and If-Match', async () => {
-    mocks.apiPost.mockResolvedValue(dto(1));
-    await start(
-      {
-        requestedType: 'venue',
-        plan: 'basic',
-        profile: { legalName: 'Acme', contactPerson: 'A', phone: '+919876543210', city: 'Pune' },
-      },
-      'k',
-    );
+    mocks.bffPost.mockResolvedValue(dto(1));
+    await start(profile, 'k');
     mocks.bffPost.mockResolvedValue(dto(2));
     const file = png();
     await uploadDocument('req_1', 'sig_id_back', file, 'idem-up');
 
-    const call = mocks.bffPost.mock.calls[0]?.[0];
+    const call = mocks.bffPost.mock.calls.at(-1)?.[0];
     expect(call?.path).toBe('/api/bff/onboarding/applications/req_1/documents/upload');
     expect(call?.query).toEqual({ label: 'sig_id_back' });
     expect(call?.rawBody).toBe(file);
@@ -124,45 +133,49 @@ describe('onboarding repository', () => {
     });
   });
 
-  it('advances If-Match across upload then submit', async () => {
+  it('advances If-Match across upload then submit (both via the BFF)', async () => {
     mocks.bffGet.mockResolvedValue({ request: dto(7) });
     await getMine();
     mocks.bffPost.mockResolvedValue(dto(8));
     await uploadDocument('req_1', 'id_front', png(), 'u1');
-    mocks.apiPost.mockResolvedValue(dto(9, { status: 'submitted' }));
+    mocks.bffPost.mockResolvedValue(dto(9, { status: 'submitted' }));
     const submitted = await submit('req_1', 'idem-submit');
 
     expect(mocks.bffPost.mock.calls[0]?.[0].headers).toMatchObject({ 'If-Match': '7' });
-    expect(lastHeaders(mocks.apiPost)).toMatchObject({
+    expect(lastHeaders(mocks.bffPost)).toMatchObject({
+      'x-csrf-token': 'csrf-1',
       'Idempotency-Key': 'idem-submit',
       'If-Match': '8',
     });
+    expect(mocks.bffPost.mock.calls.at(-1)?.[0].path).toBe(
+      '/api/bff/onboarding/applications/req_1/submit',
+    );
     expect(submitted.status).toBe('submitted');
   });
 
   it('on 409 re-reads the version and retries once with the SAME idempotency key', async () => {
     mocks.bffGet.mockResolvedValueOnce({ request: dto(3) });
     await getMine();
-    mocks.apiPost
+    mocks.bffPost
       .mockRejectedValueOnce(apiError({ code: 'conflict', message: 'stale', status: 409 }))
       .mockResolvedValueOnce(dto(6, { status: 'submitted' }));
     mocks.bffGet.mockResolvedValueOnce({ request: dto(5) });
 
     await submit('req_1', 'same-key');
 
-    expect(mocks.apiPost).toHaveBeenCalledTimes(2);
-    expect(mocks.apiPost.mock.calls[0]?.[0].headers).toMatchObject({
+    expect(mocks.bffPost).toHaveBeenCalledTimes(2);
+    expect(mocks.bffPost.mock.calls[0]?.[0].headers).toMatchObject({
       'If-Match': '3',
       'Idempotency-Key': 'same-key',
     });
-    expect(mocks.apiPost.mock.calls[1]?.[0].headers).toMatchObject({
+    expect(mocks.bffPost.mock.calls[1]?.[0].headers).toMatchObject({
       'If-Match': '5',
       'Idempotency-Key': 'same-key',
     });
   });
 
   it('does not swallow a 422 with fieldErrors', async () => {
-    mocks.apiPatch.mockRejectedValue(
+    mocks.bffPatch.mockRejectedValue(
       apiError({
         code: 'validation',
         message: 'Invalid',
@@ -174,6 +187,6 @@ describe('onboarding repository', () => {
       status: 422,
       fieldErrors: { phone: ['too short'] },
     });
-    expect(mocks.apiPatch).toHaveBeenCalledTimes(1);
+    expect(mocks.bffPatch).toHaveBeenCalledTimes(1);
   });
 });

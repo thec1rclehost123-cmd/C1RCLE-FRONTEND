@@ -69,6 +69,10 @@ export function useVenueCalendar({
       monthKeys,
       ...(venueId ? { venueId } : {}),
       signal: controller.signal,
+      // B2: the auto-provide venue-create uses a per-org stable key, so a
+      // retry after a partial provision can never mint a fresh one and create
+      // a second venue.
+      idempotencyKey: `venue-provision-${organizationId}`,
     })
       .then((workspace) => {
         if (!controller.signal.aborted) {

@@ -66,7 +66,6 @@ export const ticketsFixture: {
         tierName: 'VIP ACCESS',
         isVip: true,
         ticketCount: 2,
-        qrPayload: 'NOT_VALID_FOR_ENTRY_FIXTURE_ONLY',
         status: 'active',
       },
       {
@@ -82,7 +81,6 @@ export const ticketsFixture: {
         tierName: 'GENERAL ADMISSION',
         isVip: false,
         ticketCount: 1,
-        qrPayload: 'NOT_VALID_FOR_ENTRY_FIXTURE_ONLY',
         status: 'active',
       },
     ],
@@ -100,7 +98,6 @@ export const ticketsFixture: {
         tierName: 'COUPLE PASS',
         isVip: false,
         ticketCount: 2,
-        qrPayload: 'NOT_VALID_FOR_ENTRY_FIXTURE_ONLY',
         status: 'used',
       },
     ],

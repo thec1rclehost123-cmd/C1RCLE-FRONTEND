@@ -118,7 +118,7 @@ export function ResultSheet({
       : '—';
   const tierName =
     result.status === 'consumed' || result.status === 'confirmation_required'
-      ? (result.entitlement.tierName ?? 'General')
+      ? result.entitlement.tierName
       : '—';
   // Reference's grid is always 3 columns (GUEST/TIER/PAX) regardless of
   // outcome — this branch only had 2, silently dropping PAX on every
