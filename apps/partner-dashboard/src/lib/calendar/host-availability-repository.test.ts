@@ -46,8 +46,8 @@ function event(id: string, day: number, status: EventDto['status']): EventDto {
     summary: '',
     description: '',
     imageUrl: null,
-    startAt: `${date}T21:00:00.000Z`,
-    endAt: `${date}T23:30:00.000Z`,
+    startAt: `${date}T14:30:00.000Z`,
+    endAt: `${date}T17:30:00.000Z`,
     status,
     isPublic: true,
     tags: [],
@@ -68,6 +68,7 @@ describe('host availability repository mapping', () => {
       from: timestamp,
       to: '2026-09-30T23:59:59.999Z',
       openSlots: 1,
+      pendingRequests: 0,
       bookedSlots: 1,
       blockedSlots: 1,
       openMinutes: 180,
@@ -99,14 +100,20 @@ describe('host availability repository mapping', () => {
     });
     expect(days[2]).toMatchObject({
       state: 'available',
-      slots: [{ id: 'open-slot', label: '8:00 PM – 11:00 PM', status: 'available' }],
+      slots: [{ id: 'open-slot', label: '8:00 pm UTC–11:00 pm', status: 'available' }],
     });
     expect(days[3]?.state).toBe('confirmed');
     expect(days[4]?.state).toBe('unavailable');
     expect(days[5]).toMatchObject({ state: 'pending', events: [{ id: 'pending' }] });
     expect(days[6]).toMatchObject({
       state: 'confirmed',
-      events: [{ id: 'published', href: '/partner/host/events/published' }],
+      events: [
+        {
+          id: 'published',
+          href: '/partner/host/events/published',
+          time: '8:00 PM – 11:00 PM',
+        },
+      ],
     });
     expect(days[7]).toMatchObject({ state: 'unavailable', events: [] });
   });

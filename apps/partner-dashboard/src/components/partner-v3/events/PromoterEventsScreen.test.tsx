@@ -83,4 +83,54 @@ describe('PromoterEventsScreen', () => {
       scroll: false,
     });
   });
+
+  it('does not invent promotion access or referral metrics for API-backed events', async () => {
+    const data = {
+      dataStatus: 'api' as const,
+      discoverCount: 1,
+      linkedCount: 1,
+      discoverTotal: 1,
+      discoverHasMore: false,
+      discoverEvents: [
+        {
+          id: 'evt_public',
+          name: 'Public event',
+          venue: 'Venue details unavailable',
+          city: '',
+          dateLabel: '20 Sep 2026',
+          timeLabel: '11:30 PM',
+          accessState: 'public' as const,
+          artwork: { type: 'gradient' as const, value: 'placeholder' },
+        },
+      ],
+      linkedEvents: [
+        {
+          id: 'evt_assigned',
+          name: 'Assigned event',
+          venue: 'Venue details unavailable',
+          city: '',
+          clicks: null,
+          sales: null,
+          commissionLabel: '15% commission',
+          artwork: { type: 'gradient' as const, value: 'placeholder' },
+        },
+      ],
+    };
+    render(<PromoterEventsScreen data={data} />);
+
+    expect(screen.queryByRole('combobox', { name: 'Event city' })).not.toBeInTheDocument();
+    expect(screen.getByText('Public listing')).toBeInTheDocument();
+    expect(screen.getByText(/host-issued assignment/i)).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /request promotion access/i }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.setup().click(screen.getByRole('tab', { name: /Linked Events/ }));
+    expect(screen.getByText(/Clicks unavailable/)).toBeInTheDocument();
+    expect(screen.getByText(/sales unavailable/)).toBeInTheDocument();
+    expect(screen.getByText('15% commission')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Assigned event linked event' }),
+    ).not.toBeInTheDocument();
+  });
 });

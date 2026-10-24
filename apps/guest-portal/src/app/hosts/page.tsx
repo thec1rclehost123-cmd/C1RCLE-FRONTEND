@@ -1,10 +1,5 @@
 import { DirectoryLanding } from '@/features/directory/components/DirectoryLanding';
-import {
-  hostDirectoryFixtures,
-  venueDirectoryFixtures,
-} from '@/features/directory/fixtures/directory.fixture';
 import { buildPublicMetadata } from '@/lib/seo/metadata';
-import { isProductionSeo } from '@/lib/seo/site';
 
 import type { Metadata } from 'next';
 
@@ -19,11 +14,5 @@ export function generateMetadata(): Metadata {
 }
 
 export default function HostsPage() {
-  const production = isProductionSeo();
-  return (
-    <DirectoryLanding
-      hosts={production ? [] : hostDirectoryFixtures}
-      venues={production ? [] : venueDirectoryFixtures}
-    />
-  );
+  return <DirectoryLanding hosts={[]} venues={[]} />;
 }

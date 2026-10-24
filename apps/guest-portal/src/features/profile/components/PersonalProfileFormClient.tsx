@@ -1,133 +1,163 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useMemo, useState } from 'react';
+
+import { createApiClient, isApiClientError } from '@c1rcle/api-client';
+import { guestProfileDtoSchema, upsertGuestProfileSchema } from '@c1rcle/contracts';
+import { Button } from '@c1rcle/ui';
+
+import { csrfHeaders } from '@/lib/bff/csrf';
 
 import type { ProfileIdentity } from '../types/profile.types';
+import type { UpsertGuestProfileRequest } from '@c1rcle/contracts';
 
-interface PersonalProfileDraft {
-  displayName: string;
-  city: string;
-  instagram: string;
-  phoneNumber: string;
-  gender: string;
-}
+type RetainedProfileFields = Pick<UpsertGuestProfileRequest, 'dateOfBirth' | 'tastes' | 'intents'>;
+type PersonalProfileDraft = Pick<
+  UpsertGuestProfileRequest,
+  'displayName' | 'city' | 'dateOfBirth'
+> & {
+  tastes: string;
+  intents: string;
+};
 
-function createDraft(identity: ProfileIdentity): PersonalProfileDraft {
-  return {
-    displayName: identity.displayName,
-    city: identity.city,
-    instagram: identity.instagram,
-    phoneNumber: identity.phoneNumber,
-    gender: identity.gender,
-  };
-}
+const profileClient = createApiClient({
+  baseUrl: typeof window === 'undefined' ? '' : window.location.origin,
+});
 
-export function PersonalProfileFormClient({ identity }: { identity: ProfileIdentity }) {
-  const [draft, setDraft] = useState(() => createDraft(identity));
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{
-    avatar?: string;
-    displayName?: string;
-    phoneNumber?: string;
-  }>({});
-  const initialDraft = useMemo(() => createDraft(identity), [identity]);
-  const isDirty = avatarPreview !== null || JSON.stringify(draft) !== JSON.stringify(initialDraft);
+const inputClass =
+  'mt-2 min-h-14 w-full rounded-2xl border border-white/10 bg-black/50 px-5 text-sm font-bold text-white outline-none transition-colors focus:border-[#FF4400]';
 
-  useEffect(() => {
-    return () => {
-      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
-    };
-  }, [avatarPreview]);
+export function PersonalProfileFormClient({
+  identity,
+  profileFields,
+}: {
+  identity: ProfileIdentity;
+  profileFields: RetainedProfileFields;
+}) {
+  const router = useRouter();
+  const initialDraft = useMemo<PersonalProfileDraft>(
+    () => ({
+      displayName: identity.displayName,
+      city: identity.city ?? '',
+      dateOfBirth: profileFields.dateOfBirth,
+      tastes: profileFields.tastes.join(', '),
+      intents: profileFields.intents.join(', '),
+    }),
+    [identity.city, identity.displayName, profileFields],
+  );
+  const [draft, setDraft] = useState(initialDraft);
+  const [savedDraft, setSavedDraft] = useState(initialDraft);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [cityError, setCityError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const isDirty = (Object.keys(draft) as (keyof PersonalProfileDraft)[]).some(
+    (key) => draft[key] !== savedDraft[key],
+  );
 
-  const updateField = (field: keyof PersonalProfileDraft, value: string) => {
-    setDraft((current) => ({ ...current, [field]: value }));
-  };
+  function validateName(value: string): string | null {
+    return value.trim().length < 2 ? 'Enter at least two characters.' : null;
+  }
 
-  const validateName = () => {
-    setErrors((current) => {
-      const next = { ...current };
-      if (draft.displayName.trim().length < 2) {
-        next.displayName = 'Enter at least two characters.';
-      } else {
-        delete next.displayName;
-      }
-      return next;
+  function validateCity(value: string): string | null {
+    if (value.trim().length === 0) return 'Enter a city.';
+    return value.trim().length > 100 ? 'City must be 100 characters or fewer.' : null;
+  }
+
+  async function saveProfile() {
+    const nextNameError = validateName(draft.displayName);
+    const nextCityError = validateCity(draft.city);
+    setNameError(nextNameError);
+    setCityError(nextCityError);
+    setSaveError(null);
+    setSaved(false);
+    if (nextNameError !== null || nextCityError !== null) return;
+
+    const parsed = upsertGuestProfileSchema.safeParse({
+      displayName: draft.displayName.trim(),
+      city: draft.city.trim(),
+      dateOfBirth: draft.dateOfBirth,
+      tastes: draft.tastes
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean),
+      intents: draft.intents
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean),
     });
-  };
+    if (!parsed.success) {
+      setSaveError(
+        'Check your date of birth, enter at least three interests, and add one reason for joining.',
+      );
+      return;
+    }
 
-  const validatePhone = () => {
-    const digits = draft.phoneNumber.replace(/\D/g, '');
-    setErrors((current) => {
-      const next = { ...current };
-      if (digits.length !== 10) {
-        next.phoneNumber = 'Enter a 10-digit phone number.';
-      } else {
-        delete next.phoneNumber;
-      }
-      return next;
-    });
-  };
+    setSaving(true);
+    try {
+      const updated = await profileClient.put({
+        path: '/api/profile/me',
+        body: parsed.data,
+        headers: csrfHeaders(),
+        schema: guestProfileDtoSchema,
+      });
+      const nextDraft = {
+        displayName: updated.displayName,
+        city: updated.city,
+        dateOfBirth: updated.dateOfBirth,
+        tastes: updated.tastes.join(', '),
+        intents: updated.intents.join(', '),
+      };
+      setDraft(nextDraft);
+      setSavedDraft(nextDraft);
+      setSaved(true);
+      router.refresh();
+    } catch (error) {
+      setSaveError(
+        isApiClientError(error) && error.status === 401
+          ? 'Your session expired. Sign in again to update your profile.'
+          : 'Your profile could not be saved. Check your connection and try again.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function resetChanges() {
+    setDraft(savedDraft);
+    setNameError(null);
+    setCityError(null);
+    setSaveError(null);
+    setSaved(false);
+  }
 
   return (
-    <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-5 sm:p-7">
-      <div className="flex flex-col gap-6 border-b border-white/10 pb-7 sm:flex-row sm:items-center">
-        <div className="relative flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#FF4400]/40 bg-[#FF4400] text-2xl font-black text-white">
-          {avatarPreview ? (
-            // A local blob preview cannot be handled by the Next image optimizer.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={avatarPreview}
-              alt="Selected profile preview"
-              className="size-full object-cover"
+    <section
+      aria-label="Personal profile"
+      className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-5 sm:p-7"
+    >
+      <div className="flex items-center gap-5 border-b border-white/10 pb-7">
+        <div className="relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#FF4400]/40 bg-[#FF4400] text-2xl font-black text-white">
+          {identity.avatarUrl ? (
+            <Image
+              src={identity.avatarUrl}
+              alt="Current profile photo"
+              fill
+              unoptimized
+              sizes="80px"
+              className="object-cover"
             />
           ) : (
             identity.initials
           )}
         </div>
-        <div>
-          <label
-            htmlFor="profile-avatar"
-            className="inline-flex min-h-11 cursor-pointer items-center rounded-full bg-white px-5 text-[9px] font-black uppercase tracking-[0.2em] text-black"
-          >
-            Choose image
-          </label>
-          <input
-            id="profile-avatar"
-            type="file"
-            accept="image/*"
-            className="sr-only"
-            aria-describedby={errors.avatar ? 'profile-avatar-error' : 'profile-avatar-help'}
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (!file) return;
-              if (!file.type.startsWith('image/')) {
-                setErrors((current) => ({ ...current, avatar: 'Choose an image file.' }));
-                event.target.value = '';
-                return;
-              }
-              if (file.size > 5 * 1024 * 1024) {
-                setErrors((current) => ({ ...current, avatar: 'Choose an image under 5 MB.' }));
-                event.target.value = '';
-                return;
-              }
-              if (avatarPreview) URL.revokeObjectURL(avatarPreview);
-              setAvatarPreview(URL.createObjectURL(file));
-              setErrors((current) => {
-                const next = { ...current };
-                delete next.avatar;
-                return next;
-              });
-            }}
-          />
-          <p id="profile-avatar-help" className="mt-3 text-xs text-white/35">
-            Square JPG, PNG or WebP · 5 MB max.
-          </p>
-          {errors.avatar && (
-            <p id="profile-avatar-error" className="mt-2 text-xs text-red-300">
-              {errors.avatar}
-            </p>
-          )}
-        </div>
+        <p className="max-w-lg text-sm leading-6 text-white/55">
+          Profile photo uploads are not available yet. Your saved photo is shown here when one
+          exists.
+        </p>
       </div>
 
       <div className="mt-7 grid gap-5 sm:grid-cols-2">
@@ -139,17 +169,23 @@ export function PersonalProfileFormClient({ identity }: { identity: ProfileIdent
             name="name"
             autoComplete="name"
             value={draft.displayName}
+            aria-invalid={Boolean(nameError)}
+            aria-describedby={nameError ? 'profile-name-error' : undefined}
+            className={inputClass}
             onChange={(event) => {
-              updateField('displayName', event.target.value);
+              const value = event.target.value;
+              setDraft((current) => ({ ...current, displayName: value }));
+              setNameError(null);
+              setSaveError(null);
+              setSaved(false);
             }}
-            onBlur={validateName}
-            aria-invalid={Boolean(errors.displayName)}
-            aria-describedby={errors.displayName ? 'profile-name-error' : undefined}
-            className="mt-2 min-h-14 w-full rounded-2xl border border-white/10 bg-black/50 px-5 text-sm font-bold text-white outline-none transition-colors focus:border-[#FF4400]"
+            onBlur={() => {
+              setNameError(validateName(draft.displayName));
+            }}
           />
-          {errors.displayName && (
+          {nameError && (
             <span id="profile-name-error" className="mt-2 block text-xs text-red-300">
-              {errors.displayName}
+              {nameError}
             </span>
           )}
         </label>
@@ -162,92 +198,107 @@ export function PersonalProfileFormClient({ identity }: { identity: ProfileIdent
             name="address-level2"
             autoComplete="address-level2"
             value={draft.city}
+            aria-invalid={Boolean(cityError)}
+            aria-describedby={cityError ? 'profile-city-error' : undefined}
+            className={inputClass}
             onChange={(event) => {
-              updateField('city', event.target.value);
+              const value = event.target.value;
+              setDraft((current) => ({ ...current, city: value }));
+              setCityError(null);
+              setSaveError(null);
+              setSaved(false);
             }}
-            className="mt-2 min-h-14 w-full rounded-2xl border border-white/10 bg-black/50 px-5 text-sm font-bold text-white outline-none transition-colors focus:border-[#FF4400]"
-          />
-        </label>
-
-        <label className="block">
-          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">
-            Instagram
-          </span>
-          <div className="relative mt-2">
-            <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-bold text-white/30">
-              @
-            </span>
-            <input
-              name="instagram"
-              autoComplete="off"
-              value={draft.instagram}
-              onChange={(event) => {
-                updateField('instagram', event.target.value);
-              }}
-              className="min-h-14 w-full rounded-2xl border border-white/10 bg-black/50 pl-10 pr-5 text-sm font-bold text-white outline-none transition-colors focus:border-[#FF4400]"
-            />
-          </div>
-        </label>
-
-        <label className="block">
-          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">
-            Phone number
-          </span>
-          <input
-            name="tel"
-            autoComplete="tel"
-            inputMode="numeric"
-            value={draft.phoneNumber}
-            onChange={(event) => {
-              updateField('phoneNumber', event.target.value);
+            onBlur={() => {
+              setCityError(validateCity(draft.city));
             }}
-            onBlur={validatePhone}
-            aria-invalid={Boolean(errors.phoneNumber)}
-            aria-describedby={errors.phoneNumber ? 'profile-phone-error' : undefined}
-            className="mt-2 min-h-14 w-full rounded-2xl border border-white/10 bg-black/50 px-5 text-sm font-bold text-white outline-none transition-colors focus:border-[#FF4400]"
           />
-          {errors.phoneNumber && (
-            <span id="profile-phone-error" className="mt-2 block text-xs text-red-300">
-              {errors.phoneNumber}
+          {cityError && (
+            <span id="profile-city-error" className="mt-2 block text-xs text-red-300">
+              {cityError}
             </span>
           )}
         </label>
+      </div>
 
+      <div className="mt-5 grid gap-5 sm:grid-cols-2">
+        <label className="block">
+          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">
+            Date of birth
+          </span>
+          <input
+            type="date"
+            autoComplete="bday"
+            value={draft.dateOfBirth}
+            className={inputClass}
+            onChange={(event) => {
+              setDraft((current) => ({ ...current, dateOfBirth: event.target.value }));
+              setSaved(false);
+            }}
+          />
+        </label>
+        <label className="block">
+          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">
+            Interests
+          </span>
+          <input
+            value={draft.tastes}
+            className={inputClass}
+            aria-describedby="profile-interests-help"
+            onChange={(event) => {
+              setDraft((current) => ({ ...current, tastes: event.target.value }));
+              setSaved(false);
+            }}
+          />
+          <span id="profile-interests-help" className="mt-1 block text-xs text-white/40">
+            Separate at least three interests with commas.
+          </span>
+        </label>
         <label className="block sm:col-span-2">
           <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">
-            Gender
+            What brings you here
           </span>
-          <select
-            name="gender"
-            value={draft.gender}
+          <input
+            value={draft.intents}
+            className={inputClass}
+            aria-describedby="profile-intents-help"
             onChange={(event) => {
-              updateField('gender', event.target.value);
+              setDraft((current) => ({ ...current, intents: event.target.value }));
+              setSaved(false);
             }}
-            className="mt-2 min-h-14 w-full rounded-2xl border border-white/10 bg-black/50 px-5 text-sm font-bold text-white outline-none transition-colors focus:border-[#FF4400]"
-          >
-            <option>Woman</option>
-            <option>Man</option>
-            <option>Non-binary</option>
-            <option>Prefer not to say</option>
-          </select>
+          />
+          <span id="profile-intents-help" className="mt-1 block text-xs text-white/40">
+            Separate multiple reasons with commas.
+          </span>
         </label>
       </div>
 
-      <div className="mt-7 flex justify-end border-t border-white/10 pt-6">
-        <button
-          type="button"
-          disabled={!isDirty}
-          onClick={() => {
-            setDraft(initialDraft);
-            setErrors({});
-            if (avatarPreview) URL.revokeObjectURL(avatarPreview);
-            setAvatarPreview(null);
-          }}
-          className="inline-flex min-h-11 items-center rounded-full border border-white/15 px-5 text-[9px] font-black uppercase tracking-[0.2em] text-white/55 transition-colors hover:bg-white hover:text-black disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-white/55"
-        >
-          Reset changes
-        </button>
+      <div className="mt-7 flex flex-col gap-4 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <div aria-live="polite" className="text-sm">
+          {saveError && (
+            <p role="alert" className="text-red-300">
+              {saveError}
+            </p>
+          )}
+          {saved && (
+            <p role="status" className="text-emerald-300">
+              Profile updated.
+            </p>
+          )}
+        </div>
+        <div className="flex justify-end gap-3">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!isDirty || saving}
+            onClick={resetChanges}
+          >
+            Reset changes
+          </Button>
+          <Button type="button" disabled={!isDirty || saving} onClick={() => void saveProfile()}>
+            {saving ? 'Saving…' : 'Save changes'}
+          </Button>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

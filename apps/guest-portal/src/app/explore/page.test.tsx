@@ -54,9 +54,15 @@ const FREE_EVENT: EventDto = {
 };
 
 const mockGet = vi.fn();
+const replace = vi.fn();
 
 vi.mock('@c1rcle/api-client', () => ({
   createApiClient: () => ({ get: mockGet }),
+}));
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/explore',
+  useRouter: () => ({ replace }),
 }));
 
 vi.mock('next/image', () => ({
@@ -84,7 +90,26 @@ function mockFeed(items: EventDto[], venues: VenueDto[] = [VENUE]) {
     const venue = venues.find(
       (candidate) => path === `/api/v2/public/venues/by-id/${candidate.id}`,
     );
-    return venue ? Promise.resolve(venue) : Promise.reject(new Error('not found'));
+    if (venue) return Promise.resolve(venue);
+    const tierEvent = items.find(
+      (candidate) => path === `/api/v2/public/events/${candidate.slug}/tiers`,
+    );
+    if (tierEvent) {
+      return Promise.resolve({
+        items: [
+          {
+            id: `tier_${tierEvent.id}`,
+            eventId: tierEvent.id,
+            name: 'General',
+            description: '',
+            priceInPaise: tierEvent.startingPricePaise ?? 0,
+            currency: 'INR',
+            availableQuantity: 10,
+          },
+        ],
+      });
+    }
+    return Promise.reject(new Error('not found'));
   });
 }
 
@@ -100,7 +125,7 @@ describe('ExplorePage', () => {
     // Venue name + city come from the venue lookup, not the event.
     expect(screen.getAllByText('Skyline Social, Pune').length).toBeGreaterThan(0);
     // Event without a venue renders the honest fallback, not a dummy.
-    expect(screen.getAllByText('Venue TBA, India').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Venue TBA, Location unavailable').length).toBeGreaterThan(0);
   });
 
   it('searches and filters real events without fixtures', async () => {
@@ -126,13 +151,9 @@ describe('ExplorePage', () => {
     expect(citySelect).not.toHaveTextContent('Mumbai');
   });
 
-  it('shows an honest empty state when the API fails, never fixtures', async () => {
+  it('routes API failures to the retryable route error boundary', async () => {
     mockGet.mockRejectedValue(new Error('gateway down'));
-    render(await ExplorePage());
-
-    expect(screen.getByText('No events found')).toBeInTheDocument();
-    expect(screen.getByText('0 events found')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /view /i })).not.toBeInTheDocument();
+    await expect(ExplorePage()).rejects.toThrow('gateway down');
   });
 
   it('sorts real events by soonest and price', async () => {
@@ -160,8 +181,8 @@ describe('ExplorePage', () => {
         .getAllByRole('link', { name: /View (Later|Earlier) Night/ })
         .map((link) => link.getAttribute('aria-label'));
 
-    // Trending keeps the API order.
-    expect(cardNames()[0]).toBe('View Later Night');
+    // The default ranking is the authoritative soonest-starting order.
+    expect(cardNames()[0]).toBe('View Earlier Night');
 
     fireEvent.change(screen.getByLabelText('Sort'), { target: { value: 'soonest' } });
     expect(cardNames()[0]).toBe('View Earlier Night');
@@ -190,14 +211,26 @@ describe('ExplorePage', () => {
   });
 
   it('filters real events by today', async () => {
-    const noon = new Date();
-    noon.setHours(12, 0, 0, 0);
+    const dateParts = new Intl.DateTimeFormat('en', {
+      day: '2-digit',
+      month: '2-digit',
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+    })
+      .formatToParts(new Date())
+      .reduce<Record<string, string>>((parts, { type, value }) => {
+        parts[type] = value;
+        return parts;
+      }, {});
+    const { year, month, day } = dateParts;
+    if (!year || !month || !day) throw new Error('Could not resolve the current India date');
+    const indiaNoonUtc = new Date(`${year}-${month}-${day}T06:30:00.000Z`);
     const todayEvent = {
       ...EVENT,
       id: 'evt_t',
       slug: 'today-night',
       title: 'Today Night',
-      startAt: noon.toISOString(),
+      startAt: indiaNoonUtc.toISOString(),
     };
     const oldEvent = { ...EVENT, startAt: '2026-03-10T12:00:00.000Z' };
     mockFeed([todayEvent, oldEvent]);

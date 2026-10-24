@@ -1,8 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiClientError } from '@c1rcle/api-client';
-import { markHydrated } from '@c1rcle/auth';
+import { markAnonymous, markHydrated, setSession, useSessionStore } from '@c1rcle/auth';
 
 import { useOrgAccess } from './use-org-access';
 
@@ -13,11 +13,6 @@ const getPartnerAccessMock = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/org/org-repository', () => ({
   getPartnerAccess: getPartnerAccessMock,
 }));
-
-// The hook now gates its fetch on the session store's one-time `hydrated`
-// flag (see use-org-access.ts) — these tests exercise steady-state fetch
-// behavior post-bootstrap, so mark it settled once for the whole file.
-markHydrated();
 
 const ACCESS_FIXTURE: PartnerAccessDto = {
   organizationId: 'org-1',
@@ -30,6 +25,26 @@ const ACCESS_FIXTURE: PartnerAccessDto = {
 
 afterEach(() => {
   getPartnerAccessMock.mockReset();
+  markAnonymous();
+  markHydrated();
+});
+
+beforeEach(() => {
+  setSession(
+    {
+      user: {
+        id: 'user-1',
+        email: 'user@example.com',
+        displayName: 'Test User',
+        role: 'partner',
+        avatarUrl: null,
+        mustChangePassword: false,
+      },
+    },
+    null,
+    0,
+  );
+  useSessionStore.setState({ hydrated: true });
 });
 
 describe('useOrgAccess', () => {
@@ -56,6 +71,18 @@ describe('useOrgAccess', () => {
     expect(result.current.partnerType).toBe('venue');
     expect(result.current.permissions).toEqual(['VIEW_FINANCIALS', 'MANAGE_EVENTS']);
     expect(result.current.tabVisibility).toEqual({ finance: false });
+    expect(getPartnerAccessMock).toHaveBeenCalledWith('org-1');
+  });
+
+  it('starts the cookie-authenticated access read before token refresh hydration settles', async () => {
+    useSessionStore.setState({ hydrated: false });
+    getPartnerAccessMock.mockResolvedValue(ACCESS_FIXTURE);
+
+    const { result } = renderHook(() => useOrgAccess('org-1'));
+
+    await waitFor(() => {
+      expect(result.current.partnerType).toBe('venue');
+    });
     expect(getPartnerAccessMock).toHaveBeenCalledWith('org-1');
   });
 

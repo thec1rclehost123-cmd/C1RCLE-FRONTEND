@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 
 import { HostEventEditorRoute } from '@/components/partner-v3/event-editor/HostEventEditorRoute';
 import { VenueEventEditorRoute } from '@/components/partner-v3/event-editor/VenueEventEditorRoute';
-import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
+import { createEmptyEventEditorData } from '@/lib/events/event-editor-data';
 import { getActiveOrgIdFromCookieHeader } from '@/lib/org/active-org-cookie';
 
 export default async function StudioCreateEventPage({
@@ -21,9 +21,10 @@ export default async function StudioCreateEventPage({
   const venue = value(query['venue']);
   const date = value(query['date']);
   const slot = value(query['slot']);
+  const request = value(query['request']);
   if (studio === 'venue') {
     const organizationId = getActiveOrgIdFromCookieHeader((await cookies()).toString());
-    const data = await fixturePartnerDataSource.getVenueEventEditor();
+    const data = createEmptyEventEditorData('venue');
     return (
       <VenueEventEditorRoute
         organizationId={organizationId}
@@ -35,7 +36,7 @@ export default async function StudioCreateEventPage({
       />
     );
   }
-  const data = await fixturePartnerDataSource.getHostEventEditor();
+  const data = createEmptyEventEditorData('host');
   const organizationId = getActiveOrgIdFromCookieHeader((await cookies()).toString());
   return (
     <HostEventEditorRoute
@@ -45,6 +46,7 @@ export default async function StudioCreateEventPage({
       {...(venue ? { initialVenueId: venue } : {})}
       {...(date ? { initialDate: date } : {})}
       {...(slot ? { initialSlotId: slot } : {})}
+      {...(request ? { acceptedRequestId: request } : {})}
     />
   );
 }

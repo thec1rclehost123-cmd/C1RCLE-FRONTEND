@@ -12,7 +12,13 @@ import {
   signupRequestSchema,
 } from '@c1rcle/contracts';
 
-import { clearSession, getAccessToken, markAnonymous, setSession } from './session-store.js';
+import {
+  clearSession,
+  getAccessToken,
+  markAnonymous,
+  setSession,
+  useSessionStore,
+} from './session-store.js';
 
 interface SignupInput {
   readonly email: string;
@@ -234,6 +240,19 @@ export async function fetchSession(): Promise<void> {
   } catch {
     markAnonymous();
   }
+}
+
+/**
+ * Hydrate a session that was discovered by a Server Component and then obtain
+ * a browser access token. The read is deliberate: when a user arrives from a
+ * different C1RCLE app on the same localhost host, the httpOnly session cookie
+ * can exist while this app's namespaced CSRF cookie does not. The BFF session
+ * route mints that app-scoped token before the CSRF-protected refresh runs.
+ */
+export async function hydrateSession(): Promise<boolean> {
+  await fetchSession();
+  if (useSessionStore.getState().status !== 'authenticated') return false;
+  return refresh();
 }
 
 /**

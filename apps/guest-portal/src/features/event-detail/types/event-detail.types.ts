@@ -13,6 +13,7 @@ export interface EventDetailTicketTier {
   description: string;
   price: EventDetailMoney | null;
   availabilityLabel: string;
+  availableQuantity?: number;
 }
 
 export interface EventDetailGuest {
@@ -34,9 +35,9 @@ export interface EventDetailFixture {
   venue: string;
   address: string;
   city: string;
-  hostId: string;
+  hostId: string | null;
   host: string;
-  venueId: string;
+  venueId: string | null;
   summary: string;
   description: readonly string[];
   doorNote: string;
@@ -45,8 +46,8 @@ export interface EventDetailFixture {
   interestedCount: number;
   ticketTiers: readonly EventDetailTicketTier[];
   /**
-   * Ticket section header note. Fixtures omit it (renders the legacy
-   * 'Fixture preview'); real backend-mapped events set 'Live pricing'.
+   * Ticket section header note. Authoritative events label their live
+   * inventory explicitly.
    */
   ticketNote?: string;
 }

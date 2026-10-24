@@ -28,7 +28,7 @@ export function FinanceBankCards({ data }: { readonly data: PartnerFinanceData }
             IFSC Code
             <input value={data.bankAccount.ifscCode} readOnly />
           </label>
-          {!data.bankAccount.verified ? (
+          {data.bankAccount.bankName !== 'No payout account' && !data.bankAccount.verified ? (
             <p className={styles['accountNote']}>
               <BankIcon size={16} aria-hidden="true" /> This account is awaiting verification —
               payouts to it will not settle until it clears.

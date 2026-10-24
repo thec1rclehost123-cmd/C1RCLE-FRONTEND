@@ -183,7 +183,7 @@ export function clearCsrfCookie(res: NextResponse): void {
 }
 
 export interface ForwardInit {
-  readonly method: 'GET' | 'POST';
+  readonly method: 'GET' | 'POST' | 'PUT';
   readonly body?: unknown;
   readonly cookie?: string | null;
   /** Extra headers to forward verbatim (e.g. `Idempotency-Key`). */

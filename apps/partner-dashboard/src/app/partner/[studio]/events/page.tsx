@@ -1,7 +1,8 @@
 import { HostEventsScreen } from '@/components/partner-v3/events/HostEventsScreen';
 import { PromoterEventsScreen } from '@/components/partner-v3/events/PromoterEventsScreen';
 import { VenueEventsScreen } from '@/components/partner-v3/events/VenueEventsScreen';
-import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
+import { loadPartnerEvents } from '@/lib/events/load-partner-events';
+import { loadPromoterEvents } from '@/lib/events/load-promoter-events';
 
 import { renderStudioSkeleton } from '../route-helpers';
 
@@ -18,7 +19,7 @@ export default async function StudioEventsPage({
     const getValue = (value: string | string[] | undefined) =>
       Array.isArray(value) ? value[0] : value;
     if (studio === 'promoter') {
-      const data = await fixturePartnerDataSource.getPromoterEvents();
+      const data = await loadPromoterEvents();
       const tab = getValue(query['tab']) === 'linked' ? ('linked' as const) : ('discover' as const);
       const city = getValue(query['city']) ?? 'all';
       return (
@@ -42,15 +43,22 @@ export default async function StudioEventsPage({
           : status === 'draft'
             ? ('Draft' as const)
             : ('all' as const),
-      initialParty: party === 'hosts' ? ('hosts' as const) : ('venue' as const),
+      initialParty:
+        party === 'hosts'
+          ? ('hosts' as const)
+          : party === 'venue'
+            ? ('venue' as const)
+            : studio === 'host'
+              ? ('hosts' as const)
+              : ('venue' as const),
       initialView: view === 'list' ? ('list' as const) : ('grid' as const),
     };
     if (studio === 'host') {
-      const data = await fixturePartnerDataSource.getHostEvents();
+      const data = await loadPartnerEvents({ studio: 'host', cursor: getValue(query['cursor']) });
       return <HostEventsScreen data={data} {...sharedProps} />;
     }
 
-    const data = await fixturePartnerDataSource.getVenueEvents();
+    const data = await loadPartnerEvents({ studio: 'venue', cursor: getValue(query['cursor']) });
     return <VenueEventsScreen data={data} {...sharedProps} />;
   }
 

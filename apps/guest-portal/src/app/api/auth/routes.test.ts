@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { forwardToGateway } from '@/lib/bff/auth-proxy';
 
+import { POST as changePassword } from './change-password/route';
 import { POST as forgotPassword } from './forgot-password/route';
 import { POST as login } from './login/route';
 import { POST as logout } from './logout/route';
@@ -57,6 +58,66 @@ const AUTH_BODY = {
 
 beforeEach(() => {
   mockForward.mockReset();
+});
+
+describe('POST /api/auth/change-password', () => {
+  const passwordBody = { currentPassword: 'old-password', newPassword: 'new-password' };
+
+  it('requires a signed-in session and CSRF before forwarding', async () => {
+    const unsigned = await changePassword(
+      req('POST', '/api/auth/change-password', {}, passwordBody),
+    );
+    expect(unsigned.status).toBe(401);
+
+    const noCsrf = await changePassword(
+      req(
+        'POST',
+        '/api/auth/change-password',
+        { cookie: 'better-auth.session_token=sess' },
+        passwordBody,
+      ),
+    );
+    expect(noCsrf.status).toBe(403);
+    expect(mockForward).not.toHaveBeenCalled();
+  });
+
+  it('forwards validated credentials and re-scopes the refreshed session cookie', async () => {
+    mockForward.mockResolvedValue(gw(AUTH_BODY, { headers: { 'set-cookie': SESSION_SET_COOKIE } }));
+    const response = await changePassword(
+      req('POST', '/api/auth/change-password', csrfHeaders, passwordBody),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockForward).toHaveBeenCalledWith('/api/v2/auth/change-password', {
+      method: 'POST',
+      body: passwordBody,
+      cookie: csrfHeaders.cookie,
+    });
+    expect(response.headers.get('set-cookie')).toContain('better-auth.session_token=sess_abc');
+    expect(response.headers.get('set-cookie')?.toLowerCase()).not.toContain('domain=');
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+  });
+
+  it('does not forward invalid or cross-origin requests', async () => {
+    const invalid = await changePassword(
+      req('POST', '/api/auth/change-password', csrfHeaders, {
+        currentPassword: 'same-password',
+        newPassword: 'same-password',
+      }),
+    );
+    expect(invalid.status).toBe(422);
+
+    const crossOrigin = await changePassword(
+      req(
+        'POST',
+        '/api/auth/change-password',
+        { ...csrfHeaders, origin: 'http://evil.example' },
+        passwordBody,
+      ),
+    );
+    expect(crossOrigin.status).toBe(403);
+    expect(mockForward).not.toHaveBeenCalled();
+  });
 });
 
 describe('POST /api/auth/login', () => {

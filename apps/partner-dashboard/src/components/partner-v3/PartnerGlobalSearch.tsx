@@ -116,6 +116,26 @@ export function PartnerGlobalSearch({ data }: { readonly data: PartnerSearchData
     .filter(Boolean)
     .join(' ');
 
+  if (data.dataStatus === 'unavailable') {
+    return (
+      <div className={styles['globalSearchRoot']}>
+        <button
+          className={styles['mobileSearchTrigger']}
+          type="button"
+          aria-label="Global search unavailable"
+          title={data.unavailableReason}
+          disabled
+        >
+          <SearchIcon size={16} aria-hidden="true" />
+        </button>
+        <div className={searchFieldClass} title={data.unavailableReason}>
+          <SearchIcon size={15} aria-hidden="true" />
+          <span aria-live="polite">Search unavailable</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles['globalSearchRoot']} ref={rootRef}>
       <button

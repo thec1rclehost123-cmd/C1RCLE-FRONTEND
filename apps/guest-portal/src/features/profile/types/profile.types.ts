@@ -7,12 +7,13 @@ export interface ProfileIdentity {
   id: string;
   displayName: string;
   initials: string;
+  avatarUrl?: string | null;
   email: string;
-  phoneNumber: string;
-  city: string;
-  instagram: string;
-  gender: string;
-  memberSince: string;
+  phoneNumber: string | null;
+  city: string | null;
+  instagram: string | null;
+  gender: string | null;
+  memberSince: string | null;
   badges: readonly string[];
   signInMethod: string;
 }
@@ -20,18 +21,24 @@ export interface ProfileIdentity {
 export interface ProfileEventSummary {
   id: string;
   slug: string;
+  detailHref?: string;
   title: string;
   image: string;
   startsAt: string;
   venue: string;
   city: string;
   participationLabel: string;
+  bookingReference?: string;
+  bookingHref?: string;
+  amountPaise?: number;
 }
 
 export interface ProfileFixture {
   identity: ProfileIdentity;
   upcomingEvents: readonly ProfileEventSummary[];
   attendedEvents: readonly ProfileEventSummary[];
+  orderHistoryAvailable?: boolean;
+  attendanceHistoryAvailable?: boolean;
 }
 
 export interface PublicProfileIdentity {

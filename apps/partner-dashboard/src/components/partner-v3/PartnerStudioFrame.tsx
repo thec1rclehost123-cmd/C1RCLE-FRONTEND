@@ -6,6 +6,7 @@ import { useEffect, type ReactNode } from 'react';
 import { normalizePartnerRole } from '@/components/partner-shell/partner-role-routing';
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 import { lastPathSegment, visibilityKeyForSegment } from '@/lib/access/studio-tab-access';
+import { isServerAuthorizedPartnerEventRoute } from '@/lib/access/server-authorized-event-route';
 import { getStudioConfig, type StudioRole } from '@/studios/studio-config';
 
 import { PageContainer } from './PagePrimitives';
@@ -26,6 +27,8 @@ export function PartnerStudioFrame({
   const auth = useDashboardAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const serverAuthorizedEventRoute = isServerAuthorizedPartnerEventRoute(pathname);
+  const clientAuthorizationLoading = auth.loading && !serverAuthorizedEventRoute;
   const config = getStudioConfig(studio);
   const activeRole = normalizePartnerRole(auth.profile?.activeMembership?.partnerType);
   // Direct-URL guard matching the sidebar: a tab the backend's per-role
@@ -42,19 +45,27 @@ export function PartnerStudioFrame({
     auth.tabVisibility[visibilityKey] === false;
 
   useEffect(() => {
-    if (auth.loading) return;
-    if (!auth.user) {
+    if (clientAuthorizationLoading) return;
+    if (!auth.user && !serverAuthorizedEventRoute) {
       router.replace(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
       return;
     }
-    if (!auth.isApproved) {
+    if (!auth.isApproved && !serverAuthorizedEventRoute) {
       router.replace('/onboard');
       return;
     }
-    if (!activeRole) router.replace('/partner/select-organization');
-  }, [activeRole, auth.isApproved, auth.loading, auth.user, pathname, router]);
+    if (!activeRole && !serverAuthorizedEventRoute) router.replace('/partner/select-organization');
+  }, [
+    activeRole,
+    auth.isApproved,
+    auth.user,
+    clientAuthorizationLoading,
+    pathname,
+    router,
+    serverAuthorizedEventRoute,
+  ]);
 
-  if (auth.loading) {
+  if (clientAuthorizationLoading) {
     return (
       <PartnerShell studio={studio} interactionData={interactionData}>
         <LoadingState label="Authorizing Partner V3" />
@@ -62,13 +73,13 @@ export function PartnerStudioFrame({
     );
   }
 
-  if (!auth.user || !auth.isApproved || !activeRole) {
+  if ((!auth.user || !auth.isApproved || !activeRole) && !serverAuthorizedEventRoute) {
     return <LoadingState label="Redirecting to your workspace" />;
   }
 
   return (
     <PartnerShell studio={studio} interactionData={interactionData}>
-      {activeRole !== studio ? (
+      {activeRole !== null && activeRole !== studio ? (
         <PageContainer>
           <EmptyState
             title={`${config.label} is not available for this account`}

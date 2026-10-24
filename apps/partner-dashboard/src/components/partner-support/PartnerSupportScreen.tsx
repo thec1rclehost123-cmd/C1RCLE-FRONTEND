@@ -37,6 +37,8 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
   const auth = useDashboardAuth();
   const [tickets, setTickets] = useState<readonly PartnerSupportTicket[]>(initialTickets ?? []);
   const [loading, setLoading] = useState(!initialTickets);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadCount, setReloadCount] = useState(0);
   const [filter, setFilter] = useState<'all' | 'active' | 'closed'>('all');
   const [query, setQuery] = useState('');
 
@@ -66,10 +68,14 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
         const items = await listPartnerTickets();
         if (mounted) {
           setTickets(items);
+          setLoadError(null);
           setLoading(false);
         }
-      } catch {
+      } catch (error) {
         if (mounted) {
+          setLoadError(
+            error instanceof Error ? error.message : 'Support tickets could not be loaded.',
+          );
           setLoading(false);
         }
       }
@@ -80,7 +86,13 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
     return () => {
       mounted = false;
     };
-  }, [initialTickets]);
+  }, [initialTickets, reloadCount]);
+
+  const retryLoad = () => {
+    setLoading(true);
+    setLoadError(null);
+    setReloadCount((count) => count + 1);
+  };
 
   const selectedDepartment = useMemo(
     () => SUPPORT_DEPARTMENTS.find((dept) => dept.name === departmentName) ?? DEFAULT_DEPT,
@@ -111,6 +123,7 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
     ).length;
     return { total, active, closed };
   }, [tickets]);
+  const metricsUnknown = loading || (loadError !== null && tickets.length === 0);
 
   const filteredTickets = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -269,20 +282,33 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
       <div className={styles['metricsRow']}>
         <div className={styles['metricCard']}>
           <span>Total Requests</span>
-          <strong>{metrics.total}</strong>
+          <strong>{metricsUnknown ? '—' : metrics.total}</strong>
         </div>
         <div className={styles['metricCard']}>
           <span>Active Inquiries</span>
-          <strong>{metrics.active}</strong>
+          <strong>{metricsUnknown ? '—' : metrics.active}</strong>
         </div>
         <div className={styles['metricCard']}>
           <span>Resolved / Merged</span>
-          <strong>{metrics.closed}</strong>
+          <strong>{metricsUnknown ? '—' : metrics.closed}</strong>
         </div>
       </div>
 
       {/* Main Ticket Panel */}
       <section className={styles['mainPanel']} aria-label="Support Tickets">
+        {loadError ? (
+          <div className={styles['emptyState']} role="alert">
+            <SupportIcon size={32} aria-hidden="true" />
+            <p>
+              {tickets.length
+                ? `Showing previously loaded tickets. Refresh failed: ${loadError}`
+                : `Support tickets could not be loaded: ${loadError}`}
+            </p>
+            <button type="button" className={styles['primaryButton']} onClick={retryLoad}>
+              Try again
+            </button>
+          </div>
+        ) : null}
         <div className={styles['toolbar']}>
           <div
             className={styles['filterTabs']}
@@ -344,7 +370,7 @@ export function PartnerSupportScreen({ initialTickets }: PartnerSupportScreenPro
             <div className={styles['emptyState']}>
               <p>Loading support desk...</p>
             </div>
-          ) : filteredTickets.length === 0 ? (
+          ) : loadError && tickets.length === 0 ? null : filteredTickets.length === 0 ? (
             <div className={styles['emptyState']}>
               <SupportIcon size={32} aria-hidden="true" />
               <p>

@@ -98,7 +98,7 @@ export function PartnerCard({
             </Button>
           ) : null}
           <Link className={styles['profileLink']} href={href}>
-            View profile <span aria-hidden="true">\u2197</span>
+            View profile <span aria-hidden="true">↗</span>
           </Link>
         </div>
       </div>

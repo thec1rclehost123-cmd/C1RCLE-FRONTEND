@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   changePassword,
   fetchSession,
+  hydrateSession,
   login,
   logout,
   refresh,
@@ -33,6 +34,12 @@ function jsonResponse(body: unknown, status = 200): Response {
     status,
     headers: { 'content-type': 'application/json' },
   });
+}
+
+function requestUrl(input: Parameters<typeof fetch>[0] | undefined): string {
+  if (typeof input === 'string') return input;
+  if (input instanceof URL) return input.toString();
+  return input?.url ?? '';
 }
 
 function stubFetch(): ReturnType<typeof vi.fn<typeof fetch>> {
@@ -112,6 +119,16 @@ describe('auth-client', () => {
 
       expect(useSessionStore.getState().status).toBe('authenticated');
     });
+
+    it('preserves the Guest role returned by the backend in the frontend session', async () => {
+      stubFetch().mockResolvedValue(
+        jsonResponse(authBody({ user: { ...user, role: 'guest' } })),
+      );
+
+      await login({ email: 'guest@example.test', password: 'temporary-password' });
+
+      expect(useSessionStore.getState().session?.user.role).toBe('guest');
+    });
   });
 
   describe('refresh stampede guard', () => {
@@ -171,6 +188,34 @@ describe('auth-client', () => {
       await fetchSession();
 
       expect(useSessionStore.getState().status).toBe('anonymous');
+    });
+  });
+
+  describe('hydrateSession', () => {
+    it('establishes the app-scoped CSRF token before requesting a refresh token', async () => {
+      const fetchMock = stubFetch();
+      fetchMock
+        .mockResolvedValueOnce(jsonResponse({ user, expiresAt: 1_900_000_000_000 }))
+        .mockResolvedValueOnce(jsonResponse(authBody()));
+
+      await expect(hydrateSession()).resolves.toBe(true);
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      const firstUrl = requestUrl(fetchMock.mock.calls[0]?.[0]);
+      const secondUrl = requestUrl(fetchMock.mock.calls[1]?.[0]);
+      expect(firstUrl).toContain('/api/auth/session');
+      expect(secondUrl).toContain('/api/auth/refresh');
+      expect(useSessionStore.getState().accessToken).toBe('tok_abc');
+    });
+
+    it('does not attempt a CSRF-protected refresh without a valid session', async () => {
+      const fetchMock = stubFetch();
+      fetchMock.mockResolvedValue(jsonResponse({ code: 'unauthorized', message: 'x' }, 401));
+
+      await expect(hydrateSession()).resolves.toBe(false);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(requestUrl(fetchMock.mock.calls[0]?.[0])).toContain('/api/auth/session');
     });
   });
 

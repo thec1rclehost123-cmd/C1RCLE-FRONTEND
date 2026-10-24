@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { EmptyState, ErrorState, LoadingState } from './states.js';
+import { EmptyState, ErrorState, LoadingState, UnavailableState } from './states.js';
 
 describe('LoadingState', () => {
   it('announces the default label', () => {
@@ -58,5 +58,13 @@ describe('ErrorState', () => {
   it('omits retry and request id when not provided', () => {
     render(<ErrorState description="boom" />);
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+});
+
+describe('UnavailableState', () => {
+  it('does not present an unavailable read as an empty collection', () => {
+    render(<UnavailableState description="The wallet could not be loaded." />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Temporarily unavailable');
+    expect(screen.queryByText(/nothing here/i)).not.toBeInTheDocument();
   });
 });

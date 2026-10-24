@@ -12,7 +12,7 @@ export default function EventNotFound() {
   return (
     <EmptyState
       title="Event unavailable"
-      description={`This event does not exist in the current ${studio === 'host' ? 'Host' : 'Venue'} workspace fixture. Return to Events to choose an available event.`}
+      description={`This event does not exist or is unavailable in the current ${studio === 'host' ? 'Host' : 'Venue'} workspace. Return to Events to choose an accessible event.`}
       action={<Link href={eventsHref}>Back to Events</Link>}
     />
   );

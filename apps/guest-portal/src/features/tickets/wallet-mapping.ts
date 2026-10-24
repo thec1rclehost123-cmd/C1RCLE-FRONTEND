@@ -1,5 +1,5 @@
 import type { TicketStatus, TicketWalletData, UserTicketItem } from './types/tickets.types';
-import type { EntitlementDto, EventDto, VenueDto } from '@c1rcle/contracts';
+import type { EntitlementDto, EventDto, OrderDto, VenueDto } from '@c1rcle/contracts';
 
 export interface WalletEventDetails {
   event: EventDto;
@@ -22,8 +22,17 @@ const timeFormatter = new Intl.DateTimeFormat('en-US', {
 });
 
 const FALLBACK_POSTER = '/c1rcle-logo.webp';
+const EVENT_LOOKUP_CONCURRENCY = 4;
 
-function toTicketStatus(items: readonly EntitlementDto[]): TicketStatus {
+function toTicketStatus(
+  items: readonly EntitlementDto[],
+  order: OrderDto | undefined,
+): TicketStatus {
+  if (order?.status === 'refund_requested') return 'refund_pending';
+  if (order?.eventCancellation) return 'cancelled';
+  if (items.every((item) => item.status === 'void') && (order?.refundedPaise ?? 0) > 0) {
+    return 'refunded';
+  }
   if (items.every((item) => item.status === 'void')) return 'cancelled';
   if (items.every((item) => item.status === 'redeemed')) return 'used';
   return 'active';
@@ -45,10 +54,12 @@ export async function toTicketWalletData(
   entitlements: readonly EntitlementDto[],
   resolve: (eventId: string) => Promise<WalletEventDetails | null>,
   now: Date = new Date(),
+  orders: readonly OrderDto[] = [],
 ): Promise<TicketWalletData> {
+  const ordersById = new Map(orders.map((order) => [order.id, order]));
   const groups = new Map<string, EntitlementDto[]>();
   for (const entitlement of entitlements) {
-    const key = `${entitlement.orderId}::${entitlement.tierId}`;
+    const key = `${entitlement.orderId}::${entitlement.tierId}::${entitlement.status}`;
     const group = groups.get(key);
     if (group) {
       group.push(entitlement);
@@ -69,14 +80,56 @@ export async function toTicketWalletData(
   const upcomingTickets: UserTicketItem[] = [];
   const pastTickets: UserTicketItem[] = [];
 
-  for (const group of groups.values()) {
-    const first = group[0];
-    if (!first) continue;
-    const details = await detailsOf(first.eventId);
-    if (!details) continue;
+  const resolvedGroups: {
+    group: EntitlementDto[];
+    first: EntitlementDto;
+    details: WalletEventDetails | null;
+    order: OrderDto | undefined;
+  }[] = [];
+  const groupList = [...groups.values()];
+  for (let start = 0; start < groupList.length; start += EVENT_LOOKUP_CONCURRENCY) {
+    const batch = groupList.slice(start, start + EVENT_LOOKUP_CONCURRENCY);
+    const resolvedBatch = await Promise.all(
+      batch.map(async (group) => {
+        const first = group[0];
+        if (!first) return null;
+        return {
+          group,
+          first,
+          details: await detailsOf(first.eventId),
+          order: ordersById.get(first.orderId),
+        };
+      }),
+    );
+    resolvedGroups.push(
+      ...resolvedBatch.filter((entry): entry is NonNullable<typeof entry> => entry !== null),
+    );
+  }
+
+  for (const { group, first, details, order } of resolvedGroups) {
+    if (!details) {
+      const status = toTicketStatus(group, order);
+      pastTickets.push({
+        id: first.id,
+        orderId: first.orderId,
+        bookingReference: order?.bookingReference ?? null,
+        holderName: first.holderName,
+        eventTitle: order?.eventCancellation?.eventTitle ?? 'Event details unavailable',
+        date: '',
+        time: '',
+        venueName: 'Venue unavailable',
+        city: '',
+        posterUrl: FALLBACK_POSTER,
+        tierName: first.tierName,
+        isVip: /vip/i.test(first.tierName),
+        ticketCount: group.length,
+        status: order?.eventCancellation ? status : 'unavailable',
+      });
+      continue;
+    }
 
     const { event, venue } = details;
-    const status = toTicketStatus(group);
+    const status = toTicketStatus(group, order);
     const endsAt = event.endAt ?? event.startAt;
     const ended = Number.isNaN(Date.parse(endsAt)) ? false : Date.parse(endsAt) <= now.getTime();
     const startsAt = new Date(event.startAt);
@@ -84,6 +137,8 @@ export async function toTicketWalletData(
     const ticket: UserTicketItem = {
       id: first.id,
       orderId: first.orderId,
+      bookingReference: order?.bookingReference ?? null,
+      holderName: first.holderName,
       eventTitle: event.title,
       date: Number.isNaN(startsAt.getTime()) ? event.title : dateFormatter.format(startsAt),
       time: Number.isNaN(startsAt.getTime()) ? '' : `${timeFormatter.format(startsAt)} IST`,
@@ -93,7 +148,6 @@ export async function toTicketWalletData(
       tierName: first.tierName,
       isVip: /vip/i.test(first.tierName),
       ticketCount: group.length,
-      qrPayload: first.id,
       status,
     };
 

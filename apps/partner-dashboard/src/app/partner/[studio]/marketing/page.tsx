@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
 
-import { PartnerMarketingScreen } from '@/components/partner-v3/marketing/PartnerMarketingScreen';
-import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
+import { renderStudioSkeleton } from '../route-helpers';
 
 export default async function StudioMarketingPage({
   params,
@@ -10,9 +9,9 @@ export default async function StudioMarketingPage({
 }) {
   const { studio } = await params;
   if (studio !== 'venue' && studio !== 'host') notFound();
-  const data =
-    studio === 'venue'
-      ? await fixturePartnerDataSource.getVenueMarketing()
-      : await fixturePartnerDataSource.getHostMarketing();
-  return <PartnerMarketingScreen data={data} />;
+  return renderStudioSkeleton(
+    Promise.resolve({ studio }),
+    'Marketing',
+    'Marketing delivery and campaign analytics are not connected to an authorized tenant-scoped service yet.',
+  );
 }

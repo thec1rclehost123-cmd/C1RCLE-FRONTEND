@@ -12,10 +12,12 @@ export function EventCard({
   event,
   href,
   editHref,
+  canEdit = true,
 }: {
   readonly event: PartnerEventRecord;
   readonly href: string;
   readonly editHref: string;
+  readonly canEdit?: boolean;
 }) {
   return (
     <article className={styles['eventCard']}>
@@ -25,9 +27,11 @@ export function EventCard({
         <div className={styles['cardStatus']}>
           <EventStatusBadge status={event.status} />
         </div>
-        <Link className={styles['editEvent']} href={editHref}>
-          Edit event
-        </Link>
+        {canEdit ? (
+          <Link className={styles['editEvent']} href={editHref}>
+            Edit event
+          </Link>
+        ) : null}
         <Link className={styles['namePlate']} href={href}>
           <strong>{event.name}</strong>
           <span>{event.venue}</span>
@@ -40,10 +44,12 @@ export function EventCard({
         </span>
         <span className={styles['eventMeta']}>
           <strong>{event.timeLabel.toLowerCase()}</strong>
-          <span>
-            <i>{event.hostInitials}</i>
-            {event.host}
-          </span>
+          {event.host !== 'Host details unavailable' ? (
+            <span>
+              <i>{event.hostInitials}</i>
+              {event.host}
+            </span>
+          ) : null}
         </span>
         <span className={styles['priceBlock']}>
           <small>From</small>

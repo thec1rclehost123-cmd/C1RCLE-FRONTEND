@@ -8,7 +8,7 @@ export default function CheckoutNotFound() {
           Checkout unavailable
         </p>
         <h1 className="mt-4 text-4xl font-black uppercase tracking-tight">
-          That event preview could not be found.
+          This event could not be found or is no longer available.
         </h1>
         <Link
           href="/explore"

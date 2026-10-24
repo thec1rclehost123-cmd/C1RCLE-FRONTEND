@@ -26,7 +26,6 @@ vi.mock('@c1rcle/icons', () => {
     SettingsIcon: Icon,
     SortableIcon: Icon,
     TrendUpIcon: Icon,
-    WithdrawIcon: Icon,
   };
 });
 
@@ -45,7 +44,7 @@ describe('HostFinanceScreen', () => {
       'href',
       '/partner/host/finance?view=bank',
     );
-    expect(screen.getByRole('button', { name: /Withdraw/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Request payout' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Request payout/ })).toBeDisabled();
   });
 

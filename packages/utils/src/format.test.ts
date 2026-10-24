@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { cn } from './cn.js';
-import { formatCurrency, formatDate, truncate } from './format.js';
+import {
+  formatBookingReference,
+  formatCurrency,
+  formatDate,
+  formatFreshness,
+  truncate,
+} from './format.js';
 import { err, isErr, isOk, ok, unwrapOr } from './result.js';
 
 describe('cn', () => {
@@ -35,6 +41,22 @@ describe('truncate', () => {
 
   it('cuts on a word boundary', () => {
     expect(truncate('the quick brown fox', 12)).toBe('the quick…');
+  });
+});
+
+describe('guest-safe references', () => {
+  it('formats only the public booking-reference shape', () => {
+    expect(formatBookingReference('c1-abcde-12345-fffff-00000')).toBe('C1-ABCDE-12345-FFFFF-00000');
+    expect(formatBookingReference('order_internal_123')).toBe('Reference unavailable');
+  });
+});
+
+describe('freshness labels', () => {
+  it('uses an explicit locale and timezone', () => {
+    expect(formatFreshness('2026-10-16T12:00:00.000Z', 'en-IN', 'UTC')).toMatch(
+      /^Updated 16 Oct 2026, 12:00 pm$/,
+    );
+    expect(formatFreshness('invalid', 'en-IN')).toBe('Freshness unavailable');
   });
 });
 

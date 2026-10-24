@@ -18,6 +18,7 @@ const testData: EventEditorData = {
   genres: [],
   extraGenres: [],
   defaultDraft: {
+    description: '',
     venueId: '',
     date: '',
     dateLabel: '',
@@ -40,6 +41,7 @@ const testData: EventEditorData = {
 function renderPromoterSelector(initialDraft?: Partial<EventEditorDraft>) {
   let draft: EventEditorDraft = {
     name: 'Party Night',
+    description: '',
     venueId: 'v1',
     date: '2026-10-01',
     dateLabel: 'Thu, Oct 1',

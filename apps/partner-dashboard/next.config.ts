@@ -31,7 +31,84 @@ const nextConfig: NextConfig = {
   /* A type error must never reach a deploy. */
   typescript: { ignoreBuildErrors: false },
 
-  images: { formats: ['image/avif', 'image/webp'] },
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'c1-rcle-frontend-partner-dashboard.vercel.app',
+        pathname: '/partner-v3/**',
+      },
+    ],
+  },
+
+  /**
+   * The pre-M3 studio paths remain bookmarked externally. Route every legacy
+   * path through the authenticated, tenant-aware workspace so it cannot render
+   * an older fixture-backed screen beside the connected implementation.
+   */
+  redirects() {
+    return Promise.resolve([
+      // Deep links that moved to a query-driven connected screen need an
+      // explicit target before the broad legacy-studio path redirects below.
+      {
+        source: '/venue/finance/orders',
+        destination: '/partner/venue/finance?view=orders',
+        permanent: false,
+      },
+      {
+        source: '/host/finance/orders',
+        destination: '/partner/host/finance?view=orders',
+        permanent: false,
+      },
+      {
+        source: '/promoter/finance/orders',
+        destination: '/partner/promoter/finance?view=orders',
+        permanent: false,
+      },
+      {
+        source: '/partner/venue/finance/orders',
+        destination: '/partner/venue/finance?view=orders',
+        permanent: false,
+      },
+      {
+        source: '/partner/host/finance/orders',
+        destination: '/partner/host/finance?view=orders',
+        permanent: false,
+      },
+      {
+        source: '/partner/promoter/finance/orders',
+        destination: '/partner/promoter/finance?view=orders',
+        permanent: false,
+      },
+      {
+        source: '/venue/events/analytics',
+        destination: '/partner/venue/analytics',
+        permanent: false,
+      },
+      {
+        source: '/host/events/analytics',
+        destination: '/partner/host/analytics',
+        permanent: false,
+      },
+      {
+        source: '/partner/venue/events/analytics',
+        destination: '/partner/venue/analytics',
+        permanent: false,
+      },
+      {
+        source: '/partner/host/events/analytics',
+        destination: '/partner/host/analytics',
+        permanent: false,
+      },
+      { source: '/venue', destination: '/partner/venue', permanent: false },
+      { source: '/venue/:path*', destination: '/partner/venue/:path*', permanent: false },
+      { source: '/host', destination: '/partner/host', permanent: false },
+      { source: '/host/:path*', destination: '/partner/host/:path*', permanent: false },
+      { source: '/promoter', destination: '/partner/promoter', permanent: false },
+      { source: '/promoter/:path*', destination: '/partner/promoter/:path*', permanent: false },
+    ]);
+  },
 
   headers() {
     return Promise.resolve([

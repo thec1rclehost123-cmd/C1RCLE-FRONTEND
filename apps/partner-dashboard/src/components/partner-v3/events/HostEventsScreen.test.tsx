@@ -32,7 +32,7 @@ describe('HostEventsScreen', () => {
 
   it('keeps Host routing, lavender actions, and the Host HTML toolbar shape', async () => {
     const data = await fixturePartnerDataSource.getHostEvents();
-    render(<HostEventsScreen data={data} />);
+    render(<HostEventsScreen data={data} initialParty="venue" />);
 
     expect(screen.getByRole('heading', { name: 'Events' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /slot requests/i })).toHaveAttribute(
@@ -52,10 +52,36 @@ describe('HostEventsScreen', () => {
     expect(screen.getByText('Neon Nights: Afrobeats')).toBeInTheDocument();
   });
 
+  it('defaults to Host-owned events and keeps that default out of the URL', async () => {
+    const user = userEvent.setup();
+    const data = await fixturePartnerDataSource.getHostEvents();
+    const hostEvent = { ...data.events[0]!, id: 'host-owned-event', party: 'hosts' as const };
+    render(<HostEventsScreen data={{ ...data, events: [hostEvent, data.events[0]!] }} />);
+
+    expect(screen.getByText(hostEvent.name)).toBeInTheDocument();
+    expect(screen.getAllByText(hostEvent.name)).toHaveLength(1);
+    await user.type(screen.getByPlaceholderText('Search events'), 'Neon');
+    expect(replace).toHaveBeenLastCalledWith('/partner/host/events?search=Neon', {
+      scroll: false,
+    });
+  });
+
+  it('uses Host-specific empty-state language', async () => {
+    const data = await fixturePartnerDataSource.getHostEvents();
+    render(<HostEventsScreen data={{ ...data, events: [] }} />);
+
+    expect(
+      screen.getByText('Events created or assigned to this host organization will appear here.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('Events created or assigned to this venue will appear here.'),
+    ).toBeNull();
+  });
+
   it('keeps Host filtering URL-backed and supports list view from URL state', async () => {
     const user = userEvent.setup();
     const data = await fixturePartnerDataSource.getHostEvents();
-    render(<HostEventsScreen data={data} initialView="list" />);
+    render(<HostEventsScreen data={data} initialParty="venue" initialView="list" />);
 
     expect(screen.getByRole('region', { name: 'Host events list' })).toBeInTheDocument();
     const search = screen.getByPlaceholderText('Search events');
@@ -65,7 +91,7 @@ describe('HostEventsScreen', () => {
     expect(screen.getByText('Neon Nights: Afrobeats')).toBeInTheDocument();
     expect(screen.queryByText('Sunset Sessions Vol. 4')).not.toBeInTheDocument();
     expect(replace).toHaveBeenLastCalledWith(
-      '/partner/host/events?search=Neon&status=live&view=list',
+      '/partner/host/events?search=Neon&status=live&party=venue&view=list',
       { scroll: false },
     );
   });

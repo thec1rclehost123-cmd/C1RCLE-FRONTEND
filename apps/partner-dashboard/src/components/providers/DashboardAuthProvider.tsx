@@ -5,10 +5,12 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 
 import { getAccessToken, login, logout, signup, useSession } from '@c1rcle/auth';
 
+import { getCachedPartnerAccess } from '@/lib/access/org-access-cache';
+import { isServerAuthorizedPartnerEventRoute } from '@/lib/access/server-authorized-event-route';
 import { useOrgAccess } from '@/lib/access/use-org-access';
 import { getMyOnboardingRequest } from '@/lib/onboarding/onboarding-repository';
 import { getActiveOrgId, setActiveOrg } from '@/lib/org/active-org';
-import { getOrganizations, getPartnerAccess } from '@/lib/org/org-repository';
+import { getOrganizations } from '@/lib/org/org-repository';
 
 import type { DashboardProfile, PartnerMembership, PartnerType, StaffRole } from '@/lib/rbac/types';
 import type { OnboardingRequestDto } from '@c1rcle/contracts';
@@ -138,7 +140,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
         const resolved = await Promise.all(
           orgs.map(async (org): Promise<PartnerMembership | null> => {
             try {
-              const access = await getPartnerAccess(org.id);
+              const access = await getCachedPartnerAccess(org.id, currentUser.id);
               return {
                 uid: currentUser.id,
                 partnerId: org.id,
@@ -194,7 +196,14 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   // alone can never flip this true for a fully provisioned user — they'd be
   // bounced back to `/onboard` forever. A resolved membership list is the
   // reliable signal that onboarding already succeeded.
-  const isApproved = onboardingRequest?.status === 'approved' || memberships.length > 0;
+  // A successful, server-authorized read for the selected organization is
+  // sufficient proof for this workspace. Do not make a protected route wait
+  // for the unrelated account switcher and onboarding reads to finish.
+  const hasActiveOrganizationAccess = Boolean(activeOrgId && orgAccess.partnerType);
+  const isApproved =
+    onboardingRequest?.status === 'approved' ||
+    memberships.length > 0 ||
+    hasActiveOrganizationAccess;
   // No `isBanned` concept exists in V2 yet — see the file-level comment.
   const isBanned = false;
   const onboardingStatus = onboardingRequest?.status ?? null;
@@ -242,7 +251,9 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   );
 
   const loading =
-    session.isLoading || (session.isAuthenticated && (dataLoading || orgAccess.isLoading));
+    session.isLoading ||
+    (session.isAuthenticated &&
+      (orgAccess.isLoading || (dataLoading && !hasActiveOrganizationAccess)));
 
   const authContextValue = useMemo<AuthContextValue>(() => {
     const activeMembership: PartnerMembership | null =
@@ -320,7 +331,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     ? pathname.startsWith('/onboard') || pathname.startsWith('/login')
     : false;
 
-  if (loading && !isBypassPath) {
+  if (loading && !isBypassPath && !isServerAuthorizedPartnerEventRoute(pathname)) {
     return (
       <div className="partner-v3-auth-loading" role="status" aria-live="polite">
         <div className="partner-v3-spinner" aria-hidden="true" />

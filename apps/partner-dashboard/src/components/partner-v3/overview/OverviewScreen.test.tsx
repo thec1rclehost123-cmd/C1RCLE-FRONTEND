@@ -42,7 +42,8 @@ describe('OverviewScreen', () => {
     expect(
       screen.getByRole('heading', { name: 'Neon Nights: Afrobeats Edition' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Recent orders' })).toBeInTheDocument();
+    expect(screen.getByText('No orders have been recorded yet.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'July 2026' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Upcoming events' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'My network' })).toBeInTheDocument();
@@ -55,6 +56,88 @@ describe('OverviewScreen', () => {
       'href',
       '/partner/venue/events/create',
     );
+  });
+
+  it('limits the My network preview to four entries and links to the full list', async () => {
+    const fixture = await fixturePartnerDataSource.getVenueOverview();
+    const firstMember = fixture.network[0];
+    if (!firstMember) throw new Error('Expected overview network fixture');
+    render(
+      <OverviewScreen
+        data={{
+          ...fixture,
+          network: [
+            ...fixture.network,
+            { ...firstMember, id: 'network-preview-fifth', name: 'Fifth network partner' },
+            { ...firstMember, id: 'network-preview-sixth', name: 'Sixth network partner' },
+          ],
+        }}
+        links={venueLinks}
+      />,
+    );
+
+    expect(screen.getByText('Skyline Rooftop')).toBeInTheDocument();
+    expect(screen.getByText('Arjun (Pulse)')).toBeInTheDocument();
+    expect(screen.getByText('The Docks')).toBeInTheDocument();
+    expect(screen.getByText('Maya (Staff)')).toBeInTheDocument();
+    expect(screen.queryByText('Fifth network partner')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sixth network partner')).not.toBeInTheDocument();
+    expect(
+      screen
+        .getAllByRole('link', { name: 'See all' })
+        .some((link) => link.getAttribute('href') === venueLinks.partners),
+    ).toBe(true);
+  });
+
+  it('routes the host guest-list action through the authenticated Host workspace', async () => {
+    const data = await fixturePartnerDataSource.getVenueOverview();
+    render(<OverviewScreen data={data} links={venueLinks} studio="host" />);
+
+    expect(screen.getByRole('link', { name: /view guest list/i })).toHaveAttribute(
+      'href',
+      `/partner/host/events/${encodeURIComponent(data.nextEvent.id)}/guests`,
+    );
+  });
+
+  it('renders authoritative order rows without exposing buyer contact data', async () => {
+    const fixture = await fixturePartnerDataSource.getVenueOverview();
+    render(
+      <OverviewScreen
+        data={{
+          ...fixture,
+          recentOrders: [
+            {
+              id: 'order-1',
+              eventName: 'M3 paid test event',
+              ticketCount: 2,
+              amountLabel: '₹217.70',
+              statusLabel: 'Paid',
+              placedAtLabel: '26 Oct 2026, 8:00 pm',
+            },
+          ],
+        }}
+        links={venueLinks}
+      />,
+    );
+
+    expect(screen.getByText('M3 paid test event')).toBeInTheDocument();
+    expect(screen.getByText('2 tickets · Paid · 26 Oct 2026, 8:00 pm IST')).toBeInTheDocument();
+    expect(screen.getByText('₹217.70')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Guest totals can include platform fees and GST; they are not Partner payable/,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('does not present a permission denial as an empty order list', async () => {
+    const fixture = await fixturePartnerDataSource.getVenueOverview();
+    render(<OverviewScreen data={{ ...fixture, recentOrders: null }} links={venueLinks} />);
+
+    expect(
+      screen.getByText('Order details are not available to this workspace role.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('No orders have been recorded yet.')).not.toBeInTheDocument();
   });
 
   it('switches the local performance presentation without a mutation', async () => {

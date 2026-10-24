@@ -27,6 +27,7 @@ export default async function StudioCalendarPage({
         {...(month ? { initialMonth: month } : {})}
         {...(date ? { initialDate: date } : {})}
         initialDialog={getValue(query['dialog']) === 'block'}
+        initialAvailabilityDialog={getValue(query['dialog']) === 'availability'}
       />
     );
   }

@@ -23,8 +23,10 @@ export interface PartnerEventsScreenConfig {
   readonly accent: 'orange' | 'lavender';
   readonly analyticsHref: string;
   readonly createEventHref: string;
+  readonly defaultParty: PartnerEventParty;
   readonly eventsBaseHref: string;
   readonly eventSectionLabel: string;
+  readonly emptyDescription?: string;
   readonly partyFilterLabel: string;
   readonly showViewToggle: boolean;
   readonly slotRequestsHref: string;
@@ -49,7 +51,7 @@ export function PartnerEventsScreen({
   data,
   initialSearch = '',
   initialStatus = 'all',
-  initialParty = 'venue',
+  initialParty,
   initialView = 'grid',
 }: {
   readonly config: PartnerEventsScreenConfig;
@@ -63,7 +65,7 @@ export function PartnerEventsScreen({
   const pathname = usePathname();
   const [query, setQuery] = useState(initialSearch);
   const [status, setStatus] = useState<PartnerEventStatusFilter>(initialStatus);
-  const [party, setParty] = useState<PartnerEventParty>(initialParty);
+  const [party, setParty] = useState<PartnerEventParty>(initialParty ?? config.defaultParty);
   const [view, setView] = useState<PartnerEventView>(initialView);
 
   const visibleEvents = useMemo(() => {
@@ -91,7 +93,7 @@ export function PartnerEventsScreen({
     const nextView = next.view ?? view;
     if (nextQuery.trim()) params.set('search', nextQuery.trim());
     if (nextStatus !== 'all') params.set('status', nextStatus.toLowerCase());
-    if (nextParty !== 'venue') params.set('party', nextParty);
+    if (nextParty !== config.defaultParty) params.set('party', nextParty);
     if (nextView !== 'grid') params.set('view', nextView);
     const search = params.toString();
     router.replace(search ? `${pathname}?${search}` : pathname, { scroll: false });
@@ -125,7 +127,7 @@ export function PartnerEventsScreen({
           <h1>Events</h1>
           <div className={styles['pageHeaderActions']}>
             <Link className={styles['requestCount']} href={config.slotRequestsHref}>
-              <strong>{data.pendingRequestCount}</strong>
+              <strong>{data.pendingRequestCount ?? '—'}</strong>
               <span>Requests</span>
             </Link>
             <Link className={styles['headerAction']} href={config.slotRequestsHref}>
@@ -171,6 +173,7 @@ export function PartnerEventsScreen({
 
         {visibleEvents.length === 0 ? (
           <EventEmptyState
+            description={config.emptyDescription}
             filtered={Boolean(query.trim()) || status !== 'all' || party !== 'venue'}
           />
         ) : view === 'list' ? (
@@ -191,6 +194,7 @@ export function PartnerEventsScreen({
                 event={event}
                 href={`${config.eventsBaseHref}/${event.id}`}
                 editHref={config.createEventHref}
+                canEdit={data.dataStatus === 'fixture'}
               />
             ))}
           </section>
@@ -205,6 +209,7 @@ export function PartnerEventsScreen({
                 event={event}
                 href={`${config.eventsBaseHref}/${event.id}`}
                 editHref={config.createEventHref}
+                canEdit={data.dataStatus === 'fixture'}
               />
             ))}
           </section>
@@ -213,6 +218,24 @@ export function PartnerEventsScreen({
         <div className={styles['srOnly']} aria-live="polite">
           {visibleEvents.length} events shown. {liveCount} live, {draftCount} drafts.
         </div>
+        {data.dataStatus === 'api' &&
+        data.total !== undefined &&
+        data.total > data.events.length ? (
+          <nav aria-label="Event list pagination" className={styles['pagination']}>
+            <span>
+              Showing {data.events.length} of {data.total} events
+            </span>
+            {data.nextCursor ? (
+              <Link
+                href={`${pathname}?${new URLSearchParams({ cursor: data.nextCursor }).toString()}`}
+              >
+                Next page
+              </Link>
+            ) : (
+              <span>End of list</span>
+            )}
+          </nav>
+        ) : null}
       </div>
     </PageContainer>
   );

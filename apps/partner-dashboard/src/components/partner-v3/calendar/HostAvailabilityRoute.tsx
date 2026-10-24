@@ -1,8 +1,10 @@
 'use client';
 
 import { EmptyState, ErrorState } from '@/components/partner-v3/States';
+import { requestHostAvailabilitySlot } from '@/lib/calendar/host-availability-repository';
 import { useHostAvailability } from '@/lib/calendar/use-host-availability';
 import { currentMonthKey } from '@/lib/calendar/venue-calendar-repository';
+import { useRef } from 'react';
 
 import { HostAvailabilityScreen } from './HostAvailabilityScreen';
 
@@ -19,6 +21,7 @@ export function HostAvailabilityRoute({
   readonly initialVenue?: string;
   readonly initialSlot?: string;
 }) {
+  const requestKeys = useRef(new Map<string, string>());
   const state = useHostAvailability({
     organizationId,
     anchorMonth: initialMonth ?? currentMonthKey(),
@@ -34,7 +37,13 @@ export function HostAvailabilityRoute({
       />
     );
   }
-  if (state.loading) return null;
+  if (state.loading) {
+    return (
+      <section role="status" aria-live="polite" aria-busy="true">
+        Loading host availability…
+      </section>
+    );
+  }
   if (state.error) {
     return (
       <ErrorState
@@ -60,6 +69,21 @@ export function HostAvailabilityRoute({
       {...(initialDate ? { initialDate } : {})}
       {...(initialVenue ? { initialVenue } : {})}
       {...(initialSlot ? { initialSlot } : {})}
+      onRequestSlot={async (venueId, slotId) => {
+        let idempotencyKey = requestKeys.current.get(slotId);
+        if (!idempotencyKey) {
+          idempotencyKey = crypto.randomUUID();
+          requestKeys.current.set(slotId, idempotencyKey);
+        }
+        await requestHostAvailabilitySlot({
+          organizationId,
+          venueId,
+          slotId,
+          idempotencyKey,
+        });
+        requestKeys.current.delete(slotId);
+        state.retry();
+      }}
     />
   );
 }

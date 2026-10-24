@@ -15,7 +15,7 @@
 @keyframes explore-hero-background-reveal {
   from {
     opacity: 0;
-    transform: scale(1.035);
+    transform: scale(1.025);
   }
 
   to {
@@ -24,15 +24,13 @@
   }
 }
 
-@keyframes explore-hero-poster-reveal {
+@keyframes explore-hero-ambient-reveal {
   from {
     opacity: 0;
-    transform: translateX(28px) scale(0.965);
   }
 
   to {
-    opacity: 1;
-    transform: translateX(0) scale(1);
+    opacity: 0.9;
   }
 }
 
@@ -132,7 +130,11 @@
 }
 
 .font-heading {
-  font-family: 'Satoshi', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+body:has(#mobile-navigation) .mobile-bottom-nav {
+  display: none;
 }
 
 .nightlife-grain {
@@ -157,10 +159,28 @@
 
 .explore-hero-background-reveal {
   animation: explore-hero-background-reveal 850ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 70%, transparent);
 }
 
-.explore-hero-poster-reveal {
-  animation: explore-hero-poster-reveal 760ms cubic-bezier(0.22, 1, 0.36, 1) 180ms both;
+.explore-hero-fallback-artwork {
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 68%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 68%, transparent 100%);
+}
+
+.explore-hero-overlay-fade {
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 64%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 64%, transparent 100%);
+}
+
+@media (max-width: 639px) {
+  .explore-hero-overlay-fade {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}
+
+.explore-hero-ambient {
+  animation: explore-hero-ambient-reveal 600ms ease-out both;
 }
 
 .explore-hero-copy-reveal {
@@ -187,6 +207,48 @@
   animation: checkout-number-roll-up 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.guest-search-glow {
+  background:
+    radial-gradient(ellipse 74% 50% at 50% 10%, rgb(55 90 62 / 35%), transparent 78%),
+    linear-gradient(180deg, #090a09 0%, #050605 72%);
+}
+
+.event-card-details {
+  opacity: 0;
+  transform: translateY(0.75rem);
+}
+
+.group:focus-visible > .event-card-details {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.group:focus-visible > .event-card-top-pills {
+  opacity: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .group:hover > .event-card-details {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .group:hover > .event-card-top-pills {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .event-card-details {
+    transition: none;
+  }
+
+  .explore-hero-ambient {
+    animation: none;
+    opacity: 0.9;
+  }
+}
+
 /* ═══════════════════════════════════════════
    Photo String Gallery — Disposable Camera
    ═══════════════════════════════════════════ */
@@ -194,7 +256,7 @@
 .photo-string-section {
   position: relative;
   overflow: hidden;
-  padding: 5rem 0 6rem;
+  padding: 3rem 0 6rem;
 }
 
 .photo-string-glow {
@@ -340,6 +402,25 @@
   100% {
     transform: translateX(-50%);
   }
+}
+
+@media (min-width: 640px) and (prefers-reduced-motion: no-preference) {
+  .featured-events-track--drift {
+    animation: marquee-left 90s linear infinite;
+  }
+
+  .featured-events-rail:hover .featured-events-track--drift,
+  .featured-events-rail:focus-within .featured-events-track--drift {
+    animation-play-state: paused;
+  }
+}
+
+.featured-events-rail {
+  scrollbar-width: none;
+}
+
+.featured-events-rail::-webkit-scrollbar {
+  display: none;
 }
 
 /* ── Photo on string ── */
@@ -498,7 +579,7 @@
 /* ── Responsive ── */
 @media (max-width: 768px) {
   .photo-string-section {
-    padding: 3rem 0 4rem;
+    padding: 2rem 0 4rem;
   }
 
   .photo-string-rows {
@@ -540,7 +621,7 @@
   }
 
   .explore-hero-background-reveal,
-  .explore-hero-poster-reveal,
+  .explore-hero-ambient,
   .explore-hero-copy-reveal,
   .animate-home-scale-in,
   .animate-home-fade-in,
@@ -578,5 +659,25 @@
     opacity: 1;
     transform: none;
     transition: none;
+  }
+}
+@layer utilities {
+  .story-screen-slot-0 {
+    transform: translate3d(0%, 0, 0);
+  }
+  .story-screen-slot-1 {
+    transform: translate3d(100%, 0, 0);
+  }
+  .story-screen-slot-2 {
+    transform: translate3d(200%, 0, 0);
+  }
+  .story-screen-slot-3 {
+    transform: translate3d(300%, 0, 0);
+  }
+  .story-screen-slot-4 {
+    transform: translate3d(400%, 0, 0);
+  }
+  .story-screen-slot-5 {
+    transform: translate3d(500%, 0, 0);
   }
 }

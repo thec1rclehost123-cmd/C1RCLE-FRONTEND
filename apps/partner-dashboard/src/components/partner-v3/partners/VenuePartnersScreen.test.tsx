@@ -30,6 +30,19 @@ describe('VenuePartnersScreen', () => {
     );
   });
 
+  it('does not link an empty Discover view back to itself', async () => {
+    const data = await fixturePartnerDataSource.getVenuePartners();
+    render(
+      <VenuePartnersScreen
+        data={{ ...data, hosts: { ...data.hosts, discover: [] } }}
+        subView="discover"
+      />,
+    );
+
+    expect(screen.getByText('No partners are available to discover right now.')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Browse discover' })).not.toBeInTheDocument();
+  });
+
   it('renders requests, staff access, and fixture-safe staff invitation entry', async () => {
     const data = await fixturePartnerDataSource.getVenuePartners();
     const { rerender } = render(

@@ -7,6 +7,7 @@ import type {
   OverviewData,
   OverviewEvent,
   OverviewNetworkMember,
+  OverviewRecentOrder,
   OverviewTrendMetric,
   OverviewTrendRange,
   OverviewTrendSeries,
@@ -17,6 +18,7 @@ import type {
   OrganizationEventCardListResponse,
   OrganizationOverviewDto,
   OrganizationTrendsDto,
+  FinanceOrderDto,
 } from '@c1rcle/contracts';
 
 /**
@@ -100,6 +102,8 @@ export interface OverviewViewModelInput {
   readonly network: readonly NetworkPartner[];
   /** Recent ledger-backed activity. */
   readonly activity: readonly ActivitySource[];
+  /** `null` when the current role is not allowed to read finance orders. */
+  readonly recentOrders: readonly FinanceOrderDto[] | null;
   /**
    * The moment the page is rendering, injected rather than read from the clock.
    * Every label below is derived from it, and a Server Component that called
@@ -112,7 +116,7 @@ export interface OverviewViewModelInput {
 export interface NetworkPartner {
   readonly partnershipId: string;
   readonly counterpartyOrganizationId: string;
-  readonly side: 'host' | 'venue';
+  readonly side: 'host' | 'venue' | 'promoter';
   readonly status: string;
 }
 
@@ -142,6 +146,17 @@ export function toOverviewData(input: OverviewViewModelInput): OverviewData {
     nextEvent: nextEvent ?? placeholderEvent(),
     trends: buildTrends(input),
     recentActivity: buildActivity(input.activity),
+    recentOrders:
+      input.recentOrders === null
+        ? null
+        : input.recentOrders.map((order): OverviewRecentOrder => ({
+            id: order.id,
+            eventName: order.eventName,
+            ticketCount: order.ticketCount,
+            amountLabel: order.grandTotalPaise === 0 ? 'Free' : formatPaise(order.grandTotalPaise),
+            statusLabel: recentOrderStatusLabel(order.status, order.grandTotalPaise),
+            placedAtLabel: formatOrderDate(order.createdAt),
+          })),
     calendar: {
       // The label follows the **calendar's** month, not the render date. The
       // grid can legitimately be showing a different month than today, and a
@@ -154,6 +169,33 @@ export function toOverviewData(input: OverviewViewModelInput): OverviewData {
     upcomingEvents: rest.slice(0, UPCOMING_LIMIT - 1),
     network: buildNetwork(input.network),
   };
+}
+
+function recentOrderStatusLabel(
+  status: FinanceOrderDto['status'],
+  grandTotalPaise: number,
+): string {
+  if (status === 'paid') return grandTotalPaise === 0 ? 'Free RSVP' : 'Paid';
+  const labels: Record<Exclude<FinanceOrderDto['status'], 'paid'>, string> = {
+    pending: 'Pending',
+    awaiting_payment: 'Awaiting payment',
+    expired: 'Expired',
+    cancelled: 'Cancelled',
+    failed: 'Failed',
+    refund_requested: 'Refund requested',
+    refunded: 'Refunded',
+  };
+  return labels[status];
+}
+
+function formatOrderDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Time unavailable';
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
 }
 
 // ─── Events ──────────────────────────────────────────────────────────────────
@@ -354,22 +396,16 @@ function formatAmount(paise: number): string {
 
 // ─── Network ─────────────────────────────────────────────────────────────────
 
-/**
- * The network card lists counterparties from real partnerships.
- *
- * It shows a **shortened organization id**, not a name: the partnership DTO
- * carries ids, and there is no partner-side endpoint that resolves a
- * counterparty organization the viewer is not a member of. Inventing a name
- * here would put a stranger's business name on another partner's dashboard.
- */
+/** The partnership DTO has no counterparty display name; never expose its ID as a label. */
 function buildNetwork(partners: readonly NetworkPartner[]): readonly OverviewNetworkMember[] {
   return partners.map((partner, index) => ({
     id: partner.partnershipId,
-    name: shortId(partner.counterpartyOrganizationId),
-    role: partner.side === 'venue' ? 'Venue' : 'Host',
-    initials: shortId(partner.counterpartyOrganizationId).slice(0, 2).toUpperCase(),
+    name: 'Partner name unavailable',
+    role: partner.side === 'venue' ? 'Venue' : partner.side === 'promoter' ? 'Promoter' : 'Host',
+    initials: partner.side === 'venue' ? 'V' : partner.side === 'promoter' ? 'P' : 'H',
     status: toNetworkStatus(partner.status),
-    statusTone: partner.status === 'active' ? 'success' : 'neutral',
+    statusTone:
+      partner.status === 'active' ? 'success' : partner.status === 'pending' ? 'accent' : 'neutral',
     accent: (['orange', 'violet', 'teal', 'pink'] as const)[index % 4] ?? 'orange',
   }));
 }
@@ -377,11 +413,10 @@ function buildNetwork(partners: readonly NetworkPartner[]): readonly OverviewNet
 function toNetworkStatus(status: string): OverviewNetworkMember['status'] {
   if (status === 'active') return 'Partnered';
   if (status === 'pending') return 'Invite sent';
+  if (status === 'ended' || status === 'revoked') return 'Ended';
+  if (status === 'blocked') return 'Blocked';
+  if (status === 'rejected') return 'Rejected';
   return 'Active';
-}
-
-function shortId(id: string): string {
-  return id.length <= 10 ? id : `${id.slice(0, 8)}…`;
 }
 
 // ─── Date labels (UTC, so server and client agree) ───────────────────────────

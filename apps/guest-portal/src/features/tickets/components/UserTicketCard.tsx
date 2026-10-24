@@ -1,9 +1,7 @@
 'use client';
 
-// FIXTURE_ONLY: Temporary UI development user ticket card.
-
 import Image from 'next/image';
-import React from 'react';
+import { useState } from 'react';
 
 import type { UserTicketItem } from '../types/tickets.types';
 
@@ -14,106 +12,107 @@ export interface UserTicketCardProps {
 }
 
 export function UserTicketCard({ ticket, onSelect, isPast = false }: UserTicketCardProps) {
+  const [posterUnavailable, setPosterUnavailable] = useState(false);
+  const hasPoster = ticket.posterUrl !== '/c1rcle-logo.webp' && !posterUnavailable;
+  const place = [ticket.venueName, ticket.city]
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join(', ');
+
   return (
-    <div className="group relative overflow-visible">
-      {!isPast && (
-        <div className="pointer-events-none absolute inset-x-[10%] -inset-y-5 rounded-full bg-[#FF4400]/12 opacity-70 blur-[70px] transition-opacity duration-500 group-hover:opacity-100" />
-      )}
-
-      <article
-        className={`relative flex min-h-[210px] flex-col items-center gap-6 overflow-hidden rounded-[32px] border p-5 transition-all duration-300 sm:flex-row ${
-          isPast
-            ? 'border-white/5 bg-zinc-950/60 opacity-60 grayscale'
-            : 'border-white/10 bg-[#141416]/82 shadow-[0_28px_75px_-30px_rgba(255,68,0,0.38)] backdrop-blur-2xl hover:-translate-y-1 hover:border-white/20'
-        }`}
+    <article className="group relative min-w-0">
+      <button
+        type="button"
+        aria-label="View ticket details"
+        onClick={() => {
+          onSelect(ticket);
+        }}
+        className="relative flex h-full w-full flex-col overflow-hidden rounded-[1.35rem] bg-[#f2e9dc] text-left text-[#251915] shadow-[0_18px_45px_-22px_rgba(0,0,0,0.85)] outline-none transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-[0_26px_50px_-20px_rgba(0,0,0,0.9)] focus-visible:ring-2 focus-visible:ring-[#ff6842] motion-reduce:transform-none motion-reduce:transition-none"
       >
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,rgba(255,68,0,0.045),transparent_45%)]" />
-
-        {/* Poster Image */}
-        <div className="relative h-48 w-full shrink-0 overflow-hidden rounded-[22px] border border-white/10 bg-zinc-950 shadow-xl sm:h-40 sm:w-36">
-          <Image
-            src={ticket.posterUrl}
-            alt={ticket.eventTitle}
-            fill
-            unoptimized
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
+        <div className="relative flex w-full items-center justify-center px-3 pb-3 pt-6 sm:px-7 sm:pb-7 sm:pt-9">
+          <span
+            className="absolute inset-x-0 top-0 h-2.5 bg-[radial-gradient(circle_at_50%_0,#080706_5px,transparent_5.5px)] bg-[length:25px_10px] bg-repeat-x"
+            aria-hidden="true"
           />
-          {ticket.isVip && (
-            <span className="absolute top-3 left-3 bg-[#FF4400] text-white text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md z-10">
-              VIP
-            </span>
-          )}
+          <span className="text-center text-[8px] font-black uppercase tracking-[0.2em] sm:text-xs sm:tracking-[0.24em]">
+            THE C1RCLE
+          </span>
         </div>
 
-        {/* Ticket Details */}
-        <div className="relative flex h-full min-w-0 w-full flex-1 flex-col justify-between py-1">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#FF4400]">
-                {ticket.tierName}
-              </span>
-              <span className="text-white/30">•</span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">
-                {ticket.ticketCount} {ticket.ticketCount > 1 ? 'Passes' : 'Pass'}
-              </span>
-            </div>
-
-            <h3 className="mb-2 text-xl font-black uppercase tracking-[-0.035em] text-white sm:text-2xl">
-              {ticket.eventTitle}
-            </h3>
-
-            <p className="text-xs font-bold text-white/70 mb-1">
-              {ticket.date} • {ticket.time}
-            </p>
-
-            <p className="text-xs font-medium text-white/40 uppercase tracking-wider">
-              {ticket.venueName}, {ticket.city}
-            </p>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                onSelect(ticket);
-              }}
-              className={`px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${
-                isPast
-                  ? 'bg-white/10 text-white/60 hover:bg-white/20'
-                  : 'bg-white text-black hover:bg-white/90 hover:scale-105 shadow-md'
-              }`}
-            >
-              {isPast ? 'VIEW PREVIEW RECEIPT' : 'VIEW PASS PREVIEW'}
-            </button>
-
-            {!isPast && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (typeof navigator !== 'undefined') {
-                    void navigator.clipboard.writeText(`C1RCLE Pass: ${ticket.eventTitle}`);
-                  }
+        <div className="w-full px-3 sm:px-7">
+          <div
+            className={`relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-[#211714] ${isPast ? 'saturate-50' : ''}`}
+          >
+            {hasPoster ? (
+              <Image
+                src={ticket.posterUrl}
+                alt={`${ticket.eventTitle} event poster`}
+                fill
+                unoptimized
+                sizes="(max-width: 639px) calc(50vw - 2.5rem), (max-width: 1279px) 40vw, 25vw"
+                onError={() => {
+                  setPosterUnavailable(true);
                 }}
-                aria-label="Share ticket link"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white hover:bg-white/15 transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-5.368m0 5.368l5.66 3.234m-5.66-3.234l5.66-3.234m0 0a3 3 0 10-5.368-2.684m5.368 2.684a3 3 0 10-5.368 2.684"
-                  />
-                </svg>
-              </button>
+                className="object-cover transition-transform duration-500 group-hover:scale-[1.025] motion-reduce:transition-none"
+              />
+            ) : (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 bg-[linear-gradient(145deg,#241410,#0b0908_70%)] px-5 text-center text-white">
+                <Image
+                  src="/c1rcle-logo.webp"
+                  alt=""
+                  width={54}
+                  height={54}
+                  className="size-10 object-contain opacity-80 sm:size-14"
+                />
+                <span className="text-[7px] font-bold uppercase tracking-[0.12em] text-white/45 sm:text-[8px] sm:tracking-[0.16em]">
+                  Event artwork unavailable
+                </span>
+              </div>
             )}
           </div>
         </div>
 
-        <div className="pointer-events-none absolute -bottom-3.5 left-[170px] hidden size-7 rounded-full border border-white/5 bg-black sm:block" />
-        <div className="pointer-events-none absolute -top-3.5 left-[170px] hidden size-7 rounded-full border border-white/5 bg-black sm:block" />
-      </article>
-    </div>
+        <div className="flex w-full flex-1 flex-col px-3 pb-4 pt-3 sm:px-7 sm:pb-7 sm:pt-6">
+          <h2 className="line-clamp-3 text-xs font-black uppercase leading-tight tracking-[-0.035em] sm:line-clamp-2 sm:text-xl">
+            {ticket.eventTitle}
+          </h2>
+          <p className="mt-2 text-[10px] font-semibold leading-4 text-[#5d4b42] sm:text-sm sm:leading-5">
+            {[ticket.date, ticket.time].filter(Boolean).join(' · ') || 'Date unavailable'}
+          </p>
+          <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-[#77655b] sm:text-sm sm:leading-5">
+            {place || 'Venue unavailable'}
+          </p>
+          <div className="mt-auto pt-3 sm:pt-5">
+            <div className="relative border-t-2 border-dashed border-[#9b8576]/60 pt-4">
+              <span
+                className="absolute -left-[1.25rem] -top-3 size-6 rounded-full bg-[#080706] sm:-left-[2.25rem]"
+                aria-hidden="true"
+              />
+              <span
+                className="absolute -right-[1.25rem] -top-3 size-6 rounded-full bg-[#080706] sm:-right-[2.25rem]"
+                aria-hidden="true"
+              />
+              <div className="flex items-end justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[9px] font-black uppercase tracking-[0.17em] text-[#aa492e] sm:text-[10px]">
+                    {ticket.ticketCount} {ticket.ticketCount === 1 ? 'pass' : 'passes'}
+                  </p>
+                  <p className="mt-1 line-clamp-2 text-[10px] font-black uppercase leading-3 sm:text-sm sm:leading-4">
+                    {ticket.tierName}
+                  </p>
+                </div>
+                <span className="shrink-0 text-right text-[8px] font-black uppercase tracking-[0.06em] text-[#716057] sm:text-[10px] sm:tracking-[0.12em]">
+                  {isPast ? 'Past' : ticket.status.replace('_', ' ')}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <span
+          className="absolute inset-x-0 bottom-0 h-2.5 bg-[radial-gradient(circle_at_50%_100%,#080706_5px,transparent_5.5px)] bg-[length:25px_10px] bg-repeat-x"
+          aria-hidden="true"
+        />
+      </button>
+    </article>
   );
 }

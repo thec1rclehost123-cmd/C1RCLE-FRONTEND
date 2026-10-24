@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 import { EmptyState, ErrorState, LoadingState } from '@/components/partner-v3/States';
 import { useVenueCalendar } from '@/lib/calendar/use-venue-calendar';
@@ -29,10 +30,14 @@ export function VenueEventEditorRoute({
   readonly initialSlotId?: string;
 }) {
   const router = useRouter();
-  const anchorMonth =
+  // Keep the availability request range stable while the user changes the
+  // selected date. Changing the query param otherwise changes the request key,
+  // renders the loading state, and unmounts the editor (discarding its draft).
+  const [anchorMonth] = useState(() =>
     initialDate && /^\d{4}-\d{2}-\d{2}$/.test(initialDate)
       ? initialDate.slice(0, 7)
-      : currentMonthKey();
+      : currentMonthKey(),
+  );
   const state = useVenueCalendar({
     organizationId,
     anchorMonth,

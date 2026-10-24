@@ -11,7 +11,7 @@ vi.mock('next/image', () => ({
 }));
 
 describe('HostsPage', () => {
-  it('renders host and venue discovery with real profile destinations', () => {
+  it('does not show fixture profiles when no public directory data is available', () => {
     render(<HostsPage />);
 
     expect(
@@ -19,17 +19,11 @@ describe('HostsPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Venues' })).toBeInTheDocument();
     expect(screen.getByRole('searchbox', { name: 'Search hosts and venues' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Skyline Social/i })).toHaveAttribute(
-      'href',
-      '/venue/skyline-social',
-    );
+    expect(screen.getByText('No public venues are available yet.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'HOSTS' }));
 
-    expect(screen.getByRole('link', { name: /High Spirits Collective/i })).toHaveAttribute(
-      'href',
-      '/host/high-spirits-collective',
-    );
+    expect(screen.getByText('No public hosts are available yet.')).toBeInTheDocument();
     expect(screen.queryByText(/coming soon/i)).not.toBeInTheDocument();
   });
 });

@@ -52,7 +52,7 @@ export function PartnerProfilePanel({
             ) : null}
           </div>
           <p>
-            {partner.kind === 'host' ? 'Host' : 'Promoter'} · {partner.location}
+            {partnerLabel(partner.kind)} · {partner.location}
           </p>
         </div>
         {partner.status ? (
@@ -116,4 +116,15 @@ export function PartnerProfilePanel({
       )}
     </aside>
   );
+}
+
+function partnerLabel(kind: PartnerRelationship['kind']): string {
+  switch (kind) {
+    case 'venue':
+      return 'Venue';
+    case 'host':
+      return 'Host';
+    case 'promoter':
+      return 'Promoter';
+  }
 }

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   calendarMonthKeys,
+  eventDatePartInIndia,
+  formatEventTimeRange,
   mapVenueCalendar,
   venueBlockTimeRange,
 } from './venue-calendar-repository';
@@ -51,8 +53,8 @@ function event(id: string, day: number, status: EventDto['status']): EventDto {
     summary: '',
     description: '',
     imageUrl: null,
-    startAt: `${date}T21:00:00.000Z`,
-    endAt: `${date}T23:00:00.000Z`,
+    startAt: `${date}T14:30:00.000Z`,
+    endAt: `${date}T17:30:00.000Z`,
     status,
     isPublic: true,
     tags: [],
@@ -79,7 +81,11 @@ describe('venue calendar repository mapping', () => {
       ],
       events: [
         event('pending', 7, 'review'),
-        event('published', 8, 'published'),
+        {
+          ...event('published', 8, 'published'),
+          startAt: '2026-09-08T14:30:00.000Z',
+          endAt: '2026-09-08T17:30:00.000Z',
+        },
         event('cancelled', 9, 'cancelled'),
       ],
     });
@@ -99,7 +105,7 @@ describe('venue calendar repository mapping', () => {
     });
     expect(days[7]).toMatchObject({
       state: 'confirmed',
-      events: [{ id: 'published', status: 'confirmed' }],
+      events: [{ id: 'published', status: 'confirmed', time: '8:00 PM – 11:00 PM' }],
     });
     expect(days[8]).toMatchObject({ state: 'unavailable', events: [] });
     expect(calendar.blocks).toEqual([
@@ -125,5 +131,12 @@ describe('venue calendar repository mapping', () => {
       startTime: '2026-09-17T23:00:00.000Z',
       endTime: '2026-09-18T02:00:00.000Z',
     });
+  });
+
+  it('shows stored UTC event instants in India venue time', () => {
+    expect(eventDatePartInIndia('2026-11-06T19:30:00.000Z')).toBe('2026-11-07');
+    expect(formatEventTimeRange('2026-11-07T14:30:00.000Z', '2026-11-07T17:30:00.000Z')).toBe(
+      '8:00 PM – 11:00 PM',
+    );
   });
 });

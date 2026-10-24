@@ -13,7 +13,7 @@ import {
   RefundIcon,
   WalletIcon,
 } from '@c1rcle/icons';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@c1rcle/ui';
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@c1rcle/ui';
 
 import {
   listAdmins,
@@ -30,8 +30,49 @@ interface LiveStats {
   readonly pendingProposals: number;
   readonly pendingRefunds: number;
   readonly refundValuePaise: number;
+  readonly refundValueHint: string;
   readonly onboardingInReview: number;
   readonly activeAdmins: number;
+  readonly activeAdminsHint: string;
+}
+
+interface CountPage {
+  readonly pageInfo: { readonly total: number };
+}
+
+interface RefundPage extends CountPage {
+  readonly items: readonly { readonly amountPaise: number }[];
+}
+
+interface AdminPage extends CountPage {
+  readonly items: readonly { readonly isActive: boolean }[];
+}
+
+/**
+ * The overview makes two bounded list reads. Keep the displayed totals honest:
+ * the API gives an exact count, but not a sum/count for records beyond this
+ * page, so this helper never labels a page-local aggregate as platform-wide.
+ */
+export function toLiveStats(
+  proposals: CountPage,
+  refunds: RefundPage,
+  onboarding: CountPage,
+  admins: AdminPage,
+): LiveStats {
+  const boundedHint = (loaded: number, total: number, noun: string): string =>
+    loaded < total
+      ? `most recent ${String(loaded)} of ${String(total)} ${noun}`
+      : `across all ${noun}`;
+
+  return {
+    pendingProposals: proposals.pageInfo.total,
+    pendingRefunds: refunds.pageInfo.total,
+    refundValuePaise: refunds.items.reduce((sum, item) => sum + item.amountPaise, 0),
+    refundValueHint: boundedHint(refunds.items.length, refunds.pageInfo.total, 'pending requests'),
+    onboardingInReview: onboarding.pageInfo.total,
+    activeAdmins: admins.items.filter((admin) => admin.isActive).length,
+    activeAdminsHint: boundedHint(admins.items.length, admins.pageInfo.total, 'admin accounts'),
+  };
 }
 
 function StatCard({
@@ -65,6 +106,7 @@ function LiveStatsCards() {
   const { user } = useSession();
   const [stats, setStats] = useState<LiveStats | null>(null);
   const [unavailable, setUnavailable] = useState(false);
+  const [reloadAttempt, setReloadAttempt] = useState(0);
   // `useSession()` reads a client-only singleton that is always
   // unauthenticated during SSR (the server bootstrap proves a session exists
   // but never feeds this store). A returning admin's browser already has it
@@ -80,7 +122,6 @@ function LiveStatsCards() {
       return;
     }
     let cancelled = false;
-
     // `proposals`/`onboarding` only need `pageInfo.total`, so limit=1 is
     // correct (and cheap) for them. `refunds`/`admins` are also summed/
     // filtered over `.items`, which limit=1 would silently truncate to the
@@ -98,13 +139,7 @@ function LiveStatsCards() {
         if (cancelled) {
           return;
         }
-        setStats({
-          pendingProposals: proposals.pageInfo.total,
-          pendingRefunds: refunds.pageInfo.total,
-          refundValuePaise: refunds.items.reduce((sum, item) => sum + item.amountPaise, 0),
-          onboardingInReview: onboarding.pageInfo.total,
-          activeAdmins: admins.items.filter((admin) => admin.isActive).length,
-        });
+        setStats(toLiveStats(proposals, refunds, onboarding, admins));
       })
       .catch(() => {
         if (!cancelled) {
@@ -115,7 +150,7 @@ function LiveStatsCards() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [reloadAttempt, user]);
 
   if (!mounted || user === null) {
     return null;
@@ -137,14 +172,21 @@ function LiveStatsCards() {
 
   if (stats === null) {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {[0, 1, 2, 3, 4].map((index) => (
-          <Card key={index}>
-            <CardContent className="flex h-28 items-center justify-center text-sm text-muted-foreground">
-              Unavailable
-            </CardContent>
-          </Card>
-        ))}
+      <div className="rounded-lg border border-border p-5 text-sm text-muted-foreground">
+        <p>The operational summary could not be loaded.</p>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="mt-3"
+          onClick={() => {
+            setStats(null);
+            setUnavailable(false);
+            setReloadAttempt((attempt) => attempt + 1);
+          }}
+        >
+          Retry summary
+        </Button>
       </div>
     );
   }
@@ -166,7 +208,7 @@ function LiveStatsCards() {
       <StatCard
         label="Refund value"
         value={formatPaise(stats.refundValuePaise)}
-        hint="across pending requests"
+        hint={stats.refundValueHint}
         icon={WalletIcon}
       />
       <StatCard
@@ -178,7 +220,7 @@ function LiveStatsCards() {
       <StatCard
         label="Admins"
         value={String(stats.activeAdmins)}
-        hint="active accounts"
+        hint={stats.activeAdminsHint}
         icon={AdminIcon}
       />
     </div>

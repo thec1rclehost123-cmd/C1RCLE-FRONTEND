@@ -35,7 +35,16 @@ function buckets(
   keys: readonly string[],
   value: { revenuePaise: number; tickets: number; checkIns: number },
 ): TrendBucketDto[] {
-  return keys.map((key) => ({ key, ...value }));
+  return keys.map((key) => ({
+    key,
+    ...value,
+    totalTicketsIssued: 0,
+    paidTickets: 0,
+    freeRsvpTickets: 0,
+    paidOrderCount: 0,
+    guestGrossCollectedPaise: 0,
+    ticketRevenuePaise: 0,
+  }));
 }
 
 function trends(over: Partial<OrganizationTrendsDto> = {}): OrganizationTrendsDto {
@@ -45,7 +54,17 @@ function trends(over: Partial<OrganizationTrendsDto> = {}): OrganizationTrendsDt
     from: '2026-09-01',
     to: '2026-09-16',
     buckets: [],
-    totals: { revenuePaise: 0, tickets: 0, checkIns: 0 },
+    totals: {
+      revenuePaise: 0,
+      tickets: 0,
+      checkIns: 0,
+      totalTicketsIssued: 0,
+      paidTickets: 0,
+      freeRsvpTickets: 0,
+      paidOrderCount: 0,
+      guestGrossCollectedPaise: 0,
+      ticketRevenuePaise: 0,
+    },
     ...over,
   };
 }
@@ -87,6 +106,7 @@ function build(
     displayName?: string | null;
     network?: Parameters<typeof toOverviewData>[0]['network'];
     activity?: Parameters<typeof toOverviewData>[0]['activity'];
+    recentOrders?: Parameters<typeof toOverviewData>[0]['recentOrders'];
   } = {},
 ) {
   return toOverviewData({
@@ -100,6 +120,7 @@ function build(
     displayName: over.displayName === undefined ? 'Rhea Kapoor' : over.displayName,
     network: over.network ?? [],
     activity: over.activity ?? [],
+    recentOrders: over.recentOrders === undefined ? [] : over.recentOrders,
     now: NOW,
   });
 }
@@ -278,6 +299,12 @@ describe('toOverviewData', () => {
           // Buckets 27..30 (the most recent four) have sales; 26 and before do not.
           tickets: index >= 26 ? 4 : 0,
           checkIns: 0,
+          totalTicketsIssued: 0,
+          paidTickets: 0,
+          freeRsvpTickets: 0,
+          paidOrderCount: 0,
+          guestGrossCollectedPaise: 0,
+          ticketRevenuePaise: 0,
         })),
       }),
     });
@@ -297,6 +324,12 @@ describe('toOverviewData', () => {
           revenuePaise: 0,
           tickets: index < 23 ? 0 : index < 26 ? 10 : 20,
           checkIns: 0,
+          totalTicketsIssued: 0,
+          paidTickets: 0,
+          freeRsvpTickets: 0,
+          paidOrderCount: 0,
+          guestGrossCollectedPaise: 0,
+          ticketRevenuePaise: 0,
         })),
       }),
     });
@@ -354,7 +387,7 @@ describe('toOverviewData', () => {
     expect(data.recentActivity[1]?.amount).toBe('+ ₹5,000');
   });
 
-  it('shows a short org id for a counterparty, never an invented name', () => {
+  it('does not expose a counterparty organization id when its display name is unavailable', () => {
     const data = build({
       network: [
         {
@@ -366,7 +399,9 @@ describe('toOverviewData', () => {
       ],
     });
 
-    // There is no endpoint that resolves an org the viewer is not a member of.
-    expect(data.network[0]?.name).toBe('org_coun…');
+    expect(data.network[0]?.name).toBe('Partner name unavailable');
+    expect(data.network[0]?.name).not.toContain('org_counterparty_long_id');
+    expect(data.network[0]?.initials).toBe('H');
+    expect(data.network[0]?.role).toBe('Host');
   });
 });

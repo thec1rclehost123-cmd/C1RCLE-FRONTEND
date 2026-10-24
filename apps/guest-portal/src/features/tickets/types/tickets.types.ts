@@ -2,7 +2,8 @@
 
 export type TicketCategory = 'GENERAL' | 'STAG' | 'VIP' | 'COUPLE' | 'GROUP';
 export type TicketTab = 'upcoming' | 'past';
-export type TicketStatus = 'active' | 'used' | 'cancelled' | 'pending';
+export type TicketStatus =
+  'active' | 'used' | 'cancelled' | 'pending' | 'refund_pending' | 'refunded' | 'unavailable';
 
 export interface TicketShowcaseItem {
   id: number;
@@ -15,6 +16,8 @@ export interface TicketShowcaseItem {
 export interface UserTicketItem {
   id: string;
   orderId: string;
+  bookingReference: string | null;
+  holderName: string;
   eventTitle: string;
   date: string;
   time: string;
@@ -24,7 +27,6 @@ export interface UserTicketItem {
   tierName: string;
   isVip?: boolean;
   ticketCount: number;
-  qrPayload: string;
   status: TicketStatus;
 }
 

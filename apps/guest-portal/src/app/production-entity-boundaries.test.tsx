@@ -15,6 +15,14 @@ const notFound = vi.hoisted(() =>
 
 vi.mock('next/navigation', () => ({ notFound }));
 
+vi.mock('@c1rcle/api-client', () => ({
+  createApiClient: () => ({
+    get: () => Promise.reject(Object.assign(new Error('not found'), { status: 404 })),
+  }),
+  isApiClientError: (value: unknown) =>
+    typeof value === 'object' && value !== null && 'status' in value,
+}));
+
 vi.mock('@/lib/seo/site', () => ({
   absoluteUrl: (path: string) => `https://thec1rcle.com${path}`,
   isProductionSeo: () => true,

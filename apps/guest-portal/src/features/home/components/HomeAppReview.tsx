@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 import { HomePartyVideoClient } from './HomePartyVideoClient';
 
 export function HomeAppReview() {
@@ -14,13 +12,12 @@ export function HomeAppReview() {
             id="home-app-review-heading"
             className="mb-12 text-2xl font-medium italic leading-tight tracking-tight text-zinc-100 md:text-4xl md:leading-snug"
           >
-            “The only app you need to navigate the city after dark. Find the right room, get on the
-            list, and just walk in.”
+            Discover events, book your entry, and keep your tickets together.
           </h2>
 
           <div className="flex flex-col items-center gap-4 sm:flex-row">
-            <StoreLink href="/app" store="apple" />
-            <StoreLink href="/app" store="google" />
+            <StoreAvailability store="apple" />
+            <StoreAvailability store="google" />
           </div>
         </div>
       </section>
@@ -40,24 +37,22 @@ export function HomeAppReview() {
   );
 }
 
-function StoreLink({ href, store }: { href: string; store: 'apple' | 'google' }) {
+function StoreAvailability({ store }: { store: 'apple' | 'google' }) {
   const apple = store === 'apple';
 
   return (
-    <Link
-      href={href}
-      className="flex w-[210px] items-center justify-center gap-3 rounded-xl border border-white/20 bg-black px-5 py-2.5 text-white transition-colors hover:bg-zinc-900 motion-reduce:transition-none"
+    <div
+      aria-label={`${apple ? 'App Store' : 'Google Play'} listing coming soon`}
+      className="flex w-[210px] items-center justify-center gap-3 rounded-xl border border-white/20 bg-black px-5 py-2.5 text-white opacity-70"
     >
       {apple ? <AppleIcon /> : <GooglePlayIcon />}
-      <span className="flex flex-col text-left">
+      <span className="flex flex-col text-left" aria-hidden="true">
         <span className="mb-1 text-[10px] font-medium leading-none">
-          {apple ? 'Download on the' : 'GET IT ON'}
+          {apple ? 'APP STORE' : 'GOOGLE PLAY'}
         </span>
-        <span className="text-[19px] font-semibold leading-none">
-          {apple ? 'App Store' : 'Google Play'}
-        </span>
+        <span className="text-[19px] font-semibold leading-none">Coming soon</span>
       </span>
-    </Link>
+    </div>
   );
 }
 
