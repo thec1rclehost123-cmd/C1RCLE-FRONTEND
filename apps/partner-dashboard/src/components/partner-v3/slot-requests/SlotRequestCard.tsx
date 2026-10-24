@@ -1,5 +1,6 @@
-import { CalendarIcon, LocationIcon, TimeIcon, TicketIcon } from '@c1rcle/icons';
 import Link from 'next/link';
+
+import { CalendarIcon, LocationIcon, TimeIcon, TicketIcon } from '@c1rcle/icons';
 
 import { Button } from '@/components/partner-v3/Button';
 import { EventPoster } from '@/components/partner-v3/events/EventPoster';

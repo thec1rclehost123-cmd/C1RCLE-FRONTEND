@@ -35,6 +35,9 @@ export interface LoadVenueCalendarInput {
   readonly monthKeys: readonly string[];
   readonly venueId?: string;
   readonly signal?: AbortSignal;
+  /** B2: per-intent key re-used when the auto-provision retry re-creates a
+   * missing venue (guards against a double venue from a partial first pass). */
+  readonly idempotencyKey?: string;
 }
 
 export interface CreateVenueBlockInput {
@@ -56,24 +59,40 @@ export function venueAvailabilityInstant(localDateTime: string, timezone: string
   if (!match) throw new Error('Choose a valid local date and time.');
   const target = match.slice(1).map(Number);
   const [year, month, day, hour, minute] = target;
-  if (![year, month, day, hour, minute].every(Number.isFinite)) {
+  if (
+    year === undefined ||
+    month === undefined ||
+    day === undefined ||
+    hour === undefined ||
+    minute === undefined ||
+    ![year, month, day, hour, minute].every(Number.isFinite)
+  ) {
     throw new Error('Choose a valid local date and time.');
   }
   try {
     const partsFor = (instant: Date) =>
       new Intl.DateTimeFormat('en-US', {
         timeZone: timezone,
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
       }).formatToParts(instant);
-    let guess = Date.UTC(year!, month! - 1, day!, hour!, minute!);
+    let guess = Date.UTC(year, month - 1, day, hour, minute);
     for (let attempt = 0; attempt < 3; attempt += 1) {
-      const parts = Object.fromEntries(partsFor(new Date(guess)).map((part) => [part.type, part.value]));
-      const observed = Date.UTC(
-        Number(parts['year']), Number(parts['month']) - 1, Number(parts['day']),
-        Number(parts['hour']), Number(parts['minute']),
+      const parts = Object.fromEntries(
+        partsFor(new Date(guess)).map((part) => [part.type, part.value]),
       );
-      guess += Date.UTC(year!, month! - 1, day!, hour!, minute!) - observed;
+      const observed = Date.UTC(
+        Number(parts['year']),
+        Number(parts['month']) - 1,
+        Number(parts['day']),
+        Number(parts['hour']),
+        Number(parts['minute']),
+      );
+      guess += Date.UTC(year, month - 1, day, hour, minute) - observed;
     }
     const result = new Date(guess);
     const parts = Object.fromEntries(partsFor(result).map((part) => [part.type, part.value]));
@@ -83,7 +102,8 @@ export function venueAvailabilityInstant(localDateTime: string, timezone: string
       parts['day'] !== String(day).padStart(2, '0') ||
       parts['hour'] !== String(hour).padStart(2, '0') ||
       parts['minute'] !== String(minute).padStart(2, '0')
-    ) throw new Error('That local time does not exist in the selected timezone.');
+    )
+      throw new Error('That local time does not exist in the selected timezone.');
     return result.toISOString();
   } catch (error) {
     if (error instanceof Error && error.message.includes('does not exist')) throw error;
@@ -129,10 +149,16 @@ export async function blockVenueDate({
   organizationId,
   venueId,
   input,
+  idempotencyKey,
 }: {
   readonly organizationId: string;
   readonly venueId: string;
   readonly input: CreateVenueBlockInput;
+  /** B2: minted once per block intent by the caller and re-used on retries so
+   * a retry after a partial failure cannot create the block twice. When
+   * omitted, a fresh key is generated per call (callers that retry MUST pass
+   * the same key). */
+  readonly idempotencyKey?: string;
 }): Promise<VenueSlotDto> {
   const range = venueBlockTimeRange(input);
   if (!range) throw new Error('Choose a valid date and time range.');
@@ -145,7 +171,7 @@ export async function blockVenueDate({
     body: { label, ...range },
     headers: {
       'x-organization-id': organizationId,
-      'Idempotency-Key': crypto.randomUUID(),
+      'Idempotency-Key': idempotencyKey ?? crypto.randomUUID(),
     },
     schema: venueSlotDtoSchema,
   });
@@ -213,6 +239,7 @@ export async function loadVenueCalendarWorkspace({
   monthKeys,
   venueId,
   signal,
+  idempotencyKey,
 }: LoadVenueCalendarInput): Promise<VenueCalendarWorkspace> {
   const venueResponse = await apiClient.get({
     path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/venues`,
@@ -245,7 +272,7 @@ export async function loadVenueCalendarWorkspace({
         body: { name, slug, description: '' },
         headers: {
           'x-organization-id': organizationId,
-          'Idempotency-Key': crypto.randomUUID(),
+          'Idempotency-Key': idempotencyKey ?? crypto.randomUUID(),
         },
         schema: venueDtoSchema,
         ...(signal ? { signal } : {}),

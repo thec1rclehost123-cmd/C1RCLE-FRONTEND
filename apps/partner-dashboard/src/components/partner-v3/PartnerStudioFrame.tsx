@@ -5,8 +5,8 @@ import { useEffect, type ReactNode } from 'react';
 
 import { normalizePartnerRole } from '@/components/partner-shell/partner-role-routing';
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
-import { lastPathSegment, visibilityKeyForSegment } from '@/lib/access/studio-tab-access';
 import { isServerAuthorizedPartnerEventRoute } from '@/lib/access/server-authorized-event-route';
+import { lastPathSegment, visibilityKeyForSegment } from '@/lib/access/studio-tab-access';
 import { getStudioConfig, type StudioRole } from '@/studios/studio-config';
 
 import { PageContainer } from './PagePrimitives';

@@ -33,6 +33,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   useState,
   useEffect,
+  useId,
   useRef,
   useCallback,
   type ReactNode,
@@ -205,6 +206,12 @@ export function OnboardingPage() {
   >('pending');
   const [reviewNote] = useState('');
   const [submittedRequestId, setSubmittedRequestId] = useState<string | null>(null);
+  // B2: one Idempotency-Key per user intent — minted on the first click and
+  // reused across retries of that same click so a retry after a partial
+  // server-side write can never mint a fresh key and double-create (or
+  // double-submit) the application.
+  const startOnboardingKeyRef = useRef<string | null>(null);
+  const submitOnboardingKeyRef = useRef<string | null>(null);
 
   // KYC step state — documents are uploaded/confirmed server-side as each
   // KycFileZone completes; kycStepData is local UI bookkeeping only now.
@@ -831,7 +838,7 @@ export function OnboardingPage() {
           plan: DEFAULT_PLAN,
           profile: profilePayload(),
         },
-        crypto.randomUUID(),
+        (startOnboardingKeyRef.current ??= crypto.randomUUID()),
       );
       setSubmittedRequestId(application.id);
       setFieldErrors({});
@@ -873,7 +880,7 @@ export function OnboardingPage() {
         }
         const application = await submitOnboardingApplication(
           submittedRequestId,
-          crypto.randomUUID(),
+          (submitOnboardingKeyRef.current ??= crypto.randomUUID()),
         );
         setSubmittedRequestId(application.id);
         setApprovalStatus('pending');
@@ -2016,15 +2023,21 @@ type FormInputProps = {
   error?: string | undefined;
 } & InputHTMLAttributes<HTMLInputElement>;
 
-function FormInput({ label, icon: Icon, error, ...props }: FormInputProps) {
+function FormInput({ label, icon: Icon, error, id, name, ...props }: FormInputProps) {
+  const autoId = useId();
+  const inputId = id ?? name ?? autoId;
   return (
     <div className="space-y-2">
-      <label className="input-label">{label}</label>
+      <label htmlFor={inputId} className="input-label">
+        {label}
+      </label>
       <div className="relative group">
         {Icon && (
           <Icon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--text-placeholder)] group-focus-within:text-[var(--accent-primary)] transition-colors" />
         )}
         <input
+          id={inputId}
+          name={name}
           className={`w-full bg-[var(--surface-secondary)] border rounded-xl text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-placeholder)] transition-all outline-none ${Icon ? 'pl-12 pr-4' : 'px-4'} py-3.5 hover:border-[var(--border-default)] focus:bg-[var(--surface-base)] focus:border-[var(--accent-primary)] focus:ring-3 focus:ring-[var(--accent-glow)] disabled:opacity-60 disabled:cursor-not-allowed ${error ? 'border-[var(--state-error)]' : 'border-[var(--border-subtle)]'}`}
           aria-invalid={error ? true : undefined}
           {...props}
@@ -2058,14 +2071,18 @@ function FormField({
   disabled?: boolean;
   maxLength?: number;
 }) {
+  const inputId = useId();
   return (
     <div className="space-y-2">
-      <label className="input-label">{label}</label>
+      <label htmlFor={inputId} className="input-label">
+        {label}
+      </label>
       <div className="relative group">
         {Icon && (
           <Icon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--text-placeholder)] group-focus-within:text-[var(--accent-primary)] transition-colors" />
         )}
         <input
+          id={inputId}
           type={type}
           inputMode={inputMode}
           maxLength={maxLength}
@@ -2268,10 +2285,14 @@ function OtpInput({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const inputId = useId();
   return (
     <div className="space-y-2">
-      <label className="input-label">{label}</label>
+      <label htmlFor={inputId} className="input-label">
+        {label}
+      </label>
       <input
+        id={inputId}
         type="text"
         inputMode="numeric"
         maxLength={6}
@@ -2301,11 +2322,15 @@ function FormSelect({
   options: { value: string; label: string }[];
   disabled?: boolean;
 }) {
+  const selectId = useId();
   return (
     <div className="space-y-2">
-      <label className="input-label">{label}</label>
+      <label htmlFor={selectId} className="input-label">
+        {label}
+      </label>
       <div className="relative">
         <select
+          id={selectId}
           value={value}
           onChange={(e) => {
             onChange(e.target.value);
@@ -2558,12 +2583,17 @@ function KycInputField({
   maxLength?: number;
 }) {
   const message = error ?? hint;
+  const inputId = useId();
   return (
     <div className="space-y-1.5">
-      <label className="text-[11px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">
+      <label
+        htmlFor={inputId}
+        className="text-[11px] font-black uppercase tracking-widest text-[var(--text-tertiary)]"
+      >
         {label}
       </label>
       <input
+        id={inputId}
         type={type}
         inputMode={inputMode}
         maxLength={maxLength}
@@ -2597,13 +2627,18 @@ function KycSelectField({
   options: { value: string; label: string }[];
   error?: string | undefined;
 }) {
+  const selectId = useId();
   return (
     <div className="space-y-1.5">
-      <label className="text-[11px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">
+      <label
+        htmlFor={selectId}
+        className="text-[11px] font-black uppercase tracking-widest text-[var(--text-tertiary)]"
+      >
         {label}
       </label>
       <div className="relative">
         <select
+          id={selectId}
           value={value}
           onChange={(e) => {
             onChange(e.target.value);

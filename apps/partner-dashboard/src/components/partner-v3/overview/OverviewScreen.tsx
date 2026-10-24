@@ -3,6 +3,8 @@ import Link from 'next/link';
 
 import { AddIcon, ForwardIcon, TicketIcon, UsersIcon } from '@c1rcle/icons';
 
+import { FixtureBadge } from '../FixtureBadge';
+
 import styles from './overview.module.css';
 import { OverviewCalendarCard } from './OverviewCalendarCard';
 import { OverviewTrendCard } from './OverviewTrendCard';
@@ -107,9 +109,7 @@ export function OverviewScreen({
             {/* The badge follows `dataStatus`, so it can only ever describe what
                 is actually on screen. When the screen is API-backed there is
                 nothing to disclaim. */}
-            {data.dataStatus === 'fixture' ? (
-              <span className={styles['fixtureTag']}>Fixture data</span>
-            ) : null}
+            <FixtureBadge dataStatus={data.dataStatus} />
           </div>
           <h1>{data.greeting}</h1>
         </div>

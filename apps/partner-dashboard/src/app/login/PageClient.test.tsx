@@ -7,7 +7,7 @@ import LoginPage from './PageClient';
 const { router, searchParams, sessionState } = vi.hoisted(() => ({
   router: { push: vi.fn(), replace: vi.fn() },
   searchParams: new URLSearchParams('type=venue'),
-  sessionState: { status: 'anonymous' as string, session: null as null },
+  sessionState: { status: 'anonymous', session: null },
 }));
 
 vi.mock('next/navigation', () => ({

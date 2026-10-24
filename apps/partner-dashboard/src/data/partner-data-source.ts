@@ -549,6 +549,7 @@ export interface StaffMember {
   readonly email?: string | null | undefined;
   readonly backendRole?: 'owner' | 'admin' | 'manager' | 'member' | undefined;
   readonly capabilities?: readonly string[] | undefined;
+  readonly joinedAt?: string | undefined;
 }
 
 export type StaffInviteStatus = 'pending' | 'accepted' | 'revoked' | 'expired';

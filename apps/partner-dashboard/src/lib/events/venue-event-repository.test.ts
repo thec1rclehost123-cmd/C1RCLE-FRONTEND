@@ -416,6 +416,53 @@ describe('publishVenueEvent contract and error handling', () => {
     expect(mocks.post).toHaveBeenCalledTimes(1);
   });
 
+  it('B2: a retry after a failed publish reuses the SAME per-intent key on every step', async () => {
+    // First attempt reaches review (past the event + tier writes) and fails.
+    // The retry must pass the caller's ORIGINAL key to every step again, so
+    // the gateway dedups `-event` / `-tier-0` instead of a freshly minted key
+    // creating a second event.
+    const failure = new ApiClientError({
+      code: 'server',
+      message: 'Request failed.',
+      status: 500,
+      requestId: undefined,
+      fieldErrors: undefined,
+    });
+    mocks.post
+      .mockResolvedValueOnce({ id: 'evt_1' })
+      .mockResolvedValueOnce({ id: 'tier_1' })
+      .mockRejectedValueOnce(failure)
+      .mockResolvedValueOnce({ id: 'evt_1' })
+      .mockResolvedValueOnce({ id: 'tier_1' })
+      .mockResolvedValueOnce({ id: 'evt_1', status: 'review' })
+      .mockResolvedValueOnce({ id: 'evt_1', status: 'published' });
+
+    const workflowKey = 'flow-abc-123';
+    await expect(publishVenueEvent('org_1', draft, workflowKey)).rejects.toBe(failure);
+    await expect(publishVenueEvent('org_1', draft, workflowKey)).resolves.toMatchObject({
+      id: 'evt_1',
+      status: 'published',
+    });
+
+    const path = ([options]: [PostOptions]) => options.path;
+    const eventKeys = mocks.post.mock.calls
+      .filter(([options]) => options.path === '/api/v2/organizations/org_1/events')
+      .map(([options]) => options.headers?.['Idempotency-Key']);
+    const tierKeys = mocks.post.mock.calls
+      .filter(([options]) => options.path.endsWith('/ticket-tiers'))
+      .map(([options]) => options.headers?.['Idempotency-Key']);
+    const reviewKeys = mocks.post.mock.calls
+      .filter(([options]) => path([options]) === '/api/v2/events/evt_1/review')
+      .map(([options]) => options.headers?.['Idempotency-Key']);
+
+    // Two attempts, each writing the event and the tier, review reached twice.
+    expect(mocks.post).toHaveBeenCalledTimes(7);
+    // The retry reused the same derived keys — never a fresh mint.
+    expect(eventKeys).toEqual([`${workflowKey}-event`, `${workflowKey}-event`]);
+    expect(tierKeys).toEqual([`${workflowKey}-tier-0`, `${workflowKey}-tier-0`]);
+    expect(reviewKeys).toEqual([`${workflowKey}-review`, `${workflowKey}-review`]);
+  });
+
   it('stops after a failed tier create instead of publishing a half-built event', async () => {
     const failure = new ApiClientError({
       code: 'validation',

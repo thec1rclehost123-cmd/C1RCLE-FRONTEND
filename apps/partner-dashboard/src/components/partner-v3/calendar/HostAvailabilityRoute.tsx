@@ -1,10 +1,11 @@
 'use client';
 
+import { useRef } from 'react';
+
 import { EmptyState, ErrorState } from '@/components/partner-v3/States';
 import { requestHostAvailabilitySlot } from '@/lib/calendar/host-availability-repository';
 import { useHostAvailability } from '@/lib/calendar/use-host-availability';
 import { currentMonthKey } from '@/lib/calendar/venue-calendar-repository';
-import { useRef } from 'react';
 
 import { HostAvailabilityScreen } from './HostAvailabilityScreen';
 

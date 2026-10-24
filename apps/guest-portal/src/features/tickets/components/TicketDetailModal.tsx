@@ -1,8 +1,15 @@
 'use client';
 
+import { QRCodeSVG } from 'qrcode.react';
+import { useEffect, useState } from 'react';
+
+import { magicQrResponseSchema } from '@c1rcle/contracts';
 import { Dialog } from '@c1rcle/ui';
 
+import { bffClient } from '@/lib/bff/bff-client';
+
 import type { UserTicketItem } from '../types/tickets.types';
+import type { MagicQrResponse } from '@c1rcle/contracts';
 
 export interface TicketDetailModalProps {
   ticket: UserTicketItem | null;
@@ -28,8 +35,43 @@ const STATUS_COPY = {
   unavailable: { label: 'Unavailable', detail: 'Current event details could not be loaded.' },
 } as const;
 
+type EntryCodeState =
+  { phase: 'loading' } | { phase: 'ready'; code: MagicQrResponse } | { phase: 'failed' };
+
 export function TicketDetailModal({ ticket, onClose }: TicketDetailModalProps) {
   const status = ticket ? STATUS_COPY[ticket.status] : null;
+  const ticketId = ticket?.status === 'active' ? ticket.id : null;
+  const [stored, setStored] = useState<{ ticketId: string | null; state: EntryCodeState }>({
+    ticketId: null,
+    state: { phase: 'loading' },
+  });
+  const [attempt, setAttempt] = useState(0);
+  const entryCode: EntryCodeState =
+    ticketId && stored.ticketId === ticketId ? stored.state : { phase: 'loading' };
+
+  useEffect(() => {
+    if (!ticketId) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const load = async () => {
+      try {
+        const code = await bffClient.get({
+          path: `/api/tickets/${encodeURIComponent(ticketId)}/qr`,
+          schema: magicQrResponseSchema,
+        });
+        if (cancelled) return;
+        setStored({ ticketId, state: { phase: 'ready', code } });
+        timer = setTimeout(() => void load(), Math.max(code.refreshIntervalSec, 1) * 1000);
+      } catch {
+        if (!cancelled) setStored({ ticketId, state: { phase: 'failed' } });
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [ticketId, attempt]);
 
   return (
     <Dialog
@@ -74,8 +116,43 @@ export function TicketDetailModal({ ticket, onClose }: TicketDetailModalProps) {
             ) : null}
           </dl>
 
-          {ticket.status === 'active' ? (
-            <p className="text-xs text-white/45">Entry code unavailable in this wallet.</p>
+          {ticketId ? (
+            <div className="flex flex-col items-center gap-3 border-t border-white/10 pt-5 text-center">
+              {entryCode.phase === 'ready' ? (
+                <>
+                  <div className="rounded-2xl bg-white p-4">
+                    <QRCodeSVG
+                      value={entryCode.code.qrPayload}
+                      size={220}
+                      level="M"
+                      marginSize={2}
+                      title={`Entry code for ${ticket.eventTitle}`}
+                      role="img"
+                      aria-label={`Entry code for ${ticket.eventTitle}`}
+                    />
+                  </div>
+                  <p className="text-xs text-white/45">
+                    Refreshes every {entryCode.code.refreshIntervalSec}s · scan at the door
+                  </p>
+                </>
+              ) : entryCode.phase === 'failed' ? (
+                <>
+                  <p className="text-sm text-white/65">Entry code unavailable.</p>
+                  <button
+                    type="button"
+                    className="rounded-full border border-white/20 px-5 py-2 text-xs font-bold"
+                    onClick={() => {
+                      setStored({ ticketId: null, state: { phase: 'loading' } });
+                      setAttempt((current) => current + 1);
+                    }}
+                  >
+                    Try again
+                  </button>
+                </>
+              ) : (
+                <p className="text-sm text-white/65">Fetching entry code…</p>
+              )}
+            </div>
           ) : null}
         </div>
       ) : null}

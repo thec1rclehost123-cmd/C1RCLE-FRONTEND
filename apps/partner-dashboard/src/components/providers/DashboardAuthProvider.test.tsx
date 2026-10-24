@@ -143,9 +143,7 @@ describe('DashboardAuthProvider', () => {
     expect(screen.getByTestId('approved')).toHaveTextContent('false');
     // No isBanned backend concept exists in V2 yet — always false, documented in the provider.
     expect(screen.getByTestId('banned')).toHaveTextContent('false');
-    // No per-action staff permission map exists server-side yet — canDo is
-    // always unrestricted (documented in the provider's file-level comment).
-    expect(screen.getByTestId('candoAny')).toHaveTextContent('true');
+    expect(screen.getByTestId('candoAny')).toHaveTextContent('false');
     expect(screen.getByTestId('memberships')).toHaveTextContent('0');
   });
 

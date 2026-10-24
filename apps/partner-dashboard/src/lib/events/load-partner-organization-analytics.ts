@@ -3,13 +3,13 @@ import 'server-only';
 import { cookies } from 'next/headers';
 
 import { createServerApiClient } from '@/lib/api/server-client';
+import { getFinanceBalance } from '@/lib/finance/api-finance-repository';
 import { getActiveOrgIdFromCookieHeader } from '@/lib/org/active-org-cookie';
 import {
   getOrganizationOverview,
   getOrganizationSalesBreakdown,
   getOrganizationTrends,
 } from '@/lib/overview/api-overview-repository';
-import { getFinanceBalance } from '@/lib/finance/api-finance-repository';
 import { dayKeyOffset } from '@/lib/overview/overview-view-model';
 
 import type {

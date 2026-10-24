@@ -2,8 +2,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 import { loadExploreEvents } from '@/features/explore/explore-data';
-import { HomeBrowseByVenue } from '@/features/home/components/HomeBrowseByVenue';
 import { HomeBackgroundVideoClient } from '@/features/home/components/HomeBackgroundVideoClient';
+import { HomeBrowseByVenue } from '@/features/home/components/HomeBrowseByVenue';
 import { HomeEventCategories } from '@/features/home/components/HomeEventCategories';
 import { HomeFeaturedEvents } from '@/features/home/components/HomeFeaturedEvents';
 import { HomeHero } from '@/features/home/components/HomeHero';

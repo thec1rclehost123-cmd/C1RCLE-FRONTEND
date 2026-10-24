@@ -13,6 +13,7 @@ import {
   TimeIcon,
 } from '@c1rcle/icons';
 
+import { FixtureBadge } from '@/components/partner-v3/FixtureBadge';
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 
 import { EventEmptyState } from './EventEmptyState';
@@ -90,6 +91,7 @@ export function PromoterEventsScreen({
       <div className={styles['page']}>
         <div className={styles['promoterPage']}>
           <h1>Events</h1>
+          <FixtureBadge dataStatus={data.dataStatus} />
           <div className={styles['promoterTabs']} role="tablist" aria-label="Promoter event views">
             <button
               className={styles['promoterTab']}

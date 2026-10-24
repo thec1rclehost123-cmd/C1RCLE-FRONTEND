@@ -46,8 +46,11 @@ export default function LandingPage() {
 
   return (
     <main className="relative w-full h-screen overflow-hidden bg-[#0A0A0B]">
-      {/* Layer 1: Three.js 3D nightclub scene */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(244,74,34,0.18),transparent_34%),linear-gradient(160deg,#12080a_0%,#0A0A0B_58%,#060607_100%)]">
+      {/* Layer 1: Three.js 3D nightclub scene (purely decorative) */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(244,74,34,0.18),transparent_34%),linear-gradient(160deg,#12080a_0%,#0A0A0B_58%,#060607_100%)]"
+      >
         {mounted && sceneReady && (
           <WebGLErrorBoundary fallback={<div className="absolute inset-0 bg-[#0A0A0B]" />}>
             <NightclubScene />
@@ -56,7 +59,10 @@ export default function LandingPage() {
       </div>
 
       {/* Layer 2: Bottom-up vignette so text reads against the scene */}
-      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(to_top,#0A0A0B_0%,rgba(10,10,11,0.75)_40%,transparent_100%)]" />
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none bg-[linear-gradient(to_top,#0A0A0B_0%,rgba(10,10,11,0.75)_40%,transparent_100%)]"
+      />
 
       {/* Top brand label */}
       <motion.div

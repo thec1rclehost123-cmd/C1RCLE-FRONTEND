@@ -42,18 +42,79 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  /**
-   * The pre-M3 studio paths remain bookmarked externally. Route every legacy
-   * path through the authenticated, tenant-aware workspace so it cannot render
-   * an older fixture-backed screen beside the connected implementation.
+  /*
+   * H2 — the legacy `/venue`, `/host`, `/promoter` and `/partner-network`
+   * trees were superseded by the V3 `/partner/[studio]` namespace. Nothing in
+   * the app links to them any more and they render a second, fixture-backed
+   * dashboard, so every legacy URL is redirected to its V3 equivalent.
+   *
+   * `redirects` run *before* the proxy (execution order: headers → redirects →
+   * proxy), so an anonymous hit on a legacy path is rewritten to `/partner/…`
+   * first and only then does the proxy gate it to `/login?next=/partner/…`.
+   *
+   * Temporary (307) rather than permanent (308) keeps the mapping reversible
+   * and stops clients caching a redirect we may still revisit. Order matters:
+   * the first matching rule wins, so the shape exceptions come before the
+   * role-wide wildcards.
    */
   redirects() {
+    const legacyRoles = ['venue', 'host', 'promoter'] as const;
+
     return Promise.resolve([
-      // Deep links that moved to a query-driven connected screen need an
-      // explicit target before the broad legacy-studio path redirects below.
+      /* Legacy shapes with no 1:1 V3 route — fold onto the nearest surface. */
+      {
+        source: '/venue/events/analytics',
+        destination: '/partner/venue/analytics',
+        permanent: false,
+      },
+      {
+        source: '/venue/events/:eventId/finance',
+        destination: '/partner/venue/events/:eventId',
+        permanent: false,
+      },
+      {
+        source: '/venue/events/:eventId/marketing',
+        destination: '/partner/venue/events/:eventId',
+        permanent: false,
+      },
       {
         source: '/venue/finance/orders',
         destination: '/partner/venue/finance?view=orders',
+        permanent: false,
+      },
+      {
+        source: '/venue/notifications',
+        destination: '/partner/venue/overview',
+        permanent: false,
+      },
+      {
+        source: '/host/events/analytics',
+        destination: '/partner/host/analytics',
+        permanent: false,
+      },
+      {
+        source: '/host/events/invitations',
+        destination: '/partner/host/events',
+        permanent: false,
+      },
+      {
+        source: '/host/events/invitations/:invitationId',
+        destination: '/partner/host/events',
+        permanent: false,
+      },
+      {
+        source: '/host/events/requests/:requestId',
+        destination: '/partner/host/events',
+        permanent: false,
+      },
+      {
+        source: '/host/events/:eventId/earnings',
+        destination: '/partner/host/events/:eventId',
+        permanent: false,
+      },
+      {
+        source: '/host/events/:eventId/marketing',
+        destination: '/partner/host/events/:eventId',
         permanent: false,
       },
       {
@@ -62,10 +123,31 @@ const nextConfig: NextConfig = {
         permanent: false,
       },
       {
+        source: '/host/notifications',
+        destination: '/partner/host/overview',
+        permanent: false,
+      },
+      {
+        source: '/host/partners/promoters/:promoterId',
+        destination: '/partner/host/partners',
+        permanent: false,
+      },
+      {
+        source: '/host/partners/venues/:venueId',
+        destination: '/partner/host/partners',
+        permanent: false,
+      },
+      {
         source: '/promoter/finance/orders',
         destination: '/partner/promoter/finance?view=orders',
         permanent: false,
       },
+      {
+        source: '/promoter/links',
+        destination: '/partner/promoter/overview',
+        permanent: false,
+      },
+
       {
         source: '/partner/venue/finance/orders',
         destination: '/partner/venue/finance?view=orders',
@@ -82,16 +164,6 @@ const nextConfig: NextConfig = {
         permanent: false,
       },
       {
-        source: '/venue/events/analytics',
-        destination: '/partner/venue/analytics',
-        permanent: false,
-      },
-      {
-        source: '/host/events/analytics',
-        destination: '/partner/host/analytics',
-        permanent: false,
-      },
-      {
         source: '/partner/venue/events/analytics',
         destination: '/partner/venue/analytics',
         permanent: false,
@@ -101,12 +173,22 @@ const nextConfig: NextConfig = {
         destination: '/partner/host/analytics',
         permanent: false,
       },
-      { source: '/venue', destination: '/partner/venue', permanent: false },
-      { source: '/venue/:path*', destination: '/partner/venue/:path*', permanent: false },
-      { source: '/host', destination: '/partner/host', permanent: false },
-      { source: '/host/:path*', destination: '/partner/host/:path*', permanent: false },
-      { source: '/promoter', destination: '/partner/promoter', permanent: false },
-      { source: '/promoter/:path*', destination: '/partner/promoter/:path*', permanent: false },
+
+      /* Partner-network is legacy admin chrome; fold it into the partner entry. */
+      { source: '/partner-network', destination: '/partner', permanent: false },
+      { source: '/partner-network/:path*', destination: '/partner', permanent: false },
+
+      /* Representative roots, then everything else keeps its path shape. */
+      ...legacyRoles.map((role) => ({
+        source: `/${role}`,
+        destination: `/partner/${role}`,
+        permanent: false,
+      })),
+      ...legacyRoles.map((role) => ({
+        source: `/${role}/:path*`,
+        destination: `/partner/${role}/:path*`,
+        permanent: false,
+      })),
     ]);
   },
 
@@ -127,7 +209,6 @@ const nextConfig: NextConfig = {
            * merge as the *intersection* of both policies, silently breaking
            * whichever directive is narrower.
            */
-          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
         ],
       },
     ]);

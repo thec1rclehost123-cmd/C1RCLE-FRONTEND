@@ -36,6 +36,9 @@ export function VenueCalendarRoute({
     monthsBefore: 1,
     monthsAfter: 12,
   });
+  // B2: one Idempotency-Key per block intent — reused across retries of the
+  // same block, reset once it succeeds so the next block is a new intent.
+  const blockKeyRef = useRef<string | null>(null);
 
   if (!organizationId) {
     return (
@@ -75,7 +78,14 @@ export function VenueCalendarRoute({
       {...(initialDialog ? { initialDialog } : {})}
       {...(initialAvailabilityDialog ? { initialAvailabilityDialog } : {})}
       onBlockDate={async (input: CreateVenueBlockInput) => {
-        await blockVenueDate({ organizationId, venueId, input });
+        blockKeyRef.current ??= crypto.randomUUID();
+        await blockVenueDate({
+          organizationId,
+          venueId,
+          input,
+          idempotencyKey: blockKeyRef.current,
+        });
+        blockKeyRef.current = null;
         state.retry();
       }}
       onUnblockDate={async (blockId) => {

@@ -121,7 +121,7 @@ describe('ExplorePage', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Real Night' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Real Night featured poster' })).toBeInTheDocument();
     expect(screen.getByText('2 events found')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'View Free Jam' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^View Free Jam\b/ })).toBeInTheDocument();
     // Venue name + city come from the venue lookup, not the event.
     expect(screen.getAllByText('Skyline Social, Pune').length).toBeGreaterThan(0);
     // Event without a venue renders the honest fallback, not a dummy.
@@ -130,15 +130,11 @@ describe('ExplorePage', () => {
 
   it('searches and filters real events without fixtures', async () => {
     mockFeed([EVENT, FREE_EVENT]);
-    render(await ExplorePage());
-
-    fireEvent.change(screen.getByPlaceholderText('Events, venues, artists, cities'), {
-      target: { value: 'jam' },
-    });
+    render(await ExplorePage({ searchParams: Promise.resolve({ q: 'jam' }) }));
 
     expect(screen.getByText('1 event found')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'View Free Jam' })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'View Real Night' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^View Free Jam\b/ })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^View Real Night\b/ })).not.toBeInTheDocument();
   });
 
   it('derives city options from real venues', async () => {
@@ -182,13 +178,13 @@ describe('ExplorePage', () => {
         .map((link) => link.getAttribute('aria-label'));
 
     // The default ranking is the authoritative soonest-starting order.
-    expect(cardNames()[0]).toBe('View Earlier Night');
+    expect(cardNames()[0]).toMatch(/^View Earlier Night\b/);
 
     fireEvent.change(screen.getByLabelText('Sort'), { target: { value: 'soonest' } });
-    expect(cardNames()[0]).toBe('View Earlier Night');
+    expect(cardNames()[0]).toMatch(/^View Earlier Night\b/);
 
     fireEvent.change(screen.getByLabelText('Sort'), { target: { value: 'price-low' } });
-    expect(cardNames()[0]).toBe('View Later Night');
+    expect(cardNames()[0]).toMatch(/^View Later Night\b/);
   });
 
   it('filters real events by city option', async () => {
@@ -206,8 +202,8 @@ describe('ExplorePage', () => {
 
     fireEvent.change(screen.getByLabelText('City'), { target: { value: 'mumbai' } });
     expect(screen.getByText('1 event found')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'View Mumbai Night' })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'View Real Night' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^View Mumbai Night\b/ })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^View Real Night\b/ })).not.toBeInTheDocument();
   });
 
   it('filters real events by today', async () => {
@@ -238,6 +234,6 @@ describe('ExplorePage', () => {
 
     fireEvent.change(screen.getByLabelText('Date'), { target: { value: 'today' } });
     expect(screen.getByText('1 event found')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'View Today Night' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^View Today Night\b/ })).toBeInTheDocument();
   });
 });

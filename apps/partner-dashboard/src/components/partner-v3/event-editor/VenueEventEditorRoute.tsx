@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { EmptyState, ErrorState, LoadingState } from '@/components/partner-v3/States';
 import { useVenueCalendar } from '@/lib/calendar/use-venue-calendar';
@@ -30,6 +30,8 @@ export function VenueEventEditorRoute({
   readonly initialSlotId?: string;
 }) {
   const router = useRouter();
+  // Keep the same key for retries of one publish intent.
+  const workflowKeyRef = useRef<string | null>(null);
   // Keep the availability request range stable while the user changes the
   // selected date. Changing the query param otherwise changes the request key,
   // renders the loading state, and unmounts the editor (discarding its draft).
@@ -115,7 +117,9 @@ export function VenueEventEditorRoute({
   const usableInitialDate =
     requestedDay && canSelectEventDate(requestedDay.state, 'venue') ? initialDate : undefined;
   const publishEvent = async (draft: EventEditorDraft) => {
-    await publishVenueEvent(organizationId, draft);
+    workflowKeyRef.current ??= crypto.randomUUID();
+    await publishVenueEvent(organizationId, draft, workflowKeyRef.current);
+    workflowKeyRef.current = null;
     const params = new URLSearchParams({ month: draft.date.slice(0, 7), date: draft.date });
     router.push(`/partner/venue/calendar?${params.toString()}`);
   };

@@ -19,15 +19,29 @@ import type { EventDto } from '@c1rcle/contracts';
 
 export { eventEndAtFromDraft, eventStartAtFromDraft } from '@/lib/events/event-time';
 
+/**
+ * Publishes a venue event end-to-end (create event → tiers → review → publish).
+ *
+ * B2: `idempotencyKey` is minted ONCE per user intent by the flow (editor
+ * component) and reused across retries of the same publish. Every write here
+ * derives its `Idempotency-Key` from it, so a retry after a partial failure
+ * replays the same key at each step instead of minting fresh ones and
+ * duplicating the event. The fallback mint keeps legacy callers working but
+ * MUST NOT be used by a retrying caller.
+ */
 export async function publishVenueEvent(
   organizationId: string,
   draft: EventEditorDraft,
-  slotReservation?: {
-    readonly slotRequestId: string;
-    readonly startAt: string;
-    readonly endAt: string;
-  },
+  reservationOrKey?:
+    | {
+        readonly slotRequestId: string;
+        readonly startAt: string;
+        readonly endAt: string;
+      }
+    | string,
 ): Promise<EventDto> {
+  const slotReservation = typeof reservationOrKey === 'string' ? undefined : reservationOrKey;
+  const idempotencyKey = typeof reservationOrKey === 'string' ? reservationOrKey : undefined;
   const startAt = slotReservation?.startAt ?? eventStartAtFromDraft(draft);
   if (!startAt) throw new Error('Enter a valid event date and start time.');
 
@@ -36,7 +50,7 @@ export async function publishVenueEvent(
   // replayed instead of producing a second event or catalog row.
   const workflowId = slotReservation
     ? `host-slot-${slotReservation.slotRequestId}`
-    : crypto.randomUUID();
+    : (idempotencyKey ?? crypto.randomUUID());
   const paidTierIds = new Set(
     draft.ticketTiers.filter((tier) => tier.accessType !== 'RSVP').map((tier) => tier.id),
   );

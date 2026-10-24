@@ -19,6 +19,7 @@ import {
 
 import { EventPoster } from '@/components/partner-v3/events/EventPoster';
 import { EventStatusBadge } from '@/components/partner-v3/events/EventStatusBadge';
+import { FixtureBadge } from '@/components/partner-v3/FixtureBadge';
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 
 import styles from './door.module.css';
@@ -155,6 +156,7 @@ function DoorHeader({
           ) : (
             <p className={styles['doorSubtitle']}>Choose an event to continue.</p>
           )}
+          <FixtureBadge dataStatus={data.dataStatus} />
         </div>
       </div>
       <div className={styles['doorHeaderActions']}>

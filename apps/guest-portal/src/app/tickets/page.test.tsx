@@ -86,6 +86,13 @@ const REAL_VENUE = {
 function mockWalletFeed(entitlements: unknown[] = [ENTITLEMENT]) {
   mockBffGet.mockImplementation((arg: unknown) => {
     const { path } = arg as { path: string };
+    if (path === '/api/tickets/ENT-rsvp-1/qr') {
+      return Promise.resolve({
+        qrPayload: 'ENT-rsvp-1:1791800000:test-signature',
+        expiresAt: '2026-12-10T12:00:30.000Z',
+        refreshIntervalSec: 30,
+      });
+    }
     const items = path === '/api/wallet/tickets' ? entitlements : [];
     return Promise.resolve({
       items,
@@ -257,7 +264,10 @@ describe('TicketsPage real wallet', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     // Tier shows on both the card and the open preview.
     expect(screen.getAllByText('General Admission')).toHaveLength(2);
-    expect(screen.getByText('Entry code unavailable in this wallet.')).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: 'Entry code for RSVP Night' })).toBeInTheDocument();
+    expect(mockBffGet).toHaveBeenCalledWith(
+      expect.objectContaining({ path: '/api/tickets/ENT-rsvp-1/qr' }),
+    );
 
     fireEvent.click(screen.getByRole('button', { name: 'Close dialog' }));
     await waitFor(() => {

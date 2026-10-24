@@ -38,7 +38,7 @@ export function DoorModeScreen({
   const canView =
     auth.grantedPermissions.length === 0 ||
     auth.grantedPermissions.includes('*') ||
-    auth.hasPermission('VIEW_GUESTS');
+    auth.hasPermission('VIEW_GUESTLIST');
   const canManage = auth.canDo('canManageDoorMode');
   const [online, setOnline] = useState(true);
   const [reconnecting, setReconnecting] = useState(false);

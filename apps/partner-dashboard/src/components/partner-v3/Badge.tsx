@@ -9,7 +9,7 @@ export function Badge({
 }: {
   readonly children: ReactNode;
   readonly tone?: 'neutral' | 'accent' | 'success' | 'warning';
-  readonly className?: string;
+  readonly className?: string | undefined;
 }) {
   const toneClass = {
     neutral: styles['badgeNeutral'],

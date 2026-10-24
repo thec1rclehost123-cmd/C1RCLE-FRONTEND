@@ -96,18 +96,36 @@ describe('Host requestable availability', () => {
   it('sends a selected published slot once and disables duplicate clicks while pending', async () => {
     const user = userEvent.setup();
     let resolveRequest: (() => void) | undefined;
-    const onRequestSlot = vi.fn(() => new Promise<void>((resolve) => { resolveRequest = resolve; }));
+    const onRequestSlot = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveRequest = resolve;
+        }),
+    );
     const availableDay: CalendarDay = {
-      date: '2026-11-06', day: 6, state: 'available', events: [],
-      slots: [{
-        id: 'm3-open-slot', label: '6:00 PM–10:00 PM IST', status: 'available',
-        startTime: '2026-11-06T12:30:00.000Z', endTime: '2026-11-06T16:30:00.000Z', timezone: 'Asia/Kolkata',
-      }],
+      date: '2026-11-06',
+      day: 6,
+      state: 'available',
+      events: [],
+      slots: [
+        {
+          id: 'm3-open-slot',
+          label: '6:00 PM–10:00 PM IST',
+          status: 'available',
+          startTime: '2026-11-06T12:30:00.000Z',
+          endTime: '2026-11-06T16:30:00.000Z',
+          timezone: 'Asia/Kolkata',
+        },
+      ],
     };
     render(
       <CalendarDayDetails
-        day={availableDay} accent="lavender" mode="host" onSlotSelect={() => {}}
-        selectedSlotId="m3-open-slot" onRequestSlot={onRequestSlot}
+        day={availableDay}
+        accent="lavender"
+        mode="host"
+        onSlotSelect={vi.fn()}
+        selectedSlotId="m3-open-slot"
+        onRequestSlot={onRequestSlot}
       />,
     );
     const button = screen.getByRole('button', { name: 'Request this slot' });
@@ -116,19 +134,27 @@ describe('Host requestable availability', () => {
     await user.click(screen.getByRole('button', { name: 'Sending request…' }));
     expect(onRequestSlot).toHaveBeenCalledTimes(1);
     resolveRequest?.();
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Request this slot' })).toBeEnabled());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Request this slot' })).toBeEnabled(),
+    );
   });
 
   it('shows a retryable failure for a Host slot request', async () => {
     const user = userEvent.setup();
     const onRequestSlot = vi.fn().mockRejectedValueOnce(new Error('slot already claimed'));
     const availableDay: CalendarDay = {
-      date: '2026-11-06', day: 6, state: 'available', events: [],
+      date: '2026-11-06',
+      day: 6,
+      state: 'available',
+      events: [],
       slots: [{ id: 'm3-open-slot', label: '6:00 PM', status: 'available' }],
     };
     render(
       <CalendarDayDetails
-        day={availableDay} accent="lavender" mode="host" selectedSlotId="m3-open-slot"
+        day={availableDay}
+        accent="lavender"
+        mode="host"
+        selectedSlotId="m3-open-slot"
         onRequestSlot={onRequestSlot}
       />,
     );

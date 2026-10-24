@@ -28,6 +28,7 @@ export type {
   VenueDto,
   CreateVenueInput,
   OrganizationMemberDto,
+  UpdateMemberRoleRequest,
   InviteMemberInput,
   VenueProfileDto,
   VenueSlotDto,
@@ -48,6 +49,7 @@ export {
   venueDtoSchema,
   createVenueSchema,
   organizationMemberDtoSchema,
+  updateMemberRoleSchema,
   inviteMemberSchema,
   venueProfileDtoSchema,
   venueSlotDtoSchema,
@@ -556,3 +558,30 @@ export {
   notificationDecisionSchema,
   notificationActionRequestSchema,
 } from './contracts/notifications.js';
+
+// Admin finance controls: tax rules + payment reconciliation
+export type {
+  TaxRuleKind,
+  TaxBasis,
+  TaxRuleStatus,
+  TaxRuleDto,
+  TaxRuleListResponse,
+  CreateTaxRuleInput,
+  EnableTaxRuleInput,
+  RetireTaxRuleInput,
+  ReconciliationFindingDto,
+  ReconciliationResultDto,
+} from './contracts/finance-admin.js';
+
+export {
+  taxRuleKindSchema,
+  taxBasisSchema,
+  taxRuleStatusSchema,
+  taxRuleDtoSchema,
+  taxRuleListResponseSchema,
+  createTaxRuleSchema,
+  enableTaxRuleSchema,
+  retireTaxRuleSchema,
+  reconciliationFindingSchema,
+  reconciliationResultSchema,
+} from './contracts/finance-admin.js';

@@ -127,8 +127,8 @@ describe('toTicketWalletData', () => {
     await Promise.resolve();
     expect(started).toEqual(eventIds);
 
-    release.evt_1?.({ event: FUTURE_EVENT, venue: VENUE });
-    release.evt_2?.({ event: { ...FUTURE_EVENT, id: 'evt_2' }, venue: VENUE });
+    release['evt_1']?.({ event: FUTURE_EVENT, venue: VENUE });
+    release['evt_2']?.({ event: { ...FUTURE_EVENT, id: 'evt_2' }, venue: VENUE });
     const wallet = await pending;
     expect(wallet.upcomingTickets).toHaveLength(2);
   });

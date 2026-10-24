@@ -94,6 +94,7 @@ export interface HostSlotRequestSubmitInput {
   readonly dateLabel: string;
   readonly genres: readonly string[];
   readonly artists: readonly string[];
+  /** Public poster URL resolved on the client (null = gradient artwork). */
   readonly posterPublicUrl?: string | null;
 }
 

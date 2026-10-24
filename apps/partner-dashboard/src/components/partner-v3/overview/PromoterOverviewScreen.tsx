@@ -2,6 +2,8 @@ import Link from 'next/link';
 
 import { CalendarIcon, SearchIcon } from '@c1rcle/icons';
 
+import { FixtureBadge } from '@/components/partner-v3/FixtureBadge';
+
 import { OverviewTrendCard } from './OverviewTrendCard';
 import styles from './promoter-overview.module.css';
 
@@ -20,6 +22,7 @@ export function PromoterOverviewScreen({
   return (
     <div className={styles['overview']}>
       <h1>Overview</h1>
+      <FixtureBadge dataStatus={data.dataStatus} />
 
       <div className={styles['topGrid']}>
         <OverviewTrendCard

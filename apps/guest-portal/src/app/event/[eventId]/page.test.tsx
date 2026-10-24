@@ -32,7 +32,11 @@ vi.mock('next/image', () => ({
     fill: _fill,
     unoptimized: _unoptimized,
     ...props
-  }: React.ComponentProps<'img'> & { preload?: boolean; fill?: boolean }) => (
+  }: React.ComponentProps<'img'> & {
+    preload?: boolean;
+    fill?: boolean;
+    unoptimized?: boolean;
+  }) => (
     // eslint-disable-next-line @next/next/no-img-element
     <img alt={alt} {...props} />
   ),

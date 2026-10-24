@@ -11,7 +11,9 @@ import { useVenueStudio } from '../store';
 import styles from './VenueEventOperations.module.css';
 
 const canUseMarketing = (permissions: readonly string[]): boolean =>
-  permissions.length === 0 || permissions.includes('*') || permissions.includes('VIEW_MARKETING');
+  permissions.length === 0 ||
+  permissions.includes('*') ||
+  permissions.includes('MANAGE_PAGE_CONTENT');
 
 export function CreateEventMessageAction({ label }: { readonly label: 'Create message' | 'Edit' }) {
   const auth = useDashboardAuth();

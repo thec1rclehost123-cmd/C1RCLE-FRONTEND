@@ -282,8 +282,16 @@ describe('loadOverviewData', () => {
   it('loads real relationship edges and preserves their actual status', async () => {
     const data = await loadOverviewData({ accent: 'orange', client, now: NOW });
     expect(data.network).toEqual([
-      expect.objectContaining({ name: 'org_2', role: 'Venue', status: 'Partnered' }),
-      expect.objectContaining({ name: 'org_3', role: 'Promoter', status: 'Blocked' }),
+      expect.objectContaining({
+        name: 'Partner name unavailable',
+        role: 'Venue',
+        status: 'Partnered',
+      }),
+      expect.objectContaining({
+        name: 'Partner name unavailable',
+        role: 'Promoter',
+        status: 'Blocked',
+      }),
     ]);
     expect(getMock.mock.calls.some(([call]) => call.path.includes('/partnerships?limit=100'))).toBe(
       true,

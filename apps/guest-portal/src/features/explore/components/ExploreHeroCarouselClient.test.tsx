@@ -13,6 +13,8 @@ const event = {
   venue: 'Test venue',
   city: 'Pune',
   cityKey: 'pune',
+  venueId: null,
+  venueSlug: null,
   price: { amountPaise: 10_000, currency: 'INR' as const },
   availability: 'available' as const,
   availableQuantity: 3,

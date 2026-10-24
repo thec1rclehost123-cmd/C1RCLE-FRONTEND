@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { venueSlotDtoSchema } from '@c1rcle/contracts';
+
 import { unblockVenueDate } from './venue-calendar-repository';
 
 const mocks = vi.hoisted(() => ({ delete: vi.fn() }));
@@ -40,7 +42,7 @@ describe('venue calendar mutations', () => {
         'x-organization-id': 'm3-e2e-org',
         'Idempotency-Key': 'm3-unblock-idem-1',
       },
-      schema: expect.anything(),
+      schema: venueSlotDtoSchema,
     });
   });
 });
