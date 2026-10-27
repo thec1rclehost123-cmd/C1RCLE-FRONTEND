@@ -25,7 +25,7 @@
     "@c1rcle/config": "workspace:*",
     "@c1rcle/contracts": "workspace:*",
     "@c1rcle/types": "workspace:*",
-    "zod": "4.4.3"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@c1rcle/eslint-config": "workspace:*",
