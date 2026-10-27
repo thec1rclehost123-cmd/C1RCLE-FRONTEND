@@ -216,11 +216,16 @@ function openSlots(
     .map((slot) => {
       const timezone = slot.timezone ?? 'UTC';
       const options: Intl.DateTimeFormatOptions = {
-        hour: 'numeric', minute: '2-digit', timeZone: timezone, timeZoneName: 'short',
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZone: timezone,
+        timeZoneName: 'short',
       };
       const start = new Intl.DateTimeFormat('en-IN', options).format(new Date(slot.startTime));
       const end = new Intl.DateTimeFormat('en-IN', {
-        hour: 'numeric', minute: '2-digit', timeZone: timezone,
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZone: timezone,
       }).format(new Date(slot.endTime));
       return {
         id: slot.id,

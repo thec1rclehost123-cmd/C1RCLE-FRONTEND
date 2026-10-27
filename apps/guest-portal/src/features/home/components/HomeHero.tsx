@@ -68,7 +68,6 @@ export function HomeHero({ hero }: { hero: HomeHeroContent }) {
           </Link>
         </div>
       </div>
-
     </section>
   );
 }

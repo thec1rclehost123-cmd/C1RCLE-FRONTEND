@@ -17,9 +17,12 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@c1rcle/auth', () => ({
   login: vi.fn(),
-  useSessionStore: Object.assign(vi.fn(() => sessionState), {
-    getState: () => sessionState,
-  }),
+  useSessionStore: Object.assign(
+    vi.fn(() => sessionState),
+    {
+      getState: () => sessionState,
+    },
+  ),
 }));
 
 vi.mock('@/lib/org/active-org', () => ({ setActiveOrg: vi.fn() }));

@@ -10,15 +10,42 @@ export function MobileBottomNav() {
   const pathname = usePathname();
   const { isAuthenticated } = useSession();
 
-  if (/^\/(checkout|confirmation|event|login|signup|forgot-password|reset-password)(\/|$)/.test(pathname)) {
+  if (
+    /^\/(checkout|confirmation|event|login|signup|forgot-password|reset-password)(\/|$)/.test(
+      pathname,
+    )
+  ) {
     return null;
   }
 
   const links = [
-    { label: 'Explore', href: '/explore', icon: HomeIcon, active: pathname === '/' || pathname.startsWith('/explore') || pathname.startsWith('/search') },
-    { label: 'Hosts', href: '/hosts', icon: UsersIcon, active: pathname.startsWith('/hosts') || pathname.startsWith('/host/') || pathname.startsWith('/venue/') },
-    { label: 'Tickets', href: '/tickets', icon: TicketIcon, active: pathname.startsWith('/tickets') },
-    { label: 'Profile', href: isAuthenticated ? '/profile' : '/login', icon: AccountIcon, active: pathname.startsWith('/profile') },
+    {
+      label: 'Explore',
+      href: '/explore',
+      icon: HomeIcon,
+      active: pathname === '/' || pathname.startsWith('/explore') || pathname.startsWith('/search'),
+    },
+    {
+      label: 'Hosts',
+      href: '/hosts',
+      icon: UsersIcon,
+      active:
+        pathname.startsWith('/hosts') ||
+        pathname.startsWith('/host/') ||
+        pathname.startsWith('/venue/'),
+    },
+    {
+      label: 'Tickets',
+      href: '/tickets',
+      icon: TicketIcon,
+      active: pathname.startsWith('/tickets'),
+    },
+    {
+      label: 'Profile',
+      href: isAuthenticated ? '/profile' : '/login',
+      icon: AccountIcon,
+      active: pathname.startsWith('/profile'),
+    },
   ];
 
   return (

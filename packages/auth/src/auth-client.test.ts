@@ -121,9 +121,7 @@ describe('auth-client', () => {
     });
 
     it('preserves the Guest role returned by the backend in the frontend session', async () => {
-      stubFetch().mockResolvedValue(
-        jsonResponse(authBody({ user: { ...user, role: 'guest' } })),
-      );
+      stubFetch().mockResolvedValue(jsonResponse(authBody({ user: { ...user, role: 'guest' } })));
 
       await login({ email: 'guest@example.test', password: 'temporary-password' });
 

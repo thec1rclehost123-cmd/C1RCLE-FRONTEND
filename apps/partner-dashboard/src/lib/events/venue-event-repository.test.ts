@@ -496,7 +496,9 @@ describe('cancelPartnerEvent', () => {
   });
 
   it('rejects an empty cancellation reason before calling the gateway', async () => {
-    await expect(cancelPartnerEvent('org_m3', 'evt_m3', '   ', 'cancel-intent-m3')).rejects.toThrow();
+    await expect(
+      cancelPartnerEvent('org_m3', 'evt_m3', '   ', 'cancel-intent-m3'),
+    ).rejects.toThrow();
     expect(mocks.post).not.toHaveBeenCalled();
   });
 });

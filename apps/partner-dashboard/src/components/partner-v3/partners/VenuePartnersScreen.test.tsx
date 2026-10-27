@@ -39,7 +39,9 @@ describe('VenuePartnersScreen', () => {
       />,
     );
 
-    expect(screen.getByText('No partners are available to discover right now.')).toBeInTheDocument();
+    expect(
+      screen.getByText('No partners are available to discover right now.'),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Browse discover' })).not.toBeInTheDocument();
   });
 

@@ -69,7 +69,9 @@ export function PublishAvailabilityDialog({
             <input
               type="datetime-local"
               value={startsAtLocal}
-              onChange={(event) => { setStartsAtLocal(event.target.value); }}
+              onChange={(event) => {
+                setStartsAtLocal(event.target.value);
+              }}
               required
             />
           </label>
@@ -78,14 +80,25 @@ export function PublishAvailabilityDialog({
             <input
               type="datetime-local"
               value={endsAtLocal}
-              onChange={(event) => { setEndsAtLocal(event.target.value); }}
+              onChange={(event) => {
+                setEndsAtLocal(event.target.value);
+              }}
               required
             />
           </label>
           <label>
             Timezone
-            <select value={timezone} onChange={(event) => { setTimezone(event.target.value); }}>
-              {TIMEZONES.map((zone) => <option key={zone} value={zone}>{zone}</option>)}
+            <select
+              value={timezone}
+              onChange={(event) => {
+                setTimezone(event.target.value);
+              }}
+            >
+              {TIMEZONES.map((zone) => (
+                <option key={zone} value={zone}>
+                  {zone}
+                </option>
+              ))}
             </select>
           </label>
           <label>
@@ -93,18 +106,28 @@ export function PublishAvailabilityDialog({
             <textarea
               value={notes}
               maxLength={2000}
-              onChange={(event) => { setNotes(event.target.value); }}
+              onChange={(event) => {
+                setNotes(event.target.value);
+              }}
               placeholder="Anything a Host should know before requesting"
             />
           </label>
-          <p>Visible to all active Host partners. The Venue must accept a request before an event can be created.</p>
+          <p>
+            Visible to all active Host partners. The Venue must accept a request before an event can
+            be created.
+          </p>
           {error ? <p role="alert">{error}</p> : null}
         </div>
         <footer>
           <Button type="button" variant="secondary" onClick={onClose} disabled={pending}>
             Cancel
           </Button>
-          <Button type="button" variant="primary" onClick={() => void submit()} disabled={pending || !onPublish}>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => void submit()}
+            disabled={pending || !onPublish}
+          >
             {pending ? 'Publishing…' : `Publish ${selectedDate}`}
           </Button>
         </footer>

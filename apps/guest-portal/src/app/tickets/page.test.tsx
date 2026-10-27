@@ -264,7 +264,9 @@ describe('TicketsPage real wallet', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     // Tier shows on both the card and the open preview.
     expect(screen.getAllByText('General Admission')).toHaveLength(2);
-    expect(await screen.findByRole('img', { name: 'Entry code for RSVP Night' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('img', { name: 'Entry code for RSVP Night' }),
+    ).toBeInTheDocument();
     expect(mockBffGet).toHaveBeenCalledWith(
       expect.objectContaining({ path: '/api/tickets/ENT-rsvp-1/qr' }),
     );

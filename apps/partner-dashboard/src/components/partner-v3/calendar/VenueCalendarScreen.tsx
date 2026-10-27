@@ -124,9 +124,9 @@ export function VenueCalendarScreen({
           mode="venue"
           eventHref={(event) => event.href}
           onUnblock={block && onUnblockDate ? async () => onUnblockDate(block.id) : undefined}
-          onPublishAvailability={
-            () => { update({ availabilityDialog: true }); }
-          }
+          onPublishAvailability={() => {
+            update({ availabilityDialog: true });
+          }}
           createHref={`/partner/venue/events/create?date=${selectedDay.date}`}
         />
       </div>
@@ -146,7 +146,9 @@ export function VenueCalendarScreen({
         <PublishAvailabilityDialog
           selectedDate={selectedDate}
           {...(onPublishAvailability ? { onPublish: onPublishAvailability } : {})}
-          onClose={() => { update({ dialog: false, availabilityDialog: false }); }}
+          onClose={() => {
+            update({ dialog: false, availabilityDialog: false });
+          }}
         />
       ) : null}
     </div>

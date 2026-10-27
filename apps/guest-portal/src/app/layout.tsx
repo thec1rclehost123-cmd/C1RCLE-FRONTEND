@@ -36,7 +36,9 @@ export default async function RootLayout({ children }: { readonly children: Reac
 
   return (
     <html lang="en">
-      <body className={`${inter.className} ${inter.variable} min-h-dvh bg-black text-white antialiased`}>
+      <body
+        className={`${inter.className} ${inter.variable} min-h-dvh bg-black text-white antialiased`}
+      >
         <a
           href="#main"
           className="sr-only-focusable absolute left-4 top-4 z-50 rounded-md bg-primary px-4 py-2 text-primary-foreground"

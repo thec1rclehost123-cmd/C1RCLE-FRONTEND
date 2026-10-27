@@ -124,7 +124,12 @@ export function SlotRequestCard({
           ) : null}
         </div>
       ) : null}
-      {!isIncoming && request.status === 'approved' && request.slotId && request.venueId && request.slotStartTime && request.slotEndTime ? (
+      {!isIncoming &&
+      request.status === 'approved' &&
+      request.slotId &&
+      request.venueId &&
+      request.slotStartTime &&
+      request.slotEndTime ? (
         <div className={styles['requestCardActions']}>
           <Link
             className={styles['emptyLink']}

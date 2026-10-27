@@ -72,9 +72,15 @@ export function CalendarDayDetails({
           <UnavailableDetail />
         )
       ) : day.state === 'pending' ? (
-        <ReservationDetail title="Host request pending" detail="A Host has requested this time. It is not available for another offer." />
+        <ReservationDetail
+          title="Host request pending"
+          detail="A Host has requested this time. It is not available for another offer."
+        />
       ) : day.state === 'confirmed' ? (
-        <ReservationDetail title="Reserved" detail="This time is reserved. Review the linked event or slot request." />
+        <ReservationDetail
+          title="Reserved"
+          detail="This time is reserved. Review the linked event or slot request."
+        />
       ) : (
         <OpenDetail
           createHref={createHref}
@@ -196,7 +202,9 @@ function OpenDetail({
 function ReservationDetail({ title, detail }: { readonly title: string; readonly detail: string }) {
   return (
     <div className={styles['dayEmpty']}>
-      <span className={styles['emptyIconBlocked']}><LockedIcon size={22} aria-hidden="true" /></span>
+      <span className={styles['emptyIconBlocked']}>
+        <LockedIcon size={22} aria-hidden="true" />
+      </span>
       <strong>{title}</strong>
       <p>{detail}</p>
     </div>
