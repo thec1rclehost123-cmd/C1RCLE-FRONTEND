@@ -4,8 +4,9 @@ import type { PartnerEventParty, VenueEventsData } from '@/data/partner-data-sou
 
 const venueEventsConfig = {
   accent: 'orange',
-  analyticsHref: '/partner/venue/events/analytics',
+  analyticsHref: '/partner/venue/analytics',
   createEventHref: '/partner/venue/events/create',
+  defaultParty: 'venue',
   eventsBaseHref: '/partner/venue/events',
   eventSectionLabel: 'Venue',
   partyFilterLabel: 'Event ownership',

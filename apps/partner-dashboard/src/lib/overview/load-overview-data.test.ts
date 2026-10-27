@@ -82,7 +82,17 @@ function emptyTrends(path: string) {
     from: '2026-09-01',
     to: '2026-09-16',
     buckets: [],
-    totals: { revenuePaise: 0, tickets: 0, checkIns: 0 },
+    totals: {
+      revenuePaise: 0,
+      tickets: 0,
+      checkIns: 0,
+      totalTicketsIssued: 0,
+      paidTickets: 0,
+      freeRsvpTickets: 0,
+      paidOrderCount: 0,
+      guestGrossCollectedPaise: 0,
+      ticketRevenuePaise: 0,
+    },
   };
 }
 
@@ -104,6 +114,70 @@ beforeEach(() => {
     }
     if (path.includes('/analytics/events')) {
       return Promise.resolve({ organizationId: 'org_1', items: [CARD] });
+    }
+    if (path.includes('/finance/orders?')) {
+      return Promise.resolve({
+        items: [
+          {
+            id: 'order_1',
+            eventId: 'evt_1',
+            eventName: 'Neon Nights',
+            buyerName: 'Private buyer name',
+            ticketCount: 1,
+            currency: 'INR',
+            grandTotalPaise: 10_885,
+            gstPaise: 0,
+            refundedPaise: 0,
+            status: 'paid',
+            paidAt: '2026-09-16T10:00:00.000Z',
+            createdAt: '2026-09-16T10:00:00.000Z',
+          },
+        ],
+        pageInfo: { page: 0, pageSize: 5, total: 1, hasNextPage: false },
+      });
+    }
+    if (path.includes('/partnerships?')) {
+      return Promise.resolve({
+        items: [
+          {
+            id: 'partnership_1',
+            hostOrganizationId: 'org_1',
+            venueOrganizationId: 'org_2',
+            venueId: 'ven_2',
+            initiatedBy: 'host',
+            status: 'active',
+            message: null,
+            venueShareRate: null,
+            resolutionReason: null,
+            resolvedAt: null,
+            version: 1,
+            createdAt: '2026-09-01T00:00:00.000Z',
+            updatedAt: '2026-09-01T00:00:00.000Z',
+          },
+        ],
+        pageInfo: { page: 1, pageSize: 100, total: 1, hasNextPage: false },
+      });
+    }
+    if (path.includes('/promoter-connections?')) {
+      return Promise.resolve({
+        items: [
+          {
+            id: 'connection_1',
+            promoterId: 'org_3',
+            targetId: 'org_1',
+            targetType: 'host',
+            initiatedBy: 'promoter',
+            status: 'blocked',
+            message: null,
+            resolutionReason: null,
+            resolvedAt: null,
+            version: 1,
+            createdAt: '2026-09-01T00:00:00.000Z',
+            updatedAt: '2026-09-01T00:00:00.000Z',
+          },
+        ],
+        pageInfo: { page: 1, pageSize: 100, total: 1, hasNextPage: false },
+      });
     }
     return Promise.reject(new Error(`unstubbed path: ${path}`));
   });
@@ -141,6 +215,16 @@ describe('loadOverviewData', () => {
     expect(daily).toContain('to=2026-09-16');
   });
 
+  it('requests the monthly series from two years ago through today', async () => {
+    await loadOverviewData({ accent: 'orange', client, now: NOW });
+
+    const monthly = getMock.mock.calls
+      .map((call) => call[0].path)
+      .find((path) => path.includes('granularity=month'));
+    expect(monthly).toContain('from=2024-09-16');
+    expect(monthly).toContain('to=2026-09-16');
+  });
+
   it('sends an explicit limit on the event cards', async () => {
     await loadOverviewData({ accent: 'orange', client, now: NOW });
 
@@ -148,6 +232,73 @@ describe('loadOverviewData', () => {
       .map((call) => call[0].path)
       .find((path) => path.includes('/analytics/events'));
     expect(cards).toContain('limit=4');
+  });
+
+  it('loads the newest org-scoped finance orders without forwarding buyer names to the view model', async () => {
+    const data = await loadOverviewData({ accent: 'orange', client, now: NOW });
+    const recentOrdersCall = getMock.mock.calls.find(([call]) =>
+      call.path.includes('/finance/orders?'),
+    )?.[0];
+
+    expect(recentOrdersCall?.path).toBe('/api/v2/organizations/org_1/finance/orders?limit=5');
+    expect(recentOrdersCall?.headers).toEqual({ 'x-organization-id': 'org_1' });
+    expect(data.recentOrders).toEqual([
+      expect.objectContaining({
+        eventName: 'Neon Nights',
+        ticketCount: 1,
+        amountLabel: '₹108.85',
+        statusLabel: 'Paid',
+      }),
+    ]);
+    expect(JSON.stringify(data.recentOrders)).not.toContain('Private buyer name');
+  });
+
+  it('distinguishes a role without finance access from an empty order list', async () => {
+    getMock.mockImplementation(({ path }) => {
+      if (path.includes('/finance/orders?')) return Promise.reject(apiError('forbidden', 403));
+      return Promise.resolve({
+        ...(path.endsWith('/analytics/overview') ? OVERVIEW : {}),
+        ...(path.includes('/analytics/trends') ? emptyTrends(path) : {}),
+        ...(path.includes('/analytics/calendar')
+          ? {
+              organizationId: 'org_1',
+              month: '2026-09',
+              firstDayOffset: 1,
+              days: Array.from({ length: 30 }, (_, index) => ({ day: index + 1, eventCount: 0 })),
+            }
+          : {}),
+        ...(path.includes('/analytics/events') ? { organizationId: 'org_1', items: [CARD] } : {}),
+        ...(path.includes('/partnerships?') || path.includes('/promoter-connections?')
+          ? { items: [], pageInfo: { page: 1, pageSize: 100, total: 0, hasNextPage: false } }
+          : {}),
+      });
+    });
+
+    const data = await loadOverviewData({ accent: 'orange', client, now: NOW });
+
+    expect(data.recentOrders).toBeNull();
+  });
+
+  it('loads real relationship edges and preserves their actual status', async () => {
+    const data = await loadOverviewData({ accent: 'orange', client, now: NOW });
+    expect(data.network).toEqual([
+      expect.objectContaining({
+        name: 'Partner name unavailable',
+        role: 'Venue',
+        status: 'Partnered',
+      }),
+      expect.objectContaining({
+        name: 'Partner name unavailable',
+        role: 'Promoter',
+        status: 'Blocked',
+      }),
+    ]);
+    expect(getMock.mock.calls.some(([call]) => call.path.includes('/partnerships?limit=100'))).toBe(
+      true,
+    );
+    expect(
+      getMock.mock.calls.some(([call]) => call.path.includes('/promoter-connections?limit=100')),
+    ).toBe(true);
   });
 
   it('refuses to read anything without an active organization', async () => {

@@ -94,18 +94,12 @@ export function normalizeTicket(dto: SupportTicketDto): PartnerSupportTicket {
   };
 }
 
-const FIXTURE_TICKETS: readonly PartnerSupportTicket[] = [];
-
 export async function listPartnerTickets(): Promise<readonly PartnerSupportTicket[]> {
-  try {
-    const res = await bffClient.get({
-      path: '/api/bff/support/tickets',
-      schema: supportTicketListResponseSchema,
-    });
-    return res.items.map(normalizeTicket);
-  } catch {
-    return FIXTURE_TICKETS;
-  }
+  const res = await bffClient.get({
+    path: '/api/bff/support/tickets',
+    schema: supportTicketListResponseSchema,
+  });
+  return res.items.map(normalizeTicket);
 }
 
 export async function getPartnerTicket(ticketId: string): Promise<PartnerSupportTicket> {

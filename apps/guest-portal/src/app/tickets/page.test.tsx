@@ -83,23 +83,21 @@ const REAL_VENUE = {
   updatedAt: '2026-09-01T00:00:00.000Z',
 };
 
-const ENTRY_QR = {
-  qrPayload: 'ENT-rsvp-1:1791800000:deadbeefdeadbeef',
-  expiresAt: '2026-12-10T12:00:30.000Z',
-  refreshIntervalSec: 30,
-};
-
 function mockWalletFeed(entitlements: unknown[] = [ENTITLEMENT]) {
   mockBffGet.mockImplementation((arg: unknown) => {
     const { path } = arg as { path: string };
-    if (path === '/api/wallet/tickets') {
+    if (path === '/api/tickets/ENT-rsvp-1/qr') {
       return Promise.resolve({
-        items: entitlements,
-        pageInfo: { page: 1, pageSize: 50, total: entitlements.length, hasNextPage: false },
+        qrPayload: 'ENT-rsvp-1:1791800000:test-signature',
+        expiresAt: '2026-12-10T12:00:30.000Z',
+        refreshIntervalSec: 30,
       });
     }
-    if (path === '/api/tickets/ENT-rsvp-1/qr') return Promise.resolve(ENTRY_QR);
-    return Promise.reject(new Error(`unexpected bff path ${path}`));
+    const items = path === '/api/wallet/tickets' ? entitlements : [];
+    return Promise.resolve({
+      items,
+      pageInfo: { page: 1, pageSize: 50, total: items.length, hasNextPage: false },
+    });
   });
   mockApiGet.mockImplementation((arg: unknown) => {
     const { path } = arg as { path: string };
@@ -120,15 +118,24 @@ describe('TicketsPage real wallet', () => {
     mockApiGet.mockReset();
   });
 
-  it('renders the logged-out guest ticket showcase without wallet passes', () => {
+  it('renders a login prompt without fixture passes for logged-out visitors', () => {
     render(<TicketsPage />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'TICKETS' })).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { level: 2, name: 'YOUR PASS TO THE CIRCLE' }),
+      screen.getByRole('heading', { level: 2, name: /your tickets live here/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Select VIP ticket tier' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /ticket tier/i })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'LOGIN TO ACCESS' })).toHaveAttribute('href', '/login');
+    expect(mockBffGet).not.toHaveBeenCalled();
+  });
+
+  it('keeps unresolved session bootstrap separate from the logged-out prompt', () => {
+    useSessionStore.setState({ status: 'unknown' });
+    render(<TicketsPage />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Checking your session');
+    expect(screen.queryByRole('link', { name: 'LOGIN TO ACCESS' })).not.toBeInTheDocument();
     expect(mockBffGet).not.toHaveBeenCalled();
   });
 
@@ -144,6 +151,35 @@ describe('TicketsPage real wallet', () => {
     expect(screen.queryByText('NEON RITUAL VOL. 3')).not.toBeInTheDocument();
   });
 
+  it('bounds wallet and event-enrichment reads so loading cannot wait indefinitely', async () => {
+    authenticate();
+    mockWalletFeed();
+    render(<TicketsPage />);
+
+    expect(await screen.findByText('RSVP Night')).toBeInTheDocument();
+
+    expect(mockBffGet.mock.calls.map(([arg]) => arg)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: '/api/wallet/tickets', timeoutMs: 15_000, retries: 0 }),
+        expect.objectContaining({ path: '/api/wallet/orders', timeoutMs: 15_000, retries: 0 }),
+      ]),
+    );
+    expect(mockApiGet.mock.calls.map(([arg]) => arg)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: '/api/v2/public/events/evt_rsvp_1',
+          timeoutMs: 10_000,
+          retries: 0,
+        }),
+        expect.objectContaining({
+          path: '/api/v2/public/venues/by-id/ven_1',
+          timeoutMs: 10_000,
+          retries: 0,
+        }),
+      ]),
+    );
+  });
+
   it('shows the empty state when the wallet has no passes', async () => {
     authenticate();
     mockWalletFeed([]);
@@ -153,20 +189,54 @@ describe('TicketsPage real wallet', () => {
     expect(screen.getByRole('link', { name: 'EXPLORE EVENTS' })).toBeInTheDocument();
   });
 
-  it('shows an empty state (not the guest showcase) when the wallet read fails', async () => {
+  it('distinguishes a wallet read failure from a legitimately empty wallet', async () => {
     authenticate();
     mockBffGet.mockRejectedValue(new Error('gateway down'));
     render(<TicketsPage />);
 
-    expect(await screen.findByText('NO CURRENT PASSES YET')).toBeInTheDocument();
-    expect(screen.queryByText('YOUR PASS TO THE CIRCLE')).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Tickets unavailable' })).toBeInTheDocument();
+    expect(screen.queryByText('NO CURRENT PASSES YET')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+  });
+
+  it('retries a failed wallet read without losing the authenticated session', async () => {
+    authenticate();
+    mockBffGet
+      .mockRejectedValueOnce(new Error('gateway down'))
+      .mockImplementation((arg: unknown) => {
+        const { path } = arg as { path: string };
+        const items = path === '/api/wallet/tickets' ? [ENTITLEMENT] : [];
+        return Promise.resolve({
+          items,
+          pageInfo: { page: 1, pageSize: 50, total: items.length, hasNextPage: false },
+        });
+      });
+    mockApiGet.mockImplementation((arg: unknown) => {
+      const { path } = arg as { path: string };
+      if (path === '/api/v2/public/events/evt_rsvp_1') return Promise.resolve(REAL_EVENT);
+      if (path === '/api/v2/public/venues/by-id/ven_1') return Promise.resolve(REAL_VENUE);
+      return Promise.reject(new Error(`unexpected path ${path}`));
+    });
+    render(<TicketsPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Try again' }));
+
+    expect(await screen.findByText('RSVP Night')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Tickets unavailable' })).not.toBeInTheDocument();
   });
 
   it('switches to history tab and displays past tickets', async () => {
     authenticate();
-    mockBffGet.mockResolvedValue({
-      items: [{ ...ENTITLEMENT, id: 'ENT-past-1', status: 'redeemed', scanCount: 1 }],
-      pageInfo: { page: 1, pageSize: 50, total: 1, hasNextPage: false },
+    mockBffGet.mockImplementation((arg: unknown) => {
+      const { path } = arg as { path: string };
+      const items =
+        path === '/api/wallet/tickets'
+          ? [{ ...ENTITLEMENT, id: 'ENT-past-1', status: 'redeemed', scanCount: 1 }]
+          : [];
+      return Promise.resolve({
+        items,
+        pageInfo: { page: 1, pageSize: 50, total: items.length, hasNextPage: false },
+      });
     });
     mockApiGet.mockImplementation((arg: unknown) => {
       const { path } = arg as { path: string };
@@ -184,26 +254,24 @@ describe('TicketsPage real wallet', () => {
     expect(screen.getByText('RSVP Night')).toBeInTheDocument();
   });
 
-  it('opens the pass preview for a real ticket', async () => {
+  it('opens authoritative ticket details for a real ticket', async () => {
     authenticate();
     mockWalletFeed();
     render(<TicketsPage />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'VIEW PASS PREVIEW' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'View ticket details' }));
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     // Tier shows on both the card and the open preview.
     expect(screen.getAllByText('General Admission')).toHaveLength(2);
-
-    // The preview carries the holder's real rotating code, not a fixture id.
-    const qr = await screen.findByRole('img', { name: 'Entry code for RSVP Night' });
-    expect(qr).toBeInTheDocument();
+    expect(
+      await screen.findByRole('img', { name: 'Entry code for RSVP Night' }),
+    ).toBeInTheDocument();
     expect(mockBffGet).toHaveBeenCalledWith(
       expect.objectContaining({ path: '/api/tickets/ENT-rsvp-1/qr' }),
     );
-    expect(await screen.findByText(/Refreshes every 30s/)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Close ticket view' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close dialog' }));
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });

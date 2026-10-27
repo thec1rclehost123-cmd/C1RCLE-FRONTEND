@@ -13,8 +13,6 @@
  *  - `accepted` (wire) is mapped to `approved` (UI) so the surface keeps its
  *    established status vocabulary.
  */
-import { eventEndAtFromDraft, eventStartAtFromDraft } from '@/lib/events/event-time';
-
 import { forwardToGateway, mintIdempotencyKey, parseJson } from './auth-proxy';
 
 import type {
@@ -27,6 +25,7 @@ import type {
 import type {
   EventDto,
   Paginated,
+  PartnershipDto,
   SlotRequestDetailDto,
   SlotRequestDto,
   VenueDto,
@@ -171,11 +170,11 @@ function formatDate(iso: string): string {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
-    timeZone: 'UTC',
+    timeZone: 'Asia/Kolkata',
   });
 }
 
-/** Renders a start/end ISO pair as a human time range, UTC. */
+/** Renders a start/end ISO pair in the product's event timezone. */
 function formatTime(startAt: string, endAt: string | null): string {
   const start = new Date(startAt);
   const end = endAt ? new Date(endAt) : null;
@@ -183,11 +182,36 @@ function formatTime(startAt: string, endAt: string | null): string {
   const options: Intl.DateTimeFormatOptions = {
     hour: 'numeric',
     minute: '2-digit',
-    timeZone: 'UTC',
+    timeZone: 'Asia/Kolkata',
   };
   const startLabel = start.toLocaleTimeString('en-IN', options);
   if (!end || Number.isNaN(end.getTime())) return startLabel;
   return `${startLabel} – ${end.toLocaleTimeString('en-IN', options)}`;
+}
+
+function formatSlotTime(
+  startAt: string,
+  endAt: string | null,
+  timezone: string | null | undefined,
+): string {
+  const zone = timezone ?? 'UTC';
+  try {
+    const start = new Intl.DateTimeFormat('en-IN', {
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZone: zone,
+    }).format(new Date(startAt));
+    const end = endAt
+      ? new Intl.DateTimeFormat('en-IN', {
+          hour: 'numeric',
+          minute: '2-digit',
+          timeZone: zone,
+        }).format(new Date(endAt))
+      : null;
+    return end ? `${start} – ${end}` : start;
+  } catch {
+    return formatTime(startAt, endAt);
+  }
 }
 
 function toUiEvent(
@@ -236,7 +260,28 @@ function toUiRequest(
     partnerName,
     partnerRoleLabel,
     partnerInitials: partnerInitials(partnerName),
-    event: toUiEvent(event, dto.message, venueName, titleFallback),
+    ...(dto.venueId ? { venueId: dto.venueId } : {}),
+    ...(dto.slotId ? { slotId: dto.slotId } : {}),
+    ...(dto.slotStartTime ? { slotStartTime: dto.slotStartTime } : {}),
+    ...(dto.slotEndTime ? { slotEndTime: dto.slotEndTime } : {}),
+    ...(dto.timezone ? { timezone: dto.timezone } : {}),
+    event: event
+      ? toUiEvent(event, dto.message, venueName, titleFallback)
+      : dto.slotStartTime
+        ? {
+            name: 'Venue slot request',
+            description: 'Request for a published Venue availability slot.',
+            date: new Intl.DateTimeFormat('en-IN', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+              timeZone: dto.timezone ?? 'UTC',
+            }).format(new Date(dto.slotStartTime)),
+            time: formatSlotTime(dto.slotStartTime, dto.slotEndTime ?? null, dto.timezone),
+            venue: venueName,
+            ...(dto.message ? { note: dto.message } : {}),
+          }
+        : toUiEvent(null, dto.message, venueName, titleFallback),
   };
 }
 
@@ -374,19 +419,30 @@ async function fetchOutgoingEntries(
     ctx,
   );
 
-  // Two bulk reads cover all enrichment: the org's venues (name lookup) and the
-  // org's own events (title/art lookup) — no per-request gateway round-trips.
+  // Two bulk reads cover event enrichment and a venue lookup. The Host's
+  // organization-scoped venue list may be empty because the Host does not own
+  // the venue; active partnerships are the authoritative relationship and
+  // carry the public-safe venue name.
   // Both are best-effort: a failed bulk read degrades enrichment (fallback
   // names/titles) instead of failing the whole list, matching the old
   // per-request `ignoreMissing` tolerance.
   const [venuesById, eventsById] = await Promise.all([
-    gatewayGet<Paginated<VenueDto>>(
-      `/api/v2/organizations/${encodeURIComponent(organizationId)}/venues?limit=100`,
+    gatewayGet<Paginated<PartnershipDto>>(
+      `/api/v2/organizations/${encodeURIComponent(organizationId)}/partnerships?limit=100`,
       organizationId,
       ctx,
     )
-      .then((data) => new Map(data.items.map((venue) => [venue.id, venue])))
-      .catch(() => new Map<string, VenueDto>()),
+      .then(
+        (data) =>
+          new Map(
+            data.items.flatMap((partnership) =>
+              partnership.status === 'active' && partnership.venueName
+                ? [[partnership.venueId, partnership.venueName] as const]
+                : [],
+            ),
+          ),
+      )
+      .catch(() => new Map<string, string>()),
     gatewayGet<Paginated<EventDto>>(
       `/api/v2/organizations/${encodeURIComponent(organizationId)}/events?limit=100`,
       organizationId,
@@ -399,8 +455,8 @@ async function fetchOutgoingEntries(
   const entries = page.items.map((dto) => {
     const event = dto.eventId ? (eventsById.get(dto.eventId) ?? null) : null;
     const venueName = dto.venueId
-      ? (venuesById.get(dto.venueId)?.name ?? dto.venueId)
-      : dto.venueId;
+      ? (venuesById.get(dto.venueId) ?? 'Venue name unavailable')
+      : 'Venue name unavailable';
     return {
       createdAt: dto.createdAt,
       request: toUiRequest(
@@ -561,6 +617,8 @@ export async function cancelSlotRequest(
 export interface HostSlotRequestSubmitInput {
   readonly organizationId: string;
   readonly venueId: string;
+  readonly slotId: string;
+  readonly idempotencyKey: string;
   readonly name: string;
   /** YYYY-MM-DD. */
   readonly date: string;
@@ -572,60 +630,29 @@ export interface HostSlotRequestSubmitInput {
   readonly artists: readonly string[];
   /** Public poster URL resolved on the client (null = gradient artwork). */
   readonly posterPublicUrl?: string | null;
-  /** B2: minted ONCE per submit intent by the caller and reused across retries
-   * of the same submit; both gateway writes derive their per-write
-   * `Idempotency-Key` from it so a retry can never double-create one record. */
-  readonly idempotencyKey: string;
 }
 
 export interface HostSlotRequestSubmitResult {
-  readonly eventId: string;
   readonly slotRequestId: string;
 }
 
 /**
- * Creates the host's draft event, then submits a slot request to the target
- * venue — both against the gateway from the server. The caller supplies ONE
- * `idempotencyKey` for the whole submit intent (B2); it is expanded to a
- * per-write key, so both records are protected by the same dedup boundary and
- * a client retry with the original key cannot double-create either.
+ * Creates only the slot request. A Host event is created in a separate flow
+ * after the Venue has accepted and reserved this slot.
  */
 export async function submitHostSlotRequest(
   input: HostSlotRequestSubmitInput,
   ctx: GatewayContext,
 ): Promise<HostSlotRequestSubmitResult> {
-  const startAt = eventStartAtFromDraft(input);
-  if (!startAt)
-    throw new GatewayError(400, {
-      code: 'validation',
-      message: 'Enter a valid event date and start time.',
-      status: 400,
-    });
-  const { organizationId, idempotencyKey } = input;
-
-  const event = await gatewayPost<EventDto>(
-    `/api/v2/organizations/${encodeURIComponent(organizationId)}/events`,
-    organizationId,
-    {
-      venueId: input.venueId,
-      title: input.name.trim(),
-      imageUrl: input.posterPublicUrl ?? null,
-      startAt,
-      endAt: eventEndAtFromDraft(input),
-      tags: [...new Set([...input.genres, ...input.artists])].slice(0, 50),
-    },
-    { ...ctx, headers: { ...ctx.headers, 'Idempotency-Key': `${idempotencyKey}-event` } },
-  );
-
+  const { organizationId } = input;
   const slotRequest = await gatewayPost<SlotRequestDto>(
     `/api/v2/venues/${encodeURIComponent(input.venueId)}/slot-requests`,
     organizationId,
     {
-      eventId: event.id,
+      slotId: input.slotId,
       message: `Host request for "${input.name.trim()}" on ${input.dateLabel}`,
     },
-    { ...ctx, headers: { ...ctx.headers, 'Idempotency-Key': `${idempotencyKey}-slot-request` } },
+    { ...ctx, headers: { ...ctx.headers, 'Idempotency-Key': input.idempotencyKey } },
   );
-
-  return { eventId: event.id, slotRequestId: slotRequest.id };
+  return { slotRequestId: slotRequest.id };
 }

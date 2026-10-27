@@ -1,16 +1,15 @@
 import { notFound } from 'next/navigation';
 
 import { AuthoritativeVenueView } from '@/features/directory/components/AuthoritativePublicEntityView';
-import { VenueProfileView } from '@/features/directory/components/VenueProfileView';
-import { findVenuePublicProfileFixture } from '@/features/directory/fixtures/public-profile.fixture';
+import { loadExploreEvents } from '@/features/explore/explore-data';
 import { buildPublicMetadata } from '@/lib/seo/metadata';
 import { getPublicVenueForSeo, isEligiblePublicVenue } from '@/lib/seo/public-data';
-import { isProductionSeo } from '@/lib/seo/site';
 
 import type { Metadata } from 'next';
 
 interface VenueProfilePageProps {
   params: Promise<{ venueId: string }>;
+  searchParams?: Promise<{ view?: string }>;
 }
 
 export const dynamic = 'force-dynamic';
@@ -29,36 +28,22 @@ export async function generateMetadata({ params }: VenueProfilePageProps): Promi
     });
   }
 
-  if (isProductionSeo()) notFound();
-
-  const venue = findVenuePublicProfileFixture(slug);
-
-  if (!venue) {
-    return buildPublicMetadata({
-      path: `/venue/${encodeURIComponent(slug)}`,
-      title: 'Venue unavailable',
-      description: 'This C1RCLE venue profile is unavailable.',
-      indexable: false,
-    });
-  }
-
-  return buildPublicMetadata({
-    path: `/venue/${encodeURIComponent(venue.id)}`,
-    title: venue.hero.title,
-    description: venue.hero.subtitle,
-    image: venue.hero.cover.src,
-    indexable: false,
-  });
+  notFound();
 }
 
-export default async function VenueProfilePage({ params }: VenueProfilePageProps) {
+export default async function VenueProfilePage({ params, searchParams }: VenueProfilePageProps) {
   const { venueId } = await params;
   const slug = decodeURIComponent(venueId);
   const authoritativeVenue = await getPublicVenueForSeo(slug);
-  if (authoritativeVenue !== null) return <AuthoritativeVenueView venue={authoritativeVenue} />;
-  const venue = isProductionSeo() ? undefined : findVenuePublicProfileFixture(slug);
-
-  if (!venue) notFound();
-
-  return <VenueProfileView venue={venue} />;
+  if (authoritativeVenue !== null) {
+    const query = searchParams ? await searchParams : { view: undefined };
+    const discovery = await loadExploreEvents().then(
+      (events) => events,
+      () => [],
+    );
+    const events = discovery.filter((event) => event.venueId === authoritativeVenue.id);
+    const view = query.view === 'about' ? 'about' : 'events';
+    return <AuthoritativeVenueView venue={authoritativeVenue} events={events} view={view} />;
+  }
+  notFound();
 }

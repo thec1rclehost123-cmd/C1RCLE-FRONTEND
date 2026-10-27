@@ -2,6 +2,7 @@ import { paginatedSchema } from '@c1rcle/api-client';
 import {
   eventDtoSchema,
   partnershipDtoSchema,
+  slotRequestDtoSchema,
   venueAvailabilityDtoSchema,
   venueDtoSchema,
   type EventDto,
@@ -12,7 +13,8 @@ import {
 import { apiClient } from '@/lib/api/client';
 
 import {
-  formatTimeRange,
+  eventDatePartInIndia,
+  formatEventTimeRange,
   isoDatePart,
   parseMonthKey,
   rangeForMonthKeys,
@@ -147,21 +149,19 @@ function buildHostMonths(
   const eventsByDate = new Map<string, CalendarEvent[]>();
   for (const event of events) {
     if (inactiveEventStatuses.has(event.status)) continue;
-    const date = isoDatePart(event.startAt);
+    const date = eventDatePartInIndia(event.startAt);
     if (!date) continue;
     const item: CalendarEvent = {
       id: event.id,
       date,
       name: event.title,
-      time: formatTimeRange(event.startAt, event.endAt),
+      time: formatEventTimeRange(event.startAt, event.endAt),
       status: pendingEventStatuses.has(event.status) ? 'pending' : 'confirmed',
       venue: venue.name,
       href: `/partner/host/events/${event.id}`,
     };
     eventsByDate.set(date, [...(eventsByDate.get(date) ?? []), item]);
   }
-
-  const hasAnySlotsInWindow = availability.slots.length > 0;
 
   return monthKeys.flatMap((key): CalendarMonth[] => {
     const parsed = parseMonthKey(key);
@@ -175,9 +175,9 @@ function buildHostMonths(
       return {
         date,
         day,
-        state: hostDayState(dayEvents, daySlots, hasAnySlotsInWindow),
+        state: hostDayState(dayEvents, daySlots),
         events: dayEvents,
-        slots: openSlots(date, daySlots, hasAnySlotsInWindow),
+        slots: openSlots(date, daySlots),
       };
     });
     return [
@@ -199,37 +199,66 @@ function buildHostMonths(
 function hostDayState(
   events: readonly CalendarEvent[],
   slots: VenueAvailabilityDto['slots'],
-  hasAnySlotsInWindow: boolean,
 ): CalendarDayState {
   if (events.some((event) => event.status === 'pending')) return 'pending';
+  if (slots.some((slot) => slot.status === 'pending')) return 'pending';
   if (events.length > 0 || slots.some((slot) => slot.status === 'booked')) return 'confirmed';
   if (slots.some((slot) => slot.status === 'open')) return 'available';
-  if (!hasAnySlotsInWindow && events.length === 0) return 'available';
   return 'unavailable';
 }
 
 function openSlots(
-  date: string,
+  _date: string,
   slots: VenueAvailabilityDto['slots'],
-  hasAnySlotsInWindow: boolean,
 ): readonly AvailabilitySlot[] {
   const explicitOpen = slots
     .filter((slot) => slot.status === 'open')
-    .map((slot) => ({
-      id: slot.id,
-      label: formatTimeRange(slot.startTime, slot.endTime),
-      status: 'available' as const,
-    }));
-  if (explicitOpen.length > 0) return explicitOpen;
+    .map((slot) => {
+      const timezone = slot.timezone ?? 'UTC';
+      const options: Intl.DateTimeFormatOptions = {
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZone: timezone,
+        timeZoneName: 'short',
+      };
+      const start = new Intl.DateTimeFormat('en-IN', options).format(new Date(slot.startTime));
+      const end = new Intl.DateTimeFormat('en-IN', {
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZone: timezone,
+      }).format(new Date(slot.endTime));
+      return {
+        id: slot.id,
+        label: `${start}–${end}`,
+        status: 'available' as const,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        timezone,
+      };
+    });
+  return explicitOpen;
+}
 
-  if (!hasAnySlotsInWindow && slots.length === 0) {
-    return [
-      { id: `${date}-late`, label: '8:00 PM – 11:00 PM', status: 'available' },
-      { id: `${date}-night`, label: '11:00 PM – 3:00 AM', status: 'available' },
-    ];
-  }
-
-  return [];
+export async function requestHostAvailabilitySlot({
+  organizationId,
+  venueId,
+  slotId,
+  idempotencyKey,
+}: {
+  readonly organizationId: string;
+  readonly venueId: string;
+  readonly slotId: string;
+  readonly idempotencyKey: string;
+}) {
+  return apiClient.post({
+    path: `/api/v2/venues/${encodeURIComponent(venueId)}/slot-requests`,
+    body: { slotId, message: 'Requesting the published Venue availability.' },
+    headers: {
+      'x-organization-id': organizationId,
+      'Idempotency-Key': idempotencyKey,
+    },
+    schema: slotRequestDtoSchema,
+  });
 }
 
 function emptyHostAvailability(): HostAvailabilityData {

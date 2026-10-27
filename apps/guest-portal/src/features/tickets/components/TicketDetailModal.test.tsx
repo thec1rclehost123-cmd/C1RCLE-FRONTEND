@@ -31,6 +31,8 @@ const TICKET: UserTicketItem = {
   isVip: true,
   ticketCount: 2,
   status: 'active',
+  bookingReference: null,
+  holderName: 'Guest',
 };
 
 function renderModal(ticket: UserTicketItem | null, onClose = vi.fn()) {
@@ -117,10 +119,10 @@ describe('TicketDetailModal entry code', () => {
     mockBffGet.mockResolvedValue(CODE);
     renderModal({ ...TICKET, status: 'used' });
 
-    expect(screen.getByText('This pass has already been used at the door.')).toBeInTheDocument();
+    expect(screen.getByText('This ticket has already been used.')).toBeInTheDocument();
     expect(mockBffGet).not.toHaveBeenCalled();
     expect(screen.queryByRole('img', { name: /entry code/i })).not.toBeInTheDocument();
-    expect(screen.getByText('CHECKED IN')).toBeInTheDocument();
+    expect(screen.getByText('Used')).toBeInTheDocument();
   });
 
   it('renders nothing when no pass is selected', () => {

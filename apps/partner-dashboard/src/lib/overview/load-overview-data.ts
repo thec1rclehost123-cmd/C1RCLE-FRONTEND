@@ -2,7 +2,8 @@ import 'server-only';
 
 import { cookies } from 'next/headers';
 
-import { ApiClientError } from '@c1rcle/api-client';
+import { ApiClientError, paginatedSchema } from '@c1rcle/api-client';
+import { partnershipDtoSchema, promoterConnectionDtoSchema } from '@c1rcle/contracts';
 
 import { createServerApiClient } from '@/lib/api/server-client';
 import { getActiveOrgIdFromCookieHeader } from '@/lib/org/active-org-cookie';
@@ -10,6 +11,7 @@ import {
   getOrganizationCalendar,
   getOrganizationEventCards,
   getOrganizationOverview,
+  getOrganizationRecentOrders,
   getOrganizationTrends,
 } from '@/lib/overview/api-overview-repository';
 import { dayKeyOffset, toOverviewData } from '@/lib/overview/overview-view-model';
@@ -54,7 +56,7 @@ const CARD_LIMIT = 4;
  * — and asking for one granularity and re-bucketing client-side would either
  * give `1D` a single bar or give `All` 400 points to draw 12 lines from.
  */
-const READ_COUNT = 5;
+const READ_COUNT = 8;
 
 /**
  * Why the overview could not be read.
@@ -126,31 +128,36 @@ export async function loadOverviewData(options: OverviewLoaderOptions): Promise<
 
   let input: OverviewViewModelInput;
   try {
-    const [overview, hourly, daily, monthly, calendar, cards] = await Promise.all([
-      getOrganizationOverview(client, organizationId),
-      // Today, by the hour. A same-day hourly range is 24 buckets — the
-      // endpoint extends the `to` bound to the whole day.
-      getOrganizationTrends(client, organizationId, {
-        from: today,
-        to: today,
-        granularity: 'hour',
-      }),
-      // 30 days covers both the 1W window and the 1M window, so one read
-      // serves two ranges. The 1W series slices the trailing 7 buckets.
-      getOrganizationTrends(client, organizationId, {
-        from: dayKeyOffset(now, 29),
-        to: today,
-        granularity: 'day',
-      }),
-      getOrganizationTrends(client, organizationId, {
-        // The API accepts day bounds even when bucketing by month.
-        from: dayKeyOffset(now, -730),
-        to: today,
-        granularity: 'month',
-      }),
-      getOrganizationCalendar(client, organizationId, today.slice(0, 7)),
-      getOrganizationEventCards(client, organizationId, CARD_LIMIT),
-    ]);
+    const [overview, hourly, daily, monthly, calendar, cards, network, recentOrders] =
+      await Promise.all([
+        getOrganizationOverview(client, organizationId),
+        // Today, by the hour. A same-day hourly range is 24 buckets — the
+        // endpoint extends the `to` bound to the whole day.
+        getOrganizationTrends(client, organizationId, {
+          from: today,
+          to: today,
+          granularity: 'hour',
+        }),
+        // 30 days covers both the 1W window and the 1M window, so one read
+        // serves two ranges. The 1W series slices the trailing 7 buckets.
+        getOrganizationTrends(client, organizationId, {
+          from: dayKeyOffset(now, 29),
+          to: today,
+          granularity: 'day',
+        }),
+        getOrganizationTrends(client, organizationId, {
+          // The API accepts day bounds even when bucketing by month.
+          from: dayKeyOffset(now, 730),
+          to: today,
+          granularity: 'month',
+        }),
+        getOrganizationCalendar(client, organizationId, today.slice(0, 7)),
+        getOrganizationEventCards(client, organizationId, CARD_LIMIT),
+        options.network
+          ? Promise.resolve(options.network)
+          : loadOrganizationNetwork(client, organizationId),
+        loadRecentOrders(client, organizationId),
+      ]);
 
     input = {
       accent: options.accent,
@@ -161,8 +168,9 @@ export async function loadOverviewData(options: OverviewLoaderOptions): Promise<
       calendar,
       cards,
       displayName: options.displayName ?? null,
-      network: options.network ?? [],
+      network,
       activity: options.activity ?? [],
+      recentOrders,
       now,
     };
   } catch (cause) {
@@ -177,4 +185,55 @@ export async function loadOverviewData(options: OverviewLoaderOptions): Promise<
   }
 
   return toOverviewData(input);
+}
+
+async function loadRecentOrders(client: ServerApiClient, organizationId: string) {
+  try {
+    return await getOrganizationRecentOrders(client, organizationId, 5);
+  } catch (cause) {
+    // The finance order endpoint is deliberately permission-gated. A role
+    // without finance access may still use the rest of Overview; distinguish
+    // that from a genuine empty order list and from a transient API failure.
+    if (cause instanceof ApiClientError && cause.status === 403) return null;
+    throw cause;
+  }
+}
+
+async function loadOrganizationNetwork(
+  client: ServerApiClient,
+  organizationId: string,
+): Promise<readonly NetworkPartner[]> {
+  const headers = { 'x-organization-id': organizationId };
+  const [partnerships, connections] = await Promise.all([
+    client.get({
+      path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/partnerships?limit=100`,
+      schema: paginatedSchema(partnershipDtoSchema),
+      headers,
+    }),
+    client.get({
+      path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/promoter-connections?limit=100`,
+      schema: paginatedSchema(promoterConnectionDtoSchema),
+      headers,
+    }),
+  ]);
+  return [
+    ...partnerships.items.map((partnership) => ({
+      partnershipId: partnership.id,
+      counterpartyOrganizationId:
+        partnership.hostOrganizationId === organizationId
+          ? partnership.venueOrganizationId
+          : partnership.hostOrganizationId,
+      side:
+        partnership.hostOrganizationId === organizationId ? ('venue' as const) : ('host' as const),
+      status: partnership.status,
+    })),
+    ...connections.items.map((connection) => ({
+      partnershipId: connection.id,
+      counterpartyOrganizationId:
+        connection.promoterId === organizationId ? connection.targetId : connection.promoterId,
+      side:
+        connection.promoterId === organizationId ? connection.targetType : ('promoter' as const),
+      status: connection.status,
+    })),
+  ];
 }

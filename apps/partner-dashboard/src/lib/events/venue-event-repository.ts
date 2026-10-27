@@ -1,5 +1,6 @@
 import {
   assignPromoterSchema,
+  cancelEventSchema,
   createEventSchema,
   createTicketTierSchema,
   eventDtoSchema,
@@ -12,7 +13,6 @@ import {
 import { apiClient } from '@/lib/api/client';
 import { eventEndAtFromDraft, eventStartAtFromDraft } from '@/lib/events/event-time';
 import { uploadToSignedUrl } from '@/lib/onboarding/uploadToSignedUrl';
-import { submitHostSlotRequest } from '@/lib/slot-requests/slot-request-repository';
 
 import type { EventEditorDraft } from '@/data/partner-data-source';
 import type { EventDto } from '@c1rcle/contracts';
@@ -32,12 +32,25 @@ export { eventEndAtFromDraft, eventStartAtFromDraft } from '@/lib/events/event-t
 export async function publishVenueEvent(
   organizationId: string,
   draft: EventEditorDraft,
-  idempotencyKey?: string,
+  reservationOrKey?:
+    | {
+        readonly slotRequestId: string;
+        readonly startAt: string;
+        readonly endAt: string;
+      }
+    | string,
 ): Promise<EventDto> {
-  const startAt = eventStartAtFromDraft(draft);
+  const slotReservation = typeof reservationOrKey === 'string' ? undefined : reservationOrKey;
+  const idempotencyKey = typeof reservationOrKey === 'string' ? reservationOrKey : undefined;
+  const startAt = slotReservation?.startAt ?? eventStartAtFromDraft(draft);
   if (!startAt) throw new Error('Enter a valid event date and start time.');
 
-  const workflowId = idempotencyKey ?? crypto.randomUUID();
+  // Stable across retries for an accepted reservation: if a network failure
+  // happens midway through tier creation/publish, each completed command is
+  // replayed instead of producing a second event or catalog row.
+  const workflowId = slotReservation
+    ? `host-slot-${slotReservation.slotRequestId}`
+    : (idempotencyKey ?? crypto.randomUUID());
   const paidTierIds = new Set(
     draft.ticketTiers.filter((tier) => tier.accessType !== 'RSVP').map((tier) => tier.id),
   );
@@ -52,10 +65,13 @@ export async function publishVenueEvent(
     path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/events`,
     body: createEventSchema.parse({
       venueId: draft.venueId,
+      ...(slotReservation ? { slotRequestId: slotReservation.slotRequestId } : {}),
       title: draft.name.trim(),
+      summary: draft.description.trim().slice(0, 1000),
+      description: draft.description.trim(),
       imageUrl,
       startAt,
-      endAt: eventEndAtFromDraft(draft),
+      endAt: slotReservation?.endAt ?? eventEndAtFromDraft(draft),
       tags: [...new Set([...draft.genres, ...draft.artists])].slice(0, 50),
       compensation:
         hasPaidTiers && draft.selectedPromoterIds.length
@@ -193,30 +209,38 @@ export async function publishVenueEvent(
   });
 }
 
-/**
- * Submits a host slot request (BFF writes draft event + slot request). The
- * caller mints the Idempotency-Key once per submit intent (B2) and reuses it
- * across retries so the gateway's two writes cannot double-create.
- */
-export async function submitHostEventRequest(
+export async function updatePartnerEventDetails(
   organizationId: string,
-  draft: EventEditorDraft,
-  idempotencyKey?: string,
-): Promise<void> {
-  const imageUrl = await resolvePosterImageUrl(organizationId, draft);
+  eventId: string,
+  version: number,
+  changes: { readonly title: string; readonly summary: string; readonly description: string },
+): Promise<EventDto> {
+  return apiClient.patch({
+    path: `/api/v2/events/${encodeURIComponent(eventId)}`,
+    body: updateEventSchema.parse(changes),
+    schema: eventDtoSchema,
+    headers: {
+      'x-organization-id': organizationId,
+      'If-Match': String(version),
+      'Idempotency-Key': crypto.randomUUID(),
+    },
+  });
+}
 
-  await submitHostSlotRequest({
-    organizationId,
-    venueId: draft.venueId,
-    name: draft.name.trim(),
-    date: draft.date,
-    time: draft.time,
-    ...(draft.endTime ? { endTime: draft.endTime } : {}),
-    dateLabel: draft.dateLabel,
-    genres: draft.genres,
-    artists: draft.artists,
-    posterPublicUrl: imageUrl ?? null,
-    idempotencyKey: idempotencyKey ?? crypto.randomUUID(),
+export async function cancelPartnerEvent(
+  organizationId: string,
+  eventId: string,
+  reason: string,
+  idempotencyKey = crypto.randomUUID(),
+): Promise<EventDto> {
+  return apiClient.post({
+    path: `/api/v2/events/${encodeURIComponent(eventId)}/cancel`,
+    body: cancelEventSchema.parse({ reason: reason.trim() }),
+    schema: eventDtoSchema,
+    headers: {
+      'x-organization-id': organizationId,
+      'Idempotency-Key': idempotencyKey,
+    },
   });
 }
 

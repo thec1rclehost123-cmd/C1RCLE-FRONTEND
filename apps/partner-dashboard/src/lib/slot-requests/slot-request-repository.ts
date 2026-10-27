@@ -36,6 +36,11 @@ export const slotRequestsDataSchema = z.object({
       partnerName: z.string(),
       partnerRoleLabel: z.enum(['Host', 'Venue']),
       partnerInitials: z.string(),
+      venueId: z.string().optional(),
+      slotId: z.string().optional(),
+      slotStartTime: z.string().optional(),
+      slotEndTime: z.string().optional(),
+      timezone: z.string().optional(),
       event: z.object({
         name: z.string(),
         description: z.string(),
@@ -58,7 +63,6 @@ export const slotRequestsDataSchema = z.object({
 });
 
 export const slotRequestSubmitResultSchema = z.object({
-  eventId: z.string(),
   slotRequestId: z.string(),
 });
 
@@ -81,6 +85,8 @@ export const slotRequestNotificationsSchema = z.object({
 export interface HostSlotRequestSubmitInput {
   readonly organizationId: string;
   readonly venueId: string;
+  readonly slotId: string;
+  readonly idempotencyKey: string;
   readonly name: string;
   readonly date: string;
   readonly time: string;
@@ -90,10 +96,6 @@ export interface HostSlotRequestSubmitInput {
   readonly artists: readonly string[];
   /** Public poster URL resolved on the client (null = gradient artwork). */
   readonly posterPublicUrl?: string | null;
-  /** B2: minted ONCE per submit intent and reused across retries of the same
-   * submit, so a retry after a partial failure cannot double-create the draft
-   * event or the slot request. */
-  readonly idempotencyKey: string;
 }
 
 function currentOrganizationId(): string {
@@ -159,11 +161,11 @@ export async function applySlotRequestAction(
 
 export async function submitHostSlotRequest(
   input: HostSlotRequestSubmitInput,
-): Promise<{ readonly eventId: string; readonly slotRequestId: string }> {
+): Promise<{ readonly slotRequestId: string }> {
   return bffClient.post({
     path: '/api/bff/slot-requests',
     body: { draft: input },
     schema: slotRequestSubmitResultSchema,
-    headers: csrfHeaders(),
+    headers: { ...csrfHeaders(), 'Idempotency-Key': input.idempotencyKey },
   });
 }

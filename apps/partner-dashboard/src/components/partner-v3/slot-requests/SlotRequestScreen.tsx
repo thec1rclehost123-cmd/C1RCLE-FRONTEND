@@ -214,7 +214,13 @@ export function SlotRequestScreen({
             </p>
           </div>
         </header>
-        <SlotRequestSummary counts={counts} />
+        {data ? (
+          <SlotRequestSummary counts={counts} />
+        ) : (
+          <p role="status" aria-live="polite">
+            {isLoading ? 'Loading request counts…' : 'Request counts unavailable.'}
+          </p>
+        )}
         <nav className={styles['requestTabs']} aria-label="Slot request views">
           <button
             type="button"
@@ -223,7 +229,7 @@ export function SlotRequestScreen({
               selectView('pending');
             }}
           >
-            Pending <span>{counts.pending}</span>
+            Pending {data ? <span>{counts.pending}</span> : null}
           </button>
           <button
             type="button"
@@ -232,7 +238,7 @@ export function SlotRequestScreen({
               selectView('all');
             }}
           >
-            All Requests <span>{data?.requests.length ?? 0}</span>
+            All Requests {data ? <span>{data.requests.length}</span> : null}
           </button>
         </nav>
         {loadError !== null && data === null ? (

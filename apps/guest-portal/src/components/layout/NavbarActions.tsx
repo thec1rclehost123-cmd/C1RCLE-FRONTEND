@@ -5,13 +5,16 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import { useSession } from '@c1rcle/auth';
+import { AccountIcon, SearchIcon } from '@c1rcle/icons';
 
 import { navLinks } from './DesktopNavLinks';
 
 export function NavbarActions({
   isAuthenticated: isAuthenticatedProp,
+  isHome = false,
 }: {
   isAuthenticated?: boolean;
+  isHome?: boolean;
 }) {
   const { isAuthenticated: isSessionAuthenticated } = useSession();
   const isAuthenticated = isAuthenticatedProp ?? isSessionAuthenticated;
@@ -20,6 +23,7 @@ export function NavbarActions({
   const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const isLoginPage = pathname === '/login';
+  const isSearchPage = pathname.startsWith('/search');
   const accountHref = isAuthenticated ? '/profile' : '/login';
   const accountLabel = isAuthenticated ? 'PROFILE' : 'LOGIN';
 
@@ -67,14 +71,34 @@ export function NavbarActions({
   };
 
   return (
-    <div className="pointer-events-auto flex shrink-0 items-center gap-3">
-      {!isLoginPage && (
+    <div className="pointer-events-auto flex shrink-0 items-center gap-2 sm:gap-3">
+      {!isLoginPage && isHome && (
         <Link
           href={accountHref}
           className="hidden items-center justify-center rounded-full bg-white px-7 py-2.5 text-xs font-black uppercase tracking-widest text-black shadow-md transition-[transform,background-color] duration-200 hover:scale-[1.03] hover:bg-white/90 motion-reduce:transition-none lg:inline-flex"
         >
           {accountLabel}
         </Link>
+      )}
+
+      {!isHome && !isLoginPage && (
+        <>
+          <Link
+            href="/search"
+            aria-label="Search events"
+            aria-current={isSearchPage ? 'page' : undefined}
+            className={`hidden size-10 items-center justify-center rounded-full border transition-[color,border-color,background-color] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none lg:inline-flex ${isSearchPage ? 'border-white bg-white text-black shadow-[0_0_24px_rgba(255,255,255,0.2)]' : 'border-white/15 bg-black/45 text-white/75 hover:border-[#FF6842]/55 hover:bg-white/[0.06] hover:text-[#FF6842]'}`}
+          >
+            <SearchIcon aria-hidden="true" size={19} strokeWidth={1.8} />
+          </Link>
+          <Link
+            href={accountHref}
+            aria-label={accountLabel === 'PROFILE' ? 'Profile' : 'Login'}
+            className="hidden size-10 items-center justify-center rounded-full border border-white/15 bg-black/45 text-white/75 transition-[color,border-color,background-color] duration-200 hover:border-[#FF6842]/55 hover:bg-white/[0.06] hover:text-[#FF6842] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-reduce:transition-none lg:inline-flex"
+          >
+            <AccountIcon aria-hidden="true" size={19} strokeWidth={1.8} />
+          </Link>
+        </>
       )}
 
       <button
@@ -120,7 +144,7 @@ export function NavbarActions({
                   href={link.href}
                   onClick={closeMenu}
                   aria-current={active ? 'page' : undefined}
-                  className={`text-3xl font-black uppercase tracking-tight transition-colors duration-200 motion-reduce:transition-none ${active ? 'text-[#FF6842]' : 'text-white hover:text-[#FF6842]'}`}
+                  className={`w-full rounded-full px-6 py-4 text-center text-3xl font-black uppercase tracking-tight transition-[color,background-color,box-shadow] duration-200 motion-reduce:transition-none ${active ? 'bg-[#FF6842] text-white shadow-[0_8px_22px_rgba(255,104,66,0.28)]' : 'text-white/75 hover:bg-white/[0.08] hover:text-white'}`}
                 >
                   {link.label}
                 </Link>

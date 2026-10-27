@@ -8,13 +8,13 @@ export default function ConfirmationNotFound() {
           Confirmation unavailable
         </p>
         <h1 className="mt-4 text-4xl font-black uppercase tracking-tight">
-          That fixture order could not be found.
+          This booking could not be found for your account.
         </h1>
         <Link
           href="/tickets"
           className="mt-8 inline-flex min-h-11 items-center rounded-full bg-white px-7 py-3 text-xs font-black uppercase tracking-[0.2em] text-black"
         >
-          Open ticket previews
+          Open My Tickets
         </Link>
       </div>
     </div>

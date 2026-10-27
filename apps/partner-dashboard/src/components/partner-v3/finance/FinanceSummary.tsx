@@ -1,8 +1,6 @@
 import Link from 'next/link';
 
-import { ScheduledPayoutIcon, SettingsIcon, TrendUpIcon, WithdrawIcon } from '@c1rcle/icons';
-
-import { Button } from '@/components/partner-v3/Button';
+import { ScheduledPayoutIcon, SettingsIcon, TrendUpIcon } from '@c1rcle/icons';
 
 import styles from './finance.module.css';
 import { FinanceMetric } from './FinanceMetric';
@@ -70,14 +68,6 @@ export function FinanceSummary({
             <strong className={styles['balanceValue']}>{data.availableBalance}</strong>
             <p>{data.balanceDetail}</p>
             <div className={styles['balanceActions']}>
-              <Button
-                className={styles['financePrimaryAction']}
-                variant="primary"
-                disabled
-                title="Withdrawals require the payout mutation API."
-              >
-                <WithdrawIcon size={16} aria-hidden="true" /> Withdraw
-              </Button>
               <PayoutRequestAction request={data.payoutRequest} />
             </div>
           </div>

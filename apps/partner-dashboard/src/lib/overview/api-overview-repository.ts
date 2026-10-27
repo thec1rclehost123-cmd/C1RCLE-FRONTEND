@@ -1,7 +1,9 @@
 import {
+  financeOrderListResponseSchema,
   organizationCalendarDtoSchema,
   organizationEventCardListResponseSchema,
   organizationOverviewDtoSchema,
+  organizationSalesBreakdownDtoSchema,
   organizationTrendsDtoSchema,
 } from '@c1rcle/contracts';
 
@@ -9,7 +11,9 @@ import type {
   OrganizationCalendarDto,
   OrganizationEventCardListResponse,
   OrganizationOverviewDto,
+  OrganizationSalesBreakdownDto,
   OrganizationTrendsDto,
+  FinanceOrderDto,
   TrendGranularity,
 } from '@c1rcle/contracts';
 import type { z } from 'zod';
@@ -35,10 +39,10 @@ export interface OverviewApiClient {
 /**
  * ─── Overview (Phase 1 analytics) ───────────────────────────────────────────
  *
- * The four reads behind `OverviewData`. Every route is `:organizationId`-scoped
- * and `requirePermission('organization.read')` server-side. The gateway still
- * requires the same organization ID in `X-Organization-Id` for tenancy
- * validation, so every read sends both forms.
+ * The reads behind `OverviewData` are organization-scoped. Analytics reads
+ * require `organization.read`; recent orders use the narrower finance-order
+ * permission. The gateway also validates the active organization header, so
+ * every request sends the organization in both the path and header.
  *
  * The client is a **required first argument**, never a module import. The
  * overview screens are Server Components, and a repository that reached for the
@@ -70,6 +74,18 @@ export async function getOrganizationOverview(
   return client.get({
     path: orgPath(organizationId, '/overview'),
     schema: organizationOverviewDtoSchema,
+    headers: orgHeaders(organizationId),
+  });
+}
+
+/** Backend-calculated ticket-unit and guest-payment components for one org. */
+export async function getOrganizationSalesBreakdown(
+  client: OverviewApiClient,
+  organizationId: string,
+): Promise<OrganizationSalesBreakdownDto> {
+  return client.get({
+    path: orgPath(organizationId, '/sales-breakdown'),
+    schema: organizationSalesBreakdownDtoSchema,
     headers: orgHeaders(organizationId),
   });
 }
@@ -147,4 +163,21 @@ export async function getOrganizationEventCards(
     schema: organizationEventCardListResponseSchema,
     headers: orgHeaders(organizationId),
   });
+}
+
+/** Latest organization-scoped orders, newest first, from the finance read model. */
+export async function getOrganizationRecentOrders(
+  client: OverviewApiClient,
+  organizationId: string,
+  limit: number,
+): Promise<readonly FinanceOrderDto[]> {
+  const search = new URLSearchParams({ limit: String(limit) });
+  const response = await client.get({
+    path: `/api/v2/organizations/${encodeURIComponent(
+      organizationId,
+    )}/finance/orders?${search.toString()}`,
+    schema: financeOrderListResponseSchema,
+    headers: orgHeaders(organizationId),
+  });
+  return response.items;
 }

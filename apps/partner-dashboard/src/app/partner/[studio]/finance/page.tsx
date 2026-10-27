@@ -7,7 +7,6 @@ import { VenueFinanceScreen } from '@/components/partner-v3/finance/VenueFinance
 import { FinanceLoadError, loadFinanceData } from '@/lib/finance/load-finance-data';
 
 import type {
-  FinanceDateRange,
   FinanceOrderStatus,
   FinanceView,
   PartnerFinanceData,
@@ -30,7 +29,6 @@ export default async function StudioFinancePage({
     Array.isArray(value) ? value[0] : value;
   const viewValue = getValue(query['view']);
   const view: FinanceView = viewValue === 'orders' || viewValue === 'bank' ? viewValue : 'payouts';
-  const range: FinanceDateRange = getValue(query['range']) === 'all' ? 'all' : 'current';
   const statusValue = getValue(query['status']);
   const status: 'All' | FinanceOrderStatus =
     statusValue === 'confirmed'
@@ -71,7 +69,6 @@ export default async function StudioFinancePage({
     data,
     view,
     search: getValue(query['search']) ?? '',
-    range,
     status,
     sort,
     direction,

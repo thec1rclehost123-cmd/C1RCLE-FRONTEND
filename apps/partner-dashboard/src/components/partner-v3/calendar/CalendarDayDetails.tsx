@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { useState } from 'react';
 
 import { EmptyDateIcon, LocationIcon, LockedIcon, TimeIcon } from '@c1rcle/icons';
 
@@ -20,6 +21,9 @@ export function CalendarDayDetails({
   eventHref,
   selectedSlotId,
   onSlotSelect,
+  onRequestSlot,
+  onUnblock,
+  onPublishAvailability,
   createHref,
 }: {
   readonly day: CalendarDay;
@@ -29,6 +33,9 @@ export function CalendarDayDetails({
   readonly eventHref?: ((event: CalendarEvent) => string | undefined) | undefined;
   readonly selectedSlotId?: string | undefined;
   readonly onSlotSelect?: ((slot: AvailabilitySlot) => void) | undefined;
+  readonly onRequestSlot?: (() => Promise<void>) | undefined;
+  readonly onUnblock?: (() => Promise<void>) | undefined;
+  readonly onPublishAvailability?: (() => void) | undefined;
   readonly createHref?: string | undefined;
 }) {
   const isBlocked = day.state === 'blocked';
@@ -52,16 +59,34 @@ export function CalendarDayDetails({
           ))}
         </div>
       ) : isBlocked ? (
-        <BlockedDetail block={block} />
+        <BlockedDetail block={block} onUnblock={onUnblock} />
       ) : host ? (
-        <AvailableDetail
-          day={day}
-          selectedSlotId={selectedSlotId}
-          onSlotSelect={onSlotSelect}
-          createHref={createHref}
+        day.state === 'available' ? (
+          <AvailableDetail
+            day={day}
+            selectedSlotId={selectedSlotId}
+            onSlotSelect={onSlotSelect}
+            onRequestSlot={onRequestSlot}
+          />
+        ) : (
+          <UnavailableDetail />
+        )
+      ) : day.state === 'pending' ? (
+        <ReservationDetail
+          title="Host request pending"
+          detail="A Host has requested this time. It is not available for another offer."
+        />
+      ) : day.state === 'confirmed' ? (
+        <ReservationDetail
+          title="Reserved"
+          detail="This time is reserved. Review the linked event or slot request."
         />
       ) : (
-        <OpenDetail createHref={createHref} />
+        <OpenDetail
+          createHref={createHref}
+          canPublish={day.state === 'unavailable' && day.slots.length === 0}
+          onPublishAvailability={onPublishAvailability}
+        />
       )}
     </aside>
   );
@@ -102,7 +127,29 @@ function EventDetail({
   );
 }
 
-function BlockedDetail({ block }: { readonly block?: CalendarBlock | undefined }) {
+function BlockedDetail({
+  block,
+  onUnblock,
+}: {
+  readonly block?: CalendarBlock | undefined;
+  readonly onUnblock?: (() => Promise<void>) | undefined;
+}) {
+  const [pending, setPending] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const unblock = async () => {
+    if (!onUnblock || pending) return;
+    setPending(true);
+    setFailed(false);
+    try {
+      await onUnblock();
+    } catch {
+      setFailed(true);
+    } finally {
+      setPending(false);
+    }
+  };
+
   return (
     <div className={styles['dayEmpty']}>
       <span className={styles['emptyIconBlocked']}>
@@ -114,14 +161,23 @@ function BlockedDetail({ block }: { readonly block?: CalendarBlock | undefined }
           ? `${block.reason} · ${formatTime(block.from)} – ${formatTime(block.to)}`
           : 'This date is unavailable.'}
       </p>
-      <button type="button" disabled title="Unblocking requires the calendar mutation API">
-        Unblock date
+      <button type="button" disabled={!onUnblock || pending} onClick={() => void unblock()}>
+        {pending ? 'Unblocking…' : 'Unblock date'}
       </button>
+      {failed ? <p role="alert">Unable to unblock this date. Please try again.</p> : null}
     </div>
   );
 }
 
-function OpenDetail({ createHref }: { readonly createHref?: string | undefined }) {
+function OpenDetail({
+  createHref,
+  canPublish,
+  onPublishAvailability,
+}: {
+  readonly createHref?: string | undefined;
+  readonly canPublish: boolean;
+  readonly onPublishAvailability?: (() => void) | undefined;
+}) {
   return (
     <div className={styles['dayEmpty']}>
       <span className={styles['emptyIcon']}>
@@ -134,6 +190,23 @@ function OpenDetail({ createHref }: { readonly createHref?: string | undefined }
           Create event
         </Link>
       ) : null}
+      {canPublish && onPublishAvailability ? (
+        <button className={styles['emptyAction']} type="button" onClick={onPublishAvailability}>
+          Open this time for Host requests
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function ReservationDetail({ title, detail }: { readonly title: string; readonly detail: string }) {
+  return (
+    <div className={styles['dayEmpty']}>
+      <span className={styles['emptyIconBlocked']}>
+        <LockedIcon size={22} aria-hidden="true" />
+      </span>
+      <strong>{title}</strong>
+      <p>{detail}</p>
     </div>
   );
 }
@@ -142,13 +215,27 @@ function AvailableDetail({
   day,
   selectedSlotId,
   onSlotSelect,
-  createHref,
+  onRequestSlot,
 }: {
   readonly day: CalendarDay;
   readonly selectedSlotId?: string | undefined;
   readonly onSlotSelect?: ((slot: AvailabilitySlot) => void) | undefined;
-  readonly createHref?: string | undefined;
+  readonly onRequestSlot?: (() => Promise<void>) | undefined;
 }) {
+  const [requestPending, setRequestPending] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const submitRequest = async () => {
+    if (!onRequestSlot || requestPending) return;
+    setRequestPending(true);
+    setRequestError(null);
+    try {
+      await onRequestSlot();
+    } catch (error) {
+      setRequestError(error instanceof Error ? error.message : 'Unable to request this slot.');
+    } finally {
+      setRequestPending(false);
+    }
+  };
   return (
     <div className={styles['hostAvailable']}>
       <span className={styles['emptyIcon']}>
@@ -163,11 +250,29 @@ function AvailableDetail({
           onSelect={onSlotSelect}
         />
       ) : null}
-      {selectedSlotId && createHref ? (
-        <Link className={styles['emptyAction']} href={createHref}>
-          Continue to Create Event
-        </Link>
+      {selectedSlotId && onRequestSlot ? (
+        <button
+          className={styles['emptyAction']}
+          type="button"
+          disabled={requestPending}
+          onClick={() => void submitRequest()}
+        >
+          {requestPending ? 'Sending request…' : 'Request this slot'}
+        </button>
       ) : null}
+      {requestError ? <p role="alert">{requestError}</p> : null}
+    </div>
+  );
+}
+
+function UnavailableDetail() {
+  return (
+    <div className={styles['dayEmpty']}>
+      <span className={styles['emptyIconBlocked']}>
+        <LockedIcon size={22} aria-hidden="true" />
+      </span>
+      <strong>Unavailable</strong>
+      <p>No open time slots are available for this date.</p>
     </div>
   );
 }

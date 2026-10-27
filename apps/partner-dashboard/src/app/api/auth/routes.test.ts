@@ -326,5 +326,43 @@ describe('GET /api/auth/session', () => {
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toMatchObject({ user: { id: 'usr_1' } });
+    expect(res.headers.get('cache-control')).toBe('private, no-store');
+    expect(res.headers.get('set-cookie')).toContain('partner.c1rcle.csrf=');
+  });
+
+  it('does not rotate an existing app-scoped CSRF cookie during session hydration', async () => {
+    mockForward.mockResolvedValue(
+      gatewayResponse({ user: AUTH_BODY.user, expiresAt: AUTH_BODY.expiresAt }),
+    );
+
+    const res = await session(
+      new NextRequest(`${APP_ORIGIN}/api/auth/session`, {
+        headers: {
+          origin: APP_ORIGIN,
+          cookie: 'partner.c1rcle.csrf=existing-token',
+        },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('set-cookie')).toBeNull();
+  });
+
+  it('mints the app-scoped CSRF cookie when only the legacy shared cookie exists', async () => {
+    mockForward.mockResolvedValue(
+      gatewayResponse({ user: AUTH_BODY.user, expiresAt: AUTH_BODY.expiresAt }),
+    );
+
+    const res = await session(
+      new NextRequest(`${APP_ORIGIN}/api/auth/session`, {
+        headers: {
+          origin: APP_ORIGIN,
+          cookie: 'c1rcle.csrf=legacy-token; better-auth.session_token=sess_abc',
+        },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('set-cookie')).toContain('partner.c1rcle.csrf=');
   });
 });

@@ -85,6 +85,7 @@ export function EventBasicDetails({
   draft,
   data,
   editMode,
+  showDescription = false,
   update,
   onArtistAdd,
   onArtistRemove,
@@ -94,6 +95,7 @@ export function EventBasicDetails({
   readonly draft: EventEditorDraft;
   readonly data: EventEditorData;
   readonly editMode: boolean;
+  readonly showDescription?: boolean;
   readonly update: DraftUpdate;
   readonly onArtistAdd: (name: string) => void;
   readonly onArtistRemove: (name: string) => void;
@@ -261,6 +263,22 @@ export function EventBasicDetails({
             </button>
           </div>
         </div>
+        {showDescription ? (
+          <div className={styles['field']}>
+            <label htmlFor="event-description">Event description</label>
+            <textarea
+              id="event-description"
+              value={draft.description}
+              maxLength={2000}
+              rows={4}
+              onChange={(event) => {
+                update({ description: event.target.value });
+              }}
+              placeholder="Tell guests what to expect at this event."
+            />
+            <small>{draft.description.length} / 2,000</small>
+          </div>
+        ) : null}
       </div>
     </section>
   );
@@ -303,7 +321,7 @@ export function EventDateTimeSection({
           </div>
           <div className={styles['muted']}>
             {editorRole === 'host'
-              ? 'Partnered venue availability — grey dates are already taken.'
+              ? 'Partnered venue availability — grey dates have no open slots for requests.'
               : 'Your venue’s open nights — grey dates are already taken.'}
           </div>
         </div>
@@ -1393,12 +1411,14 @@ export function EventReview({
   editMode,
   errors,
   studio,
+  acceptedSlotMode = false,
 }: {
   readonly draft: EventEditorDraft;
   readonly venueName: string;
   readonly editMode: boolean;
   readonly errors: readonly string[];
   readonly studio: 'venue' | 'host';
+  readonly acceptedSlotMode?: boolean;
 }) {
   const soldOut = draft.ticketTiers.reduce((total, tier) => total + tier.price * tier.quantity, 0);
   return (
@@ -1445,9 +1465,11 @@ export function EventReview({
       ) : (
         <div className={styles['successNote']}>
           ✓ Everything looks good.{' '}
-          {studio === 'host'
-            ? 'The venue will review this request before it can be published.'
-            : 'Guests will see the poster preview exactly as shown.'}
+          {studio === 'host' && acceptedSlotMode
+            ? 'Submitting publishes this event using the accepted Venue slot.'
+            : studio === 'host'
+              ? 'The venue will review this request before it can be published.'
+              : 'Guests will see the poster preview exactly as shown.'}
         </div>
       )}
     </section>

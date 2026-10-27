@@ -116,6 +116,8 @@ describe('PartnerCard', () => {
 
     const link = screen.getByRole('link', { name: /View profile/ });
     expect(link).toHaveAttribute('href', '/partner/profile/org_host_9');
+    expect(link).toHaveTextContent('View profile ↗');
+    expect(link).not.toHaveTextContent('\\u2197');
   });
 
   it('renders status action and invokes onActionUnavailable for partnered status', async () => {

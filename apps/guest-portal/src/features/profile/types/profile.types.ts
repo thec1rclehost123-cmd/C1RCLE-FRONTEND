@@ -3,45 +3,42 @@ export type ProfileEventFilter = 'upcoming' | 'attended';
 export type ProfileSettingsSection = 'personal' | 'account';
 export type PublicProfileTone = 'orange' | 'red' | 'purple';
 
-/**
- * The signed-in guest's identity.
- *
- * `displayName`, `email` and `city` are the only fields the API can answer for
- * every guest (`email` from the session, the rest from `GET /profile/me`). The
- * rest are optional because no endpoint currently exposes them — a live profile
- * renders what it has and omits the rows it cannot fill, rather than showing a
- * fixture placeholder next to real data.
- */
 export interface ProfileIdentity {
   id: string;
   displayName: string;
   initials: string;
+  avatarUrl?: string | null;
   email: string;
-  city: string;
+  phoneNumber: string | null;
+  city: string | null;
+  instagram: string | null;
+  gender: string | null;
+  memberSince: string | null;
   badges: readonly string[];
-  memberSince?: string;
-  phoneNumber?: string;
-  instagram?: string;
-  gender?: string;
-  signInMethod?: string;
+  signInMethod: string;
 }
 
 export interface ProfileEventSummary {
   id: string;
   slug: string;
+  detailHref?: string;
   title: string;
   image: string;
   startsAt: string;
   venue: string;
   city: string;
   participationLabel: string;
+  bookingReference?: string;
+  bookingHref?: string;
+  amountPaise?: number;
 }
 
-/** The live profile view model — session identity + profile + wallet events. */
-export interface ProfileView {
+export interface ProfileFixture {
   identity: ProfileIdentity;
   upcomingEvents: readonly ProfileEventSummary[];
   attendedEvents: readonly ProfileEventSummary[];
+  orderHistoryAvailable?: boolean;
+  attendanceHistoryAvailable?: boolean;
 }
 
 export interface PublicProfileIdentity {

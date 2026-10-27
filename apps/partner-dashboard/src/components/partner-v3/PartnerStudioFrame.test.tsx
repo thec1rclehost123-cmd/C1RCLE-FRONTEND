@@ -1,94 +1,79 @@
 import { render, screen } from '@testing-library/react';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PartnerStudioFrame } from './PartnerStudioFrame';
 
-const navigation = vi.hoisted(() => ({ pathname: '/partner/venue/finance' }));
-const authAccess = vi.hoisted(() => ({ tabVisibility: null as Record<string, boolean> | null }));
-const storedValues = new Map<string, string>();
+const mocks = vi.hoisted(() => ({
+  pathname: '/partner/venue/events/event_m3',
+  replace: vi.fn(),
+  auth: {
+    loading: true,
+    user: null,
+    isApproved: false,
+    profile: null,
+    tabVisibility: null,
+  },
+}));
 
 vi.mock('next/navigation', () => ({
-  usePathname: () => navigation.pathname,
-  useRouter: () => ({ replace: vi.fn() }),
+  usePathname: () => mocks.pathname,
+  useRouter: () => ({ replace: mocks.replace }),
 }));
 
 vi.mock('@/components/providers/DashboardAuthProvider', () => ({
-  useDashboardAuth: () => ({
-    profile: {
-      displayName: 'Ravi Kumar',
-      activeMembership: { partnerType: 'venue' },
-    },
-    user: { id: 'u1' },
-    loading: false,
-    isApproved: true,
-    tabVisibility: authAccess.tabVisibility,
-  }),
+  useDashboardAuth: () => mocks.auth,
 }));
 
-beforeAll(() => {
-  // jsdom in this workspace does not provide `window.localStorage` (see
-  // PartnerShell.test.tsx — same stub). PartnerStudioFrame renders PartnerShell,
-  // which reads the saved navigation layout on mount.
-  Object.defineProperty(window, 'localStorage', {
-    configurable: true,
-    value: {
-      clear: () => {
-        storedValues.clear();
-      },
-      getItem: (key: string) => storedValues.get(key) ?? null,
-      setItem: (key: string, value: string) => {
-        storedValues.set(key, value);
-      },
-    },
+vi.mock('./PartnerShell', () => ({
+  PartnerShell: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="partner-shell">{children}</div>
+  ),
+}));
+
+vi.mock('./States', () => ({
+  LoadingState: ({ label }: { label: string }) => <div role="status">{label}</div>,
+  EmptyState: ({ title }: { title: string }) => <div>{title}</div>,
+}));
+
+vi.mock('./PagePrimitives', () => ({
+  PageContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
+describe('PartnerStudioFrame server-authorized event routes', () => {
+  beforeEach(() => {
+    mocks.pathname = '/partner/venue/events/event_m3';
+    mocks.replace.mockReset();
+    mocks.auth = {
+      loading: true,
+      user: null,
+      isApproved: false,
+      profile: null,
+      tabVisibility: null,
+    };
   });
-});
 
-beforeEach(() => {
-  navigation.pathname = '/partner/venue/finance';
-  authAccess.tabVisibility = null;
-  window.localStorage.clear();
-});
-
-describe('PartnerStudioFrame role gating', () => {
-  it('renders a no-access state instead of a withheld tab', async () => {
-    authAccess.tabVisibility = { finance: false };
-    const interactionData = await fixturePartnerDataSource.getPartnerShellInteractions('venue');
-
+  it('renders server-authorized event content while client auth is still hydrating', () => {
     render(
-      <PartnerStudioFrame studio="venue" interactionData={interactionData}>
-        <div>Finance content</div>
+      <PartnerStudioFrame studio="venue" interactionData={{} as never}>
+        <div>Server-authorized event content</div>
       </PartnerStudioFrame>,
     );
 
-    expect(screen.getByText("Finance isn't available for your role")).toBeInTheDocument();
-    expect(screen.queryByText('Finance content')).not.toBeInTheDocument();
+    expect(screen.getByText('Server-authorized event content')).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(mocks.replace).not.toHaveBeenCalled();
   });
 
-  it('renders allowed tabs normally', async () => {
-    authAccess.tabVisibility = { finance: false };
-    navigation.pathname = '/partner/venue/events';
-    const interactionData = await fixturePartnerDataSource.getPartnerShellInteractions('venue');
+  it('keeps non-server-authorized partner routes behind the client auth gate', () => {
+    mocks.pathname = '/partner/venue/finance';
 
     render(
-      <PartnerStudioFrame studio="venue" interactionData={interactionData}>
-        <div>Events content</div>
+      <PartnerStudioFrame studio="venue" interactionData={{} as never}>
+        <div>Protected finance content</div>
       </PartnerStudioFrame>,
     );
 
-    expect(screen.getByText('Events content')).toBeInTheDocument();
-  });
-
-  it('fails open while access is still loading', async () => {
-    const interactionData = await fixturePartnerDataSource.getPartnerShellInteractions('venue');
-
-    render(
-      <PartnerStudioFrame studio="venue" interactionData={interactionData}>
-        <div>Finance content</div>
-      </PartnerStudioFrame>,
-    );
-
-    expect(screen.getByText('Finance content')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Authorizing Partner V3');
+    expect(screen.queryByText('Protected finance content')).not.toBeInTheDocument();
   });
 });

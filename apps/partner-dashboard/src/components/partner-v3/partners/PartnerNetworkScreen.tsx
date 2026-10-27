@@ -762,14 +762,20 @@ export function PartnerNetworkScreen({
         ) : (
           <EmptyState
             title="No partners found"
-            description="Try a different search or explore the discover view."
+            description={
+              subView === 'discover'
+                ? 'No partners are available to discover right now.'
+                : 'Try a different search or explore the discover view.'
+            }
             action={
-              <Link
-                className={styles['emptyLink']}
-                href={hrefFor({ search: '', subView: 'discover', profileId: undefined })}
-              >
-                Browse discover
-              </Link>
+              subView === 'discover' ? undefined : (
+                <Link
+                  className={styles['emptyLink']}
+                  href={hrefFor({ search: '', subView: 'discover', profileId: undefined })}
+                >
+                  Browse discover
+                </Link>
+              )
             }
           />
         )}

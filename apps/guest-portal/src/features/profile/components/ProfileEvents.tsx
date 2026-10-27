@@ -7,9 +7,11 @@ import type { ProfileEventFilter, ProfileEventSummary } from '../types/profile.t
 export function ProfileEvents({
   activeFilter,
   events,
+  available = true,
 }: {
   activeFilter: ProfileEventFilter;
   events: readonly ProfileEventSummary[];
+  available?: boolean;
 }) {
   return (
     <section aria-labelledby="profile-events-heading">
@@ -50,7 +52,21 @@ export function ProfileEvents({
         </nav>
       </div>
 
-      {events.length > 0 ? (
+      {!available ? (
+        <div
+          role="alert"
+          className="mt-8 rounded-[2rem] border border-amber-400/20 bg-amber-400/5 px-6 py-16 text-center"
+        >
+          <p className="text-lg font-black uppercase text-white">
+            {activeFilter === 'attended'
+              ? 'Attendance history unavailable'
+              : 'Order history unavailable'}
+          </p>
+          <p className="mt-3 text-sm text-white/50">
+            Your bookings are still safe. Refresh to try again.
+          </p>
+        </div>
+      ) : events.length > 0 ? (
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {events.map((event) => (
             <ProfileEventCard key={event.id} event={event} />

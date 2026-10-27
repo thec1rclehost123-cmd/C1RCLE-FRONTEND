@@ -18,6 +18,10 @@ const mocks = vi.hoisted(() => {
   };
 });
 
+vi.mock('@c1rcle/auth', () => ({
+  useSession: () => ({ user: { displayName: 'A Buyer', email: 'b@example.com' } }),
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => mocks.router,
   useSearchParams: () => new URLSearchParams(),
@@ -94,10 +98,8 @@ function deps(overrides: Partial<PaidCheckoutDeps> = {}): PaidCheckoutDeps {
 
 function toPaymentStep(event: BookingEventFixture = LIVE_EVENT) {
   render(<CheckoutView event={event} initialTierId="tier_1" />);
-  fireEvent.click(screen.getByRole('button', { name: 'Continue to details →' }));
-  fireEvent.change(screen.getByLabelText('Full Name'), { target: { value: 'A Buyer' } });
-  fireEvent.change(screen.getByLabelText('Email Address'), { target: { value: 'b@example.com' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Proceed to payment →' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Review order →' }));
+  expect(screen.queryByLabelText('Full Name')).not.toBeInTheDocument();
 }
 
 beforeEach(() => {
@@ -158,21 +160,59 @@ describe('paid checkout step', () => {
   it('prices the selection on the server and shows its fees and GST, not an estimate', async () => {
     toPaymentStep();
 
-    expect(await screen.findByRole('button', { name: 'Pay ₹1,180 →' })).toBeEnabled();
+    expect(await screen.findByRole('button', { name: 'Pay ₹1,180' })).toBeEnabled();
     expect(mocks.fetchQuote).toHaveBeenCalledWith({
       eventId: 'evt_1',
       lines: [{ tierId: 'tier_1', quantity: 1 }],
     });
-    expect(screen.getByText('Fees')).toBeInTheDocument();
+    expect(screen.getByText('Fees and taxes')).toBeInTheDocument();
     expect(screen.getByText('GST on fees')).toBeInTheDocument();
     expect(screen.queryByText('Fees (estimate)')).not.toBeInTheDocument();
+  });
+
+  it('re-prices with an entered promo and shows authoritative application', async () => {
+    mocks.fetchQuote.mockResolvedValueOnce(quote()).mockResolvedValueOnce({
+      ...quote(100_000),
+      discountPaise: 18_000,
+      appliedPromoCode: 'NIGHT',
+    });
+    toPaymentStep();
+
+    await screen.findByRole('button', { name: 'Pay ₹1,180' });
+    fireEvent.change(screen.getByPlaceholderText('Enter code'), { target: { value: 'NIGHT' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    expect(await screen.findByText('Promo NIGHT applied.')).toBeInTheDocument();
+    expect(mocks.fetchQuote).toHaveBeenLastCalledWith({
+      eventId: 'evt_1',
+      lines: [{ tierId: 'tier_1', quantity: 1 }],
+      promoCode: 'NIGHT',
+    });
+  });
+
+  it('explains that a failed promo quote must be removed or corrected before payment', async () => {
+    mocks.fetchQuote
+      .mockResolvedValueOnce(quote())
+      .mockRejectedValueOnce(new Error('invalid promo'));
+    toPaymentStep();
+
+    await screen.findByRole('button', { name: 'Pay ₹1,180' });
+    fireEvent.change(screen.getByPlaceholderText('Enter code'), { target: { value: 'NOT-VALID' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+    expect(
+      await screen.findByText(/promo could not be applied.*clear the code.*retry/i),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pay securely' })).toBeDisabled();
+    expect(mocks.deps.createHold).not.toHaveBeenCalled();
+    expect(mocks.deps.createAttempt).not.toHaveBeenCalled();
   });
 
   it('keeps Pay disabled until the quote arrives', () => {
     mocks.fetchQuote.mockReturnValue(new Promise(() => undefined));
     toPaymentStep();
 
-    expect(screen.getByRole('button', { name: 'Pay →' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Pay securely' })).toBeDisabled();
     expect(screen.getByText('Calculating your total…')).toBeInTheDocument();
     expect(screen.queryByText('₹1,050')).not.toBeInTheDocument();
     expect(screen.queryByText('Fees (estimate)')).not.toBeInTheDocument();
@@ -181,7 +221,7 @@ describe('paid checkout step', () => {
   it('pays through the widget and goes to the real confirmation for the verified order', async () => {
     toPaymentStep();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180 →' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180' }));
 
     await waitFor(() => {
       expect(mocks.push).toHaveBeenCalledWith('/confirmation/ord_9');
@@ -194,15 +234,20 @@ describe('paid checkout step', () => {
         prefill: { name: 'A Buyer', email: 'b@example.com' },
       }),
     );
+    expect(mocks.deps.createHold).toHaveBeenCalledWith(
+      expect.objectContaining({
+        attendee: { name: 'A Buyer', email: 'b@example.com' },
+      }),
+    );
   });
 
   it('uses one idempotency key per attempt, so retrying replays the same hold', async () => {
     mocks.deps = deps({ openCheckout: vi.fn().mockResolvedValue({ kind: 'dismissed' }) });
     toPaymentStep();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180 →' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180' }));
     await screen.findByText(/Payment cancelled/);
-    fireEvent.click(screen.getByRole('button', { name: 'Pay ₹1,180 →' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pay ₹1,180' }));
     await waitFor(() => {
       expect(mocks.deps.createHold).toHaveBeenCalledTimes(2);
     });
@@ -217,10 +262,10 @@ describe('paid checkout step', () => {
     });
     toPaymentStep();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180 →' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Card declined');
-    expect(screen.getByRole('button', { name: 'Pay ₹1,180 →' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Pay ₹1,180' })).toBeEnabled();
     expect(mocks.push).not.toHaveBeenCalled();
   });
 
@@ -237,10 +282,10 @@ describe('paid checkout step', () => {
     mocks.fetchQuote.mockResolvedValueOnce(quote(118_000)).mockResolvedValueOnce(quote(130_000));
     toPaymentStep();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180 →' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('The price changed to ₹1,300');
-    expect(await screen.findByRole('button', { name: 'Pay ₹1,300 →' })).toBeEnabled();
+    expect(await screen.findByRole('button', { name: 'Pay ₹1,300' })).toBeEnabled();
     expect(mocks.deps.openCheckout).not.toHaveBeenCalled();
   });
 
@@ -248,7 +293,7 @@ describe('paid checkout step', () => {
     mocks.deps = deps({ verify: vi.fn().mockRejectedValue(new Error('timeout')) });
     toPaymentStep();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180 →' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180' }));
 
     expect(await screen.findByText(/Checkout in progress/)).toHaveTextContent('contact support');
     expect(screen.getByRole('link', { name: 'My Tickets' })).toHaveAttribute('href', '/tickets');
@@ -263,7 +308,7 @@ describe('paid checkout step', () => {
     });
     toPaymentStep();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180 →' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('It has been refunded in full');
     expect(screen.queryByText(/Checkout in progress/)).not.toBeInTheDocument();
@@ -278,7 +323,7 @@ describe('paid checkout step', () => {
     });
     toPaymentStep();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180 →' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180' }));
 
     await waitFor(() => {
       expect(mocks.push).toHaveBeenCalledWith('/tickets');
@@ -290,18 +335,16 @@ describe('paid checkout step', () => {
     toPaymentStep();
 
     expect(await screen.findByText(/could not price your order/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Pay →' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Pay securely' })).toBeDisabled();
   });
 
-  it('never offers real payment for an event that is only a preview', () => {
+  it('never offers payment or a synthetic confirmation for an unavailable event', () => {
     toPaymentStep({ ...LIVE_EVENT, purchasable: false });
 
-    expect(screen.getByText('Preview only')).toBeInTheDocument();
+    expect(screen.getByText('Tickets unavailable')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Pay/ })).not.toBeInTheDocument();
     expect(mocks.fetchQuote).not.toHaveBeenCalled();
-    expect(screen.getByRole('link', { name: 'Complete Payment →' })).toHaveAttribute(
-      'href',
-      '/confirmation/preview-sky-night',
-    );
+    expect(screen.getByText('Checkout unavailable')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Complete Payment →' })).not.toBeInTheDocument();
   });
 });

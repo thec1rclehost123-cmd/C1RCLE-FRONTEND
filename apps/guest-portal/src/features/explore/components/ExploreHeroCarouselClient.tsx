@@ -4,6 +4,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
+import { EventArtworkFallback } from './EventArtworkFallback';
+
 import type { ExploreEvent } from '../types/explore.types';
 
 const heroDateFormatter = new Intl.DateTimeFormat('en-IN', {
@@ -18,14 +20,6 @@ const heroTimeFormatter = new Intl.DateTimeFormat('en-IN', {
   minute: '2-digit',
   timeZone: 'Asia/Kolkata',
 });
-
-const interestedAvatars = [
-  'from-[#ff754d] to-[#ff3d1f]',
-  'from-[#ff8a60] to-[#ff4b2b]',
-  'from-[#ff9d73] to-[#ff5d35]',
-  'from-[#ffb08a] to-[#ff714b]',
-  'from-[#ffc0a3] to-[#ff845d]',
-] as const;
 
 export function ExploreHeroCarouselClient({ events }: { events: readonly ExploreEvent[] }) {
   const carouselRef = useRef<HTMLDivElement>(null);
@@ -92,73 +86,88 @@ export function ExploreHeroCarouselClient({ events }: { events: readonly Explore
   };
 
   return (
-    <div className="relative z-10 px-3 pb-5 pt-20 sm:px-6 sm:pb-6 sm:pt-24 lg:px-8">
-      {/* Ambient Gradient Glow Behind Curved Hero Card */}
+    <div className="relative z-10">
       <div
+        key={`${event.id}-ambient`}
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-[52%] z-0 h-[92%] w-[96%] max-w-[1620px] -translate-x-1/2 -translate-y-1/2 rounded-[3.5rem] bg-[radial-gradient(ellipse_at_72%_48%,rgba(255,90,43,0.38)_0%,rgba(255,68,0,0.2)_36%,transparent_72%)] blur-[58px]"
-      />
-
-      {/* Curved Edge Rectangle Hero Container */}
-      <div
-        ref={carouselRef}
-        role="region"
-        aria-label="Featured event carousel"
-        aria-roledescription="carousel"
-        className="relative mx-auto min-h-[850px] max-w-[1540px] overflow-hidden rounded-[1.75rem] border border-white/12 bg-[#080808] shadow-[0_28px_90px_rgba(0,0,0,0.9),0_0_100px_rgba(255,68,0,0.16)] sm:min-h-[700px] sm:rounded-[2.5rem] lg:h-[calc(100svh-11rem)] lg:min-h-[540px] lg:max-h-[790px] lg:rounded-[3rem]"
+        className="explore-hero-ambient pointer-events-none fixed inset-0 z-0 overflow-hidden bg-[#080605] blur-[42px] sm:blur-[64px]"
       >
-        {/* Background Image & Cinematic Gradient */}
-        <div
-          key={`${event.id}-background`}
-          className="explore-hero-background-reveal absolute inset-0"
-        >
+        {event.image === '/c1rcle-logo.webp' ? (
+          <div
+            aria-hidden="true"
+            className="absolute inset-[-12%] bg-[radial-gradient(ellipse_at_52%_48%,rgba(255,100,45,0.42)_0%,rgba(103,42,20,0.34)_28%,rgba(18,13,11,0.84)_68%,#080605_100%)]"
+          >
+            <div className="absolute -right-[12%] top-[8%] aspect-square w-[72%] rounded-full border border-[#ff6b4a]/30 shadow-[0_0_90px_rgba(255,90,43,0.18)]" />
+          </div>
+        ) : (
           <Image
             src={event.image}
             alt=""
             fill
             unoptimized
-            preload={activeIndex === 0}
-            sizes="(max-width: 1024px) 100vw, 1540px"
-            className="scale-[1.025] object-cover object-center brightness-[0.88] saturate-[1.12]"
+            sizes="100vw"
+            className="scale-[1.12] object-cover brightness-[0.82] saturate-[1.25]"
           />
-        </div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_24%,transparent_0%,rgba(0,0,0,0.06)_26%,rgba(0,0,0,0.72)_82%)] sm:bg-[radial-gradient(circle_at_74%_40%,transparent_0%,rgba(0,0,0,0.08)_27%,rgba(0,0,0,0.74)_82%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.44)_0%,rgba(0,0,0,0.08)_28%,rgba(0,0,0,0.46)_50%,rgba(0,0,0,0.92)_72%,#000_100%)] sm:bg-[linear-gradient(90deg,rgba(0,0,0,0.96)_0%,rgba(0,0,0,0.82)_27%,rgba(0,0,0,0.48)_50%,rgba(0,0,0,0.12)_76%,rgba(0,0,0,0.32)_100%)]" />
-        <div className="absolute inset-x-0 bottom-0 h-[56%] bg-gradient-to-t from-black via-black/70 to-transparent sm:h-[46%] sm:via-black/46" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/52 to-transparent" />
+        )}
+        <div className="absolute inset-0 bg-black/45" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_24%,transparent_0%,rgba(0,0,0,0.22)_68%,rgba(0,0,0,0.5)_100%)]" />
+      </div>
 
-        {/* Right Side Expanded Event Poster Card */}
+      <div
+        ref={carouselRef}
+        role="region"
+        aria-label="Featured event carousel"
+        aria-roledescription="carousel"
+        className="relative min-h-[76svh] overflow-hidden sm:min-h-[84svh] lg:min-h-[min(90svh,980px)]"
+      >
         <div
-          key={`${event.id}-poster`}
-          className="explore-hero-poster-reveal absolute left-1/2 top-[5.25rem] z-10 h-[14.75rem] w-[11.5rem] -translate-x-1/2 overflow-hidden rounded-[1.25rem] border border-white/22 bg-black/60 p-1.5 shadow-[0_24px_70px_rgba(0,0,0,0.82),0_0_38px_rgba(255,68,0,0.2)] sm:left-auto sm:right-[7%] sm:top-1/2 sm:h-[66%] sm:w-[29%] sm:max-w-[390px] sm:translate-x-0 sm:-translate-y-1/2 sm:rounded-[1.5rem] sm:p-2 md:right-[8%] lg:right-[10%] lg:h-[68%] lg:w-[27%] lg:rounded-[1.8rem] lg:p-2.5"
+          key={`${event.id}-artwork`}
+          className="explore-hero-background-reveal absolute -inset-[6%] overflow-hidden blur-[60px]"
         >
-          <div className="relative h-full w-full overflow-hidden rounded-[0.95rem] sm:rounded-[1.1rem] lg:rounded-[1.35rem]">
+          {event.image === '/c1rcle-logo.webp' ? (
+            <EventArtworkFallback startsAt={event.startsAt} category={event.category} hero />
+          ) : (
             <Image
               src={event.image}
               alt={`${event.title} featured poster`}
               fill
               unoptimized
-              loading={activeIndex === 0 ? 'eager' : 'lazy'}
-              sizes="(max-width: 640px) 184px, (max-width: 1024px) 29vw, 27vw"
-              className="object-cover object-center brightness-[1.08] contrast-[1.04] saturate-[1.15]"
+              preload={activeIndex === 0}
+              sizes="100vw"
+              className="scale-[1.12] object-cover object-center brightness-[0.48] saturate-[1.1]"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/5" />
-            <div className="absolute inset-0 ring-1 ring-inset ring-white/10" />
-          </div>
+          )}
         </div>
+        <div className="explore-hero-overlay-fade pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,#080605_0%,rgba(8,6,5,0.86)_22%,rgba(8,6,5,0.48)_48%,rgba(8,6,5,0.1)_82%,rgba(8,6,5,0.04)_100%)] max-sm:bg-[linear-gradient(180deg,rgba(8,6,5,0.48)_0%,rgba(8,6,5,0.05)_26%,rgba(8,6,5,0.5)_58%,transparent_100%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_55%_35%,transparent_24%,rgba(0,0,0,0.24)_75%,transparent_100%)]" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[72%] bg-gradient-to-t from-transparent via-[#080605]/40 to-transparent sm:h-[64%]" />
 
         {/* Left Side Content Info */}
         <div
           key={`${event.id}-copy`}
-          className="relative z-20 flex min-h-[850px] w-full flex-col justify-start px-5 pb-24 pt-[21.25rem] sm:min-h-[700px] sm:justify-center sm:px-9 sm:pb-20 sm:pt-20 lg:h-full lg:min-h-0 lg:px-12 lg:pb-20 lg:pl-[7.5%] xl:pl-[9%]"
+          className="relative z-20 mx-auto flex min-h-[76svh] w-full max-w-[1600px] flex-col justify-end gap-5 px-6 pb-28 pt-40 sm:min-h-[84svh] sm:flex-row sm:items-center sm:justify-between sm:gap-10 sm:px-12 sm:pb-44 sm:pt-28 lg:min-h-[min(90svh,980px)] lg:px-[6%]"
         >
-          <div className="w-full sm:max-w-[58%] md:max-w-[56%] lg:max-w-[54%] xl:max-w-[55rem]">
-            <p className="explore-hero-copy-reveal explore-hero-delay-1 inline-flex items-center gap-2 rounded-full border border-[#ff5a2b]/45 bg-black/36 px-4 py-2 text-[8px] font-black uppercase tracking-[0.28em] text-[#ff7857] backdrop-blur-xl sm:px-5 sm:py-2.5 sm:text-[9px]">
-              <span className="size-1.5 rounded-full bg-[#ff5a2b] shadow-[0_0_12px_rgba(255,90,43,0.9)]" />
-              {event.badge ?? 'Featured experience'}
-            </p>
+          <div
+            role="img"
+            aria-label={`${event.title} poster`}
+            className="explore-hero-copy-reveal relative order-1 mx-auto aspect-[4/5] w-[min(42vw,190px)] shrink-0 overflow-hidden rounded-[1.2rem] border border-white/20 bg-black/30 shadow-[0_24px_70px_rgba(0,0,0,0.55)] sm:mx-0 sm:w-[min(34vw,380px)] md:w-[min(32vw,430px)] xl:w-[min(30vw,500px)]"
+          >
+            {event.image === '/c1rcle-logo.webp' ? (
+              <EventArtworkFallback startsAt={event.startsAt} category={event.category} />
+            ) : (
+              <Image
+                src={event.image}
+                alt=""
+                fill
+                unoptimized
+                sizes="(max-width: 639px) 42vw, (max-width: 1279px) 32vw, 500px"
+                className="object-cover"
+              />
+            )}
+          </div>
 
-            <h1 className="explore-hero-copy-reveal explore-hero-delay-2 mt-4 max-w-[12ch] text-[clamp(2.35rem,11vw,3.25rem)] font-black uppercase leading-[0.88] tracking-[-0.058em] text-white drop-shadow-[0_14px_42px_rgba(0,0,0,0.7)] sm:mt-5 sm:text-[clamp(3rem,5.2vw,5rem)]">
+          <div className="order-2 w-full sm:min-w-0 sm:flex-1 lg:max-w-[54rem]">
+            <h1 className="explore-hero-copy-reveal explore-hero-delay-2 mt-1 max-w-[18ch] text-[clamp(2rem,9vw,3rem)] font-black uppercase leading-[0.94] tracking-[-0.05em] text-white drop-shadow-[0_14px_42px_rgba(0,0,0,0.7)] sm:mt-0 sm:text-[clamp(2.5rem,4vw,4.5rem)]">
               {event.title}
             </h1>
 
@@ -182,35 +191,25 @@ export function ExploreHeroCarouselClient({ events }: { events: readonly Explore
               </span>
             </div>
 
-            <div className="explore-hero-copy-reveal explore-hero-delay-4 mt-6 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2.5 sm:mt-8 sm:flex sm:flex-wrap sm:gap-3">
+            {event.summary ? (
+              <p className="explore-hero-copy-reveal mt-4 max-w-xl text-sm leading-6 text-white/75">
+                {event.summary}
+              </p>
+            ) : null}
+
+            <div className="explore-hero-copy-reveal explore-hero-delay-4 mt-6 flex flex-wrap items-center gap-2.5 sm:mt-8 sm:gap-3">
               <Link
                 href={`/event/${event.slug}`}
                 className="inline-flex min-h-13 items-center justify-center rounded-full bg-white px-6 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-black shadow-[0_12px_35px_rgba(255,255,255,0.14)] transition-transform hover:scale-[1.03] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white motion-reduce:transition-none sm:min-h-14 sm:px-8 sm:text-xs"
               >
                 Get tickets
               </Link>
-              <div
-                className="flex min-h-13 min-w-0 items-center justify-center gap-2 rounded-full border border-white/16 bg-black/38 px-3 py-2 backdrop-blur-xl sm:min-h-14 sm:justify-start sm:gap-3 sm:px-4"
-                aria-label="184 people interested"
-              >
-                <span className="flex -space-x-3" aria-hidden="true">
-                  {interestedAvatars.map((gradient) => (
-                    <span
-                      key={gradient}
-                      className={`size-7 rounded-full border-2 border-[#241815] bg-gradient-to-br last:hidden sm:size-8 sm:last:flex ${gradient}`}
-                    />
-                  ))}
-                </span>
-                <span className="whitespace-nowrap text-[9px] font-black uppercase tracking-[0.1em] text-white/88 sm:text-[10px] sm:tracking-[0.12em]">
-                  +184 <span className="hidden sm:inline">Interested</span>
-                </span>
-              </div>
             </div>
           </div>
         </div>
 
         {/* Carousel Navigation Arrow & Dots Controls */}
-        <div className="absolute inset-x-0 bottom-8 z-30 flex items-center justify-center gap-2 sm:bottom-9 sm:gap-3">
+        <div className="absolute inset-x-0 bottom-9 z-30 flex items-center justify-center gap-2 sm:inset-x-auto sm:right-[6%] sm:bottom-28 sm:gap-3">
           <button
             type="button"
             aria-label="Previous featured event"

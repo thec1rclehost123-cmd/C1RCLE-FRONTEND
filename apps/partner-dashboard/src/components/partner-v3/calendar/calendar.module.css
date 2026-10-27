@@ -589,7 +589,8 @@
   text-transform: none;
 }
 .blockForm input,
-.blockForm select {
+.blockForm select,
+.blockForm textarea {
   min-width: 0;
   width: 100%;
   padding: 10px 11px;
@@ -601,6 +602,10 @@
   font: inherit;
   font-size: 13px;
   font-weight: 600;
+}
+.blockForm textarea {
+  min-height: 84px;
+  resize: vertical;
 }
 .timeControls {
   display: grid;

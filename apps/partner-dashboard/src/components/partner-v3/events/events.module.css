@@ -202,6 +202,23 @@
   clip-path: inset(50%);
 }
 
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 20px;
+  padding: 14px 18px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 14px;
+  color: #aaa;
+  font-size: 13px;
+}
+.pagination a {
+  color: #ff7444;
+  font-weight: 700;
+}
+
 .eventTable {
   overflow-x: auto;
   border: 1px solid rgb(255 255 255 / 7%);

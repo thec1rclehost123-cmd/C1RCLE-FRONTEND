@@ -6,10 +6,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { isApiClientError } from '@c1rcle/api-client';
+import { useSession } from '@c1rcle/auth';
 import { rsvpResponseSchema } from '@c1rcle/contracts';
 
 import { getEventAccentClasses } from '@/features/event-detail/eventDetailPalette';
 import { bffClient } from '@/lib/bff/bff-client';
+import { csrfHeaders } from '@/lib/bff/csrf';
 
 import {
   clearPaymentRecovery,
@@ -34,7 +36,7 @@ const dateFormatter = new Intl.DateTimeFormat('en-IN', {
   timeZone: 'Asia/Kolkata',
 });
 
-type CheckoutStep = 1 | 2 | 3;
+type CheckoutStep = 1 | 2;
 type PayState = 'idle' | 'paying' | 'processing';
 type QuoteState = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -47,18 +49,19 @@ export function CheckoutFlowClient({
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { user } = useSession();
   const requestedTier = initialTierId ?? searchParams.get('tier') ?? undefined;
   const initialTier = event.ticketTiers.some((tier) => tier.id === requestedTier)
     ? requestedTier
     : event.ticketTiers[0]?.id;
   const [step, setStep] = useState<CheckoutStep>(1);
+  const [expandedTierId, setExpandedTierId] = useState<string | undefined>(initialTier);
   const [quantities, setQuantities] = useState<Record<string, number>>(() => {
     if (!initialTier) return {};
     // Never pre-select more than the live availability captured at render.
     const max = event.ticketTiers.find((tier) => tier.id === initialTier)?.maximumQuantity ?? 0;
     return max > 0 ? { [initialTier]: 1 } : {};
   });
-  const [attendee, setAttendee] = useState({ name: '', email: '', phone: '' });
   // The server's price for ONE selection. It is keyed by that selection, so a
   // result for different tickets can never be shown or paid against.
   const [quoteResult, setQuoteResult] = useState<{
@@ -66,6 +69,8 @@ export function CheckoutFlowClient({
     quote: CheckoutQuoteResponse | null;
   } | null>(null);
   const [requoteCount, setRequoteCount] = useState(0);
+  const [promoInput, setPromoInput] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
   const [payState, setPayState] = useState<PayState>(() =>
     event.purchasable && event.ticketTiers.some((tier) => tier.price.amountPaise > 0)
       ? 'processing'
@@ -93,9 +98,8 @@ export function CheckoutFlowClient({
     0,
   );
   const totalTickets = selectedTickets.reduce((total, tier) => total + tier.quantity, 0);
-  // A ₹0 total means every selected tier is free — the only booking this
-  // client fulfills for real (direct RSVP, no payment provider). Anything
-  // priced stays on the preview confirmation path.
+  // A ₹0 total is fulfilled as RSVP without the payment provider. Paid
+  // selections proceed only when the authoritative event mapping allows it.
   const isFreeBooking = selectedTickets.length > 0 && subtotalPaise === 0;
   // The server fulfills exactly one RSVP ticket per account per event.
   const canConfirmRsvp = isFreeBooking && totalTickets === 1 && rsvpStatus === 'idle';
@@ -107,8 +111,8 @@ export function CheckoutFlowClient({
   );
   const lineSignature = lines.map((line) => `${line.tierId}:${String(line.quantity)}`).join(',');
 
-  const wantsQuote = step === 3 && canPay && lines.length > 0;
-  const quoteKey = `${event.eventId}|${lineSignature}|${String(requoteCount)}`;
+  const wantsQuote = step === 2 && canPay && lines.length > 0;
+  const quoteKey = `${event.eventId}|${lineSignature}|${appliedPromo ?? ''}|${String(requoteCount)}`;
   const currentQuote = quoteResult?.key === quoteKey ? quoteResult : null;
   const quote = wantsQuote ? (currentQuote?.quote ?? null) : null;
   const quoteState: QuoteState = !wantsQuote
@@ -181,7 +185,11 @@ export function CheckoutFlowClient({
   useEffect(() => {
     if (!wantsQuote) return;
     let cancelled = false;
-    fetchQuote({ eventId: event.eventId, lines })
+    fetchQuote({
+      eventId: event.eventId,
+      lines,
+      ...(appliedPromo ? { promoCode: appliedPromo } : {}),
+    })
       .then((result) => {
         if (!cancelled) setQuoteResult({ key: quoteKey, quote: result });
       })
@@ -191,7 +199,7 @@ export function CheckoutFlowClient({
     return () => {
       cancelled = true;
     };
-  }, [wantsQuote, quoteKey, event.eventId, lines]);
+  }, [wantsQuote, quoteKey, event.eventId, lines, appliedPromo]);
 
   async function pay() {
     if (!quote || payState !== 'idle') return;
@@ -200,18 +208,15 @@ export function CheckoutFlowClient({
     }
     setPayState('paying');
     setPayMessage(null);
-    const prefill = {
-      ...(attendee.name ? { name: attendee.name } : {}),
-      ...(attendee.email ? { email: attendee.email } : {}),
-      ...(attendee.phone ? { contact: attendee.phone } : {}),
-    };
+    const prefill = user ? { name: user.displayName, email: user.email } : undefined;
     const result = await runPaidCheckout(paidCheckoutDeps, {
       eventId: event.eventId,
       eventTitle: event.title,
       lines,
       expectedTotalPaise: quote.grandTotalPaise,
       idempotencyKey: attemptKey.current.value,
-      prefill,
+      ...(prefill ? { prefill, attendee: prefill } : {}),
+      promoCode: appliedPromo,
     });
 
     switch (result.kind) {
@@ -253,12 +258,6 @@ export function CheckoutFlowClient({
     setPayState('idle');
   }
 
-  function csrfHeader(): Record<string, string> {
-    if (typeof document === 'undefined') return {};
-    const match = /(?:^|;\s*)(?:[a-zA-Z0-9_-]+\.)?c1rcle\.csrf=([^;]+)/.exec(document.cookie);
-    return match?.[1] ? { 'x-csrf-token': decodeURIComponent(match[1]) } : {};
-  }
-
   async function confirmRsvp() {
     const ticket = selectedTickets[0];
     if (!ticket || totalTickets !== 1 || rsvpStatus !== 'idle') return;
@@ -268,7 +267,7 @@ export function CheckoutFlowClient({
       const result = await bffClient.post({
         path: '/api/rsvp',
         body: { eventId: event.eventId, tierId: ticket.id },
-        headers: csrfHeader(),
+        headers: csrfHeaders(),
         schema: rsvpResponseSchema,
       });
       router.push(`/confirmation/${encodeURIComponent(result.order.id)}`);
@@ -292,458 +291,492 @@ export function CheckoutFlowClient({
   }
 
   return (
-    <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_390px]">
-      <section
-        aria-labelledby="checkout-heading"
-        className={`rounded-[1.75rem] border bg-black/65 p-5 backdrop-blur-xl sm:p-7 ${accent.borderStrong} ${accent.panelShadow}`}
+    <div className="mx-auto max-w-[1020px]">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 sm:mb-6">
+        <Link
+          href={`/event/${encodeURIComponent(event.id)}`}
+          className="inline-flex min-h-10 items-center gap-2 text-xs font-semibold text-white/60 transition-colors hover:text-white motion-reduce:transition-none"
+        >
+          <span aria-hidden="true">←</span> Back to event
+        </Link>
+      </div>
+
+      <div
+        className={`grid overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#0b0a0d]/95 shadow-[0_28px_100px_rgba(0,0,0,0.6)] backdrop-blur-md lg:grid-cols-[minmax(240px,0.78fr)_minmax(0,1.22fr)] ${accent.panelShadow}`}
       >
-        <div className="flex flex-wrap items-start justify-between gap-5">
-          <div>
-            <p className={`text-[9px] font-black uppercase tracking-[0.28em] ${accent.text}`}>
-              Step {String(step).padStart(2, '0')} of 03
-            </p>
-            <h1
-              id="checkout-heading"
-              className="mt-3 text-4xl font-black uppercase leading-[0.9] tracking-[-0.05em] sm:text-6xl"
-            >
-              {step === 1 && 'Select tickets'}
-              {step === 2 && 'Your details'}
-              {step === 3 && 'Payment options'}
-            </h1>
-          </div>
-          <ol aria-label="Checkout progress" className="flex items-center gap-2">
-            {[1, 2, 3].map((item) => (
-              <li
-                key={item}
-                aria-current={step === item ? 'step' : undefined}
-                className={`flex size-9 items-center justify-center rounded-full border text-[10px] font-black ${
-                  step === item ? `${accent.selected} text-white` : 'border-white/10 text-white/30'
-                }`}
-              >
-                {item}
-              </li>
-            ))}
-          </ol>
-        </div>
-
-        {step === 1 && (
-          <div className="mt-8 space-y-3">
-            {event.ticketTiers.map((tier) => {
-              const quantity = quantities[tier.id] ?? 0;
-              return (
-                <article
-                  key={tier.id}
-                  className={`flex flex-col gap-5 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between ${
-                    quantity > 0 ? accent.selected : 'border-white/10 bg-white/[0.035]'
-                  }`}
-                >
-                  <div>
-                    <h2 className="text-lg font-black uppercase text-white">{tier.name}</h2>
-                    <p className="mt-1 text-xs uppercase tracking-[0.12em] text-white/35">
-                      {tier.description}
-                    </p>
-                    <p className="mt-3 text-sm font-black text-white">
-                      {moneyFormatter.format(tier.price.amountPaise / 100)}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-3 sm:justify-end">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/30 sm:hidden">
-                      Quantity
-                    </span>
-                    <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/40 p-1">
-                      <button
-                        type="button"
-                        aria-label={`Decrease ${tier.name} count`}
-                        disabled={quantity === 0}
-                        onClick={() => {
-                          changeQuantity(tier.id, -1, tier.maximumQuantity);
-                        }}
-                        className="flex size-8 items-center justify-center rounded-full text-sm font-bold text-white transition-colors hover:bg-white/10 disabled:opacity-20"
-                      >
-                        -
-                      </button>
-                      <span className="w-6 text-center text-xs font-black text-white">
-                        {quantity}
-                      </span>
-                      <button
-                        type="button"
-                        aria-label={`Increase ${tier.name} count`}
-                        disabled={quantity >= tier.maximumQuantity}
-                        onClick={() => {
-                          changeQuantity(tier.id, 1, tier.maximumQuantity);
-                        }}
-                        className="flex size-8 items-center justify-center rounded-full text-sm font-bold text-white transition-colors hover:bg-white/10 disabled:opacity-20"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-
-            <div className="flex justify-end pt-4">
-              <button
-                type="button"
-                disabled={selectedTickets.length === 0}
-                onClick={() => {
-                  setStep(2);
-                }}
-                className={`rounded-full px-7 py-3 text-xs font-black uppercase tracking-[0.2em] transition-all ${
-                  selectedTickets.length > 0
-                    ? `${accent.selected} text-white shadow-lg`
-                    : 'cursor-not-allowed bg-white/10 text-white/30'
-                }`}
-              >
-                Continue to details →
-              </button>
+        <aside
+          aria-label="Event information"
+          className="border-b border-white/10 px-5 py-6 sm:px-8 sm:py-8 lg:border-b-0 lg:border-r lg:border-white/10"
+        >
+          <h1 className="mb-5 line-clamp-3 text-lg font-extrabold uppercase leading-tight tracking-[-0.03em] text-white sm:text-xl lg:border-t lg:border-white/15 lg:pt-5 lg:text-2xl">
+            {event.title}
+          </h1>
+          <div className="flex items-start gap-4 lg:block">
+            <div className="relative aspect-[0.72/1] w-[100px] shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black sm:w-[138px] lg:mx-auto lg:mt-7 lg:w-full lg:max-w-[230px]">
+              <Image
+                src={event.image}
+                alt={`${event.title} event poster`}
+                fill
+                unoptimized
+                sizes="(max-width: 640px) 96px, 250px"
+                className="object-cover"
+              />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
             </div>
-          </div>
-        )}
-
-        {step === 2 && (
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (attendee.name && attendee.email) {
-                setStep(3);
-              }
-            }}
-            className="mt-8 space-y-4"
-          >
-            <PreviewField
-              label="Full Name"
-              type="text"
-              value={attendee.name}
-              onChange={(value) => {
-                setAttendee((current) => ({ ...current, name: value }));
-              }}
-            />
-            <PreviewField
-              label="Email Address"
-              type="email"
-              value={attendee.email}
-              onChange={(value) => {
-                setAttendee((current) => ({ ...current, email: value }));
-              }}
-            />
-            <PreviewField
-              label="Phone Number"
-              type="tel"
-              value={attendee.phone}
-              onChange={(value) => {
-                setAttendee((current) => ({ ...current, phone: value }));
-              }}
-            />
-
-            <div className="flex items-center justify-between pt-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setStep(1);
-                }}
-                className="text-xs font-black uppercase tracking-[0.2em] text-white/50 hover:text-white"
-              >
-                ← Back
-              </button>
-              <button
-                type="submit"
-                disabled={!attendee.name || !attendee.email}
-                className={`rounded-full px-7 py-3 text-xs font-black uppercase tracking-[0.2em] transition-all ${
-                  attendee.name && attendee.email
-                    ? `${accent.selected} text-white shadow-lg`
-                    : 'cursor-not-allowed bg-white/10 text-white/30'
-                }`}
-              >
-                Proceed to payment →
-              </button>
-            </div>
-          </form>
-        )}
-
-        {step === 3 && isFreeBooking && (
-          <div className="mt-8 space-y-6">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-white">
-                Free RSVP — no payment needed
+            <div className="min-w-0 flex-1 lg:mt-7 lg:text-center">
+              <p className="mt-2 text-xs font-semibold leading-5 text-white/70 sm:text-sm">
+                {dateFormatter.format(new Date(event.startsAt))}
               </p>
-              <p className="mt-2 text-xs leading-5 text-white/55">
-                Confirming reserves one ticket on your account. You must be logged in.
+              <p className="mt-0.5 text-xs leading-5 text-white/50 sm:text-sm">
+                {event.venue} · {event.city}
               </p>
-            </div>
-
-            {totalTickets !== 1 && (
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">
-                RSVP admits one guest — select a single ticket to continue.
-              </p>
-            )}
-            {rsvpError !== null && (
-              <p
-                role="alert"
-                className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-400"
-              >
-                {rsvpError}
-              </p>
-            )}
-            {alreadyOnList && (
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/60">
-                You&apos;re already on the list —{' '}
-                <Link href="/tickets" className="underline hover:text-white">
-                  view My Tickets
-                </Link>
-                .
-              </p>
-            )}
-
-            <div className="flex items-center justify-between pt-4 border-t border-white/10">
-              <button
-                type="button"
-                onClick={() => {
-                  setStep(2);
-                }}
-                className="text-xs font-black uppercase tracking-[0.2em] text-white/50 hover:text-white"
-              >
-                ← Back to details
-              </button>
-              <button
-                type="button"
-                disabled={!canConfirmRsvp}
-                onClick={() => {
-                  void confirmRsvp();
-                }}
-                className={`rounded-full px-8 py-3.5 text-xs font-black uppercase tracking-[0.2em] text-white transition-all shadow-xl ${
-                  canConfirmRsvp ? accent.selected : 'cursor-not-allowed bg-white/10 text-white/30'
-                }`}
-              >
-                {rsvpStatus === 'posting' ? 'Reserving…' : 'Confirm RSVP →'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {step === 3 && !isFreeBooking && (
-          <div className="mt-8 space-y-6">
-            {canPay ? (
-              <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-white">
-                  Secure payment by Razorpay
+              {event.doorNote && (
+                <p className="mt-3 hidden border-t border-white/10 pt-3 text-[10px] leading-5 text-white/40 lg:block">
+                  {event.doorNote}
                 </p>
-                <p className="mt-2 text-xs leading-5 text-white/55">
-                  Pay by card, UPI or net banking in Razorpay&apos;s secure window. Your payment
-                  details never reach C1RCLE.
-                </p>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-white">
-                  Preview only
-                </p>
-                <p className="mt-2 text-xs leading-5 text-white/55">
-                  This event is not open for online purchase yet.
-                </p>
-              </div>
-            )}
-
-            {quoteState === 'loading' && (
-              <p
-                role="status"
-                className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40"
-              >
-                Calculating your total…
-              </p>
-            )}
-            {quoteState === 'error' && (
-              <p
-                role="alert"
-                className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-400"
-              >
-                We could not price your order. Check you are signed in, then go back and try again.
-              </p>
-            )}
-            {payMessage !== null && (
-              <p
-                role="alert"
-                className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-400"
-              >
-                {payMessage}
-              </p>
-            )}
-            {payState === 'processing' && (
-              <p role="status" className="text-xs leading-5 text-white/70">
-                Checkout in progress. We are checking server confirmation and any issued tickets
-                should appear in{' '}
-                <Link href="/tickets" className="underline hover:text-white">
-                  My Tickets
-                </Link>{' '}
-                within a few minutes. If they do not, contact support and quote your payment
-                confirmation from Razorpay.
-              </p>
-            )}
-
-            <div className="flex items-center justify-between border-t border-white/10 pt-4">
-              <button
-                type="button"
-                disabled={payState !== 'idle'}
-                onClick={() => {
-                  setStep(2);
-                }}
-                className="text-xs font-black uppercase tracking-[0.2em] text-white/50 hover:text-white disabled:opacity-30"
-              >
-                ← Back to details
-              </button>
-              {canPay ? (
-                <button
-                  type="button"
-                  disabled={quoteState !== 'ready' || payState !== 'idle'}
-                  onClick={() => {
-                    void pay();
-                  }}
-                  className={`rounded-full px-8 py-3.5 text-xs font-black uppercase tracking-[0.2em] text-white transition-all shadow-xl ${
-                    quoteState === 'ready' && payState === 'idle'
-                      ? accent.selected
-                      : 'cursor-not-allowed bg-white/10 text-white/30'
-                  }`}
-                >
-                  {payState === 'paying'
-                    ? 'Opening payment…'
-                    : quote
-                      ? `Pay ${moneyFormatter.format(quote.grandTotalPaise / 100)} →`
-                      : 'Pay →'}
-                </button>
-              ) : (
-                <Link
-                  href={`/confirmation/preview-${event.id}`}
-                  className={`rounded-full px-8 py-3.5 text-xs font-black uppercase tracking-[0.2em] text-white transition-all shadow-xl ${accent.selected}`}
-                >
-                  Complete Payment →
-                </Link>
               )}
             </div>
           </div>
-        )}
-      </section>
+        </aside>
 
-      <aside className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-black/65 backdrop-blur-xl">
-        <div className="relative aspect-[16/9] w-full overflow-hidden">
-          <Image
-            src={event.image}
-            alt={event.title}
-            fill
-            unoptimized
-            sizes="(max-width: 1024px) 100vw, 390px"
-            className="object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-          <div className="absolute inset-x-5 bottom-5">
-            <p className={`text-[9px] font-black uppercase tracking-[0.24em] ${accent.text}`}>
-              Booking summary
+        <section aria-labelledby="checkout-heading" className="min-w-0 px-4 py-6 sm:px-7 sm:py-8">
+          <div className="mb-5 border-b border-white/10 pb-4 sm:mb-6 sm:pb-5">
+            <h2
+              id="checkout-heading"
+              className="text-xl font-extrabold uppercase leading-tight tracking-[-0.035em] text-white sm:text-2xl"
+            >
+              {step === 1 ? 'Select tickets' : isFreeBooking ? 'Confirm your RSVP' : 'Your order'}
+            </h2>
+            <p className="mt-1.5 text-xs leading-5 text-white/45">
+              {step === 1
+                ? 'Choose your entry.'
+                : isFreeBooking
+                  ? 'No payment is needed.'
+                  : 'Review the final price before payment.'}
             </p>
-            <h2 className="mt-2 text-2xl font-black uppercase text-white">{event.title}</h2>
           </div>
-        </div>
 
-        <div className="p-5">
-          <p className="text-xs font-semibold text-white/60">
-            {dateFormatter.format(new Date(event.startsAt))}
-          </p>
-          <p className="mt-1 text-xs text-white/40">
-            {event.venue} · {event.city}
-          </p>
-
-          <div className="mt-5 space-y-3 border-y border-white/10 py-5">
-            {selectedTickets.length > 0 ? (
-              selectedTickets.map((ticket) => {
-                const quotedLine = quote?.lines.find((line) => line.tierId === ticket.id);
-                const lineDisplay =
-                  wantsQuote && !quotedLine
-                    ? '—'
-                    : moneyFormatter.format(
-                        (quotedLine?.subtotalPaise ?? ticket.price.amountPaise * ticket.quantity) /
-                          100,
-                      );
+          {step === 1 && (
+            <div className="space-y-2.5">
+              {event.ticketTiers.map((tier) => {
+                const quantity = quantities[tier.id] ?? 0;
+                const soldOut = tier.maximumQuantity <= 0;
+                const expanded = expandedTierId === tier.id;
                 return (
-                  <div key={ticket.id} className="flex items-center justify-between gap-4 text-sm">
-                    <span className="text-white/55">
-                      {ticket.name} × {ticket.quantity}
-                    </span>
-                    <span className="font-bold text-white">
-                      <AnimatedValue value={lineDisplay} />
-                    </span>
-                  </div>
+                  <article
+                    key={tier.id}
+                    className={`overflow-hidden rounded-lg border transition-colors ${quantity > 0 ? accent.border : 'border-white/10'} ${soldOut ? 'bg-white/[0.03]' : 'bg-white/[0.07]'}`}
+                  >
+                    <button
+                      type="button"
+                      aria-expanded={expanded}
+                      onClick={() => {
+                        setExpandedTierId(expanded ? undefined : tier.id);
+                      }}
+                      className="flex min-h-[64px] w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                    >
+                      <span className="min-w-0">
+                        <span
+                          className={`block text-sm font-extrabold uppercase tracking-[-0.01em] ${soldOut ? 'text-white/45 line-through decoration-white/30' : 'text-white'}`}
+                        >
+                          {tier.name}
+                        </span>
+                        <span className="mt-1 block text-xs font-semibold text-white/55">
+                          {moneyFormatter.format(tier.price.amountPaise / 100)}
+                          {tier.description ? (
+                            <span className="font-normal text-white/35"> · {tier.description}</span>
+                          ) : null}
+                        </span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-2">
+                        {soldOut ? (
+                          <span className="rounded-full bg-white/10 px-2.5 py-1 text-[9px] font-bold text-white/55">
+                            Sold out
+                          </span>
+                        ) : quantity > 0 ? (
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-[9px] font-bold text-white ${accent.selected}`}
+                          >
+                            {quantity} selected
+                          </span>
+                        ) : null}
+                        <span
+                          aria-hidden="true"
+                          className={`text-white/45 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                        >
+                          ⌄
+                        </span>
+                      </span>
+                    </button>
+                    {expanded && (
+                      <div className="flex items-center justify-between gap-3 border-t border-white/10 px-3.5 py-3 sm:px-4">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">
+                          {soldOut
+                            ? 'This ticket tier is sold out'
+                            : `Up to ${String(tier.maximumQuantity)} available`}
+                        </span>
+                        {!soldOut && (
+                          <div className="flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-black/45 p-1">
+                            <button
+                              type="button"
+                              aria-label={`Decrease ${tier.name} count`}
+                              disabled={quantity === 0}
+                              onClick={() => {
+                                changeQuantity(tier.id, -1, tier.maximumQuantity);
+                              }}
+                              className="flex size-9 items-center justify-center rounded-full text-base font-bold text-white transition-colors hover:bg-white/10 disabled:opacity-25"
+                            >
+                              −
+                            </button>
+                            <span className="w-5 text-center text-xs font-black text-white">
+                              {quantity}
+                            </span>
+                            <button
+                              type="button"
+                              aria-label={`Increase ${tier.name} count`}
+                              disabled={quantity >= tier.maximumQuantity}
+                              onClick={() => {
+                                changeQuantity(tier.id, 1, tier.maximumQuantity);
+                              }}
+                              className="flex size-9 items-center justify-center rounded-full text-base font-bold text-white transition-colors hover:bg-white/10 disabled:opacity-25"
+                            >
+                              +
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </article>
                 );
-              })
-            ) : (
-              <p className="text-xs uppercase tracking-[0.18em] text-white/25">
-                No tickets selected
-              </p>
-            )}
-          </div>
-
-          <dl className="mt-5 space-y-3 text-sm">
-            <div className="flex justify-between gap-4 text-white/45">
-              <dt>Subtotal</dt>
-              <dd>
-                <AnimatedValue
-                  value={
-                    wantsQuote && !quote
-                      ? '—'
-                      : moneyFormatter.format((quote?.subtotalPaise ?? subtotalPaise) / 100)
-                  }
-                />
-              </dd>
-            </div>
-            {discountPaise > 0 && (
-              <div className="flex justify-between gap-4 text-white/45">
-                <dt>Discount</dt>
-                <dd>
-                  <AnimatedValue value={`-${moneyFormatter.format(discountPaise / 100)}`} />
-                </dd>
+              })}
+              {event.ticketTiers.length === 0 && (
+                <p className="rounded-xl border border-white/10 bg-white/[0.025] p-4 text-sm leading-6 text-white/55">
+                  Tickets are not available for this event right now.
+                </p>
+              )}
+              <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-4">
+                <span className="text-xs text-white/50">
+                  {totalTickets} {totalTickets === 1 ? 'ticket' : 'tickets'} ·{' '}
+                  {moneyFormatter.format(subtotalPaise / 100)}
+                </span>
+                <button
+                  type="button"
+                  disabled={selectedTickets.length === 0}
+                  onClick={() => {
+                    setStep(2);
+                  }}
+                  className={`min-h-11 rounded-full px-5 text-[10px] font-black uppercase tracking-[0.14em] transition-all sm:px-6 sm:text-xs ${selectedTickets.length > 0 ? 'bg-white text-black hover:bg-white/90' : 'cursor-not-allowed bg-white/10 text-white/30'}`}
+                >
+                  Review order →
+                </button>
               </div>
-            )}
-            <div className="flex justify-between gap-4 text-white/45">
-              <dt>Fees</dt>
-              <dd>
-                <AnimatedValue
-                  value={
-                    authoritativeFeesPaise === null
-                      ? '—'
-                      : moneyFormatter.format(authoritativeFeesPaise / 100)
-                  }
-                />
-              </dd>
             </div>
-            {gstPaise > 0 && (
-              <div className="flex justify-between gap-4 text-white/45">
-                <dt>GST on fees</dt>
-                <dd>
-                  <AnimatedValue value={moneyFormatter.format(gstPaise / 100)} />
-                </dd>
-              </div>
-            )}
-            <div className="flex items-end justify-between gap-4 border-t border-white/10 pt-4">
-              <dt className="text-[9px] font-black uppercase tracking-[0.22em] text-white/35">
-                Total
-              </dt>
-              <dd className="text-3xl font-black text-white">
-                <AnimatedValue
-                  value={
-                    quote
-                      ? moneyFormatter.format(quote.grandTotalPaise / 100)
-                      : isFreeBooking
-                        ? moneyFormatter.format(0)
-                        : '—'
-                  }
-                />
-              </dd>
-            </div>
-          </dl>
+          )}
 
-          <p className="mt-5 rounded-xl bg-white/[0.04] p-3 text-[10px] leading-5 text-white/35">
-            {event.doorNote}
-          </p>
-        </div>
-      </aside>
+          {step === 2 && (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3.5 sm:p-4">
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/45">
+                  Your order
+                </p>
+                <div className="mt-3 space-y-3">
+                  {selectedTickets.map((ticket) => {
+                    const quotedLine = quote?.lines.find((line) => line.tierId === ticket.id);
+                    const lineDisplay =
+                      wantsQuote && !quotedLine
+                        ? '—'
+                        : moneyFormatter.format(
+                            (quotedLine?.subtotalPaise ??
+                              ticket.price.amountPaise * ticket.quantity) / 100,
+                          );
+                    return (
+                      <div
+                        key={ticket.id}
+                        className="flex items-start justify-between gap-4 text-sm"
+                      >
+                        <span className="min-w-0 text-white/75">
+                          {ticket.quantity}× {ticket.name}
+                        </span>
+                        <span className="shrink-0 font-bold text-white">
+                          <AnimatedValue value={lineDisplay} />
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <dl className="mt-4 space-y-2.5 border-t border-white/10 pt-3 text-xs">
+                  <div className="flex justify-between gap-4 text-white/50">
+                    <dt>Subtotal</dt>
+                    <dd>
+                      <AnimatedValue
+                        value={
+                          wantsQuote && !quote
+                            ? '—'
+                            : moneyFormatter.format((quote?.subtotalPaise ?? subtotalPaise) / 100)
+                        }
+                      />
+                    </dd>
+                  </div>
+                  {discountPaise > 0 && (
+                    <div className="flex justify-between gap-4 text-white/50">
+                      <dt>Discount</dt>
+                      <dd>
+                        <AnimatedValue value={`−${moneyFormatter.format(discountPaise / 100)}`} />
+                      </dd>
+                    </div>
+                  )}
+                  <details className="group text-white/50">
+                    <summary className="flex min-h-8 cursor-pointer list-none items-center justify-between gap-4 marker:hidden">
+                      <span>Fees and taxes</span>
+                      <span>
+                        <AnimatedValue
+                          value={
+                            authoritativeFeesPaise === null
+                              ? '—'
+                              : moneyFormatter.format((authoritativeFeesPaise + gstPaise) / 100)
+                          }
+                        />{' '}
+                        <span
+                          aria-hidden="true"
+                          className="ml-1 text-white/35 group-open:inline-block group-open:rotate-180"
+                        >
+                          ⌄
+                        </span>
+                      </span>
+                    </summary>
+                    <div className="space-y-2 border-t border-white/10 py-2 text-[11px]">
+                      <div className="flex justify-between gap-4">
+                        <dt>Platform and payment fees</dt>
+                        <dd>
+                          <AnimatedValue
+                            value={
+                              authoritativeFeesPaise === null
+                                ? '—'
+                                : moneyFormatter.format(authoritativeFeesPaise / 100)
+                            }
+                          />
+                        </dd>
+                      </div>
+                      {gstPaise > 0 && (
+                        <div className="flex justify-between gap-4">
+                          <dt>GST on fees</dt>
+                          <dd>
+                            <AnimatedValue value={moneyFormatter.format(gstPaise / 100)} />
+                          </dd>
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                  <div className="flex items-end justify-between gap-4 border-t border-white/10 pt-3">
+                    <dt className="font-black uppercase tracking-[0.14em] text-white/70">
+                      Total due
+                    </dt>
+                    <dd className="text-xl font-black text-white sm:text-2xl">
+                      <AnimatedValue
+                        value={
+                          quote
+                            ? moneyFormatter.format(quote.grandTotalPaise / 100)
+                            : isFreeBooking
+                              ? moneyFormatter.format(0)
+                              : '—'
+                        }
+                      />
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+
+              {isFreeBooking ? (
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
+                    <p className="text-xs font-black uppercase tracking-[0.14em] text-white">
+                      Free RSVP · no payment needed
+                    </p>
+                    <p className="mt-2 text-xs leading-5 text-white/55">
+                      Confirming reserves one ticket on your account. You must be logged in.
+                    </p>
+                  </div>
+                  {totalTickets !== 1 && (
+                    <p className="text-xs leading-5 text-amber-200/80">
+                      RSVP admits one guest. Go back and select a single ticket.
+                    </p>
+                  )}
+                  {rsvpError !== null && (
+                    <p role="alert" className="text-xs text-red-300">
+                      {rsvpError}
+                    </p>
+                  )}
+                  {alreadyOnList && (
+                    <p className="text-xs text-white/60">
+                      You&apos;re already on the list —{' '}
+                      <Link href="/tickets" className="underline hover:text-white">
+                        view My Tickets
+                      </Link>
+                      .
+                    </p>
+                  )}
+                  <div className="flex flex-col-reverse gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep(1);
+                      }}
+                      className="min-h-10 text-left text-xs font-black uppercase tracking-[0.16em] text-white/50 hover:text-white"
+                    >
+                      ← Back
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!canConfirmRsvp}
+                      onClick={() => {
+                        void confirmRsvp();
+                      }}
+                      className={`min-h-11 w-full rounded-full px-6 text-[10px] font-black uppercase tracking-[0.15em] text-black transition-all sm:w-auto sm:text-xs ${canConfirmRsvp ? 'bg-white hover:bg-white/90' : 'cursor-not-allowed bg-white/30'}`}
+                    >
+                      {rsvpStatus === 'posting' ? 'Reserving…' : 'Confirm RSVP'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {canPay ? (
+                    <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3.5 sm:p-4">
+                      <label className="block text-[9px] font-black uppercase tracking-[0.18em] text-white/55">
+                        Promo code
+                        <span className="mt-2 flex gap-2">
+                          <input
+                            value={promoInput}
+                            onChange={(inputEvent) => {
+                              setPromoInput(inputEvent.target.value);
+                            }}
+                            placeholder="Enter code"
+                            className="min-h-11 min-w-0 flex-1 rounded-lg border border-white/15 bg-black/35 px-3 text-sm text-white outline-none focus:border-white/40"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAppliedPromo(promoInput.trim() || null);
+                              setRequoteCount((count) => count + 1);
+                            }}
+                            className="min-h-11 rounded-lg border border-white/20 px-4 text-[9px] font-black uppercase tracking-[0.13em] text-white"
+                          >
+                            Apply
+                          </button>
+                        </span>
+                      </label>
+                      {quote?.appliedPromoCode ? (
+                        <p className="mt-3 text-xs text-emerald-300">
+                          Promo {quote.appliedPromoCode} applied.
+                        </p>
+                      ) : appliedPromo && quoteState === 'ready' ? (
+                        <p className="mt-3 text-xs text-amber-300">
+                          That promo could not be applied to this order.
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-white">
+                        Tickets unavailable
+                      </p>
+                      <p className="mt-2 text-xs leading-5 text-white/55">
+                        This event is not open for online purchase right now.
+                      </p>
+                    </div>
+                  )}
+                  {canPay && (
+                    <div className="rounded-xl border border-white/10 bg-black/25 p-3.5 sm:p-4">
+                      <div className="flex items-center gap-3">
+                        <span
+                          aria-hidden="true"
+                          className="flex size-8 items-center justify-center rounded-full border border-white/10 text-sm text-white/70"
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            className="size-4"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                          >
+                            <rect x="5" y="10" width="14" height="11" rx="2" />
+                            <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                          </svg>
+                        </span>
+                        <div>
+                          <p className="text-xs font-bold text-white">Secure payment</p>
+                          <p className="mt-0.5 text-[10px] leading-4 text-white/45">
+                            Payment opens in Razorpay&apos;s secure checkout.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {quoteState === 'loading' && (
+                    <p role="status" className="text-xs text-white/50">
+                      Calculating your total…
+                    </p>
+                  )}
+                  {quoteState === 'error' && (
+                    <p role="alert" className="text-xs leading-5 text-red-300">
+                      {appliedPromo
+                        ? 'This promo could not be applied, so we could not calculate your total. Clear the code and select Apply to retry without it.'
+                        : 'We could not price your order. Check you are signed in, then go back and try again.'}
+                    </p>
+                  )}
+                  {payMessage !== null && (
+                    <p role="alert" className="text-xs leading-5 text-red-300">
+                      {payMessage}
+                    </p>
+                  )}
+                  {payState === 'processing' && (
+                    <p role="status" className="text-xs leading-5 text-white/70">
+                      Checkout in progress. We are checking server confirmation and issued tickets
+                      should appear in{' '}
+                      <Link href="/tickets" className="underline hover:text-white">
+                        My Tickets
+                      </Link>{' '}
+                      within a few minutes. If they do not, contact support and quote your payment
+                      confirmation from Razorpay.
+                    </p>
+                  )}
+                  <div className="flex flex-col-reverse gap-3 border-t border-white/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                    <button
+                      type="button"
+                      disabled={payState !== 'idle'}
+                      onClick={() => {
+                        setStep(1);
+                      }}
+                      className="min-h-10 text-left text-xs font-black uppercase tracking-[0.16em] text-white/50 hover:text-white disabled:opacity-30"
+                    >
+                      ← Edit tickets
+                    </button>
+                    {canPay ? (
+                      <button
+                        type="button"
+                        disabled={quoteState !== 'ready' || payState !== 'idle'}
+                        onClick={() => {
+                          void pay();
+                        }}
+                        className={`min-h-11 w-full rounded-full px-6 text-[10px] font-black uppercase tracking-[0.15em] transition-all shadow-xl sm:w-auto sm:text-xs ${quoteState === 'ready' && payState === 'idle' ? 'bg-white text-black hover:bg-white/90' : 'cursor-not-allowed bg-white/30 text-black/50'}`}
+                      >
+                        {payState === 'paying'
+                          ? 'Opening payment…'
+                          : quote
+                            ? `Pay ${moneyFormatter.format(quote.grandTotalPaise / 100)}`
+                            : 'Pay securely'}
+                      </button>
+                    ) : (
+                      <span className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] px-6 text-[10px] font-black uppercase tracking-[0.15em] text-white/40">
+                        Checkout unavailable
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
@@ -753,33 +786,5 @@ function AnimatedValue({ value }: { value: string }) {
     <span key={value} className="checkout-number-roll inline-block">
       {value}
     </span>
-  );
-}
-
-function PreviewField({
-  label,
-  type,
-  value,
-  onChange,
-}: {
-  label: string;
-  type: 'email' | 'tel' | 'text';
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <label className="block">
-      <span className="text-[9px] font-black uppercase tracking-[0.24em] text-white/40">
-        {label}
-      </span>
-      <input
-        type={type}
-        value={value}
-        onChange={(event) => {
-          onChange(event.target.value);
-        }}
-        className="mt-2 min-h-14 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-semibold text-white outline-none transition-colors placeholder:text-white/20 focus:border-white/30 motion-reduce:transition-none"
-      />
-    </label>
   );
 }

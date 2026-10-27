@@ -1,34 +1,30 @@
-import { PromoterGuestsScreen } from '@/components/partner-v3/promoter/PromoterGuestsScreen';
-import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
+import { ConnectedPartnerGuestsIndexScreen } from '@/components/partner-v3/event-detail/ConnectedPartnerGuestsIndexScreen';
+import { loadPartnerEvents } from '@/lib/events/load-partner-events';
 
 import { renderStudioSkeleton } from '../route-helpers';
 
 export default async function StudioGuestsPage({
   params,
-  searchParams,
 }: {
   readonly params: Promise<{ studio: string }>;
-  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { studio } = await params;
-  if (studio !== 'promoter')
+  if (studio === 'promoter') {
     return renderStudioSkeleton(
       Promise.resolve({ studio }),
       'Guests',
-      'Guest tools are reserved for the Promoter Studio screen checkpoint.',
+      'Promoter guest records are not available until a tenant-scoped referral read model is connected.',
     );
-  const query = await searchParams;
-  const getValue = (value: string | string[] | undefined) =>
-    Array.isArray(value) ? value[0] : value;
-  const status = getValue(query['status']) === 'ticket' ? ('ticket' as const) : ('all' as const);
-  const data = await fixturePartnerDataSource.getPromoterGuests();
-  return (
-    <PromoterGuestsScreen
-      data={data}
-      initialSearch={getValue(query['search']) ?? ''}
-      initialStatus={status}
-      initialEvent={getValue(query['event']) ?? 'all'}
-      initialDialog={getValue(query['dialog']) === 'add'}
-    />
+  }
+  if (studio === 'venue' || studio === 'host') {
+    const data = await loadPartnerEvents({ studio });
+    return <ConnectedPartnerGuestsIndexScreen data={data} studio={studio} />;
+  }
+  return renderStudioSkeleton(
+    Promise.resolve({ studio }),
+    'Guests',
+    studio === 'promoter'
+      ? 'Promoter guest records are not available until a tenant-scoped referral read model is connected. No guest details are shown.'
+      : 'Guest tools are not available for this workspace.',
   );
 }

@@ -19,6 +19,10 @@ type PartnerNavigationLayout = 'side' | 'top';
 const NAVIGATION_LAYOUT_STORAGE_KEY = 'c1rcle.partner.navigation-layout';
 const NAVIGATION_LAYOUT_CHANGE_EVENT = 'partner-navigation-layout-change';
 
+const subscribeToHydration = (_onStoreChange: () => void) => () => undefined;
+const getClientHydrationSnapshot = () => true;
+const getServerHydrationSnapshot = () => false;
+
 const getStoredNavigationLayout = (): PartnerNavigationLayout => {
   const savedLayout = window.localStorage.getItem(NAVIGATION_LAYOUT_STORAGE_KEY);
   return savedLayout === 'top' ? 'top' : 'side';
@@ -48,13 +52,21 @@ export function PartnerShell({
   const pathname = usePathname();
   const router = useRouter();
   const auth = useDashboardAuth();
+  const clientMounted = useSyncExternalStore(
+    subscribeToHydration,
+    getClientHydrationSnapshot,
+    getServerHydrationSnapshot,
+  );
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigationLayout = useSyncExternalStore(
     subscribeToNavigationLayout,
     getStoredNavigationLayout,
     getServerNavigationLayout,
   );
-  const userName = auth.profile?.displayName ?? 'Partner';
+  // The session store is populated from an HTTP-only cookie on the client,
+  // while server renders use the generic identity. Keep the first client
+  // render deterministic, then reveal the authenticated display name.
+  const userName = clientMounted ? (auth.profile?.displayName ?? 'Partner') : 'Partner';
   // Role-limited navigation: tabs the backend's per-role matrix withholds
   // never render. Fail-open while access is still loading (a null map shows
   // every tab until the access read lands).

@@ -42,7 +42,7 @@ const VENUE: VenueDto = {
 
 describe('toBookingEventFixture', () => {
   it('maps wire fields into the checkout view model', () => {
-    expect(toBookingEventFixture(EVENT, VENUE)).toEqual({
+    expect(toBookingEventFixture(EVENT, VENUE, [])).toEqual({
       id: 'sky-night',
       eventId: 'evt_1',
       title: 'Sky Night',
@@ -54,39 +54,41 @@ describe('toBookingEventFixture', () => {
       address: 'Pune',
       city: 'Pune',
       doorNote: 'Entry rules are set by the host and shown at checkout.',
-      ticketTiers: [
-        {
-          id: 'general-admission',
-          name: 'General Admission',
-          description: 'A rooftop gathering.',
-          price: { amountPaise: 120000, currency: 'INR' },
-          maximumQuantity: 10,
-        },
-      ],
-      // Only the price-derived fallback tier here, which is not a real tier id.
+      ticketTiers: [],
       purchasable: false,
     });
   });
 
-  it('is purchasable only when real ticket tiers loaded', () => {
-    expect(toBookingEventFixture(EVENT, VENUE, null).purchasable).toBe(false);
-    expect(toBookingEventFixture(EVENT, VENUE, []).purchasable).toBe(true);
+  it('is purchasable only when authoritative inventory is available', () => {
+    expect(toBookingEventFixture(EVENT, VENUE, []).purchasable).toBe(false);
+    expect(
+      toBookingEventFixture(EVENT, VENUE, [
+        {
+          id: 'tier_1',
+          eventId: EVENT.id,
+          name: 'General',
+          description: '',
+          priceInPaise: 120000,
+          currency: 'INR',
+          availableQuantity: 1,
+        },
+      ]).purchasable,
+    ).toBe(true);
   });
 
-  it('falls back honestly without inventing data', () => {
-    const mapped = toBookingEventFixture({ ...EVENT, tags: [], imageUrl: null, summary: '' }, null);
+  it('uses honest event and venue placeholders without inventing tickets', () => {
+    const mapped = toBookingEventFixture(
+      { ...EVENT, tags: [], imageUrl: null, summary: '' },
+      null,
+      [],
+    );
     expect(mapped).toMatchObject({
       category: 'Events',
       image: '/c1rcle-logo.webp',
       venue: 'Venue TBA',
       city: 'India',
+      ticketTiers: [],
     });
-    expect(mapped.ticketTiers[0]?.description).toBe('Sky Night');
-  });
-
-  it('maps free events to a zero price', () => {
-    const mapped = toBookingEventFixture({ ...EVENT, isFree: true }, VENUE);
-    expect(mapped.ticketTiers[0]?.price).toEqual({ amountPaise: 0, currency: 'INR' });
   });
 
   it('maps real public tiers with their ids (RSVP-capable)', () => {

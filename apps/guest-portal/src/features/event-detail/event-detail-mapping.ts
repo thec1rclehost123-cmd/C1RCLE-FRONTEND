@@ -1,32 +1,17 @@
-import type {
-  EventAccentTone,
-  EventDetailFixture,
-  EventLifecycle,
-} from './types/event-detail.types';
-import type { EventDto, HostPublicDto, VenueDto } from '@c1rcle/contracts';
+import type { EventDetailFixture, EventLifecycle } from './types/event-detail.types';
+import type { EventPublicDetailDto, PublicTicketTierDto } from '@c1rcle/contracts';
 
 /**
- * ─── Backend → event detail mapping ──────────────────────────────────────────
- * Pure mapping from the public wire DTOs (`GET /api/v2/public/events/:idOrSlug`
- * + per-event venue/host by-id lookups) to the presentational
- * `EventDetailFixture` that `EventDetailView` renders. Only published events
- * ever reach this module — `GET /public/events/:idOrSlug` 404s anything else.
- * No fetch, no fallback fixtures: missing venue/host data renders honest
- * placeholders, never invented events.
- *
- * Ticket tiers and guestlist have no public read endpoints yet, so the ticket
- * section gets one tier derived from the event's real price fields and the
- * guestlist stays empty (the view skips it when there are no guests).
+ * Pure mapping from the public event-detail projection and its authoritative
+ * public tier list. Missing relationships stay visibly unavailable and ticket
+ * tiers are never synthesized from summary price fields.
  */
 
 const FALLBACK_IMAGE = '/c1rcle-logo.webp';
 const FALLBACK_VENUE = 'Venue TBA';
-const FALLBACK_CITY = 'India';
+const FALLBACK_CITY = 'Location unavailable';
 const FALLBACK_CATEGORY = 'Events';
-const FALLBACK_HOST_NAME = 'Host TBA';
-const FALLBACK_HOST_ID = 'host-tba';
-
-const ACCENT_TONES: readonly EventAccentTone[] = ['pink', 'purple', 'red', 'orange'];
+const FALLBACK_HOST_NAME = 'Host details unavailable';
 
 const STATUS_LIFECYCLE: Record<string, EventLifecycle> = {
   published: 'scheduled',
@@ -37,15 +22,33 @@ const STATUS_LIFECYCLE: Record<string, EventLifecycle> = {
   archived: 'completed',
 };
 
+function nonEmptyString(value: string | null | undefined, fallback: string): string {
+  const normalized = value?.trim();
+  return normalized && normalized.length > 0 ? normalized : fallback;
+}
+
+function formatAddress(event: EventPublicDetailDto): string {
+  if (!event.venue) return FALLBACK_CITY;
+  return (
+    [
+      event.venue.address.street,
+      event.venue.address.city,
+      event.venue.address.state,
+      event.venue.address.zip,
+      event.venue.address.country,
+    ]
+      .map((part) => part?.trim())
+      .filter(Boolean)
+      .join(', ') || FALLBACK_CITY
+  );
+}
+
 export function toEventDetailFixture(
-  event: EventDto,
-  venue: VenueDto | null,
-  host: HostPublicDto | null,
+  event: EventPublicDetailDto,
+  tiers: readonly PublicTicketTierDto[],
 ): EventDetailFixture {
-  const city = venue?.city ?? FALLBACK_CITY;
   const summary = event.summary.trim();
   const description = event.description.trim();
-  const details = [summary, description].filter((part) => part.length > 0);
 
   return {
     id: event.id,
@@ -53,33 +56,33 @@ export function toEventDetailFixture(
     title: event.title,
     category: event.tags[0] ?? FALLBACK_CATEGORY,
     image: event.imageUrl ?? FALLBACK_IMAGE,
-    accentTone: ACCENT_TONES[event.title.length % ACCENT_TONES.length] ?? 'purple',
+    accentTone: 'orange',
     startsAt: event.startAt,
     endsAt: event.endAt ?? event.startAt,
-    venue: venue?.name ?? FALLBACK_VENUE,
-    venueId: event.venueId ?? 'venue-tba',
-    address: city,
-    city,
-    hostId: host?.slug ?? FALLBACK_HOST_ID,
-    host: host?.name ?? FALLBACK_HOST_NAME,
-    summary: summary || `${event.title} — details below.`,
-    description: details.length > 0 ? details : ['More details will be announced soon.'],
-    doorNote: 'Entry rules are set by the host and shown at checkout.',
+    venue: event.venue?.name ?? FALLBACK_VENUE,
+    venueId: event.venue?.slug ?? null,
+    address: formatAddress(event),
+    city: nonEmptyString(event.venue?.address.city, FALLBACK_CITY),
+    hostId: event.organizer?.slug ?? null,
+    host: event.organizer?.name ?? FALLBACK_HOST_NAME,
+    summary: summary || 'Event details not provided.',
+    description: description.length > 0 ? [description] : [],
+    doorNote: 'Ticket and entry terms are shown during checkout when available.',
     lifecycle: STATUS_LIFECYCLE[event.status] ?? 'scheduled',
     guests: [],
     interestedCount: 0,
-    ticketNote: 'Live pricing',
-    ticketTiers: [
-      {
-        id: 'general-admission',
-        name: 'General Admission',
-        description: summary,
-        price:
-          event.isFree || event.startingPricePaise === null
-            ? null
-            : { amountPaise: event.startingPricePaise, currency: 'INR' },
-        availabilityLabel: 'Available at checkout',
-      },
-    ],
+    ticketNote: 'Live availability',
+    ticketTiers: tiers.map((tier) => ({
+      id: tier.id,
+      name: tier.name,
+      description: tier.description,
+      price:
+        tier.priceInPaise === 0
+          ? null
+          : { amountPaise: tier.priceInPaise, currency: 'INR' as const },
+      availabilityLabel:
+        tier.availableQuantity === 0 ? 'Sold out' : `${String(tier.availableQuantity)} available`,
+      availableQuantity: tier.availableQuantity,
+    })),
   };
 }

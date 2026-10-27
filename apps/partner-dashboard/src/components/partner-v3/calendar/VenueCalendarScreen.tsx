@@ -12,22 +12,32 @@ import styles from './calendar.module.css';
 import { CalendarDayDetails } from './CalendarDayDetails';
 import { CalendarGrid } from './CalendarGrid';
 import { CalendarHeader } from './CalendarHeader';
+import { PublishAvailabilityDialog } from './PublishAvailabilityDialog';
 
 import type { VenueCalendarData } from '@/data/partner-data-source';
-import type { CreateVenueBlockInput } from '@/lib/calendar/venue-calendar-repository';
+import type {
+  CreateVenueBlockInput,
+  PublishVenueAvailabilityInput,
+} from '@/lib/calendar/venue-calendar-repository';
 
 export function VenueCalendarScreen({
   data,
   initialMonth,
   initialDate,
   initialDialog,
+  initialAvailabilityDialog,
   onBlockDate,
+  onUnblockDate,
+  onPublishAvailability,
 }: {
   readonly data: VenueCalendarData;
   readonly initialMonth?: string;
   readonly initialDate?: string;
   readonly initialDialog?: boolean;
+  readonly initialAvailabilityDialog?: boolean;
   readonly onBlockDate?: (input: CreateVenueBlockInput) => Promise<void>;
+  readonly onUnblockDate?: (blockId: string) => Promise<void>;
+  readonly onPublishAvailability?: (input: PublishVenueAvailabilityInput) => Promise<void>;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -43,13 +53,15 @@ export function VenueCalendarScreen({
     readonly month?: string;
     readonly date?: string;
     readonly dialog?: boolean;
+    readonly availabilityDialog?: boolean;
   }) => {
     const params = new URLSearchParams();
     const nextMonth = values.month ?? month.key;
     const nextDate = values.date ?? selectedDay.date;
     params.set('month', nextMonth);
     params.set('date', nextDate);
-    if (values.dialog) params.set('dialog', 'block');
+    if (values.availabilityDialog) params.set('dialog', 'availability');
+    else if (values.dialog) params.set('dialog', 'block');
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
   const moveMonth = (direction: -1 | 1) => {
@@ -111,6 +123,10 @@ export function VenueCalendarScreen({
           accent="orange"
           mode="venue"
           eventHref={(event) => event.href}
+          onUnblock={block && onUnblockDate ? async () => onUnblockDate(block.id) : undefined}
+          onPublishAvailability={() => {
+            update({ availabilityDialog: true });
+          }}
           createHref={`/partner/venue/events/create?date=${selectedDay.date}`}
         />
       </div>
@@ -123,6 +139,15 @@ export function VenueCalendarScreen({
           onBlock={onBlockDate}
           onClose={() => {
             update({ dialog: false });
+          }}
+        />
+      ) : null}
+      {initialAvailabilityDialog ? (
+        <PublishAvailabilityDialog
+          selectedDate={selectedDate}
+          {...(onPublishAvailability ? { onPublish: onPublishAvailability } : {})}
+          onClose={() => {
+            update({ dialog: false, availabilityDialog: false });
           }}
         />
       ) : null}

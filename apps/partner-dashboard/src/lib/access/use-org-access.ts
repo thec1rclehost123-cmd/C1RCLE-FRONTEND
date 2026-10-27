@@ -6,7 +6,8 @@ import { isApiClientError } from '@c1rcle/api-client';
 import { useSessionStore } from '@c1rcle/auth';
 
 import { getActiveOrgId } from '@/lib/org/active-org';
-import { getPartnerAccess } from '@/lib/org/org-repository';
+
+import { getCachedPartnerAccess } from './org-access-cache';
 
 import type { PartnerAccessDto } from '@c1rcle/contracts';
 
@@ -36,22 +37,22 @@ const IDLE_RESULT: FetchResult = { orgId: null, access: null, error: null, isSus
 
 export function useOrgAccess(orgIdOverride?: string | null): OrgAccessState {
   const orgId = orgIdOverride !== undefined ? orgIdOverride : getActiveOrgId();
-  // `SessionProvider` hydrates the session before its background `refresh()`
-  // re-scopes the gateway session cookie to this origin (see
-  // session-provider.tsx). Firing the request earlier means the BFF has no
-  // cookie to forward and the gateway 401s. Gate on `hydrated` — the flag
-  // flips once bootstrap settles, signed in or not — so the first access
-  // read always rides a real session.
-  const hydrated = useSessionStore().hydrated;
+  // The server has already validated the httpOnly session cookie to provide
+  // the initial user. The same-origin BFF forwards that cookie directly, so
+  // authorization can start while the separate in-memory token refresh is
+  // still settling; waiting for `hydrated` serialized two authenticated
+  // network round trips on every fresh page load.
+  const session = useSessionStore();
+  const userId = session.session?.user.id ?? null;
 
   const [result, setResult] = useState<FetchResult>(IDLE_RESULT);
 
   useEffect(() => {
-    if (!orgId || !hydrated) return;
+    if (!orgId || !userId) return;
 
     let isMounted = true;
 
-    getPartnerAccess(orgId)
+    getCachedPartnerAccess(orgId, userId)
       .then((data) => {
         if (isMounted) {
           setResult({ orgId, access: data, error: null, isSuspended: false });
@@ -74,7 +75,7 @@ export function useOrgAccess(orgIdOverride?: string | null): OrgAccessState {
     return () => {
       isMounted = false;
     };
-  }, [orgId, hydrated]);
+  }, [orgId, userId]);
 
   // A result fetched for a different (or no) org is stale — treat it as still loading
   // rather than flashing the previous org's access while the new request is in flight.

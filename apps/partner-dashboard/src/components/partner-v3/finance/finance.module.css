@@ -153,6 +153,13 @@
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
+
+.financeDisclosure {
+  margin: 8px 0 0;
+  color: var(--partner-muted, #a1a1aa);
+  font-size: 12px;
+  line-height: 1.5;
+}
 .balanceHero p {
   margin: 0 0 26px;
   color: #c9b7ac;

@@ -21,6 +21,8 @@ export interface PaidCheckoutDeps {
     eventId: string;
     lines: { tierId: string; quantity: number }[];
     idempotencyKey: string;
+    promoCode?: string | null;
+    attendee?: { name: string; email: string; phone?: string };
   }): Promise<CheckoutHoldResponse>;
   createAttempt(input: { holdId: string; idempotencyKey: string }): Promise<PaymentAttemptResponse>;
   openCheckout(args: OpenCheckoutArgs): Promise<RazorpayOutcome>;
@@ -43,6 +45,8 @@ export interface PaidCheckoutInput {
   readonly expectedTotalPaise: number;
   /** One per checkout attempt, so a double-click or retry replays rather than repeats. */
   readonly idempotencyKey: string;
+  readonly promoCode?: string | null;
+  readonly attendee?: { name: string; email: string; phone?: string };
   readonly prefill?: { name?: string; email?: string; contact?: string };
 }
 
@@ -77,6 +81,8 @@ export async function runPaidCheckout(
       eventId: input.eventId,
       lines: input.lines.map((line) => ({ ...line })),
       idempotencyKey: `${input.idempotencyKey}-hold`,
+      ...(input.promoCode ? { promoCode: input.promoCode } : {}),
+      ...(input.attendee ? { attendee: input.attendee } : {}),
     });
     if (hold.pricing.grandTotalPaise !== input.expectedTotalPaise) {
       return { kind: 'price_changed', grandTotalPaise: hold.pricing.grandTotalPaise };

@@ -127,6 +127,8 @@ export {
 export type {
   EventStatusDto,
   EventDto,
+  EventOperationsDto,
+  OrganizationEventListResponse,
   EventPreviewDto,
   CreateEventInput,
   UpdateEventInput,
@@ -149,6 +151,8 @@ export type {
 export {
   eventStatusSchema,
   eventDtoSchema,
+  eventOperationsDtoSchema,
+  organizationEventListResponseSchema,
   eventPreviewDtoSchema,
   createEventSchema,
   updateEventSchema,
@@ -177,6 +181,7 @@ export type {
   SetVenueShareRequest,
   PartnerAccessDto,
   OrganizationOverviewDto,
+  OrganizationSalesBreakdownDto,
   OrganizationTrendsDto,
   TrendGranularity,
   TrendBucketDto,
@@ -202,6 +207,7 @@ export {
   partnerPermissionSchema,
   partnerAccessDtoSchema,
   organizationOverviewDtoSchema,
+  organizationSalesBreakdownDtoSchema,
   organizationTrendsDtoSchema,
   trendGranularitySchema,
   trendBucketDtoSchema,

@@ -1,15 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import {
-  AddIcon,
-  BankIcon,
-  BottleServiceIcon,
-  ForwardIcon,
-  RefundIcon,
-  TicketIcon,
-  UsersIcon,
-} from '@c1rcle/icons';
+import { AddIcon, ForwardIcon, TicketIcon, UsersIcon } from '@c1rcle/icons';
 
 import { FixtureBadge } from '../FixtureBadge';
 
@@ -17,31 +9,7 @@ import styles from './overview.module.css';
 import { OverviewCalendarCard } from './OverviewCalendarCard';
 import { OverviewTrendCard } from './OverviewTrendCard';
 
-import type {
-  OverviewAccent,
-  OverviewActivity,
-  OverviewData,
-  OverviewLinks,
-} from '@/data/partner-data-source';
-import type { ComponentType } from 'react';
-
-const activityIcons: Readonly<
-  Record<
-    OverviewActivity['kind'],
-    ComponentType<{ size?: number; 'aria-hidden'?: boolean | 'true' | 'false' }>
-  >
-> = {
-  ticket: TicketIcon,
-  payout: BankIcon,
-  refund: RefundIcon,
-  table: BottleServiceIcon,
-};
-
-const activityToneClasses = {
-  positive: { icon: styles['activityIcon-positive'], amount: styles['amount-positive'] },
-  neutral: { icon: styles['activityIcon-neutral'], amount: styles['amount-neutral'] },
-  negative: { icon: styles['activityIcon-negative'], amount: styles['amount-negative'] },
-} as const;
+import type { OverviewAccent, OverviewData, OverviewLinks } from '@/data/partner-data-source';
 
 const upcomingBackgroundClasses = [
   styles['upcomingEvent-1'],
@@ -80,6 +48,8 @@ const networkStatusClasses = {
   success: styles['networkStatus-success'],
   neutral: styles['networkStatus-neutral'],
 } as const;
+
+const NETWORK_PREVIEW_LIMIT = 4;
 
 const classNames = (...names: readonly (string | undefined | false)[]) =>
   names.filter(Boolean).join(' ');
@@ -201,10 +171,15 @@ export function OverviewScreen({
                     max={100}
                   />
                 )}
-                <Link className={styles['heroAction']} href={`${data.nextEvent.href}/guests`}>
-                  <UsersIcon size={18} aria-hidden="true" />
-                  View guest list
-                </Link>
+                {data.nextEvent.id ? (
+                  <Link
+                    className={styles['heroAction']}
+                    href={`/partner/${studio ?? 'venue'}/events/${encodeURIComponent(data.nextEvent.id)}/guests`}
+                  >
+                    <UsersIcon size={18} aria-hidden="true" />
+                    View guest list
+                  </Link>
+                ) : null}
               </div>
             </div>
           </article>
@@ -213,36 +188,47 @@ export function OverviewScreen({
 
         <section
           className={classNames(styles['card'], styles['activityCard'])}
-          aria-labelledby="recent-activity-title"
+          aria-labelledby="recent-orders-title"
         >
           <SectionHeader
-            id="recent-activity-title"
-            title="Recent activity"
-            description="Orders, payouts & refunds"
+            id="recent-orders-title"
+            title="Recent orders"
+            description="Latest Guest orders across your events"
             href={links.finance}
             action="View all"
           />
           <div className={styles['activityList']}>
-            {data.recentActivity.map((activity) => {
-              const Icon = activityIcons[activity.kind];
+            {data.recentOrders === null ? (
+              <p className={styles['overviewEmpty']}>
+                Order details are not available to this workspace role.
+              </p>
+            ) : null}
+            {data.recentOrders?.length === 0 ? (
+              <p className={styles['overviewEmpty']}>No orders have been recorded yet.</p>
+            ) : null}
+            {data.recentOrders?.map((order) => {
               return (
-                <div className={styles['activityRow']} key={activity.id}>
+                <div className={styles['activityRow']} key={order.id}>
                   <span
-                    className={classNames(
-                      styles['activityIcon'],
-                      activityToneClasses[activity.tone].icon,
-                    )}
+                    className={classNames(styles['activityIcon'], styles['activityIcon-positive'])}
                   >
-                    <Icon size={17} aria-hidden="true" />
+                    <TicketIcon size={17} aria-hidden="true" />
                   </span>
                   <div>
-                    <strong>{activity.name}</strong>
-                    <span>{activity.meta}</span>
+                    <strong>{order.eventName}</strong>
+                    <span>
+                      {order.ticketCount} {order.ticketCount === 1 ? 'ticket' : 'tickets'} ·{' '}
+                      {order.statusLabel} · {order.placedAtLabel} IST
+                    </span>
                   </div>
-                  <b className={activityToneClasses[activity.tone].amount}>{activity.amount}</b>
+                  <b>{order.amountLabel}</b>
                 </div>
               );
             })}
+            <p className={styles['overviewEmpty']}>
+              Guest totals can include platform fees and GST; they are not Partner payable.
+              Payout/refund activity is not connected here.
+            </p>
           </div>
         </section>
       </div>
@@ -309,7 +295,10 @@ export function OverviewScreen({
             action="See all"
           />
           <div className={styles['networkList']}>
-            {data.network.map((member) => (
+            {data.network.length === 0 ? (
+              <p className={styles['overviewEmpty']}>No partner relationships yet.</p>
+            ) : null}
+            {data.network.slice(0, NETWORK_PREVIEW_LIMIT).map((member) => (
               <div className={styles['networkRow']} key={member.id}>
                 <span
                   className={classNames(

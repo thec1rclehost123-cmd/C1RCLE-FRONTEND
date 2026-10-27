@@ -1,38 +1,43 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiClientError } from '@c1rcle/api-client';
 import { clearSession, useSessionStore } from '@c1rcle/auth';
 
 import { ProfileLoggedOutView } from '@/features/profile/components/ProfileLoggedOutView';
 
 import ProfilePage from './page';
 
-const mockBffGet = vi.fn<(...args: readonly unknown[]) => Promise<unknown>>();
-const mockApiGet = vi.fn<(...args: readonly unknown[]) => Promise<unknown>>();
-
-vi.mock('@/lib/bff/bff-client', () => ({
-  bffClient: { get: (...args: unknown[]) => mockBffGet(...args) },
-}));
-
-vi.mock('@/lib/api/client', () => ({
-  apiClient: { get: (...args: unknown[]) => mockApiGet(...args) },
+vi.mock('next/image', () => ({
+  default: ({ alt, fill: _fill, ...props }: React.ComponentProps<'img'> & { fill?: boolean }) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img alt={alt} {...props} />
+  ),
 }));
 
 const replace = vi.fn<(href: string) => void>();
+const mockApiGet = vi.fn<(...args: readonly unknown[]) => Promise<unknown>>();
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace }),
+}));
+
+vi.mock('next/headers', () => ({
+  cookies: () => Promise.resolve({ toString: () => 'better-auth.session_token=test' }),
+}));
+
+vi.mock('@c1rcle/api-client', () => ({
+  createApiClient: () => ({ get: (...args: unknown[]) => mockApiGet(...args) }),
+  isApiClientError: (value: unknown) =>
+    typeof value === 'object' && value !== null && 'status' in value,
 }));
 
 vi.mock('@/lib/auth/require-session', () => ({
   requireGuestSession: vi.fn(() =>
     Promise.resolve({
       user: {
-        id: 'usr_live_1',
-        email: 'anaya@example.com',
-        displayName: 'Anaya Mehta',
+        id: 'test-user',
+        email: 'aayush@example.com',
+        displayName: 'Aayush Divase',
         role: 'guest',
         avatarUrl: null,
         mustChangePassword: false,
@@ -41,236 +46,223 @@ vi.mock('@/lib/auth/require-session', () => ({
   ),
 }));
 
-const PROFILE = {
-  userId: 'usr_live_1',
-  displayName: 'Anaya Mehta',
-  dateOfBirth: '1999-05-10',
-  city: 'Pune',
-  tastes: ['Techno', 'House', 'Open mic'],
-  intents: ['Network'],
-  createdAt: '2025-03-14T00:00:00.000Z',
-  updatedAt: '2025-03-14T00:00:00.000Z',
+const GUEST_PROFILE = {
+  userId: 'test-user',
+  displayName: 'Aayush Divase',
+  dateOfBirth: '2000-01-01',
+  city: 'Tempe',
+  tastes: ['music', 'art', 'food'],
+  intents: ['discover'],
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
 };
 
-const ENTITLEMENT = {
-  id: 'ENT-live-1',
-  orderId: 'ORD-live-1',
-  eventId: 'evt_live_1',
-  organizationId: 'org_1',
-  tierId: 'tier_live_1',
-  tierName: 'Gallery Pass',
-  userId: 'usr_live_1',
-  holderName: 'Anaya Mehta',
-  status: 'valid',
-  scanCountAllowed: 1,
-  scanCount: 0,
-  scannedAt: [],
-  version: 1,
-  createdAt: '2026-09-23T00:00:00.000Z',
-  updatedAt: '2026-09-23T00:00:00.000Z',
-};
-
-const REAL_EVENT = {
-  id: 'evt_live_1',
-  organizationId: 'org_1',
-  venueId: 'ven_1',
-  slug: 'rsvp-night',
-  title: 'RSVP Night',
-  summary: '',
-  description: '',
-  imageUrl: null,
-  startAt: '2026-12-25T18:00:00.000Z',
-  endAt: null,
-  status: 'published',
-  isPublic: true,
-  tags: [],
-  startingPricePaise: 0,
-  isFree: true,
-  cancellationReason: null,
-  version: 1,
-  createdAt: '2026-09-01T00:00:00.000Z',
-  updatedAt: '2026-09-01T00:00:00.000Z',
-};
-
-const REAL_VENUE = {
-  id: 'ven_1',
-  organizationId: 'org_1',
-  name: 'Sky Bar',
-  slug: 'sky-bar',
-  status: 'active',
-  description: '',
-  capacity: null,
-  city: 'Mumbai',
-  version: 1,
-  createdAt: '2026-09-01T00:00:00.000Z',
-  updatedAt: '2026-09-01T00:00:00.000Z',
-};
-
-const PAGE_INFO = {
-  page: 1,
-  pageSize: 50,
-  total: 1,
-  hasNextPage: false,
-};
-
-function mockLiveProfile() {
-  mockBffGet.mockImplementation((arg: unknown) => {
-    const { path } = arg as { path: string };
-    if (path === '/api/profile/me') return Promise.resolve(PROFILE);
-    if (path === '/api/wallet/tickets')
-      return Promise.resolve({ items: [ENTITLEMENT], pageInfo: PAGE_INFO });
-    return Promise.reject(new Error(`unexpected bff path ${path}`));
-  });
-  mockApiGet.mockImplementation((arg: unknown) => {
-    const { path } = arg as { path: string };
-    if (path === '/api/v2/public/events/evt_live_1') return Promise.resolve(REAL_EVENT);
-    if (path === '/api/v2/public/venues/by-id/ven_1') return Promise.resolve(REAL_VENUE);
-    return Promise.reject(new Error(`unexpected api path ${path}`));
-  });
-}
-
-describe('ProfilePage live profile', () => {
+describe('ProfilePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     clearSession();
-    mockBffGet.mockReset();
-    mockApiGet.mockReset();
+    mockApiGet.mockImplementation((arg: unknown) => {
+      const { path } = arg as { path: string };
+      if (path === '/api/v2/profile/me') return Promise.resolve(GUEST_PROFILE);
+      if (path === '/api/v2/orders?limit=50') {
+        return Promise.resolve({
+          items: [],
+          pageInfo: { page: 1, pageSize: 50, total: 0, hasNextPage: false },
+        });
+      }
+      if (path === '/api/v2/wallet/tickets?limit=50') {
+        return Promise.resolve({
+          items: [],
+          pageInfo: { page: 1, pageSize: 50, total: 0, hasNextPage: false },
+        });
+      }
+      return Promise.reject(new Error(`unexpected path ${path}`));
+    });
   });
 
-  it('renders the session identity with profile city and joined date, no fixture', async () => {
-    mockLiveProfile();
-    render(await ProfilePage({ searchParams: Promise.resolve({}) }));
+  it('renders the authenticated profile identity without fixture data', async () => {
+    render(await ProfilePage());
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Anaya Mehta' })).toBeInTheDocument();
-    // Only the profile document can supply the city + join date.
-    expect(await screen.findByText('Pune · Joined Mar 2025')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Aayush Divase' })).toBeInTheDocument();
+    expect(screen.getByText(/Tempe · Joined Jan 2026/)).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Profile sections' })).toBeInTheDocument();
-    expect(
-      await screen.findByRole('heading', { name: 'Your C1RCLE at a glance' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Your C1RCLE at a glance' })).toBeInTheDocument();
     expect(screen.queryByText(/UI PREVIEW|FIXTURE DATA/i)).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /logged in|guest showcase/i }),
     ).not.toBeInTheDocument();
-    // Fixture-only identity never leaks into the live header.
-    expect(screen.queryByText(/riya@example\.com/i)).not.toBeInTheDocument();
   });
 
-  it('shows real upcoming passes and never the fixture events', async () => {
-    mockLiveProfile();
-    render(await ProfilePage({ searchParams: Promise.resolve({ view: 'events' }) }));
+  it('renders honest empty event states instead of fixture history', async () => {
+    const { rerender } = render(
+      await ProfilePage({ searchParams: Promise.resolve({ view: 'events' }) }),
+    );
 
-    expect(await screen.findByRole('heading', { name: 'RSVP Night' })).toBeInTheDocument();
-    expect(screen.getByText('Gallery Pass')).toBeInTheDocument();
-    expect(screen.queryByText('Rooftop Jazz')).not.toBeInTheDocument();
-    expect(screen.queryByText('Art Collective')).not.toBeInTheDocument();
+    expect(screen.getByText('No upcoming events yet.')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Rooftop Jazz' })).not.toBeInTheDocument();
+
+    rerender(
+      await ProfilePage({
+        searchParams: Promise.resolve({ filter: 'attended', view: 'events' }),
+      }),
+    );
+    expect(screen.getByText('No attended events yet.')).toBeInTheDocument();
   });
 
-  it('filters to attended events from the real wallet', async () => {
-    mockBffGet.mockImplementation((arg: unknown) => {
-      const { path } = arg as { path: string };
-      if (path === '/api/profile/me') return Promise.resolve(PROFILE);
-      return Promise.resolve({
-        items: [{ ...ENTITLEMENT, id: 'ENT-done-1', status: 'redeemed', scanCount: 1 }],
-        pageInfo: PAGE_INFO,
-      });
+  it('requires a past event and a non-refunded redeemed scan to show attendance', async () => {
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    const order = (id: string, eventId: string, status = 'paid', refundedPaise = 0) => ({
+      id,
+      eventId,
+      status,
+      refundedPaise,
+      eventCancellation: null,
+      createdAt: yesterday,
+      bookingReference: `C1-${id}`,
+      grandTotalPaise: 10_000,
     });
+    const events: Record<string, unknown> = {
+      past_scanned: {
+        id: 'past_scanned',
+        slug: 'past-scanned',
+        title: 'Past scanned event',
+        startAt: yesterday,
+        venue: { name: 'Venue', address: { city: 'Pune' } },
+        imageUrl: null,
+      },
+      past_unscanned: {
+        id: 'past_unscanned',
+        slug: 'past-unscanned',
+        title: 'Past unscanned event',
+        startAt: yesterday,
+        venue: { name: 'Venue', address: { city: 'Pune' } },
+        imageUrl: null,
+      },
+      future_scanned: {
+        id: 'future_scanned',
+        slug: 'future-scanned',
+        title: 'Future scanned event',
+        startAt: tomorrow,
+        venue: { name: 'Venue', address: { city: 'Pune' } },
+        imageUrl: null,
+      },
+      refunded: {
+        id: 'refunded',
+        slug: 'refunded',
+        title: 'Refunded event',
+        startAt: yesterday,
+        venue: { name: 'Venue', address: { city: 'Pune' } },
+        imageUrl: null,
+      },
+      cancelled: {
+        id: 'cancelled',
+        slug: 'cancelled',
+        title: 'Cancelled event',
+        startAt: yesterday,
+        venue: { name: 'Venue', address: { city: 'Pune' } },
+        imageUrl: null,
+      },
+    };
+    const orders = [
+      order('order_scanned', 'past_scanned'),
+      order('order_unscanned', 'past_unscanned'),
+      order('order_future', 'future_scanned'),
+      order('order_refunded', 'refunded', 'refunded', 10_000),
+      order('order_cancelled', 'cancelled', 'cancelled'),
+    ];
     mockApiGet.mockImplementation((arg: unknown) => {
       const { path } = arg as { path: string };
-      if (path === '/api/v2/public/events/evt_live_1') return Promise.resolve(REAL_EVENT);
-      if (path === '/api/v2/public/venues/by-id/ven_1') return Promise.resolve(REAL_VENUE);
-      return Promise.reject(new Error(`unexpected api path ${path}`));
-    });
-    render(
-      await ProfilePage({ searchParams: Promise.resolve({ view: 'events', filter: 'attended' }) }),
-    );
-
-    expect(await screen.findByRole('heading', { name: 'RSVP Night' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Upcoming' })).not.toBeInTheDocument();
-  });
-
-  it('falls back to the session identity when no profile is saved yet (404)', async () => {
-    mockBffGet.mockImplementation((arg: unknown) => {
-      const { path } = arg as { path: string };
-      if (path === '/api/profile/me') {
-        return Promise.reject(
-          new ApiClientError({
-            code: 'not_found',
-            message: 'Guest profile',
-            status: 404,
-            requestId: undefined,
-            fieldErrors: undefined,
-          }),
-        );
+      if (path === '/api/v2/profile/me') return Promise.resolve(GUEST_PROFILE);
+      if (path === '/api/v2/orders?limit=50') {
+        return Promise.resolve({
+          items: orders,
+          pageInfo: { page: 1, pageSize: 50, total: orders.length, hasNextPage: false },
+        });
       }
-      return Promise.resolve({ items: [], pageInfo: PAGE_INFO });
+      if (path === '/api/v2/wallet/tickets?limit=50') {
+        return Promise.resolve({
+          items: [
+            { orderId: 'order_scanned', status: 'redeemed', scanCount: 1 },
+            { orderId: 'order_unscanned', status: 'valid', scanCount: 0 },
+            { orderId: 'order_future', status: 'redeemed', scanCount: 1 },
+            { orderId: 'order_refunded', status: 'redeemed', scanCount: 1 },
+            { orderId: 'order_cancelled', status: 'void', scanCount: 0 },
+          ],
+          pageInfo: { page: 1, pageSize: 50, total: 5, hasNextPage: false },
+        });
+      }
+      const eventId = path.slice('/api/v2/public/events/'.length);
+      if (eventId in events) return Promise.resolve(events[eventId]);
+      return Promise.reject(new Error(`unexpected path ${path}`));
     });
-    render(await ProfilePage({ searchParams: Promise.resolve({}) }));
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Anaya Mehta' })).toBeInTheDocument();
-    expect(await screen.findByText('Your C1RCLE at a glance')).toBeInTheDocument();
-    expect(screen.queryByText('Pune')).not.toBeInTheDocument();
+    render(
+      await ProfilePage({
+        searchParams: Promise.resolve({ filter: 'attended', view: 'events' }),
+      }),
+    );
+
+    expect(screen.getByRole('heading', { name: 'Past scanned event' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Past unscanned event' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Future scanned event' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Refunded event' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Cancelled event' })).not.toBeInTheDocument();
   });
 
-  it('renders an empty events list when the wallet read fails, never fixtures', async () => {
-    mockBffGet.mockImplementation((arg: unknown) => {
+  it('does not claim an empty attended history when the wallet read failed', async () => {
+    mockApiGet.mockImplementation((arg: unknown) => {
       const { path } = arg as { path: string };
-      if (path === '/api/profile/me') return Promise.resolve(PROFILE);
-      return Promise.reject(new Error('gateway down'));
+      if (path === '/api/v2/profile/me') return Promise.resolve(GUEST_PROFILE);
+      if (path === '/api/v2/orders?limit=50') {
+        return Promise.resolve({
+          items: [],
+          pageInfo: { page: 1, pageSize: 50, total: 0, hasNextPage: false },
+        });
+      }
+      if (path === '/api/v2/wallet/tickets?limit=50') {
+        return Promise.reject(new Error('wallet unavailable'));
+      }
+      return Promise.reject(new Error(`unexpected path ${path}`));
     });
-    render(await ProfilePage({ searchParams: Promise.resolve({ view: 'events' }) }));
 
-    expect(await screen.findByText('No upcoming events yet.')).toBeInTheDocument();
-    expect(screen.queryByText('Rooftop Jazz')).not.toBeInTheDocument();
-  });
-
-  it('shows the real email on the account panel with no invented method row', async () => {
-    mockLiveProfile();
     render(
       await ProfilePage({
-        searchParams: Promise.resolve({ view: 'settings', section: 'account' }),
+        searchParams: Promise.resolve({ filter: 'attended', view: 'events' }),
       }),
     );
 
-    expect(await screen.findByText('anaya@example.com')).toBeInTheDocument();
-    // No endpoint exposes the phone number or the sign-in method, so those rows
-    // are omitted rather than filled with a fixture value.
-    expect(screen.queryByText('Phone')).not.toBeInTheDocument();
-    expect(screen.queryByText('Method')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
+    expect(screen.getByText('Attendance history unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('No attended events yet.')).not.toBeInTheDocument();
   });
 
-  it('supports local personal-setting validation and reset without claiming persistence', async () => {
-    mockLiveProfile();
+  it('validates and resets unsaved personal-profile changes', async () => {
     render(
       await ProfilePage({
-        searchParams: Promise.resolve({ view: 'settings', section: 'personal' }),
+        searchParams: Promise.resolve({ section: 'personal', view: 'settings' }),
       }),
     );
 
-    const nameInput = await screen.findByLabelText('Full name');
-    expect(nameInput).toHaveValue('Anaya Mehta');
-
+    const nameInput = screen.getByLabelText('Full name');
     fireEvent.change(nameInput, { target: { value: 'R' } });
     fireEvent.blur(nameInput);
     expect(screen.getByText('Enter at least two characters.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Reset changes' }));
-    expect(nameInput).toHaveValue('Anaya Mehta');
+    expect(nameInput).toHaveValue('Aayush Divase');
     expect(screen.queryByText('Enter at least two characters.')).not.toBeInTheDocument();
     expect(screen.queryByText(/saved successfully/i)).not.toBeInTheDocument();
   });
 
   it('clears the local session and returns to login after sign-out confirmation', async () => {
-    mockLiveProfile();
-    useSessionStore.setState({ accessToken: 'live-access-token', status: 'authenticated' });
+    useSessionStore.setState({ accessToken: 'fixture-access-token', status: 'authenticated' });
     render(
       await ProfilePage({
-        searchParams: Promise.resolve({ view: 'settings', section: 'account' }),
+        searchParams: Promise.resolve({ section: 'account', view: 'settings' }),
       }),
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
     expect(screen.getByRole('dialog', { name: 'End this session?' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Confirm sign out' }));
 

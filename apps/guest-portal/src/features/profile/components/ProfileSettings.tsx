@@ -1,9 +1,11 @@
 import Link from 'next/link';
 
+import { ChangePasswordFormClient } from './ChangePasswordFormClient';
 import { PersonalProfileFormClient } from './PersonalProfileFormClient';
 import { SignOutControl } from './SignOutControl';
 
 import type { ProfileIdentity, ProfileSettingsSection } from '../types/profile.types';
+import type { UpsertGuestProfileRequest } from '@c1rcle/contracts';
 
 const settingsSections: readonly {
   href: string;
@@ -17,9 +19,11 @@ const settingsSections: readonly {
 export function ProfileSettings({
   activeSection,
   identity,
+  profileFields,
 }: {
   activeSection: ProfileSettingsSection;
   identity: ProfileIdentity;
+  profileFields: Pick<UpsertGuestProfileRequest, 'dateOfBirth' | 'tastes' | 'intents'> | null;
 }) {
   return (
     <section id="profile-settings" aria-labelledby="profile-settings-heading">
@@ -56,7 +60,17 @@ export function ProfileSettings({
         </nav>
 
         {activeSection === 'personal' ? (
-          <PersonalProfileFormClient identity={identity} />
+          profileFields ? (
+            <PersonalProfileFormClient identity={identity} profileFields={profileFields} />
+          ) : (
+            <div
+              role="status"
+              className="rounded-[1.75rem] border border-white/10 p-6 text-sm text-white/60"
+            >
+              Complete profile onboarding before editing these details. Profile setup is not
+              available for this account yet.
+            </div>
+          )
         ) : (
           <AccountSecurityPanel identity={identity} />
         )}
@@ -73,32 +87,47 @@ function AccountSecurityPanel({ identity }: { identity: ProfileIdentity }) {
           Sign-in identity
         </p>
         <dl className="mt-6 grid gap-6 sm:grid-cols-2">
-          {identity.signInMethod ? (
-            <div>
-              <dt className="text-[8px] font-black uppercase tracking-[0.2em] text-white/30">
-                Method
-              </dt>
-              <dd className="mt-2 text-sm font-bold text-white">{identity.signInMethod}</dd>
-            </div>
-          ) : null}
+          <div>
+            <dt className="text-[8px] font-black uppercase tracking-[0.2em] text-white/30">
+              Method
+            </dt>
+            <dd className="mt-2 text-sm font-bold text-white">{identity.signInMethod}</dd>
+          </div>
           <div>
             <dt className="text-[8px] font-black uppercase tracking-[0.2em] text-white/30">
               Email
             </dt>
-            <dd className="mt-2 break-all text-sm font-bold text-white">{identity.email || '—'}</dd>
+            <dd className="mt-2 break-all text-sm font-bold text-white">{identity.email}</dd>
           </div>
-          {identity.phoneNumber ? (
-            <div>
-              <dt className="text-[8px] font-black uppercase tracking-[0.2em] text-white/30">
-                Phone
-              </dt>
-              <dd className="mt-2 text-sm font-bold text-white">{identity.phoneNumber}</dd>
-            </div>
-          ) : null}
+          <div>
+            <dt className="text-[8px] font-black uppercase tracking-[0.2em] text-white/30">
+              Phone
+            </dt>
+            <dd className="mt-2 text-sm font-bold text-white">
+              {identity.phoneNumber ?? 'Not provided'}
+            </dd>
+          </div>
         </dl>
-        <p className="mt-7 border-t border-white/10 pt-5 text-xs leading-6 text-white/35">
-          Security and recovery follow the sign-in method connected to this account.
+        <p className="mt-7 border-t border-white/10 pt-5 text-xs leading-6 text-white/50">
+          Email and phone changes are not available for this account yet.
         </p>
+      </div>
+
+      <ChangePasswordFormClient />
+
+      <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-6 sm:p-8">
+        <h3 className="text-xl font-black uppercase tracking-[-0.03em] text-white">
+          Account recovery
+        </h3>
+        <p className="mt-2 text-sm leading-6 text-white/50">
+          Forgot your current password? Request a secure reset link for your account email.
+        </p>
+        <Link
+          href="/forgot-password"
+          className="mt-5 inline-flex min-h-11 items-center rounded-full border border-white/20 px-5 text-xs font-bold text-white hover:bg-white/10"
+        >
+          Reset with email
+        </Link>
       </div>
 
       <div className="rounded-[1.75rem] border border-white/10 bg-black/55 p-6 sm:p-8">

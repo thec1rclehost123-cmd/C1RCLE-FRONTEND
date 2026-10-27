@@ -33,6 +33,9 @@ export function EventPoster({
           fill
           loading="eager"
           sizes={sizes ?? '240px'}
+          unoptimized={/^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?(?:\/|$)/i.test(
+            artwork.value,
+          )}
         />
       ) : (
         <div

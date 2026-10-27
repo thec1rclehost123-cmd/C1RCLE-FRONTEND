@@ -68,7 +68,6 @@ export async function getPublicEventForSeo(slug: string): Promise<EventPublicDet
 }
 
 export async function getPublicVenueForSeo(slug: string): Promise<VenuePublicDetailDto | null> {
-  if (!isProductionSeo()) return null;
   return readPublic<VenuePublicDetailDto>(
     `/api/v2/public/venues/${encodeURIComponent(slug)}`,
     venuePublicDetailDtoSchema,
@@ -76,7 +75,6 @@ export async function getPublicVenueForSeo(slug: string): Promise<VenuePublicDet
 }
 
 export async function getPublicHostForSeo(slug: string): Promise<HostPublicDto | null> {
-  if (!isProductionSeo()) return null;
   return readPublic<HostPublicDto>(
     `/api/v2/public/hosts/${encodeURIComponent(slug)}`,
     hostPublicDtoSchema,

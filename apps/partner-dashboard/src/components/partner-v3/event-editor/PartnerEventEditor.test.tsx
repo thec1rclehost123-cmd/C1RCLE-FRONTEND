@@ -118,6 +118,9 @@ describe('PartnerEventEditor', () => {
     );
 
     fireEvent.change(screen.getByLabelText('Event name'), { target: { value: 'Backend Night' } });
+    fireEvent.change(screen.getByLabelText('Event description'), {
+      target: { value: 'A namespaced test night with music and a small guest list.' },
+    });
     await user.click(screen.getByRole('button', { name: String(availableDate.day) }));
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     await user.click(screen.getByRole('button', { name: 'Continue' }));
@@ -129,7 +132,12 @@ describe('PartnerEventEditor', () => {
       expect(onSubmit).toHaveBeenCalledTimes(1);
     });
     expect(onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({ name: 'Backend Night', date: availableDate.date }),
+      expect.objectContaining({
+        name: 'Backend Night',
+        description: 'A namespaced test night with music and a small guest list.',
+        date: availableDate.date,
+      }),
+      '',
     );
   });
 
@@ -175,6 +183,11 @@ describe('PartnerEventEditor', () => {
     );
 
     expect(screen.getByText('Choose a venue')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Partnered venue availability — grey dates have no open slots for requests.',
+      ),
+    ).toBeInTheDocument();
     expect(screen.queryByText('Block date')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /8:00 PM – 11:00 PM/ }));
     await user.click(screen.getByRole('button', { name: /Create event/ }));
@@ -183,6 +196,28 @@ describe('PartnerEventEditor', () => {
       expect.stringContaining('step=basics'),
       expect.anything(),
     );
+  });
+
+  it('explains accepted-slot publication truthfully in Host review', async () => {
+    const data = await fixturePartnerDataSource.getHostEventEditor();
+    const availability = await fixturePartnerDataSource.getHostAvailability();
+
+    render(
+      <PartnerEventEditor
+        data={data}
+        availability={availability}
+        mode="create"
+        acceptedSlotMode
+        initialStep="review"
+      />,
+    );
+
+    expect(
+      screen.getByText(/Submitting publishes this event using the accepted Venue slot\./),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('The venue will review this request before it can be published.'),
+    ).not.toBeInTheDocument();
   });
 
   it('opens Guest portal and Mobile app preview choices from the live preview', async () => {

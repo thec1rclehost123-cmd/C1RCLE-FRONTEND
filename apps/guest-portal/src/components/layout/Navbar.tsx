@@ -1,20 +1,29 @@
-// FIXTURE_ONLY: Floating navigation shell matching reference screenshot spacing.
+'use client';
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 import { DesktopNavLinks } from './DesktopNavLinks';
 import { NavbarActions } from './NavbarActions';
 
 export function Navbar() {
+  const isHome = usePathname() === '/';
+
   return (
-    <header className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-4 pt-4 sm:px-6">
+    <header className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-4 pt-4 sm:px-8 lg:px-12">
       <nav
         aria-label="Primary navigation"
-        className="flex w-full max-w-5xl items-center justify-between gap-4 sm:gap-8"
+        className={`w-full items-center gap-4 sm:gap-8 ${
+          isHome
+            ? 'mx-auto grid max-w-[1000px] grid-cols-[1fr_auto_1fr]'
+            : 'mx-auto flex max-w-[1600px] justify-between'
+        }`}
       >
-        {/* Left: Brand Logo & Title */}
-        <Link href="/" className="pointer-events-auto group flex items-center gap-3 shrink-0">
+        <Link
+          href="/"
+          className={`pointer-events-auto group flex shrink-0 items-center gap-3 ${isHome ? 'justify-self-start lg:mr-8 lg:justify-self-end' : ''}`}
+        >
           <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#FF4400]/40 bg-black shadow-md transition-transform duration-500 group-hover:rotate-180 motion-reduce:transition-none sm:h-11 sm:w-11">
             <Image
               src="/c1rcle-logo.webp"
@@ -25,17 +34,24 @@ export function Navbar() {
               preload
             />
           </div>
-          <span className="font-heading text-lg sm:text-xl font-black tracking-tighter uppercase text-white group-hover:text-white/90 transition-colors">
+          <span className="font-heading text-lg font-black uppercase tracking-tighter text-white transition-colors group-hover:text-white/90 sm:text-xl">
             THE C1RCLE
           </span>
         </Link>
 
-        {/* Center: Dedicated Glassmorphism Navigation Pill */}
-        <div className="pointer-events-auto">
+        <div
+          className={`pointer-events-auto ${isHome ? 'justify-self-center' : 'ml-auto flex items-center gap-3'}`}
+        >
           <DesktopNavLinks />
         </div>
 
-        <NavbarActions />
+        <div
+          className={
+            isHome ? 'justify-self-end lg:ml-8 lg:justify-self-start' : 'pointer-events-auto'
+          }
+        >
+          <NavbarActions isHome={isHome} />
+        </div>
       </nav>
     </header>
   );

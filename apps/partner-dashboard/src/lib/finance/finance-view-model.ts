@@ -37,6 +37,7 @@ import type {
 
 /** How many trailing weeks the balance sparkline covers. */
 const TREND_WEEKS = 8;
+export const FINANCE_TIME_ZONE = 'Asia/Kolkata' as const;
 
 const RUPEE = new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -76,29 +77,34 @@ export function formatPaiseCompact(paise: number): string {
   return formatPaise(paise);
 }
 
-/** `2026-09-01T10:00:00.000Z` → `1 Sep 2026`. Locale-stable, server-safe. */
+/** `2026-09-01T10:00:00.000Z` → `1 Sept 2026` in the product's IST finance timezone. */
 export function formatDate(iso: string): string {
   const parsed = new Date(iso);
   if (Number.isNaN(parsed.getTime())) return '—';
-  const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-  // The month table is exhaustive for a valid `Date`, so the index is always in
-  // range — the fallback exists only so the function's return type is a plain
-  // `string` rather than `string | undefined` leaking into a rendered cell.
-  const month = months[parsed.getUTCMonth()] ?? '';
-  return `${String(parsed.getUTCDate())} ${month} ${String(parsed.getUTCFullYear())}`;
+  return new Intl.DateTimeFormat('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: FINANCE_TIME_ZONE,
+  }).format(parsed);
+}
+
+/**
+ * A calendar-day key in the finance timezone. The result is intentionally a
+ * UTC timestamp for the *IST calendar date*, not the instant's UTC date: that
+ * makes date arithmetic stable across server timezones while keeping the
+ * product's reporting boundary in IST.
+ */
+function financeDayKey(instant: Date): number {
+  const parts = new Intl.DateTimeFormat('en-IN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: FINANCE_TIME_ZONE,
+  }).formatToParts(instant);
+  const part = (type: Intl.DateTimeFormatPartTypes): number =>
+    Number(parts.find((candidate) => candidate.type === type)?.value);
+  return Date.UTC(part('year'), part('month') - 1, part('day'));
 }
 
 /** Up to two letters, for the order-row avatar. */
@@ -266,15 +272,15 @@ export function toBalanceTrend(
   entries: readonly LedgerEntryDto[],
   now: Date = new Date(),
 ): readonly number[] {
-  const thisWeekStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const thisWeekStart = financeDayKey(now);
   const buckets = new Array<number>(TREND_WEEKS).fill(0);
 
   for (const entry of entries) {
     if (!INFLOW_TYPES.has(entry.entryType)) continue;
     if (entry.status === 'pending') continue; // not money yet
-    const at = Date.parse(entry.createdAt);
-    if (Number.isNaN(at)) continue;
-    const daysAgo = Math.floor((thisWeekStart - at) / (24 * 60 * 60 * 1000));
+    const parsed = new Date(entry.createdAt);
+    if (Number.isNaN(parsed.getTime())) continue;
+    const daysAgo = Math.floor((thisWeekStart - financeDayKey(parsed)) / (24 * 60 * 60 * 1000));
     const weekIndex = Math.floor(daysAgo / 7);
     if (weekIndex < 0 || weekIndex >= TREND_WEEKS) continue;
     const slot = TREND_WEEKS - 1 - weekIndex;
@@ -297,15 +303,15 @@ export function formatBalanceDelta(entries: readonly LedgerEntryDto[]): string {
     (entry) => INFLOW_TYPES.has(entry.entryType) && entry.status !== 'pending',
   );
   const now = new Date();
-  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const today = financeDayKey(now);
   const dayMs = 24 * 60 * 60 * 1000;
 
   let thisWeek = 0;
   let lastWeek = 0;
   for (const entry of settled) {
-    const at = Date.parse(entry.createdAt);
-    if (Number.isNaN(at)) continue;
-    const daysAgo = Math.floor((today - at) / dayMs);
+    const parsed = new Date(entry.createdAt);
+    if (Number.isNaN(parsed.getTime())) continue;
+    const daysAgo = Math.floor((today - financeDayKey(parsed)) / dayMs);
     if (daysAgo < 0 || daysAgo >= 14) continue;
     if (daysAgo < 7) thisWeek += entry.amountPaise;
     else lastWeek += entry.amountPaise;
@@ -361,6 +367,8 @@ export interface FinanceScreenInput {
   readonly payouts: readonly PayoutResponse[];
   readonly bankAccounts: readonly BankAccountResponse[];
   readonly orders: readonly FinanceOrderDto[];
+  readonly coverage?: PartnerFinanceData['coverage'];
+  readonly asOf?: string;
   /**
    * The default bank account wins. `listBankAccounts` is unordered, so
    * "pick the default, else the first" is the only selection rule that is
@@ -379,6 +387,7 @@ export interface FinanceScreenInput {
  */
 export function toPartnerFinanceData(input: FinanceScreenInput): PartnerFinanceData {
   const { balances, ledger, payouts, bankAccounts, orders } = input;
+  const legacyLedgerIsBalanceSource = balances.readModel === 'legacy_ledger_v1';
   const defaultAccount =
     bankAccounts.find((account) => account.id === input.defaultBankAccountId) ??
     bankAccounts.find((account) => account.isDefault) ??
@@ -421,14 +430,23 @@ export function toPartnerFinanceData(input: FinanceScreenInput): PartnerFinanceD
     dataStatus: 'api',
     accent: input.accent,
     availableBalance: formatPaise(balances.availablePaise),
-    balanceDelta: formatBalanceDelta(ledger),
+    // The legacy ledger endpoint is not a valid trend source after the balance
+    // read has been cut over to the financial journal. Keep the two sources
+    // separate until a journal-line trend projection is available.
+    balanceDelta: legacyLedgerIsBalanceSource ? formatBalanceDelta(ledger) : '—',
     balanceDetail: `${formatPaise(balances.lifetimePaise)} earned all time`,
-    balanceTrend: toBalanceTrend(ledger),
+    balanceTrend: legacyLedgerIsBalanceSource ? toBalanceTrend(ledger) : [],
     pendingBalance,
     reservedBalance,
     heldBalance,
     paidBalance,
     readModel: balances.readModel,
+    freshness: { asOf: input.asOf ?? new Date().toISOString(), timezone: FINANCE_TIME_ZONE },
+    coverage: input.coverage ?? {
+      ledger: { loaded: ledger.length, total: ledger.length, hasMore: false },
+      payouts: { loaded: payouts.length, total: payouts.length, hasMore: false },
+      orders: { loaded: orders.length, total: orders.length, hasMore: false },
+    },
     payoutRequest: input.organizationId
       ? {
           organizationId: input.organizationId,

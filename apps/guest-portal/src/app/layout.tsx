@@ -1,3 +1,4 @@
+import { Inter } from 'next/font/google';
 import { cookies } from 'next/headers';
 
 import { getServerSession } from '@c1rcle/auth/server-session';
@@ -10,6 +11,8 @@ import './globals.css';
 
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
+
+const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' });
 
 export function generateMetadata(): Metadata {
   return {
@@ -33,7 +36,9 @@ export default async function RootLayout({ children }: { readonly children: Reac
 
   return (
     <html lang="en">
-      <body className="min-h-dvh bg-black text-white antialiased">
+      <body
+        className={`${inter.className} ${inter.variable} min-h-dvh bg-black text-white antialiased`}
+      >
         <a
           href="#main"
           className="sr-only-focusable absolute left-4 top-4 z-50 rounded-md bg-primary px-4 py-2 text-primary-foreground"

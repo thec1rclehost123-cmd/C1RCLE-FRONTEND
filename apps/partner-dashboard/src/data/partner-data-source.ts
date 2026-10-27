@@ -52,6 +52,15 @@ export interface OverviewActivity {
   readonly tone: OverviewActivityTone;
 }
 
+export interface OverviewRecentOrder {
+  readonly id: string;
+  readonly eventName: string;
+  readonly ticketCount: number;
+  readonly amountLabel: string;
+  readonly statusLabel: string;
+  readonly placedAtLabel: string;
+}
+
 export interface OverviewCalendarDay {
   readonly day: number;
   readonly eventCount?: number;
@@ -64,7 +73,7 @@ export interface OverviewNetworkMember {
   readonly name: string;
   readonly role: string;
   readonly initials: string;
-  readonly status: 'Partnered' | 'Invite sent' | 'Active';
+  readonly status: 'Partnered' | 'Invite sent' | 'Active' | 'Ended' | 'Blocked' | 'Rejected';
   readonly statusTone: 'accent' | 'success' | 'neutral';
   readonly accent: 'orange' | 'violet' | 'teal' | 'pink';
 }
@@ -89,6 +98,8 @@ export interface OverviewData {
   readonly nextEvent: OverviewEvent & { readonly doorsLabel?: string };
   readonly trends: readonly OverviewTrendSeries[];
   readonly recentActivity: readonly OverviewActivity[];
+  /** `null` means the signed-in role cannot read orders; `[]` is a real empty state. */
+  readonly recentOrders: readonly OverviewRecentOrder[] | null;
   readonly calendar: {
     readonly monthLabel: string;
     readonly firstDayOffset: number;
@@ -147,7 +158,8 @@ export interface PromoterOverviewLinks {
   readonly finance: string;
 }
 
-export type PartnerEventStatus = 'Live' | 'Draft' | 'Past' | 'Cancelled';
+export type PartnerEventStatus =
+  'Live' | 'Draft' | 'Review' | 'Scheduled' | 'Paused' | 'Past' | 'Archived' | 'Cancelled';
 export type PartnerEventParty = 'venue' | 'hosts';
 
 export interface PartnerEventArtwork {
@@ -171,15 +183,18 @@ export interface PartnerEventRecord {
   readonly dayLabel: string;
   readonly monthLabel: string;
   readonly priceLabel: string;
-  readonly sold: number;
-  readonly capacity: number;
+  readonly sold: number | null;
+  readonly capacity: number | null;
+  readonly salesCountComplete?: boolean;
   readonly revenueLabel: string;
   readonly artwork: PartnerEventArtwork;
 }
 
 export interface PartnerEventsData {
-  readonly dataStatus: 'fixture';
-  readonly pendingRequestCount: number;
+  readonly dataStatus: 'fixture' | 'api';
+  readonly pendingRequestCount: number | null;
+  readonly total?: number;
+  readonly nextCursor?: string | null;
   readonly events: readonly PartnerEventRecord[];
 }
 
@@ -433,7 +448,7 @@ export interface PromoterDiscoverEvent {
   readonly city: string;
   readonly dateLabel: string;
   readonly timeLabel: string;
-  readonly accessState: PromoterEventAccessState;
+  readonly accessState: PromoterEventAccessState | 'public';
   readonly artwork: PartnerEventArtwork;
 }
 
@@ -442,15 +457,18 @@ export interface PromoterLinkedEvent {
   readonly name: string;
   readonly venue: string;
   readonly city: string;
-  readonly clicks: number;
-  readonly sales: number;
+  readonly clicks: number | null;
+  readonly sales: number | null;
   readonly artwork: PartnerEventArtwork;
+  readonly commissionLabel?: string;
 }
 
 export interface PromoterEventsData {
-  readonly dataStatus: 'fixture';
+  readonly dataStatus: 'fixture' | 'api';
   readonly discoverCount: number;
   readonly linkedCount: number;
+  readonly discoverTotal?: number;
+  readonly discoverHasMore?: boolean;
   readonly discoverEvents: readonly PromoterDiscoverEvent[];
   readonly linkedEvents: readonly PromoterLinkedEvent[];
 }
@@ -681,6 +699,12 @@ export interface FinanceOrder {
   readonly avatarTone: 'orange' | 'violet' | 'teal' | 'pink' | 'gold' | 'indigo';
 }
 
+export interface FinanceCollectionCoverage {
+  readonly loaded: number;
+  readonly total: number;
+  readonly hasMore: boolean;
+}
+
 export interface PartnerFinanceData {
   /**
    * Which world this data came from. `'api'` means every field below is backed
@@ -700,6 +724,12 @@ export interface PartnerFinanceData {
   readonly heldBalance: FinanceMetric;
   readonly paidBalance: FinanceMetric;
   readonly readModel: 'legacy_ledger_v1' | 'financial_journal_v2';
+  readonly freshness: { readonly asOf: string; readonly timezone: 'Asia/Kolkata' };
+  readonly coverage: {
+    readonly ledger: FinanceCollectionCoverage;
+    readonly payouts: FinanceCollectionCoverage;
+    readonly orders: FinanceCollectionCoverage;
+  };
   /** Present only for API-backed screens that can submit a real payout intent. */
   readonly payoutRequest: {
     readonly organizationId: string;
@@ -830,8 +860,9 @@ export interface PartnerSearchResult {
 }
 
 export interface PartnerSearchData {
-  readonly dataStatus: 'fixture';
+  readonly dataStatus: 'fixture' | 'api' | 'unavailable';
   readonly results: readonly PartnerSearchResult[];
+  readonly unavailableReason?: string | undefined;
 }
 
 export type PartnerNotificationType = 'payout' | 'request' | 'marketing' | 'operations' | 'system';
@@ -853,12 +884,13 @@ export interface PartnerNotification {
 }
 
 export interface PartnerNotificationsData {
-  readonly dataStatus: 'fixture';
+  readonly dataStatus: 'fixture' | 'api' | 'unavailable';
   readonly notifications: readonly PartnerNotification[];
+  readonly unavailableReason?: string | undefined;
 }
 
 export interface PartnerShellInteractionData {
-  readonly dataStatus: 'fixture';
+  readonly dataStatus: 'fixture' | 'api' | 'unavailable';
   readonly search: PartnerSearchData;
   readonly notifications: PartnerNotificationsData;
 }
@@ -901,6 +933,11 @@ export interface SlotRequest {
   readonly partnerName: string;
   readonly partnerRoleLabel: 'Host' | 'Venue';
   readonly partnerInitials: string;
+  readonly venueId?: string | undefined;
+  readonly slotId?: string | undefined;
+  readonly slotStartTime?: string | undefined;
+  readonly slotEndTime?: string | undefined;
+  readonly timezone?: string | undefined;
   readonly event: SlotRequestEvent;
 }
 
@@ -938,7 +975,10 @@ export interface CalendarBlock {
 export interface AvailabilitySlot {
   readonly id: string;
   readonly label: string;
-  readonly status: 'available' | 'unavailable';
+  readonly status: 'available' | 'unavailable' | 'pending' | 'booked';
+  readonly startTime?: string;
+  readonly endTime?: string;
+  readonly timezone?: string | null;
 }
 
 export interface CalendarDay {
@@ -1033,6 +1073,7 @@ export interface EventEditorTicketTier {
 
 export interface EventEditorDraft {
   readonly name: string;
+  readonly description: string;
   readonly venueId: string;
   readonly date: string;
   readonly dateLabel: string;
@@ -1058,7 +1099,7 @@ export interface EventEditorDraft {
 }
 
 export interface EventEditorData {
-  readonly dataStatus: 'fixture';
+  readonly dataStatus: 'fixture' | 'api';
   readonly role: EventEditorRole;
   readonly venues: readonly EventEditorVenueOption[];
   readonly promoters: readonly EventEditorPromoterOption[];

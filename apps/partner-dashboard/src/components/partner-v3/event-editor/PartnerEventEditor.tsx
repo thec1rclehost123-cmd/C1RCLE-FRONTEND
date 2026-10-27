@@ -43,8 +43,9 @@ export interface PartnerEventEditorProps {
   readonly initialVenueId?: string;
   readonly initialDate?: string;
   readonly initialSlotId?: string;
+  readonly acceptedSlotMode?: boolean;
   readonly initialEvent?: PartnerEventDetailData;
-  readonly onSubmit?: (draft: EventEditorDraft) => Promise<void>;
+  readonly onSubmit?: (draft: EventEditorDraft, selectedSlotId: string) => Promise<void>;
 }
 
 const venueSteps: readonly EventEditorStep[] = ['basics', 'promoters', 'review'];
@@ -58,6 +59,7 @@ export function PartnerEventEditor({
   initialVenueId,
   initialDate,
   initialSlotId,
+  acceptedSlotMode = false,
   initialEvent,
   onSubmit,
 }: PartnerEventEditorProps) {
@@ -65,14 +67,20 @@ export function PartnerEventEditor({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const isHost = data.role === 'host';
-  const steps = isHost ? hostSteps : venueSteps;
+  const steps = isHost
+    ? acceptedSlotMode
+      ? (['basics', 'promoters', 'review'] as const)
+      : hostSteps
+    : venueSteps;
   const initialDraft = useMemo(
     () => draftFromInput(data, initialEvent, initialVenueId, initialDate),
     [data, initialDate, initialEvent, initialVenueId],
   );
   const [draft, setDraft] = useState<EventEditorDraft>(initialDraft);
   const [selectedSlotId, setSelectedSlotId] = useState(initialSlotId ?? '');
-  const [localStep, setLocalStep] = useState<EventEditorStep>(normaliseStep(initialStep, steps));
+  const [localStep, setLocalStep] = useState<EventEditorStep>(
+    normaliseStep(initialStep ?? (acceptedSlotMode ? 'basics' : undefined), steps),
+  );
   const [genrePickerOpen, setGenrePickerOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<'closed' | 'picker' | 'guest' | 'mobile'>(
     'closed',
@@ -170,7 +178,7 @@ export function PartnerEventEditor({
       setSubmitting(true);
       setSubmitError(null);
       try {
-        await onSubmit(draft);
+        await onSubmit(draft, selectedSlotId);
       } catch (error) {
         setSubmitError(describeApiError(error, 'The event could not be submitted.'));
       } finally {
@@ -200,7 +208,7 @@ export function PartnerEventEditor({
     : currentStep === 'review'
       ? mode === 'edit'
         ? 'Save changes'
-        : isHost
+        : isHost && !acceptedSlotMode
           ? 'Submit for approval'
           : 'Publish event'
       : isHost && currentStep === 'venue'
@@ -276,6 +284,7 @@ export function PartnerEventEditor({
                 data={data}
                 draft={draft}
                 editMode={mode === 'edit'}
+                showDescription={!isHost && mode === 'create'}
                 update={update}
                 onArtistAdd={addArtist}
                 onArtistRemove={(artist) => {
@@ -314,6 +323,7 @@ export function PartnerEventEditor({
               editMode={mode === 'edit'}
               errors={showErrors ? validationErrors : []}
               studio={data.role}
+              acceptedSlotMode={acceptedSlotMode}
             />
           ) : null}
           {showErrors && currentStep !== 'review' && validationErrors.length ? (
@@ -513,7 +523,7 @@ function draftFromInput(
                 id: 'edit-tier-1',
                 name: 'General Admission',
                 price: firstPrice,
-                quantity: event.event.capacity,
+                quantity: event.event.capacity ?? base.ticketTiers[0]?.quantity ?? 0,
               },
             ],
       ),

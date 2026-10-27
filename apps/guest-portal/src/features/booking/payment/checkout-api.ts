@@ -11,6 +11,7 @@ import {
 } from '@c1rcle/contracts';
 
 import { bffClient } from '@/lib/bff/bff-client';
+import { csrfHeaders } from '@/lib/bff/csrf';
 
 import { pollAuthoritativePaymentStatus } from './payment-recovery-poll';
 import { openRazorpayCheckout } from './razorpay-checkout';
@@ -18,21 +19,15 @@ import { openRazorpayCheckout } from './razorpay-checkout';
 import type { PaidCheckoutDeps } from './paid-checkout';
 import type { CheckoutQuoteResponse, PaymentRecoveryResponse } from '@c1rcle/contracts';
 
-/** The double-submit CSRF token the auth BFF sets; echoed back on every write. */
-function csrfHeader(): Record<string, string> {
-  if (typeof document === 'undefined') return {};
-  const match = /(?:^|;\s*)(?:[a-zA-Z0-9_-]+\.)?c1rcle\.csrf=([^;]+)/.exec(document.cookie);
-  return match?.[1] ? { 'x-csrf-token': decodeURIComponent(match[1]) } : {};
-}
-
 const writeHeaders = (idempotencyKey?: string): Record<string, string> => ({
-  ...csrfHeader(),
+  ...csrfHeaders(),
   ...(idempotencyKey ? { 'idempotency-key': idempotencyKey } : {}),
 });
 
 export function fetchQuote(input: {
   eventId: string;
   lines: { tierId: string; quantity: number }[];
+  promoCode?: string | null;
 }): Promise<CheckoutQuoteResponse> {
   return bffClient.post({
     path: '/api/checkout/quote',
@@ -75,6 +70,13 @@ export async function pollPaymentRecovery(
           throw error;
         }
       },
+      reconcile: () =>
+        bffClient.post({
+          path: '/api/payments/recovery/reconcile',
+          body: {},
+          headers: writeHeaders('m3-payment-recovery-reconcile'),
+          schema: paymentRecoveryResponseSchema,
+        }),
       pause: () => sleep(RECOVERY_POLL_INTERVAL_MS),
     },
     eventId,

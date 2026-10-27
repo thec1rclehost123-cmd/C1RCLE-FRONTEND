@@ -648,6 +648,14 @@
   flex-direction: column;
   gap: 14px;
 }
+
+.overviewEmpty {
+  margin: 0;
+  padding: 14px 0;
+  color: #969696;
+  font-size: 13px;
+  line-height: 1.5;
+}
 .networkRow {
   display: flex;
   align-items: center;

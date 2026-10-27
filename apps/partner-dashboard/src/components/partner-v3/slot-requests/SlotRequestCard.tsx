@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { CalendarIcon, LocationIcon, TimeIcon, TicketIcon } from '@c1rcle/icons';
 
 import { Button } from '@/components/partner-v3/Button';
@@ -120,6 +122,21 @@ export function SlotRequestCard({
               {actionError}
             </p>
           ) : null}
+        </div>
+      ) : null}
+      {!isIncoming &&
+      request.status === 'approved' &&
+      request.slotId &&
+      request.venueId &&
+      request.slotStartTime &&
+      request.slotEndTime ? (
+        <div className={styles['requestCardActions']}>
+          <Link
+            className={styles['emptyLink']}
+            href={`/partner/host/events/create?request=${encodeURIComponent(request.id)}`}
+          >
+            Create event from accepted slot
+          </Link>
         </div>
       ) : null}
     </article>

@@ -1,8 +1,5 @@
-import { notFound } from 'next/navigation';
-
-import { HostEventDetailScreen } from '@/components/partner-v3/event-detail/HostEventDetailScreen';
-import { VenueEventDetailScreen } from '@/components/partner-v3/event-detail/VenueEventDetailScreen';
-import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
+import { ConnectedPartnerEventScreen } from '@/components/partner-v3/event-detail/ConnectedPartnerEventScreen';
+import { loadPartnerEvent } from '@/lib/events/load-partner-event';
 
 import { renderStudioSkeleton } from '../../route-helpers';
 
@@ -19,14 +16,12 @@ export default async function StudioEventDetailPage({
       'Event detail routes are reserved for a later screen implementation.',
     );
 
-  const data =
-    studio === 'host'
-      ? await fixturePartnerDataSource.getHostEventDetail(eventId)
-      : await fixturePartnerDataSource.getVenueEventDetail(eventId);
-  if (!data) notFound();
-  return studio === 'host' ? (
-    <HostEventDetailScreen data={data} />
-  ) : (
-    <VenueEventDetailScreen data={data} />
+  const event = await loadPartnerEvent(eventId);
+  return (
+    <ConnectedPartnerEventScreen
+      event={event}
+      organizationId={event.organizationId}
+      studio={studio}
+    />
   );
 }

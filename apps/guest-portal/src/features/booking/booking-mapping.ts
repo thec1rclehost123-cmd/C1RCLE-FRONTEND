@@ -10,10 +10,9 @@ import type { EventDto, PublicTicketTierDto, VenueDto } from '@c1rcle/contracts'
  * ever reach this module — the public endpoint 404s anything else. No fetch,
  * no fallback fixtures: a missing venue renders honest placeholders.
  *
- * Ticket tiers come from `GET /api/v2/public/events/:idOrSlug/tiers` when the
- * caller passes them (real ids the RSVP endpoint accepts). Without tiers the
- * section falls back to one tier derived from the event's price fields — the
- * previous preview behavior, kept for paid events with no public tier read.
+ * Ticket tiers always come from `GET /api/v2/public/events/:idOrSlug/tiers`.
+ * The mapper deliberately cannot synthesize a tier: checkout must never send
+ * a made-up id or price to inventory or a payment provider.
  * Zero-price tiers cap at 1 (the server fulfills exactly one RSVP ticket per
  * account per event); others keep the UI stepper cap.
  */
@@ -29,7 +28,7 @@ const ACCENT_TONES: readonly EventAccentTone[] = ['pink', 'purple', 'red', 'oran
 export function toBookingEventFixture(
   event: EventDto,
   venue: VenueDto | null,
-  tiers: readonly PublicTicketTierDto[] | null = null,
+  tiers: readonly PublicTicketTierDto[],
 ): BookingEventFixture {
   const city = venue?.city ?? FALLBACK_CITY;
   return {
@@ -44,8 +43,8 @@ export function toBookingEventFixture(
     address: city,
     city,
     doorNote: 'Entry rules are set by the host and shown at checkout.',
-    ticketTiers: tiers !== null ? toRealTiers(tiers) : [toFallbackTier(event)],
-    purchasable: tiers !== null,
+    ticketTiers: toRealTiers(tiers),
+    purchasable: tiers.some((tier) => tier.availableQuantity > 0),
   };
 }
 
@@ -64,17 +63,4 @@ function toRealTiers(tiers: readonly PublicTicketTierDto[]): BookingTicketTier[]
         ? Math.min(1, tier.availableQuantity)
         : Math.min(tier.availableQuantity, PREVIEW_MAX_QUANTITY),
   }));
-}
-
-function toFallbackTier(event: EventDto): BookingTicketTier {
-  return {
-    id: 'general-admission',
-    name: 'General Admission',
-    description: event.summary.trim() || event.title,
-    price: {
-      amountPaise: event.isFree ? 0 : (event.startingPricePaise ?? 0),
-      currency: 'INR',
-    },
-    maximumQuantity: PREVIEW_MAX_QUANTITY,
-  };
 }

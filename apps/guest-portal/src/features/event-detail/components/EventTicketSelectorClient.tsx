@@ -18,7 +18,7 @@ export function EventTicketSelectorClient({
   eventId,
   initialVisibleCount = 3,
   tiers,
-  headerNote = 'Fixture preview',
+  headerNote = 'Ticket options',
 }: {
   accentTone: EventAccentTone;
   eventId: string;
@@ -48,8 +48,14 @@ export function EventTicketSelectorClient({
       </div>
 
       <div className="mt-5 space-y-2.5">
+        {tiers.length === 0 ? (
+          <p className="rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-5 text-sm text-white/55">
+            Ticket options are not currently available.
+          </p>
+        ) : null}
         {visibleTiers.map((tier) => {
           const selected = selectedTier === tier.id;
+          const soldOut = tier.availableQuantity === 0;
           const price = tier.price ? moneyFormatter.format(tier.price.amountPaise / 100) : 'Free';
 
           return (
@@ -57,13 +63,16 @@ export function EventTicketSelectorClient({
               key={tier.id}
               type="button"
               aria-pressed={selected}
+              disabled={soldOut}
               onClick={() => {
-                setSelectedTier(tier.id);
+                if (!soldOut) setSelectedTier(tier.id);
               }}
               className={`flex min-h-16 w-full items-center justify-between gap-4 rounded-2xl border px-4 py-3 text-left transition-colors motion-reduce:transition-none ${
-                selected
-                  ? accent.selected
-                  : 'border-white/10 bg-white/[0.045] hover:bg-white/[0.08]'
+                soldOut
+                  ? 'cursor-not-allowed border-white/5 bg-white/[0.025] opacity-55'
+                  : selected
+                    ? accent.selected
+                    : 'border-white/10 bg-white/[0.045] hover:bg-white/[0.08]'
               }`}
             >
               <span>
@@ -103,7 +112,7 @@ export function EventTicketSelectorClient({
           href={`/checkout/${eventId}?tier=${encodeURIComponent(selectedTier)}`}
           className="mt-5 flex min-h-11 w-full items-center justify-center rounded-full bg-white px-5 py-3 text-center text-[10px] font-black uppercase tracking-[0.2em] text-black"
         >
-          Continue to checkout preview
+          Continue to checkout
         </Link>
       ) : (
         <button
@@ -111,7 +120,7 @@ export function EventTicketSelectorClient({
           disabled
           className="mt-5 min-h-11 w-full cursor-not-allowed rounded-full border border-white/10 bg-white/[0.06] px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white/40"
         >
-          Select a preview tier
+          {tiers.length === 0 ? 'Checkout unavailable' : 'Select a ticket tier'}
         </button>
       )}
     </section>

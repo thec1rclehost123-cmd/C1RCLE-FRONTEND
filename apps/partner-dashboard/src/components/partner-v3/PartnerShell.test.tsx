@@ -1,5 +1,7 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { hydrateRoot } from 'react-dom/client';
+import { renderToString } from 'react-dom/server';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
@@ -7,7 +9,10 @@ import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
 import { PartnerShell } from './PartnerShell';
 
 const navigation = vi.hoisted(() => ({ pathname: '/partner/venue/overview' }));
-const authAccess = vi.hoisted(() => ({ tabVisibility: null as Record<string, boolean> | null }));
+const authAccess = vi.hoisted(() => ({
+  tabVisibility: null as Record<string, boolean> | null,
+  displayName: 'Rhea Kapoor',
+}));
 const storedValues = new Map<string, string>();
 
 vi.mock('next/navigation', () => ({
@@ -17,7 +22,7 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/components/providers/DashboardAuthProvider', () => ({
   useDashboardAuth: () => ({
-    profile: { displayName: 'Rhea Kapoor' },
+    profile: { displayName: authAccess.displayName },
     signOut: vi.fn(),
     tabVisibility: authAccess.tabVisibility,
   }),
@@ -42,6 +47,7 @@ describe('PartnerShell navigation layouts', () => {
   beforeEach(() => {
     navigation.pathname = '/partner/venue/overview';
     authAccess.tabVisibility = null;
+    authAccess.displayName = 'Rhea Kapoor';
     window.localStorage.clear();
   });
 
@@ -112,5 +118,34 @@ describe('PartnerShell navigation layouts', () => {
     expect(screen.getByRole('link', { name: 'Events' })).toBeInTheDocument();
     // Segments with no backend opinion stay visible.
     expect(screen.getByRole('link', { name: 'Marketing' })).toBeInTheDocument();
+  });
+
+  it('keeps the authenticated header name stable through server hydration', async () => {
+    const interactionData = await fixturePartnerDataSource.getPartnerShellInteractions('venue');
+    const tree = (
+      <PartnerShell studio="venue" interactionData={interactionData}>
+        <div>Overview content</div>
+      </PartnerShell>
+    );
+    authAccess.displayName = 'Partner';
+    const container = document.createElement('div');
+    container.innerHTML = renderToString(tree);
+    document.body.append(container);
+    authAccess.displayName = 'Rhea Kapoor';
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    let root: ReturnType<typeof hydrateRoot> | null = null;
+    act(() => {
+      root = hydrateRoot(container, tree);
+    });
+
+    expect(consoleError.mock.calls.flat().join(' ')).not.toContain('Hydration failed');
+    expect(container).toHaveTextContent('Rhea Kapoor');
+
+    act(() => {
+      root?.unmount();
+    });
+    container.remove();
+    consoleError.mockRestore();
   });
 });

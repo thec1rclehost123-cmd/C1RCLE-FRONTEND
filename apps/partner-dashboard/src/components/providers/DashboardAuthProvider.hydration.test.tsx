@@ -95,6 +95,9 @@ afterEach(() => {
 
 describe('DashboardAuthProvider hydration', () => {
   it('keeps browser-only auth state out of SSR and renders profile upon client hydration', async () => {
+    // Active-org storage is browser-only and must not be available to the
+    // server-rendered tree.
+    mocks.getActiveOrgId.mockReturnValue(null);
     const tree = (
       <DashboardAuthProvider>
         <ProfileName />

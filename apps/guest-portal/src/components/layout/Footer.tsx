@@ -17,35 +17,29 @@ export const footerLinks: FooterLinkItem[] = [
 
 export function Footer() {
   return (
-    <footer className="bg-black text-white pt-20 md:pt-28 pb-24 md:pb-12 px-6 border-t border-white/10 relative z-10">
-      <div className="max-w-[1400px] mx-auto flex flex-col items-center">
-        {/* Giant Brand Typography */}
-        <div className="relative mb-20 w-full text-center">
-          <Link href="/" className="inline-block group">
-            <span className="block text-[14vw] md:text-[10rem] font-black uppercase tracking-tighter text-white/40 group-hover:text-white/60 transition-all duration-700 select-none">
-              THE C1RCLE
-            </span>
-          </Link>
+    <footer className="relative z-10 border-t border-white/8 bg-[#080808] px-6 pb-28 pt-14 text-white lg:pb-14">
+      <div className="mx-auto flex max-w-[1400px] flex-col items-center gap-6 text-center">
+        <Link
+          href="/"
+          className="text-lg font-black uppercase tracking-[-0.04em] text-white transition-colors hover:text-white/75"
+        >
+          THE C1RCLE
+        </Link>
+        <p className="max-w-sm text-xs leading-5 text-white/40">
+          Discover life offline. Find real events, venues, and hosts.
+        </p>
+        <div className="flex flex-wrap justify-center gap-x-6 gap-y-3">
+          {footerLinks.map((link) => (
+            <Link
+              key={link.label}
+              href={link.href}
+              className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white"
+            >
+              {link.label}
+            </Link>
+          ))}
         </div>
-
-        {/* Bottom Navigation Links & Copyright */}
-        <div className="w-full flex flex-col md:flex-row justify-between items-center gap-8 pt-8 border-t border-white/10">
-          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/60">
-            © 2026 THE C1RCLE — DISCOVER LIFE OFFLINE
-          </p>
-
-          <div className="flex flex-wrap justify-center gap-x-8 gap-y-3">
-            {footerLinks.map((link) => (
-              <Link
-                key={link.label}
-                href={link.href}
-                className="text-[10px] font-black uppercase tracking-[0.4em] text-white/60 hover:text-white transition-colors"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-        </div>
+        <p className="text-[10px] text-white/30">© 2026 THE C1RCLE</p>
       </div>
     </footer>
   );
