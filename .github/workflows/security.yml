@@ -22,13 +22,15 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      # Not the shared setup action: it caches the pnpm store, which does not
-      # exist without an install, and that fails the post-job step (see ci.yml).
+      # Not the shared setup action. setup-node v5 caches the pnpm store by itself
+      # when package.json has a `packageManager` field, and there is no store without
+      # an install, which fails the post-job step (see ci.yml).
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           run_install: false
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version-file: .nvmrc
+          package-manager-cache: false
       - name: Audit dependencies (fail on high or critical)
         run: pnpm audit --audit-level=high

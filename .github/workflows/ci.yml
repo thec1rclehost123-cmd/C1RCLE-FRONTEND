@@ -220,16 +220,19 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      # Not the shared ./.github/actions/setup: its Node step caches the pnpm store,
-      # and with no install there is no store, so the post-job cache save fails the
-      # whole job even though the audit itself passed. The versions come from the
-      # same sources (`packageManager`, `.nvmrc`).
+      # Not the shared ./.github/actions/setup. setup-node v5 turns pnpm store
+      # caching on by itself whenever package.json has a `packageManager` field, and
+      # with no install there is no store, so its post-job cache save fails the whole
+      # job even though the audit itself passed. `package-manager-cache: false` is
+      # what switches that off. Versions come from the same sources as the shared
+      # action (`packageManager`, `.nvmrc`).
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           run_install: false
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version-file: .nvmrc
+          package-manager-cache: false
       - name: Audit dependencies (fail on high or critical)
         run: pnpm audit --audit-level=high
 
