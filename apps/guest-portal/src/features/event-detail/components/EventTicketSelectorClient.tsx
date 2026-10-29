@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 
 import { useTicketAccessGrantId } from '@/lib/access/use-ticket-access-grant-id';
@@ -31,6 +31,9 @@ export function EventTicketSelectorClient({
   headerNote = 'Ticket options',
   referralCode,
   accessGrantId,
+  open,
+  onClose,
+  triggerRef,
 }: {
   accentTone: EventAccentTone;
   eventId: string;
@@ -39,6 +42,9 @@ export function EventTicketSelectorClient({
   headerNote?: string;
   referralCode?: string;
   accessGrantId?: string;
+  open?: boolean;
+  onClose?: () => void;
+  triggerRef?: React.RefObject<HTMLButtonElement | null>;
 }) {
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -51,15 +57,79 @@ export function EventTicketSelectorClient({
   const [joiningTierId, setJoiningTierId] = useState<string | null>(null);
   const grantFromUrl = useTicketAccessGrantId();
   const effectiveGrantId = accessGrantId ?? grantFromUrl;
+  const dialogRef = useRef<HTMLElement>(null);
   const accent = getEventAccentClasses(accentTone);
   const hasHiddenTiers = tiers.length > initialVisibleCount;
   const visibleTiers = expanded ? tiers : tiers.slice(0, initialVisibleCount);
 
+  useEffect(() => {
+    if (open !== true) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const focusable = () =>
+      Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+    focusable()[0]?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose?.();
+      } else if (event.key === 'Tab') {
+        const items = focusable();
+        const first = items[0];
+        const last = items.at(-1);
+        if (!first || !last) return;
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [onClose, open]);
+
+  const wasOpen = useRef(false);
+  useLayoutEffect(() => {
+    if (open === true) wasOpen.current = true;
+    else if (open === false && wasOpen.current) {
+      wasOpen.current = false;
+      triggerRef?.current?.focus();
+    }
+  }, [open, triggerRef]);
+
+  if (open === false) return null;
+
   return (
     <section
+      ref={dialogRef}
+      role={open === true ? 'dialog' : undefined}
+      aria-modal={open === true ? true : undefined}
       aria-labelledby="ticket-options-heading"
-      className={`rounded-[1.75rem] border bg-black/65 p-5 backdrop-blur-xl ${accent.border} ${accent.eventGlow}`}
+      tabIndex={open === true ? -1 : undefined}
+      className={`${open === true ? 'fixed inset-x-0 bottom-0 z-[90] max-h-[88svh] overflow-y-auto rounded-t-[1.5rem] border bg-[#0d0d0d] p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] shadow-2xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[1.5rem] sm:p-6' : 'rounded-[1.75rem] border bg-black/65 p-5 backdrop-blur-xl'} ${accent.border} ${accent.eventGlow}`}
     >
+      {open === true ? (
+        <div className="mb-3 flex justify-end">
+          <button
+            type="button"
+            aria-label="Close ticket selection"
+            onClick={onClose}
+            className="flex size-11 items-center justify-center rounded-full border border-white/10 text-2xl text-white/70"
+          >
+            ×
+          </button>
+        </div>
+      ) : null}
       <p className="text-[9px] font-black uppercase tracking-[0.28em] text-white/40">Admission</p>
       <div className="mt-2 flex items-end justify-between gap-4">
         <h2 id="ticket-options-heading" className="text-2xl font-black uppercase tracking-tight">

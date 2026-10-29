@@ -35,7 +35,9 @@ describe('ExploreDiscoveryClient URL state', () => {
       />,
     );
 
-    expect(screen.getByRole('heading', { name: /what's on in all cities/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: "What's on inAll Cities1 event found" }),
+    ).toBeInTheDocument();
     expect(screen.queryByText('Explore events', { selector: 'p' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /View Blue Room/ })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Coming up' })).not.toBeInTheDocument();

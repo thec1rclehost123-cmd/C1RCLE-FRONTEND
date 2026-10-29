@@ -8,7 +8,7 @@ export default function ExploreLoading() {
       <div className="min-h-[34rem] rounded-[2rem] border border-white/10 bg-white/5 sm:min-h-[38rem] lg:min-h-[42rem]" />
       <div className="mx-auto mt-10 max-w-[1400px]">
         <div className="h-14 max-w-4xl rounded-full bg-white/5" />
-        <div className="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="mt-14 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
           {Array.from({ length: 8 }, (_, index) => (
             <div key={index} className="aspect-[4/5] rounded-[1.75rem] bg-white/5" />
           ))}

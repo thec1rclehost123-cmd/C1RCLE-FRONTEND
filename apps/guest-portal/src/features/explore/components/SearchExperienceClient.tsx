@@ -135,7 +135,7 @@ export function SearchExperienceClient({
       <section
         aria-live="polite"
         aria-labelledby="search-results-heading"
-        className="relative mx-auto mt-28 max-w-[1500px] sm:mt-36"
+        className="relative mx-auto mt-16 max-w-[1500px] sm:mt-20"
       >
         <h2
           id="search-results-heading"

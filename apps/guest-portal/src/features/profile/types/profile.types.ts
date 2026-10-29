@@ -1,6 +1,6 @@
 export type ProfileSection = 'overview' | 'events' | 'settings';
 export type ProfileEventFilter = 'upcoming' | 'attended';
-export type ProfileSettingsSection = 'personal' | 'account';
+export type ProfileSettingsSection = 'personal' | 'social' | 'account';
 export type PublicProfileTone = 'orange' | 'red' | 'purple';
 
 export interface ProfileIdentity {

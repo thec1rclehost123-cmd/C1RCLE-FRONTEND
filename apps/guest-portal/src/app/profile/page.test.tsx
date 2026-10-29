@@ -81,12 +81,32 @@ describe('ProfilePage', () => {
   });
 
   it('renders the authenticated profile identity without fixture data', async () => {
-    render(await ProfilePage());
+    render(await ProfilePage({}));
 
     expect(screen.getByRole('heading', { level: 1, name: 'Aayush Divase' })).toBeInTheDocument();
-    expect(screen.getByText(/Tempe · Joined Jan 2026/)).toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: 'Profile sections' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Your C1RCLE at a glance' })).toBeInTheDocument();
+    expect(screen.getByText('Tempe')).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Profile sections' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open profile settings' })).toHaveAttribute(
+      'href',
+      '/profile?view=settings&section=social#social-links',
+    );
+    expect(screen.getByRole('link', { name: 'Edit profile name' })).toHaveAttribute(
+      'href',
+      '/profile?view=settings&section=personal#profile-settings',
+    );
+    expect(
+      screen.getByRole('link', { name: 'Add Instagram profile link in settings' }),
+    ).toHaveAttribute('href', '/profile?view=settings&section=social#social-links');
+    expect(screen.getByRole('link', { name: 'Add X profile link in settings' })).toHaveAttribute(
+      'href',
+      '/profile?view=settings&section=social#social-links',
+    );
+    expect(screen.queryByText(/your c1rcle/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Upcoming events' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Events you’ve attended' })).toBeInTheDocument();
+    expect(
+      screen.queryByText(/events attended|tickets booked|total spent/i),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(/UI PREVIEW|FIXTURE DATA/i)).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /logged in|guest showcase/i }),
@@ -232,7 +252,7 @@ describe('ProfilePage', () => {
       }),
     );
 
-    expect(screen.getByText('Attendance history unavailable')).toBeInTheDocument();
+    expect(screen.getByText('Attendance history is temporarily unavailable.')).toBeInTheDocument();
     expect(screen.queryByText('No attended events yet.')).not.toBeInTheDocument();
   });
 
@@ -252,6 +272,20 @@ describe('ProfilePage', () => {
     expect(nameInput).toHaveValue('Aayush Divase');
     expect(screen.queryByText('Enter at least two characters.')).not.toBeInTheDocument();
     expect(screen.queryByText(/saved successfully/i)).not.toBeInTheDocument();
+  });
+
+  it('shows social settings without pretending unsupported links can be saved', async () => {
+    render(
+      await ProfilePage({
+        searchParams: Promise.resolve({ section: 'social', view: 'settings' }),
+      }),
+    );
+
+    expect(screen.getByRole('heading', { name: 'Instagram & X' })).toBeInTheDocument();
+    expect(screen.getByText(/not supported by the Guest profile service yet/i)).toBeInTheDocument();
+    expect(screen.getByText('Instagram', { exact: true })).toBeInTheDocument();
+    expect(screen.getByText('X', { exact: true })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /save.*social/i })).not.toBeInTheDocument();
   });
 
   it('clears the local session and returns to login after sign-out confirmation', async () => {

@@ -118,7 +118,7 @@ function mockFeed(items: EventDto[], venues: VenueDto[] = [VENUE]) {
 describe('ExplorePage', () => {
   it('renders real published events with resolved venues', async () => {
     mockFeed([EVENT, FREE_EVENT]);
-    render(await ExplorePage());
+    render(await ExplorePage({}));
 
     expect(screen.getByRole('heading', { level: 1, name: 'Real Night' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Real Night featured poster' })).toBeInTheDocument();
@@ -141,7 +141,7 @@ describe('ExplorePage', () => {
 
   it('derives city options from real venues', async () => {
     mockFeed([EVENT, FREE_EVENT]);
-    render(await ExplorePage());
+    render(await ExplorePage({}));
 
     const citySelect = screen.getByLabelText('City');
     expect(citySelect).toHaveTextContent('All Cities');
@@ -151,7 +151,7 @@ describe('ExplorePage', () => {
 
   it('routes API failures to the retryable route error boundary', async () => {
     mockGet.mockRejectedValue(new Error('gateway down'));
-    await expect(ExplorePage()).rejects.toThrow('gateway down');
+    await expect(ExplorePage({})).rejects.toThrow('gateway down');
   });
 
   it('sorts real events by soonest and price', async () => {
@@ -172,7 +172,7 @@ describe('ExplorePage', () => {
       startingPricePaise: 99900,
     };
     mockFeed([later, earlier]);
-    render(await ExplorePage());
+    render(await ExplorePage({}));
 
     const cardNames = () =>
       screen
@@ -199,7 +199,7 @@ describe('ExplorePage', () => {
       venueId: 'ven_m',
     };
     mockFeed([EVENT, mumbaiEvent], [VENUE, mumbaiVenue]);
-    render(await ExplorePage());
+    render(await ExplorePage({}));
     expect(screen.getByText('2 events found')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('City'), { target: { value: 'mumbai' } });
@@ -232,7 +232,7 @@ describe('ExplorePage', () => {
     };
     const oldEvent = { ...EVENT, startAt: '2026-03-10T12:00:00.000Z' };
     mockFeed([todayEvent, oldEvent]);
-    render(await ExplorePage());
+    render(await ExplorePage({}));
 
     fireEvent.change(screen.getByLabelText('Date'), { target: { value: 'today' } });
     expect(screen.getByText('1 event found')).toBeInTheDocument();

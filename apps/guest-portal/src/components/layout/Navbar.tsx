@@ -8,7 +8,9 @@ import { DesktopNavLinks } from './DesktopNavLinks';
 import { NavbarActions } from './NavbarActions';
 
 export function Navbar() {
-  const isHome = usePathname() === '/';
+  const pathname = usePathname();
+  if (pathname.startsWith('/checkout/')) return null;
+  const isHome = pathname === '/';
 
   return (
     <header className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center px-4 pt-4 sm:px-8 lg:px-12">

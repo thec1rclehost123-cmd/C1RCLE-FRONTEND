@@ -1,4 +1,5 @@
 import { DirectoryLanding } from '@/features/directory/components/DirectoryLanding';
+import { loadExploreEvents } from '@/features/explore/explore-data';
 import { buildPublicMetadata } from '@/lib/seo/metadata';
 
 import type { Metadata } from 'next';
@@ -13,6 +14,10 @@ export function generateMetadata(): Metadata {
   });
 }
 
-export default function HostsPage() {
-  return <DirectoryLanding hosts={[]} venues={[]} />;
+export default async function HostsPage() {
+  const result = await loadExploreEvents().then(
+    (events) => ({ events, feedAvailable: true }),
+    () => ({ events: [], feedAvailable: false }),
+  );
+  return <DirectoryLanding {...result} />;
 }

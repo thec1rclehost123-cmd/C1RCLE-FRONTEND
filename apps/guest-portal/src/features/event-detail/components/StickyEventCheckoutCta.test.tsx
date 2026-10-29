@@ -1,76 +1,55 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 
 import { StickyEventCheckoutCta } from './StickyEventCheckoutCta';
 
-let intersectionCallback: IntersectionObserverCallback | undefined;
-
-class MockIntersectionObserver implements IntersectionObserver {
-  readonly root = null;
-  readonly rootMargin = '0px';
-  readonly thresholds = [0];
-
-  constructor(callback: IntersectionObserverCallback) {
-    intersectionCallback = callback;
-  }
-
-  observe = vi.fn();
-  unobserve = vi.fn();
-  disconnect = vi.fn();
-  takeRecords = vi.fn(() => []);
-}
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-  intersectionCallback = undefined;
-});
-
 describe('StickyEventCheckoutCta', () => {
-  it('stays out of the ticket selector and appears after it leaves view', async () => {
-    vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
+  it('remains available as a button independent of selector visibility', () => {
     render(
       <>
         <aside id="event-ticket-selector">Ticket tiers</aside>
-        <StickyEventCheckoutCta href="/checkout/event" label="Buy tickets" className="accent" />
+        <StickyEventCheckoutCta label="Buy tickets" className="accent" />
       </>,
     );
-
-    expect(screen.queryByRole('link', { name: 'Buy tickets' })).not.toBeInTheDocument();
-
-    await waitFor(() => {
-      expect(intersectionCallback).toBeDefined();
-    });
-    act(() => {
-      intersectionCallback?.(
-        [{ isIntersecting: true } as IntersectionObserverEntry],
-        {} as IntersectionObserver,
-      );
-    });
-    expect(screen.queryByRole('link', { name: 'Buy tickets' })).not.toBeInTheDocument();
-
-    act(() => {
-      intersectionCallback?.(
-        [{ isIntersecting: false } as IntersectionObserverEntry],
-        {} as IntersectionObserver,
-      );
-    });
-    expect(screen.getByRole('link', { name: 'Buy tickets' })).toHaveAttribute(
-      'href',
-      '/checkout/event',
-    );
+    expect(screen.getByRole('button', { name: 'Buy tickets' })).toBeInTheDocument();
   });
 
-  it('does not cover the selector when IntersectionObserver is unavailable', async () => {
-    vi.stubGlobal('IntersectionObserver', undefined);
-    render(
-      <>
-        <aside id="event-ticket-selector">Ticket tiers</aside>
-        <StickyEventCheckoutCta href="/checkout/event" label="Buy tickets" className="accent" />
-      </>,
-    );
+  it('opens the ticket selector and restores focus when it closes', async () => {
+    const { EventTicketSelectorClient } = await import('./EventTicketSelectorClient');
+    const { useRef, useState } = await import('react');
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      const triggerRef = useRef<HTMLButtonElement>(null);
+      return (
+        <>
+          <StickyEventCheckoutCta
+            ref={triggerRef}
+            label="Get tickets"
+            className="accent"
+            onClick={() => {
+              setOpen(true);
+            }}
+          />
+          <EventTicketSelectorClient
+            accentTone="orange"
+            eventId="event"
+            tiers={[]}
+            open={open}
+            onClose={() => {
+              setOpen(false);
+            }}
+            triggerRef={triggerRef}
+          />
+        </>
+      );
+    }
 
-    await waitFor(() => {
-      expect(screen.queryByRole('link', { name: 'Buy tickets' })).not.toBeInTheDocument();
-    });
+    render(<Harness />);
+    const cta = screen.getByRole('button', { name: 'Get tickets' });
+    cta.focus();
+    fireEvent.click(cta);
+    expect(await screen.findByRole('dialog', { name: 'Get on the list' })).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(cta).toHaveFocus());
   });
 });

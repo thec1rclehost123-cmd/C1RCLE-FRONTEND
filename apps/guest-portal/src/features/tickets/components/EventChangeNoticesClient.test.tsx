@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EventChangeNoticesClient } from './EventChangeNoticesClient';
 
+import type { SocialNotificationDto } from '@c1rcle/contracts/client';
+
 const { get, post } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 
 vi.mock('@/lib/bff/bff-client', () => ({ bffClient: { get, post } }));
@@ -25,7 +27,7 @@ const notice = {
   },
   eventChangeResponse: null,
 };
-let currentNotice = notice;
+let currentNotice: SocialNotificationDto = notice;
 
 beforeEach(() => {
   currentNotice = notice;

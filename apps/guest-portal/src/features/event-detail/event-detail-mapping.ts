@@ -11,7 +11,6 @@ const FALLBACK_IMAGE = '/c1rcle-logo.webp';
 const FALLBACK_VENUE = 'Venue TBA';
 const FALLBACK_CITY = 'Location unavailable';
 const FALLBACK_CATEGORY = 'Events';
-const FALLBACK_HOST_NAME = 'Host details unavailable';
 
 const STATUS_LIFECYCLE: Record<string, EventLifecycle> = {
   published: 'scheduled',
@@ -64,7 +63,7 @@ export function toEventDetailFixture(
     address: formatAddress(event),
     city: nonEmptyString(event.venue?.address.city, FALLBACK_CITY),
     hostId: event.organizer?.slug ?? null,
-    host: event.organizer?.name ?? FALLBACK_HOST_NAME,
+    host: event.organizer ? event.organizer.name.trim() : '',
     summary: summary || 'Event details not provided.',
     description: description.length > 0 ? [description] : [],
     doorNote: 'Ticket and entry terms are shown during checkout when available.',

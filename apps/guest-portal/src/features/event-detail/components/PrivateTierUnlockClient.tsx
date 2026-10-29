@@ -9,6 +9,7 @@ import {
   ticketAccessGrantDtoSchema,
 } from '@c1rcle/contracts';
 
+import { toBookingEventFromPublicDetail } from '@/features/booking/booking-mapping';
 import { bffClient } from '@/lib/bff/bff-client';
 import { csrfHeaders } from '@/lib/bff/csrf';
 
@@ -22,6 +23,7 @@ import type {
   EventDetailFixture,
   EventDetailTicketTier,
 } from '../types/event-detail.types';
+import type { BookingEventFixture } from '@/features/booking/types/booking.types';
 
 export function PrivateTierUnlockClient({
   eventId,
@@ -36,6 +38,7 @@ export function PrivateTierUnlockClient({
   const [grantId, setGrantId] = useState<string | null>(null);
   const [tiers, setTiers] = useState<readonly EventDetailTicketTier[]>([]);
   const [privateEvent, setPrivateEvent] = useState<EventDetailFixture | null>(null);
+  const [checkoutEvent, setCheckoutEvent] = useState<BookingEventFixture | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -65,6 +68,7 @@ export function PrivateTierUnlockClient({
           schema: publicTicketTierListResponseSchema,
         });
         setPrivateEvent(toEventDetailFixture(event, unlocked.items));
+        setCheckoutEvent(toBookingEventFromPublicDetail(event, unlocked.items));
         setGrantId(grant.id);
         setCode('');
         return;
@@ -102,8 +106,13 @@ export function PrivateTierUnlockClient({
 
   return (
     <section className="rounded-2xl border border-white/10 bg-black/45 p-4">
-      {privateEvent && grantId ? (
-        <EventDetailView event={privateEvent} accessGrantId={grantId} />
+      {privateEvent && checkoutEvent && grantId ? (
+        <EventDetailView
+          event={privateEvent}
+          checkoutEvent={checkoutEvent}
+          accessGrantId={grantId}
+          {...(referralCode ? { referralCode } : {})}
+        />
       ) : (
         <>
           <label htmlFor="ticket-access-code" className="text-sm font-semibold text-white">

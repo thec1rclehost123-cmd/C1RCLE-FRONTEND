@@ -122,7 +122,7 @@ describe('toEventDetailFixture', () => {
       venue: 'Venue TBA',
       venueId: null,
       city: 'Location unavailable',
-      host: 'Host details unavailable',
+      host: '',
       hostId: null,
       endsAt: EVENT.startAt,
       summary: 'Event details not provided.',

@@ -73,29 +73,25 @@ export function ExploreDiscoveryClient({
     >
       <div className="mx-auto max-w-[1600px]">
         {/* Results heading and compact filters follow the floating rail pattern. */}
-        <div className="mb-2 flex flex-col gap-5 sm:mb-3 sm:gap-6 xl:flex-row xl:items-start xl:justify-between">
-          <div>
+        <div className="mb-3 grid grid-cols-1 gap-y-4 sm:mb-4 sm:gap-y-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:grid-rows-[auto_auto] xl:items-center xl:gap-x-6 xl:gap-y-2">
+          <div className="min-w-0 xl:col-start-1 xl:row-start-1">
             <h2
               id="explore-results-heading"
-              className="text-[1.65rem] font-bold leading-tight tracking-[-0.04em] sm:text-[2rem] lg:text-[2.25rem]"
+              className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-[1.65rem] font-bold leading-[1.05] tracking-[-0.04em] sm:text-[2rem] lg:text-[2.25rem]"
             >
-              What&apos;s on in{' '}
-              <span className="inline-block align-baseline whitespace-nowrap text-[#FF4400]">
-                {activeCity}
+              <span>What&apos;s on in</span>
+              <span className="text-[#FF4400]">{activeCity}</span>
+              <span className="text-[0.38em] font-black uppercase leading-none tracking-[0.14em] text-white/45 sm:text-[0.34em]">
+                {filteredEvents.length} {filteredEvents.length === 1 ? 'event' : 'events'} found
               </span>
             </h2>
-            <p
-              aria-live="polite"
-              className="mt-3 text-[10px] font-black uppercase tracking-[0.18em] text-white/45 sm:text-[11px] sm:tracking-[0.2em]"
-            >
-              {filteredEvents.length} {filteredEvents.length === 1 ? 'event' : 'events'} found
-            </p>
           </div>
 
           {/* Search remains available from the immersive Search route. */}
-          <div className="relative z-20 grid w-full grid-cols-2 gap-2.5 xl:w-auto xl:grid-cols-4 xl:items-center">
+          <div className="relative z-20 grid w-full grid-cols-2 overflow-hidden rounded-[1.35rem] border border-white/12 bg-black/35 shadow-[0_8px_24px_rgba(0,0,0,0.16)] backdrop-blur-xl xl:col-start-2 xl:row-start-1 xl:w-auto xl:grid-cols-4 xl:items-center xl:rounded-full">
             <ExploreSelect
               label="Category"
+              className="border-b border-r border-white/10 xl:border-b-0"
               value={category}
               onChange={(value) => {
                 setCategory(value);
@@ -112,6 +108,7 @@ export function ExploreDiscoveryClient({
 
             <ExploreSelect
               label="Sort"
+              className="border-b border-white/10 xl:border-b-0 xl:border-r"
               value={sort}
               onChange={(value) => {
                 setSort(value as ExploreSort);
@@ -125,6 +122,7 @@ export function ExploreDiscoveryClient({
 
             <ExploreSelect
               label="Date"
+              className="border-r border-white/10"
               value={date}
               onChange={(value) => {
                 setDate(value as ExploreDateFilter);
@@ -156,7 +154,7 @@ export function ExploreDiscoveryClient({
         {/* Results Grid / Empty State */}
         {filteredEvents.length > 0 ? (
           <>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
               {visibleEvents.map((event) => (
                 <ExploreEventCard key={event.id} event={event} />
               ))}
@@ -200,17 +198,21 @@ export function ExploreDiscoveryClient({
 
 function ExploreSelect({
   label,
+  className,
   value,
   onChange,
   children,
 }: {
   label: string;
+  className?: string;
   value: string;
   onChange: (value: string) => void;
   children: React.ReactNode;
 }) {
   return (
-    <label className="group relative flex min-h-11 min-w-0 cursor-pointer items-center rounded-full border border-white/12 bg-black/35 px-3.5 shadow-[0_8px_24px_rgba(0,0,0,0.16)] backdrop-blur-xl transition-[border-color,background-color] duration-200 hover:border-white/20 hover:bg-black/50 focus-within:border-[#FF6842]/55 sm:min-h-12 sm:px-4">
+    <label
+      className={`group relative flex min-h-12 min-w-0 cursor-pointer items-center px-3.5 py-2 transition-colors duration-200 hover:bg-white/[0.045] focus-within:bg-white/[0.06] sm:min-h-14 sm:px-4 xl:min-w-[142px] ${className ?? ''}`}
+    >
       <select
         aria-label={label}
         value={value}

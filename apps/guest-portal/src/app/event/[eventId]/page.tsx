@@ -3,12 +3,14 @@ import { notFound } from 'next/navigation';
 import { createApiClient, isApiClientError } from '@c1rcle/api-client';
 import { eventPublicDetailDtoSchema, publicTicketTierListResponseSchema } from '@c1rcle/contracts';
 
+import { toBookingEventFromPublicDetail } from '@/features/booking/booking-mapping';
 import { EventDetailView } from '@/features/event-detail/components/EventDetailView';
 import { PrivateTierUnlockClient } from '@/features/event-detail/components/PrivateTierUnlockClient';
 import { PromoterClickTracker } from '@/features/event-detail/components/PromoterClickTracker';
 import { toEventDetailFixture } from '@/features/event-detail/event-detail-mapping';
 import { loadExploreEvents } from '@/features/explore/explore-data';
 
+import type { BookingEventFixture } from '@/features/booking/types/booking.types';
 import type { EventDetailFixture } from '@/features/event-detail/types/event-detail.types';
 import type { Metadata } from 'next';
 
@@ -20,7 +22,7 @@ interface EventDetailPageProps {
 }
 
 type EventDetailResult =
-  | { kind: 'ready'; event: EventDetailFixture }
+  | { kind: 'ready'; event: EventDetailFixture; checkoutEvent: BookingEventFixture }
   | { kind: 'private' }
   | { kind: 'not-found' }
   | { kind: 'unavailable' };
@@ -46,7 +48,11 @@ async function getEventDetail(eventId: string): Promise<EventDetailResult> {
       path: `/api/v2/public/events/${encoded}/tiers`,
       schema: publicTicketTierListResponseSchema,
     });
-    return { kind: 'ready', event: toEventDetailFixture(event, tiers.items) };
+    return {
+      kind: 'ready',
+      event: toEventDetailFixture(event, tiers.items),
+      checkoutEvent: toBookingEventFromPublicDetail(event, tiers.items),
+    };
   } catch {
     return { kind: 'unavailable' };
   }
@@ -139,6 +145,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
       />
       <EventDetailView
         event={result.event}
+        checkoutEvent={result.checkoutEvent}
         recommendations={recommendations}
         {...(referralCode ? { referralCode } : {})}
       />

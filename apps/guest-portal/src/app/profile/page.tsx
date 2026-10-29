@@ -8,12 +8,10 @@ import {
   ordersListResponseSchema,
 } from '@c1rcle/contracts';
 
-import { EventArtworkBackdrop } from '@/components/layout/EventArtworkBackdrop';
 import { getOrderStatusPresentation } from '@/features/booking/status-presentation';
 import { ProfileEvents } from '@/features/profile/components/ProfileEvents';
 import { ProfileHeader } from '@/features/profile/components/ProfileHeader';
 import { ProfileOverview } from '@/features/profile/components/ProfileOverview';
-import { ProfileSectionNav } from '@/features/profile/components/ProfileSectionNav';
 import { ProfileSettings } from '@/features/profile/components/ProfileSettings';
 import { requireGuestSession } from '@/lib/auth/require-session';
 import { buildPrivateMetadata } from '@/lib/seo/metadata';
@@ -57,7 +55,7 @@ function resolveEventFilter(value: string | undefined): ProfileEventFilter {
 }
 
 function resolveSettingsSection(value: string | undefined): ProfileSettingsSection {
-  return value === 'account' ? 'account' : 'personal';
+  return value === 'account' || value === 'social' ? value : 'personal';
 }
 
 function initialsFor(displayName: string): string {
@@ -86,7 +84,7 @@ async function collectPages<T>(
   }
 }
 
-export default async function ProfilePage({ searchParams }: ProfilePageProps = {}) {
+export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const session = await requireGuestSession('/profile');
   const cookieHeader = (await cookies()).toString();
   const guestProfile = await createApiClient()
@@ -193,16 +191,17 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps = {
     activeEventFilter === 'attended' ? profile.attendedEvents : profile.upcomingEvents;
 
   return (
-    <div className="relative z-10 min-h-screen px-4 pb-28 pt-24 text-white sm:px-6 sm:pt-28 lg:px-8">
-      <EventArtworkBackdrop
-        image={profile.upcomingEvents[0]?.image ?? profile.attendedEvents[0]?.image ?? null}
+    <div className="relative isolate min-h-screen overflow-hidden bg-[#070807] px-4 pb-24 pt-28 text-white sm:px-6 sm:pt-32 lg:px-8">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 z-[-1] bg-[linear-gradient(to_bottom,rgba(0,0,0,0.48),rgba(0,0,0,0.7)_42%,#070807_100%)]"
       />
-      <div className="relative z-10 mx-auto max-w-[1280px]">
-        <ProfileHeader identity={profile.identity} />
-
-        <div className="my-7 sm:my-9">
-          <ProfileSectionNav activeSection={activeSection} />
-        </div>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 z-[-1] bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.42)_82%,rgba(0,0,0,0.62)_100%)]"
+      />
+      <div className="relative z-10 mx-auto max-w-[1500px]">
+        <ProfileHeader identity={profile.identity} featured={activeSection !== 'settings'} />
 
         {activeSection === 'overview' && <ProfileOverview profile={profile} />}
         {activeSection === 'events' && (

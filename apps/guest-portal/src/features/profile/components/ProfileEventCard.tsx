@@ -10,6 +10,16 @@ const eventDateFormatter = new Intl.DateTimeFormat('en-IN', {
   weekday: 'short',
 });
 
+const eventDateTimeFormatter = new Intl.DateTimeFormat('en-US', {
+  day: 'numeric',
+  hour: 'numeric',
+  hour12: true,
+  minute: '2-digit',
+  month: 'short',
+  timeZone: 'Asia/Kolkata',
+  weekday: 'short',
+});
+
 const moneyFormatter = new Intl.NumberFormat('en-IN', {
   currency: 'INR',
   maximumFractionDigits: 0,
@@ -36,20 +46,31 @@ export function ProfileEventCard({
               src={event.image}
               alt={`${event.title} event poster`}
               fill
+              unoptimized
               sizes="(max-width: 640px) 46vw, (max-width: 1024px) 30vw, 18vw"
               className="object-cover transition-transform duration-500 group-hover:scale-[1.035] motion-reduce:transition-none"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-black/5 transition-colors group-hover:bg-black/45" />
-            <span className="absolute left-2 top-2 rounded-full border border-white/20 bg-black/75 px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-wide text-white sm:left-3 sm:top-3">
-              {eventDateFormatter.format(new Date(event.startsAt))}
-            </span>
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/5" />
+            <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/15 motion-reduce:transition-none" />
             <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
-              <h3 className="text-sm font-black uppercase leading-tight tracking-[-0.035em] text-white sm:text-lg">
+              <time
+                dateTime={event.startsAt}
+                className="mb-3 inline-flex max-w-full rounded-lg border border-white/25 bg-black/45 px-2.5 py-2 text-[9px] font-bold uppercase leading-tight tracking-wide text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] backdrop-blur-sm sm:mb-4 sm:px-3 sm:text-[10px]"
+              >
+                {eventDateTimeFormatter
+                  .format(new Date(event.startsAt))
+                  .replace(',', ' ·')
+                  .replace(' at ', ' · ')
+                  .toUpperCase()}
+              </time>
+              <h3 className="line-clamp-3 text-[clamp(0.9rem,1.45vw,1.5rem)] font-bold uppercase leading-[1.08] tracking-[-0.035em] text-white">
                 {event.title}
               </h3>
-              <p className="mt-1 truncate text-[11px] text-white/75">
-                {[event.venue, event.city].filter(Boolean).join(', ')}
-              </p>
+              {[event.venue, event.city].filter(Boolean).join(', ') ? (
+                <p className="mt-2 line-clamp-2 text-[11px] leading-snug text-white/80 sm:text-sm">
+                  {[event.venue, event.city].filter(Boolean).join(', ')}
+                </p>
+              ) : null}
             </div>
           </div>
         </Link>
@@ -64,6 +85,7 @@ export function ProfileEventCard({
             src={event.image}
             alt={`${event.title} event poster`}
             fill
+            unoptimized
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
             className="object-cover transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none"
           />

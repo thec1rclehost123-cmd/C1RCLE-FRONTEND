@@ -35,7 +35,7 @@ export default async function RootLayout({ children }: { readonly children: Reac
   const session = await getServerSession((await cookies()).toString());
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${inter.className} ${inter.variable} min-h-dvh bg-black text-white antialiased`}
       >

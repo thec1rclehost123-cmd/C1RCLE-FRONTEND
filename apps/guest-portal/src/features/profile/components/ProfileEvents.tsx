@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { ProfileEventCard } from './ProfileEventCard';
+import { ProfileEventCollection } from './ProfileEventCollection';
 
 import type { ProfileEventFilter, ProfileEventSummary } from '../types/profile.types';
 
@@ -13,24 +13,22 @@ export function ProfileEvents({
   events: readonly ProfileEventSummary[];
   available?: boolean;
 }) {
+  const title = activeFilter === 'upcoming' ? 'Upcoming events' : 'Events you’ve attended';
+
   return (
-    <section aria-labelledby="profile-events-heading">
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+    <section aria-labelledby="profile-events-heading" className="mx-auto max-w-[1500px]">
+      <div className="mb-6 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-[9px] font-black uppercase tracking-[0.3em] text-[#FF6B4A]">
-            Your nights
-          </p>
           <h2
             id="profile-events-heading"
-            className="mt-3 text-4xl font-black uppercase tracking-[-0.055em] text-white sm:text-6xl"
+            className="font-heading text-2xl font-semibold tracking-[-0.04em] text-white sm:text-3xl"
           >
-            Events
+            {title}
           </h2>
         </div>
-
         <nav
           aria-label="Profile event filters"
-          className="flex gap-2 rounded-full border border-white/10 p-1.5"
+          className="flex w-full gap-1 rounded-full border border-white/10 bg-white/[0.05] p-1 sm:w-fit"
         >
           {(['upcoming', 'attended'] as const).map((filter) => {
             const active = filter === activeFilter;
@@ -39,13 +37,13 @@ export function ProfileEvents({
                 key={filter}
                 href={`/profile?view=events&filter=${filter}`}
                 aria-current={active ? 'page' : undefined}
-                className={`inline-flex min-h-11 items-center rounded-full px-5 text-[9px] font-black uppercase tracking-[0.2em] transition-colors ${
+                className={`inline-flex min-h-10 flex-1 items-center justify-center rounded-full px-4 text-[10px] font-semibold transition-colors sm:flex-none sm:px-5 ${
                   active
                     ? 'bg-white text-black'
-                    : 'text-white/40 hover:bg-white/10 hover:text-white'
+                    : 'text-white/60 hover:bg-white/[0.08] hover:text-white'
                 }`}
               >
-                {filter}
+                {filter === 'upcoming' ? 'Upcoming' : 'Attended'}
               </Link>
             );
           })}
@@ -53,36 +51,29 @@ export function ProfileEvents({
       </div>
 
       {!available ? (
-        <div
-          role="alert"
-          className="mt-8 rounded-[2rem] border border-amber-400/20 bg-amber-400/5 px-6 py-16 text-center"
-        >
-          <p className="text-lg font-black uppercase text-white">
-            {activeFilter === 'attended'
-              ? 'Attendance history unavailable'
-              : 'Order history unavailable'}
-          </p>
-          <p className="mt-3 text-sm text-white/50">
-            Your bookings are still safe. Refresh to try again.
+        <div role="alert" className="py-8 text-sm text-white/55">
+          {activeFilter === 'attended'
+            ? 'Attendance history is temporarily unavailable.'
+            : 'Your upcoming events are temporarily unavailable.'}
+          <p className="mt-1 text-xs text-white/40">
+            Your bookings are still safe. Try again shortly.
           </p>
         </div>
       ) : events.length > 0 ? (
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {events.map((event) => (
-            <ProfileEventCard key={event.id} event={event} />
-          ))}
-        </div>
+        <ProfileEventCollection events={events} label={title} />
       ) : (
-        <div className="mt-8 rounded-[2rem] border border-dashed border-white/15 bg-white/[0.025] px-6 py-20 text-center">
-          <p className="text-sm font-black uppercase tracking-[0.2em] text-white/35">
+        <div className="flex min-h-36 flex-col items-start justify-center rounded-2xl border border-white/10 bg-white/[0.035] px-5 py-6 sm:px-7">
+          <p className="text-sm text-white/60">
             {activeFilter === 'upcoming' ? 'No upcoming events yet.' : 'No attended events yet.'}
           </p>
-          <Link
-            href="/explore"
-            className="mt-7 inline-flex min-h-11 items-center rounded-full bg-white px-6 text-[9px] font-black uppercase tracking-[0.2em] text-black"
-          >
-            Explore events
-          </Link>
+          {activeFilter === 'upcoming' ? (
+            <Link
+              href="/explore"
+              className="mt-3 inline-flex min-h-10 items-center text-xs font-semibold text-white/80 underline decoration-white/25 underline-offset-4 hover:text-white"
+            >
+              Explore events
+            </Link>
+          ) : null}
         </div>
       )}
     </section>

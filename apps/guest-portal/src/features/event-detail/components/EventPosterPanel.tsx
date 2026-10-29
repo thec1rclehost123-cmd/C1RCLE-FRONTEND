@@ -14,11 +14,11 @@ export function EventPosterPanel({ event }: { event: EventDetailFixture }) {
   return (
     <section
       aria-label="Event poster"
-      className="mx-auto w-full max-w-[280px] overflow-hidden rounded-[1.25rem] border border-white/10 bg-[#111] shadow-[0_24px_70px_rgba(0,0,0,0.45)] lg:max-w-none"
+      className="mx-auto w-full max-w-[300px] overflow-hidden rounded-2xl bg-transparent shadow-[0_18px_52px_rgba(0,0,0,0.42)] md:max-w-[320px] lg:max-w-[340px]"
     >
-      <div className="relative aspect-[3/4] overflow-hidden bg-black">
+      <div className="relative aspect-[4/5] max-h-[62svh] overflow-hidden bg-black/30 sm:max-h-[72vh]">
         {event.image === '/c1rcle-logo.webp' ? (
-          <EventArtworkFallback startsAt={event.startsAt} category={event.category} />
+          <EventArtworkFallback startsAt={event.startsAt} category={event.category} hero />
         ) : (
           <Image
             src={event.image}
@@ -32,10 +32,10 @@ export function EventPosterPanel({ event }: { event: EventDetailFixture }) {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-black/15" />
         <div className="absolute left-4 right-4 top-4 flex items-center justify-between gap-3">
-          <span className="rounded-full border border-white/15 bg-black/45 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.2em] text-white backdrop-blur-md">
+          <span className="rounded-full border border-white/15 bg-black/45 px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.16em] text-white backdrop-blur-md">
             {event.category}
           </span>
-          <span className="rounded-full border border-white/15 bg-black/45 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.2em] text-white backdrop-blur-md">
+          <span className="rounded-full border border-white/15 bg-black/45 px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.16em] text-white backdrop-blur-md">
             {posterDateFormatter.format(new Date(event.startsAt))}
           </span>
         </div>

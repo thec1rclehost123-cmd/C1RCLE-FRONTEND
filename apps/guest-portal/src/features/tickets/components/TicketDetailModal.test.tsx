@@ -276,8 +276,11 @@ describe('TicketDetailModal entry code', () => {
     if (typeof resendInput !== 'object' || resendInput === null || !('headers' in resendInput)) {
       throw new Error('expected a resend request');
     }
-    expect(resendInput.headers).toHaveProperty('idempotency-key');
-    expect(typeof resendInput.headers['idempotency-key']).toBe('string');
+    const { headers } = resendInput;
+    if (typeof headers !== 'object' || headers === null || !('idempotency-key' in headers)) {
+      throw new Error('expected an idempotency key header');
+    }
+    expect(typeof headers['idempotency-key']).toBe('string');
   });
 
   it('copies the email-bound invitation link for manual delivery', async () => {

@@ -17,6 +17,9 @@ export interface UserTicketItem {
   id: string;
   eventId: string;
   orderId: string;
+  eventSlug?: string | null;
+  startsAt?: string | null;
+  endsAt?: string | null;
   bookingReference: string | null;
   holderName: string;
   eventTitle: string;

@@ -13,6 +13,11 @@ const settingsSections: readonly {
   value: ProfileSettingsSection;
 }[] = [
   { href: '/profile?view=settings&section=personal', label: 'Personal profile', value: 'personal' },
+  {
+    href: '/profile?view=settings&section=social#social-links',
+    label: 'Social links',
+    value: 'social',
+  },
   { href: '/profile?view=settings&section=account', label: 'Account & security', value: 'account' },
 ];
 
@@ -71,11 +76,45 @@ export function ProfileSettings({
               available for this account yet.
             </div>
           )
+        ) : activeSection === 'social' ? (
+          <SocialLinksPanel />
         ) : (
           <AccountSecurityPanel identity={identity} />
         )}
       </div>
     </section>
+  );
+}
+
+function SocialLinksPanel() {
+  return (
+    <div
+      id="social-links"
+      className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-6 sm:p-8"
+    >
+      <p className="text-[9px] font-black uppercase tracking-[0.25em] text-white/35">
+        Profile links
+      </p>
+      <h3 className="mt-3 text-xl font-black uppercase tracking-[-0.03em] text-white">
+        Instagram &amp; X
+      </h3>
+      <p className="mt-3 max-w-xl text-sm leading-6 text-white/55">
+        Social links are not supported by the Guest profile service yet, so there is no saveable
+        field here. Your profile icons will become links after that support is available.
+      </p>
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-2xl border border-white/[0.08] bg-black/25 px-4 py-4">
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/35">
+            Instagram
+          </p>
+          <p className="mt-2 text-sm text-white/45">Not connected</p>
+        </div>
+        <div className="rounded-2xl border border-white/[0.08] bg-black/25 px-4 py-4">
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/35">X</p>
+          <p className="mt-2 text-sm text-white/45">Not connected</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -114,6 +153,17 @@ function AccountSecurityPanel({ identity }: { identity: ProfileIdentity }) {
       </div>
 
       <ChangePasswordFormClient />
+
+      <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-6 sm:p-8">
+        <h3 className="text-xl font-black uppercase tracking-[-0.03em] text-white">
+          Checkout payments
+        </h3>
+        <p className="mt-2 text-sm leading-6 text-white/50">
+          Card, UPI, and bank payment details are entered in Razorpay during checkout. They are not
+          stored as profile settings. Guest accounts do not receive payouts, so bank payout details
+          do not belong here.
+        </p>
+      </div>
 
       <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-6 sm:p-8">
         <h3 className="text-xl font-black uppercase tracking-[-0.03em] text-white">

@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { toBookingEventFixture } from './booking-mapping';
+import { toBookingEventFromPublicDetail, toBookingEventFixture } from './booking-mapping';
 
-import type { EventDto, PublicTicketTierDto, VenueDto } from '@c1rcle/contracts';
+import type {
+  EventDto,
+  EventPublicDetailDto,
+  PublicTicketTierDto,
+  VenueDto,
+} from '@c1rcle/contracts';
 
 const EVENT: EventDto = {
   id: 'evt_1',
@@ -42,6 +47,18 @@ const VENUE: VenueDto = {
   updatedAt: '2026-09-01T00:00:00.000Z',
 };
 
+const PUBLIC_EVENT: EventPublicDetailDto = {
+  ...EVENT,
+  venue: {
+    id: 'ven_1',
+    name: 'Skyline Social',
+    slug: 'skyline-social',
+    photoUrl: null,
+    address: { city: 'Pune', country: 'India' },
+  },
+  organizer: null,
+};
+
 describe('toBookingEventFixture', () => {
   it('maps wire fields into the checkout view model', () => {
     expect(toBookingEventFixture(EVENT, VENUE, [])).toEqual({
@@ -79,7 +96,7 @@ describe('toBookingEventFixture', () => {
     ).toBe(true);
   });
 
-  it('uses honest event and venue placeholders without inventing tickets', () => {
+  it('leaves missing event artwork empty and uses honest venue placeholders', () => {
     const mapped = toBookingEventFixture(
       { ...EVENT, tags: [], imageUrl: null, summary: '' },
       null,
@@ -87,7 +104,7 @@ describe('toBookingEventFixture', () => {
     );
     expect(mapped).toMatchObject({
       category: 'Events',
-      image: '/c1rcle-logo.webp',
+      image: '',
       venue: 'Venue TBA',
       city: 'India',
       ticketTiers: [],
@@ -153,5 +170,36 @@ describe('toBookingEventFixture', () => {
       },
     ]);
     expect(mapped.ticketTiers[0]?.maximumQuantity).toBe(0);
+  });
+});
+
+describe('toBookingEventFromPublicDetail', () => {
+  it('uses the detail route event and live tier identifiers for overlay checkout', () => {
+    const mapped = toBookingEventFromPublicDetail(PUBLIC_EVENT, [
+      {
+        id: 'tier_live_1',
+        eventId: EVENT.id,
+        name: 'General Admission',
+        description: 'Entry',
+        priceInPaise: 120_000,
+        currency: 'INR',
+        availableQuantity: 7,
+      },
+    ]);
+
+    expect(mapped).toMatchObject({
+      eventId: EVENT.id,
+      title: EVENT.title,
+      venue: 'Skyline Social',
+      city: 'Pune',
+      purchasable: true,
+      ticketTiers: [
+        {
+          id: 'tier_live_1',
+          price: { amountPaise: 120_000, currency: 'INR' },
+          maximumQuantity: 7,
+        },
+      ],
+    });
   });
 });

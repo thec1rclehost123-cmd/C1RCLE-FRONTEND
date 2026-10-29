@@ -6,6 +6,7 @@ import type {
 import type { EventAccentTone } from '@/features/event-detail/types/event-detail.types';
 import type {
   EventDto,
+  EventPublicDetailDto,
   PublicTicketAddonDto,
   PublicTicketTierDto,
   VenueDto,
@@ -26,7 +27,6 @@ import type {
  * account per event); others keep the UI stepper cap.
  */
 
-const FALLBACK_IMAGE = '/c1rcle-logo.webp';
 const FALLBACK_VENUE = 'Venue TBA';
 const FALLBACK_CITY = 'India';
 const FALLBACK_CATEGORY = 'Events';
@@ -46,7 +46,8 @@ export function toBookingEventFixture(
     eventId: event.id,
     title: event.title,
     category: event.tags[0] ?? FALLBACK_CATEGORY,
-    image: event.imageUrl ?? FALLBACK_IMAGE,
+    // Do not present the brand logo as event artwork when no poster exists.
+    image: event.imageUrl ?? '',
     accentTone: ACCENT_TONES[event.title.length % ACCENT_TONES.length] ?? 'purple',
     startsAt: event.startAt,
     venue: venue?.name ?? FALLBACK_VENUE,
@@ -55,6 +56,29 @@ export function toBookingEventFixture(
     doorNote: 'Entry rules are set by the host and shown at checkout.',
     ticketTiers: toRealTiers(tiers),
     ticketAddons: toRealAddons(addons),
+    purchasable: tiers.some((tier) => tier.availableQuantity > 0),
+  };
+}
+
+/** Reuse the event detail page's already-loaded public projection for overlay checkout. */
+export function toBookingEventFromPublicDetail(
+  event: EventPublicDetailDto,
+  tiers: readonly PublicTicketTierDto[],
+): BookingEventFixture {
+  const city = event.venue?.address.city ?? FALLBACK_CITY;
+  return {
+    id: event.slug,
+    eventId: event.id,
+    title: event.title,
+    category: event.tags[0] ?? FALLBACK_CATEGORY,
+    image: event.imageUrl ?? '',
+    accentTone: ACCENT_TONES[event.title.length % ACCENT_TONES.length] ?? 'purple',
+    startsAt: event.startAt,
+    venue: event.venue?.name ?? FALLBACK_VENUE,
+    address: city,
+    city,
+    doorNote: 'Entry rules are set by the host and shown at checkout.',
+    ticketTiers: toRealTiers(tiers),
     purchasable: tiers.some((tier) => tier.availableQuantity > 0),
   };
 }

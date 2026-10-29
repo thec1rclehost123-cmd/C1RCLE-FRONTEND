@@ -117,6 +117,9 @@ export async function toTicketWalletData(
         id: first.id,
         eventId: first.eventId,
         orderId: first.orderId,
+        eventSlug: null,
+        startsAt: null,
+        endsAt: null,
         bookingReference: order?.bookingReference ?? null,
         holderName:
           first.currentHolderUserId === null && first.userId
@@ -158,8 +161,11 @@ export async function toTicketWalletData(
 
     const ticket: UserTicketItem = {
       id: first.id,
-      eventId: first.eventId,
       orderId: first.orderId,
+      eventId: event.id,
+      eventSlug: event.slug,
+      startsAt: event.startAt,
+      endsAt: event.endAt ?? null,
       bookingReference: order?.bookingReference ?? null,
       holderName:
         first.currentHolderUserId === null && first.userId

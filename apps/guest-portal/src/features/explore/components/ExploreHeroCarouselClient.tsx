@@ -78,13 +78,6 @@ export function ExploreHeroCarouselClient({ events }: { events: readonly Explore
   const event = events[activeIndex];
   if (!event) return null;
 
-  const showPrevious = () => {
-    setActiveIndex((current) => (current - 1 + events.length) % events.length);
-  };
-  const showNext = () => {
-    setActiveIndex((current) => (current + 1) % events.length);
-  };
-
   return (
     <div className="relative z-10">
       <div
@@ -145,7 +138,7 @@ export function ExploreHeroCarouselClient({ events }: { events: readonly Explore
         {/* Left Side Content Info */}
         <div
           key={`${event.id}-copy`}
-          className="relative z-20 mx-auto flex min-h-[76svh] w-full max-w-[1600px] flex-col justify-end gap-5 px-6 pb-28 pt-40 sm:min-h-[84svh] sm:flex-row sm:items-center sm:justify-between sm:gap-10 sm:px-12 sm:pb-44 sm:pt-28 lg:min-h-[min(90svh,980px)] lg:px-[6%]"
+          className="relative z-20 mx-auto flex min-h-[76svh] w-full max-w-[1600px] flex-col justify-end gap-5 px-6 pb-28 pt-40 sm:min-h-[84svh] sm:flex-row sm:items-center sm:justify-between sm:gap-10 sm:px-12 sm:pb-44 sm:pt-28 lg:min-h-[min(90svh,980px)] lg:translate-x-[5%] lg:px-[6%]"
         >
           <div
             role="img"
@@ -208,17 +201,8 @@ export function ExploreHeroCarouselClient({ events }: { events: readonly Explore
           </div>
         </div>
 
-        {/* Carousel Navigation Arrow & Dots Controls */}
-        <div className="absolute inset-x-0 bottom-9 z-30 flex items-center justify-center gap-2 sm:inset-x-auto sm:right-[6%] sm:bottom-28 sm:gap-3">
-          <button
-            type="button"
-            aria-label="Previous featured event"
-            onClick={showPrevious}
-            className="flex size-10 items-center justify-center rounded-full border border-white/20 bg-black/55 text-lg text-white backdrop-blur-xl transition-colors hover:bg-white hover:text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:size-11 sm:text-xl"
-          >
-            <span aria-hidden="true">←</span>
-          </button>
-
+        {/* Carousel slide indicators */}
+        <div className="absolute inset-x-0 bottom-9 z-30 flex items-center justify-center sm:inset-x-auto sm:right-[6%] sm:bottom-28">
           <div
             className="flex min-h-10 items-center gap-1.5 rounded-full border border-white/15 bg-black/55 px-4 backdrop-blur-xl sm:min-h-11 sm:gap-2 sm:px-5"
             aria-label="Choose featured event"
@@ -240,15 +224,6 @@ export function ExploreHeroCarouselClient({ events }: { events: readonly Explore
               />
             ))}
           </div>
-
-          <button
-            type="button"
-            aria-label="Next featured event"
-            onClick={showNext}
-            className="flex size-10 items-center justify-center rounded-full border border-white/20 bg-black/55 text-lg text-white backdrop-blur-xl transition-colors hover:bg-white hover:text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:size-11 sm:text-xl"
-          >
-            <span aria-hidden="true">→</span>
-          </button>
         </div>
       </div>
     </div>

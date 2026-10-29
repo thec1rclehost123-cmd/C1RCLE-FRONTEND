@@ -38,7 +38,7 @@ function first(value: string | string[] | undefined): string {
   return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
 }
 
-export default async function ExplorePage({ searchParams }: ExplorePageProps = {}) {
+export default async function ExplorePage({ searchParams }: ExplorePageProps) {
   const emptyQuery: Record<string, string | string[] | undefined> = {};
   const [events, query] = await Promise.all([
     loadExploreEvents(),
