@@ -203,6 +203,30 @@ jobs:
           done
           exit $fail
 
+  # ── Dependency audit ────────────────────────────────────────────────────────
+  # `pnpm audit` reads only the lockfile, so no install is needed. This job
+  # exists because this repo shipped Next.js with five critical advisories and
+  # nothing noticed: it had no audit at all. A new advisory can now turn this red
+  # overnight and block every PR until the dependency is bumped — the same trade
+  # the backend already makes, because an unread advisory is worse. The threshold
+  # is `high`; accepted exceptions live in `pnpm.auditConfig.ignoreGhsas` in
+  # package.json, each with its reason in docs/security.md.
+  audit:
+    name: Dependency audit
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          install: "false"
+          turbo-cache: "false"
+      - name: Audit dependencies (fail on high or critical)
+        run: pnpm audit --audit-level=high
+
   # ── Cross-repo contract parity ──────────────────────────────────────────────
   # The wire contract has two copies: this repo's `@c1rcle/contracts`,
   # `@c1rcle/types` and `@c1rcle/api-client`, and the backend's
@@ -288,7 +312,7 @@ jobs:
   ci-ok:
     name: CI OK
     if: always() && github.event_name == 'pull_request'
-    needs: [gate, contract-parity]
+    needs: [gate, audit, contract-parity]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
