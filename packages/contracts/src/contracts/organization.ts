@@ -180,6 +180,22 @@ export const createVenueBlockSchema = z
   });
 export type CreateVenueBlockInput = z.infer<typeof createVenueBlockSchema>;
 
+export const publishVenueAvailabilitySchema = z
+  .object({
+    label: z.string().trim().min(1).max(200),
+    startTime: z.iso.datetime(),
+    endTime: z.iso.datetime(),
+    timezone: z.string().trim().min(1).max(100),
+    notes: z.string().trim().max(2000).nullable().optional(),
+    visibleToHostIds: z.array(opaqueIdSchema).max(100).nullable().optional(),
+  })
+  .strict()
+  .refine((value) => new Date(value.endTime) > new Date(value.startTime), {
+    message: 'End time must be after its start time',
+    path: ['endTime'],
+  });
+export type PublishVenueAvailabilityInput = z.infer<typeof publishVenueAvailabilitySchema>;
+
 export const slotRequestDtoSchema = z.object({
   id: opaqueIdSchema,
   venueId: opaqueIdSchema,
