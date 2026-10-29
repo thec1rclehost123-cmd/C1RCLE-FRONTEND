@@ -36,7 +36,24 @@
   },
   "pnpm": {
     "overrides": {
-      "lucide-react": "1.28.0"
+      "lucide-react": "1.28.0",
+      "@grpc/grpc-js": ">=1.14.5",
+      "brace-expansion@<2": "1.1.21",
+      "brace-expansion@>=2 <6": "5.0.12",
+      "js-yaml": ">=4.3.2",
+      "nanoid@^3.0.0": "3.3.18",
+      "postcss-selector-parser@^6.0.0": ">=6.1.5 <7",
+      "re2js": ">=2.8.7",
+      "source-map-js": ">=1.2.2",
+      "undici@^7.0.0": ">=7.30.1 <8",
+      "uuid@<11": "11.1.1",
+      "vite@>=8.2.0 <8.3.0": "8.2.4"
+    },
+    "auditConfig": {
+      "ignoreGhsas": [
+        "GHSA-86w9-cpqp-85rv",
+        "GHSA-mrhx-c7xc-m3w5"
+      ]
     }
   }
 }
