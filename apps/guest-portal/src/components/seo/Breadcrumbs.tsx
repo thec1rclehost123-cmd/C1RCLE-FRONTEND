@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
+import { absoluteClientUrl } from '@/lib/seo/client-site';
 import { JsonLd } from '@/lib/seo/json-ld';
-import { absoluteUrl } from '@/lib/seo/site';
 
 export interface BreadcrumbItem {
   readonly label: string;
@@ -16,7 +16,7 @@ export function Breadcrumbs({ items }: { readonly items: readonly BreadcrumbItem
       '@type': 'ListItem',
       position: index + 1,
       name: item.label,
-      item: absoluteUrl(item.href),
+      item: absoluteClientUrl(item.href),
     })),
   };
 

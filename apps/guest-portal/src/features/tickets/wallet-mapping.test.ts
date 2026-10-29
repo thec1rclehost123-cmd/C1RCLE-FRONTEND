@@ -3,7 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { toTicketWalletData } from './wallet-mapping';
 
 import type { WalletEventDetails } from './wallet-mapping';
-import type { EntitlementDto, EventDto, OrderDto, VenueDto } from '@c1rcle/contracts';
+import type {
+  EntitlementDto,
+  EventCoverWalletItemDto,
+  EventDto,
+  OrderDto,
+  VenueDto,
+} from '@c1rcle/contracts';
 
 const BASE_ENTITLEMENT: EntitlementDto = {
   id: 'ENT-1',
@@ -35,6 +41,8 @@ const FUTURE_EVENT: EventDto = {
   startAt: '2026-12-25T18:00:00.000Z',
   endAt: '2026-12-26T00:00:00.000Z',
   status: 'published',
+  visibilityMode: 'public',
+  addressDisclosure: 'public',
   isPublic: true,
   tags: [],
   startingPricePaise: 0,
@@ -133,7 +141,7 @@ describe('toTicketWalletData', () => {
     expect(wallet.upcomingTickets).toHaveLength(2);
   });
 
-  it('groups one order-tier bundle into a single card with a count', async () => {
+  it('keeps every entitlement as an independently scannable ticket card', async () => {
     const wallet = await toTicketWalletData(
       [
         BASE_ENTITLEMENT,
@@ -144,17 +152,35 @@ describe('toTicketWalletData', () => {
       NOW,
     );
 
-    expect(wallet.upcomingTickets).toHaveLength(2);
+    expect(wallet.upcomingTickets).toHaveLength(3);
     expect(wallet.upcomingTickets[0]).toMatchObject({
       orderId: 'ORD-1',
       tierName: 'General Admission',
-      ticketCount: 2,
+      ticketCount: 1,
       status: 'active',
       eventTitle: 'Future Night',
       venueName: 'Sky Bar',
       city: 'Mumbai',
     });
+    expect(new Set(wallet.upcomingTickets.map((ticket) => ticket.id))).toEqual(
+      new Set(['ENT-1', 'ENT-2', 'ENT-3']),
+    );
     expect(wallet.pastTickets).toHaveLength(0);
+  });
+
+  it('labels unassigned group admissions as held in the purchaser custody', async () => {
+    const wallet = await toTicketWalletData(
+      [{ ...BASE_ENTITLEMENT, id: 'ENT-unassigned', currentHolderUserId: null, holderName: '' }],
+      resolveFor({ evt_1: FUTURE_EVENT }),
+      NOW,
+    );
+
+    expect(wallet.upcomingTickets[0]).toMatchObject({
+      id: 'ENT-unassigned',
+      holderName: 'Unassigned · in your custody',
+      custody: 'unassigned',
+      ticketCount: 1,
+    });
   });
 
   it('sends redeemed, void, and ended events to history', async () => {
@@ -249,5 +275,60 @@ describe('toTicketWalletData', () => {
       ticketCount: 1,
       bookingReference: ORDER.bookingReference,
     });
+  });
+
+  it('attaches the caller-held per-ticket cover balance and history to its wallet pass', async () => {
+    const cover: EventCoverWalletItemDto = {
+      entitlementId: BASE_ENTITLEMENT.id,
+      eventId: BASE_ENTITLEMENT.eventId,
+      status: 'pending_activation',
+      issuedPaise: 15_000,
+      remainingPaise: 15_000,
+      reservedPaise: 0,
+      redeemedPaise: 0,
+      refundedPaise: 0,
+      policyVersion: 'venue-v1',
+      history: [{ type: 'issuance', amountPaise: 15_000, createdAt: '2026-09-23T00:00:00.000Z' }],
+    };
+    const wallet = await toTicketWalletData(
+      [BASE_ENTITLEMENT],
+      resolveFor({ evt_1: FUTURE_EVENT }),
+      NOW,
+      [],
+      [cover],
+    );
+
+    expect(wallet.upcomingTickets[0]?.eventCover).toMatchObject({
+      status: 'pending_activation',
+      issuedPaise: 15_000,
+      remainingPaise: 15_000,
+      history: [{ type: 'issuance', amountPaise: 15_000 }],
+    });
+  });
+
+  it('projects purchased add-on grant status into the matching ticket wallet item', async () => {
+    const entitlement: EntitlementDto = {
+      ...BASE_ENTITLEMENT,
+      ticketAddons: [
+        {
+          id: 'TAE-parking-1',
+          addonId: 'addon-parking',
+          name: 'Parking pass',
+          kind: 'parking',
+          unitPricePaise: 2500,
+          status: 'active',
+          createdAt: '2026-09-23T00:00:00.000Z',
+          redeemedAt: null,
+        },
+      ],
+    };
+    const wallet = await toTicketWalletData(
+      [entitlement],
+      resolveFor({ evt_1: FUTURE_EVENT }),
+      NOW,
+    );
+    expect(wallet.upcomingTickets[0]?.ticketAddons).toEqual([
+      { id: 'TAE-parking-1', name: 'Parking pass', kind: 'parking', status: 'active' },
+    ]);
   });
 });

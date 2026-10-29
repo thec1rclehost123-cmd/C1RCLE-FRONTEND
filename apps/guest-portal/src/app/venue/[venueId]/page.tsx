@@ -7,6 +7,8 @@ import { getPublicVenueForSeo, isEligiblePublicVenue } from '@/lib/seo/public-da
 
 import type { Metadata } from 'next';
 
+export const revalidate = 0;
+
 interface VenueProfilePageProps {
   params: Promise<{ venueId: string }>;
   searchParams?: Promise<{ view?: string }>;

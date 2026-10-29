@@ -8,9 +8,11 @@ import type { BookingEventFixture } from '../types/booking.types';
 export function CheckoutView({
   event,
   initialTierId,
+  eventSlug = event.eventId,
 }: {
   event: BookingEventFixture;
   initialTierId?: string | undefined;
+  eventSlug?: string;
 }) {
   return (
     <div className="relative z-10 min-h-screen overflow-hidden pb-20 pt-20 text-white sm:flex sm:items-center sm:py-24">
@@ -28,7 +30,7 @@ export function CheckoutView({
 
       <div className="relative mx-auto w-full max-w-[1120px] px-3 sm:px-6">
         <Suspense fallback={<CheckoutFlowSkeleton />}>
-          <CheckoutFlowClient event={event} initialTierId={initialTierId} />
+          <CheckoutFlowClient event={event} initialTierId={initialTierId} eventSlug={eventSlug} />
         </Suspense>
       </div>
     </div>

@@ -6,6 +6,8 @@ import { deriveCities } from '@/features/explore/explore-mapping';
 import type { ExploreFilters } from '@/features/explore/types/explore.types';
 import type { Metadata } from 'next';
 
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: 'Explore Events | THE C1RCLE',
   description:

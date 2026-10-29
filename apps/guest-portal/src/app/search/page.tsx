@@ -4,6 +4,8 @@ import { deriveCities } from '@/features/explore/explore-mapping';
 
 import type { Metadata } from 'next';
 
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: 'Search Events | THE C1RCLE',
   description: 'Search public C1RCLE events by event, venue, category, and city.',

@@ -41,9 +41,12 @@ const hostParams = { params: Promise.resolve({ hostId: 'missing-host' }) };
 const venueParams = { params: Promise.resolve({ venueId: 'missing-venue' }) };
 
 describe('production public entity boundaries', () => {
-  it('returns not found for an unknown event page and its metadata', async () => {
-    await expect(EventDetailPage(eventParams)).rejects.toThrow('NEXT_NOT_FOUND');
-    await expect(generateEventMetadata(eventParams)).rejects.toThrow('NEXT_NOT_FOUND');
+  it('returns a generic private access shell and noindex metadata for an unknown event', async () => {
+    await expect(EventDetailPage(eventParams)).resolves.toBeDefined();
+    await expect(generateEventMetadata(eventParams)).resolves.toMatchObject({
+      title: 'Private event access | THE C1RCLE',
+      robots: { index: false, follow: false, noarchive: true },
+    });
   });
 
   it('returns not found for an unknown host page and its metadata', async () => {

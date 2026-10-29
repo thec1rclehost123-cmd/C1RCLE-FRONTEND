@@ -17,7 +17,7 @@ vi.mock('next/navigation', () => ({
   },
 }));
 
-const mockGet = vi.fn();
+const { mockGet } = vi.hoisted(() => ({ mockGet: vi.fn() }));
 
 vi.mock('@c1rcle/api-client', () => ({
   createApiClient: () => ({ get: mockGet }),
@@ -143,6 +143,8 @@ const REAL_EVENT: EventPublicDetailDto = {
   startAt: '2026-09-18T19:30:00.000Z',
   endAt: null,
   status: 'published',
+  visibilityMode: 'public',
+  addressDisclosure: 'public',
   isPublic: true,
   tags: ['Music'],
   startingPricePaise: 99900,
@@ -226,10 +228,10 @@ describe('EventDetailPage', () => {
     expect(screen.getByText('Host details unavailable')).toBeInTheDocument();
   });
 
-  it('not-founds unknown or unpublished slugs without fixtures', async () => {
+  it('shows the same generic access form for private and unknown slugs', async () => {
     mockDetail(null);
-    await expect(
-      EventDetailPage({ params: Promise.resolve({ eventId: 'no-such-event' }) }),
-    ).rejects.toThrow('NEXT_NOT_FOUND');
+    render(await EventDetailPage({ params: Promise.resolve({ eventId: 'no-such-event' }) }));
+    expect(screen.getByRole('heading', { name: 'Private event access' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Have an event or private ticket code?')).toBeInTheDocument();
   });
 });

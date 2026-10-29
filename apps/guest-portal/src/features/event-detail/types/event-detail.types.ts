@@ -14,6 +14,8 @@ export interface EventDetailTicketTier {
   price: EventDetailMoney | null;
   availabilityLabel: string;
   availableQuantity?: number;
+  guestCount?: number;
+  admissionMode?: 'bundle' | 'per_person';
 }
 
 export interface EventDetailGuest {

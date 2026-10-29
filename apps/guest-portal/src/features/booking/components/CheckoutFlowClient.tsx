@@ -4,12 +4,20 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { z } from 'zod';
 
 import { isApiClientError } from '@c1rcle/api-client';
 import { useSession } from '@c1rcle/auth';
-import { rsvpResponseSchema } from '@c1rcle/contracts';
+import {
+  checkoutQuoteResponseSchema,
+  publicTicketAddonListResponseSchema,
+  publicTicketTierListResponseSchema,
+  rsvpResponseSchema,
+} from '@c1rcle/contracts';
 
+import { usePromoterReferralContext } from '@/features/event-detail/components/PromoterClickTracker';
 import { getEventAccentClasses } from '@/features/event-detail/eventDetailPalette';
+import { useTicketAccessGrantId } from '@/lib/access/use-ticket-access-grant-id';
 import { bffClient } from '@/lib/bff/bff-client';
 import { csrfHeaders } from '@/lib/bff/csrf';
 
@@ -22,7 +30,7 @@ import {
 import { runPaidCheckout } from '../payment/paid-checkout';
 
 import type { BookingEventFixture } from '../types/booking.types';
-import type { CheckoutQuoteResponse } from '@c1rcle/contracts';
+import type { CheckoutHoldResponse, CheckoutQuoteResponse } from '@c1rcle/contracts';
 
 const moneyFormatter = new Intl.NumberFormat('en-IN', {
   currency: 'INR',
@@ -40,33 +48,87 @@ type CheckoutStep = 1 | 2;
 type PayState = 'idle' | 'paying' | 'processing';
 type QuoteState = 'idle' | 'loading' | 'ready' | 'error';
 
-export function CheckoutFlowClient({
+const acceptedWaitlistOfferSchema = z.object({
+  entry: z.object({ eventId: z.string(), tierId: z.string() }),
+  holdId: z.string(),
+  expiresAt: z.iso.datetime(),
+  pricing: checkoutQuoteResponseSchema,
+});
+
+export function CheckoutFlowClient(props: {
+  event: BookingEventFixture;
+  initialTierId?: string | undefined;
+  eventSlug?: string;
+}) {
+  const accessGrantId = useTicketAccessGrantId();
+  return (
+    <CheckoutFlowClientState
+      key={accessGrantId ?? 'public'}
+      {...props}
+      {...(accessGrantId ? { accessGrantId } : {})}
+    />
+  );
+}
+
+function CheckoutFlowClientState({
   event,
   initialTierId,
+  eventSlug = event.eventId,
+  accessGrantId,
 }: {
   event: BookingEventFixture;
   initialTierId?: string | undefined;
+  eventSlug?: string;
+  accessGrantId?: string;
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useSession();
   const requestedTier = initialTierId ?? searchParams.get('tier') ?? undefined;
-  const initialTier = event.ticketTiers.some((tier) => tier.id === requestedTier)
+  const upgradeFromEntitlementId = searchParams.get('upgradeFromEntitlementId') ?? undefined;
+  const [unlockedTiers, setUnlockedTiers] = useState<BookingEventFixture['ticketTiers']>([]);
+  const ticketTiers = useMemo(
+    () => [...event.ticketTiers, ...unlockedTiers],
+    [event.ticketTiers, unlockedTiers],
+  );
+  const [ticketAddons, setTicketAddons] = useState<BookingEventFixture['ticketAddons']>(
+    event.ticketAddons ?? [],
+  );
+  const queryReferralCode = searchParams.get('ref');
+  const storedReferralCode = usePromoterReferralContext(eventSlug);
+  const [payMessage, setPayMessage] = useState<string | null>(null);
+  const requestedReferralCode = upgradeFromEntitlementId
+    ? null
+    : (queryReferralCode ?? storedReferralCode);
+  const referralCode = requestedReferralCode;
+  const initialTier = ticketTiers.some((tier) => tier.id === requestedTier)
     ? requestedTier
-    : event.ticketTiers[0]?.id;
+    : accessGrantId && requestedTier
+      ? undefined
+      : ticketTiers[0]?.id;
   const [step, setStep] = useState<CheckoutStep>(1);
   const [expandedTierId, setExpandedTierId] = useState<string | undefined>(initialTier);
   const [quantities, setQuantities] = useState<Record<string, number>>(() => {
     if (!initialTier) return {};
     // Never pre-select more than the live availability captured at render.
-    const max = event.ticketTiers.find((tier) => tier.id === initialTier)?.maximumQuantity ?? 0;
+    const max = ticketTiers.find((tier) => tier.id === initialTier)?.maximumQuantity ?? 0;
     return max > 0 ? { [initialTier]: 1 } : {};
   });
+  const [addonQuantities, setAddonQuantities] = useState<Record<string, Record<string, number>>>(
+    {},
+  );
   // The server's price for ONE selection. It is keyed by that selection, so a
   // result for different tickets can never be shown or paid against.
   const [quoteResult, setQuoteResult] = useState<{
     key: string;
     quote: CheckoutQuoteResponse | null;
+  } | null>(null);
+  const [reservedWaitlistOffer, setReservedWaitlistOffer] = useState<{
+    eventId: string;
+    tierId: string;
+    holdId: string;
+    expiresAt: string;
+    pricing: CheckoutQuoteResponse;
   } | null>(null);
   const [requoteCount, setRequoteCount] = useState(0);
   const [promoInput, setPromoInput] = useState('');
@@ -76,52 +138,246 @@ export function CheckoutFlowClient({
       ? 'processing'
       : 'idle',
   );
-  const [payMessage, setPayMessage] = useState<string | null>(null);
   // One key per checkout attempt: a double-click or a retry replays the same
   // hold and payment order instead of reserving and charging twice. A new
   // selection (or a re-quote) is a new attempt, so it gets a new key.
   const attemptKey = useRef<{ forQuote: string; value: string } | null>(null);
   const [rsvpStatus, setRsvpStatus] = useState<'idle' | 'posting'>('idle');
   const [rsvpError, setRsvpError] = useState<string | null>(null);
+  const [eligibilityAttestedFor, setEligibilityAttestedFor] = useState<string | null>(null);
   const [alreadyOnList, setAlreadyOnList] = useState(false);
   const accent = getEventAccentClasses(event.accentTone);
 
+  useEffect(() => {
+    if (searchParams.get('waitlist') !== '1') return;
+    const entryId = sessionStorage.getItem('c1rcle.waitlist.accepted-entry-id');
+    if (!entryId) {
+      void Promise.resolve().then(() => {
+        setPayMessage(
+          'This waitlist reservation is unavailable. Return to Tickets and refresh your waitlist.',
+        );
+      });
+      return;
+    }
+    let cancelled = false;
+    void bffClient
+      .get({
+        path: `/api/waitlist/${encodeURIComponent(entryId)}`,
+        schema: acceptedWaitlistOfferSchema,
+        retries: 0,
+      })
+      .then((offer) => {
+        if (cancelled) return;
+        if (offer.entry.eventId !== event.eventId || Date.parse(offer.expiresAt) <= Date.now()) {
+          sessionStorage.removeItem('c1rcle.waitlist.accepted-entry-id');
+          setPayMessage(
+            'This waitlist reservation expired. Return to Tickets to check for another offer.',
+          );
+          return;
+        }
+        setReservedWaitlistOffer({
+          eventId: offer.entry.eventId,
+          tierId: offer.entry.tierId,
+          holdId: offer.holdId,
+          expiresAt: offer.expiresAt,
+          pricing: offer.pricing,
+        });
+        setExpandedTierId(offer.entry.tierId);
+        setQuantities({ [offer.entry.tierId]: 1 });
+        setStep(2);
+      })
+      .catch(() => {
+        if (!cancelled)
+          setPayMessage(
+            'This waitlist reservation could not be loaded. Return to Tickets and refresh your waitlist.',
+          );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [event.eventId, searchParams]);
+
+  useEffect(() => {
+    if (!accessGrantId) return;
+    let cancelled = false;
+    void bffClient
+      .get({
+        path: `/api/public/events/${encodeURIComponent(event.eventId)}/tiers`,
+        headers: { 'x-ticket-access-grant-id': accessGrantId },
+        schema: publicTicketTierListResponseSchema,
+      })
+      .then((response) => {
+        if (cancelled) return;
+        const mapped = response.items.map((tier) => ({
+          id: tier.id,
+          name: tier.name,
+          description: tier.description,
+          price: { amountPaise: tier.priceInPaise, currency: 'INR' as const },
+          ...(tier.coverAmountPaise === undefined
+            ? {}
+            : { coverAmountPaise: tier.coverAmountPaise }),
+          maximumQuantity: Math.min(10, tier.availableQuantity),
+          ...(tier.guestCount === undefined ? {} : { guestCount: tier.guestCount }),
+          ...(tier.admissionMode === undefined ? {} : { admissionMode: tier.admissionMode }),
+          ...(tier.audienceType === undefined ? {} : { audienceType: tier.audienceType }),
+          ...(tier.minAge === undefined ? {} : { minAge: tier.minAge }),
+          ...(tier.maxAge === undefined ? {} : { maxAge: tier.maxAge }),
+        }));
+        setUnlockedTiers(mapped);
+        if (requestedTier && mapped.some((tier) => tier.id === requestedTier)) {
+          const selected = mapped.find((tier) => tier.id === requestedTier);
+          if (selected && selected.maximumQuantity > 0) {
+            setExpandedTierId(requestedTier);
+            setQuantities({ [requestedTier]: 1 });
+          }
+        }
+      })
+      .catch(() => {
+        if (!cancelled)
+          setPayMessage(
+            'This private ticket access has expired or been revoked. Return to the event and unlock it again.',
+          );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accessGrantId, event.eventId, requestedTier]);
+
+  useEffect(() => {
+    if (!accessGrantId) return;
+    let cancelled = false;
+    void bffClient
+      .get({
+        path: `/api/public/events/${encodeURIComponent(event.eventId)}/ticket-addons`,
+        headers: { 'x-ticket-access-grant-id': accessGrantId },
+        schema: publicTicketAddonListResponseSchema,
+      })
+      .then((response) => {
+        if (!cancelled)
+          setTicketAddons(
+            response.items.map((addon) => ({
+              id: addon.id,
+              name: addon.name,
+              description: addon.description,
+              kind: addon.kind,
+              priceInPaise: addon.priceInPaise,
+              availableQuantity: addon.availableQuantity,
+              maxPerEntitlement: addon.maxPerEntitlement,
+            })),
+          );
+      })
+      .catch(() => {
+        if (!cancelled) setTicketAddons([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accessGrantId, event.eventId]);
+
   const selectedTickets = useMemo(
     () =>
-      event.ticketTiers
+      ticketTiers
         .map((tier) => ({ ...tier, quantity: quantities[tier.id] ?? 0 }))
         .filter((tier) => tier.quantity > 0),
-    [event.ticketTiers, quantities],
+    [ticketTiers, quantities],
   );
   const subtotalPaise = selectedTickets.reduce(
-    (total, tier) => total + tier.price.amountPaise * tier.quantity,
+    (total, tier) =>
+      total +
+      (tier.price.amountPaise +
+        (tier.coverAmountPaise ?? 0) *
+          (tier.admissionMode === 'per_person' ? (tier.guestCount ?? 1) : 1)) *
+        tier.quantity +
+      (ticketAddons ?? []).reduce((sum, addon) => {
+        const selected = addonQuantities[tier.id]?.[addon.id] ?? 0;
+        const entitlementCount =
+          tier.quantity * (tier.admissionMode === 'per_person' ? (tier.guestCount ?? 1) : 1);
+        return sum + addon.priceInPaise * selected * entitlementCount;
+      }, 0),
     0,
   );
   const totalTickets = selectedTickets.reduce((total, tier) => total + tier.quantity, 0);
+  const soleSelectedTicket = selectedTickets.length === 1 ? selectedTickets[0] : undefined;
+  const usesReservedOffer =
+    reservedWaitlistOffer?.eventId === event.eventId &&
+    soleSelectedTicket?.id === reservedWaitlistOffer.tierId &&
+    soleSelectedTicket.quantity === 1;
   // A ₹0 total is fulfilled as RSVP without the payment provider. Paid
   // selections proceed only when the authoritative event mapping allows it.
-  const isFreeBooking = selectedTickets.length > 0 && subtotalPaise === 0;
+  const isFreeBooking =
+    selectedTickets.length > 0 && subtotalPaise === 0 && !upgradeFromEntitlementId;
   // The server fulfills exactly one RSVP ticket per account per event.
   const canConfirmRsvp = isFreeBooking && totalTickets === 1 && rsvpStatus === 'idle';
-
-  const canPay = event.purchasable === true && !isFreeBooking;
-  const lines = useMemo(
-    () => selectedTickets.map((ticket) => ({ tierId: ticket.id, quantity: ticket.quantity })),
-    [selectedTickets],
+  const restrictedTickets = selectedTickets.filter(
+    (ticket) =>
+      (ticket.audienceType !== undefined &&
+        ticket.audienceType !== 'GENERAL' &&
+        ticket.audienceType !== 'GROUP') ||
+      ticket.minAge != null ||
+      ticket.maxAge != null,
   );
-  const lineSignature = lines.map((line) => `${line.tierId}:${String(line.quantity)}`).join(',');
+  const eligibilityRequired = restrictedTickets.length > 0;
+  const eligibilitySignature = restrictedTickets
+    .map(
+      (ticket) =>
+        `${ticket.id}:${String(ticket.quantity)}:${ticket.audienceType ?? 'GENERAL'}:${String(ticket.minAge ?? '')}:${String(ticket.maxAge ?? '')}`,
+    )
+    .join('|');
+  const eligibilityAttested = eligibilityAttestedFor === eligibilitySignature;
+  const eligibilityReady = usesReservedOffer || !eligibilityRequired || eligibilityAttested;
+
+  const canPay = (event.purchasable === true || unlockedTiers.length > 0) && !isFreeBooking;
+  const lines = useMemo(
+    () =>
+      selectedTickets.map((ticket) => ({
+        tierId: ticket.id,
+        quantity: ticket.quantity,
+        ...(accessGrantId ? { accessGrantId } : {}),
+        ...(eligibilityRequired && eligibilityAttested ? { eligibilityAttested: true } : {}),
+        ...((ticketAddons ?? []).some((addon) => (addonQuantities[ticket.id]?.[addon.id] ?? 0) > 0)
+          ? {
+              ticketAddons: (ticketAddons ?? [])
+                .map((addon) => ({
+                  addonId: addon.id,
+                  quantityPerEntitlement: addonQuantities[ticket.id]?.[addon.id] ?? 0,
+                }))
+                .filter((addon) => addon.quantityPerEntitlement > 0),
+            }
+          : {}),
+      })),
+    [
+      selectedTickets,
+      accessGrantId,
+      eligibilityRequired,
+      eligibilityAttested,
+      ticketAddons,
+      addonQuantities,
+    ],
+  );
+  const lineSignature = lines
+    .map(
+      (line) =>
+        `${line.tierId}:${String(line.quantity)}:${accessGrantId ?? ''}:${(line.ticketAddons ?? []).map((addon) => `${addon.addonId}=${String(addon.quantityPerEntitlement)}`).join('|')}`,
+    )
+    .join(',');
 
   const wantsQuote = step === 2 && canPay && lines.length > 0;
-  const quoteKey = `${event.eventId}|${lineSignature}|${appliedPromo ?? ''}|${String(requoteCount)}`;
+  const quoteKey = `${event.eventId}|${lineSignature}|${upgradeFromEntitlementId ?? ''}|${appliedPromo ?? ''}|${referralCode ?? ''}|${String(requoteCount)}`;
   const currentQuote = quoteResult?.key === quoteKey ? quoteResult : null;
-  const quote = wantsQuote ? (currentQuote?.quote ?? null) : null;
+  const quote = wantsQuote
+    ? usesReservedOffer
+      ? reservedWaitlistOffer.pricing
+      : (currentQuote?.quote ?? null)
+    : null;
   const quoteState: QuoteState = !wantsQuote
     ? 'idle'
-    : currentQuote === null
-      ? 'loading'
-      : currentQuote.quote === null
-        ? 'error'
-        : 'ready';
+    : usesReservedOffer
+      ? 'ready'
+      : currentQuote === null
+        ? 'loading'
+        : currentQuote.quote === null
+          ? 'error'
+          : 'ready';
 
   // The hold id is retained only in an httpOnly, short-lived BFF cookie. On a
   // reload, check the owner-scoped backend status before enabling another pay
@@ -183,15 +439,19 @@ export function CheckoutFlowClient({
   const discountPaise = quote?.discountPaise ?? 0;
   // Price the selection on the server when the buyer reaches the payment step.
   useEffect(() => {
-    if (!wantsQuote) return;
+    if (!wantsQuote || usesReservedOffer) return;
     let cancelled = false;
     fetchQuote({
       eventId: event.eventId,
       lines,
+      ...(upgradeFromEntitlementId ? { upgradeFromEntitlementId } : {}),
       ...(appliedPromo ? { promoCode: appliedPromo } : {}),
+      ...(referralCode ? { referralCode } : {}),
     })
       .then((result) => {
-        if (!cancelled) setQuoteResult({ key: quoteKey, quote: result });
+        if (!cancelled) {
+          setQuoteResult({ key: quoteKey, quote: result });
+        }
       })
       .catch(() => {
         if (!cancelled) setQuoteResult({ key: quoteKey, quote: null });
@@ -199,7 +459,16 @@ export function CheckoutFlowClient({
     return () => {
       cancelled = true;
     };
-  }, [wantsQuote, quoteKey, event.eventId, lines, appliedPromo]);
+  }, [
+    wantsQuote,
+    usesReservedOffer,
+    quoteKey,
+    event.eventId,
+    lines,
+    appliedPromo,
+    referralCode,
+    upgradeFromEntitlementId,
+  ]);
 
   async function pay() {
     if (!quote || payState !== 'idle') return;
@@ -217,14 +486,29 @@ export function CheckoutFlowClient({
       idempotencyKey: attemptKey.current.value,
       ...(prefill ? { prefill, attendee: prefill } : {}),
       promoCode: appliedPromo,
+      ...(referralCode ? { referralCode } : {}),
+      ...(upgradeFromEntitlementId ? { upgradeFromEntitlementId } : {}),
+      ...(usesReservedOffer
+        ? {
+            reservedHold: {
+              holdId: reservedWaitlistOffer.holdId,
+              expiresAt: reservedWaitlistOffer.expiresAt,
+              status: 'active',
+              convertedOrderId: null,
+              pricing: reservedWaitlistOffer.pricing,
+            } satisfies CheckoutHoldResponse,
+          }
+        : {}),
     });
 
     switch (result.kind) {
       case 'confirmed':
+        sessionStorage.removeItem('c1rcle.waitlist.accepted-entry-id');
         await clearPaymentRecovery().catch(() => undefined);
         router.push(`/confirmation/${encodeURIComponent(result.orderId)}`);
         return;
       case 'processing':
+        sessionStorage.removeItem('c1rcle.waitlist.accepted-entry-id');
         setPayState('processing');
         if (result.ticketsReady) router.push('/tickets');
         return;
@@ -236,6 +520,7 @@ export function CheckoutFlowClient({
         setRequoteCount((count) => count + 1);
         break;
       case 'refunded':
+        sessionStorage.removeItem('c1rcle.waitlist.accepted-entry-id');
         // Final: the money is already on its way back, so nothing is pending and
         // there is nothing to retry against this hold.
         setPayMessage(result.message);
@@ -266,7 +551,13 @@ export function CheckoutFlowClient({
     try {
       const result = await bffClient.post({
         path: '/api/rsvp',
-        body: { eventId: event.eventId, tierId: ticket.id },
+        body: {
+          eventId: event.eventId,
+          tierId: ticket.id,
+          ...(eligibilityRequired && eligibilityAttested ? { eligibilityAttested: true } : {}),
+          ...(accessGrantId ? { accessGrantId } : {}),
+          ...(referralCode ? { referralCode } : {}),
+        },
         headers: csrfHeaders(),
         schema: rsvpResponseSchema,
       });
@@ -284,10 +575,15 @@ export function CheckoutFlowClient({
   }
 
   function changeQuantity(tierId: string, change: number, maximum: number) {
-    setQuantities((current) => ({
-      ...current,
-      [tierId]: Math.max(0, Math.min(maximum, (current[tierId] ?? 0) + change)),
-    }));
+    setQuantities((current) => {
+      const quantity = Math.max(
+        0,
+        Math.min(upgradeFromEntitlementId ? 1 : maximum, (current[tierId] ?? 0) + change),
+      );
+      return upgradeFromEntitlementId
+        ? { ...(quantity > 0 ? { [tierId]: quantity } : {}) }
+        : { ...current, [tierId]: quantity };
+    });
   }
 
   return (
@@ -300,6 +596,13 @@ export function CheckoutFlowClient({
           <span aria-hidden="true">←</span> Back to event
         </Link>
       </div>
+
+      {upgradeFromEntitlementId ? (
+        <div className="mb-4 rounded-xl border border-[#FF6842]/25 bg-[#FF6842]/[0.07] px-4 py-3 text-xs leading-5 text-white/70">
+          Choose one higher ticket tier. We’ll show the server-calculated upgrade price before
+          payment. Your current ticket stays valid unless payment succeeds.
+        </div>
+      ) : null}
 
       <div
         className={`grid overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#0b0a0d]/95 shadow-[0_28px_100px_rgba(0,0,0,0.6)] backdrop-blur-md lg:grid-cols-[minmax(240px,0.78fr)_minmax(0,1.22fr)] ${accent.panelShadow}`}
@@ -358,7 +661,7 @@ export function CheckoutFlowClient({
 
           {step === 1 && (
             <div className="space-y-2.5">
-              {event.ticketTiers.map((tier) => {
+              {ticketTiers.map((tier) => {
                 const quantity = quantities[tier.id] ?? 0;
                 const soldOut = tier.maximumQuantity <= 0;
                 const expanded = expandedTierId === tier.id;
@@ -383,10 +686,22 @@ export function CheckoutFlowClient({
                         </span>
                         <span className="mt-1 block text-xs font-semibold text-white/55">
                           {moneyFormatter.format(tier.price.amountPaise / 100)}
+                          {(tier.coverAmountPaise ?? 0) > 0 ? (
+                            <span className="font-normal text-white/40">
+                              {' '}
+                              + {moneyFormatter.format((tier.coverAmountPaise ?? 0) / 100)} cover
+                              per attendee
+                            </span>
+                          ) : null}
                           {tier.description ? (
                             <span className="font-normal text-white/35"> · {tier.description}</span>
                           ) : null}
                         </span>
+                        {tier.admissionMode === 'per_person' && (tier.guestCount ?? 1) > 1 ? (
+                          <span className="mt-1 block text-[10px] font-medium leading-4 text-white/50">
+                            Group of {String(tier.guestCount)} · each attendee gets a separate pass
+                          </span>
+                        ) : null}
                       </span>
                       <span className="flex shrink-0 items-center gap-2">
                         {soldOut ? (
@@ -409,41 +724,119 @@ export function CheckoutFlowClient({
                       </span>
                     </button>
                     {expanded && (
-                      <div className="flex items-center justify-between gap-3 border-t border-white/10 px-3.5 py-3 sm:px-4">
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">
-                          {soldOut
-                            ? 'This ticket tier is sold out'
-                            : `Up to ${String(tier.maximumQuantity)} available`}
-                        </span>
-                        {!soldOut && (
-                          <div className="flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-black/45 p-1">
-                            <button
-                              type="button"
-                              aria-label={`Decrease ${tier.name} count`}
-                              disabled={quantity === 0}
-                              onClick={() => {
-                                changeQuantity(tier.id, -1, tier.maximumQuantity);
-                              }}
-                              className="flex size-9 items-center justify-center rounded-full text-base font-bold text-white transition-colors hover:bg-white/10 disabled:opacity-25"
-                            >
-                              −
-                            </button>
-                            <span className="w-5 text-center text-xs font-black text-white">
-                              {quantity}
-                            </span>
-                            <button
-                              type="button"
-                              aria-label={`Increase ${tier.name} count`}
-                              disabled={quantity >= tier.maximumQuantity}
-                              onClick={() => {
-                                changeQuantity(tier.id, 1, tier.maximumQuantity);
-                              }}
-                              className="flex size-9 items-center justify-center rounded-full text-base font-bold text-white transition-colors hover:bg-white/10 disabled:opacity-25"
-                            >
-                              +
-                            </button>
-                          </div>
-                        )}
+                      <div className="space-y-3 border-t border-white/10 px-3.5 py-3 sm:px-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">
+                            {soldOut
+                              ? 'This ticket tier is sold out'
+                              : `Up to ${String(tier.maximumQuantity)} available`}
+                          </span>
+                          {!soldOut && (
+                            <div className="flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-black/45 p-1">
+                              <button
+                                type="button"
+                                aria-label={`Decrease ${tier.name} count`}
+                                disabled={quantity === 0}
+                                onClick={() => {
+                                  changeQuantity(tier.id, -1, tier.maximumQuantity);
+                                }}
+                                className="flex size-9 items-center justify-center rounded-full text-base font-bold text-white transition-colors hover:bg-white/10 disabled:opacity-25"
+                              >
+                                −
+                              </button>
+                              <span className="w-5 text-center text-xs font-black text-white">
+                                {quantity}
+                              </span>
+                              <button
+                                type="button"
+                                aria-label={`Increase ${tier.name} count`}
+                                disabled={quantity >= tier.maximumQuantity}
+                                onClick={() => {
+                                  changeQuantity(tier.id, 1, tier.maximumQuantity);
+                                }}
+                                className="flex size-9 items-center justify-center rounded-full text-base font-bold text-white transition-colors hover:bg-white/10 disabled:opacity-25"
+                              >
+                                +
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        {(ticketAddons ?? []).length > 0 &&
+                          !soldOut &&
+                          tier.price.amountPaise > 0 && (
+                            <fieldset className="space-y-2 border-t border-white/10 pt-3">
+                              <legend className="px-1 text-[9px] font-black uppercase tracking-[0.14em] text-white/45">
+                                Optional extras per ticket
+                              </legend>
+                              {(ticketAddons ?? []).map((addon) => {
+                                const selected = addonQuantities[tier.id]?.[addon.id] ?? 0;
+                                const unavailable = addon.availableQuantity <= 0;
+                                return (
+                                  <div
+                                    key={addon.id}
+                                    className="flex items-center justify-between gap-3 rounded-md bg-black/25 px-2.5 py-2"
+                                  >
+                                    <span className="min-w-0">
+                                      <span className="block text-xs font-bold text-white/80">
+                                        {addon.name}
+                                      </span>
+                                      <span className="block text-[10px] text-white/40">
+                                        {moneyFormatter.format(addon.priceInPaise / 100)} each
+                                        {addon.description ? ` · ${addon.description}` : ''}
+                                      </span>
+                                    </span>
+                                    <span className="flex shrink-0 items-center gap-2">
+                                      {unavailable ? (
+                                        <span className="text-[9px] font-bold uppercase text-white/35">
+                                          Sold out
+                                        </span>
+                                      ) : (
+                                        <>
+                                          <button
+                                            type="button"
+                                            aria-label={`Decrease ${addon.name} for ${tier.name}`}
+                                            disabled={selected === 0}
+                                            onClick={() => {
+                                              setAddonQuantities((current) => ({
+                                                ...current,
+                                                [tier.id]: {
+                                                  ...current[tier.id],
+                                                  [addon.id]: selected - 1,
+                                                },
+                                              }));
+                                            }}
+                                            className="flex size-8 items-center justify-center rounded-full border border-white/10 text-sm text-white disabled:opacity-25"
+                                          >
+                                            −
+                                          </button>
+                                          <span className="w-4 text-center text-xs font-bold text-white">
+                                            {selected}
+                                          </span>
+                                          <button
+                                            type="button"
+                                            aria-label={`Increase ${addon.name} for ${tier.name}`}
+                                            disabled={selected >= addon.maxPerEntitlement}
+                                            onClick={() => {
+                                              setAddonQuantities((current) => ({
+                                                ...current,
+                                                [tier.id]: {
+                                                  ...current[tier.id],
+                                                  [addon.id]: selected + 1,
+                                                },
+                                              }));
+                                            }}
+                                            className="flex size-8 items-center justify-center rounded-full border border-white/10 text-sm text-white disabled:opacity-25"
+                                          >
+                                            +
+                                          </button>
+                                        </>
+                                      )}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </fieldset>
+                          )}
                       </div>
                     )}
                   </article>
@@ -487,7 +880,12 @@ export function CheckoutFlowClient({
                         ? '—'
                         : moneyFormatter.format(
                             (quotedLine?.subtotalPaise ??
-                              ticket.price.amountPaise * ticket.quantity) / 100,
+                              (ticket.price.amountPaise +
+                                (ticket.coverAmountPaise ?? 0) *
+                                  (ticket.admissionMode === 'per_person'
+                                    ? (ticket.guestCount ?? 1)
+                                    : 1)) *
+                                ticket.quantity) / 100,
                           );
                     return (
                       <div
@@ -496,6 +894,15 @@ export function CheckoutFlowClient({
                       >
                         <span className="min-w-0 text-white/75">
                           {ticket.quantity}× {ticket.name}
+                          {quotedLine?.admissionSubtotalPaise !== undefined ? (
+                            <span className="mt-1 block text-[11px] text-white/40">
+                              Admission{' '}
+                              {moneyFormatter.format(quotedLine.admissionSubtotalPaise / 100)}
+                              {(quotedLine.coverSubtotalPaise ?? 0) > 0
+                                ? ` · Cover ${moneyFormatter.format((quotedLine.coverSubtotalPaise ?? 0) / 100)}`
+                                : ''}
+                            </span>
+                          ) : null}
                         </span>
                         <span className="shrink-0 font-bold text-white">
                           <AnimatedValue value={lineDisplay} />
@@ -504,6 +911,39 @@ export function CheckoutFlowClient({
                     );
                   })}
                 </div>
+                {eligibilityRequired && (
+                  <div className="mt-4 rounded-lg border border-white/10 bg-black/30 p-3 text-xs leading-5 text-white/70">
+                    <p className="mb-2">Eligibility for selected tickets:</p>
+                    <ul className="mb-3 list-inside list-disc text-white/55">
+                      {restrictedTickets.map((ticket) => (
+                        <li key={ticket.id}>
+                          {ticket.name}:{' '}
+                          {ticket.audienceType &&
+                          ticket.audienceType !== 'GENERAL' &&
+                          ticket.audienceType !== 'GROUP'
+                            ? `${ticket.audienceType.toLowerCase()} attendees`
+                            : 'eligible attendees'}
+                          {ticket.minAge != null || ticket.maxAge != null
+                            ? `, ages ${String(ticket.minAge ?? 'any')}–${String(ticket.maxAge ?? 'any')}`
+                            : ''}
+                        </li>
+                      ))}
+                    </ul>
+                    <label className="flex min-h-11 cursor-pointer items-start gap-2">
+                      <input
+                        type="checkbox"
+                        checked={eligibilityAttested}
+                        onChange={(changeEvent) => {
+                          setEligibilityAttestedFor(
+                            changeEvent.currentTarget.checked ? eligibilitySignature : null,
+                          );
+                        }}
+                        className="mt-1 size-4 accent-white"
+                      />
+                      <span>I confirm that all attendees meet the eligibility shown above.</span>
+                    </label>
+                  </div>
+                )}
                 <dl className="mt-4 space-y-2.5 border-t border-white/10 pt-3 text-xs">
                   <div className="flex justify-between gap-4 text-white/50">
                     <dt>Subtotal</dt>
@@ -627,7 +1067,7 @@ export function CheckoutFlowClient({
                     </button>
                     <button
                       type="button"
-                      disabled={!canConfirmRsvp}
+                      disabled={!canConfirmRsvp || !eligibilityReady}
                       onClick={() => {
                         void confirmRsvp();
                       }}
@@ -639,7 +1079,7 @@ export function CheckoutFlowClient({
                 </div>
               ) : (
                 <>
-                  {canPay ? (
+                  {canPay && !upgradeFromEntitlementId ? (
                     <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3.5 sm:p-4">
                       <label className="block text-[9px] font-black uppercase tracking-[0.18em] text-white/55">
                         Promo code
@@ -674,7 +1114,7 @@ export function CheckoutFlowClient({
                         </p>
                       ) : null}
                     </div>
-                  ) : (
+                  ) : upgradeFromEntitlementId && canPay ? null : (
                     <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
                       <p className="text-xs font-black uppercase tracking-[0.14em] text-white">
                         Tickets unavailable
@@ -753,7 +1193,9 @@ export function CheckoutFlowClient({
                     {canPay ? (
                       <button
                         type="button"
-                        disabled={quoteState !== 'ready' || payState !== 'idle'}
+                        disabled={
+                          quoteState !== 'ready' || payState !== 'idle' || !eligibilityReady
+                        }
                         onClick={() => {
                           void pay();
                         }}

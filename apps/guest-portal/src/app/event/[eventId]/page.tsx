@@ -4,18 +4,26 @@ import { createApiClient, isApiClientError } from '@c1rcle/api-client';
 import { eventPublicDetailDtoSchema, publicTicketTierListResponseSchema } from '@c1rcle/contracts';
 
 import { EventDetailView } from '@/features/event-detail/components/EventDetailView';
+import { PrivateTierUnlockClient } from '@/features/event-detail/components/PrivateTierUnlockClient';
+import { PromoterClickTracker } from '@/features/event-detail/components/PromoterClickTracker';
 import { toEventDetailFixture } from '@/features/event-detail/event-detail-mapping';
 import { loadExploreEvents } from '@/features/explore/explore-data';
 
 import type { EventDetailFixture } from '@/features/event-detail/types/event-detail.types';
 import type { Metadata } from 'next';
 
+export const revalidate = 0;
+
 interface EventDetailPageProps {
   params: Promise<{ eventId: string }>;
+  searchParams?: Promise<{ ref?: string | string[] }>;
 }
 
 type EventDetailResult =
-  { kind: 'ready'; event: EventDetailFixture } | { kind: 'not-found' } | { kind: 'unavailable' };
+  | { kind: 'ready'; event: EventDetailFixture }
+  | { kind: 'private' }
+  | { kind: 'not-found' }
+  | { kind: 'unavailable' };
 
 /** Public relationships and tiers are resolved by authoritative backend projections. */
 async function getEventDetail(eventId: string): Promise<EventDetailResult> {
@@ -29,7 +37,7 @@ async function getEventDetail(eventId: string): Promise<EventDetailResult> {
     });
   } catch (error) {
     return isApiClientError(error) && error.status === 404
-      ? { kind: 'not-found' }
+      ? { kind: 'private' }
       : { kind: 'unavailable' };
   }
 
@@ -48,6 +56,13 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
   const { eventId } = await params;
   const result = await getEventDetail(decodeURIComponent(eventId));
   if (result.kind === 'not-found') notFound();
+  if (result.kind === 'private') {
+    return {
+      title: 'Private event access | THE C1RCLE',
+      description: 'Enter an event access code or invitation to continue.',
+      robots: { index: false, follow: false, noarchive: true },
+    };
+  }
   if (result.kind === 'unavailable') {
     return {
       title: 'Event temporarily unavailable | THE C1RCLE',
@@ -78,10 +93,24 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
   };
 }
 
-export default async function EventDetailPage({ params }: EventDetailPageProps) {
+export default async function EventDetailPage({ params, searchParams }: EventDetailPageProps) {
   const { eventId } = await params;
   const result = await getEventDetail(decodeURIComponent(eventId));
   if (result.kind === 'not-found') notFound();
+  if (result.kind === 'private') {
+    return (
+      <section className="relative z-10 mx-auto flex min-h-[75vh] max-w-2xl flex-col justify-center px-6 py-24 text-white">
+        <h1 className="text-3xl font-black uppercase">Private event access</h1>
+        <p className="mt-3 text-sm leading-6 text-white/60">
+          Enter an event access code or invitation secret. Event details appear only after your
+          verified account is authorized.
+        </p>
+        <div className="mt-6">
+          <PrivateTierUnlockClient eventId={decodeURIComponent(eventId)} accentTone="orange" />
+        </div>
+      </section>
+    );
+  }
   if (result.kind === 'unavailable') {
     return (
       <section className="relative z-10 mx-auto flex min-h-[75vh] max-w-3xl flex-col items-center justify-center px-6 py-32 text-center text-white">
@@ -100,5 +129,19 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
   const recommendations = await loadExploreEvents()
     .then((events) => events.filter((event) => event.id !== result.event.id).slice(0, 8))
     .catch(() => []);
-  return <EventDetailView event={result.event} recommendations={recommendations} />;
+  const query = (await searchParams) ?? {};
+  const referralCode = typeof query.ref === 'string' ? query.ref : undefined;
+  return (
+    <>
+      <PromoterClickTracker
+        eventSlug={result.event.slug}
+        {...(referralCode ? { code: referralCode } : {})}
+      />
+      <EventDetailView
+        event={result.event}
+        recommendations={recommendations}
+        {...(referralCode ? { referralCode } : {})}
+      />
+    </>
+  );
 }

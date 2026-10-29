@@ -8,6 +8,9 @@ import TicketsPage from './page';
 
 const mockBffGet = vi.fn<(...args: readonly unknown[]) => Promise<unknown>>();
 const mockApiGet = vi.fn<(...args: readonly unknown[]) => Promise<unknown>>();
+const mockRouterPush = vi.fn();
+
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mockRouterPush }) }));
 
 vi.mock('@/lib/bff/bff-client', () => ({
   bffClient: { get: (...args: unknown[]) => mockBffGet(...args) },
@@ -93,6 +96,8 @@ function mockWalletFeed(entitlements: unknown[] = [ENTITLEMENT]) {
         refreshIntervalSec: 30,
       });
     }
+    if (path === '/api/tickets/ENT-rsvp-1/transfers') return Promise.resolve([]);
+    if (path === '/api/wallet/event-covers') return Promise.resolve([]);
     const items = path === '/api/wallet/tickets' ? entitlements : [];
     return Promise.resolve({
       items,
@@ -162,6 +167,11 @@ describe('TicketsPage real wallet', () => {
       expect.arrayContaining([
         expect.objectContaining({ path: '/api/wallet/tickets', timeoutMs: 15_000, retries: 0 }),
         expect.objectContaining({ path: '/api/wallet/orders', timeoutMs: 15_000, retries: 0 }),
+        expect.objectContaining({
+          path: '/api/wallet/event-covers',
+          timeoutMs: 15_000,
+          retries: 0,
+        }),
       ]),
     );
     expect(mockApiGet.mock.calls.map(([arg]) => arg)).toEqual(
@@ -205,6 +215,7 @@ describe('TicketsPage real wallet', () => {
       .mockRejectedValueOnce(new Error('gateway down'))
       .mockImplementation((arg: unknown) => {
         const { path } = arg as { path: string };
+        if (path === '/api/wallet/event-covers') return Promise.resolve([]);
         const items = path === '/api/wallet/tickets' ? [ENTITLEMENT] : [];
         return Promise.resolve({
           items,
@@ -229,6 +240,7 @@ describe('TicketsPage real wallet', () => {
     authenticate();
     mockBffGet.mockImplementation((arg: unknown) => {
       const { path } = arg as { path: string };
+      if (path === '/api/wallet/event-covers') return Promise.resolve([]);
       const items =
         path === '/api/wallet/tickets'
           ? [{ ...ENTITLEMENT, id: 'ENT-past-1', status: 'redeemed', scanCount: 1 }]

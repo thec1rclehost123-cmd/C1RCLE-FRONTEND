@@ -55,6 +55,7 @@ export const ticketsFixture: {
     upcomingTickets: [
       {
         id: 'fixture-ticket-001-not-issued',
+        eventId: 'fixture-event-001-not-created',
         orderId: 'fixture-order-001-not-created',
         bookingReference: null,
         holderName: 'Guest',
@@ -72,6 +73,7 @@ export const ticketsFixture: {
       },
       {
         id: 'fixture-ticket-002-not-issued',
+        eventId: 'fixture-event-002-not-created',
         orderId: 'fixture-order-002-not-created',
         bookingReference: null,
         holderName: 'Guest',
@@ -91,6 +93,7 @@ export const ticketsFixture: {
     pastTickets: [
       {
         id: 'fixture-ticket-003-not-issued',
+        eventId: 'fixture-event-003-not-created',
         orderId: 'fixture-order-003-not-created',
         bookingReference: null,
         holderName: 'Guest',

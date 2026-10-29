@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useSession } from '@c1rcle/auth';
 import {
   entitlementsListResponseSchema,
+  eventCoverWalletResponseSchema,
   eventDtoSchema,
   ordersListResponseSchema,
   venueDtoSchema,
@@ -13,8 +14,10 @@ import {
 import { apiClient } from '@/lib/api/client';
 import { bffClient } from '@/lib/bff/bff-client';
 
+import { EventChangeNoticesClient } from '../../features/tickets/components/EventChangeNoticesClient';
 import { TicketsGuestView } from '../../features/tickets/components/TicketsGuestView';
 import { UserTicketsView } from '../../features/tickets/components/UserTicketsView';
+import { WaitlistOffersClient } from '../../features/tickets/components/WaitlistOffersClient';
 import { toTicketWalletData } from '../../features/tickets/wallet-mapping';
 
 import type { TicketWalletData } from '../../features/tickets/types/tickets.types';
@@ -60,6 +63,12 @@ export function TicketsClient() {
             retries: 0,
           }),
           bffClient.get({
+            path: '/api/wallet/event-covers',
+            schema: eventCoverWalletResponseSchema,
+            timeoutMs: WALLET_READ_TIMEOUT_MS,
+            retries: 0,
+          }),
+          bffClient.get({
             path: '/api/wallet/orders',
             query: { limit: 50 },
             schema: ordersListResponseSchema,
@@ -68,7 +77,7 @@ export function TicketsClient() {
           }),
         ]);
       })
-      .then(([tickets, orders]) =>
+      .then(([tickets, eventCovers, orders]) =>
         toTicketWalletData(
           tickets.items,
           async (eventId) => {
@@ -95,6 +104,7 @@ export function TicketsClient() {
           },
           new Date(),
           orders.items,
+          eventCovers,
         ),
       )
       .then((data) => {
@@ -142,7 +152,13 @@ export function TicketsClient() {
           </button>
         </div>
       ) : (
-        <UserTicketsView wallet={walletState.wallet} />
+        <>
+          <div className="relative z-10 mx-auto w-full max-w-5xl px-4 pt-24 sm:px-6">
+            <EventChangeNoticesClient />
+            <WaitlistOffersClient />
+          </div>
+          <UserTicketsView wallet={walletState.wallet} />
+        </>
       )}
     </div>
   );

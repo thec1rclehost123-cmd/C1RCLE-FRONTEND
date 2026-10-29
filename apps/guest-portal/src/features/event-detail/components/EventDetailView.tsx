@@ -9,6 +9,7 @@ import { getEventAccentClasses, getGuestToneClass } from '../eventDetailPalette'
 import { EventPosterPanel } from './EventPosterPanel';
 import { EventTicketSelectorClient } from './EventTicketSelectorClient';
 import { GuestlistPreviewClient } from './GuestlistPreviewClient';
+import { PrivateTierUnlockClient } from './PrivateTierUnlockClient';
 import { StickyEventCheckoutCta } from './StickyEventCheckoutCta';
 
 import type {
@@ -48,9 +49,13 @@ const lifecycleCopy: Partial<Record<EventLifecycle, { title: string; detail: str
 export function EventDetailView({
   event,
   recommendations = [],
+  referralCode,
+  accessGrantId,
 }: {
   event: EventDetailFixture;
   recommendations?: readonly ExploreEvent[];
+  referralCode?: string;
+  accessGrantId?: string;
 }) {
   const lifecycle = lifecycleCopy[event.lifecycle];
   const accent = getEventAccentClasses(event.accentTone);
@@ -70,6 +75,7 @@ export function EventDetailView({
   const mapHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
     `${event.venue}, ${event.address}`,
   )}`;
+  const checkoutQuery = referralCode ? `?ref=${encodeURIComponent(referralCode)}` : '';
 
   if (lifecycle) {
     return (
@@ -118,6 +124,13 @@ export function EventDetailView({
               tiers={event.ticketTiers}
               initialVisibleCount={3}
               headerNote={event.ticketNote ?? 'Ticket options'}
+              {...(accessGrantId ? { accessGrantId } : {})}
+              {...(referralCode ? { referralCode } : {})}
+            />
+            <PrivateTierUnlockClient
+              eventId={event.slug}
+              accentTone={event.accentTone}
+              {...(referralCode ? { referralCode } : {})}
             />
           </aside>
 
@@ -191,7 +204,7 @@ export function EventDetailView({
               )}
               {hasAvailableTiers ? (
                 <Link
-                  href={`/checkout/${event.slug}`}
+                  href={`/checkout/${event.slug}${checkoutQuery}`}
                   className="flex min-h-11 items-center justify-center rounded-full bg-white px-6 py-3 text-center text-[10px] font-black uppercase tracking-[0.2em] text-black transition-transform hover:scale-[1.02] active:scale-[0.98] motion-reduce:transition-none"
                 >
                   Get tickets
@@ -296,7 +309,7 @@ export function EventDetailView({
 
       {stickyCtaLabel === null ? null : (
         <StickyEventCheckoutCta
-          href={`/checkout/${event.slug}`}
+          href={`/checkout/${event.slug}${checkoutQuery}`}
           label={stickyCtaLabel}
           className={`${accent.solid} ${accent.stickyShadow}`}
         />

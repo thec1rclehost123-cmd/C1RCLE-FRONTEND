@@ -53,6 +53,17 @@ const input: PaidCheckoutInput = {
 };
 
 describe('runPaidCheckout', () => {
+  it('continues when referral attribution is omitted from the public hold response', async () => {
+    const d = deps({
+      createHold: vi.fn().mockResolvedValue(hold()),
+    });
+
+    const result = await runPaidCheckout(d, input);
+
+    expect(result).toEqual({ kind: 'confirmed', orderId: 'ord_9' });
+    expect(d.openCheckout).toHaveBeenCalledOnce();
+  });
+
   it('holds, creates the order, opens the widget, verifies, and returns the order id', async () => {
     const d = deps();
 
@@ -75,6 +86,39 @@ describe('runPaidCheckout', () => {
       title: 'C1RCLE',
       description: 'Sky Night',
     });
+  });
+
+  it('passes the source entitlement to the server when creating an upgrade hold', async () => {
+    const d = deps();
+
+    const result = await runPaidCheckout(d, {
+      ...input,
+      lines: [{ tierId: 'tier_upgrade', quantity: 1 }],
+      upgradeFromEntitlementId: 'ent_source',
+    });
+
+    expect(result).toEqual({ kind: 'confirmed', orderId: 'ord_9' });
+    expect(d.createHold).toHaveBeenCalledWith({
+      eventId: 'evt_1',
+      lines: [{ tierId: 'tier_upgrade', quantity: 1 }],
+      idempotencyKey: 'attempt-key-hold',
+      upgradeFromEntitlementId: 'ent_source',
+    });
+  });
+
+  it('uses an accepted waitlist reservation without creating a duplicate inventory hold', async () => {
+    const reservedHold = hold();
+    const d = deps();
+
+    const result = await runPaidCheckout(d, { ...input, reservedHold });
+
+    expect(result).toEqual({ kind: 'confirmed', orderId: 'ord_9' });
+    expect(d.createHold).not.toHaveBeenCalled();
+    expect(d.createAttempt).toHaveBeenCalledWith({
+      holdId: reservedHold.holdId,
+      idempotencyKey: 'attempt-key-attempt',
+    });
+    expect(d.verify).toHaveBeenCalledWith(expect.objectContaining({ holdId: reservedHold.holdId }));
   });
 
   it('verifies with the ids the widget returned, not ones the client invented', async () => {

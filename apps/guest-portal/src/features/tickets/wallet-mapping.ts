@@ -1,5 +1,11 @@
 import type { TicketStatus, TicketWalletData, UserTicketItem } from './types/tickets.types';
-import type { EntitlementDto, EventDto, OrderDto, VenueDto } from '@c1rcle/contracts';
+import type {
+  EntitlementDto,
+  EventCoverWalletItemDto,
+  EventDto,
+  OrderDto,
+  VenueDto,
+} from '@c1rcle/contracts';
 
 export interface WalletEventDetails {
   event: EventDto;
@@ -55,18 +61,16 @@ export async function toTicketWalletData(
   resolve: (eventId: string) => Promise<WalletEventDetails | null>,
   now: Date = new Date(),
   orders: readonly OrderDto[] = [],
+  eventCovers: readonly EventCoverWalletItemDto[] = [],
 ): Promise<TicketWalletData> {
   const ordersById = new Map(orders.map((order) => [order.id, order]));
+  const eventCoversByEntitlement = new Map(
+    eventCovers.map((cover) => [cover.entitlementId, cover]),
+  );
   const groups = new Map<string, EntitlementDto[]>();
-  for (const entitlement of entitlements) {
-    const key = `${entitlement.orderId}::${entitlement.tierId}::${entitlement.status}`;
-    const group = groups.get(key);
-    if (group) {
-      group.push(entitlement);
-    } else {
-      groups.set(key, [entitlement]);
-    }
-  }
+  // Each entitlement is an independent admission credential. Grouping by
+  // order/tier would show one QR for several separately-scannable units.
+  for (const entitlement of entitlements) groups.set(entitlement.id, [entitlement]);
 
   const cache = new Map<string, Promise<WalletEventDetails | null>>();
   const detailsOf = (eventId: string): Promise<WalletEventDetails | null> => {
@@ -111,9 +115,16 @@ export async function toTicketWalletData(
       const status = toTicketStatus(group, order);
       pastTickets.push({
         id: first.id,
+        eventId: first.eventId,
         orderId: first.orderId,
         bookingReference: order?.bookingReference ?? null,
-        holderName: first.holderName,
+        holderName:
+          first.currentHolderUserId === null && first.userId
+            ? 'Unassigned · in your custody'
+            : first.holderName,
+        ...(first.currentHolderUserId === null && first.userId
+          ? { custody: 'unassigned' as const }
+          : {}),
         eventTitle: order?.eventCancellation?.eventTitle ?? 'Event details unavailable',
         date: '',
         time: '',
@@ -122,8 +133,19 @@ export async function toTicketWalletData(
         posterUrl: FALLBACK_POSTER,
         tierName: first.tierName,
         isVip: /vip/i.test(first.tierName),
-        ticketCount: group.length,
+        ticketCount: 1,
         status: order?.eventCancellation ? status : 'unavailable',
+        ...(first.ticketAddons?.length
+          ? {
+              ticketAddons: first.ticketAddons.map(({ id, name, kind, status }) => ({
+                id,
+                name,
+                kind,
+                status,
+              })),
+            }
+          : {}),
+        ...coverSummary(eventCoversByEntitlement.get(first.id)),
       });
       continue;
     }
@@ -136,9 +158,16 @@ export async function toTicketWalletData(
 
     const ticket: UserTicketItem = {
       id: first.id,
+      eventId: first.eventId,
       orderId: first.orderId,
       bookingReference: order?.bookingReference ?? null,
-      holderName: first.holderName,
+      holderName:
+        first.currentHolderUserId === null && first.userId
+          ? 'Unassigned · in your custody'
+          : first.holderName,
+      ...(first.currentHolderUserId === null && first.userId
+        ? { custody: 'unassigned' as const }
+        : {}),
       eventTitle: event.title,
       date: Number.isNaN(startsAt.getTime()) ? event.title : dateFormatter.format(startsAt),
       time: Number.isNaN(startsAt.getTime()) ? '' : `${timeFormatter.format(startsAt)} IST`,
@@ -147,8 +176,19 @@ export async function toTicketWalletData(
       posterUrl: event.imageUrl ?? FALLBACK_POSTER,
       tierName: first.tierName,
       isVip: /vip/i.test(first.tierName),
-      ticketCount: group.length,
+      ticketCount: 1,
       status,
+      ...(first.ticketAddons?.length
+        ? {
+            ticketAddons: first.ticketAddons.map(({ id, name, kind, status }) => ({
+              id,
+              name,
+              kind,
+              status,
+            })),
+          }
+        : {}),
+      ...coverSummary(eventCoversByEntitlement.get(first.id)),
     };
 
     if (status === 'active' && !ended) {
@@ -159,4 +199,19 @@ export async function toTicketWalletData(
   }
 
   return { upcomingTickets, pastTickets };
+}
+
+function coverSummary(cover: EventCoverWalletItemDto | undefined) {
+  if (!cover) return {};
+  return {
+    eventCover: {
+      status: cover.status,
+      issuedPaise: cover.issuedPaise,
+      remainingPaise: cover.remainingPaise,
+      reservedPaise: cover.reservedPaise,
+      redeemedPaise: cover.redeemedPaise,
+      refundedPaise: cover.refundedPaise,
+      history: cover.history,
+    },
+  };
 }

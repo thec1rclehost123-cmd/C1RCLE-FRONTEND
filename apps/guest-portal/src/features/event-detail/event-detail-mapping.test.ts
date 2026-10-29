@@ -16,6 +16,8 @@ const EVENT: EventPublicDetailDto = {
   startAt: '2026-09-18T19:30:00.000Z',
   endAt: '2026-09-18T23:30:00.000Z',
   status: 'published',
+  visibilityMode: 'public',
+  addressDisclosure: 'public',
   isPublic: true,
   tags: ['Music'],
   startingPricePaise: 99_900,

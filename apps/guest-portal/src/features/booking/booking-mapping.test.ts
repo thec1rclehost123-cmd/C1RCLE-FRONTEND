@@ -16,6 +16,8 @@ const EVENT: EventDto = {
   startAt: '2026-09-18T19:30:00.000Z',
   endAt: null,
   status: 'published',
+  visibilityMode: 'public',
+  addressDisclosure: 'public',
   isPublic: true,
   tags: ['Music'],
   startingPricePaise: 120000,
@@ -55,6 +57,7 @@ describe('toBookingEventFixture', () => {
       city: 'Pune',
       doorNote: 'Entry rules are set by the host and shown at checkout.',
       ticketTiers: [],
+      ticketAddons: [],
       purchasable: false,
     });
   });
@@ -110,6 +113,9 @@ describe('toBookingEventFixture', () => {
         priceInPaise: 200000,
         currency: 'INR',
         availableQuantity: 3,
+        guestCount: 3,
+        admissionMode: 'per_person',
+        coverAmountPaise: 1500,
       },
     ];
     const mapped = toBookingEventFixture(EVENT, VENUE, tiers);
@@ -126,7 +132,10 @@ describe('toBookingEventFixture', () => {
         name: 'VIP',
         description: 'Priority entry',
         price: { amountPaise: 200000, currency: 'INR' },
+        coverAmountPaise: 1500,
         maximumQuantity: 3,
+        guestCount: 3,
+        admissionMode: 'per_person',
       },
     ]);
   });

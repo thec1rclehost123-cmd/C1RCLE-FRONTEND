@@ -1,7 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import HomePage from '@/app/page';
+import HomePage, { revalidate } from '@/app/page';
 import { HomeBackgroundVideoClient } from '@/features/home/components/HomeBackgroundVideoClient';
 import { homeFixture } from '@/features/home/fixtures/home.fixture';
 
@@ -57,6 +57,10 @@ afterEach(() => {
 });
 
 describe('Home Page', () => {
+  it('does not cache discovery content across event visibility changes', () => {
+    expect(revalidate).toBe(0);
+  });
+
   it('opens with the video hero and connected discovery rail', async () => {
     discovery.events = [EVENT];
     render(await HomePage());

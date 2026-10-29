@@ -11,7 +11,23 @@ export interface BookingTicketTier {
   name: string;
   description: string;
   price: BookingMoney;
+  coverAmountPaise?: number;
   maximumQuantity: number;
+  guestCount?: number;
+  admissionMode?: 'bundle' | 'per_person';
+  audienceType?: 'GENERAL' | 'MALE' | 'FEMALE' | 'COUPLE' | 'GROUP' | 'STUDENT' | 'MEMBER';
+  minAge?: number | null;
+  maxAge?: number | null;
+}
+
+export interface BookingTicketAddon {
+  id: string;
+  name: string;
+  description: string;
+  kind: 'parking' | 'cloakroom' | 'merchandise';
+  priceInPaise: number;
+  availableQuantity: number;
+  maxPerEntitlement: number;
 }
 
 export interface BookingEventFixture {
@@ -27,6 +43,7 @@ export interface BookingEventFixture {
   city: string;
   doorNote: string;
   ticketTiers: readonly BookingTicketTier[];
+  ticketAddons?: readonly BookingTicketAddon[];
   /** False when a cancelled private event can only be rendered from order evidence. */
   detailsAvailable?: boolean;
   /**

@@ -22,6 +22,8 @@ const event: EventDto = {
   startAt: '2030-01-01T18:00:00.000Z',
   endAt: null,
   status: 'published',
+  visibilityMode: 'public',
+  addressDisclosure: 'public',
   isPublic: true,
   tags: [],
   startingPricePaise: null,

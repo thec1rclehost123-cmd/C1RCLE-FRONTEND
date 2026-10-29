@@ -24,7 +24,9 @@ export function generateMetadata(): Metadata {
   });
 }
 
-export const revalidate = 300;
+// Public visibility can change immediately when a Host makes an event private.
+// Render the listing from the current authoritative discovery response.
+export const revalidate = 0;
 
 export default async function HomePage() {
   const discovery = await loadExploreEvents().then(

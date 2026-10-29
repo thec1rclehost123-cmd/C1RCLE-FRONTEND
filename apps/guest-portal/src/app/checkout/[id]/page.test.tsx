@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiClientError } from '@c1rcle/api-client';
 
 import { CheckoutView } from '@/features/booking/components/CheckoutView';
+import { PrivateCheckoutBootstrap } from '@/features/booking/components/PrivateCheckoutBootstrap';
 import { bookingEventFixtures } from '@/features/booking/fixtures/booking.fixture';
 
 import CheckoutPage from './page';
@@ -212,6 +213,8 @@ const REAL_EVENT: EventDto = {
   startAt: '2026-09-18T19:30:00.000Z',
   endAt: null,
   status: 'published',
+  visibilityMode: 'public',
+  addressDisclosure: 'public',
   isPublic: true,
   tags: ['Music'],
   startingPricePaise: 99900,
@@ -324,13 +327,13 @@ describe('CheckoutPage', () => {
     expect(screen.queryByRole('heading', { name: 'General Admission' })).not.toBeInTheDocument();
   });
 
-  it('does not resolve fixture slugs without backend authority', async () => {
+  it('uses a private grant bootstrap for ids with protected or unavailable public detail', async () => {
     mockGet.mockRejectedValue(
       new ApiClientError({ code: 'not_found', message: 'missing', status: 404 } as never),
     );
-    await expect(CheckoutPage({ params: Promise.resolve({ id: 'neon-nights' }) })).rejects.toThrow(
-      'NEXT_NOT_FOUND',
-    );
+    const page = await CheckoutPage({ params: Promise.resolve({ id: 'neon-nights' }) });
+    expect(page.type).toBe(PrivateCheckoutBootstrap);
+    expect(page.props).toMatchObject({ eventId: 'neon-nights' });
     expect(mockGet).toHaveBeenCalled();
   });
 

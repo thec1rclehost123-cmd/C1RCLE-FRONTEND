@@ -83,6 +83,8 @@ export function toEventDetailFixture(
       availabilityLabel:
         tier.availableQuantity === 0 ? 'Sold out' : `${String(tier.availableQuantity)} available`,
       availableQuantity: tier.availableQuantity,
+      ...(tier.guestCount === undefined ? {} : { guestCount: tier.guestCount }),
+      ...(tier.admissionMode === undefined ? {} : { admissionMode: tier.admissionMode }),
     })),
   };
 }

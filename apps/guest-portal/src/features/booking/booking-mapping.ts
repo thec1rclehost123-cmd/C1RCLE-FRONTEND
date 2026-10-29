@@ -1,6 +1,15 @@
-import type { BookingEventFixture, BookingTicketTier } from './types/booking.types';
+import type {
+  BookingEventFixture,
+  BookingTicketAddon,
+  BookingTicketTier,
+} from './types/booking.types';
 import type { EventAccentTone } from '@/features/event-detail/types/event-detail.types';
-import type { EventDto, PublicTicketTierDto, VenueDto } from '@c1rcle/contracts';
+import type {
+  EventDto,
+  PublicTicketAddonDto,
+  PublicTicketTierDto,
+  VenueDto,
+} from '@c1rcle/contracts';
 
 /**
  * ─── Backend → checkout mapping ──────────────────────────────────────────────
@@ -29,6 +38,7 @@ export function toBookingEventFixture(
   event: EventDto,
   venue: VenueDto | null,
   tiers: readonly PublicTicketTierDto[],
+  addons: readonly PublicTicketAddonDto[] = [],
 ): BookingEventFixture {
   const city = venue?.city ?? FALLBACK_CITY;
   return {
@@ -44,8 +54,21 @@ export function toBookingEventFixture(
     city,
     doorNote: 'Entry rules are set by the host and shown at checkout.',
     ticketTiers: toRealTiers(tiers),
+    ticketAddons: toRealAddons(addons),
     purchasable: tiers.some((tier) => tier.availableQuantity > 0),
   };
+}
+
+function toRealAddons(addons: readonly PublicTicketAddonDto[]): BookingTicketAddon[] {
+  return addons.map((addon) => ({
+    id: addon.id,
+    name: addon.name,
+    description: addon.description,
+    kind: addon.kind,
+    priceInPaise: addon.priceInPaise,
+    availableQuantity: addon.availableQuantity,
+    maxPerEntitlement: addon.maxPerEntitlement,
+  }));
 }
 
 function toRealTiers(tiers: readonly PublicTicketTierDto[]): BookingTicketTier[] {
@@ -56,11 +79,17 @@ function toRealTiers(tiers: readonly PublicTicketTierDto[]): BookingTicketTier[]
     name: tier.name,
     description: tier.description || tier.name,
     price: { amountPaise: tier.priceInPaise, currency: 'INR' },
+    ...(tier.coverAmountPaise === undefined ? {} : { coverAmountPaise: tier.coverAmountPaise }),
     // RSVP fulfills exactly one ticket per account — the stepper must not
     // offer more. Paid tiers cap at live availability (bounded by the UI cap).
     maximumQuantity:
       tier.priceInPaise === 0
         ? Math.min(1, tier.availableQuantity)
         : Math.min(tier.availableQuantity, PREVIEW_MAX_QUANTITY),
+    ...(tier.guestCount === undefined ? {} : { guestCount: tier.guestCount }),
+    ...(tier.admissionMode === undefined ? {} : { admissionMode: tier.admissionMode }),
+    ...(tier.audienceType === undefined ? {} : { audienceType: tier.audienceType }),
+    ...(tier.minAge === undefined ? {} : { minAge: tier.minAge }),
+    ...(tier.maxAge === undefined ? {} : { maxAge: tier.maxAge }),
   }));
 }

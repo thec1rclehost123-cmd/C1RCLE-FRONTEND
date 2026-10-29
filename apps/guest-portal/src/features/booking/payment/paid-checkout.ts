@@ -19,9 +19,17 @@ import type {
 export interface PaidCheckoutDeps {
   createHold(input: {
     eventId: string;
-    lines: { tierId: string; quantity: number }[];
+    lines: {
+      tierId: string;
+      quantity: number;
+      accessGrantId?: string;
+      eligibilityAttested?: boolean;
+      ticketAddons?: { addonId: string; quantityPerEntitlement: number }[];
+    }[];
     idempotencyKey: string;
     promoCode?: string | null;
+    referralCode?: string | null;
+    upgradeFromEntitlementId?: string;
     attendee?: { name: string; email: string; phone?: string };
   }): Promise<CheckoutHoldResponse>;
   createAttempt(input: { holdId: string; idempotencyKey: string }): Promise<PaymentAttemptResponse>;
@@ -40,14 +48,24 @@ export interface PaidCheckoutDeps {
 export interface PaidCheckoutInput {
   readonly eventId: string;
   readonly eventTitle: string;
-  readonly lines: readonly { tierId: string; quantity: number }[];
+  readonly lines: readonly {
+    tierId: string;
+    quantity: number;
+    accessGrantId?: string;
+    eligibilityAttested?: boolean;
+    ticketAddons?: { addonId: string; quantityPerEntitlement: number }[];
+  }[];
   /** The total the buyer was shown; a hold priced differently stops for re-confirmation. */
   readonly expectedTotalPaise: number;
   /** One per checkout attempt, so a double-click or retry replays rather than repeats. */
   readonly idempotencyKey: string;
   readonly promoCode?: string | null;
+  readonly referralCode?: string | null;
+  readonly upgradeFromEntitlementId?: string;
   readonly attendee?: { name: string; email: string; phone?: string };
   readonly prefill?: { name?: string; email?: string; contact?: string };
+  /** A waitlist offer has already reserved inventory and must not create a second hold. */
+  readonly reservedHold?: CheckoutHoldResponse;
 }
 
 export type PaidCheckoutResult =
@@ -77,13 +95,19 @@ export async function runPaidCheckout(
   let hold: CheckoutHoldResponse;
   let attempt: PaymentAttemptResponse;
   try {
-    hold = await deps.createHold({
-      eventId: input.eventId,
-      lines: input.lines.map((line) => ({ ...line })),
-      idempotencyKey: `${input.idempotencyKey}-hold`,
-      ...(input.promoCode ? { promoCode: input.promoCode } : {}),
-      ...(input.attendee ? { attendee: input.attendee } : {}),
-    });
+    hold =
+      input.reservedHold ??
+      (await deps.createHold({
+        eventId: input.eventId,
+        lines: input.lines.map((line) => ({ ...line })),
+        idempotencyKey: `${input.idempotencyKey}-hold`,
+        ...(input.promoCode ? { promoCode: input.promoCode } : {}),
+        ...(input.referralCode ? { referralCode: input.referralCode } : {}),
+        ...(input.upgradeFromEntitlementId
+          ? { upgradeFromEntitlementId: input.upgradeFromEntitlementId }
+          : {}),
+        ...(input.attendee ? { attendee: input.attendee } : {}),
+      }));
     if (hold.pricing.grandTotalPaise !== input.expectedTotalPaise) {
       return { kind: 'price_changed', grandTotalPaise: hold.pricing.grandTotalPaise };
     }

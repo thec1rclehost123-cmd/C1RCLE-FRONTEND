@@ -26,8 +26,16 @@ const writeHeaders = (idempotencyKey?: string): Record<string, string> => ({
 
 export function fetchQuote(input: {
   eventId: string;
-  lines: { tierId: string; quantity: number }[];
+  lines: {
+    tierId: string;
+    quantity: number;
+    accessGrantId?: string;
+    eligibilityAttested?: boolean;
+    ticketAddons?: { addonId: string; quantityPerEntitlement: number }[];
+  }[];
   promoCode?: string | null;
+  referralCode?: string | null;
+  upgradeFromEntitlementId?: string;
 }): Promise<CheckoutQuoteResponse> {
   return bffClient.post({
     path: '/api/checkout/quote',

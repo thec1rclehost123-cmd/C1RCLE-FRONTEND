@@ -1,20 +1,21 @@
-import { notFound } from 'next/navigation';
-
 import { createApiClient, isApiClientError } from '@c1rcle/api-client';
 import {
   eventDtoSchema,
+  publicTicketAddonListResponseSchema,
   publicTicketTierListResponseSchema,
   venueDtoSchema,
 } from '@c1rcle/contracts';
 
 import { toBookingEventFixture } from '@/features/booking/booking-mapping';
 import { CheckoutView } from '@/features/booking/components/CheckoutView';
+import { PrivateCheckoutBootstrap } from '@/features/booking/components/PrivateCheckoutBootstrap';
 
 import type { BookingEventFixture } from '@/features/booking/types/booking.types';
 import type { Metadata } from 'next';
 
 interface CheckoutPageProps {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ tier?: string | string[] }>;
 }
 
 /**
@@ -60,7 +61,17 @@ async function getCheckoutEvent(id: string): Promise<CheckoutEventResult> {
     return { kind: 'unavailable' };
   }
 
-  return { kind: 'ready', event: toBookingEventFixture(event, venue, tiers.items) };
+  const addons = await client
+    .get({
+      path: `/api/v2/public/events/${encodeURIComponent(decoded)}/ticket-addons`,
+      schema: publicTicketAddonListResponseSchema,
+    })
+    .catch(() => ({ items: [] }));
+
+  return {
+    kind: 'ready',
+    event: toBookingEventFixture(event, venue, tiers.items, addons.items),
+  };
 }
 
 export async function generateMetadata({ params }: CheckoutPageProps): Promise<Metadata> {
@@ -74,10 +85,19 @@ export async function generateMetadata({ params }: CheckoutPageProps): Promise<M
   };
 }
 
-export default async function CheckoutPage({ params }: CheckoutPageProps) {
+export default async function CheckoutPage({ params, searchParams }: CheckoutPageProps) {
   const { id } = await params;
   const result = await getCheckoutEvent(id);
-  if (result.kind === 'not-found') notFound();
+  if (result.kind === 'not-found') {
+    const query = (await searchParams) ?? {};
+    const tier = typeof query.tier === 'string' ? query.tier : undefined;
+    return (
+      <PrivateCheckoutBootstrap
+        eventId={decodeURIComponent(id)}
+        {...(tier ? { initialTierId: tier } : {})}
+      />
+    );
+  }
   if (result.kind === 'unavailable') {
     return (
       <section className="relative z-10 mx-auto flex min-h-[75vh] max-w-3xl flex-col items-center justify-center px-6 py-32 text-center text-white">
@@ -93,5 +113,5 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
       </section>
     );
   }
-  return <CheckoutView event={result.event} />;
+  return <CheckoutView event={result.event} eventSlug={decodeURIComponent(id)} />;
 }
