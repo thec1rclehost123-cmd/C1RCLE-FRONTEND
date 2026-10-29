@@ -15,7 +15,7 @@ import { eventEndAtFromDraft, eventStartAtFromDraft } from '@/lib/events/event-t
 import { uploadToSignedUrl } from '@/lib/onboarding/uploadToSignedUrl';
 
 import type { EventEditorDraft } from '@/data/partner-data-source';
-import type { EventDto } from '@c1rcle/contracts';
+import type { EventDto, UpdateEventInput } from '@c1rcle/contracts';
 
 export { eventEndAtFromDraft, eventStartAtFromDraft } from '@/lib/events/event-time';
 
@@ -72,6 +72,12 @@ export async function publishVenueEvent(
       imageUrl,
       startAt,
       endAt: slotReservation?.endAt ?? eventEndAtFromDraft(draft),
+      visibilityMode: draft.visibilityMode ?? 'public',
+      addressDisclosure:
+        draft.addressDisclosure ??
+        (draft.visibilityMode === 'code' || draft.visibilityMode === 'invited'
+          ? 'hidden'
+          : 'public'),
       tags: [...new Set([...draft.genres, ...draft.artists])].slice(0, 50),
       compensation:
         hasPaidTiers && draft.selectedPromoterIds.length
@@ -109,10 +115,15 @@ export async function publishVenueEvent(
       body: createTicketTierSchema.parse({
         name: tier.name.trim(),
         ...(!isRsvp ? { priceInPaise: Math.round(tier.price * 100) } : {}),
+        ...(!isRsvp && (tier.coverAmountPaise ?? 0) > 0
+          ? { coverAmountPaise: tier.coverAmountPaise }
+          : {}),
         quantity: tier.quantity,
+        ...(!isRsvp && tier.accessMode ? { accessMode: tier.accessMode } : {}),
         ...(tier.accessType ? { accessType: tier.accessType } : {}),
         ...(tier.audienceType ? { audienceType: tier.audienceType } : {}),
         ...(tier.guestCount ? { guestCount: tier.guestCount } : {}),
+        ...(!isRsvp && tier.admissionMode ? { admissionMode: tier.admissionMode } : {}),
         ...(!isRsvp && tier.doorPrice != null
           ? { doorPriceInPaise: Math.round(tier.doorPrice * 100) }
           : {}),
@@ -213,7 +224,7 @@ export async function updatePartnerEventDetails(
   organizationId: string,
   eventId: string,
   version: number,
-  changes: { readonly title: string; readonly summary: string; readonly description: string },
+  changes: UpdateEventInput,
 ): Promise<EventDto> {
   return apiClient.patch({
     path: `/api/v2/events/${encodeURIComponent(eventId)}`,

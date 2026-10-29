@@ -11,7 +11,7 @@ export default async function StudioEventPromotersPage({
 }) {
   const { studio, eventId } = await params;
   if (studio !== 'venue' && studio !== 'host') notFound();
-  const [event, links] = await Promise.all([
+  const [event, data] = await Promise.all([
     loadPartnerEvent(eventId),
     loadPartnerEventPromoters(eventId),
   ]);
@@ -20,7 +20,11 @@ export default async function StudioEventPromotersPage({
       studio={studio}
       eventId={eventId}
       eventTitle={event.title}
-      links={links}
+      links={data.links}
+      assignments={data.assignments}
+      connections={data.connections}
+      tiers={data.tiers}
+      performance={data.performance}
     />
   );
 }

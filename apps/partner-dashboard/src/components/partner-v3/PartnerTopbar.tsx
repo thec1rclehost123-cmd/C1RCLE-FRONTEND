@@ -8,13 +8,13 @@ import {
   SupportIcon,
 } from '@c1rcle/icons';
 
+import { ConnectedPartnerNotifications } from './ConnectedPartnerNotifications';
 import styles from './partner-v3.module.css';
 import { PartnerGlobalSearch } from './PartnerGlobalSearch';
-import { PartnerNotifications } from './PartnerNotifications';
 
 import { Avatar, IconButton } from './index';
 
-import type { PartnerNotificationsData, PartnerSearchData } from '@/data/partner-data-source';
+import type { PartnerSearchData } from '@/data/partner-data-source';
 import type { StudioConfig } from '@/studios/studio-config';
 
 export function PartnerTopbar({
@@ -22,7 +22,7 @@ export function PartnerTopbar({
   activeLabel,
   userName,
   searchData,
-  notificationsData,
+  organizationId,
   navigationLayout,
   mobileOpen,
   onMobileToggle,
@@ -33,7 +33,7 @@ export function PartnerTopbar({
   readonly activeLabel: string;
   readonly userName: string;
   readonly searchData: PartnerSearchData;
-  readonly notificationsData: PartnerNotificationsData;
+  readonly organizationId: string | null;
   readonly navigationLayout: 'side' | 'top';
   readonly mobileOpen: boolean;
   readonly onMobileToggle: () => void;
@@ -114,7 +114,7 @@ export function PartnerTopbar({
             <SupportIcon size={17} aria-hidden="true" />
           </Link>
         ) : null}
-        <PartnerNotifications data={notificationsData} />
+        <ConnectedPartnerNotifications organizationId={organizationId} studioRole={config.role} />
         <IconButton
           label={navigationLayout === 'side' ? 'Use top navigation' : 'Use side navigation'}
           className={styles['layoutSwitchButton']}

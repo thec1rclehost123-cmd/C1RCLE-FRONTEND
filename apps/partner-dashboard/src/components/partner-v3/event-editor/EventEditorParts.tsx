@@ -120,6 +120,57 @@ export function EventBasicDetails({
             placeholder="e.g. Neon Nights: Afrobeats Edition"
           />
         </div>
+        <div className={styles['field']}>
+          <label htmlFor="event-visibility">Who can find this event?</label>
+          <select
+            id="event-visibility"
+            value={draft.visibilityMode ?? 'public'}
+            onChange={(event) => {
+              update({
+                visibilityMode: event.target.value as 'public' | 'unlisted' | 'code' | 'invited',
+              });
+            }}
+          >
+            <option value="public">Public · listed in discovery</option>
+            <option value="unlisted">Unlisted · direct link only</option>
+            <option value="code">Private · access code required</option>
+            <option value="invited">Private · named invitation required</option>
+          </select>
+          <div className={styles['muted']}>
+            {draft.visibilityMode === 'unlisted'
+              ? 'Unlisted events do not appear in discovery. Anyone with the link can view and share event details.'
+              : draft.visibilityMode === 'code' || draft.visibilityMode === 'invited'
+                ? 'Private events stay out of discovery and require a verified, event-scoped grant before details or checkout are available. Configure access from the event access screen.'
+                : 'Public events can appear in C1RCLE discovery.'}
+          </div>
+        </div>
+        <div className={styles['field']}>
+          <label htmlFor="event-address-disclosure">
+            When should guests see the full venue address?
+          </label>
+          <select
+            id="event-address-disclosure"
+            value={
+              draft.addressDisclosure ??
+              (draft.visibilityMode === 'code' || draft.visibilityMode === 'invited'
+                ? 'hidden'
+                : 'public')
+            }
+            onChange={(event) => {
+              update({
+                addressDisclosure: event.target.value as 'public' | 'after_grant' | 'hidden',
+              });
+            }}
+          >
+            <option value="public">Public · visible on event detail</option>
+            <option value="after_grant">After private event access is granted</option>
+            <option value="hidden">Keep the full address hidden</option>
+          </select>
+          <div className={styles['muted']}>
+            Private events default to hidden. After-grant reveals the full address only to guests
+            with an event-scoped grant.
+          </div>
+        </div>
         <div className={styles['threeColumns']}>
           <div className={styles['field']}>
             <label htmlFor="event-date">
@@ -440,7 +491,11 @@ export function TicketTierEditor({
   readonly onChange: (tiers: readonly EventEditorTicketTier[]) => void;
 }) {
   const [benefitInputs, setBenefitInputs] = useState<Record<string, string>>({});
-  const soldOut = tiers.reduce((total, tier) => total + tier.price * tier.quantity, 0);
+  const purchasableUnits = (tier: EventEditorTicketTier) =>
+    tier.admissionMode === 'per_person'
+      ? Math.floor(tier.quantity / Math.max(1, tier.guestCount ?? 1))
+      : tier.quantity;
+  const soldOut = tiers.reduce((total, tier) => total + tier.price * purchasableUnits(tier), 0);
   const updateTier = (id: string, values: Partial<EventEditorTicketTier>) => {
     onChange(tiers.map((tier) => (tier.id === id ? { ...tier, ...values } : tier)));
   };
@@ -495,8 +550,31 @@ export function TicketTierEditor({
               ) : (
                 <div className={styles['tierFieldLabel']}>Free RSVP</div>
               )}
+              {tier.accessType !== 'RSVP' ? (
+                <label className={styles['tierFieldLabel']}>
+                  <span>Event cover (₹ per attendee)</span>
+                  <input
+                    aria-label={`${tier.name} event cover per attendee`}
+                    inputMode="decimal"
+                    min="0"
+                    value={String((tier.coverAmountPaise ?? 0) / 100)}
+                    onChange={(event) => {
+                      updateTier(tier.id, {
+                        coverAmountPaise: Math.round(numberValue(event.target.value) * 100),
+                      });
+                    }}
+                    placeholder="0"
+                  />
+                  <span className={styles['muted']}>
+                    Charged separately from admission. Promoter commission applies to admission
+                    only.
+                  </span>
+                </label>
+              ) : null}
               <label className={styles['tierFieldLabel']}>
-                <span>Capacity</span>
+                <span>
+                  {tier.admissionMode === 'per_person' ? 'Attendee capacity' : 'Capacity'}
+                </span>
                 <input
                   aria-label={`${tier.name} capacity`}
                   inputMode="numeric"
@@ -511,7 +589,7 @@ export function TicketTierEditor({
                 <div className={styles['tierFieldLabel']}>
                   <span>Tier Gross</span>
                   <span className={styles['ticketGross']}>
-                    {formatMoney(tier.price * tier.quantity)}
+                    {formatMoney(tier.price * purchasableUnits(tier))}
                   </span>
                 </div>
               ) : null}
@@ -538,6 +616,26 @@ export function TicketTierEditor({
               </summary>
               <div className={styles['detailsBody']}>
                 <div className={styles['ticketOptions']}>
+                  {tier.accessType !== 'RSVP' ? (
+                    <label>
+                      Tier access
+                      <select
+                        aria-label="Tier access"
+                        value={tier.accessMode ?? 'public'}
+                        onChange={(event) => {
+                          updateTier(tier.id, {
+                            accessMode: event.target.value as NonNullable<
+                              EventEditorTicketTier['accessMode']
+                            >,
+                          });
+                        }}
+                      >
+                        <option value="public">Public</option>
+                        <option value="code">Code-gated</option>
+                        <option value="invited">Invitation-only</option>
+                      </select>
+                    </label>
+                  ) : null}
                   <label>
                     Ticket type / access
                     <select
@@ -552,6 +650,8 @@ export function TicketTierEditor({
                             ? {
                                 accessType,
                                 price: 0,
+                                guestCount: 1,
+                                admissionMode: undefined,
                                 doorPrice: undefined,
                                 pricingPhases: [],
                                 commissionEligible: false,
@@ -582,12 +682,23 @@ export function TicketTierEditor({
                         });
                       }}
                     >
-                      {['GENERAL', 'MALE', 'FEMALE', 'COUPLE', 'GROUP'].map((value) => (
+                      {[
+                        ['GENERAL', 'General'],
+                        ['MALE', 'Men'],
+                        ['FEMALE', 'Women'],
+                        ['COUPLE', 'Couple'],
+                        ['GROUP', 'Group'],
+                        ['STUDENT', 'Student'],
+                        ['MEMBER', 'Member'],
+                      ].map(([value, label]) => (
                         <option key={value} value={value}>
-                          {value}
+                          {label}
                         </option>
                       ))}
                     </select>
+                    <span className="text-xs text-white/50">
+                      Guests confirm eligibility at checkout; the Venue may verify it at entry.
+                    </span>
                   </label>
                   <label>
                     Guests
@@ -597,10 +708,32 @@ export function TicketTierEditor({
                       min="1"
                       value={String(tier.guestCount ?? 1)}
                       onChange={(event) => {
-                        updateTier(tier.id, { guestCount: numberValue(event.target.value) });
+                        const guestCount = numberValue(event.target.value);
+                        updateTier(tier.id, {
+                          guestCount,
+                          ...(guestCount <= 1 ? { admissionMode: undefined } : {}),
+                        });
                       }}
                     />
                   </label>
+                  {tier.accessType !== 'RSVP' && (tier.guestCount ?? 1) > 1 ? (
+                    <label>
+                      Admission issuance
+                      <select
+                        aria-label="Admission issuance"
+                        value={tier.admissionMode ?? 'bundle'}
+                        onChange={(event) => {
+                          updateTier(tier.id, {
+                            admissionMode: event.target
+                              .value as EventEditorTicketTier['admissionMode'],
+                          });
+                        }}
+                      >
+                        <option value="bundle">One group pass</option>
+                        <option value="per_person">Separate pass for each attendee</option>
+                      </select>
+                    </label>
+                  ) : null}
                   {tier.accessType !== 'RSVP' ? (
                     <label>
                       Door price (₹)
@@ -856,6 +989,12 @@ export function TicketTierEditor({
                 ) : (
                   <p>RSVP tickets have no price, phases, or commission.</p>
                 )}
+                {tier.accessType !== 'RSVP' && (tier.accessMode ?? 'public') !== 'public' ? (
+                  <p className={styles['muted']}>
+                    Restricted tiers stay unavailable until their access code or verified invitation
+                    flow is configured.
+                  </p>
+                ) : null}
               </div>
             </details>
           </div>

@@ -255,6 +255,7 @@ function toUiRequest(
 ): SlotRequest {
   return {
     id: dto.id,
+    ...(dto.eventId ? { eventId: dto.eventId } : {}),
     status: mapStatus(dto.status),
     direction,
     partnerName,

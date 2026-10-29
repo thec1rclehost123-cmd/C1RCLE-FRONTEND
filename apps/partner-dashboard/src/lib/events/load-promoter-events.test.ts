@@ -88,6 +88,15 @@ describe('loadPromoterEvents', () => {
             pageInfo: { page: 1, pageSize: 100, total: 1, hasNextPage: false },
           });
         }
+        if (path === '/api/v2/promoters/org_1/assignment-invitations') {
+          return Promise.resolve([]);
+        }
+        if (path === '/api/v2/promoters/org_1/referral-links?limit=100') {
+          return Promise.resolve({
+            items: [],
+            pageInfo: { page: 1, pageSize: 100, total: 0, hasNextPage: false },
+          });
+        }
         return Promise.reject(new Error(`Unexpected API path: ${path}`));
       },
     } as unknown as ServerApiClient;
@@ -98,8 +107,8 @@ describe('loadPromoterEvents', () => {
     expect(result.linkedEvents[0]).toMatchObject({
       id: 'evt_assigned',
       name: 'Assigned event',
-      clicks: null,
-      sales: null,
+      clicks: 0,
+      sales: 0,
       commissionLabel: '15% commission',
     });
     expect(result.discoverEvents[0]).toMatchObject({
@@ -111,6 +120,8 @@ describe('loadPromoterEvents', () => {
     expect(apiCalls.map((call) => call.path)).toEqual([
       '/api/v2/promoters/org_1/events',
       '/api/v2/public/events?limit=100',
+      '/api/v2/promoters/org_1/assignment-invitations',
+      '/api/v2/promoters/org_1/referral-links?limit=100',
     ]);
     expect(apiCalls[0]?.headers).toEqual({ 'x-organization-id': 'org_1' });
   });

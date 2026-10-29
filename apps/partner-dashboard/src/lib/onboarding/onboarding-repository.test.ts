@@ -44,6 +44,7 @@ const dto = (version: number, extra: Record<string, unknown> = {}) => ({
   plan: 'basic',
   profile: { legalName: 'Acme', contactPerson: 'A', phone: '+919876543210', city: 'Pune' },
   documents: [],
+  promoterAgreementAcceptances: [],
   missingDocuments: ['id_front', 'id_back', 'selfie'],
   submittedAt: null,
   reviewedBy: null,

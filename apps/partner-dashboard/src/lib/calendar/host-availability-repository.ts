@@ -244,15 +244,23 @@ export async function requestHostAvailabilitySlot({
   venueId,
   slotId,
   idempotencyKey,
+  eventId,
 }: {
   readonly organizationId: string;
   readonly venueId: string;
   readonly slotId: string;
   readonly idempotencyKey: string;
+  readonly eventId?: string;
 }) {
   return apiClient.post({
     path: `/api/v2/venues/${encodeURIComponent(venueId)}/slot-requests`,
-    body: { slotId, message: 'Requesting the published Venue availability.' },
+    body: {
+      slotId,
+      ...(eventId ? { eventId } : {}),
+      message: eventId
+        ? `Requesting a new Venue slot for event ${eventId}.`
+        : 'Requesting the published Venue availability.',
+    },
     headers: {
       'x-organization-id': organizationId,
       'Idempotency-Key': idempotencyKey,

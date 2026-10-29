@@ -31,7 +31,11 @@ const eventViews = [
   ['Analytics', 'analytics'],
   ['Sales', 'sales'],
   ['Attendees', 'guests'],
+  ['Waitlist', 'waitlist'],
+  ['Door scanner', 'door'],
   ['Promoters', 'promoters'],
+  ['Access codes', 'access'],
+  ['Cover policy', 'cover'],
 ] as const;
 
 const cancellableStatuses = new Set<EventOperationsDto['status']>([

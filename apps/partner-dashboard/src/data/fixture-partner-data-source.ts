@@ -1213,6 +1213,8 @@ const promoterEventsData: PromoterEventsData = {
   linkedCount: 4,
   discoverEvents: promoterDiscoverEvents,
   linkedEvents: promoterLinkedEvents,
+  invitations: [],
+  referralLinks: [],
 };
 
 const partnerProfileDefaults = {

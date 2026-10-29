@@ -9,7 +9,10 @@ import { getActiveOrgIdFromCookieHeader } from '@/lib/org/active-org-cookie';
 
 import type { DoorGuest } from '@c1rcle/contracts';
 
-export async function loadPartnerEventGuests(eventId: string): Promise<readonly DoorGuest[]> {
+export async function loadPartnerEventGuests(eventId: string): Promise<{
+  readonly items: readonly DoorGuest[];
+  readonly truncated: boolean;
+}> {
   const cookieHeader = (await cookies()).toString();
   const organizationId = getActiveOrgIdFromCookieHeader(cookieHeader);
   if (!organizationId) throw new Error('Select an organization before viewing event guests.');
@@ -18,5 +21,5 @@ export async function loadPartnerEventGuests(eventId: string): Promise<readonly 
     schema: doorGuestListResponseSchema,
     headers: { 'x-organization-id': organizationId },
   });
-  return response.items;
+  return response;
 }

@@ -1,8 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { mapHostAvailability } from './host-availability-repository';
+import { mapHostAvailability, requestHostAvailabilitySlot } from './host-availability-repository';
 
 import type { EventDto, VenueAvailabilityDto, VenueDto } from '@c1rcle/contracts';
+
+const post = vi.hoisted(() => vi.fn());
+
+vi.mock('@/lib/api/client', () => ({ apiClient: { post } }));
+
+beforeEach(() => post.mockReset());
 
 const timestamp = '2026-09-01T00:00:00.000Z';
 const venue: VenueDto = {
@@ -49,6 +55,8 @@ function event(id: string, day: number, status: EventDto['status']): EventDto {
     startAt: `${date}T14:30:00.000Z`,
     endAt: `${date}T17:30:00.000Z`,
     status,
+    visibilityMode: 'public',
+    addressDisclosure: 'public',
     isPublic: true,
     tags: [],
     startingPricePaise: null,
@@ -116,5 +124,26 @@ describe('host availability repository mapping', () => {
       ],
     });
     expect(days[7]).toMatchObject({ state: 'unavailable', events: [] });
+  });
+
+  it('binds a reschedule slot request to the selected event', async () => {
+    await requestHostAvailabilitySlot({
+      organizationId: 'host-org-1',
+      venueId: 'venue-1',
+      slotId: 'slot-new',
+      idempotencyKey: 'request-key',
+      eventId: 'event-1',
+    });
+
+    expect(post).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: '/api/v2/venues/venue-1/slot-requests',
+        body: {
+          slotId: 'slot-new',
+          eventId: 'event-1',
+          message: 'Requesting a new Venue slot for event event-1.',
+        },
+      }),
+    );
   });
 });

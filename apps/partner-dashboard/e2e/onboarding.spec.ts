@@ -15,12 +15,9 @@
  *   - webServer: pnpm exec next start --port 3211
  *   - retries: 2 in CI
  *
- * Known URL routing discrepancies (documented here, not yet hard-failing):
- *   - startOnboarding()  → /api/v2/onboarding/applications (should be BFF)
- *   - saveProgress()     → /api/v2/onboarding/applications/:id (should be BFF)
- *   - submit()           → /api/v2/onboarding/applications/:id/submit (should be BFF)
- * The BFF wrappers for all three exist and are unit-tested. See section 6 of the
- * implementation plan for full details.
+ * Application lifecycle requests must remain same-origin through the BFF.
+ * The mocks return failures for direct gateway paths so routing regressions do
+ * not accidentally pass or reach a configured gateway during browser tests.
  */
 
 import { expect, test, type Page, type Route } from '@playwright/test';
@@ -46,6 +43,7 @@ function makeApplicationDto(overrides: Record<string, unknown> = {}): Record<str
       entityType: 'individual',
     },
     documents: [],
+    promoterAgreementAcceptances: [],
     missingDocuments: ['id_front', 'id_back', 'selfie'],
     submittedAt: null,
     reviewedBy: null,
@@ -60,10 +58,9 @@ function makeApplicationDto(overrides: Record<string, unknown> = {}): Record<str
 }
 
 /**
- * Intercepts all BFF and gateway calls the onboarding wizard makes.
- * Both the correct BFF path AND the current (buggy) direct-gateway path are
- * intercepted for write operations so tests pass regardless of which the code
- * currently hits, while URL contract tests assert the specific path used.
+ * Intercepts onboarding calls made by the wizard. BFF calls receive synthetic
+ * responses; direct gateway application paths fail closed. The sole intentional
+ * direct gateway call is the format-only document check, which has no BFF route.
  */
 async function mockOnboardingNetwork(
   page: Page,
@@ -187,8 +184,7 @@ async function mockOnboardingNetwork(
     });
   });
 
-  // ── POST: start application — both BFF and direct gateway paths ───────────
-  // BFF (correct target): /api/bff/onboarding/applications
+  // ── POST: start application through the same-origin BFF ──────────────────
   await page.route('**/api/bff/onboarding/applications', async (route: Route) => {
     if (route.request().method() !== 'POST') {
       await route.continue();
@@ -200,20 +196,7 @@ async function mockOnboardingNetwork(
       body: JSON.stringify(makeApplicationDto()),
     });
   });
-  // Direct gateway (current buggy target): /api/v2/onboarding/applications
-  await page.route('**/api/v2/onboarding/applications', async (route: Route) => {
-    if (route.request().method() !== 'POST') {
-      await route.continue();
-      return;
-    }
-    await route.fulfill({
-      status: 201,
-      contentType: 'application/json',
-      body: JSON.stringify(makeApplicationDto()),
-    });
-  });
-
-  // ── PATCH autosave — both BFF and direct gateway paths ───────────────────
+  // ── PATCH autosave through the same-origin BFF ────────────────────────────
   await page.route(`**/api/bff/onboarding/applications/${APP_ID}`, async (route: Route) => {
     if (route.request().method() !== 'PATCH') {
       await route.continue();
@@ -225,43 +208,26 @@ async function mockOnboardingNetwork(
       body: JSON.stringify(makeApplicationDto({ version: 2 })),
     });
   });
-  await page.route(`**/api/v2/onboarding/applications/${APP_ID}`, async (route: Route) => {
-    if (route.request().method() !== 'PATCH') {
-      await route.continue();
+  // ── POST submit through the same-origin BFF ───────────────────────────────
+  await page.route(`**/api/bff/onboarding/applications/${APP_ID}/submit`, async (route: Route) => {
+    if (options.submitMissingDocs) {
+      await route.fulfill({
+        status: 400,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          code: 'validation',
+          message: 'Please upload all required documents before submitting.',
+          status: 400,
+        }),
+      });
       return;
     }
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(makeApplicationDto({ version: 2 })),
+      body: JSON.stringify(makeApplicationDto({ status: 'submitted', missingDocuments: [] })),
     });
   });
-
-  // ── POST submit — both BFF and direct gateway paths ───────────────────────
-  for (const submitPattern of [
-    `**/api/bff/onboarding/applications/${APP_ID}/submit`,
-    `**/api/v2/onboarding/applications/${APP_ID}/submit`,
-  ]) {
-    await page.route(submitPattern, async (route: Route) => {
-      if (options.submitMissingDocs) {
-        await route.fulfill({
-          status: 400,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            code: 'validation',
-            message: 'Please upload all required documents before submitting.',
-            status: 400,
-          }),
-        });
-        return;
-      }
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(makeApplicationDto({ status: 'submitted', missingDocuments: [] })),
-      });
-    });
-  }
 
   // ── KYC document upload via BFF (2-phase) ─────────────────────────────────
   await page.route(
@@ -288,6 +254,21 @@ async function mockOnboardingNetwork(
       }),
     });
   });
+
+  // Never let application data bypass the cookie-authenticated, CSRF-checked
+  // same-origin BFF during browser tests, even if a route is added later.
+  for (const directApplicationPattern of [
+    '**/api/v2/onboarding/applications',
+    '**/api/v2/onboarding/applications/**',
+  ]) {
+    await page.route(directApplicationPattern, async (route: Route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 'e2e_direct_gateway_forbidden', status: 500 }),
+      });
+    });
+  }
 
   // ── Firebase Identity Platform (phone OTP) ────────────────────────────────
   // `appVerificationDisabledForTesting` (non-production builds) skips reCAPTCHA,

@@ -27,6 +27,8 @@ const event: EventOperationsDto = {
   startAt: '2026-12-30T13:30:00.000Z',
   endAt: '2026-12-30T17:30:00.000Z',
   status: 'published',
+  visibilityMode: 'public',
+  addressDisclosure: 'public',
   isPublic: true,
   tags: [],
   startingPricePaise: 10_000,

@@ -20,7 +20,9 @@ export default async function StudioEventsPage({
       Array.isArray(value) ? value[0] : value;
     if (studio === 'promoter') {
       const data = await loadPromoterEvents();
-      const tab = getValue(query['tab']) === 'linked' ? ('linked' as const) : ('discover' as const);
+      const requestedTab = getValue(query['tab']);
+      const tab =
+        requestedTab === 'linked' || requestedTab === 'invitations' ? requestedTab : 'discover';
       const city = getValue(query['city']) ?? 'all';
       return (
         <PromoterEventsScreen

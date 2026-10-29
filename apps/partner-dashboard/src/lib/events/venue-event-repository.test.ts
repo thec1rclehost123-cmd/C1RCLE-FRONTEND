@@ -116,7 +116,9 @@ describe('publishVenueEvent', () => {
       .mockResolvedValueOnce({ id: 'evt_1', status: 'review' })
       .mockResolvedValueOnce({ id: 'evt_1', status: 'published' });
 
-    await expect(publishVenueEvent('org_1', draft)).resolves.toMatchObject({
+    await expect(
+      publishVenueEvent('org_1', { ...draft, visibilityMode: 'unlisted' }),
+    ).resolves.toMatchObject({
       id: 'evt_1',
       status: 'published',
     });
@@ -136,6 +138,7 @@ describe('publishVenueEvent', () => {
       startAt: '2026-09-17T16:00:00.000Z',
       endAt: '2026-09-17T21:30:00.000Z',
       imageUrl: null,
+      visibilityMode: 'unlisted',
     });
     expect(mocks.post.mock.calls[1]?.[0].body).toMatchObject({
       name: 'General Admission',
@@ -386,7 +389,13 @@ describe('publishVenueEvent contract and error handling', () => {
     await publishVenueEvent('org_1', {
       ...draft,
       ticketTiers: [
-        ...draft.ticketTiers,
+        {
+          ...draft.ticketTiers[0]!,
+          quantity: 90,
+          guestCount: 3,
+          admissionMode: 'per_person',
+          accessMode: 'code',
+        },
         { id: 'rsvp', name: 'Guest list', price: 0, quantity: 50, accessType: 'RSVP' },
       ],
     });
@@ -396,6 +405,12 @@ describe('publishVenueEvent contract and error handling', () => {
     const rsvp = createTicketTierSchema.safeParse(mocks.post.mock.calls[2]?.[0].body);
     expect(paid.success).toBe(true);
     expect(rsvp.success).toBe(true);
+    expect(mocks.post.mock.calls[1]?.[0].body).toMatchObject({
+      quantity: 90,
+      guestCount: 3,
+      admissionMode: 'per_person',
+      accessMode: 'code',
+    });
     const rsvpBody = mocks.post.mock.calls[2]?.[0].body as Record<string, unknown>;
     expect(rsvpBody).not.toHaveProperty('priceInPaise');
     expect(rsvpBody).not.toHaveProperty('pricingPhases');

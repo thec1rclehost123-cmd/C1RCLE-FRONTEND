@@ -15,12 +15,14 @@ export function HostAvailabilityRoute({
   initialDate,
   initialVenue,
   initialSlot,
+  initialEventId,
 }: {
   readonly organizationId: string | null;
   readonly initialMonth?: string;
   readonly initialDate?: string;
   readonly initialVenue?: string;
   readonly initialSlot?: string;
+  readonly initialEventId?: string;
 }) {
   const requestKeys = useRef(new Map<string, string>());
   const state = useHostAvailability({
@@ -81,6 +83,7 @@ export function HostAvailabilityRoute({
           venueId,
           slotId,
           idempotencyKey,
+          ...(initialEventId ? { eventId: initialEventId } : {}),
         });
         requestKeys.current.delete(slotId);
         state.retry();

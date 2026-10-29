@@ -22,7 +22,7 @@ import styles from './events.module.css';
 
 import type { PromoterEventsData } from '@/data/partner-data-source';
 
-type PromoterEventsTab = 'discover' | 'linked';
+type PromoterEventsTab = 'discover' | 'linked' | 'invitations';
 
 const cityOptions = ['all', 'Pune', 'Mumbai'] as const;
 type PromoterCity = (typeof cityOptions)[number];
@@ -84,7 +84,13 @@ export function PromoterEventsScreen({
     setCity(value);
     updateUrl({ city: value });
   };
-  const visibleEvents = tab === 'discover' ? visibleDiscoverEvents : visibleLinkedEvents;
+  const visibleInvitations = filterEvents(data.invitations, query, 'all');
+  const visibleEvents =
+    tab === 'discover'
+      ? visibleDiscoverEvents
+      : tab === 'invitations'
+        ? visibleInvitations
+        : visibleLinkedEvents;
 
   return (
     <PageContainer>
@@ -114,6 +120,18 @@ export function PromoterEventsScreen({
               }}
             >
               Linked Events <span className={styles['promoterTabCount']}>{data.linkedCount}</span>
+            </button>
+            <button
+              className={styles['promoterTab']}
+              type="button"
+              role="tab"
+              aria-selected={tab === 'invitations'}
+              onClick={() => {
+                onTabChange('invitations');
+              }}
+            >
+              Invitations{' '}
+              <span className={styles['promoterTabCount']}>{data.invitations.length}</span>
             </button>
           </div>
 
@@ -154,6 +172,13 @@ export function PromoterEventsScreen({
             </p>
           ) : null}
 
+          {tab === 'linked' && data.dataStatus === 'api' && data.referralLinksHaveMore ? (
+            <p className={styles['promoterLinkedMeta']}>
+              Click and sale totals include the first 100 referral links only. Additional links are
+              not included in these event totals.
+            </p>
+          ) : null}
+
           {visibleEvents.length === 0 ? (
             <EventEmptyState
               filtered={Boolean(query.trim()) || (data.dataStatus === 'fixture' && city !== 'all')}
@@ -170,6 +195,17 @@ export function PromoterEventsScreen({
                 />
               ))}
             </section>
+          ) : tab === 'invitations' ? (
+            <section className={styles['promoterGrid']} aria-label="Promoter invitations">
+              {visibleInvitations.map((event) => (
+                <LinkedEventCard
+                  key={event.assignmentId ?? event.id}
+                  event={event}
+                  href={eventHref(event.id)}
+                  interactive
+                />
+              ))}
+            </section>
           ) : (
             <section className={styles['promoterGrid']} aria-label="Linked events">
               {visibleLinkedEvents.map((event) => (
@@ -177,7 +213,7 @@ export function PromoterEventsScreen({
                   key={event.id}
                   event={event}
                   href={eventHref(event.id)}
-                  interactive={data.dataStatus === 'fixture'}
+                  interactive
                 />
               ))}
             </section>
@@ -316,6 +352,11 @@ function LinkedEventCard({
       </div>
       {event.commissionLabel ? (
         <div className={styles['promoterLinkedMeta']}>{event.commissionLabel}</div>
+      ) : null}
+      {event.assignmentStatus ? (
+        <div className={styles['promoterLinkedMeta']}>
+          {event.assignmentStatus === 'invited' ? 'Invitation pending' : event.assignmentStatus}
+        </div>
       ) : null}
     </>
   );

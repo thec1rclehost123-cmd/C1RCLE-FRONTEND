@@ -186,6 +186,7 @@ describe('DashboardAuthProvider', () => {
         city: 'Mumbai',
       },
       documents: [],
+      promoterAgreementAcceptances: [],
       missingDocuments: [],
       submittedAt: '2026-01-01T00:00:00.000Z',
       reviewedBy: null,

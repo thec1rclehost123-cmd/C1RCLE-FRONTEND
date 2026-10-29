@@ -124,7 +124,7 @@ export function PartnerShell({
           activeLabel={activeLabel}
           userName={userName}
           searchData={interactionData.search}
-          notificationsData={interactionData.notifications}
+          organizationId={auth.profile?.activeMembership?.partnerId ?? null}
           navigationLayout={navigationLayout}
           mobileOpen={mobileOpen}
           onMobileToggle={() => {

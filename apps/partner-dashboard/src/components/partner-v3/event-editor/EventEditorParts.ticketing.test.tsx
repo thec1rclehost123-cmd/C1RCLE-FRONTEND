@@ -30,6 +30,8 @@ describe('TicketTierEditor ticket dimensions', () => {
     await openTicketOptions(user);
 
     await user.selectOptions(screen.getByLabelText('Ticket type / access'), 'VIP');
+    expect(screen.getByRole('option', { name: 'Student' })).toHaveValue('STUDENT');
+    expect(screen.getByRole('option', { name: 'Member' })).toHaveValue('MEMBER');
     await user.selectOptions(screen.getByLabelText('Audience'), 'COUPLE');
     await user.clear(screen.getByLabelText('Guests'));
     await user.type(screen.getByLabelText('Guests'), '2');

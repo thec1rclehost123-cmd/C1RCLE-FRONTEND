@@ -115,6 +115,9 @@ describe('PromoterEventsScreen', () => {
           artwork: { type: 'gradient' as const, value: 'placeholder' },
         },
       ],
+      invitations: [],
+      referralLinks: [],
+      referralLinksHaveMore: true,
     };
     render(<PromoterEventsScreen data={data} />);
 
@@ -126,11 +129,13 @@ describe('PromoterEventsScreen', () => {
     ).not.toBeInTheDocument();
 
     await userEvent.setup().click(screen.getByRole('tab', { name: /Linked Events/ }));
+    expect(screen.getByText(/first 100 referral links only/)).toBeInTheDocument();
     expect(screen.getByText(/Clicks unavailable/)).toBeInTheDocument();
     expect(screen.getByText(/sales unavailable/)).toBeInTheDocument();
     expect(screen.getByText('15% commission')).toBeInTheDocument();
-    expect(
-      screen.queryByRole('link', { name: 'Assigned event linked event' }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Assigned event linked event' })).toHaveAttribute(
+      'href',
+      '/partner/promoter/events/evt_assigned',
+    );
   });
 });

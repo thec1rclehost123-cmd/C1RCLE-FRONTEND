@@ -106,6 +106,7 @@ describe('loadSlotRequestsData outgoing venue enrichment', () => {
     });
 
     expect(result.requests).toHaveLength(1);
+    expect(result.requests[0]?.eventId).toBe('event-m3');
     expect(result.requests[0]?.partnerName).toBe('Keshvi Agarwal');
     expect(result.requests[0]?.event.venue).toBe('Keshvi Agarwal');
     expect(result.requests[0]?.event.date).toBe('Fri, 6 Nov');

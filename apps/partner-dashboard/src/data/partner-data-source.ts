@@ -1,4 +1,5 @@
 import type { StudioRole } from '@/studios/studio-config';
+import type { ReferralLinkDto } from '@c1rcle/contracts';
 
 export interface StudioShellData {
   readonly role: StudioRole;
@@ -454,6 +455,16 @@ export interface PromoterDiscoverEvent {
 
 export interface PromoterLinkedEvent {
   readonly id: string;
+  readonly assignmentId?: string;
+  readonly assignmentVersion?: number;
+  readonly assignmentStatus?:
+    'invited' | 'accepted' | 'active' | 'rejected' | 'revoked' | 'expired' | 'suspended' | 'ended';
+  readonly ratePercent?: number;
+  readonly flatPaise?: number;
+  readonly eligibleTierIds?: readonly string[] | null;
+  readonly tierRates?: Readonly<Record<string, { ratePercent: number; flatPaise: number }>>;
+  readonly startsAt?: string | null;
+  readonly expiresAt?: string | null;
   readonly name: string;
   readonly venue: string;
   readonly city: string;
@@ -471,6 +482,10 @@ export interface PromoterEventsData {
   readonly discoverHasMore?: boolean;
   readonly discoverEvents: readonly PromoterDiscoverEvent[];
   readonly linkedEvents: readonly PromoterLinkedEvent[];
+  readonly invitations: readonly PromoterLinkedEvent[];
+  readonly referralLinks: readonly ReferralLinkDto[];
+  readonly referralLinkTotal?: number;
+  readonly referralLinksHaveMore?: boolean;
 }
 
 export type PartnerKind = 'host' | 'promoter' | 'venue';
@@ -928,6 +943,7 @@ export interface SlotRequestEvent {
 
 export interface SlotRequest {
   readonly id: string;
+  readonly eventId?: string | undefined;
   readonly status: SlotRequestStatus;
   readonly direction: SlotRequestDirection;
   readonly partnerName: string;
@@ -1043,11 +1059,16 @@ export interface EventEditorTicketTier {
   readonly id: string;
   readonly name: string;
   readonly price: number;
+  /** Event cover charged separately per issued admission entitlement, in paise. */
+  readonly coverAmountPaise?: number;
   readonly quantity: number;
   readonly maxPerOrder?: number | undefined;
+  readonly accessMode?: 'public' | 'code' | 'invited';
   readonly accessType?: 'ENTRY' | 'VIP' | 'VVIP' | 'TABLE' | 'PACKAGE' | 'RSVP' | undefined;
-  readonly audienceType?: 'GENERAL' | 'MALE' | 'FEMALE' | 'COUPLE' | 'GROUP' | undefined;
+  readonly audienceType?:
+    'GENERAL' | 'MALE' | 'FEMALE' | 'COUPLE' | 'GROUP' | 'STUDENT' | 'MEMBER' | undefined;
   readonly guestCount?: number;
+  readonly admissionMode?: 'bundle' | 'per_person' | undefined;
   readonly doorPrice?: number | undefined;
   readonly pricingPhases?: readonly {
     readonly id: string;
@@ -1075,6 +1096,8 @@ export interface EventEditorDraft {
   readonly name: string;
   readonly description: string;
   readonly venueId: string;
+  readonly visibilityMode?: 'public' | 'unlisted' | 'code' | 'invited';
+  readonly addressDisclosure?: 'public' | 'after_grant' | 'hidden';
   readonly date: string;
   readonly dateLabel: string;
   readonly time: string;

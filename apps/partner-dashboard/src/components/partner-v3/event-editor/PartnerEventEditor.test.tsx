@@ -121,6 +121,22 @@ describe('PartnerEventEditor', () => {
     fireEvent.change(screen.getByLabelText('Event description'), {
       target: { value: 'A namespaced test night with music and a small guest list.' },
     });
+    fireEvent.change(screen.getByLabelText('Who can find this event?'), {
+      target: { value: 'unlisted' },
+    });
+    fireEvent.change(screen.getByLabelText('When should guests see the full venue address?'), {
+      target: { value: 'hidden' },
+    });
+    await user.click(screen.getAllByText('Ticket options')[0]!);
+    fireEvent.change(screen.getAllByLabelText('Guests')[0]!, { target: { value: '3' } });
+    fireEvent.change(screen.getByLabelText('Admission issuance'), {
+      target: { value: 'per_person' },
+    });
+    fireEvent.change(screen.getAllByLabelText('Tier access')[0]!, { target: { value: 'code' } });
+    expect(screen.getByText('Attendee capacity')).toBeInTheDocument();
+    expect(screen.getByText('₹99,600')).toBeInTheDocument();
+    expect(screen.getByText(/Anyone with the link can view and share event details/)).toBeVisible();
+    expect(screen.getByText(/Restricted tiers stay unavailable/)).toBeVisible();
     await user.click(screen.getByRole('button', { name: String(availableDate.day) }));
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     await user.click(screen.getByRole('button', { name: 'Continue' }));
@@ -131,14 +147,19 @@ describe('PartnerEventEditor', () => {
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledTimes(1);
     });
-    expect(onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: 'Backend Night',
-        description: 'A namespaced test night with music and a small guest list.',
-        date: availableDate.date,
-      }),
-      '',
-    );
+    const submittedDraft = onSubmit.mock.calls[0]?.[0];
+    expect(submittedDraft).toMatchObject({
+      name: 'Backend Night',
+      description: 'A namespaced test night with music and a small guest list.',
+      date: availableDate.date,
+      visibilityMode: 'unlisted',
+      addressDisclosure: 'hidden',
+    });
+    expect(submittedDraft?.ticketTiers[0]).toMatchObject({
+      guestCount: 3,
+      admissionMode: 'per_person',
+      accessMode: 'code',
+    });
   });
 
   it('keeps publish clickable and reveals validation errors on review', async () => {

@@ -56,6 +56,8 @@ function event(id: string, day: number, status: EventDto['status']): EventDto {
     startAt: `${date}T14:30:00.000Z`,
     endAt: `${date}T17:30:00.000Z`,
     status,
+    visibilityMode: 'public',
+    addressDisclosure: 'public',
     isPublic: true,
     tags: [],
     startingPricePaise: null,

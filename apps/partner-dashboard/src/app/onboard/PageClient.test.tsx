@@ -87,6 +87,7 @@ const dto = (extra: Record<string, unknown> = {}, profile: Record<string, unknow
     ...profile,
   },
   documents: [],
+  promoterAgreementAcceptances: [],
   missingDocuments: ['id_front', 'id_back', 'selfie'],
   submittedAt: null,
   version: 1,
