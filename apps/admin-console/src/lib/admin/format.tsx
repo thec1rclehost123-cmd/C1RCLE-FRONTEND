@@ -58,7 +58,6 @@ export const ADMIN_ACTION_LABELS: Record<AdminAction, string> = {
   ORGANIZATION_SUSPEND: 'Suspend organization',
   ORGANIZATION_REINSTATE: 'Reinstate organization',
   FINANCIAL_REFUND: 'Refund',
-  TAX_RULE_UPDATE: 'Change tax rules',
   PAYOUT_BATCH_RUN: 'Run payout batch',
   PAYOUT_COMPLETE: 'Complete manual payout',
   DISPUTE_RESOLVE: 'Resolve dispute',
@@ -72,6 +71,7 @@ export const ADMIN_ACTION_LABELS: Record<AdminAction, string> = {
   FINANCIAL_ADJUSTMENT: 'Post financial adjustment',
   PROMOTER_SUSPEND: 'Suspend promoter',
   PROMOTER_REINSTATE: 'Reinstate promoter',
+  PROMOTER_LINK_DEACTIVATE: 'Deactivate promoter link',
 };
 
 /**
@@ -358,6 +358,11 @@ export function ticketStatusTone(status: TicketStatus): Tone {
 }
 
 export const PROMOTER_ASSIGNMENT_STATUS_LABELS: Record<PromoterAssignmentStatus, string> = {
+  invited: 'Invitation pending',
+  accepted: 'Accepted',
+  rejected: 'Rejected',
+  revoked: 'Revoked',
+  expired: 'Expired',
   active: 'Active',
   ended: 'Ended',
   suspended: 'Suspended',
@@ -365,10 +370,17 @@ export const PROMOTER_ASSIGNMENT_STATUS_LABELS: Record<PromoterAssignmentStatus,
 
 export function promoterAssignmentStatusTone(status: PromoterAssignmentStatus): Tone {
   switch (status) {
+    case 'invited':
+      return 'warning';
+    case 'accepted':
     case 'active':
       return 'success';
+    case 'rejected':
+      return 'destructive';
     case 'suspended':
       return 'warning';
+    case 'revoked':
+    case 'expired':
     case 'ended':
       return 'muted';
   }

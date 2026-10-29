@@ -49,6 +49,7 @@ const app = {
     },
   ],
   missingDocuments: [],
+  promoterAgreementAcceptances: [],
   submittedAt: '2026-09-01T00:00:00.000Z',
   reviewedBy: null,
   reviewedAt: null,

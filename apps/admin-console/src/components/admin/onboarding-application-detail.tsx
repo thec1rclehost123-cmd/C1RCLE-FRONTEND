@@ -70,6 +70,43 @@ export function OnboardingApplicationDetail({
       </div>
 
       <div className="space-y-6 px-4 py-4">
+        {application.requestedType === 'promoter' ? (
+          <section aria-labelledby="promoter-agreement-evidence">
+            <h3
+              id="promoter-agreement-evidence"
+              className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+            >
+              Promoter agreement evidence
+            </h3>
+            {application.promoterAgreementAcceptances.length === 0 ? (
+              <p className="mt-2 text-sm">No agreement acceptance is recorded.</p>
+            ) : (
+              <ul className="mt-2 space-y-2">
+                {application.promoterAgreementAcceptances.map((acceptance) => (
+                  <li
+                    key={`${acceptance.version}:${acceptance.acceptedAt}`}
+                    className="rounded-md border border-border p-3 text-sm"
+                  >
+                    <p>
+                      {acceptance.version} · {acceptance.artifactStatus}
+                    </p>
+                    {acceptance.artifactStatus === 'test_fixture' ? (
+                      <p className="mt-1 text-amber-700">
+                        Test fixture only. This is not approved legal wording and cannot authorize
+                        real campaign activation.
+                      </p>
+                    ) : null}
+                    <p className="mt-1 text-muted-foreground">
+                      Accepted by {shortId(acceptance.acceptedBy)} on{' '}
+                      {formatDateTime(acceptance.acceptedAt)} · SHA-256 {acceptance.textSha256}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        ) : null}
+
         <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="Status" value={ONBOARDING_STATUS_LABELS[application.status]} />
           <Field label="Requested type" value={application.requestedType} />

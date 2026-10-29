@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, type SyntheticEvent } from 'react';
 
 import { Button, EmptyState, ErrorState, LoadingState } from '@c1rcle/ui';
 
@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/admin/page-header';
 import { StatusFilter } from '@/components/admin/status-filter';
 import {
   exportOrdersCsv,
+  findOrderByBookingReference,
   listOrders,
   ORDER_STATUSES,
   statusFilterOptions,
@@ -28,6 +29,8 @@ type Filter = OrderStatus | 'all';
 
 export default function OrdersDesk() {
   const [filter, setFilter] = useState<Filter>('all');
+  const [bookingReferenceInput, setBookingReferenceInput] = useState('');
+  const [investigationReference, setInvestigationReference] = useState<string | null>(null);
 
   const list = useQuery({
     queryKey: ['admin', 'orders', filter],
@@ -39,6 +42,22 @@ export default function OrdersDesk() {
   const exportMutation = useMutation({
     mutationFn: () => exportOrdersCsv(),
   });
+
+  const investigation = useQuery({
+    queryKey: ['admin', 'orders', 'promoter-investigation', investigationReference],
+    queryFn: () => {
+      if (investigationReference === null) throw new Error('No booking reference selected');
+      return findOrderByBookingReference(investigationReference);
+    },
+    enabled: investigationReference !== null,
+    retry: false,
+  });
+
+  const submitInvestigation = (event: SyntheticEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const reference = bookingReferenceInput.trim().toUpperCase();
+    if (reference) setInvestigationReference(reference);
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -71,6 +90,105 @@ export default function OrdersDesk() {
           </Button>
         </div>
       </div>
+
+      <section className="rounded-lg border border-border p-4">
+        <h2 className="font-semibold">Promoter order investigation</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Look up an exact booking reference to inspect verified attribution and its journal and
+          reversal evidence.
+        </p>
+        <form onSubmit={submitInvestigation} className="mt-3 flex flex-wrap gap-2">
+          <label className="sr-only" htmlFor="booking-reference">
+            Booking reference
+          </label>
+          <input
+            id="booking-reference"
+            value={bookingReferenceInput}
+            onChange={(event) => {
+              setBookingReferenceInput(event.target.value);
+            }}
+            placeholder="C1-ABCDE-12345-67890-F0123"
+            autoComplete="off"
+            maxLength={64}
+            className="min-w-64 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+          />
+          <Button type="submit" size="sm" disabled={!bookingReferenceInput.trim()}>
+            Find order
+          </Button>
+        </form>
+        {investigation.isPending && investigationReference ? (
+          <p role="status" className="mt-3 text-sm text-muted-foreground">
+            Looking up {investigationReference}…
+          </p>
+        ) : null}
+        {investigation.isError ? (
+          <p role="alert" className="mt-3 text-sm text-destructive">
+            Order lookup failed. Check the booking reference and your Admin access, then retry.
+          </p>
+        ) : null}
+        {investigation.data ? (
+          <div className="mt-4 grid gap-4 border-t border-border pt-4 lg:grid-cols-2">
+            <div>
+              <h3 className="font-medium">Order {investigation.data.bookingReference}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {investigation.data.order.status} ·{' '}
+                {formatPaise(investigation.data.order.grandTotalPaise)}
+                {' · '}refunded {formatPaise(investigation.data.order.refundedPaise)}
+              </p>
+              {investigation.data.attribution ? (
+                <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+                  <dt className="text-muted-foreground">Promoter</dt>
+                  <dd className="font-mono">{investigation.data.attribution.promoterId}</dd>
+                  <dt className="text-muted-foreground">Assignment</dt>
+                  <dd className="font-mono">
+                    {investigation.data.attribution.assignmentId} · v
+                    {investigation.data.attribution.assignmentVersion}
+                  </dd>
+                  <dt className="text-muted-foreground">Referral code</dt>
+                  <dd>{investigation.data.attribution.code}</dd>
+                  <dt className="text-muted-foreground">Frozen commission</dt>
+                  <dd>{formatPaise(investigation.data.attribution.promoterCommissionPaise)}</dd>
+                  <dt className="text-muted-foreground">Policy</dt>
+                  <dd>
+                    {investigation.data.attribution.commissionPolicyVersion} /{' '}
+                    {investigation.data.attribution.commercialPolicyVersion}
+                  </dd>
+                </dl>
+              ) : (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  No verified Promoter attribution was stored on this order.
+                </p>
+              )}
+            </div>
+            <div>
+              <h3 className="font-medium">Financial journals and reversals</h3>
+              {investigation.data.journals.length === 0 ? (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  No journal entries are recorded for this order.
+                </p>
+              ) : (
+                <ul className="mt-2 space-y-2 text-sm">
+                  {investigation.data.journals.map((journal) => (
+                    <li key={journal.id} className="rounded-md bg-muted/40 p-2">
+                      <span className="font-mono">{journal.sourceType}</span> · promoter allocation{' '}
+                      {journal.componentPromoterCommissionPaise === null
+                        ? 'not present'
+                        : formatPaise(journal.componentPromoterCommissionPaise)}
+                      {journal.reversalOfJournalId
+                        ? ` · reverses ${journal.reversalOfJournalId}`
+                        : ''}
+                      <p className="text-xs text-muted-foreground">
+                        {journal.id} · {journal.commissionPolicyVersion ?? 'legacy policy'} ·{' '}
+                        {formatDateTime(journal.postedAt)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </section>
 
       {list.isPending ? (
         <LoadingState label="Loading orders…" />
