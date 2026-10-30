@@ -115,6 +115,7 @@ export function VenueCalendarScreen({
             <Legend color="confirmed" label="Confirmed" />
             <Legend color="pending" label="Pending" />
             <Legend color="blocked" label="Blocked" />
+            <Legend color="available" label="Open for requests" />
           </div>
         </section>
         <CalendarDayDetails

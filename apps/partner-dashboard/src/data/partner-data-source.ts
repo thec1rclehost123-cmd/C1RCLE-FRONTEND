@@ -992,6 +992,7 @@ export interface AvailabilitySlot {
   readonly id: string;
   readonly label: string;
   readonly status: 'available' | 'unavailable' | 'pending' | 'booked';
+  readonly notes?: string | null;
   readonly startTime?: string;
   readonly endTime?: string;
   readonly timezone?: string | null;

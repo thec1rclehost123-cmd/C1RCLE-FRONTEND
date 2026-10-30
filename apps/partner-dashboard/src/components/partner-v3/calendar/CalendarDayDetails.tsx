@@ -53,11 +53,16 @@ export function CalendarDayDetails({
         <h2 id="selected-day-title">{formatDate(day.date)}</h2>
       </div>
       {hasEvents ? (
-        <div className={styles['eventDetailsList']}>
-          {day.events.map((event) => (
-            <EventDetail event={event} href={eventHref?.(event)} key={event.id} />
-          ))}
-        </div>
+        <>
+          <div className={styles['eventDetailsList']}>
+            {day.events.map((event) => (
+              <EventDetail event={event} href={eventHref?.(event)} key={event.id} />
+            ))}
+          </div>
+          {!host && day.slots.length > 0 ? <VenueAvailabilityDetail day={day} /> : null}
+        </>
+      ) : !host && day.slots.length > 0 ? (
+        <VenueAvailabilityDetail day={day} />
       ) : isBlocked ? (
         <BlockedDetail block={block} onUnblock={onUnblock} />
       ) : host ? (
@@ -89,6 +94,23 @@ export function CalendarDayDetails({
         />
       )}
     </aside>
+  );
+}
+
+function VenueAvailabilityDetail({ day }: { readonly day: CalendarDay }) {
+  return (
+    <section className={styles['eventDetailsList']} aria-label="Published availability">
+      <strong>Open for Host requests</strong>
+      {day.slots.map((slot) => (
+        <article className={styles['eventDetailCard']} key={slot.id}>
+          <span className={[styles['eventState'], styles['eventStateConfirmed']].join(' ')}>
+            Available
+          </span>
+          <strong>{slot.label}</strong>
+          {slot.notes ? <span className={styles['eventDetailMeta']}>{slot.notes}</span> : null}
+        </article>
+      ))}
+    </section>
   );
 }
 

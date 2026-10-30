@@ -141,9 +141,11 @@ beforeEach(() => {
         items: [
           {
             id: 'partnership_1',
-            hostOrganizationId: 'org_1',
-            venueOrganizationId: 'org_2',
+            hostOrganizationId: 'org_2',
+            venueOrganizationId: 'org_1',
             venueId: 'ven_2',
+            hostName: 'Anil Host',
+            venueName: 'Moonlight Venue',
             initiatedBy: 'host',
             status: 'active',
             message: null,
@@ -165,7 +167,9 @@ beforeEach(() => {
             id: 'connection_1',
             promoterId: 'org_3',
             targetId: 'org_1',
-            targetType: 'host',
+            targetType: 'venue',
+            targetName: 'Moonlight Venue',
+            promoterName: 'Anil Promoter',
             initiatedBy: 'promoter',
             status: 'blocked',
             message: null,
@@ -283,12 +287,12 @@ describe('loadOverviewData', () => {
     const data = await loadOverviewData({ accent: 'orange', client, now: NOW });
     expect(data.network).toEqual([
       expect.objectContaining({
-        name: 'Partner name unavailable',
-        role: 'Venue',
+        name: 'Anil Host',
+        role: 'Host',
         status: 'Partnered',
       }),
       expect.objectContaining({
-        name: 'Partner name unavailable',
+        name: 'Anil Promoter',
         role: 'Promoter',
         status: 'Blocked',
       }),

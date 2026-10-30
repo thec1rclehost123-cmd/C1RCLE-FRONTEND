@@ -163,3 +163,32 @@ describe('Host requestable availability', () => {
     expect(screen.getByRole('button', { name: 'Request this slot' })).toBeEnabled();
   });
 });
+
+describe('Venue published availability', () => {
+  it('shows open slot details instead of an empty date after publishing', () => {
+    const availableDay: CalendarDay = {
+      date: '2026-11-16',
+      day: 16,
+      state: 'available',
+      events: [],
+      slots: [
+        {
+          id: 'm15-open-slot',
+          label: 'Open for Host requests · 7:00 PM IST – 11:00 PM IST',
+          status: 'available',
+          timezone: 'Asia/Kolkata',
+          notes: 'M15-VENUE-E2E-20261030',
+        },
+      ],
+    };
+
+    render(<CalendarDayDetails day={availableDay} accent="orange" mode="venue" />);
+
+    expect(screen.getByRole('region', { name: 'Published availability' })).toBeInTheDocument();
+    expect(screen.getByText('Open for Host requests')).toBeInTheDocument();
+    expect(screen.getByText(availableDay.slots[0]!.label)).toBeInTheDocument();
+    expect(screen.getByText('M15-VENUE-E2E-20261030')).toBeInTheDocument();
+    expect(screen.queryByText('Nothing booked')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open this time for Host requests' })).toBeNull();
+  });
+});

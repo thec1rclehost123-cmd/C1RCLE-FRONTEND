@@ -219,6 +219,10 @@ async function loadOrganizationNetwork(
   return [
     ...partnerships.items.map((partnership) => ({
       partnershipId: partnership.id,
+      name:
+        partnership.hostOrganizationId === organizationId
+          ? (partnership.venueName ?? null)
+          : (partnership.hostName ?? null),
       counterpartyOrganizationId:
         partnership.hostOrganizationId === organizationId
           ? partnership.venueOrganizationId
@@ -229,6 +233,10 @@ async function loadOrganizationNetwork(
     })),
     ...connections.items.map((connection) => ({
       partnershipId: connection.id,
+      name:
+        (connection.promoterId === organizationId
+          ? connection.targetName
+          : connection.promoterName) ?? null,
       counterpartyOrganizationId:
         connection.promoterId === organizationId ? connection.targetId : connection.promoterId,
       side:

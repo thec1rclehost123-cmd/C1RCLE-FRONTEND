@@ -116,6 +116,7 @@ export interface OverviewViewModelInput {
 export interface NetworkPartner {
   readonly partnershipId: string;
   readonly counterpartyOrganizationId: string;
+  readonly name?: string | null;
   readonly side: 'host' | 'venue' | 'promoter';
   readonly status: string;
 }
@@ -396,18 +397,36 @@ function formatAmount(paise: number): string {
 
 // ─── Network ─────────────────────────────────────────────────────────────────
 
-/** The partnership DTO has no counterparty display name; never expose its ID as a label. */
+/** Only backend-provided public-safe names may be shown; never expose an organization ID. */
 function buildNetwork(partners: readonly NetworkPartner[]): readonly OverviewNetworkMember[] {
-  return partners.map((partner, index) => ({
-    id: partner.partnershipId,
-    name: 'Partner name unavailable',
-    role: partner.side === 'venue' ? 'Venue' : partner.side === 'promoter' ? 'Promoter' : 'Host',
-    initials: partner.side === 'venue' ? 'V' : partner.side === 'promoter' ? 'P' : 'H',
-    status: toNetworkStatus(partner.status),
-    statusTone:
-      partner.status === 'active' ? 'success' : partner.status === 'pending' ? 'accent' : 'neutral',
-    accent: (['orange', 'violet', 'teal', 'pink'] as const)[index % 4] ?? 'orange',
-  }));
+  return partners.map((partner, index) => {
+    const trimmedName = partner.name?.trim();
+    const name = trimmedName && trimmedName.length > 0 ? trimmedName : undefined;
+    return {
+      id: partner.partnershipId,
+      name: name ?? 'Partner name unavailable',
+      role: partner.side === 'venue' ? 'Venue' : partner.side === 'promoter' ? 'Promoter' : 'Host',
+      initials: name
+        ? name
+            .split(/\s+/)
+            .slice(0, 2)
+            .map((part) => part[0]?.toUpperCase() ?? '')
+            .join('')
+        : partner.side === 'venue'
+          ? 'V'
+          : partner.side === 'promoter'
+            ? 'P'
+            : 'H',
+      status: toNetworkStatus(partner.status),
+      statusTone:
+        partner.status === 'active'
+          ? 'success'
+          : partner.status === 'pending'
+            ? 'accent'
+            : 'neutral',
+      accent: (['orange', 'violet', 'teal', 'pink'] as const)[index % 4] ?? 'orange',
+    };
+  });
 }
 
 function toNetworkStatus(status: string): OverviewNetworkMember['status'] {

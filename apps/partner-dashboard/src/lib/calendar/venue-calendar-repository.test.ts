@@ -115,6 +115,33 @@ describe('venue calendar repository mapping', () => {
     ]);
   });
 
+  it('formats published availability in its stored timezone and keeps the venue note', () => {
+    const calendar = mapVenueCalendar({
+      monthKeys: ['2026-11'],
+      venue,
+      slots: [
+        {
+          ...slot('slot-venue-m15', 16, 'open'),
+          startTime: '2026-11-16T13:30:00.000Z',
+          endTime: '2026-11-16T17:30:00.000Z',
+          timezone: 'Asia/Kolkata',
+          notes: 'M15-VENUE-E2E-20261030',
+        },
+      ],
+      events: [],
+    });
+
+    expect(calendar.months[0]?.days[15]?.slots).toEqual([
+      {
+        id: 'slot-venue-m15',
+        label: 'open night · 7:00 PM IST – 11:00 PM IST',
+        status: 'available',
+        timezone: 'Asia/Kolkata',
+        notes: 'M15-VENUE-E2E-20261030',
+      },
+    ]);
+  });
+
   it('creates a stable month window around an anchor month', () => {
     expect(calendarMonthKeys('2026-01', 1, 2)).toEqual([
       '2025-12',

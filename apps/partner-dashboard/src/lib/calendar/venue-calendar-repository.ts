@@ -426,11 +426,16 @@ function stateForDay(
 function availabilityForSlots(slots: readonly VenueSlotDto[]): readonly AvailabilitySlot[] {
   return slots
     .filter((slot) => slot.status === 'open')
-    .map((slot) => ({
-      id: slot.id,
-      label: `${slot.label} · ${formatTimeRange(slot.startTime, slot.endTime)}`,
-      status: 'available',
-    }));
+    .map((slot) => {
+      const timezone = slot.timezone ?? 'UTC';
+      return {
+        id: slot.id,
+        label: `${slot.label} · ${formatTimeRange(slot.startTime, slot.endTime, timezone)}`,
+        status: 'available' as const,
+        timezone,
+        notes: slot.notes ?? null,
+      };
+    });
 }
 
 export function rangeForMonthKeys(
@@ -465,9 +470,9 @@ function isoTimePart(value: string): string {
   return match ? `${match[1] ?? '00'}:${match[2] ?? '00'}` : '00:00';
 }
 
-export function formatTimeRange(start: string, end: string | null): string {
-  const startLabel = formatClock(isoTimePart(start));
-  return end ? `${startLabel} – ${formatClock(isoTimePart(end))}` : startLabel;
+export function formatTimeRange(start: string, end: string | null, timezone = 'UTC'): string {
+  const startLabel = formatZonedClock(start, timezone);
+  return end ? `${startLabel} – ${formatZonedClock(end, timezone)}` : startLabel;
 }
 
 /** Event timestamps are stored as UTC instants and shown in the product's IST venue timezone. */
@@ -505,8 +510,21 @@ function formatIndiaClock(value: string): string {
   return `${part('hour')}:${part('minute')} ${part('dayPeriod')}`;
 }
 
-function formatClock(value: string): string {
-  const [hours = 0, minutes = 0] = value.split(':').map(Number);
-  const period = hours >= 12 ? 'PM' : 'AM';
-  return `${String(hours % 12 || 12)}:${String(minutes).padStart(2, '0')} ${period}`;
+function formatZonedClock(value: string, timezone: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  try {
+    const parts = new Intl.DateTimeFormat('en-IN', {
+      timeZone: timezone,
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZoneName: 'short',
+    }).formatToParts(date);
+    const part = (type: Intl.DateTimeFormatPartTypes) =>
+      parts.find((entry) => entry.type === type)?.value ?? '';
+    return `${part('hour')}:${part('minute')} ${part('dayPeriod').toUpperCase()} ${part('timeZoneName')}`.trim();
+  } catch {
+    return formatZonedClock(value, 'UTC');
+  }
 }
