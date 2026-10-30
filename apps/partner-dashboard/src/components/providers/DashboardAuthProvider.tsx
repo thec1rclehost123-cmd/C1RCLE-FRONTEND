@@ -139,7 +139,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
     // effect) so every `setState` call happens from a microtask continuation,
     // not synchronously during the effect's own invocation.
     async function loadAccountData() {
-      if (session.isLoading) return;
+      if (session.isLoading || !session.isHydrated) return;
       const currentUser = session.user;
       if (!session.isAuthenticated || !currentUser) {
         setMemberships([]);
@@ -205,7 +205,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
       lifecycle.cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- activeOrgId is read, not a trigger; re-running per active-org change would refetch the whole membership list for no reason.
-  }, [session.isLoading, session.isAuthenticated, session.user?.id]);
+  }, [session.isLoading, session.isHydrated, session.isAuthenticated, session.user?.id]);
 
   // An approved account stops appearing in `/onboarding/me` (approved requests
   // are excluded from OPEN_STATUSES server-side), so `status === 'approved'`
@@ -273,6 +273,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
 
   const loading =
     session.isLoading ||
+    !session.isHydrated ||
     (session.isAuthenticated &&
       (orgAccess.isLoading || (dataLoading && !hasActiveOrganizationAccess)));
 

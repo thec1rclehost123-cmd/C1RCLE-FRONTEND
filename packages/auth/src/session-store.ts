@@ -89,6 +89,7 @@ export function useSession() {
   return {
     isAuthenticated: sessionState.status === 'authenticated',
     isLoading: sessionState.status === 'unknown',
+    isHydrated: sessionState.hydrated,
     user: sessionState.session?.user ?? null,
   };
 }

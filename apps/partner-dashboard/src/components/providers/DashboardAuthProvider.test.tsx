@@ -8,6 +8,7 @@ import type { OnboardingRequestDto, OrganizationDto, PartnerAccessDto } from '@c
 interface FakeSession {
   isAuthenticated: boolean;
   isLoading: boolean;
+  isHydrated: boolean;
   user: { id: string; email: string; displayName: string } | null;
 }
 
@@ -104,7 +105,12 @@ afterEach(() => {
 
 describe('DashboardAuthProvider', () => {
   it('shows the loading splash while the session is unknown', () => {
-    mockUseSession.mockReturnValue({ isAuthenticated: false, isLoading: true, user: null });
+    mockUseSession.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: true,
+      isHydrated: true,
+      user: null,
+    });
 
     render(
       <DashboardAuthProvider>
@@ -118,7 +124,12 @@ describe('DashboardAuthProvider', () => {
 
   it('lets server-authorized event pages render while client authorization hydrates', () => {
     mockUsePathname.mockReturnValue('/partner/venue/events/event_m3/analytics');
-    mockUseSession.mockReturnValue({ isAuthenticated: false, isLoading: true, user: null });
+    mockUseSession.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: true,
+      isHydrated: true,
+      user: null,
+    });
 
     render(
       <DashboardAuthProvider>
@@ -131,7 +142,12 @@ describe('DashboardAuthProvider', () => {
   });
 
   it('renders children with real defaults once anonymous', async () => {
-    mockUseSession.mockReturnValue({ isAuthenticated: false, isLoading: false, user: null });
+    mockUseSession.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: false,
+      isHydrated: true,
+      user: null,
+    });
 
     render(
       <DashboardAuthProvider>
@@ -151,6 +167,7 @@ describe('DashboardAuthProvider', () => {
     mockUseSession.mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
+      isHydrated: true,
       user: { id: 'usr_1', email: 'a@b.com', displayName: 'A' },
     });
     mockGetOrganizations.mockResolvedValue([
@@ -210,11 +227,50 @@ describe('DashboardAuthProvider', () => {
     expect(mockSetActiveOrg).toHaveBeenCalledWith('org_1');
   });
 
+  it('waits for token hydration before starting protected account reads', async () => {
+    mockUseSession.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      isHydrated: false,
+      user: { id: 'usr_1', email: 'a@b.com', displayName: 'A' },
+    });
+    mockGetOrganizations.mockResolvedValue([]);
+    mockGetMyOnboardingRequest.mockResolvedValue(null);
+
+    const { rerender } = render(
+      <DashboardAuthProvider>
+        <Probe />
+      </DashboardAuthProvider>,
+    );
+
+    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(mockGetOrganizations).not.toHaveBeenCalled();
+    expect(mockGetMyOnboardingRequest).not.toHaveBeenCalled();
+
+    mockUseSession.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      isHydrated: true,
+      user: { id: 'usr_1', email: 'a@b.com', displayName: 'A' },
+    });
+    rerender(
+      <DashboardAuthProvider>
+        <Probe />
+      </DashboardAuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(mockGetOrganizations).toHaveBeenCalledOnce();
+    });
+    expect(mockGetMyOnboardingRequest).toHaveBeenCalledOnce();
+  });
+
   it('does not block an authorized active workspace on background account hydration', async () => {
     mockGetActiveOrgId.mockReturnValue('org_1');
     mockUseSession.mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
+      isHydrated: true,
       user: { id: 'usr_1', email: 'a@b.com', displayName: 'A' },
     });
     mockUseOrgAccess.mockReturnValue({

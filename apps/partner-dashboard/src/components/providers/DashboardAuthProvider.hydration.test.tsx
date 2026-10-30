@@ -8,7 +8,10 @@ import { DashboardAuthProvider, useDashboardAuth } from './DashboardAuthProvider
 
 const mocks = vi.hoisted(() => ({
   getActiveOrgId: vi.fn<() => string | null>(),
-  useSession: vi.fn<() => { isAuthenticated: boolean; isLoading: boolean; user: unknown }>(),
+  useSession:
+    vi.fn<
+      () => { isAuthenticated: boolean; isLoading: boolean; isHydrated: boolean; user: unknown }
+    >(),
   orgAccess: {
     partnerType: 'venue',
     role: 'owner',
@@ -79,6 +82,7 @@ beforeEach(() => {
   mocks.useSession.mockReset().mockReturnValue({
     isAuthenticated: true,
     isLoading: false,
+    isHydrated: true,
     user: {
       id: 'usr_1',
       email: 'agarwal@example.com',

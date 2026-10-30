@@ -5,6 +5,7 @@ import {
   clearSession,
   getAccessToken,
   markAnonymous,
+  markHydrated,
   setSession,
   useSession,
   useSessionStore,
@@ -26,6 +27,7 @@ describe('session-store', () => {
       accessToken: null,
       expiresAt: null,
       status: 'unknown',
+      hydrated: false,
     });
   });
 
@@ -96,19 +98,34 @@ describe('session-store', () => {
   describe('useSession', () => {
     it('reflects the store: loading -> authenticated -> anonymous', () => {
       const { result, rerender } = renderHook(() => useSession());
-      expect(result.current).toEqual({ isAuthenticated: false, isLoading: true, user: null });
+      expect(result.current).toEqual({
+        isAuthenticated: false,
+        isLoading: true,
+        isHydrated: false,
+        user: null,
+      });
 
       setSession({ user: mockUser }, 'test_token', Date.now() + 3_600_000);
       rerender();
       expect(result.current).toEqual({
         isAuthenticated: true,
         isLoading: false,
+        isHydrated: false,
         user: mockUser,
       });
 
+      markHydrated();
+      rerender();
+      expect(result.current.isHydrated).toBe(true);
+
       clearSession();
       rerender();
-      expect(result.current).toEqual({ isAuthenticated: false, isLoading: false, user: null });
+      expect(result.current).toEqual({
+        isAuthenticated: false,
+        isLoading: false,
+        isHydrated: true,
+        user: null,
+      });
     });
   });
 
