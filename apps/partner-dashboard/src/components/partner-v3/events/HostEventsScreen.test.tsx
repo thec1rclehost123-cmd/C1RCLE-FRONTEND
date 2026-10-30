@@ -35,6 +35,8 @@ describe('HostEventsScreen', () => {
     render(<HostEventsScreen data={data} initialParty="venue" />);
 
     expect(screen.getByRole('heading', { name: 'Events' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Event ownership')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Event partners')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /slot requests/i })).toHaveAttribute(
       'href',
       '/partner/host/slot-requests',

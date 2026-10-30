@@ -171,8 +171,8 @@ export function ConnectedEventPromoterManagement({
         </p>
         {connections.length === 0 ? (
           <p className="mt-5 rounded-xl border border-white/10 p-4 text-sm text-stone-300">
-            No active Promoter connections are available. Connect with a Promoter from Partners
-            before inviting them here.
+            No eligible Promoters are available for this event. A Promoter needs an active
+            connection and current agreement evidence before you can invite them.
           </p>
         ) : (
           <form

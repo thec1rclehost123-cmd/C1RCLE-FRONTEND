@@ -10,7 +10,7 @@ const hostEventsConfig = {
   eventsBaseHref: '/partner/host/events',
   eventSectionLabel: 'Host',
   emptyDescription: 'Events created or assigned to this host organization will appear here.',
-  partyFilterLabel: 'Event partners',
+  partyFilterLabel: 'Event ownership',
   showViewToggle: false,
   slotRequestsHref: '/partner/host/slot-requests',
 } as const;

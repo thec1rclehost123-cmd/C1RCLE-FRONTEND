@@ -132,6 +132,22 @@ describe('ConnectedEventPromoterManagement', () => {
     });
   });
 
+  it('explains why a partnered Promoter may not be eligible for this event', () => {
+    render(
+      <ConnectedEventPromoterManagement
+        eventId="event_1"
+        connections={[]}
+        assignments={[]}
+        links={[]}
+        tiers={[tier]}
+        performance={performance}
+      />,
+    );
+
+    expect(screen.getByText(/No eligible Promoters are available for this event/i)).toBeTruthy();
+    expect(screen.getByText(/active connection and current agreement evidence/i)).toBeTruthy();
+  });
+
   it('requires and sends an organizer reason when revoking an assignment', async () => {
     const assignment = {
       id: 'assignment_1',
