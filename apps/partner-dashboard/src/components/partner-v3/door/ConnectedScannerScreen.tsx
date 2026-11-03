@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
 import {
@@ -24,15 +23,13 @@ type BarcodeDetectorConstructor = new (options: {
 }) => BarcodeDetectorLike;
 
 export function ConnectedScannerScreen({
-  studio,
   eventId,
   organizationId,
-  eventTitle,
 }: {
-  readonly studio: 'host' | 'venue';
+  readonly studio?: 'host' | 'venue';
   readonly eventId: string;
   readonly organizationId: string;
-  readonly eventTitle: string;
+  readonly eventTitle?: string;
 }) {
   const [code, setCode] = useState('');
   const [deviceId] = useState(() => crypto.randomUUID());
@@ -167,17 +164,8 @@ export function ConnectedScannerScreen({
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 text-stone-100 sm:px-6">
-      <Link
-        href={`/partner/${studio}/events/${encodeURIComponent(eventId)}`}
-        className="text-sm text-stone-400"
-      >
-        ← {eventTitle}
-      </Link>
-      <section className="mt-5 rounded-2xl border border-white/15 bg-neutral-950 p-5 sm:p-7">
+      <section className="rounded-2xl border border-white/15 bg-neutral-950 p-5">
         <h1 className="text-2xl font-bold">Door scanner</h1>
-        <p className="mt-2 text-sm text-stone-400">
-          {eventTitle}. Scanner actions are checked by the event service.
-        </p>
 
         {!shift ? (
           <form

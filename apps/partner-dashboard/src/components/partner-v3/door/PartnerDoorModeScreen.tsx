@@ -3,23 +3,10 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
-import {
-  BackIcon,
-  CalendarIcon,
-  CheckIcon,
-  DisconnectIcon,
-  IncidentIcon,
-  InviteIcon,
-  NoteIcon,
-  ScanIcon,
-  SearchIcon,
-  TimeIcon,
-  WarningIcon,
-} from '@c1rcle/icons';
+import { BackIcon, CalendarIcon, CheckIcon, InviteIcon, SearchIcon, TimeIcon } from '@c1rcle/icons';
 
 import { EventPoster } from '@/components/partner-v3/events/EventPoster';
 import { EventStatusBadge } from '@/components/partner-v3/events/EventStatusBadge';
-import { FixtureBadge } from '@/components/partner-v3/FixtureBadge';
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 
 import styles from './door.module.css';
@@ -76,9 +63,16 @@ export function PartnerDoorModeScreen({ data }: { readonly data: DoorModeData })
             updateQuery({ event: eventId });
           }}
           onBack={() => {
-            router.push(`/partner/${data.role}/overview`);
+            router.push(`/partner/${data.role}/events`);
           }}
         />
+        <div className={styles['previewNotice']} role="status">
+          <span aria-hidden="true">i</span>
+          <p>
+            Preview data only. Guest check-in, walk-in sales, and event logs will activate when the
+            Door Mode backend is connected.
+          </p>
+        </div>
         {event ? (
           <DoorWorkspace
             data={event}
@@ -119,7 +113,7 @@ function DoorHeader({
       <div className={styles['doorHeaderIdentity']}>
         <button
           className={styles['backButton']}
-          aria-label="Back to overview"
+          aria-label="Back to events"
           type="button"
           onClick={onBack}
         >
@@ -134,7 +128,7 @@ function DoorHeader({
         ) : null}
         <div>
           <div className={styles['doorTitle']}>
-            <span className={styles['liveDot']} /> <h1>Door Mode</h1>
+            <h1>Door Mode</h1>
           </div>
           {event ? (
             <div className={styles['doorSubtitle']}>
@@ -156,7 +150,6 @@ function DoorHeader({
           ) : (
             <p className={styles['doorSubtitle']}>Choose an event to continue.</p>
           )}
-          <FixtureBadge dataStatus={data.dataStatus} />
         </div>
       </div>
       <div className={styles['doorHeaderActions']}>
@@ -179,33 +172,6 @@ function DoorHeader({
             </select>
           </label>
         ) : null}
-        <button
-          className={styles['headerButton']}
-          disabled
-          title="Scanning is unavailable in fixture mode"
-          type="button"
-        >
-          <ScanIcon size={15} aria-hidden="true" />
-          Quick scan
-        </button>
-        <button
-          className={styles['headerButton']}
-          disabled
-          title="Issue logging is unavailable in fixture mode"
-          type="button"
-        >
-          <WarningIcon size={15} aria-hidden="true" />
-          Issues <span className={styles['issueCount']}>{data.issueCount}</span>
-        </button>
-        <button
-          className={styles['disconnectButton']}
-          disabled
-          title="Door connection changes are unavailable in fixture mode"
-          type="button"
-        >
-          <DisconnectIcon size={15} aria-hidden="true" />
-          Disconnect
-        </button>
       </div>
     </header>
   );
@@ -225,9 +191,9 @@ function DoorWorkspace({
   readonly onFilterChange: (value: DoorGuestFilter) => void;
 }) {
   return (
-    <div className={styles['doorGrid']}>
-      <div className={styles['doorColumn']}>
-        <HeadcountCard data={data} />
+    <div className={styles['doorWorkspace']}>
+      <HeadcountCard data={data} />
+      <div className={styles['doorGrid']}>
         <CheckInList
           data={data}
           filter={filter}
@@ -235,39 +201,54 @@ function DoorWorkspace({
           onSearchChange={onSearchChange}
           onFilterChange={onFilterChange}
         />
-      </div>
-      <div className={styles['doorColumn']}>
-        <WalkInCard />
-        <ActivityCard activity={data.activity} />
+        <div className={styles['doorColumn']}>
+          <WalkInCard />
+        </div>
       </div>
     </div>
   );
 }
 
 function HeadcountCard({ data }: { readonly data: DoorEventData }) {
-  const percent = Math.round((data.insideNow / data.capacity) * 100);
+  const percent =
+    data.capacity > 0 ? Math.min(100, Math.round((data.insideNow / data.capacity) * 100)) : 0;
+  const remaining = Math.max(0, data.capacity - data.insideNow);
   return (
     <section className={styles['headcountCard']} aria-labelledby="headcount-title">
       <div className={styles['headcountGlow']} aria-hidden="true" />
       <div className={styles['headcountContent']}>
-        <div className={styles['sectionEyebrow']}>
-          <span id="headcount-title">How full we are</span>
-          <span className={styles['liveBadge']}>
-            <i />
-            Live
-          </span>
+        <div className={styles['headcountTopline']}>
+          <div>
+            <span className={styles['sectionEyebrow']} id="headcount-title">
+              At the door
+            </span>
+            <div className={styles['headcountValue']}>
+              <strong>{data.insideNow}</strong>
+              <span>of {data.capacity} inside</span>
+            </div>
+          </div>
+          <div className={styles['doorMetrics']}>
+            <div>
+              <strong>{data.expectedCount}</strong>
+              <span>Expected</span>
+            </div>
+            <div>
+              <strong>{data.walkInCount}</strong>
+              <span>Walk-ins</span>
+            </div>
+            <div>
+              <strong>{remaining}</strong>
+              <span>Space left</span>
+            </div>
+          </div>
         </div>
-        <div className={styles['headcountValue']}>
-          <strong>{data.insideNow}</strong>
-          <span>of {data.capacity} inside</span>
-        </div>
-        <div className={styles['capacityTrack']}>
-          <span className={capacityFillClass(percent)} />
-        </div>
-        <p>
-          {percent}% full · {data.expectedCount} guests still expected · {data.walkInCount} walk-ins
-          tonight
-        </p>
+        <progress
+          className={styles['capacityTrack']}
+          aria-label="Event capacity used"
+          max={100}
+          value={percent}
+        />
+        <p>{percent}% of event capacity</p>
       </div>
     </section>
   );
@@ -309,13 +290,12 @@ function CheckInList({
         <SearchIcon size={16} aria-hidden="true" />
         <span className={styles['srOnly']}>Search guests</span>
         <input
-          key={search}
           type="search"
-          defaultValue={search}
+          value={search}
           onChange={(input) => {
             onSearchChange(input.target.value);
           }}
-          placeholder="Search name or scan ticket to check in"
+          placeholder="Search guest name or ticket"
         />
       </label>
       <nav className={styles['guestFilters']} aria-label="Door guest filters">
@@ -417,50 +397,6 @@ function WalkInCard() {
           <CheckIcon size={16} aria-hidden="true" />
           Check in walk-in
         </button>
-        <p className={styles['unavailableNote']}>
-          Walk-in creation is read-only until the door mutation contract is connected.
-        </p>
-      </div>
-    </section>
-  );
-}
-
-function ActivityCard({ activity }: { readonly activity: DoorEventData['activity'] }) {
-  return (
-    <section className={styles['activityCard']} aria-labelledby="activity-title">
-      <h2 id="activity-title">Tonight&apos;s log</h2>
-      <div className={styles['activityActions']}>
-        <button disabled title="Incident logging is unavailable in fixture mode" type="button">
-          <IncidentIcon size={15} aria-hidden="true" />
-          Incident
-        </button>
-        <button disabled title="Note logging is unavailable in fixture mode" type="button">
-          <NoteIcon size={15} aria-hidden="true" />
-          Note
-        </button>
-      </div>
-      <div className={styles['activityList']}>
-        {activity.length ? (
-          activity.map((item) => (
-            <div className={styles['activityRow']} key={item.id}>
-              <span
-                className={item.kind === 'incident' ? styles['incidentIcon'] : styles['noteIcon']}
-              >
-                {item.kind === 'incident' ? (
-                  <IncidentIcon size={14} aria-hidden="true" />
-                ) : (
-                  <NoteIcon size={14} aria-hidden="true" />
-                )}
-              </span>
-              <span>
-                <strong>{item.text}</strong>
-                <small>{item.time}</small>
-              </span>
-            </div>
-          ))
-        ) : (
-          <p className={styles['emptyCopy']}>No activity recorded tonight.</p>
-        )}
       </div>
     </section>
   );
@@ -481,12 +417,4 @@ function NoActiveEvent({ onReset }: { readonly onReset: () => void }) {
 
 function parseFilter(value: string | null): DoorGuestFilter {
   return guestFilters.some((item) => item.value === value) ? (value as DoorGuestFilter) : 'all';
-}
-
-function capacityFillClass(percent: number) {
-  if (percent >= 100) return styles['capacityFill100'];
-  if (percent >= 75) return styles['capacityFill75'];
-  if (percent >= 50) return styles['capacityFill50'];
-  if (percent >= 25) return styles['capacityFill25'];
-  return styles['capacityFill0'];
 }

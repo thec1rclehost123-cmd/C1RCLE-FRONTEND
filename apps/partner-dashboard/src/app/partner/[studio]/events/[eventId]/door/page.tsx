@@ -11,12 +11,5 @@ export default async function StudioEventDoorPage({
   const { studio, eventId } = await params;
   if (studio !== 'venue' && studio !== 'host') notFound();
   const event = await loadPartnerEvent(eventId);
-  return (
-    <ConnectedScannerScreen
-      studio={studio}
-      eventId={event.id}
-      organizationId={event.organizationId}
-      eventTitle={event.title}
-    />
-  );
+  return <ConnectedScannerScreen eventId={event.id} organizationId={event.organizationId} />;
 }
