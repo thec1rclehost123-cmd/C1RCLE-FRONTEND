@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { PartnerCard } from './PartnerCard';
+import { PartnerProfilePanel } from './PartnerProfilePanel';
 
 import type { PartnerRelationship } from '@/data/partner-data-source';
 
@@ -57,7 +58,7 @@ describe('PartnerCard', () => {
     const user = userEvent.setup();
     const onConnect = vi.fn();
 
-    render(<PartnerCard partner={discoverHost} href="#" onConnect={onConnect} />);
+    render(<PartnerProfilePanel partner={discoverHost} closeHref="#" onConnect={onConnect} />);
 
     await user.click(screen.getByRole('button', { name: 'Connect' }));
 
@@ -68,7 +69,7 @@ describe('PartnerCard', () => {
     const user = userEvent.setup();
     const onConnect = vi.fn();
 
-    render(<PartnerCard partner={discoverVenue} href="#" onConnect={onConnect} />);
+    render(<PartnerProfilePanel partner={discoverVenue} closeHref="#" onConnect={onConnect} />);
 
     await user.click(screen.getByRole('button', { name: 'Connect' }));
 
@@ -79,7 +80,7 @@ describe('PartnerCard', () => {
     const user = userEvent.setup();
     const onConnect = vi.fn();
 
-    render(<PartnerCard partner={discoverPromoter} href="#" onConnect={onConnect} />);
+    render(<PartnerProfilePanel partner={discoverPromoter} closeHref="#" onConnect={onConnect} />);
 
     await user.click(screen.getByRole('button', { name: 'Connect' }));
 
@@ -87,16 +88,18 @@ describe('PartnerCard', () => {
   });
 
   it('shows the connecting state', () => {
-    render(<PartnerCard partner={discoverHost} href="#" connecting onConnect={vi.fn()} />);
+    render(
+      <PartnerProfilePanel partner={discoverHost} closeHref="#" connecting onConnect={vi.fn()} />,
+    );
 
     expect(screen.getByRole('button', { name: 'Connecting…' })).toBeDisabled();
   });
 
   it('shows a connection error', () => {
     render(
-      <PartnerCard
+      <PartnerProfilePanel
         partner={discoverHost}
-        href="#"
+        closeHref="#"
         connectError="Create a venue before inviting hosts"
         onConnect={vi.fn()}
       />,
@@ -120,21 +123,10 @@ describe('PartnerCard', () => {
     expect(link).not.toHaveTextContent('\\u2197');
   });
 
-  it('renders status action and invokes onActionUnavailable for partnered status', async () => {
-    const user = userEvent.setup();
-    const onActionUnavailable = vi.fn();
-
+  it('keeps unimplemented partnered actions disabled inside the profile', () => {
     render(
-      <PartnerCard
-        partner={{ ...discoverHost, status: 'Partnered' }}
-        href="#"
-        onActionUnavailable={onActionUnavailable}
-      />,
+      <PartnerProfilePanel partner={{ ...discoverHost, status: 'Partnered' }} closeHref="#" />,
     );
-
-    const actionButton = screen.getByRole('button', { name: 'Request a date' });
-    expect(actionButton).toBeInTheDocument();
-    await user.click(actionButton);
-    expect(onActionUnavailable).toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Request a date' })).toBeDisabled();
   });
 });

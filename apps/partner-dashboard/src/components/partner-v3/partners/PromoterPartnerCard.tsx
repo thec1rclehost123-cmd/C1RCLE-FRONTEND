@@ -1,4 +1,3 @@
-import { Badge } from '@/components/partner-v3/Badge';
 import { Button } from '@/components/partner-v3/Button';
 
 import styles from './partners.module.css';
@@ -27,14 +26,15 @@ export function PromoterPartnerCard({
           ],
         ].join(' ')}
       >
-        <Badge className={styles['promoterKindBadge'] ?? ''}>{partner.kind.toUpperCase()}</Badge>
         <span className={styles['promoterInitial']} aria-hidden="true">
           {partner.initials}
         </span>
       </div>
       <div className={styles['promoterPartnerBody']}>
-        <h2>{partner.name}</h2>
-        <p>{partner.role}</p>
+        <div className={styles['promoterPartnerHeading']}>
+          <h2>{partner.name}</h2>
+          <span className={styles['promoterKindLabel']}>{partner.kind}</span>
+        </div>
         {connectError ? (
           <p role="alert" className={styles['requestError'] ?? ''}>
             {connectError}
@@ -49,20 +49,7 @@ export function PromoterPartnerCard({
           >
             {connecting ? 'Connecting…' : 'Connect'}
           </Button>
-        ) : (
-          <Button
-            type="button"
-            variant="secondary"
-            disabled
-            title={
-              partner.actionLabel === 'Connected'
-                ? 'Event assignment is not available yet.'
-                : 'Sending connection requests from here is not available yet.'
-            }
-          >
-            {partner.actionLabel}
-          </Button>
-        )}
+        ) : null}
       </div>
     </article>
   );

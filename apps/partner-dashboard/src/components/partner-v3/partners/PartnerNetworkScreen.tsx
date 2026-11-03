@@ -1,7 +1,9 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 
 import { useSessionStore } from '@c1rcle/auth';
+import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
 
 import { Avatar } from '@/components/partner-v3/Avatar';
 import { Badge } from '@/components/partner-v3/Badge';
@@ -130,6 +132,7 @@ function formatJoinedDate(isoString?: string): string {
     const date = new Date(isoString);
     if (Number.isNaN(date.getTime())) return '';
     return date.toLocaleDateString('en-US', {
+      timeZone: PRODUCT_TIME_ZONE,
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -346,11 +349,117 @@ function StaffList({
           </div>
         </section>
       ) : null}
+      {members.length > 0 ? (
+        <div className={styles['staffGrid']}>
+          {members.map((member) => {
+            const isSameUser =
+              Boolean(effectiveUserId) &&
+              (member.userId === effectiveUserId || member.id === effectiveUserId);
+            const isSameEmail =
+              Boolean(effectiveUserEmail) &&
+              member.email?.toLowerCase() === effectiveUserEmail?.toLowerCase();
+            const isYou = isSameUser || isSameEmail;
+            return (
+              <details className={styles['staffCard']} key={member.id}>
+                <summary className={styles['staffSummary']}>
+                  <Image
+                    className={styles['staffAvatar']}
+                    src="/partner-v3/staff-avatar.png"
+                    alt=""
+                    width={56}
+                    height={56}
+                  />
+                  <span className={styles['staffSummaryCopy']}>
+                    <strong>{member.name}</strong>
+                    <span className={styles['staffRoleText']}>{member.role}</span>
+                  </span>
+                  <span className={styles['staffDisclosureIcon']} aria-hidden="true">
+                    ⌄
+                  </span>
+                </summary>
+                <div className={styles['staffExpanded']}>
+                  <div className={styles['staffExpandedMeta']}>
+                    <Badge tone="success">{member.status}</Badge>
+                    {isYou ? <Badge tone="accent">You</Badge> : null}
+                  </div>
+                  <div className={styles['permissionChips']}>
+                    {staffChips(member).map((chip) => (
+                      <span key={chip}>{chip}</span>
+                    ))}
+                  </div>
+                  <div className={styles['staffDetails']}>
+                    {member.email ? (
+                      <p className={styles['staffDetailItem']}>
+                        <span className={styles['staffDetailLabel']}>Email</span> {member.email}
+                      </p>
+                    ) : null}
+                    {member.joinedAt ? (
+                      <p className={styles['staffDetailItem']}>
+                        <span className={styles['staffDetailLabel']}>Joined</span>{' '}
+                        {formatJoinedDate(member.joinedAt)}
+                      </p>
+                    ) : null}
+                  </div>
+                  {isAdmin ? (
+                    <div className={styles['staffCardActions']}>
+                      {member.backendRole === 'owner' ? (
+                        <span className={styles['ownerBadge']} title="Owner role cannot be changed">
+                          Owner (Primary)
+                        </span>
+                      ) : (
+                        <>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => {
+                              setEditingMember(member);
+                            }}
+                          >
+                            Edit role
+                          </Button>
+                          {!isYou && onRevokeMemberAccess ? (
+                            <div className={styles['staffCardActionsRight']}>
+                              <button
+                                type="button"
+                                className={styles['buttonDanger']}
+                                disabled={revokingMemberId === (member.userId ?? member.id)}
+                                title="Revoke this member's access"
+                                onClick={() => {
+                                  setRevokingMemberCandidate(member);
+                                }}
+                              >
+                                {revokingMemberId === (member.userId ?? member.id)
+                                  ? 'Revoking…'
+                                  : 'Revoke access'}
+                              </button>
+                              {revokeAccessErrorId === (member.userId ?? member.id) &&
+                              revokeAccessError ? (
+                                <p role="alert" className={styles['revokeErrorNotice']}>
+                                  {revokeAccessError}
+                                </p>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+              </details>
+            );
+          })}
+        </div>
+      ) : normalized ? (
+        <EmptyState
+          title="No staff found"
+          description="Try a different name or clear the search."
+        />
+      ) : null}
       {revokedStaff.length > 0 ? (
-        <section>
-          <h2 className={styles['requestSectionHeading']}>
-            Revoked access ({revokedStaff.length})
-          </h2>
+        <details className={styles['revokedAccess']}>
+          <summary>
+            Revoked access <span>{revokedStaff.length}</span>
+          </summary>
           <div className={styles['requestList']}>
             {revokedStaff.map((item) => (
               <article className={styles['requestCard']} key={item.id}>
@@ -383,108 +492,7 @@ function StaffList({
               </article>
             ))}
           </div>
-        </section>
-      ) : null}
-      {members.length > 0 ? (
-        <div className={styles['staffGrid']}>
-          {members.map((member) => {
-            const isSameUser =
-              Boolean(effectiveUserId) &&
-              (member.userId === effectiveUserId || member.id === effectiveUserId);
-            const isSameEmail =
-              Boolean(effectiveUserEmail) &&
-              member.email?.toLowerCase() === effectiveUserEmail?.toLowerCase();
-            const isYou = isSameUser || isSameEmail;
-            return (
-              <article className={styles['staffCard']} key={member.id}>
-                <div className={styles['staffCardHeader']}>
-                  <div className={styles['partnerIdentity']}>
-                    <Avatar name={member.name} />
-                    <div>
-                      <div className={styles['staffNameRow']}>
-                        <h3>{member.name}</h3>
-                        {isYou ? (
-                          <Badge tone="accent" className={styles['youTag']}>
-                            You
-                          </Badge>
-                        ) : null}
-                      </div>
-                      <p className={styles['staffRoleText']}>{member.role}</p>
-                    </div>
-                  </div>
-                  <Badge tone="success">{member.status}</Badge>
-                </div>
-                <div className={styles['permissionChips']}>
-                  {staffChips(member).map((chip) => (
-                    <span key={chip}>{chip}</span>
-                  ))}
-                </div>
-                <div className={styles['staffDetails']}>
-                  {member.email ? (
-                    <p className={styles['staffDetailItem']}>
-                      <span className={styles['staffDetailLabel']}>Email:</span> {member.email}
-                    </p>
-                  ) : null}
-                  {member.joinedAt ? (
-                    <p className={styles['staffDetailItem']}>
-                      <span className={styles['staffDetailLabel']}>Joined:</span>{' '}
-                      {formatJoinedDate(member.joinedAt)}
-                    </p>
-                  ) : null}
-                </div>
-                {isAdmin ? (
-                  <div className={styles['staffCardActions']}>
-                    {member.backendRole === 'owner' ? (
-                      <span className={styles['ownerBadge']} title="Owner role cannot be changed">
-                        Owner (Primary)
-                      </span>
-                    ) : (
-                      <>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          onClick={() => {
-                            setEditingMember(member);
-                          }}
-                        >
-                          Edit role
-                        </Button>
-                        {!isYou && onRevokeMemberAccess ? (
-                          <div className={styles['staffCardActionsRight']}>
-                            <button
-                              type="button"
-                              className={styles['buttonDanger']}
-                              disabled={revokingMemberId === (member.userId ?? member.id)}
-                              title="Revoke this member's access"
-                              onClick={() => {
-                                setRevokingMemberCandidate(member);
-                              }}
-                            >
-                              {revokingMemberId === (member.userId ?? member.id)
-                                ? 'Revoking…'
-                                : 'Revoke access'}
-                            </button>
-                            {revokeAccessErrorId === (member.userId ?? member.id) &&
-                            revokeAccessError ? (
-                              <p role="alert" className={styles['revokeErrorNotice']}>
-                                {revokeAccessError}
-                              </p>
-                            ) : null}
-                          </div>
-                        ) : null}
-                      </>
-                    )}
-                  </div>
-                ) : null}
-              </article>
-            );
-          })}
-        </div>
-      ) : normalized ? (
-        <EmptyState
-          title="No staff found"
-          description="Try a different name or clear the search."
-        />
+        </details>
       ) : null}
       {!canManage ? (
         <p className={styles['dialogNotice']}>
@@ -635,34 +643,28 @@ export function PartnerNetworkScreen({
     <PageContainer>
       <div className={rootClass}>
         <header className={styles['partnersHeader']}>
-          <div>
-            <span className={styles['sectionKicker']}>Network</span>
+          <div className={styles['partnersTitle']}>
             <h1>Partners</h1>
-            <p>The venues, promoters &amp; staff you run nights with.</p>
           </div>
-          {segment === 'staff' ? (
-            <AddStaffButton
-              {...(hostAccent ? { buttonClassName: styles['hostPrimaryButton'] } : {})}
-              {...(studioCapability ? { defaultCapability: studioCapability } : {})}
-              {...(onStaffChanged ? { onInvited: onStaffChanged } : {})}
-              {...(organizationId ? { organizationId } : {})}
-              disabled={!staffCanManage}
-              disabledTitle="You need staff-management access to invite staff"
-            />
-          ) : null}
+          <div className={styles['partnersHeaderActions']}>
+            <nav className={styles['segmentTabs']} aria-label="Partner type">
+              {segmentItems.map((item) => (
+                <Link
+                  key={item.value}
+                  href={hrefFor({
+                    segment: item.value,
+                    subView: 'connected',
+                    profileId: undefined,
+                  })}
+                  className={segment === item.value ? styles['segmentTabActive'] : ''}
+                  aria-current={segment === item.value ? 'page' : undefined}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
         </header>
-        <nav className={styles['segmentTabs']} aria-label="Partner type">
-          {segmentItems.map((item) => (
-            <Link
-              key={item.value}
-              href={hrefFor({ segment: item.value, subView: 'connected', profileId: undefined })}
-              className={segment === item.value ? styles['segmentTabActive'] : ''}
-              aria-current={segment === item.value ? 'page' : undefined}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
         {segment !== 'staff' ? (
           <nav className={styles['subTabs']} aria-label={`${segment} partner views`}>
             {subViewItems.map((item) => (
@@ -678,27 +680,58 @@ export function PartnerNetworkScreen({
           </nav>
         ) : null}
         {showSearch ? (
-          <form className={styles['partnerToolbar']} action={baseHref} method="get">
-            <input type="hidden" name="tab" value={segment} />
-            {segment !== 'staff' ? <input type="hidden" name="view" value={subView} /> : null}
-            <SearchInput
-              name="search"
-              defaultValue={search}
-              placeholder={segment === 'staff' ? 'Search staff' : 'Search partners'}
-              aria-label={segment === 'staff' ? 'Search staff' : 'Search partners'}
-            />
-            <Button type="submit" variant="secondary">
-              Search
-            </Button>
-            {search ? (
-              <Link
-                className={styles['clearSearch']}
-                href={hrefFor({ search: '', profileId: undefined })}
-              >
-                Clear
-              </Link>
-            ) : null}
-          </form>
+          segment === 'staff' ? (
+            <div className={[styles['partnerToolbar'], styles['partnerToolbarStaff']].join(' ')}>
+              <form className={styles['staffSearchForm']} action={baseHref} method="get">
+                <input type="hidden" name="tab" value={segment} />
+                <SearchInput
+                  className={styles['staffSearchInput']}
+                  name="search"
+                  defaultValue={search}
+                  placeholder="Search staff"
+                  aria-label="Search staff"
+                />
+              </form>
+              <AddStaffButton
+                {...(hostAccent ? { buttonClassName: styles['hostPrimaryButton'] } : {})}
+                {...(studioCapability ? { defaultCapability: studioCapability } : {})}
+                {...(onStaffChanged ? { onInvited: onStaffChanged } : {})}
+                {...(organizationId ? { organizationId } : {})}
+                disabled={!staffCanManage}
+                disabledTitle="You need staff-management access to invite staff"
+              />
+              {search ? (
+                <Link
+                  className={styles['clearSearch']}
+                  href={hrefFor({ search: '', profileId: undefined })}
+                >
+                  Clear
+                </Link>
+              ) : null}
+            </div>
+          ) : (
+            <form className={styles['partnerToolbar']} action={baseHref} method="get">
+              <input type="hidden" name="tab" value={segment} />
+              <input type="hidden" name="view" value={subView} />
+              <SearchInput
+                name="search"
+                defaultValue={search}
+                placeholder="Search partners"
+                aria-label="Search partners"
+              />
+              <Button type="submit" variant="secondary">
+                Search
+              </Button>
+              {search ? (
+                <Link
+                  className={styles['clearSearch']}
+                  href={hrefFor({ search: '', profileId: undefined })}
+                >
+                  Clear
+                </Link>
+              ) : null}
+            </form>
+          )
         ) : null}
         {subView === 'requests' && segment !== 'staff' ? (
           requests.length ? (
@@ -746,18 +779,27 @@ export function PartnerNetworkScreen({
             {...(onRevokeMemberAccess ? { onRevokeMemberAccess } : {})}
           />
         ) : records.length ? (
-          <div className={styles['partnerGrid']}>
-            {records.map((partner) => (
-              <PartnerCard
-                key={partner.id}
-                partner={partner}
-                href={hrefFor({ profileId: partner.id })}
+          <div className={profile ? styles['partnerResultsWithProfile'] : undefined}>
+            <div className={styles['partnerGrid']}>
+              {records.map((partner) => (
+                <PartnerCard
+                  key={partner.id}
+                  partner={partner}
+                  href={hrefFor({ profileId: partner.id })}
+                />
+              ))}
+            </div>
+            {profile ? (
+              <PartnerProfilePanel
+                partner={profile}
+                closeHref={hrefFor({ profileId: undefined })}
+                {...(hostAccent ? { primaryButtonClassName: styles['hostPrimaryButton'] } : {})}
                 hostAccent={hostAccent}
-                connecting={connectingPartnerId === partner.id}
-                connectError={connectErrorId === partner.id ? (connectError ?? null) : null}
+                connecting={connectingPartnerId === profile.id}
+                connectError={connectErrorId === profile.id ? (connectError ?? null) : null}
                 onConnect={onConnect}
               />
-            ))}
+            ) : null}
           </div>
         ) : (
           <EmptyState
@@ -779,17 +821,6 @@ export function PartnerNetworkScreen({
             }
           />
         )}
-        {profile ? (
-          <PartnerProfilePanel
-            partner={profile}
-            closeHref={hrefFor({ profileId: undefined })}
-            {...(hostAccent ? { primaryButtonClassName: styles['hostPrimaryButton'] } : {})}
-            hostAccent={hostAccent}
-            connecting={connectingPartnerId === profile.id}
-            connectError={connectErrorId === profile.id ? (connectError ?? null) : null}
-            onConnect={onConnect}
-          />
-        ) : null}
       </div>
     </PageContainer>
   );

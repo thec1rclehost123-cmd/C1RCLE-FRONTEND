@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
 import {
   CalendarIcon,
   CheckIcon,
@@ -146,6 +147,7 @@ function formatRequestedAt(iso: string): string {
   const time = Date.parse(iso);
   if (Number.isNaN(time)) return iso;
   return new Date(time).toLocaleDateString('en-IN', {
+    timeZone: PRODUCT_TIME_ZONE,
     day: 'numeric',
     month: 'short',
     year: 'numeric',

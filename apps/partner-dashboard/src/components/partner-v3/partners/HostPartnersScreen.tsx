@@ -79,7 +79,7 @@ export function HostPartnersScreen({
       segment={segment}
       subView={subView}
       search={search}
-      showSearch={false}
+      showSearch={segment === 'staff'}
       hostAccent
       {...(profileId ? { profileId } : {})}
       {...(organizationId ? { organizationId } : {})}

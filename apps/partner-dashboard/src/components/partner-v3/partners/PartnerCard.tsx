@@ -1,30 +1,14 @@
+import Image from 'next/image';
 import Link from 'next/link';
-
-import { Avatar } from '@/components/partner-v3/Avatar';
-import { Button } from '@/components/partner-v3/Button';
+import { useState } from 'react';
 
 import styles from './partners.module.css';
-import { PartnerStatusBadge } from './PartnerStatusBadge';
 
-import type { PartnerRelationship, PartnerRelationshipStatus } from '@/data/partner-data-source';
-
-const actionForStatus = (
-  status: PartnerRelationshipStatus | undefined,
-  kind: PartnerRelationship['kind'],
-) => {
-  if (status === 'Partnered') return kind === 'promoter' ? 'Assign to event' : 'Request a date';
-  if (!status) return 'Connect';
-  return 'Send reminder';
-};
+import type { PartnerRelationship } from '@/data/partner-data-source';
 
 export function PartnerCard({
   partner,
   href,
-  onActionUnavailable,
-  hostAccent = false,
-  connecting = false,
-  connectError = null,
-  onConnect,
 }: {
   readonly partner: PartnerRelationship;
   readonly href: string;
@@ -34,73 +18,30 @@ export function PartnerCard({
   readonly connectError?: string | null | undefined;
   readonly onConnect?: ((partner: PartnerRelationship) => void) | undefined;
 }) {
-  const actionLabel = actionForStatus(partner.status, partner.kind);
-  const isDiscover = !partner.status;
-  const hasRequestTarget =
-    partner.kind === 'venue'
-      ? Boolean(partner.venueId ?? partner.id)
-      : Boolean(partner.organizationId);
-  const canConnect = isDiscover && hasRequestTarget;
-  const cardToneClass = `partnerCard${partner.cardTone.slice(0, 1).toUpperCase()}${partner.cardTone.slice(1)}`;
-  const classNames = [styles['partnerCard'], styles[cardToneClass]]
-    .filter((value): value is string => Boolean(value))
-    .join(' ');
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const avatarSrc =
+    partner.avatarUrl && !avatarFailed ? partner.avatarUrl : '/partner-v3/staff-avatar.png';
   return (
-    <article className={classNames}>
-      <div className={styles['partnerCardArtwork']} aria-hidden="true">
-        <span>{partner.initials}</span>
+    <article className={styles['partnerCard']}>
+      <div className={styles['partnerCardArtwork']}>
+        <Image
+          src={avatarSrc}
+          alt={`${partner.name} profile`}
+          fill
+          sizes="88px"
+          unoptimized
+          onError={() => {
+            setAvatarFailed(true);
+          }}
+        />
       </div>
       <div className={styles['partnerCardBody']}>
-        <div className={styles['partnerCardTopline']}>
-          {partner.status ? (
-            <PartnerStatusBadge status={partner.status} hostAccent={hostAccent} />
-          ) : null}
+        <div className={styles['partnerCardIdentity']}>
+          <h3>{partner.name}</h3>
         </div>
-        <div className={styles['partnerIdentity']}>
-          <Avatar name={partner.name} />
-          <div>
-            <h3>{partner.name}</h3>
-            <p>
-              {partner.role}
-              {partner.genres.length ? ` \u00b7 ${partner.genres.join(', ')}` : ''}
-            </p>
-          </div>
-        </div>
-        {connectError ? (
-          <p role="alert" className={styles['requestError'] ?? ''}>
-            {connectError}
-          </p>
-        ) : null}
-        <div className={styles['partnerCardActions']}>
-          {canConnect ? (
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={connecting || !onConnect}
-              title={`Send a connection request to ${partner.name}`}
-              onClick={() => onConnect?.(partner)}
-            >
-              {connecting ? 'Connecting\u2026' : 'Connect'}
-            </Button>
-          ) : !isDiscover ? (
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={partner.status !== 'Partnered'}
-              title={
-                partner.status === 'Partnered'
-                  ? 'Event assignment is not available yet.'
-                  : 'Choose one of your venues to send a connection request.'
-              }
-              onClick={onActionUnavailable}
-            >
-              {actionLabel}
-            </Button>
-          ) : null}
-          <Link className={styles['profileLink']} href={href}>
-            View profile <span aria-hidden="true">↗</span>
-          </Link>
-        </div>
+        <Link className={styles['profileLink']} href={href}>
+          View profile <span aria-hidden="true">↗</span>
+        </Link>
       </div>
     </article>
   );
