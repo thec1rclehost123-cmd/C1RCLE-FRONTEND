@@ -1,4 +1,6 @@
 import { renderHook } from '@testing-library/react';
+import { createElement } from 'react';
+import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -96,6 +98,14 @@ describe('session-store', () => {
   });
 
   describe('useSession', () => {
+    it('renders a stable unknown server snapshot even when the browser store is authenticated', () => {
+      setSession({ user: mockUser }, 'test_token', Date.now() + 3_600_000);
+      function Status() {
+        return createElement('span', null, useSessionStore().status);
+      }
+      expect(renderToString(createElement(Status))).toBe('<span>unknown</span>');
+      expect(useSessionStore.getState().status).toBe('authenticated');
+    });
     it('reflects the store: loading -> authenticated -> anonymous', () => {
       const { result, rerender } = renderHook(() => useSession());
       expect(result.current).toEqual({

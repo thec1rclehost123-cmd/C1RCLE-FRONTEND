@@ -4,8 +4,43 @@
  * wall-clock values in India, so persist the corresponding UTC instant rather
  * than treating a local clock time as UTC.
  */
+import { PRODUCT_TIME_ZONE, PRODUCT_TIME_ZONE_OFFSET_MINUTES } from '@c1rcle/contracts';
 
-const INDIA_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+const PRODUCT_TIME_ZONE_OFFSET_MS = PRODUCT_TIME_ZONE_OFFSET_MINUTES * 60_000;
+
+export function formatProductDateTime(
+  value: string,
+  options: Intl.DateTimeFormatOptions = { dateStyle: 'medium', timeStyle: 'short' },
+): string {
+  const instant = new Date(value);
+  if (Number.isNaN(instant.getTime())) return 'Time unavailable';
+  const formatted = new Intl.DateTimeFormat('en-IN', {
+    ...options,
+    timeZone: PRODUCT_TIME_ZONE,
+  }).format(instant);
+  const includesTime =
+    options.timeStyle !== undefined ||
+    options.hour !== undefined ||
+    options.minute !== undefined ||
+    options.second !== undefined;
+  return includesTime ? `${formatted} IST` : formatted;
+}
+
+export function isProductCalendarDay(value: string | undefined, now = new Date()): boolean {
+  if (!value) return false;
+  const eventDate = new Date(value);
+  if (Number.isNaN(eventDate.getTime())) return false;
+
+  const dateKey = (date: Date) =>
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: PRODUCT_TIME_ZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date);
+
+  return dateKey(eventDate) === dateKey(now);
+}
 
 interface ClockTime {
   readonly hours: number;
@@ -39,7 +74,56 @@ function parseClockTime(value: string): ClockTime | null {
 }
 
 function localIndiaInstant(dateMidnight: number, clock: ClockTime): number {
-  return dateMidnight + clock.hours * 60 * 60 * 1000 + clock.minutes * 60 * 1000 - INDIA_OFFSET_MS;
+  return (
+    dateMidnight +
+    clock.hours * 60 * 60 * 1000 +
+    clock.minutes * 60 * 1000 -
+    PRODUCT_TIME_ZONE_OFFSET_MS
+  );
+}
+
+export function isoInstantToProductLocalInput(value: string): string {
+  const instant = new Date(value);
+  if (Number.isNaN(instant.getTime())) return '';
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: PRODUCT_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(instant);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((entry) => entry.type === type)?.value ?? '';
+  return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}`;
+}
+
+export function productLocalInputToIsoInstant(value: string): string | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return null;
+  const [year, month, day, hour, minute] = match.slice(1).map(Number);
+  if (
+    year === undefined ||
+    month === undefined ||
+    day === undefined ||
+    hour === undefined ||
+    minute === undefined
+  ) {
+    return null;
+  }
+  const localStamp = Date.UTC(year, month - 1, day, hour, minute);
+  const normalized = new Date(localStamp);
+  if (
+    normalized.getUTCFullYear() !== year ||
+    normalized.getUTCMonth() + 1 !== month ||
+    normalized.getUTCDate() !== day ||
+    normalized.getUTCHours() !== hour ||
+    normalized.getUTCMinutes() !== minute
+  ) {
+    return null;
+  }
+  return new Date(localStamp - PRODUCT_TIME_ZONE_OFFSET_MS).toISOString();
 }
 
 export function eventStartAtFromDraft(draft: {
@@ -77,11 +161,11 @@ export function eventEndAtFromDraft(
   let endLocal = dateMidnight + endClock.hours * 60 * 60 * 1000 + endClock.minutes * 60 * 1000;
   if (endLocal <= startLocal) endLocal += 24 * 60 * 60 * 1000;
 
-  return new Date(endLocal - INDIA_OFFSET_MS).toISOString();
+  return new Date(endLocal - PRODUCT_TIME_ZONE_OFFSET_MS).toISOString();
 }
 
-/** Format a date-only value in its event timezone without inheriting the host OS timezone. */
-export function formatEventDateLabel(date: string, timezone: string): string {
+/** Format a date-only value in the fixed product timezone. */
+export function formatEventDateLabel(date: string): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return '';
   const stableMiddayUtc = new Date(`${date}T12:00:00.000Z`);
   if (
@@ -90,7 +174,8 @@ export function formatEventDateLabel(date: string, timezone: string): string {
   ) {
     return '';
   }
-  return new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeZone: timezone }).format(
-    stableMiddayUtc,
-  );
+  return new Intl.DateTimeFormat('en-IN', {
+    dateStyle: 'medium',
+    timeZone: PRODUCT_TIME_ZONE,
+  }).format(stableMiddayUtc);
 }
