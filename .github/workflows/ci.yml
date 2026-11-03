@@ -13,6 +13,12 @@ on:
   push:
     branches: [main, staging]
   workflow_dispatch:
+    inputs:
+      backend_ref:
+        description: Backend commit or branch for exact-pair contract parity
+        type: string
+        required: true
+        default: codex/m4-m5-lineage-reconcile-20261029
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -44,12 +50,12 @@ jobs:
       - name: Lint
         id: lint
         if: always()
-        run: pnpm lint
+        run: pnpm exec turbo run lint --concurrency=1
 
       - name: Typecheck
         id: typecheck
         if: always()
-        run: pnpm typecheck
+        run: pnpm exec turbo run typecheck --concurrency=1
 
       - name: Architecture boundaries
         id: boundaries
@@ -59,7 +65,7 @@ jobs:
       - name: Test
         id: test
         if: always()
-        run: pnpm test:coverage
+        run: pnpm exec turbo run test:coverage --concurrency=1
 
       # Each app validates its own env at build time (`@c1rcle/config`). CI has
       # no real secrets to build against, so each app's own `.env.example`
@@ -102,7 +108,7 @@ jobs:
       - name: Build
         id: build
         if: always()
-        run: pnpm build
+        run: pnpm exec turbo run build --concurrency=1
 
       - name: Summarize
         if: always()
@@ -240,7 +246,7 @@ jobs:
   contract-parity:
     name: Contract parity (backend)
     needs: changes
-    if: needs.changes.outputs.contracts == 'true'
+    if: always() && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.contracts == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -251,7 +257,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           repository: ${{ vars.BACKEND_REPO || 'thec1rclehost123-cmd/C1RCLE-BACKEND' }}
-          ref: ${{ vars.BACKEND_REF || github.base_ref }}
+          ref: ${{ inputs.backend_ref || vars.BACKEND_REF || github.base_ref }}
           token: ${{ secrets.BACKEND_REPO_TOKEN || github.token }}
           path: backend
           persist-credentials: false
@@ -280,6 +286,11 @@ jobs:
           pnpm --filter @c1rcle/api-client build
 
       # Exit 0 = agree, 1 = drift, 2 = cannot check (missing dists).
+      - name: Record exact contract pair
+        run: |
+          git -C frontend rev-parse HEAD
+          git -C backend rev-parse HEAD
+
       - name: Compare contracts
         working-directory: backend
         run: node scripts/contract-parity.mjs --frontend "$GITHUB_WORKSPACE/frontend"
@@ -287,7 +298,7 @@ jobs:
   # ── The single required status check for PRs ───────────────────────────────
   ci-ok:
     name: CI OK
-    if: always() && github.event_name == 'pull_request'
+    if: always() && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
     needs: [gate, contract-parity]
     runs-on: ubuntu-latest
     timeout-minutes: 5
