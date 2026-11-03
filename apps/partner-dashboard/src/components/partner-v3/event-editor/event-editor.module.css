@@ -6,9 +6,9 @@
 }
 
 .hostTheme {
-  --editor-accent: #a78bfa;
-  --editor-accent-soft: rgb(167 139 250 / 14%);
-  --editor-accent-border: rgb(167 139 250 / 32%);
+  --editor-accent: #ff5a1f;
+  --editor-accent-soft: rgb(255 90 31 / 10%);
+  --editor-accent-border: rgb(255 90 31 / 32%);
 }
 .venueTheme {
   --editor-accent: #ff5a1f;
@@ -57,7 +57,7 @@
   gap: 5px;
   padding: 6px;
   border: 1px solid rgb(255 255 255 / 7%);
-  border-radius: 999px;
+  border-radius: 8px;
   background: rgb(20 20 20 / 72%);
 }
 .step {
@@ -66,7 +66,7 @@
   gap: 7px;
   min-height: 31px;
   padding: 0 11px;
-  border-radius: 999px;
+  border-radius: 8px;
   color: #6a6a66;
   font-size: 11.5px;
   font-weight: 700;
@@ -94,29 +94,91 @@
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  grid-template-columns: 210px minmax(0, 1fr) minmax(300px, 380px);
   align-items: start;
-  gap: 28px;
+  gap: 32px;
+}
+.sectionNav {
+  position: sticky;
+  top: 96px;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 0 16px 0 0;
+  border-right: 1px solid rgb(255 255 255 / 10%);
+}
+.sectionNavLabel {
+  padding: 6px 10px 8px;
+  color: #f5f5f3;
+  font-size: 16px;
+  font-weight: 750;
+  letter-spacing: normal;
+}
+.sectionStep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #e5e5e2;
+  cursor: pointer;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: left;
+}
+.sectionStep:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+.sectionStep:not(:disabled):hover {
+  background: rgb(255 255 255 / 5%);
+  color: #f5f5f3;
+}
+.sectionStepActive {
+  border-color: transparent;
+  background: rgb(255 255 255 / 7%);
+  color: #fff;
+}
+.sectionStepDone .sectionStepNumber {
+  background: rgb(62 190 112 / 18%);
+  color: #70e59c;
+}
+.sectionStepNumber {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 8%);
+  color: #b6b6b2;
+  font-size: 12px;
+  font-weight: 800;
 }
 .formColumn {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
   min-width: 0;
 }
 .card {
-  padding: 20px;
-  border: 1px solid rgb(255 255 255 / 8%);
-  border-radius: 18px;
-  background: #141414;
-  box-shadow: 0 18px 42px rgb(0 0 0 / 18%);
+  min-width: 0;
+  padding: 0 0 24px;
+  border: 0;
+  border-bottom: 1px solid rgb(255 255 255 / 10%);
+  background: transparent;
 }
 .cardTitle {
   margin-bottom: 14px;
-  color: #6a6a66;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  color: #f5f5f3;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
 }
 .cardTitleRow {
   display: flex;
@@ -206,7 +268,7 @@
   min-height: 34px;
   padding: 0 13px;
   border: 1px solid rgb(255 255 255 / 10%);
-  border-radius: 999px;
+  border-radius: 8px;
   background: #0d0d0d;
   color: #8a8a86;
   cursor: pointer;
@@ -345,7 +407,7 @@
   width: fit-content;
   padding: 8px 13px;
   border: 1px solid var(--editor-accent-border);
-  border-radius: 999px;
+  border-radius: 8px;
   background: var(--editor-accent-soft);
   color: #f5f5f3;
   cursor: pointer;
@@ -430,10 +492,9 @@
   justify-content: space-between;
   gap: 10px;
   margin-top: 12px;
-  padding: 10px 12px;
-  border-radius: 11px;
-  background: var(--editor-accent-soft);
-  color: #ded1f5;
+  padding: 0;
+  background: transparent;
+  color: #a9a9a5;
   font-size: 12px;
 }
 
@@ -526,6 +587,9 @@
 .calendarDotPending {
   background: #ffb020;
 }
+.calendarDotBooked {
+  background: #666662;
+}
 .calendarLegend {
   display: flex;
   flex-wrap: wrap;
@@ -535,6 +599,12 @@
   border-top: 1px solid rgb(255 255 255 / 7%);
   color: #8a8a86;
   font-size: 11px;
+  line-height: 1.5;
+  align-items: center;
+}
+.calendarLegend + .twoColumns {
+  margin-top: 24px;
+  align-items: start;
 }
 .calendarLegend span {
   display: inline-flex;
@@ -552,6 +622,16 @@
 }
 .calendarLegend .pending {
   background: #ffb020;
+}
+.calendarEmpty {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 2%);
+  color: #a6a6a1;
+  font-size: 12px;
+  line-height: 1.5;
 }
 .slotList {
   display: grid;
@@ -575,8 +655,8 @@
   text-align: left;
 }
 .slotButtonSelected {
-  border-color: var(--editor-accent-border);
-  background: var(--editor-accent-soft);
+  border-color: transparent;
+  background: rgb(255 255 255 / 7%);
   color: #fff;
 }
 
@@ -587,10 +667,10 @@
 .ticketCard {
   display: grid;
   gap: 12px;
-  padding: 16px;
-  border: 1px solid rgb(255 255 255 / 10%);
-  border-radius: 16px;
-  background: #0e0e0e;
+  padding: 16px 0;
+  border: 0;
+  border-bottom: 1px solid rgb(255 255 255 / 12%);
+  background: transparent;
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease;
@@ -619,8 +699,7 @@
   color: #a9a9a5;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  letter-spacing: normal;
 }
 .tierFieldLabel input {
   width: 100%;
@@ -647,10 +726,9 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  padding: 12px 14px;
-  border: 1px solid rgb(255 255 255 / 7%);
-  border-radius: 12px;
-  background: #121212;
+  padding: 12px 0;
+  border: 0;
+  background: transparent;
 }
 .ticketOptions label {
   display: grid;
@@ -658,8 +736,7 @@
   color: #a9a9a5;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  letter-spacing: normal;
 }
 .ticketOptions input,
 .ticketOptions select {
@@ -701,10 +778,9 @@
 .pricingPhasesBlock {
   display: grid;
   gap: 12px;
-  padding: 14px 16px;
-  border: 1px solid rgb(255 255 255 / 8%);
-  border-radius: 12px;
-  background: #121212;
+  padding: 12px 0;
+  border: 0;
+  background: transparent;
 }
 .pricingPhasesHeader {
   display: flex;
@@ -736,10 +812,9 @@
     );
   align-items: flex-end;
   gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid rgb(255 255 255 / 7%);
-  border-radius: 10px;
-  background: #161616;
+  padding: 12px 0;
+  border: 0;
+  background: transparent;
 }
 .phaseField {
   display: flex;
@@ -752,8 +827,7 @@
   color: #a9a9a5;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  letter-spacing: normal;
 }
 .phaseField input {
   width: 100%;
@@ -813,7 +887,7 @@
   margin-top: 6px;
   padding: 8px 14px;
   border: 1px solid var(--editor-accent-border);
-  border-radius: 999px;
+  border-radius: 8px;
   background: var(--editor-accent-soft);
   color: #f5f5f3;
   cursor: pointer;
@@ -974,8 +1048,8 @@
   background: #141414;
 }
 .optionSelected {
-  border-color: var(--editor-accent-border);
-  background: var(--editor-accent-soft);
+  border-color: transparent;
+  background: rgb(255 255 255 / 7%);
   color: #fff;
 }
 .optionSelected strong {
@@ -1115,8 +1189,8 @@
   line-height: 1.4;
 }
 .compChoiceSelected {
-  border-color: var(--editor-accent-border);
-  background: var(--editor-accent-soft);
+  border-color: transparent;
+  background: rgb(255 255 255 / 7%);
   color: #fff;
 }
 .overrideSection {
@@ -1186,8 +1260,7 @@
   color: #a9a9a5;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  letter-spacing: normal;
 }
 .overrideControls input {
   width: 100%;
@@ -1387,7 +1460,7 @@
   min-height: 49px;
   padding: 0 24px;
   border: 1px solid rgb(255 255 255 / 10%);
-  border-radius: 999px;
+  border-radius: 8px;
   background: #1c1c1c;
   color: #f5f5f3;
   cursor: pointer;
@@ -1399,13 +1472,13 @@
   background: #262626;
 }
 .actionButtonPrimary {
-  flex: 1;
+  margin-left: auto;
   border-color: transparent;
   background: var(--editor-accent);
-  color: #0a0a0a;
+  color: #fff;
 }
 .actionButtonPrimary:hover {
-  background: #f3e8ff;
+  background: #e84d18;
 }
 .actionButtonPrimary:disabled {
   opacity: 0.75;
@@ -1432,15 +1505,14 @@
   color: #8a8a86;
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  letter-spacing: normal;
 }
 .previewLabel i {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: #6ee79b;
-  box-shadow: 0 0 8px #6ee79b;
+  display: none;
 }
 .previewCard {
   position: relative;
@@ -1480,7 +1552,7 @@
   gap: 6px;
   padding: 5px 10px;
   border: 1px solid rgb(255 255 255 / 16%);
-  border-radius: 999px;
+  border-radius: 8px;
   background: rgb(0 0 0 / 38%);
   color: #fff;
   font-size: 10px;
@@ -1515,7 +1587,7 @@
   margin-top: 15px;
   padding: 12px;
   border: 1px solid rgb(255 255 255 / 22%);
-  border-radius: 999px;
+  border-radius: 8px;
   background: rgb(255 255 255 / 14%);
   color: #fff;
   font-size: 13px;
@@ -1528,19 +1600,58 @@
   font-size: 11px;
   text-align: center;
 }
+.previewTools {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+}
+.previewTools .uploadButton {
+  justify-self: start;
+  white-space: nowrap;
+}
+.previewTools .artworkChoices {
+  justify-content: flex-end;
+  margin-top: 0;
+}
+.previewActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.previewAction {
+  display: block;
+  min-width: 0;
+}
 .previewOpenButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-top: 12px;
+  min-height: 40px;
+  margin: 0;
   padding: 9px 14px;
   border: 1px solid rgb(255 255 255 / 22%);
-  border-radius: 999px;
+  border-radius: 8px;
   background: rgb(0 0 0 / 52%);
   color: #fff;
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.01em;
+  cursor: pointer;
+  font-family: inherit;
+  width: 100%;
+}
+.previewOpenButton:disabled {
+  border-color: rgb(255 255 255 / 9%);
+  background: #171717;
+  color: #777773;
+  opacity: 1;
+  cursor: not-allowed;
 }
 .overlay {
   position: fixed;
@@ -1563,13 +1674,13 @@
   gap: 6px;
   padding: 7px;
   border: 1px solid rgb(255 255 255 / 15%);
-  border-radius: 999px;
+  border-radius: 8px;
   background: rgb(30 30 30 / 90%);
 }
 .previewPicker button {
   padding: 12px 18px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 8px;
   background: transparent;
   color: #f5f5f3;
   cursor: pointer;
@@ -1580,19 +1691,23 @@
 .previewPicker button:hover {
   background: rgb(255 255 255 / 10%);
 }
+.previewPicker .previewPickerBack {
+  border-left: 1px solid rgb(255 255 255 / 12%);
+  color: #a7a7a2;
+}
 .deviceFrame {
-  display: grid;
-  width: min(900px, 100%);
-  min-height: min(600px, 78vh);
-  place-items: center;
+  display: block;
+  width: min(1280px, 96vw);
+  height: min(900px, 90vh);
+  overflow: auto;
   border: 1px solid rgb(255 255 255 / 12%);
   border-radius: 16px;
   background: #090909;
 }
 .mobileFrame {
-  width: min(330px, 80vw);
-  height: min(640px, 78vh);
-  padding: 10px;
+  width: min(390px, 90vw);
+  height: min(820px, 88vh);
+  padding: 9px;
   border: 2px solid #26262a;
   border-radius: 45px;
   background: #000;
@@ -1603,13 +1718,13 @@
   overflow: auto;
   border-radius: 37px;
   background: #141414;
-  padding: 18px;
+  padding: 0;
 }
 .overlayClose {
   margin-top: 20px;
   padding: 10px 18px;
   border: 1px solid rgb(255 255 255 / 14%);
-  border-radius: 999px;
+  border-radius: 8px;
   background: rgb(255 255 255 / 8%);
   color: #f5f5f3;
   cursor: pointer;
@@ -1625,13 +1740,16 @@
 .guestPreviewShell,
 .mobilePreviewShell {
   width: 100%;
-  padding: 22px;
+  padding: 18px;
 }
 .guestPreviewShell > .previewLabel,
 .mobilePreviewShell > .previewLabel {
   display: block;
   margin-bottom: 12px;
   color: #8a8a86;
+}
+.mobilePreviewShell > .previewLabel {
+  margin: 14px 16px 4px;
 }
 .fullPreview {
   overflow: hidden;
@@ -1687,7 +1805,7 @@
   margin-top: 4px;
   padding: 12px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 8px;
   background: var(--editor-accent);
   color: #0a0a0a;
   cursor: pointer;
@@ -1695,10 +1813,257 @@
   font-weight: 800;
 }
 
+.previewPoster {
+  overflow: hidden;
+  margin-top: 16px;
+  background: transparent;
+}
+.previewPosterImage {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #191919;
+}
+.previewPosterImage > img,
+.previewPosterImage > div {
+  object-fit: cover;
+}
+.previewPosterBadge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 5px 9px;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 8px;
+  background: rgb(0 0 0 / 48%);
+  color: white;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.previewPosterDetails {
+  display: grid;
+  gap: 7px;
+  padding: 18px 0 0;
+}
+.previewPosterDetails h2 {
+  margin: 0;
+  color: #f7f7f5;
+  font-size: 22px;
+  line-height: 1.2;
+}
+.previewPosterDetails p {
+  margin: 0;
+  color: #aaa9a5;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.previewPosterDetails .previewDescription {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+.previewTierList {
+  display: grid;
+  gap: 6px;
+  margin-top: 3px;
+}
+.previewTierList > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 7px;
+  border-top: 1px solid rgb(255 255 255 / 9%);
+  color: #e8e8e5;
+  font-size: 11px;
+}
+.previewTierList strong {
+  font-weight: 600;
+}
+
+.guestEventPreview {
+  position: relative;
+  isolation: isolate;
+  min-height: 100%;
+  overflow: hidden;
+  color: white;
+  background: #050505;
+}
+.guestEventBackdrop {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  overflow: hidden;
+  background: #050505;
+}
+.guestEventBackdrop img {
+  position: absolute;
+  inset: -8%;
+  width: 116%;
+  height: 116%;
+  object-fit: cover;
+  opacity: 0.22;
+  filter: blur(54px) brightness(0.62);
+}
+.guestEventBackdrop::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #050505 0%, rgb(5 5 5 / 72%) 48%, #050505 100%);
+  content: '';
+}
+.guestEventContent {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(240px, 0.8fr);
+  gap: clamp(24px, 5vw, 64px);
+  width: min(1360px, 100%);
+  min-height: 100%;
+  margin-inline: auto;
+  padding: clamp(24px, 5vw, 64px);
+}
+.guestEventInfo {
+  padding-top: 26px;
+}
+.guestEventEyebrow {
+  color: #ff7658;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.guestEventInfo h1 {
+  max-width: 18ch;
+  margin: 12px 0 20px;
+  color: #fff;
+  font:
+    900 clamp(34px, 5.2vw, 76px)/1 var(--font-display),
+    sans-serif;
+  letter-spacing: -0.045em;
+  overflow-wrap: anywhere;
+}
+.guestEventWhen,
+.guestEventVenue {
+  margin: 0 0 8px;
+  color: rgb(255 255 255 / 78%);
+  font-size: 14px;
+}
+.guestEventAbout {
+  max-width: 62ch;
+  margin-top: 36px;
+  padding-top: 22px;
+  border-top: 1px solid rgb(255 255 255 / 12%);
+}
+.guestEventAbout h2,
+.guestEventTickets h2 {
+  margin: 0 0 12px;
+  color: #fff;
+  font-size: 19px;
+}
+.guestEventAbout p {
+  margin: 0 0 10px;
+  color: rgb(255 255 255 / 72%);
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+.guestEventAbout .guestEventArtists {
+  color: #ff9b7c;
+  font-weight: 650;
+}
+.guestEventPosterColumn {
+  width: min(100%, 370px);
+  justify-self: center;
+}
+.guestEventPoster {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 18px;
+  background: #171717;
+  box-shadow: 0 22px 70px rgb(0 0 0 / 45%);
+}
+.guestEventPoster img,
+.guestEventPoster > div {
+  object-fit: cover;
+}
+.guestEventTickets {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 16px;
+  background: rgb(14 14 14 / 76%);
+  backdrop-filter: blur(18px);
+}
+.guestEventTickets h2 {
+  margin-bottom: 2px;
+  font-size: 15px;
+}
+.guestEventTickets > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid rgb(255 255 255 / 9%);
+  font-size: 12px;
+}
+.guestEventTickets > div span {
+  display: grid;
+  gap: 3px;
+}
+.guestEventTickets small,
+.guestPreviewNotice {
+  color: rgb(255 255 255 / 50%);
+  font-size: 10px;
+}
+.guestEventTickets b {
+  color: #ff8a67;
+}
+.guestEventPreviewMobile .guestEventContent {
+  grid-template-columns: 1fr;
+  gap: 20px;
+  padding: 24px 18px 36px;
+}
+.guestEventPreviewMobile .guestEventPosterColumn {
+  grid-row: 1;
+  width: min(100%, 290px);
+}
+.guestEventPreviewMobile .guestEventInfo {
+  grid-row: 2;
+  padding-top: 0;
+}
+.guestEventPreviewMobile .guestEventInfo h1 {
+  font-size: clamp(30px, 10vw, 42px);
+}
+.guestEventPreviewMobile .guestEventAbout {
+  margin-top: 24px;
+}
+
 @media (max-width: 1050px) {
   .layout {
-    grid-template-columns: minmax(0, 1fr) 300px;
-    gap: 20px;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 16px;
+  }
+  .sectionNav {
+    position: static;
+    grid-column: 1 / -1;
+    display: flex;
+    overflow-x: auto;
+    gap: 5px;
+    padding: 6px;
+  }
+  .sectionNavLabel {
+    display: none;
+  }
+  .sectionStep {
+    width: auto;
+    flex: none;
+    padding: 0 9px;
   }
   .ticketRow {
     grid-template-columns: minmax(100px, 1fr) 80px 70px 75px 24px;
@@ -1718,6 +2083,21 @@
   }
   .layout {
     grid-template-columns: 1fr;
+  }
+  .sectionNav {
+    position: static;
+    display: flex;
+    overflow-x: auto;
+    gap: 5px;
+    padding: 6px;
+  }
+  .sectionNavLabel {
+    display: none;
+  }
+  .sectionStep {
+    width: auto;
+    flex: none;
+    padding: 0 9px;
   }
   .previewColumn {
     position: static;
@@ -1798,4 +2178,891 @@
   .previewHint {
     display: none;
   }
+}
+
+.posterControls {
+  position: absolute;
+  inset: auto 16px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.posterControls .artworkChoices {
+  margin: 0;
+}
+.posterUploadAction {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgb(255 255 255 / 30%);
+  border-radius: 8px;
+  background: rgb(12 12 12 / 85%);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.posterUploadAction input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.posterUploadAction:focus-within {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+.posterUploadAction:hover {
+  background: #262626;
+}
+@media (max-width: 560px) {
+  .card {
+    padding: 0 0 20px;
+    border-radius: 0;
+  }
+}
+
+.page {
+  position: relative;
+  isolation: isolate;
+}
+.editorBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  background: #090909;
+}
+.editorBackdrop img {
+  object-fit: cover;
+  filter: blur(48px);
+  transform: scale(1.12);
+  opacity: 0.36;
+}
+.editorBackdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 20%);
+}
+
+.timePlanner {
+  min-width: 0;
+  margin-top: 24px;
+}
+.timePlannerHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.timePlannerHeading h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+.timePlannerHeading > span {
+  font-size: 12px;
+  color: #aaa;
+}
+.timelineScroll {
+  max-width: 100%;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+.timelineCanvas {
+  min-width: 960px;
+}
+.timelineTicks {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 10px;
+  color: #b9b9b6;
+}
+.timelineTicks span {
+  white-space: nowrap;
+}
+.timeTrack {
+  display: block;
+  width: 100%;
+  height: 60px;
+  position: relative;
+  background: #6b2929;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: crosshair;
+  touch-action: none;
+}
+.timeFree {
+  fill: #333431;
+  pointer-events: none;
+}
+.timeSelection {
+  pointer-events: none;
+}
+.timeSelection rect {
+  fill: #ff5a1f;
+  stroke: #ff956f;
+}
+.timeSelection line {
+  stroke: #fff;
+  stroke-width: 3px;
+}
+.midnightMarker {
+  stroke: #ffffff88;
+  stroke-width: 2px;
+  stroke-dasharray: 5 5;
+  pointer-events: none;
+}
+.timeLegend {
+  display: flex;
+  gap: 18px;
+  font-size: 12px;
+  color: #b9b9b6;
+  margin: 10px 0 20px;
+}
+.timeLegend span {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.timeLegend span::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  background: #555650;
+  border-radius: 2px;
+}
+.timeLegend span:nth-child(2)::before {
+  background: #a34c4c;
+}
+.timeLegend span:nth-child(3)::before {
+  background: #ff5a1f;
+}
+.timePlannerFields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.timePlannerFields label,
+.timelineKeyboard label {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ccc;
+}
+.timePlannerFields input,
+.timePlannerFields select {
+  min-width: 0;
+  width: 100%;
+  color-scheme: dark;
+  background: #111;
+  color: white;
+  border: 1px solid #ffffff26;
+  border-radius: 7px;
+  padding: 12px;
+  font: inherit;
+}
+.timelineKeyboard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 16px;
+}
+.timelineKeyboard input {
+  width: 100%;
+  accent-color: #ff5a1f;
+}
+.timeConfirmation {
+  border-top: 1px solid #ffffff20;
+  padding-top: 16px;
+  margin: 18px 0 0;
+  font-size: 14px;
+  font-weight: 650;
+  color: #fff;
+  line-height: 1.6;
+}
+.timeError {
+  color: #ffb4ac;
+  font-size: 13px;
+  line-height: 1.5;
+}
+@media (max-width: 560px) {
+  .timePlannerFields {
+    grid-template-columns: 1fr;
+  }
+  .timePlannerHeading {
+    align-items: start;
+    flex-direction: column;
+    gap: 6px;
+  }
+}
+
+.timelineDates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  color: #fff;
+  font-weight: 650;
+}
+.timelineDates span:nth-child(2) {
+  border-left: 1px solid #ffffff30;
+  padding-left: 12px;
+}
+
+.chips .chip {
+  border-radius: 999px;
+}
+.genreAdd {
+  min-width: 36px;
+  padding: 0;
+  font-size: 22px;
+  line-height: 1;
+}
+.chips + .inlineInput {
+  margin-top: 12px;
+}
+
+.ticketModeChoice {
+  border: 0;
+  padding: 0 0 24px;
+  margin: 0 0 24px;
+  border-bottom: 1px solid #ffffff20;
+  min-width: 0;
+}
+.ticketModeChoice legend {
+  margin-bottom: 16px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+}
+.ticketModeChoice > div {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #ffffff20;
+  border-radius: 8px;
+  background: #101010;
+}
+.ticketModeChoice label {
+  position: relative;
+  cursor: pointer;
+}
+.ticketModeChoice input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.ticketModeChoice span {
+  display: block;
+  min-width: 130px;
+  padding: 12px 20px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 650;
+  color: #aaa;
+  border-radius: 5px;
+}
+.ticketModeChoice input:checked + span {
+  background: #30302e;
+  color: #fff;
+}
+.ticketModeChoice input:focus-visible + span {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.tierPresets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+.compactTierList {
+  display: grid;
+  margin-bottom: 16px;
+}
+.compactTierRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 0;
+  border-bottom: 1px solid #ffffff20;
+}
+.compactTierRow > div {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+.compactTierRow strong {
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+.compactTierRow span {
+  color: #b8b8b8;
+  font-size: 14px;
+}
+.tierEdit {
+  display: grid;
+  place-items: center;
+  flex: 0 0 40px;
+  height: 40px;
+  background: transparent;
+  border: 0;
+  color: #ddd;
+  cursor: pointer;
+}
+.tierEdit:hover {
+  color: white;
+  background: #ffffff10;
+  border-radius: 8px;
+}
+.tierDialog {
+  width: min(720px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
+  margin: auto;
+  padding: 24px;
+  color: #f5f5f5;
+  background: #141414;
+  border: 1px solid #ffffff26;
+  border-radius: 18px;
+}
+.tierDialog::backdrop {
+  background: #000b;
+  backdrop-filter: blur(8px);
+}
+.tierDialogHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #ffffff20;
+}
+.tierDialogHeader h2 {
+  margin: 0;
+  font-size: 22px;
+}
+.tierDialogHeader button {
+  border: 0;
+  background: transparent;
+  color: #ccc;
+  font-size: 28px;
+  cursor: pointer;
+}
+.tierDialog .ticketRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+  padding: 20px 0;
+}
+.tierDialog .ticketOptions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.tierDialog .ticketList {
+  gap: 0;
+}
+.tierDialog .tierFieldLabel {
+  min-width: 0;
+}
+.tierDialog input,
+.tierDialog select,
+.tierDialog textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+.tierDescription {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 20px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.tierDescription textarea {
+  resize: vertical;
+  padding: 12px;
+  border: 1px solid #ffffff26;
+  border-radius: 8px;
+  background: #0c0c0c;
+  color: white;
+  font: inherit;
+  line-height: 1.5;
+}
+.tierDialogFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 20px;
+  margin-top: 20px;
+  border-top: 1px solid #ffffff20;
+}
+.tierDialogFooter > button:last-child {
+  background: #ff5a1f;
+  color: white;
+  border: 0;
+  border-radius: 9px;
+  padding: 12px 20px;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+@media (max-width: 600px) {
+  .tierDialog {
+    padding: 18px;
+  }
+  .tierDialog .ticketRow,
+  .tierDialog .ticketOptions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.tierDelete {
+  margin-right: auto;
+  padding: 10px 0;
+  color: #f38c88;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.compactTierRow > .tierActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.tierActions button:last-child {
+  font-size: 24px;
+  color: #a4a4a4;
+}
+.tierActions button:last-child:hover {
+  color: #ff8e88;
+}
+.tierDialog .ticketRow > label:first-child {
+  grid-column: 1 / -1;
+}
+.tierDialog .ticketOptions {
+  align-items: start;
+  gap: 18px 20px;
+}
+.tierDialog .ticketOptions label {
+  align-content: start;
+  font-size: 13px;
+  font-weight: 500;
+}
+.tierDialog .ticketOptions input,
+.tierDialog .ticketOptions select {
+  height: 42px;
+  min-height: 42px;
+  font-size: 14px;
+  padding: 8px 12px;
+}
+.tierExtraSettings {
+  border-top: 1px solid #ffffff20;
+  padding-top: 16px;
+}
+.tierExtraSettings > summary {
+  cursor: pointer;
+  color: #ddd;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 4px 0 12px;
+}
+.tierExtraSettings .pricingPhasesBlock {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #ffffff20;
+}
+.tierDialog .ticketOptions .muted,
+.tierDialog .ticketOptions span[class] {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+.tierDialogHeader {
+  padding-bottom: 14px;
+}
+.tierDialog .ticketRow {
+  gap: 14px 18px;
+  padding: 16px 0;
+}
+.tierDescription {
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.tierDialog {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.tierDialog > .ticketList {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+.tierDialog .ticketRow select {
+  height: 42px;
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid #ffffff26;
+  border-radius: 8px;
+  background: #191919;
+  color: #f5f5f5;
+  font: inherit;
+  font-size: 14px;
+}
+.promoterPicker {
+  overflow-y: auto;
+  min-height: 0;
+  max-height: 50vh;
+  padding: 12px 0;
+}
+.promoterPicker label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid #ffffff18;
+  font-size: 15px;
+  cursor: pointer;
+}
+.promoterPicker input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: #ff5a1f;
+}
+.tierDialog .overrideControls {
+  padding: 20px 0;
+  overflow-y: auto;
+  min-height: 0;
+}
+.compactPickerButton {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  padding: 16px 0;
+  background: transparent;
+  color: #f5f5f5;
+  border: 0;
+  border-bottom: 1px solid #ffffff20;
+  font: inherit;
+  cursor: pointer;
+}
+.tierDialog[aria-label='Custom promoter commission'],
+.tierDialog[aria-label='Choose promoter for custom commission'],
+.tierDialog[aria-label='Add promoters'] {
+  width: min(520px, calc(100vw - 32px));
+}
+.tierDialog .overrideControls {
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+  margin: 0;
+  padding: 20px 0;
+}
+.tierDialog .overrideControls label {
+  font-size: 14px;
+  font-weight: 500;
+}
+.advancedSetup {
+  min-width: 0;
+}
+.advancedSetup h2 {
+  font-size: 22px;
+  margin: 0 0 24px;
+}
+.advancedSetup h3 {
+  font-size: 17px;
+  margin: 0;
+}
+.comingSoonRow,
+.promoHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.comingSoonRow {
+  padding: 0 0 22px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid #ffffff20;
+}
+.comingSoonRow span {
+  font-size: 13px;
+  color: #999;
+}
+.promoEditor {
+  border-bottom: 1px solid #ffffff20;
+  padding: 18px 0 22px;
+}
+.promoFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.promoFields label {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  font-size: 14px;
+  color: #bbb;
+}
+.promoFields input,
+.promoFields select {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  height: 44px;
+  padding: 10px 12px;
+  background: #141414;
+  border: 1px solid #ffffff26;
+  border-radius: 8px;
+  color: #f5f5f5;
+  font: inherit;
+}
+@media (max-width: 600px) {
+  .promoFields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.mediaStep h2 {
+  margin: 0 0 24px;
+  font-size: 22px;
+  font-weight: 700;
+}
+.mediaStep h3 {
+  margin: 0;
+  font-size: 17px;
+}
+.mediaField,
+.spotlightFields label {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  color: #bbb;
+  font-size: 14px;
+}
+.mediaField {
+  margin-bottom: 26px;
+}
+.mediaField input,
+.spotlightFields input:not([type='file']),
+.spotlightFields textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 10px 12px;
+  background: #141414;
+  color: white;
+  border: 1px solid #ffffff26;
+  border-radius: 8px;
+  font: inherit;
+}
+.mediaUpload {
+  position: relative;
+  display: inline-flex !important;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #ffffff30;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: white;
+}
+.mediaUpload input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.mediaUpload:focus-within {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+.mediaGallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0 28px;
+}
+.mediaGallery > div {
+  position: relative;
+}
+.mediaGallery img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.mediaGallery button {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  background: #111d;
+  border: 0;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.spotlightFields {
+  overflow-y: auto;
+  min-height: 0;
+  display: grid;
+  gap: 18px;
+  padding: 20px 0;
+}
+.spotlightImage {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.spotlightImage img {
+  object-fit: cover;
+  border-radius: 8px;
+}
+.guestlistSetting {
+  padding-bottom: 22px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid #ffffff20;
+}
+.guestlistSetting p {
+  color: #bbb;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.guestlistSetting > span {
+  color: #999;
+  font-size: 13px;
+}
+.previewSpotlight {
+  display: flex;
+  gap: 14px;
+  padding: 16px 0;
+  border-top: 1px solid #ffffff20;
+}
+.previewSpotlight img {
+  object-fit: cover;
+  border-radius: 8px;
+}
+.previewSpotlight h3 {
+  font-size: 16px;
+  margin: 0 0 6px;
+}
+
+.editorHeader {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin: -28px -16px 24px;
+  padding: 20px 16px 16px;
+  background: rgb(9 9 9 / 88%);
+  backdrop-filter: blur(20px);
+}
+.editorHeader .headingRow {
+  margin-bottom: 0;
+}
+.selectionCount {
+  margin: 12px 0 0;
+  color: #b8b8b4;
+  font-size: 14px;
+}
+.commissionPickerRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.commissionPickerRow > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.titleFontPicker {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #ffffff30 transparent;
+  padding: 3px 0 8px;
+  margin-top: 4px;
+  scroll-snap-type: x proximity;
+}
+.titleFontPicker button {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 6px 22px;
+  white-space: nowrap;
+  scroll-snap-align: start;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 5%);
+  color: #eee;
+  font-size: 22px;
+  cursor: pointer;
+}
+.titleFontPicker button[aria-pressed='true'] {
+  border-color: #f5f5f3;
+  background: rgb(255 255 255 / 10%);
+}
+.infoHint {
+  position: relative;
+  margin-left: 8px;
+  display: inline-flex;
+  color: #aaa;
+  font-size: 16px;
+}
+.infoHint [role='tooltip'] {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 190px;
+  padding: 10px 12px;
+  border: 1px solid #444;
+  border-radius: 8px;
+  background: #181818;
+  color: #eee;
+  font:
+    400 13px/1.4 var(--font-inter),
+    sans-serif;
+  z-index: 20;
+}
+.infoHint:hover [role='tooltip'],
+.infoHint:focus [role='tooltip'] {
+  display: block;
+}
+
+.compChoice .infoHint {
+  display: inline-flex;
+  font-size: 16px;
+}
+.compChoice:focus-visible [role='tooltip'] {
+  display: block;
 }

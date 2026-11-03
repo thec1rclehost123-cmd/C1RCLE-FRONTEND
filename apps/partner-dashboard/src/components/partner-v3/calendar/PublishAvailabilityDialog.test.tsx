@@ -7,7 +7,7 @@ import { PublishAvailabilityDialog } from './PublishAvailabilityDialog';
 vi.mock('@c1rcle/icons', () => ({ CloseIcon: () => <svg aria-hidden="true" /> }));
 
 describe('PublishAvailabilityDialog', () => {
-  it('publishes the explicit date/time/timezone and optional constraints', async () => {
+  it('publishes local date/time in the fixed IST timezone and optional constraints', async () => {
     const user = userEvent.setup();
     const onPublish = vi.fn().mockResolvedValue(undefined);
     const onClose = vi.fn();
@@ -20,7 +20,7 @@ describe('PublishAvailabilityDialog', () => {
     );
     fireEvent.change(screen.getByLabelText('Starts'), { target: { value: '2026-11-06T18:30' } });
     fireEvent.change(screen.getByLabelText('Ends'), { target: { value: '2026-11-06T22:30' } });
-    await user.selectOptions(screen.getByLabelText('Timezone'), 'Asia/Kolkata');
+    expect(screen.getByLabelText('Timezone')).toHaveValue('India Standard Time (IST)');
     await user.type(screen.getByLabelText(/Notes or constraints/i), 'M3 isolated test window');
     await user.click(screen.getByRole('button', { name: 'Publish 2026-11-06' }));
     await waitFor(() => {

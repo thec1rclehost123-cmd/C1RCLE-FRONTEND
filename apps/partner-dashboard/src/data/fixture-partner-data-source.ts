@@ -1,3 +1,5 @@
+import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
+
 import type {
   CalendarBlock,
   CalendarDayState,
@@ -1851,7 +1853,7 @@ const venueFinanceData: VenueFinanceData = {
     tone: 'positive',
   },
   readModel: 'legacy_ledger_v1',
-  freshness: { asOf: '2026-10-01T00:00:00.000Z', timezone: 'Asia/Kolkata' },
+  freshness: { asOf: '2026-10-01T00:00:00.000Z', timezone: PRODUCT_TIME_ZONE },
   coverage: {
     ledger: { loaded: 0, total: 0, hasMore: false },
     payouts: { loaded: 0, total: 0, hasMore: false },

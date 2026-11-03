@@ -13,6 +13,8 @@
  *  - `accepted` (wire) is mapped to `approved` (UI) so the surface keeps its
  *    established status vocabulary.
  */
+import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
+
 import { forwardToGateway, mintIdempotencyKey, parseJson } from './auth-proxy';
 
 import type {
@@ -162,7 +164,7 @@ function partnerInitials(name: string): string {
   return words.map((word) => word[0]?.toUpperCase() ?? '').join('') || '?';
 }
 
-/** Renders an ISO timestamp as a short weekday/date label, UTC — deterministic. */
+/** Renders an ISO timestamp as a short weekday/date label in IST. */
 function formatDate(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '—';
@@ -170,11 +172,11 @@ function formatDate(iso: string): string {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
-    timeZone: 'Asia/Kolkata',
+    timeZone: PRODUCT_TIME_ZONE,
   });
 }
 
-/** Renders a start/end ISO pair in the product's event timezone. */
+/** Renders a start/end ISO pair in the fixed product timezone. */
 function formatTime(startAt: string, endAt: string | null): string {
   const start = new Date(startAt);
   const end = endAt ? new Date(endAt) : null;
@@ -182,7 +184,7 @@ function formatTime(startAt: string, endAt: string | null): string {
   const options: Intl.DateTimeFormatOptions = {
     hour: 'numeric',
     minute: '2-digit',
-    timeZone: 'Asia/Kolkata',
+    timeZone: PRODUCT_TIME_ZONE,
   };
   const startLabel = start.toLocaleTimeString('en-IN', options);
   if (!end || Number.isNaN(end.getTime())) return startLabel;
@@ -192,26 +194,9 @@ function formatTime(startAt: string, endAt: string | null): string {
 function formatSlotTime(
   startAt: string,
   endAt: string | null,
-  timezone: string | null | undefined,
+  _timezone: string | null | undefined,
 ): string {
-  const zone = timezone ?? 'UTC';
-  try {
-    const start = new Intl.DateTimeFormat('en-IN', {
-      hour: 'numeric',
-      minute: '2-digit',
-      timeZone: zone,
-    }).format(new Date(startAt));
-    const end = endAt
-      ? new Intl.DateTimeFormat('en-IN', {
-          hour: 'numeric',
-          minute: '2-digit',
-          timeZone: zone,
-        }).format(new Date(endAt))
-      : null;
-    return end ? `${start} – ${end}` : start;
-  } catch {
-    return formatTime(startAt, endAt);
-  }
+  return formatTime(startAt, endAt);
 }
 
 function toUiEvent(
@@ -256,6 +241,7 @@ function toUiRequest(
   return {
     id: dto.id,
     ...(dto.eventId ? { eventId: dto.eventId } : {}),
+    ...(event ? { linkedEventStatus: event.status } : {}),
     status: mapStatus(dto.status),
     direction,
     partnerName,
@@ -265,7 +251,7 @@ function toUiRequest(
     ...(dto.slotId ? { slotId: dto.slotId } : {}),
     ...(dto.slotStartTime ? { slotStartTime: dto.slotStartTime } : {}),
     ...(dto.slotEndTime ? { slotEndTime: dto.slotEndTime } : {}),
-    ...(dto.timezone ? { timezone: dto.timezone } : {}),
+    timezone: PRODUCT_TIME_ZONE,
     event: event
       ? toUiEvent(event, dto.message, venueName, titleFallback)
       : dto.slotStartTime
@@ -276,9 +262,9 @@ function toUiRequest(
               weekday: 'short',
               month: 'short',
               day: 'numeric',
-              timeZone: dto.timezone ?? 'UTC',
+              timeZone: PRODUCT_TIME_ZONE,
             }).format(new Date(dto.slotStartTime)),
-            time: formatSlotTime(dto.slotStartTime, dto.slotEndTime ?? null, dto.timezone),
+            time: `${formatSlotTime(dto.slotStartTime, dto.slotEndTime ?? null, dto.timezone)} IST`,
             venue: venueName,
             ...(dto.message ? { note: dto.message } : {}),
           }

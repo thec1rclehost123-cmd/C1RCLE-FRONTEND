@@ -6,13 +6,18 @@ import { cancelEventSchema, createEventSchema, createTicketTierSchema } from '@c
 
 import { uploadToSignedUrl } from '@/lib/onboarding/uploadToSignedUrl';
 
-import { formatEventDateLabel } from './event-time';
+import {
+  formatEventDateLabel,
+  isoInstantToProductLocalInput,
+  productLocalInputToIsoInstant,
+} from './event-time';
 import {
   eventEndAtFromDraft,
   eventStartAtFromDraft,
   cancelPartnerEvent,
   publishVenueEvent,
   updatePartnerEventDetails,
+  updatePartnerEventTicketLimit,
 } from './venue-event-repository';
 
 import type { EventEditorDraft } from '@/data/partner-data-source';
@@ -82,6 +87,80 @@ beforeEach(() => {
 });
 
 describe('publishVenueEvent', () => {
+  it('persists gallery, video and spotlight media in event creation', async () => {
+    mocks.post.mockResolvedValue({ id: 'evt_media', status: 'published' });
+    await publishVenueEvent(
+      'org_1',
+      {
+        ...draft,
+        media: {
+          titleFont: 'eclectic',
+          youtubeUrl: 'https://youtu.be/abc123',
+          gallery: [
+            { type: 'image', value: 'https://example.test/gallery.jpg', alt: 'Dance floor' },
+          ],
+          spotlights: [
+            {
+              id: 'artist-1',
+              title: 'Artist One',
+              link: 'https://example.test/artist',
+              description: 'Live set',
+              startTime: '23:00',
+              endTime: '01:00',
+            },
+          ],
+        },
+      },
+      'media-create',
+    );
+    expect(mocks.post.mock.calls[0]?.[0].body).toMatchObject({
+      media: {
+        titleFont: 'eclectic',
+        youtubeUrl: 'https://youtu.be/abc123',
+        gallery: [{ url: 'https://example.test/gallery.jpg', alt: 'Dance floor' }],
+        spotlights: [{ title: 'Artist One', imageUrl: null, startTime: '23:00', endTime: '01:00' }],
+      },
+    });
+  });
+
+  it('sends promo quantity and IST expiry before publish with a stable command key', async () => {
+    mocks.post.mockResolvedValue({ id: 'evt_promo', status: 'published' });
+    await publishVenueEvent(
+      'org_host',
+      {
+        ...draft,
+        promoCodes: ['EARLY10'],
+        promoCodeSettings: [
+          {
+            id: 'promo-local',
+            code: 'EARLY10',
+            discountType: 'percent',
+            discountValue: 10,
+            quantity: 25,
+            endsAt: '2099-11-16T19:00',
+            fundingOwner: 'host',
+          },
+        ],
+      },
+      'promo-workflow',
+    );
+    const call = mocks.post.mock.calls
+      .map(([options]) => options)
+      .find((options) => options.path.endsWith('/promo-codes'));
+    expect(call?.body).toMatchObject({
+      code: 'EARLY10',
+      maxRedemptions: 25,
+      endsAt: '2099-11-16T13:30:00.000Z',
+      discountValue: 10,
+      discountFundingOwner: 'host',
+    });
+    expect(call?.headers?.['Idempotency-Key']).toBe('promo-workflow-promo-0');
+    const paths = mocks.post.mock.calls.map(([options]) => options.path);
+    expect(paths.findIndex((path) => path.endsWith('/promo-codes'))).toBeLessThan(
+      paths.findIndex((path) => path.endsWith('/publish')),
+    );
+  });
+
   it('creates a Host event from the accepted reservation using its exact interval and stable retry key', async () => {
     mocks.post
       .mockResolvedValueOnce({ id: 'evt_m3' })
@@ -144,11 +223,41 @@ describe('publishVenueEvent', () => {
       name: 'General Admission',
       priceInPaise: 120_000,
       quantity: 250,
+      maxPerOrder: 10,
     });
     for (const [options] of mocks.post.mock.calls) {
       expect(options.headers).toMatchObject({ 'x-organization-id': 'org_1' });
       expect(options.headers?.['Idempotency-Key']).toMatch(/^[A-Za-z0-9_-]+$/);
     }
+  });
+
+  it('sends the safe default limits for RSVP and paid tiers during creation', async () => {
+    mocks.post
+      .mockResolvedValueOnce({ id: 'evt_limits' })
+      .mockResolvedValueOnce({ id: 'tier_rsvp' })
+      .mockResolvedValueOnce({ id: 'tier_paid' })
+      .mockResolvedValueOnce({ id: 'evt_limits', status: 'review' })
+      .mockResolvedValueOnce({ id: 'evt_limits', status: 'published' });
+    const paidTier = draft.ticketTiers[0]!;
+    const { pricingPhases: _pricingPhases, ...paidTierWithoutPhases } = paidTier;
+    const rsvpTier = {
+      ...paidTierWithoutPhases,
+      id: 'rsvp',
+      name: 'Free RSVP',
+      price: 0,
+      accessType: 'RSVP' as const,
+    };
+
+    await publishVenueEvent('org_1', { ...draft, ticketTiers: [rsvpTier, paidTier] });
+
+    expect(mocks.post.mock.calls[1]?.[0].body).toMatchObject({
+      accessType: 'RSVP',
+      maxPerOrder: 1,
+    });
+    expect(mocks.post.mock.calls[2]?.[0].body).toMatchObject({
+      name: 'General Admission',
+      maxPerOrder: 10,
+    });
   });
 
   it('uploads an uploaded-poster blob and persists its public URL as imageUrl', async () => {
@@ -328,6 +437,26 @@ describe('updatePartnerEventDetails', () => {
     );
     expect(mocks.patch.mock.calls[0]?.[0].headers?.['Idempotency-Key']).toMatch(/^[0-9a-f-]{36}$/);
   });
+
+  it('updates only the maxPerOrder field with version and retry identity', async () => {
+    mocks.patch.mockResolvedValueOnce({ id: 'tier_1', maxPerOrder: 10, version: 2 });
+
+    await expect(
+      updatePartnerEventTicketLimit('org_1', 'evt_1', 'tier_1', 1, 10, 'tier-limit-intent'),
+    ).resolves.toMatchObject({ id: 'tier_1', maxPerOrder: 10, version: 2 });
+
+    expect(mocks.patch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: '/api/v2/events/evt_1/ticket-tiers/tier_1',
+        body: { maxPerOrder: 10 },
+        headers: {
+          'x-organization-id': 'org_1',
+          'If-Match': '1',
+          'Idempotency-Key': 'tier-limit-intent',
+        },
+      }),
+    );
+  });
 });
 
 describe('eventStartAtFromDraft', () => {
@@ -348,11 +477,23 @@ describe('eventStartAtFromDraft', () => {
 
 describe('formatEventDateLabel', () => {
   it('keeps the accepted calendar date stable across the host machine timezone', () => {
-    expect(formatEventDateLabel('2026-11-06', 'Asia/Kolkata')).toBe('6 Nov 2026');
+    expect(formatEventDateLabel('2026-11-06')).toBe('6 Nov 2026');
   });
 
   it('rejects invalid date-only input', () => {
-    expect(formatEventDateLabel('2026-02-30', 'Asia/Kolkata')).toBe('');
+    expect(formatEventDateLabel('2026-02-30')).toBe('');
+  });
+});
+
+describe('fixed IST date/time inputs', () => {
+  it('round-trips a local IST time through the persisted instant', () => {
+    const instant = productLocalInputToIsoInstant('2026-11-16T19:00');
+    expect(instant).toBe('2026-11-16T13:30:00.000Z');
+    expect(isoInstantToProductLocalInput(instant ?? '')).toBe('2026-11-16T19:00');
+  });
+
+  it('rejects invalid local dates rather than normalizing them', () => {
+    expect(productLocalInputToIsoInstant('2026-02-30T19:00')).toBeNull();
   });
 });
 

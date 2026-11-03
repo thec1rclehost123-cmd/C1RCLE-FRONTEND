@@ -8,6 +8,7 @@ import { BackIcon, RefreshIcon } from '@c1rcle/icons';
 
 import { Button } from '@/components/partner-v3/Button';
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
+import { PartnerDashboardSkeleton } from '@/components/partner-v3/PartnerDashboardSkeleton';
 import {
   applySlotRequestAction,
   loadSlotRequestsData,
@@ -259,13 +260,7 @@ export function SlotRequestScreen({
             </Button>
           </section>
         ) : isLoading && data === null ? (
-          <section className={styles['emptyState']} aria-busy="true">
-            <span className={styles['emptyMark']} aria-hidden="true">
-              —
-            </span>
-            <h2>Loading slot requests</h2>
-            <p>Fetching live requests…</p>
-          </section>
+          <PartnerDashboardSkeleton label="Loading slot requests" eventContent />
         ) : visibleRequests.length ? (
           <section
             className={styles['requestGrid']}

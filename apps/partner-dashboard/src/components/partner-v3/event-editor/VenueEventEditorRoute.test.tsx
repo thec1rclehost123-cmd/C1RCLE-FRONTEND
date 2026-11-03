@@ -98,13 +98,16 @@ describe('VenueEventEditorRoute', () => {
     fireEvent.change(screen.getByLabelText('Event name'), {
       target: { value: 'M3 draft survives date selection' },
     });
-    fireEvent.change(screen.getByLabelText('Start time'), { target: { value: '20:00' } });
+    fireEvent.change(screen.getByLabelText('Event description'), {
+      target: { value: 'Guest-facing details remain intact while the calendar date changes.' },
+    });
 
     view.rerender(<VenueEventEditorRoute {...props} initialDate="2026-11-21" />);
 
     expect(mocks.useVenueCalendar.mock.calls.at(-1)?.[0].anchorMonth).toBe(initialAnchorMonth);
     expect(screen.getByLabelText('Event name')).toHaveValue('M3 draft survives date selection');
-    expect(screen.getByLabelText('Start time')).toHaveValue('20:00');
-    expect(screen.getByLabelText(/^Date/)).toHaveValue('Sat, Nov 21, 2026');
+    expect(screen.getByLabelText('Event description')).toHaveValue(
+      'Guest-facing details remain intact while the calendar date changes.',
+    );
   });
 });

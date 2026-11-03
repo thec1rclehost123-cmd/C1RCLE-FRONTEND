@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import { TicketTierEditor } from './EventEditorParts';
 
@@ -20,10 +20,19 @@ function renderEditor(
 }
 
 async function openTicketOptions(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByText('Ticket options', { exact: true }));
+  await user.click(screen.getByRole('button', { name: 'Edit General' }));
+  await user.click(screen.getByText('Entry & pricing options', { exact: true }));
 }
 
 describe('TicketTierEditor ticket dimensions', () => {
+  beforeAll(() => {
+    Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
+      configurable: true,
+      value(this: HTMLDialogElement) {
+        this.open = true;
+      },
+    });
+  });
   it('edits access, audience, guest count, door price, benefits, and user limit', async () => {
     const user = userEvent.setup();
     renderEditor();
@@ -36,14 +45,14 @@ describe('TicketTierEditor ticket dimensions', () => {
     await user.clear(screen.getByLabelText('Guests'));
     await user.type(screen.getByLabelText('Guests'), '2');
     await user.type(screen.getByLabelText('Door price (₹)'), '2500');
-    await user.type(screen.getByLabelText('Benefits'), 'Entry, Drinks');
+    await user.type(screen.getByLabelText('Ticket description'), 'Entry, Drinks');
     await user.type(screen.getByLabelText('Max per user'), '2');
 
     expect(screen.getByLabelText('Ticket type / access')).toHaveValue('VIP');
     expect(screen.getByLabelText('Audience')).toHaveValue('COUPLE');
     expect(screen.getByLabelText('Guests')).toHaveValue(2);
     expect(screen.getByLabelText('Door price (₹)')).toHaveValue(2500);
-    expect(screen.getByLabelText('Benefits')).toHaveValue('Entry, Drinks');
+    expect(screen.getByLabelText('Ticket description')).toHaveValue('Entry, Drinks');
     expect(screen.getByLabelText('Max per user')).toHaveValue(2);
   });
 

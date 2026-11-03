@@ -32,6 +32,7 @@ export const slotRequestsDataSchema = z.object({
     z.object({
       id: z.string(),
       eventId: z.string().optional(),
+      linkedEventStatus: z.string().optional(),
       status: z.enum(['pending', 'approved', 'rejected', 'cancelled']),
       direction: z.enum(['incoming', 'outgoing']),
       partnerName: z.string(),

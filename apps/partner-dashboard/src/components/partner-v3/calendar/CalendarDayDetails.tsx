@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 
+import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
 import { EmptyDateIcon, LocationIcon, LockedIcon, TimeIcon } from '@c1rcle/icons';
 
 import styles from './calendar.module.css';
@@ -304,10 +305,10 @@ const formatDate = (value: string) =>
     month: 'long',
     day: 'numeric',
     year: 'numeric',
-    timeZone: 'UTC',
+    timeZone: PRODUCT_TIME_ZONE,
   }).format(new Date(`${value}T00:00:00Z`));
 const formatWeekday = (value: string) =>
-  new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: 'UTC' }).format(
+  new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: PRODUCT_TIME_ZONE }).format(
     new Date(`${value}T00:00:00Z`),
   );
 const formatTime = (value: string) => {

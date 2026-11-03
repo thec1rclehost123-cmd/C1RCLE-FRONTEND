@@ -27,7 +27,11 @@ export function SlotRequestCard({
 }: SlotRequestCardProps) {
   const isIncoming = request.direction === 'incoming';
   const canDecide = isIncoming && request.status === 'pending';
-  const canCancel = !isIncoming && request.status === 'approved';
+  const isLinkedEventLive =
+    request.linkedEventStatus === 'published' ||
+    request.linkedEventStatus === 'sales_paused' ||
+    request.linkedEventStatus === 'started';
+  const canCancel = !isIncoming && request.status === 'approved' && !isLinkedEventLive;
   return (
     <article className={styles['requestCard']}>
       <button type="button" className={styles['requestCardMain']} onClick={onOpen}>
@@ -124,12 +128,20 @@ export function SlotRequestCard({
           ) : null}
         </div>
       ) : null}
-      {!isIncoming &&
-      request.status === 'approved' &&
-      request.slotId &&
-      request.venueId &&
-      request.slotStartTime &&
-      request.slotEndTime ? (
+      {!isIncoming && request.status === 'approved' && request.eventId ? (
+        <div className={styles['requestCardActions']}>
+          <Link
+            className={styles['emptyLink']}
+            href={`/partner/host/events/${encodeURIComponent(request.eventId)}`}
+          >
+            View event
+          </Link>
+        </div>
+      ) : !isIncoming &&
+        request.slotId &&
+        request.venueId &&
+        request.slotStartTime &&
+        request.slotEndTime ? (
         <div className={styles['requestCardActions']}>
           <Link
             className={styles['emptyLink']}

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 
+import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
 import { CloseIcon } from '@c1rcle/icons';
 
 import { Button } from '@/components/partner-v3/Button';
@@ -9,8 +10,6 @@ import { Button } from '@/components/partner-v3/Button';
 import styles from './calendar.module.css';
 
 import type { PublishVenueAvailabilityInput } from '@/lib/calendar/venue-calendar-repository';
-
-const TIMEZONES = ['Asia/Kolkata', 'UTC', 'America/Los_Angeles', 'America/New_York'];
 
 export function PublishAvailabilityDialog({
   selectedDate,
@@ -23,7 +22,6 @@ export function PublishAvailabilityDialog({
 }) {
   const [startsAtLocal, setStartsAtLocal] = useState(`${selectedDate}T19:00`);
   const [endsAtLocal, setEndsAtLocal] = useState(`${selectedDate}T23:00`);
-  const [timezone, setTimezone] = useState('Asia/Kolkata');
   const [notes, setNotes] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +31,7 @@ export function PublishAvailabilityDialog({
     setPending(true);
     setError(null);
     try {
-      await onPublish({ startsAtLocal, endsAtLocal, timezone, notes });
+      await onPublish({ startsAtLocal, endsAtLocal, timezone: PRODUCT_TIME_ZONE, notes });
       onClose();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not publish this availability.');
@@ -88,18 +86,7 @@ export function PublishAvailabilityDialog({
           </label>
           <label>
             Timezone
-            <select
-              value={timezone}
-              onChange={(event) => {
-                setTimezone(event.target.value);
-              }}
-            >
-              {TIMEZONES.map((zone) => (
-                <option key={zone} value={zone}>
-                  {zone}
-                </option>
-              ))}
-            </select>
+            <input value="India Standard Time (IST)" readOnly aria-readonly="true" />
           </label>
           <label>
             Notes or constraints <small>Optional</small>

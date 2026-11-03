@@ -1,4 +1,5 @@
 import { paginatedSchema } from '@c1rcle/api-client';
+import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
 import {
   eventDtoSchema,
   partnershipDtoSchema,
@@ -81,7 +82,10 @@ export async function loadHostAvailability({
         }),
         apiClient.get({
           path: `/api/v2/venues/${venueId}/availability`,
-          query: range,
+          query: {
+            ...range,
+            to: new Date(Date.parse(range.to) + 48 * 60 * 60 * 1000).toISOString(),
+          },
           headers,
           schema: venueAvailabilityDtoSchema,
           ...(signal ? { signal } : {}),
@@ -175,9 +179,11 @@ function buildHostMonths(
       return {
         date,
         day,
-        state: hostDayState(dayEvents, daySlots),
+        state: freeTimeSlots(date, availability.slots, events).length
+          ? 'available'
+          : hostDayState(dayEvents, daySlots),
         events: dayEvents,
-        slots: openSlots(date, daySlots),
+        slots: freeTimeSlots(date, availability.slots, events),
       };
     });
     return [
@@ -186,7 +192,7 @@ function buildHostMonths(
         label: new Intl.DateTimeFormat('en-US', {
           month: 'long',
           year: 'numeric',
-          timeZone: 'UTC',
+          timeZone: PRODUCT_TIME_ZONE,
         }).format(new Date(Date.UTC(parsed.year, parsed.month - 1, 1))),
         firstDayOffset: new Date(Date.UTC(parsed.year, parsed.month - 1, 1)).getUTCDay(),
         daysInMonth,
@@ -207,36 +213,49 @@ function hostDayState(
   return 'unavailable';
 }
 
-function openSlots(
-  _date: string,
+export function freeTimeSlots(
+  date: string,
   slots: VenueAvailabilityDto['slots'],
+  events: readonly EventDto[] = [],
 ): readonly AvailabilitySlot[] {
-  const explicitOpen = slots
-    .filter((slot) => slot.status === 'open')
-    .map((slot) => {
-      const timezone = slot.timezone ?? 'UTC';
-      const options: Intl.DateTimeFormatOptions = {
-        hour: 'numeric',
-        minute: '2-digit',
-        timeZone: timezone,
-        timeZoneName: 'short',
-      };
-      const start = new Intl.DateTimeFormat('en-IN', options).format(new Date(slot.startTime));
-      const end = new Intl.DateTimeFormat('en-IN', {
-        hour: 'numeric',
-        minute: '2-digit',
-        timeZone: timezone,
-      }).format(new Date(slot.endTime));
-      return {
-        id: slot.id,
-        label: `${start}–${end}`,
-        status: 'available' as const,
-        startTime: slot.startTime,
-        endTime: slot.endTime,
-        timezone,
-      };
-    });
-  return explicitOpen;
+  const start = Date.parse(`${date}T00:00:00+05:30`);
+  const dayEnd = start + 24 * 60 * 60 * 1000;
+  const end = dayEnd + 24 * 60 * 60 * 1000;
+  const occupied = [
+    ...slots
+      .filter((slot) => slot.status !== 'open' && slot.status !== 'cancelled')
+      .map((slot) => [Date.parse(slot.startTime), Date.parse(slot.endTime)]),
+    ...events
+      .filter((event) => !inactiveEventStatuses.has(event.status))
+      .map((event) => [Date.parse(event.startAt), Date.parse(event.endAt ?? event.startAt)]),
+  ]
+    .filter((range) => (range[0] ?? end) < end && (range[1] ?? start) > start)
+    .sort((a, b) => (a[0] ?? 0) - (b[0] ?? 0));
+  let cursor = Math.max(start, Math.ceil((Date.now() + 60_000) / 60_000) * 60_000);
+  const gaps: [number, number][] = [];
+  for (const range of occupied) {
+    const from = Math.max(start, range[0] ?? start);
+    const to = Math.min(end, range[1] ?? end);
+    if (from > cursor && cursor < end) gaps.push([cursor, from]);
+    cursor = Math.max(cursor, to);
+  }
+  if (cursor < end) gaps.push([cursor, end]);
+  const format = (value: number) =>
+    new Intl.DateTimeFormat('en-IN', {
+      timeZone: PRODUCT_TIME_ZONE,
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(new Date(value));
+  return gaps
+    .filter(([from]) => from < dayEnd)
+    .map(([from, to], index) => ({
+      id: `free-${date}-${String(index)}`,
+      label: `${format(from)} – ${format(to)}${to >= end ? ' (+2 days)' : to >= dayEnd ? ' (next day)' : ''} IST`,
+      status: 'available' as const,
+      startTime: new Date(from).toISOString(),
+      endTime: new Date(to).toISOString(),
+      timezone: PRODUCT_TIME_ZONE,
+    }));
 }
 
 export async function requestHostAvailabilitySlot({
@@ -245,21 +264,25 @@ export async function requestHostAvailabilitySlot({
   slotId,
   idempotencyKey,
   eventId,
+  startTime,
+  endTime,
 }: {
   readonly organizationId: string;
   readonly venueId: string;
   readonly slotId: string;
   readonly idempotencyKey: string;
   readonly eventId?: string;
+  readonly startTime?: string;
+  readonly endTime?: string;
 }) {
   return apiClient.post({
     path: `/api/v2/venues/${encodeURIComponent(venueId)}/slot-requests`,
     body: {
-      slotId,
+      ...(slotId.startsWith('free-') ? { startTime, endTime } : { slotId }),
       ...(eventId ? { eventId } : {}),
       message: eventId
         ? `Requesting a new Venue slot for event ${eventId}.`
-        : 'Requesting the published Venue availability.',
+        : 'Requesting the selected Venue time.',
     },
     headers: {
       'x-organization-id': organizationId,

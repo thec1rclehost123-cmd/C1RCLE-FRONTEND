@@ -30,6 +30,11 @@ describe('venueEventDraftSchema', () => {
       false,
     );
   });
+  it('rejects a timezone other than the fixed product timezone', () => {
+    expect(
+      venueEventDraftSchema.safeParse({ ...validDraft, timezone: 'Europe/London' }).success,
+    ).toBe(false);
+  });
   it('rejects ticket inventory above capacity', () => {
     expect(venueEventDraftSchema.safeParse({ ...validDraft, capacity: 100 }).success).toBe(false);
   });

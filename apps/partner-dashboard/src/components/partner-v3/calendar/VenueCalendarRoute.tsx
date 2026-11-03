@@ -2,6 +2,7 @@
 
 import { useRef } from 'react';
 
+import { PartnerDashboardSkeleton } from '@/components/partner-v3/PartnerDashboardSkeleton';
 import { EmptyState, ErrorState } from '@/components/partner-v3/States';
 import { useVenueCalendar } from '@/lib/calendar/use-venue-calendar';
 import {
@@ -49,11 +50,7 @@ export function VenueCalendarRoute({
     );
   }
   if (state.loading) {
-    return (
-      <section role="status" aria-live="polite" aria-busy="true">
-        Loading venue calendar…
-      </section>
-    );
+    return <PartnerDashboardSkeleton label="Loading venue calendar…" />;
   }
   if (state.error) {
     return (

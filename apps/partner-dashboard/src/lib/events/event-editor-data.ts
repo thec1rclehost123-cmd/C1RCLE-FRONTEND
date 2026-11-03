@@ -2,8 +2,19 @@ import { getClientEnv } from '@c1rcle/config';
 
 import type { EventEditorData, EventEditorRole } from '@/data/partner-data-source';
 
+export const EVENT_GENRE_OPTIONS = [
+  'Bollywood',
+  'House',
+  'Techno',
+  'Hip-Hop',
+  'EDM',
+  'Afrobeats',
+  'Live Music',
+] as const;
+
 /**
- * The editor's options are subsequently populated by tenant-scoped hooks.
+ * Tenant records are subsequently populated by scoped hooks. Genre choices
+ * are static product metadata, not tenant or demo records.
  * Keep the server-provided baseline empty so a real session never inherits a
  * demo title, ticket tier, promoter, or venue from the fixture source.
  */
@@ -24,7 +35,7 @@ export function createEmptyEventEditorData(role: EventEditorRole): EventEditorDa
     role,
     venues: [],
     promoters: [],
-    genres: [],
+    genres: EVENT_GENRE_OPTIONS,
     extraGenres: [],
     artworkOptions,
     defaultDraft: {

@@ -1,6 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { mapHostAvailability, requestHostAvailabilitySlot } from './host-availability-repository';
+import {
+  freeTimeSlots,
+  mapHostAvailability,
+  requestHostAvailabilitySlot,
+} from './host-availability-repository';
 
 import type { EventDto, VenueAvailabilityDto, VenueDto } from '@c1rcle/contracts';
 
@@ -8,7 +12,11 @@ const post = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api/client', () => ({ apiClient: { post } }));
 
-beforeEach(() => post.mockReset());
+beforeEach(() => {
+  post.mockReset();
+  vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-09-01T00:00:00Z'));
+});
+afterEach(() => vi.restoreAllMocks());
 
 const timestamp = '2026-09-01T00:00:00.000Z';
 const venue: VenueDto = {
@@ -108,22 +116,29 @@ describe('host availability repository mapping', () => {
     });
     expect(days[2]).toMatchObject({
       state: 'available',
-      slots: [{ id: 'open-slot', label: '8:00 pm UTC–11:00 pm', status: 'available' }],
+      slots: [
+        {
+          id: 'free-2026-09-03-0',
+          status: 'available',
+          startTime: '2026-09-02T18:30:00.000Z',
+          endTime: '2026-09-04T18:30:00.000Z',
+        },
+      ],
     });
-    expect(days[3]?.state).toBe('confirmed');
-    expect(days[4]?.state).toBe('unavailable');
-    expect(days[5]).toMatchObject({ state: 'pending', events: [{ id: 'pending' }] });
+    expect(days[3]?.state).toBe('available');
+    expect(days[4]?.state).toBe('available');
+    expect(days[5]).toMatchObject({ state: 'available', events: [{ id: 'pending' }] });
     expect(days[6]).toMatchObject({
-      state: 'confirmed',
+      state: 'available',
       events: [
         {
           id: 'published',
           href: '/partner/host/events/published',
-          time: '8:00 PM – 11:00 PM',
+          time: '8:00 PM – 11:00 PM IST',
         },
       ],
     });
-    expect(days[7]).toMatchObject({ state: 'unavailable', events: [] });
+    expect(days[7]).toMatchObject({ state: 'available', events: [] });
   });
 
   it('binds a reschedule slot request to the selected event', async () => {
@@ -145,5 +160,62 @@ describe('host availability repository mapping', () => {
         },
       }),
     );
+  });
+});
+
+describe('automatic free time windows', () => {
+  it('offers the entire empty day in IST', () => {
+    expect(freeTimeSlots('2026-09-10', [])).toMatchObject([
+      { startTime: '2026-09-09T18:30:00.000Z', endTime: '2026-09-11T18:30:00.000Z' },
+    ]);
+  });
+  it('subtracts overlapping booked, blocked, and pending intervals, including overnight carryover', () => {
+    const slots = [
+      {
+        ...availabilitySlot('overnight', 9, 'booked'),
+        startTime: '2026-09-09T17:30:00.000Z',
+        endTime: '2026-09-09T20:30:00.000Z',
+      },
+      {
+        ...availabilitySlot('blocked', 10, 'blocked'),
+        startTime: '2026-09-10T08:30:00.000Z',
+        endTime: '2026-09-10T10:30:00.000Z',
+      },
+      {
+        ...availabilitySlot('pending', 10, 'pending'),
+        startTime: '2026-09-10T09:30:00.000Z',
+        endTime: '2026-09-10T11:30:00.000Z',
+      },
+    ];
+    expect(freeTimeSlots('2026-09-10', slots)).toMatchObject([
+      { startTime: '2026-09-09T20:30:00.000Z', endTime: '2026-09-10T08:30:00.000Z' },
+      { startTime: '2026-09-10T11:30:00.000Z', endTime: '2026-09-11T18:30:00.000Z' },
+    ]);
+  });
+  it('does not offer past dates or a fully occupied day', () => {
+    expect(freeTimeSlots('2026-08-01', [])).toEqual([]);
+    expect(
+      freeTimeSlots('2026-09-10', [
+        {
+          ...availabilitySlot('full', 10, 'blocked'),
+          startTime: '2026-09-09T18:30:00.000Z',
+          endTime: '2026-09-10T18:30:00.000Z',
+        },
+      ]),
+    ).toEqual([]);
+  });
+});
+
+describe('overnight free-window boundaries', () => {
+  it('keeps late-night availability open through midnight, stopping at a next-day booking', () => {
+    const nextDayBooking = {
+      ...availabilitySlot('next-day', 11, 'booked'),
+      startTime: '2026-09-10T19:30:00.000Z',
+      endTime: '2026-09-10T21:30:00.000Z',
+    };
+    const windows = freeTimeSlots('2026-09-10', [nextDayBooking]);
+    expect(windows).toMatchObject([
+      { startTime: '2026-09-09T18:30:00.000Z', endTime: '2026-09-10T19:30:00.000Z' },
+    ]);
   });
 });

@@ -4,18 +4,23 @@ import {
   createEventSchema,
   createTicketTierSchema,
   eventDtoSchema,
+  eventMediaSchema,
   posterUploadUrlDtoSchema,
   promoterAssignmentDtoSchema,
+  promoCodeDtoSchema,
   ticketTierDtoSchema,
+  updateTicketTierLimitsSchema,
   updateEventSchema,
 } from '@c1rcle/contracts';
 
 import { apiClient } from '@/lib/api/client';
+import { validateEventMedia } from '@/lib/events/event-media';
+import { promoRequestsFromDraft } from '@/lib/events/event-promo-codes';
 import { eventEndAtFromDraft, eventStartAtFromDraft } from '@/lib/events/event-time';
 import { uploadToSignedUrl } from '@/lib/onboarding/uploadToSignedUrl';
 
 import type { EventEditorDraft } from '@/data/partner-data-source';
-import type { EventDto, UpdateEventInput } from '@c1rcle/contracts';
+import type { EventDto, TicketTierDto, UpdateEventInput } from '@c1rcle/contracts';
 
 export { eventEndAtFromDraft, eventStartAtFromDraft } from '@/lib/events/event-time';
 
@@ -40,6 +45,9 @@ export async function publishVenueEvent(
       }
     | string,
 ): Promise<EventDto> {
+  const promoRequests = promoRequestsFromDraft(draft);
+  const mediaErrors = validateEventMedia(draft);
+  if (mediaErrors.length) throw new Error(mediaErrors.join(' '));
   const slotReservation = typeof reservationOrKey === 'string' ? undefined : reservationOrKey;
   const idempotencyKey = typeof reservationOrKey === 'string' ? reservationOrKey : undefined;
   const startAt = slotReservation?.startAt ?? eventStartAtFromDraft(draft);
@@ -61,6 +69,7 @@ export async function publishVenueEvent(
   });
 
   const imageUrl = await resolvePosterImageUrl(organizationId, draft);
+  const media = await resolveEventMedia(organizationId, draft);
   const event = await apiClient.post({
     path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/events`,
     body: createEventSchema.parse({
@@ -70,6 +79,7 @@ export async function publishVenueEvent(
       summary: draft.description.trim().slice(0, 1000),
       description: draft.description.trim(),
       imageUrl,
+      ...(media ? { media } : {}),
       startAt,
       endAt: slotReservation?.endAt ?? eventEndAtFromDraft(draft),
       visibilityMode: draft.visibilityMode ?? 'public',
@@ -147,12 +157,21 @@ export async function publishVenueEvent(
         ...(!isRsvp && tier.commissionEligible != null
           ? { commissionEligible: tier.commissionEligible }
           : {}),
-        ...(tier.maxPerOrder != null ? { maxPerOrder: tier.maxPerOrder } : {}),
+        maxPerOrder: tier.maxPerOrder ?? (isRsvp ? 1 : 10),
       }),
       schema: ticketTierDtoSchema,
       headers: commandHeaders(`tier-${String(index)}`),
     });
     serverTierIds.set(tier.id, createdTier.id);
+  }
+
+  for (const [index, promo] of promoRequests.entries()) {
+    await apiClient.post({
+      path: `/api/v2/events/${encodeURIComponent(event.id)}/promo-codes`,
+      body: promo,
+      schema: promoCodeDtoSchema,
+      headers: commandHeaders(`promo-${String(index)}`),
+    });
   }
 
   // The editor stores compensation by its local tier ids, while the API
@@ -238,6 +257,26 @@ export async function updatePartnerEventDetails(
   });
 }
 
+export async function updatePartnerEventTicketLimit(
+  organizationId: string,
+  eventId: string,
+  tierId: string,
+  version: number,
+  maxPerOrder: number,
+  idempotencyKey = crypto.randomUUID(),
+): Promise<TicketTierDto> {
+  return apiClient.patch({
+    path: `/api/v2/events/${encodeURIComponent(eventId)}/ticket-tiers/${encodeURIComponent(tierId)}`,
+    body: updateTicketTierLimitsSchema.parse({ maxPerOrder }),
+    schema: ticketTierDtoSchema,
+    headers: {
+      'x-organization-id': organizationId,
+      'If-Match': String(version),
+      'Idempotency-Key': idempotencyKey,
+    },
+  });
+}
+
 export async function cancelPartnerEvent(
   organizationId: string,
   eventId: string,
@@ -312,6 +351,40 @@ function posterContentType(draft: Pick<EventEditorDraft, 'artwork'>): PosterCont
     default:
       return 'image/jpeg';
   }
+}
+
+export async function resolveEventMedia(
+  organizationId: string,
+  draft: Pick<EventEditorDraft, 'media'>,
+) {
+  if (!draft.media) return undefined;
+  const gallery = [];
+  for (const artwork of draft.media.gallery) {
+    const url = await resolvePosterImageUrl(organizationId, { artwork });
+    if (!url) throw new Error('Choose a valid gallery image.');
+    gallery.push({ url, alt: artwork.alt ?? '' });
+  }
+  const spotlights = [];
+  for (const feature of draft.media.spotlights) {
+    const imageUrl = feature.artwork
+      ? await resolvePosterImageUrl(organizationId, { artwork: feature.artwork })
+      : null;
+    spotlights.push({
+      id: feature.id,
+      title: feature.title.trim(),
+      description: feature.description,
+      link: feature.link || null,
+      imageUrl,
+      startTime: feature.startTime || null,
+      endTime: feature.endTime || null,
+    });
+  }
+  return eventMediaSchema.parse({
+    titleFont: draft.media.titleFont,
+    youtubeUrl: draft.media.youtubeUrl || null,
+    gallery,
+    spotlights,
+  });
 }
 
 async function resolvePosterImageUrl(

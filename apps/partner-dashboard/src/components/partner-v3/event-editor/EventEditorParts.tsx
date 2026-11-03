@@ -1,8 +1,11 @@
 import Image from 'next/image';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+
+import { EVENT_GENRE_OPTIONS } from '@/lib/events/event-editor-data';
 
 import { canSelectEventDate } from './event-date-selection';
 import styles from './event-editor.module.css';
+import { EventTimeTimeline } from './EventTimeTimeline';
 
 import type {
   CalendarDay,
@@ -86,6 +89,7 @@ export function EventBasicDetails({
   data,
   editMode,
   showDescription = false,
+  showSchedule = true,
   update,
   onArtistAdd,
   onArtistRemove,
@@ -96,6 +100,7 @@ export function EventBasicDetails({
   readonly data: EventEditorData;
   readonly editMode: boolean;
   readonly showDescription?: boolean;
+  readonly showSchedule?: boolean;
   readonly update: DraftUpdate;
   readonly onArtistAdd: (name: string) => void;
   readonly onArtistRemove: (name: string) => void;
@@ -103,6 +108,20 @@ export function EventBasicDetails({
   readonly onToggleGenres: () => void;
 }) {
   const [artistInput, setArtistInput] = useState('');
+  const [customGenre, setCustomGenre] = useState('');
+  const addCustomGenre = () => {
+    const entered = customGenre.trim();
+    const genre =
+      [...data.genres, ...EVENT_GENRE_OPTIONS, ...draft.genres].find(
+        (item) => item.toLocaleLowerCase() === entered.toLocaleLowerCase(),
+      ) ?? entered;
+    if (!genre || genre.length > 40) return;
+    if (!draft.genres.some((item) => item.toLocaleLowerCase() === genre.toLocaleLowerCase())) {
+      update({ genres: [...draft.genres, genre] });
+    }
+    setCustomGenre('');
+    onToggleGenres();
+  };
   return (
     <section className={styles['card']} aria-labelledby="basics-heading">
       <div id="basics-heading" className={styles['cardTitle']}>
@@ -120,6 +139,40 @@ export function EventBasicDetails({
             placeholder="e.g. Neon Nights: Afrobeats Edition"
           />
         </div>
+        <div className={styles['titleFontPicker']} role="group" aria-label="Event title font">
+          {(
+            [
+              'classic',
+              'eclectic',
+              'fancy',
+              'digital',
+              'literary',
+              'impact',
+              'modern',
+              'condensed',
+            ] as const
+          ).map((font) => (
+            <button
+              key={font}
+              type="button"
+              data-title-font={font}
+              aria-pressed={(draft.media?.titleFont ?? 'classic') === font}
+              onClick={() => {
+                update({
+                  media: {
+                    youtubeUrl: '',
+                    gallery: [],
+                    spotlights: [],
+                    ...draft.media,
+                    titleFont: font,
+                  },
+                });
+              }}
+            >
+              {font.charAt(0).toUpperCase() + font.slice(1)}
+            </button>
+          ))}
+        </div>
         <div className={styles['field']}>
           <label htmlFor="event-visibility">Who can find this event?</label>
           <select
@@ -136,13 +189,6 @@ export function EventBasicDetails({
             <option value="code">Private · access code required</option>
             <option value="invited">Private · named invitation required</option>
           </select>
-          <div className={styles['muted']}>
-            {draft.visibilityMode === 'unlisted'
-              ? 'Unlisted events do not appear in discovery. Anyone with the link can view and share event details.'
-              : draft.visibilityMode === 'code' || draft.visibilityMode === 'invited'
-                ? 'Private events stay out of discovery and require a verified, event-scoped grant before details or checkout are available. Configure access from the event access screen.'
-                : 'Public events can appear in C1RCLE discovery.'}
-          </div>
         </div>
         <div className={styles['field']}>
           <label htmlFor="event-address-disclosure">
@@ -166,54 +212,57 @@ export function EventBasicDetails({
             <option value="after_grant">After private event access is granted</option>
             <option value="hidden">Keep the full address hidden</option>
           </select>
-          <div className={styles['muted']}>
-            Private events default to hidden. After-grant reveals the full address only to guests
-            with an event-scoped grant.
-          </div>
         </div>
-        <div className={styles['threeColumns']}>
-          <div className={styles['field']}>
-            <label htmlFor="event-date">
-              Date {editMode ? <span aria-label="Date locked"> · locked</span> : null}
-            </label>
-            <input id="event-date" value={draft.dateLabel} readOnly disabled={editMode} />
+        {showSchedule ? (
+          <div className={styles['threeColumns']}>
+            <div className={styles['field']}>
+              <label htmlFor="event-date">
+                Date {editMode ? <span aria-label="Date locked"> · locked</span> : null}
+              </label>
+              <input id="event-date" value={draft.dateLabel} readOnly disabled={editMode} />
+            </div>
+            <div className={styles['field']}>
+              <label htmlFor="event-time">
+                Start time {editMode ? <span aria-label="Time locked"> · locked</span> : null}
+              </label>
+              <input
+                id="event-time"
+                value={draft.time}
+                onChange={(event) => {
+                  update({ time: event.target.value });
+                }}
+                disabled={editMode}
+                placeholder="e.g. 9:00 PM"
+              />
+            </div>
+            <div className={styles['field']}>
+              <label htmlFor="event-end-time">
+                End time {editMode ? <span aria-label="Time locked"> · locked</span> : null}
+              </label>
+              <input
+                id="event-end-time"
+                value={draft.endTime ?? ''}
+                onChange={(event) => {
+                  update({ endTime: event.target.value });
+                }}
+                disabled={editMode}
+                placeholder="e.g. 3:00 AM"
+              />
+            </div>
           </div>
-          <div className={styles['field']}>
-            <label htmlFor="event-time">
-              Start time {editMode ? <span aria-label="Time locked"> · locked</span> : null}
-            </label>
-            <input
-              id="event-time"
-              value={draft.time}
-              onChange={(event) => {
-                update({ time: event.target.value });
-              }}
-              disabled={editMode}
-              placeholder="e.g. 9:00 PM"
-            />
-          </div>
-          <div className={styles['field']}>
-            <label htmlFor="event-end-time">
-              End time {editMode ? <span aria-label="Time locked"> · locked</span> : null}
-            </label>
-            <input
-              id="event-end-time"
-              value={draft.endTime ?? ''}
-              onChange={(event) => {
-                update({ endTime: event.target.value });
-              }}
-              disabled={editMode}
-              placeholder="e.g. 3:00 AM"
-            />
-          </div>
-        </div>
-        {editMode ? (
+        ) : null}
+        {editMode && showSchedule ? (
           <div className={styles['muted']}>Date and time can’t be changed after publishing.</div>
         ) : null}
         <div className={styles['field']}>
           <div className={styles['fieldLabel']}>Genre / vibe</div>
           <div className={styles['chips']}>
-            {data.genres.map((genre) => (
+            {[
+              ...new Set([
+                ...(data.genres.length ? data.genres : EVENT_GENRE_OPTIONS),
+                ...draft.genres,
+              ]),
+            ].map((genre) => (
               <button
                 className={[
                   styles['chip'],
@@ -223,6 +272,7 @@ export function EventBasicDetails({
                   .join(' ')}
                 key={genre}
                 type="button"
+                aria-pressed={draft.genres.includes(genre)}
                 onClick={() => {
                   update({
                     genres: draft.genres.includes(genre)
@@ -234,33 +284,45 @@ export function EventBasicDetails({
                 {genre}
               </button>
             ))}
-            <button className={styles['chip']} type="button" onClick={onToggleGenres}>
-              {genrePickerOpen ? 'Hide more' : '+ Add genre'}
+            <button
+              className={[styles['chip'], styles['genreAdd']].join(' ')}
+              type="button"
+              aria-label="Add custom genre"
+              aria-expanded={genrePickerOpen}
+              onClick={onToggleGenres}
+            >
+              +
             </button>
           </div>
           {genrePickerOpen ? (
-            <div className={[styles['chips'], styles['moreGenres']].join(' ')}>
-              {data.extraGenres.map((genre) => (
-                <button
-                  className={[
-                    styles['chip'],
-                    draft.genres.includes(genre) ? styles['chipSelected'] : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                  key={genre}
-                  type="button"
-                  onClick={() => {
-                    update({
-                      genres: draft.genres.includes(genre)
-                        ? draft.genres.filter((item) => item !== genre)
-                        : [...draft.genres, genre],
-                    });
-                  }}
-                >
-                  {genre}
-                </button>
-              ))}
+            <div className={styles['inlineInput']}>
+              <input
+                aria-label="Custom genre"
+                placeholder="Enter a genre"
+                maxLength={40}
+                value={customGenre}
+                onChange={(event) => {
+                  setCustomGenre(event.target.value);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addCustomGenre();
+                  }
+                  if (event.key === 'Escape') {
+                    setCustomGenre('');
+                    onToggleGenres();
+                  }
+                }}
+              />
+              <button
+                className={styles['outlineButton']}
+                type="button"
+                onClick={addCustomGenre}
+                disabled={!customGenre.trim()}
+              >
+                Add
+              </button>
             </div>
           ) : null}
         </div>
@@ -338,16 +400,24 @@ export function EventBasicDetails({
 export function EventDateTimeSection({
   months,
   selectedDate,
+  time,
+  endTime,
   selectedSlotId,
   editorRole,
   onDate,
+  onTime,
+  onEndTime,
   onSlot,
 }: {
   readonly months: readonly CalendarMonth[];
   readonly selectedDate: string;
+  readonly time?: string;
+  readonly endTime?: string;
   readonly selectedSlotId?: string;
   readonly editorRole: 'venue' | 'host';
   readonly onDate: (day: { readonly date: string; readonly day: number }) => void;
+  readonly onTime?: (value: string) => void;
+  readonly onEndTime?: (value: string) => void;
   readonly onSlot?: (id: string, label: string) => void;
 }) {
   const selectedMonthIndex = months.findIndex((month) =>
@@ -363,6 +433,9 @@ export function EventDateTimeSection({
     ...Array.from({ length: month.firstDayOffset }, () => null),
     ...month.days,
   ];
+  const monthHasOpenHostSlots = month.days.some((day) =>
+    day.slots.some((slot) => slot.status === 'available'),
+  );
   return (
     <section className={styles['card']} aria-labelledby="date-heading">
       <div className={styles['calendarHeader']}>
@@ -372,8 +445,8 @@ export function EventDateTimeSection({
           </div>
           <div className={styles['muted']}>
             {editorRole === 'host'
-              ? 'Partnered venue availability — grey dates have no open slots for requests.'
-              : 'Your venue’s open nights — grey dates are already taken.'}
+              ? 'Choose a date, then select an available time.'
+              : 'Choose an open date.'}
           </div>
         </div>
         <div className={styles['calendarControls']}>
@@ -412,22 +485,37 @@ export function EventDateTimeSection({
               className={[
                 styles['calendarDay'],
                 day.date === selectedDate ? styles['calendarDaySelected'] : '',
-                !canSelectEventDate(day.state, editorRole) ? styles['calendarDayBooked'] : '',
+                !canSelectEventDate(
+                  day.state,
+                  editorRole,
+                  day.slots.some((slot) => slot.status === 'available'),
+                )
+                  ? styles['calendarDayBooked']
+                  : '',
               ]
                 .filter(Boolean)
                 .join(' ')}
               key={day.date}
               type="button"
-              disabled={!canSelectEventDate(day.state, editorRole)}
+              disabled={
+                !canSelectEventDate(
+                  day.state,
+                  editorRole,
+                  day.slots.some((slot) => slot.status === 'available'),
+                )
+              }
               onClick={() => {
                 onDate(day);
               }}
             >
               {day.day}
-              {day.state === 'confirmed' || day.state === 'pending' ? (
+              {day.slots.some((slot) => slot.status === 'available') ? (
+                <i className={styles['calendarDot']} />
+              ) : day.state === 'confirmed' || day.state === 'pending' ? (
                 <i
                   className={[
                     styles['calendarDot'],
+                    day.state === 'confirmed' ? styles['calendarDotBooked'] : '',
                     day.state === 'pending' ? styles['calendarDotPending'] : '',
                   ]
                     .filter(Boolean)
@@ -443,7 +531,7 @@ export function EventDateTimeSection({
       <div className={styles['calendarLegend']}>
         <span>
           <i />
-          Available
+          Open time
         </span>
         <span>
           <i className={styles['booked']} />
@@ -454,30 +542,55 @@ export function EventDateTimeSection({
           Pending
         </span>
       </div>
-      {editorRole === 'host' && selectedDate && onSlot ? (
-        <div className={styles['slotList']}>
-          <div className={styles['muted']}>
-            Select a venue time window (or set custom start &amp; end time in Basics &amp; tickets)
-          </div>
-          {(month.days.find((day) => day.date === selectedDate)?.slots ?? []).map((slot) => (
-            <button
-              className={[
-                styles['slotButton'],
-                slot.id === selectedSlotId ? styles['slotButtonSelected'] : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              key={slot.id}
-              type="button"
-              onClick={() => {
-                onSlot(slot.id, slot.label);
-              }}
-            >
-              <span>{slot.label}</span>
-              <span>{slot.id === selectedSlotId ? 'Selected' : 'Choose'}</span>
-            </button>
-          ))}
+      {editorRole === 'host' && !monthHasOpenHostSlots ? (
+        <div className={styles['calendarEmpty']} role="status">
+          No free time remains this month. Choose another month.
         </div>
+      ) : null}
+      {onTime && onEndTime && editorRole === 'venue' ? (
+        <div className={styles['twoColumns']}>
+          <div className={styles['field']}>
+            <label htmlFor="event-time">Start time</label>
+            <input
+              id="event-time"
+              value={time ?? ''}
+              onChange={(event) => {
+                onTime(event.target.value);
+              }}
+              placeholder="e.g. 9:00 PM"
+            />
+          </div>
+          <div className={styles['field']}>
+            <label htmlFor="event-end-time">End time (optional)</label>
+            <input
+              id="event-end-time"
+              value={endTime ?? ''}
+              onChange={(event) => {
+                onEndTime(event.target.value);
+              }}
+              placeholder="e.g. 1:00 AM"
+            />
+          </div>
+        </div>
+      ) : null}
+      {editorRole === 'host' &&
+      selectedDate.startsWith(month.key) &&
+      onSlot &&
+      onTime &&
+      onEndTime ? (
+        <EventTimeTimeline
+          key={selectedDate}
+          date={selectedDate}
+          slots={month.days.find((day) => day.date === selectedDate)?.slots ?? []}
+          time={time ?? ''}
+          endTime={endTime ?? ''}
+          {...(selectedSlotId ? { selectedSlotId } : {})}
+          onSelect={(slot, start, end) => {
+            onSlot(slot.id, slot.label);
+            onTime(start);
+            onEndTime(end);
+          }}
+        />
       ) : null}
     </section>
   );
@@ -490,6 +603,57 @@ export function TicketTierEditor({
   readonly tiers: readonly EventEditorTicketTier[];
   readonly onChange: (tiers: readonly EventEditorTicketTier[]) => void;
 }) {
+  const [ticketMode, setTicketMode] = useState<'rsvp' | 'paid' | null>(() =>
+    tiers.length ? (tiers.every((tier) => tier.accessType === 'RSVP') ? 'rsvp' : 'paid') : null,
+  );
+  const savedModes = useRef<Partial<Record<'rsvp' | 'paid', readonly EventEditorTicketTier[]>>>({});
+  const newTier = (mode: 'rsvp' | 'paid'): EventEditorTicketTier => ({
+    id: `tier-${crypto.randomUUID()}`,
+    name: mode === 'rsvp' ? 'Free RSVP' : 'General Entry',
+    price: 0,
+    quantity: 50,
+    maxPerOrder: mode === 'rsvp' ? 1 : 10,
+    accessType: mode === 'rsvp' ? 'RSVP' : 'ENTRY',
+    ...(mode === 'rsvp' ? { guestCount: 1, commissionEligible: false } : {}),
+  });
+  const chooseMode = (mode: 'rsvp' | 'paid') => {
+    if (ticketMode === mode) return;
+    if (ticketMode) savedModes.current[ticketMode] = tiers;
+    setTicketMode(mode);
+    onChange(savedModes.current[mode] ?? [newTier(mode)]);
+  };
+  const modeChoice = (
+    <fieldset className={styles['ticketModeChoice']}>
+      <legend>How will guests join?</legend>
+      <div>
+        <label>
+          <input
+            type="radio"
+            name="event-ticket-mode"
+            value="rsvp"
+            checked={ticketMode === 'rsvp'}
+            onChange={() => {
+              chooseMode('rsvp');
+            }}
+          />
+          <span>RSVP</span>
+        </label>
+        <label>
+          <input
+            type="radio"
+            name="event-ticket-mode"
+            value="paid"
+            checked={ticketMode === 'paid'}
+            onChange={() => {
+              chooseMode('paid');
+            }}
+          />
+          <span>Sell tickets</span>
+        </label>
+      </div>
+    </fieldset>
+  );
+  const [editingTier, setEditingTier] = useState<EventEditorTicketTier | null>(null);
   const [benefitInputs, setBenefitInputs] = useState<Record<string, string>>({});
   const purchasableUnits = (tier: EventEditorTicketTier) =>
     tier.admissionMode === 'per_person'
@@ -497,105 +661,55 @@ export function TicketTierEditor({
       : tier.quantity;
   const soldOut = tiers.reduce((total, tier) => total + tier.price * purchasableUnits(tier), 0);
   const updateTier = (id: string, values: Partial<EventEditorTicketTier>) => {
-    onChange(tiers.map((tier) => (tier.id === id ? { ...tier, ...values } : tier)));
+    setEditingTier((current) => (current?.id === id ? { ...current, ...values } : current));
   };
+  if (!ticketMode) return <section className={styles['card']}>{modeChoice}</section>;
   return (
     <section className={styles['card']} aria-labelledby="tickets-heading">
+      {modeChoice}
       <div className={styles['cardTitleRow']}>
         <div id="tickets-heading" className={styles['cardTitle']}>
-          Ticket tiers
+          {ticketMode === 'rsvp' ? 'RSVP capacity' : 'Ticket tiers'}
         </div>
-        <span className={styles['totalLabel']}>{formatMoney(soldOut)} if sold out</span>
+        {ticketMode === 'paid' ? (
+          <span className={styles['totalLabel']}>{formatMoney(soldOut)} if sold out</span>
+        ) : null}
       </div>
-      <div className={styles['ticketList']}>
+      <div className={styles['compactTierList']}>
         {tiers.map((tier) => (
-          <div className={styles['ticketCard']} key={tier.id}>
-            <div className={styles['ticketRow']}>
-              <label className={styles['tierFieldLabel']}>
-                <span>Tier Name</span>
-                <input
-                  aria-label={`${tier.name} type of ticket`}
-                  list={`tier-presets-${tier.id}`}
-                  value={tier.name}
-                  onChange={(event) => {
-                    updateTier(tier.id, { name: event.target.value });
-                  }}
-                  placeholder="Type or select name"
-                />
-                <datalist id={`tier-presets-${tier.id}`}>
-                  <option value="General Admission" />
-                  <option value="Early Bird" />
-                  <option value="Phase 1" />
-                  <option value="Phase 2" />
-                  <option value="VIP" />
-                  <option value="VVIP" />
-                  <option value="Female Entry" />
-                  <option value="Couple Entry" />
-                  <option value="Table / Cabana" />
-                </datalist>
-              </label>
-              {tier.accessType !== 'RSVP' ? (
-                <label className={styles['tierFieldLabel']}>
-                  <span>Price (₹)</span>
-                  <input
-                    aria-label={`${tier.name} price`}
-                    inputMode="numeric"
-                    value={String(tier.price)}
-                    onChange={(event) => {
-                      updateTier(tier.id, { price: numberValue(event.target.value) });
-                    }}
-                    placeholder="Price"
-                  />
-                </label>
-              ) : (
-                <div className={styles['tierFieldLabel']}>Free RSVP</div>
-              )}
-              {tier.accessType !== 'RSVP' ? (
-                <label className={styles['tierFieldLabel']}>
-                  <span>Event cover (₹ per attendee)</span>
-                  <input
-                    aria-label={`${tier.name} event cover per attendee`}
-                    inputMode="decimal"
-                    min="0"
-                    value={String((tier.coverAmountPaise ?? 0) / 100)}
-                    onChange={(event) => {
-                      updateTier(tier.id, {
-                        coverAmountPaise: Math.round(numberValue(event.target.value) * 100),
-                      });
-                    }}
-                    placeholder="0"
-                  />
-                  <span className={styles['muted']}>
-                    Charged separately from admission. Promoter commission applies to admission
-                    only.
-                  </span>
-                </label>
-              ) : null}
-              <label className={styles['tierFieldLabel']}>
-                <span>
-                  {tier.admissionMode === 'per_person' ? 'Attendee capacity' : 'Capacity'}
-                </span>
-                <input
-                  aria-label={`${tier.name} capacity`}
-                  inputMode="numeric"
-                  value={String(tier.quantity)}
-                  onChange={(event) => {
-                    updateTier(tier.id, { quantity: numberValue(event.target.value) });
-                  }}
-                  placeholder="Capacity"
-                />
-              </label>
-              {tier.accessType !== 'RSVP' ? (
-                <div className={styles['tierFieldLabel']}>
-                  <span>Tier Gross</span>
-                  <span className={styles['ticketGross']}>
-                    {formatMoney(tier.price * purchasableUnits(tier))}
-                  </span>
-                </div>
-              ) : null}
+          <div className={styles['compactTierRow']} key={tier.id}>
+            <div>
+              <strong>{tier.name}</strong>
+              <span>
+                {tier.accessType === 'RSVP' ? 'Free RSVP' : formatMoney(tier.price)} ·{' '}
+                {tier.quantity} {tier.admissionMode === 'per_person' ? 'attendees' : 'tickets'}
+              </span>
+            </div>
+            <div className={styles['tierActions']}>
               <button
-                className={styles['ticketRemove']}
                 type="button"
+                className={styles['tierEdit']}
+                aria-label={`Edit ${tier.name}`}
+                onClick={() => {
+                  setEditingTier({ ...tier });
+                }}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="20"
+                  height="20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  aria-hidden="true"
+                >
+                  <path d="m16 3 5 5L8 21H3v-5L16 3Z" />
+                  <path d="m13 6 5 5" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className={styles['tierEdit']}
                 aria-label={`Remove ${tier.name}`}
                 onClick={() => {
                   onChange(tiers.filter((item) => item.id !== tier.id));
@@ -604,413 +718,633 @@ export function TicketTierEditor({
                 ×
               </button>
             </div>
-            <details className={styles['details']}>
-              <summary className={styles['summary']}>
-                <span className={styles['summaryHeader']}>
-                  <span>Ticket options</span>
-                  <span className={styles['summaryBadge']}>
-                    {tier.accessType ?? 'ENTRY'} · {tier.audienceType ?? 'GENERAL'}
-                  </span>
-                </span>
-                <span className={styles['summaryIcon']}>▼</span>
-              </summary>
-              <div className={styles['detailsBody']}>
-                <div className={styles['ticketOptions']}>
-                  {tier.accessType !== 'RSVP' ? (
-                    <label>
-                      Tier access
-                      <select
-                        aria-label="Tier access"
-                        value={tier.accessMode ?? 'public'}
-                        onChange={(event) => {
-                          updateTier(tier.id, {
-                            accessMode: event.target.value as NonNullable<
-                              EventEditorTicketTier['accessMode']
-                            >,
-                          });
-                        }}
-                      >
-                        <option value="public">Public</option>
-                        <option value="code">Code-gated</option>
-                        <option value="invited">Invitation-only</option>
-                      </select>
-                    </label>
-                  ) : null}
-                  <label>
-                    Ticket type / access
-                    <select
-                      aria-label="Ticket type / access"
-                      value={tier.accessType ?? 'ENTRY'}
-                      onChange={(event) => {
-                        const accessType = event.target
-                          .value as EventEditorTicketTier['accessType'];
-                        updateTier(
-                          tier.id,
-                          accessType === 'RSVP'
-                            ? {
-                                accessType,
-                                price: 0,
-                                guestCount: 1,
-                                admissionMode: undefined,
-                                doorPrice: undefined,
-                                pricingPhases: [],
-                                commissionEligible: false,
-                              }
-                            : {
-                                accessType,
-                                price: tier.price > 0 ? tier.price : 1000,
-                                commissionEligible: true,
-                              },
-                        );
-                      }}
-                    >
-                      {['ENTRY', 'VIP', 'VVIP', 'TABLE', 'PACKAGE', 'RSVP'].map((value) => (
-                        <option key={value} value={value}>
-                          {value}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Audience
-                    <select
-                      aria-label="Audience"
-                      value={tier.audienceType ?? 'GENERAL'}
-                      onChange={(event) => {
-                        updateTier(tier.id, {
-                          audienceType: event.target.value as EventEditorTicketTier['audienceType'],
-                        });
-                      }}
-                    >
-                      {[
-                        ['GENERAL', 'General'],
-                        ['MALE', 'Men'],
-                        ['FEMALE', 'Women'],
-                        ['COUPLE', 'Couple'],
-                        ['GROUP', 'Group'],
-                        ['STUDENT', 'Student'],
-                        ['MEMBER', 'Member'],
-                      ].map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="text-xs text-white/50">
-                      Guests confirm eligibility at checkout; the Venue may verify it at entry.
-                    </span>
-                  </label>
-                  <label>
-                    Guests
-                    <input
-                      aria-label="Guests"
-                      type="number"
-                      min="1"
-                      value={String(tier.guestCount ?? 1)}
-                      onChange={(event) => {
-                        const guestCount = numberValue(event.target.value);
-                        updateTier(tier.id, {
-                          guestCount,
-                          ...(guestCount <= 1 ? { admissionMode: undefined } : {}),
-                        });
-                      }}
-                    />
-                  </label>
-                  {tier.accessType !== 'RSVP' && (tier.guestCount ?? 1) > 1 ? (
-                    <label>
-                      Admission issuance
-                      <select
-                        aria-label="Admission issuance"
-                        value={tier.admissionMode ?? 'bundle'}
-                        onChange={(event) => {
-                          updateTier(tier.id, {
-                            admissionMode: event.target
-                              .value as EventEditorTicketTier['admissionMode'],
-                          });
-                        }}
-                      >
-                        <option value="bundle">One group pass</option>
-                        <option value="per_person">Separate pass for each attendee</option>
-                      </select>
-                    </label>
-                  ) : null}
-                  {tier.accessType !== 'RSVP' ? (
-                    <label>
-                      Door price (₹)
-                      <input
-                        aria-label="Door price (₹)"
-                        type="number"
-                        min="0"
-                        value={tier.doorPrice != null ? String(tier.doorPrice) : ''}
-                        onChange={(event) => {
-                          updateTier(tier.id, {
-                            doorPrice:
-                              event.target.value === ''
-                                ? undefined
-                                : numberValue(event.target.value),
-                          });
-                        }}
-                      />
-                    </label>
-                  ) : null}
-                  <label>
-                    Benefits
-                    <input
-                      aria-label="Benefits"
-                      value={benefitInputs[tier.id] ?? (tier.benefits ?? []).join(', ')}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        setBenefitInputs((current) => ({ ...current, [tier.id]: value }));
-                        updateTier(tier.id, {
-                          benefits: value
-                            .split(',')
-                            .map((item) => item.trim())
-                            .filter(Boolean),
-                        });
-                      }}
-                      placeholder="Entry, Drinks"
-                    />
-                  </label>
-                  <label>
-                    Max per user
-                    <input
-                      aria-label="Max per user"
-                      type="number"
-                      min="1"
-                      value={tier.maxPerUser != null ? String(tier.maxPerUser) : ''}
-                      onChange={(event) => {
-                        updateTier(tier.id, {
-                          maxPerUser:
-                            event.target.value === '' ? undefined : numberValue(event.target.value),
-                        });
-                      }}
-                    />
-                  </label>
-                </div>
-                {tier.accessType === 'TABLE' ? (
-                  <div className={[styles['ticketOptions'], styles['tableOptions']].join(' ')}>
-                    <label>
-                      Table capacity
-                      <input
-                        aria-label="Table capacity"
-                        type="number"
-                        min="1"
-                        value={String(tier.tableConfig?.capacity ?? 1)}
-                        onChange={(event) => {
-                          updateTier(tier.id, {
-                            tableConfig: {
-                              capacity: numberValue(event.target.value),
-                              minimumSpendPaise: tier.tableConfig?.minimumSpendPaise ?? 0,
-                              redeemableAmountPaise: tier.tableConfig?.redeemableAmountPaise ?? 0,
-                              tableCount: tier.tableConfig?.tableCount ?? tier.quantity,
-                            },
-                          });
-                        }}
-                      />
-                    </label>
-                    <label>
-                      Minimum spend (₹)
-                      <input
-                        aria-label="Minimum spend (₹)"
-                        type="number"
-                        min="0"
-                        value={String((tier.tableConfig?.minimumSpendPaise ?? 0) / 100)}
-                        onChange={(event) => {
-                          updateTier(tier.id, {
-                            tableConfig: {
-                              capacity: tier.tableConfig?.capacity ?? 1,
-                              minimumSpendPaise: numberValue(event.target.value) * 100,
-                              redeemableAmountPaise: tier.tableConfig?.redeemableAmountPaise ?? 0,
-                              tableCount: tier.tableConfig?.tableCount ?? tier.quantity,
-                            },
-                          });
-                        }}
-                      />
-                    </label>
-                    <label>
-                      Redeemable (₹)
-                      <input
-                        aria-label="Redeemable (₹)"
-                        type="number"
-                        min="0"
-                        value={String((tier.tableConfig?.redeemableAmountPaise ?? 0) / 100)}
-                        onChange={(event) => {
-                          updateTier(tier.id, {
-                            tableConfig: {
-                              capacity: tier.tableConfig?.capacity ?? 1,
-                              minimumSpendPaise: tier.tableConfig?.minimumSpendPaise ?? 0,
-                              redeemableAmountPaise: numberValue(event.target.value) * 100,
-                              tableCount: tier.tableConfig?.tableCount ?? tier.quantity,
-                            },
-                          });
-                        }}
-                      />
-                    </label>
-                  </div>
-                ) : null}
-                {tier.accessType !== 'RSVP' ? (
-                  <div className={styles['pricingPhasesBlock']}>
-                    <div className={styles['pricingPhasesHeader']}>
-                      <div className={styles['cardTitle']}>Pricing phases</div>
-                      <span className={styles['pricingPhasesSub']}>
-                        Optional — use when the price changes by date
-                      </span>
-                    </div>
-                    {(tier.pricingPhases ?? []).length > 0 ? (
-                      <div className={styles['phaseList']}>
-                        {(tier.pricingPhases ?? []).map((phase) => (
-                          <div className={styles['phaseRow']} key={phase.id}>
-                            <div className={styles['phaseField']}>
-                              <label
-                                htmlFor={`phase-name-${phase.id}`}
-                                className={styles['phaseLabel']}
-                              >
-                                Phase name
-                              </label>
-                              <input
-                                id={`phase-name-${phase.id}`}
-                                aria-label={`${phase.name} phase name`}
-                                value={phase.name}
-                                onChange={(event) => {
-                                  updateTier(tier.id, {
-                                    pricingPhases: (tier.pricingPhases ?? []).map((item) =>
-                                      item.id === phase.id
-                                        ? { ...item, name: event.target.value }
-                                        : item,
-                                    ),
-                                  });
-                                }}
-                              />
-                            </div>
-                            <div className={styles['phaseField']}>
-                              <label
-                                htmlFor={`phase-price-${phase.id}`}
-                                className={styles['phaseLabel']}
-                              >
-                                Price (₹)
-                              </label>
-                              <input
-                                id={`phase-price-${phase.id}`}
-                                aria-label={`${phase.name} phase price`}
-                                type="number"
-                                min="0"
-                                value={String(phase.priceInPaise / 100)}
-                                onChange={(event) => {
-                                  updateTier(tier.id, {
-                                    pricingPhases: (tier.pricingPhases ?? []).map((item) =>
-                                      item.id === phase.id
-                                        ? {
-                                            ...item,
-                                            priceInPaise: numberValue(event.target.value) * 100,
-                                          }
-                                        : item,
-                                    ),
-                                  });
-                                }}
-                              />
-                            </div>
-                            <div className={styles['phaseField']}>
-                              <label
-                                htmlFor={`phase-start-${phase.id}`}
-                                className={styles['phaseLabel']}
-                              >
-                                Start date (DD-MM)
-                              </label>
-                              <input
-                                id={`phase-start-${phase.id}`}
-                                aria-label={`${phase.name} phase start date`}
-                                placeholder="DD-MM"
-                                inputMode="numeric"
-                                maxLength={5}
-                                value={phase.startDate}
-                                onChange={(event) => {
-                                  updateTier(tier.id, {
-                                    pricingPhases: (tier.pricingPhases ?? []).map((item) =>
-                                      item.id === phase.id
-                                        ? { ...item, startDate: event.target.value }
-                                        : item,
-                                    ),
-                                  });
-                                }}
-                              />
-                            </div>
-                            <div className={styles['phaseField']}>
-                              <label
-                                htmlFor={`phase-end-${phase.id}`}
-                                className={styles['phaseLabel']}
-                              >
-                                End date (DD-MM)
-                              </label>
-                              <input
-                                id={`phase-end-${phase.id}`}
-                                aria-label={`${phase.name} phase end date`}
-                                placeholder="DD-MM"
-                                inputMode="numeric"
-                                maxLength={5}
-                                value={phase.endDate}
-                                onChange={(event) => {
-                                  updateTier(tier.id, {
-                                    pricingPhases: (tier.pricingPhases ?? []).map((item) =>
-                                      item.id === phase.id
-                                        ? { ...item, endDate: event.target.value }
-                                        : item,
-                                    ),
-                                  });
-                                }}
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
-                    <button
-                      className={styles['outlineButton']}
-                      type="button"
-                      onClick={() => {
-                        const index = (tier.pricingPhases ?? []).length + 1;
-                        updateTier(tier.id, {
-                          pricingPhases: [
-                            ...(tier.pricingPhases ?? []),
-                            {
-                              id: `phase-${String(index)}`,
-                              name: `Phase ${String(index)}`,
-                              priceInPaise: tier.price * 100,
-                              startDate: '',
-                              endDate: '',
-                              quantity: null,
-                            },
-                          ],
-                        });
-                      }}
-                    >
-                      + Add pricing phase
-                    </button>
-                  </div>
-                ) : (
-                  <p>RSVP tickets have no price, phases, or commission.</p>
-                )}
-                {tier.accessType !== 'RSVP' && (tier.accessMode ?? 'public') !== 'public' ? (
-                  <p className={styles['muted']}>
-                    Restricted tiers stay unavailable until their access code or verified invitation
-                    flow is configured.
-                  </p>
-                ) : null}
-              </div>
-            </details>
           </div>
         ))}
       </div>
+      {editingTier ? (
+        <dialog
+          className={styles['tierDialog']}
+          aria-label="Edit ticket"
+          ref={(node) => {
+            if (node && !node.open) node.showModal();
+          }}
+          onCancel={() => {
+            setEditingTier(null);
+            setBenefitInputs({});
+          }}
+        >
+          <div className={styles['tierDialogHeader']}>
+            <h2>Edit ticket</h2>
+            <button
+              type="button"
+              aria-label="Close ticket editor"
+              onClick={() => {
+                setEditingTier(null);
+                setBenefitInputs({});
+              }}
+            >
+              ×
+            </button>
+          </div>
+          <div className={styles['ticketList']}>
+            {[editingTier].map((tier) => (
+              <div key={tier.id}>
+                <div className={styles['ticketRow']}>
+                  <label className={styles['tierFieldLabel']}>
+                    <span>Ticket template</span>
+                    <select
+                      aria-label="Ticket template"
+                      value={
+                        [
+                          'General Entry',
+                          'Male Stag',
+                          'Free Female',
+                          'Couple',
+                          'VIP',
+                          'Free RSVP',
+                        ].includes(tier.name)
+                          ? tier.name
+                          : 'Custom'
+                      }
+                      onChange={(event) => {
+                        const name = event.target.value;
+                        if (name === 'Custom') {
+                          updateTier(tier.id, { name: 'Custom ticket' });
+                          return;
+                        }
+                        const free = name.startsWith('Free');
+                        updateTier(tier.id, {
+                          name,
+                          accessType: free ? 'RSVP' : name === 'VIP' ? 'VIP' : 'ENTRY',
+                          audienceType:
+                            name === 'Male Stag'
+                              ? 'MALE'
+                              : name === 'Free Female'
+                                ? 'FEMALE'
+                                : name === 'Couple'
+                                  ? 'COUPLE'
+                                  : 'GENERAL',
+                          guestCount: name === 'Couple' ? 2 : 1,
+                          admissionMode: name === 'Couple' ? 'bundle' : undefined,
+                          maxPerOrder: free ? 1 : 10,
+                          ...(free
+                            ? {
+                                price: 0,
+                                commissionEligible: false,
+                                coverAmountPaise: 0,
+                                doorPrice: undefined,
+                                pricingPhases: [],
+                              }
+                            : { commissionEligible: true }),
+                        });
+                      }}
+                    >
+                      {(ticketMode === 'rsvp'
+                        ? ['Free RSVP', 'Free Female', 'Custom']
+                        : ['General Entry', 'Male Stag', 'Free Female', 'Couple', 'VIP', 'Custom']
+                      ).map((name) => (
+                        <option key={name} value={name}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className={styles['tierFieldLabel']}>
+                    <span>Ticket name</span>
+                    <input
+                      aria-label={`${tier.name} type of ticket`}
+                      value={tier.name}
+                      onChange={(event) => {
+                        updateTier(tier.id, { name: event.target.value });
+                      }}
+                      placeholder="Type or select name"
+                    />
+                  </label>
+                  {tier.accessType !== 'RSVP' ? (
+                    <label className={styles['tierFieldLabel']}>
+                      <span>Price (₹)</span>
+                      <input
+                        aria-label={`${tier.name} price`}
+                        inputMode="numeric"
+                        value={String(tier.price)}
+                        onChange={(event) => {
+                          updateTier(tier.id, { price: numberValue(event.target.value) });
+                        }}
+                        placeholder="Price"
+                      />
+                    </label>
+                  ) : (
+                    <div className={styles['tierFieldLabel']}>Free RSVP</div>
+                  )}
+                  <label className={styles['tierFieldLabel']}>
+                    <span>
+                      {tier.admissionMode === 'per_person' ? 'Attendee capacity' : 'Capacity'}
+                    </span>
+                    <input
+                      aria-label={`${tier.name} capacity`}
+                      inputMode="numeric"
+                      value={String(tier.quantity)}
+                      onChange={(event) => {
+                        updateTier(tier.id, { quantity: numberValue(event.target.value) });
+                      }}
+                      placeholder="Capacity"
+                    />
+                  </label>
+                  <label className={styles['tierFieldLabel']}>
+                    <span>Maximum per order</span>
+                    <input
+                      aria-label={`${tier.name} maximum per order`}
+                      type="number"
+                      min="1"
+                      max={tier.accessType === 'RSVP' ? '1' : '10'}
+                      readOnly={tier.accessType === 'RSVP'}
+                      step="1"
+                      value={String(tier.maxPerOrder ?? (tier.accessType === 'RSVP' ? 1 : 10))}
+                      onChange={(event) => {
+                        updateTier(tier.id, { maxPerOrder: numberValue(event.target.value) });
+                      }}
+                    />
+                    <span className={styles['muted']}>
+                      {tier.accessType === 'RSVP'
+                        ? 'Free RSVPs are limited to one per order.'
+                        : 'The platform limit is 10 per order.'}
+                    </span>
+                  </label>
+                </div>
+                <label className={styles['tierDescription']}>
+                  Inclusions (optional)
+                  <textarea
+                    aria-label="Ticket description"
+                    rows={3}
+                    placeholder="Entry, drinks or other inclusions"
+                    value={benefitInputs[tier.id] ?? (tier.benefits ?? []).join('\n')}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setBenefitInputs((current) => ({ ...current, [tier.id]: value }));
+                      updateTier(tier.id, {
+                        benefits: value
+                          .split('\n')
+                          .map((item) => item.trim())
+                          .filter(Boolean),
+                      });
+                    }}
+                  />
+                </label>
+                <details className={styles['tierExtraSettings']}>
+                  <summary>Entry & pricing options</summary>
+                  <div>
+                    <div className={styles['ticketOptions']}>
+                      {tier.accessType !== 'RSVP' ? (
+                        <label className={styles['tierFieldLabel']}>
+                          <span>Event cover (₹ per attendee)</span>
+                          <input
+                            aria-label={`${tier.name} event cover per attendee`}
+                            inputMode="decimal"
+                            min="0"
+                            value={String((tier.coverAmountPaise ?? 0) / 100)}
+                            onChange={(event) => {
+                              updateTier(tier.id, {
+                                coverAmountPaise: Math.round(numberValue(event.target.value) * 100),
+                              });
+                            }}
+                            placeholder="0"
+                          />
+                          <span className={styles['muted']}>
+                            Charged separately from admission. Promoter commission applies to
+                            admission only.
+                          </span>
+                        </label>
+                      ) : null}
+                      {tier.accessType !== 'RSVP' ? (
+                        <label>
+                          Tier access
+                          <select
+                            aria-label="Tier access"
+                            value={tier.accessMode ?? 'public'}
+                            onChange={(event) => {
+                              updateTier(tier.id, {
+                                accessMode: event.target.value as NonNullable<
+                                  EventEditorTicketTier['accessMode']
+                                >,
+                              });
+                            }}
+                          >
+                            <option value="public">Public</option>
+                            <option value="code">Code-gated</option>
+                            <option value="invited">Invitation-only</option>
+                          </select>
+                        </label>
+                      ) : null}
+                      <label>
+                        Ticket type / access
+                        <select
+                          aria-label="Ticket type / access"
+                          disabled={ticketMode === 'rsvp'}
+                          value={tier.accessType ?? 'ENTRY'}
+                          onChange={(event) => {
+                            const accessType = event.target
+                              .value as EventEditorTicketTier['accessType'];
+                            updateTier(
+                              tier.id,
+                              accessType === 'RSVP'
+                                ? {
+                                    accessType,
+                                    price: 0,
+                                    maxPerOrder: 1,
+                                    guestCount: 1,
+                                    admissionMode: undefined,
+                                    doorPrice: undefined,
+                                    pricingPhases: [],
+                                    commissionEligible: false,
+                                  }
+                                : {
+                                    accessType,
+                                    price: tier.price > 0 ? tier.price : 1000,
+                                    maxPerOrder: tier.maxPerOrder ?? 10,
+                                    commissionEligible: true,
+                                  },
+                            );
+                          }}
+                        >
+                          {(ticketMode === 'rsvp'
+                            ? ['RSVP']
+                            : ['ENTRY', 'VIP', 'VVIP', 'TABLE', 'PACKAGE', 'RSVP']
+                          ).map((value) => (
+                            <option key={value} value={value}>
+                              {value}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Audience
+                        <select
+                          aria-label="Audience"
+                          value={tier.audienceType ?? 'GENERAL'}
+                          onChange={(event) => {
+                            updateTier(tier.id, {
+                              audienceType: event.target
+                                .value as EventEditorTicketTier['audienceType'],
+                            });
+                          }}
+                        >
+                          {[
+                            ['GENERAL', 'General'],
+                            ['MALE', 'Men'],
+                            ['FEMALE', 'Women'],
+                            ['COUPLE', 'Couple'],
+                            ['GROUP', 'Group'],
+                            ['STUDENT', 'Student'],
+                            ['MEMBER', 'Member'],
+                          ].map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="text-xs text-white/50">
+                          Guests confirm eligibility at checkout; the Venue may verify it at entry.
+                        </span>
+                      </label>
+                      <label>
+                        Guests
+                        <input
+                          aria-label="Guests"
+                          type="number"
+                          min="1"
+                          value={String(tier.guestCount ?? 1)}
+                          onChange={(event) => {
+                            const guestCount = numberValue(event.target.value);
+                            updateTier(tier.id, {
+                              guestCount,
+                              ...(guestCount <= 1 ? { admissionMode: undefined } : {}),
+                            });
+                          }}
+                        />
+                      </label>
+                      {tier.accessType !== 'RSVP' && (tier.guestCount ?? 1) > 1 ? (
+                        <label>
+                          Admission issuance
+                          <select
+                            aria-label="Admission issuance"
+                            value={tier.admissionMode ?? 'bundle'}
+                            onChange={(event) => {
+                              updateTier(tier.id, {
+                                admissionMode: event.target
+                                  .value as EventEditorTicketTier['admissionMode'],
+                              });
+                            }}
+                          >
+                            <option value="bundle">One group pass</option>
+                            <option value="per_person">Separate pass for each attendee</option>
+                          </select>
+                        </label>
+                      ) : null}
+                      {tier.accessType !== 'RSVP' ? (
+                        <label>
+                          Door price (₹)
+                          <input
+                            aria-label="Door price (₹)"
+                            type="number"
+                            min="0"
+                            value={tier.doorPrice != null ? String(tier.doorPrice) : ''}
+                            onChange={(event) => {
+                              updateTier(tier.id, {
+                                doorPrice:
+                                  event.target.value === ''
+                                    ? undefined
+                                    : numberValue(event.target.value),
+                              });
+                            }}
+                          />
+                        </label>
+                      ) : null}
+                      <label>
+                        Max per user
+                        <input
+                          aria-label="Max per user"
+                          type="number"
+                          min="1"
+                          value={tier.maxPerUser != null ? String(tier.maxPerUser) : ''}
+                          onChange={(event) => {
+                            updateTier(tier.id, {
+                              maxPerUser:
+                                event.target.value === ''
+                                  ? undefined
+                                  : numberValue(event.target.value),
+                            });
+                          }}
+                        />
+                      </label>
+                    </div>
+                    {tier.accessType === 'TABLE' ? (
+                      <div className={[styles['ticketOptions'], styles['tableOptions']].join(' ')}>
+                        <label>
+                          Table capacity
+                          <input
+                            aria-label="Table capacity"
+                            type="number"
+                            min="1"
+                            value={String(tier.tableConfig?.capacity ?? 1)}
+                            onChange={(event) => {
+                              updateTier(tier.id, {
+                                tableConfig: {
+                                  capacity: numberValue(event.target.value),
+                                  minimumSpendPaise: tier.tableConfig?.minimumSpendPaise ?? 0,
+                                  redeemableAmountPaise:
+                                    tier.tableConfig?.redeemableAmountPaise ?? 0,
+                                  tableCount: tier.tableConfig?.tableCount ?? tier.quantity,
+                                },
+                              });
+                            }}
+                          />
+                        </label>
+                        <label>
+                          Minimum spend (₹)
+                          <input
+                            aria-label="Minimum spend (₹)"
+                            type="number"
+                            min="0"
+                            value={String((tier.tableConfig?.minimumSpendPaise ?? 0) / 100)}
+                            onChange={(event) => {
+                              updateTier(tier.id, {
+                                tableConfig: {
+                                  capacity: tier.tableConfig?.capacity ?? 1,
+                                  minimumSpendPaise: numberValue(event.target.value) * 100,
+                                  redeemableAmountPaise:
+                                    tier.tableConfig?.redeemableAmountPaise ?? 0,
+                                  tableCount: tier.tableConfig?.tableCount ?? tier.quantity,
+                                },
+                              });
+                            }}
+                          />
+                        </label>
+                        <label>
+                          Redeemable (₹)
+                          <input
+                            aria-label="Redeemable (₹)"
+                            type="number"
+                            min="0"
+                            value={String((tier.tableConfig?.redeemableAmountPaise ?? 0) / 100)}
+                            onChange={(event) => {
+                              updateTier(tier.id, {
+                                tableConfig: {
+                                  capacity: tier.tableConfig?.capacity ?? 1,
+                                  minimumSpendPaise: tier.tableConfig?.minimumSpendPaise ?? 0,
+                                  redeemableAmountPaise: numberValue(event.target.value) * 100,
+                                  tableCount: tier.tableConfig?.tableCount ?? tier.quantity,
+                                },
+                              });
+                            }}
+                          />
+                        </label>
+                      </div>
+                    ) : null}
+                    {tier.accessType !== 'RSVP' ? (
+                      <div className={styles['pricingPhasesBlock']}>
+                        <div className={styles['pricingPhasesHeader']}>
+                          <div className={styles['cardTitle']}>Pricing phases</div>
+                          <span className={styles['pricingPhasesSub']}>
+                            Optional — use when the price changes by date
+                          </span>
+                        </div>
+                        {(tier.pricingPhases ?? []).length > 0 ? (
+                          <div className={styles['phaseList']}>
+                            {(tier.pricingPhases ?? []).map((phase) => (
+                              <div className={styles['phaseRow']} key={phase.id}>
+                                <div className={styles['phaseField']}>
+                                  <label
+                                    htmlFor={`phase-name-${phase.id}`}
+                                    className={styles['phaseLabel']}
+                                  >
+                                    Phase name
+                                  </label>
+                                  <input
+                                    id={`phase-name-${phase.id}`}
+                                    aria-label={`${phase.name} phase name`}
+                                    value={phase.name}
+                                    onChange={(event) => {
+                                      updateTier(tier.id, {
+                                        pricingPhases: (tier.pricingPhases ?? []).map((item) =>
+                                          item.id === phase.id
+                                            ? { ...item, name: event.target.value }
+                                            : item,
+                                        ),
+                                      });
+                                    }}
+                                  />
+                                </div>
+                                <div className={styles['phaseField']}>
+                                  <label
+                                    htmlFor={`phase-price-${phase.id}`}
+                                    className={styles['phaseLabel']}
+                                  >
+                                    Price (₹)
+                                  </label>
+                                  <input
+                                    id={`phase-price-${phase.id}`}
+                                    aria-label={`${phase.name} phase price`}
+                                    type="number"
+                                    min="0"
+                                    value={String(phase.priceInPaise / 100)}
+                                    onChange={(event) => {
+                                      updateTier(tier.id, {
+                                        pricingPhases: (tier.pricingPhases ?? []).map((item) =>
+                                          item.id === phase.id
+                                            ? {
+                                                ...item,
+                                                priceInPaise: numberValue(event.target.value) * 100,
+                                              }
+                                            : item,
+                                        ),
+                                      });
+                                    }}
+                                  />
+                                </div>
+                                <div className={styles['phaseField']}>
+                                  <label
+                                    htmlFor={`phase-start-${phase.id}`}
+                                    className={styles['phaseLabel']}
+                                  >
+                                    Start date (DD-MM)
+                                  </label>
+                                  <input
+                                    id={`phase-start-${phase.id}`}
+                                    aria-label={`${phase.name} phase start date`}
+                                    placeholder="DD-MM"
+                                    inputMode="numeric"
+                                    maxLength={5}
+                                    value={phase.startDate}
+                                    onChange={(event) => {
+                                      updateTier(tier.id, {
+                                        pricingPhases: (tier.pricingPhases ?? []).map((item) =>
+                                          item.id === phase.id
+                                            ? { ...item, startDate: event.target.value }
+                                            : item,
+                                        ),
+                                      });
+                                    }}
+                                  />
+                                </div>
+                                <div className={styles['phaseField']}>
+                                  <label
+                                    htmlFor={`phase-end-${phase.id}`}
+                                    className={styles['phaseLabel']}
+                                  >
+                                    End date (DD-MM)
+                                  </label>
+                                  <input
+                                    id={`phase-end-${phase.id}`}
+                                    aria-label={`${phase.name} phase end date`}
+                                    placeholder="DD-MM"
+                                    inputMode="numeric"
+                                    maxLength={5}
+                                    value={phase.endDate}
+                                    onChange={(event) => {
+                                      updateTier(tier.id, {
+                                        pricingPhases: (tier.pricingPhases ?? []).map((item) =>
+                                          item.id === phase.id
+                                            ? { ...item, endDate: event.target.value }
+                                            : item,
+                                        ),
+                                      });
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                        <button
+                          className={styles['outlineButton']}
+                          type="button"
+                          onClick={() => {
+                            const index = (tier.pricingPhases ?? []).length + 1;
+                            updateTier(tier.id, {
+                              pricingPhases: [
+                                ...(tier.pricingPhases ?? []),
+                                {
+                                  id: `phase-${String(index)}`,
+                                  name: `Phase ${String(index)}`,
+                                  priceInPaise: tier.price * 100,
+                                  startDate: '',
+                                  endDate: '',
+                                  quantity: null,
+                                },
+                              ],
+                            });
+                          }}
+                        >
+                          + Add pricing phase
+                        </button>
+                      </div>
+                    ) : (
+                      <p>RSVP tickets have no price, phases, or commission.</p>
+                    )}
+                    {tier.accessType !== 'RSVP' && (tier.accessMode ?? 'public') !== 'public' ? (
+                      <p className={styles['muted']}>
+                        Restricted tiers stay unavailable until their access code or verified
+                        invitation flow is configured.
+                      </p>
+                    ) : null}
+                  </div>
+                </details>
+              </div>
+            ))}
+          </div>
+
+          <div className={styles['tierDialogFooter']}>
+            {' '}
+            {tiers.some((tier) => tier.id === editingTier.id) ? (
+              <button
+                type="button"
+                className={styles['tierDelete']}
+                onClick={() => {
+                  onChange(tiers.filter((tier) => tier.id !== editingTier.id));
+                  setEditingTier(null);
+                  setBenefitInputs({});
+                }}
+              >
+                Remove ticket
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className={styles['outlineButton']}
+              onClick={() => {
+                setEditingTier(null);
+                setBenefitInputs({});
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={styles['primaryButton']}
+              onClick={() => {
+                onChange(
+                  tiers.some((tier) => tier.id === editingTier.id)
+                    ? tiers.map((tier) => (tier.id === editingTier.id ? editingTier : tier))
+                    : [...tiers, editingTier],
+                );
+                setEditingTier(null);
+                setBenefitInputs({});
+              }}
+            >
+              Save ticket
+            </button>
+          </div>
+        </dialog>
+      ) : null}
       <button
         className={styles['outlineButton']}
         type="button"
         onClick={() => {
-          onChange([
-            ...tiers,
-            { id: `tier-${String(tiers.length + 1)}`, name: 'New tier', price: 1000, quantity: 50 },
-          ]);
+          setEditingTier(newTier(ticketMode));
         }}
       >
-        + Add tier
+        + Add ticket tier
       </button>
     </section>
   );
@@ -1019,90 +1353,152 @@ export function TicketTierEditor({
 export function EventAdvancedSettings({
   draft,
   update,
+  role = 'venue',
 }: {
   readonly draft: EventEditorDraft;
   readonly update: DraftUpdate;
+  readonly role?: 'venue' | 'host' | 'promoter';
 }) {
+  const promos =
+    draft.promoCodeSettings ??
+    draft.promoCodes.map((code, index) => ({
+      id: `promo-${String(index)}`,
+      code,
+      discountType: 'percent' as const,
+      discountValue: 0,
+      quantity: null,
+      endsAt: '',
+      fundingOwner: role === 'host' ? ('host' as const) : ('venue' as const),
+    }));
+  const setPromos = (next: NonNullable<EventEditorDraft['promoCodeSettings']>) => {
+    update({ promoCodeSettings: next, promoCodes: next.map((promo) => promo.code) });
+  };
   return (
-    <details className={[styles['card'], styles['details']].join(' ')}>
-      <summary className={styles['summary']}>
-        <span>
-          ⚙ Advanced setup <span className={styles['muted']}>Tables & promo codes</span>
-        </span>
-        <span className={styles['summaryIcon']}>▼</span>
-      </summary>
-      <div className={styles['detailsBody']}>
-        <div>
-          <div className={styles['cardTitle']}>Tables</div>
-          <div className={styles['optionGrid']}>
-            {[
-              ['none', 'No tables', 'Ticket-only event'],
-              ['low', 'Low tables', 'Up to 4 tables'],
-              ['high', 'High tables', 'Bottle service'],
-            ].map(([value, label, sub]) => (
+    <section className={styles['advancedSetup']} aria-labelledby="advanced-heading">
+      <h2 id="advanced-heading">Advanced setup</h2>
+      <div className={styles['guestlistSetting']}>
+        <h3>Guestlist</h3>
+        <p>Names and photos stay private unless a guest explicitly opts in.</p>
+        <span>Public guestlist coming soon — guest opt-in is not connected yet.</span>
+      </div>
+      <div className={styles['comingSoonRow']}>
+        <h3>Tables</h3>
+        <span>Coming soon</span>
+      </div>
+      <div className={styles['promoHeading']}>
+        <h3>Promo codes</h3>
+        <button
+          type="button"
+          className={styles['outlineButton']}
+          onClick={() => {
+            setPromos([
+              ...promos,
+              {
+                id: crypto.randomUUID(),
+                code: '',
+                discountType: 'percent',
+                discountValue: 0,
+                quantity: null,
+                endsAt: '',
+                fundingOwner: role === 'host' ? 'host' : 'venue',
+              },
+            ]);
+          }}
+        >
+          + Add promo code
+        </button>
+      </div>
+      {promos.map((promo, index) => {
+        const change = (values: Partial<typeof promo>) => {
+          setPromos(promos.map((item) => (item.id === promo.id ? { ...item, ...values } : item)));
+        };
+        return (
+          <div className={styles['promoEditor']} key={promo.id}>
+            <div className={styles['promoHeading']}>
+              <strong>Promo code {index + 1}</strong>
               <button
-                className={[
-                  styles['optionButton'],
-                  draft.tableType === value ? styles['optionSelected'] : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-                key={value}
                 type="button"
+                className={styles['tierEdit']}
+                aria-label={`Remove promo code ${String(index + 1)}`}
                 onClick={() => {
-                  update({ tableType: value as EventEditorDraft['tableType'] });
+                  setPromos(promos.filter((item) => item.id !== promo.id));
                 }}
               >
-                <strong>{label}</strong>
-                <span>{sub}</span>
+                ×
               </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <div className={styles['cardTitle']}>Promo codes</div>
-          <div className={styles['promoRows']}>
-            {draft.promoCodes.map((code, index) => (
-              <div className={styles['promoRow']} key={`${code}-${String(index)}`}>
+            </div>
+            <div className={styles['promoFields']}>
+              <label>
+                Code
                 <input
-                  value={code}
-                  onChange={(event) => {
-                    update({
-                      promoCodes: draft.promoCodes.map((item, itemIndex) =>
-                        itemIndex === index ? event.target.value.toUpperCase() : item,
-                      ),
-                    });
-                  }}
                   aria-label={`Promo code ${String(index + 1)}`}
+                  maxLength={40}
+                  value={promo.code}
+                  onChange={(event) => {
+                    change({ code: event.target.value.toUpperCase().replace(/\s/g, '') });
+                  }}
+                  placeholder="e.g. EARLY10"
                 />
-                <small>Limited uses</small>
-                <button
-                  className={styles['removeButton']}
-                  type="button"
-                  aria-label={`Remove promo code ${code}`}
-                  onClick={() => {
-                    update({
-                      promoCodes: draft.promoCodes.filter((_, itemIndex) => itemIndex !== index),
-                    });
+              </label>
+              <label>
+                Discount type
+                <select
+                  value={promo.discountType}
+                  aria-label={`Promo ${String(index + 1)} discount type`}
+                  onChange={(event) => {
+                    change({ discountType: event.target.value as 'percent' | 'fixed' });
                   }}
                 >
-                  ×
-                </button>
-              </div>
-            ))}
+                  <option value="percent">Percentage (%)</option>
+                  <option value="fixed">Amount (₹)</option>
+                </select>
+              </label>
+              <label>
+                Discount {promo.discountType === 'percent' ? '(%)' : '(₹)'}
+                <input
+                  type="number"
+                  min="1"
+                  max={promo.discountType === 'percent' ? 100 : undefined}
+                  step={promo.discountType === 'percent' ? 1 : '0.01'}
+                  aria-label={`Promo ${String(index + 1)} discount`}
+                  value={promo.discountValue || ''}
+                  onChange={(event) => {
+                    change({ discountValue: Number(event.target.value) });
+                  }}
+                />
+              </label>
+              <label>
+                Quantity
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  aria-label={`Promo ${String(index + 1)} quantity`}
+                  placeholder="Unlimited"
+                  value={promo.quantity ?? ''}
+                  onChange={(event) => {
+                    change({
+                      quantity: event.target.value === '' ? null : Number(event.target.value),
+                    });
+                  }}
+                />
+              </label>
+              <label>
+                Promo ends (IST)
+                <input
+                  type="datetime-local"
+                  aria-label={`Promo ${String(index + 1)} ends`}
+                  value={promo.endsAt}
+                  onChange={(event) => {
+                    change({ endsAt: event.target.value });
+                  }}
+                />
+              </label>
+            </div>
           </div>
-          <button
-            className={styles['outlineButton']}
-            type="button"
-            onClick={() => {
-              update({ promoCodes: [...draft.promoCodes, 'NEWCODE'] });
-            }}
-          >
-            + Add code
-          </button>
-        </div>
-      </div>
-    </details>
+        );
+      })}
+    </section>
   );
 }
 
@@ -1115,43 +1511,35 @@ export function EventPromoterSelector({
   readonly draft: EventEditorDraft;
   readonly update: DraftUpdate;
 }) {
+  const [customPicker, setCustomPicker] = useState(false);
+  const [pickerIds, setPickerIds] = useState<string[] | null>(null);
+  const [editingPromoterId, setEditingPromoterId] = useState<string | null>(null);
+  const [pendingOverride, setPendingOverride] = useState<Record<string, number>>({});
   const selected = new Set(draft.selectedPromoterIds);
   const paidTiers = draft.ticketTiers.filter((tier) => tier.accessType !== 'RSVP');
   const hasPaidTiers = paidTiers.length > 0;
   const tierCommissions = draft.tierCommissions ?? {};
-  const toggle = (id: string) => {
-    const next = selected.has(id)
-      ? draft.selectedPromoterIds.filter((item) => item !== id)
-      : [...draft.selectedPromoterIds, id];
-    update({ selectedPromoterIds: next });
-  };
-  const setPromoterOverride = (promoterId: string, enabled: boolean) => {
-    const next = { ...(draft.promoterOverrides ?? {}) };
-    if (enabled) {
-      if (draft.compensation === 'standard') {
-        next[promoterId] = { default: draft.commissionRate };
-      } else if (draft.compensation === 'custom') {
-        next[promoterId] = { ...tierCommissions };
-      } else {
-        next[promoterId] = { default: draft.salaryAmount ?? 0 };
-      }
-    } else {
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-      delete next[promoterId];
+  const setPromoterOverride = (id: string, enabled: boolean) => {
+    if (!enabled) {
+      update({
+        promoterOverrides: Object.fromEntries(
+          Object.entries(draft.promoterOverrides ?? {}).filter(([key]) => key !== id),
+        ),
+      });
+      return;
     }
-    update({ promoterOverrides: next });
+    setPendingOverride(
+      draft.promoterOverrides?.[id] ??
+        (draft.compensation === 'standard'
+          ? { default: draft.commissionRate }
+          : draft.compensation === 'custom'
+            ? { ...tierCommissions }
+            : { default: draft.salaryAmount ?? 0 }),
+    );
+    setEditingPromoterId(id);
   };
-
-  const updatePromoterOverride = (promoterId: string, key: string, val: number) => {
-    const current = draft.promoterOverrides?.[promoterId] ?? {};
-    const nextOverrides = {
-      ...(draft.promoterOverrides ?? {}),
-      [promoterId]: {
-        ...current,
-        [key]: val,
-      },
-    };
-    update({ promoterOverrides: nextOverrides });
+  const updatePromoterOverride = (_id: string, key: string, val: number) => {
+    setPendingOverride((current) => ({ ...current, [key]: val }));
   };
 
   const selectModel = (model: EventEditorDraft['compensation']) => {
@@ -1208,39 +1596,105 @@ export function EventPromoterSelector({
     <div className={styles['formColumn']}>
       <section className={styles['card']}>
         <div className={styles['cardTitle']}>Promoters on this event</div>
-        <p className={styles['muted']}>
-          Select from your connected promoters. The first promoter uses Standard Commission at 15%
-          by default.
-        </p>
-        <div className={styles['promoterList']}>
-          {data.promoters.map((promoter) => (
-            <button
-              className={[
-                styles['promoterRow'],
-                selected.has(promoter.id) ? styles['promoterRowSelected'] : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              key={promoter.id}
-              type="button"
-              onClick={() => {
-                toggle(promoter.id);
-              }}
-            >
-              <span className={styles['promoterAvatar']} aria-hidden="true">
-                {promoter.initials || initialsFor(promoter.name)}
-              </span>
-              <span className={styles['promoterIdentity']}>
-                <strong>{promoter.name}</strong>
-              </span>
-              <span className={styles['check']}>{selected.has(promoter.id) ? '✓' : ''}</span>
-            </button>
-          ))}
-        </div>
-        {!data.promoters.length ? (
-          <p className={styles['muted']}>
-            No connected promoters. You can publish without compensation.
-          </p>
+        <button
+          type="button"
+          className={styles['outlineButton']}
+          onClick={() => {
+            setCustomPicker(false);
+            setPickerIds([...draft.selectedPromoterIds]);
+          }}
+        >
+          + Add promoter
+        </button>
+        <p className={styles['selectionCount']}>{draft.selectedPromoterIds.length} selected</p>
+        {pickerIds ? (
+          <dialog
+            className={styles['tierDialog']}
+            aria-label="Add promoters"
+            ref={(node) => {
+              if (node && !node.open) node.showModal();
+            }}
+            onCancel={() => {
+              setPickerIds(null);
+            }}
+          >
+            <div className={styles['tierDialogHeader']}>
+              <h2>Add promoters</h2>
+              <button
+                type="button"
+                aria-label="Close promoter picker"
+                onClick={() => {
+                  setPickerIds(null);
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <div className={styles['promoterPicker']}>
+              {data.promoters.length ? (
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={data.promoters.every((promoter) => pickerIds.includes(promoter.id))}
+                    onChange={(event) => {
+                      setPickerIds(
+                        event.target.checked ? data.promoters.map((promoter) => promoter.id) : [],
+                      );
+                    }}
+                  />
+                  Select all
+                </label>
+              ) : (
+                <p>No partnered promoters available.</p>
+              )}
+              {data.promoters.map((promoter) => (
+                <label key={promoter.id}>
+                  <input
+                    type="checkbox"
+                    checked={pickerIds.includes(promoter.id)}
+                    onChange={(event) => {
+                      setPickerIds(
+                        event.target.checked
+                          ? [...pickerIds, promoter.id]
+                          : pickerIds.filter((id) => id !== promoter.id),
+                      );
+                    }}
+                  />
+                  <span className={styles['promoterAvatar']}>
+                    {promoter.initials || initialsFor(promoter.name)}
+                  </span>
+                  {promoter.name}
+                </label>
+              ))}
+            </div>
+            <div className={styles['tierDialogFooter']}>
+              <button
+                type="button"
+                className={styles['outlineButton']}
+                onClick={() => {
+                  setPickerIds(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  update({
+                    selectedPromoterIds: pickerIds,
+                    promoterOverrides: Object.fromEntries(
+                      Object.entries(draft.promoterOverrides ?? {}).filter(([id]) =>
+                        pickerIds.includes(id),
+                      ),
+                    ),
+                  });
+                  setPickerIds(null);
+                }}
+              >
+                Apply selection
+              </button>
+            </div>
+          </dialog>
         ) : null}
       </section>
       {data.promoters.length && !hasPaidTiers ? (
@@ -1250,9 +1704,7 @@ export function EventPromoterSelector({
         <>
           <section className={styles['card']}>
             <div className={styles['cardTitle']}>Promoter Compensation</div>
-            <p className={styles['muted']}>
-              Only one promoter compensation model can be used per event.
-            </p>
+
             <div className={styles['compGrid']}>
               {[
                 ['standard', 'Standard Commission', 'One percentage for every ticket tier'],
@@ -1272,8 +1724,12 @@ export function EventPromoterSelector({
                     selectModel(value as EventEditorDraft['compensation']);
                   }}
                 >
-                  <strong>{label}</strong>
-                  <span>{sub}</span>
+                  <strong>
+                    {label}{' '}
+                    <span className={styles['infoHint']} aria-label={sub}>
+                      ⓘ<span role="tooltip">{sub}</span>
+                    </span>
+                  </strong>
                 </button>
               ))}
             </div>
@@ -1294,16 +1750,10 @@ export function EventPromoterSelector({
                   />
                   <span>%</span>
                 </div>
-                <span className={styles['muted']}>
-                  New ticket tiers automatically inherit this percentage.
-                </span>
               </div>
             ) : null}
             {draft.compensation === 'custom' ? (
               <div>
-                <p className={styles['customTierSubtext']}>
-                  Every ticket tier needs a commission. 0% is allowed.
-                </p>
                 <div className={styles['customTierList']}>
                   {paidTiers.map((tier) => (
                     <div className={styles['customTierRow']} key={tier.id}>
@@ -1377,70 +1827,181 @@ export function EventPromoterSelector({
               </div>
             ) : null}
             <div className={styles['overrideSection']}>
-              <div className={styles['cardTitle']}>Promoter Overrides</div>
+              <div className={styles['cardTitle']}>Custom commissions</div>
               <p className={styles['muted']}>
                 Each promoter uses Event Default unless you enable a custom override.
               </p>
-              <div className={styles['overrideList']}>
-                {!draft.selectedPromoterIds.length ? (
-                  <p className={styles['muted']}>
-                    Select at least one promoter in &quot;Promoters on this event&quot; above to set
-                    custom promoter overrides.
-                  </p>
-                ) : null}
+              <button
+                type="button"
+                className={styles['outlineButton']}
+                disabled={!draft.selectedPromoterIds.length}
+                onClick={() => {
+                  setCustomPicker(true);
+                }}
+              >
+                + Add promoter for custom commission
+              </button>
+              {customPicker ? (
+                <dialog
+                  className={styles['tierDialog']}
+                  aria-label="Choose promoter for custom commission"
+                  ref={(node) => {
+                    if (node && !node.open) node.showModal();
+                  }}
+                  onCancel={() => {
+                    setCustomPicker(false);
+                  }}
+                >
+                  <div className={styles['tierDialogHeader']}>
+                    <h2>Custom commission</h2>
+                    <button
+                      type="button"
+                      aria-label="Close custom promoter picker"
+                      onClick={() => {
+                        setCustomPicker(false);
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className={styles['promoterPicker']}>
+                    {data.promoters
+                      .filter((promoter) => selected.has(promoter.id))
+                      .map((promoter) => (
+                        <div className={styles['commissionPickerRow']} key={promoter.id}>
+                          <button
+                            type="button"
+                            className={styles['compactPickerButton']}
+                            onClick={() => {
+                              setCustomPicker(false);
+                              setPromoterOverride(promoter.id, true);
+                            }}
+                          >
+                            {promoter.name}
+                            <span>→</span>
+                          </button>
+                          {draft.promoterOverrides?.[promoter.id] ? (
+                            <button
+                              type="button"
+                              className={styles['tierEdit']}
+                              aria-label={`Remove custom commission for ${promoter.name}`}
+                              onClick={() => {
+                                setPromoterOverride(promoter.id, false);
+                              }}
+                            >
+                              ×
+                            </button>
+                          ) : null}
+                        </div>
+                      ))}
+                  </div>
+                </dialog>
+              ) : null}
+              <p className={styles['selectionCount']}>
+                {Object.keys(draft.promoterOverrides ?? {}).filter((id) => selected.has(id)).length}{' '}
+                custom commissions
+              </p>
+              <div>
                 {draft.selectedPromoterIds.map((promoterId) => {
                   const promoter = data.promoters.find((item) => item.id === promoterId);
                   const displayName =
                     promoter?.name ??
                     (promoterId.length > 2 ? `Promoter ${promoterId.slice(-8)}` : promoterId);
-                  const override = draft.promoterOverrides?.[promoterId];
-                  const isCustomized = Boolean(override);
-
+                  const override =
+                    editingPromoterId === promoterId
+                      ? pendingOverride
+                      : draft.promoterOverrides?.[promoterId];
                   return (
-                    <div
-                      className={[
-                        styles['overrideCard'],
-                        isCustomized ? styles['overrideCardActive'] : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                      key={promoterId}
-                    >
-                      <div className={styles['overrideHeader']}>
-                        <div className={styles['overrideIdentity']}>
-                          <span className={styles['promoterAvatar']} aria-hidden="true">
-                            {promoter?.initials ?? initialsFor(displayName)}
-                          </span>
-                          <div>
-                            <strong>{displayName}</strong>
-                            <span className={styles['overrideBadge']}>
-                              {isCustomized ? 'Custom override' : 'Event default'}
-                            </span>
-                          </div>
-                        </div>
-                        <button
-                          className={styles['outlineButton']}
-                          type="button"
-                          onClick={() => {
-                            setPromoterOverride(promoterId, !isCustomized);
+                    <div key={promoterId}>
+                      {editingPromoterId === promoterId ? (
+                        <dialog
+                          className={styles['tierDialog']}
+                          aria-label="Custom promoter commission"
+                          ref={(node) => {
+                            if (node && !node.open) node.showModal();
+                          }}
+                          onCancel={() => {
+                            setEditingPromoterId(null);
                           }}
                         >
-                          {isCustomized ? 'Use Event Default' : '+ Set custom commission'}
-                        </button>
-                      </div>
-                      {isCustomized ? (
-                        <div className={styles['overrideControls']}>
-                          {draft.compensation === 'standard' ? (
-                            <label>
-                              Custom Commission Rate (%)
-                              <div className={styles['rateField']}>
+                          <div className={styles['tierDialogHeader']}>
+                            <h2>{displayName}</h2>
+                            <button
+                              type="button"
+                              aria-label="Close commission editor"
+                              onClick={() => {
+                                setEditingPromoterId(null);
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                          <div className={styles['overrideControls']}>
+                            {draft.compensation === 'standard' ? (
+                              <label>
+                                Custom Commission Rate (%)
+                                <div className={styles['rateField']}>
+                                  <input
+                                    aria-label={`${displayName} custom commission percentage`}
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    step="1"
+                                    value={String(override?.['default'] ?? draft.commissionRate)}
+                                    onChange={(event) => {
+                                      updatePromoterOverride(
+                                        promoterId,
+                                        'default',
+                                        numberValue(event.target.value),
+                                      );
+                                    }}
+                                  />
+                                  <span>%</span>
+                                </div>
+                              </label>
+                            ) : draft.compensation === 'custom' ? (
+                              <div>
+                                <span className={styles['overrideSubhead']}>
+                                  Custom Tier Commissions for {displayName}:
+                                </span>
+                                <div className={styles['customTierList']}>
+                                  {paidTiers.map((tier) => (
+                                    <div className={styles['customTierRow']} key={tier.id}>
+                                      <span className={styles['customTierName']}>{tier.name}</span>
+                                      <div className={styles['customRateField']}>
+                                        <input
+                                          aria-label={`${displayName} ${tier.name} custom commission`}
+                                          type="number"
+                                          min="0"
+                                          max="100"
+                                          step="1"
+                                          placeholder="Rate"
+                                          value={
+                                            override?.[tier.id] ?? tierCommissions[tier.id] ?? ''
+                                          }
+                                          onChange={(event) => {
+                                            updatePromoterOverride(
+                                              promoterId,
+                                              tier.id,
+                                              numberValue(event.target.value),
+                                            );
+                                          }}
+                                        />
+                                        <span>%</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <label>
+                                Custom Fixed Payout (₹)
                                 <input
-                                  aria-label={`${displayName} custom commission percentage`}
+                                  aria-label={`${displayName} custom salary amount`}
                                   type="number"
                                   min="0"
-                                  max="100"
-                                  step="1"
-                                  value={String(override?.['default'] ?? draft.commissionRate)}
+                                  step="0.01"
+                                  value={String(override?.['default'] ?? draft.salaryAmount)}
                                   onChange={(event) => {
                                     updatePromoterOverride(
                                       promoterId,
@@ -1449,63 +2010,35 @@ export function EventPromoterSelector({
                                     );
                                   }}
                                 />
-                                <span>%</span>
-                              </div>
-                            </label>
-                          ) : draft.compensation === 'custom' ? (
-                            <div>
-                              <span className={styles['overrideSubhead']}>
-                                Custom Tier Commissions for {displayName}:
-                              </span>
-                              <div className={styles['customTierList']}>
-                                {paidTiers.map((tier) => (
-                                  <div className={styles['customTierRow']} key={tier.id}>
-                                    <span className={styles['customTierName']}>{tier.name}</span>
-                                    <div className={styles['customRateField']}>
-                                      <input
-                                        aria-label={`${displayName} ${tier.name} custom commission`}
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        step="1"
-                                        placeholder="Rate"
-                                        value={
-                                          override?.[tier.id] ?? tierCommissions[tier.id] ?? ''
-                                        }
-                                        onChange={(event) => {
-                                          updatePromoterOverride(
-                                            promoterId,
-                                            tier.id,
-                                            numberValue(event.target.value),
-                                          );
-                                        }}
-                                      />
-                                      <span>%</span>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ) : (
-                            <label>
-                              Custom Fixed Payout (₹)
-                              <input
-                                aria-label={`${displayName} custom salary amount`}
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={String(override?.['default'] ?? draft.salaryAmount)}
-                                onChange={(event) => {
-                                  updatePromoterOverride(
-                                    promoterId,
-                                    'default',
-                                    numberValue(event.target.value),
-                                  );
-                                }}
-                              />
-                            </label>
-                          )}
-                        </div>
+                              </label>
+                            )}
+                          </div>
+                          <div className={styles['tierDialogFooter']}>
+                            <button
+                              type="button"
+                              className={styles['outlineButton']}
+                              onClick={() => {
+                                setEditingPromoterId(null);
+                              }}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                update({
+                                  promoterOverrides: {
+                                    ...(draft.promoterOverrides ?? {}),
+                                    [promoterId]: pendingOverride,
+                                  },
+                                });
+                                setEditingPromoterId(null);
+                              }}
+                            >
+                              Save commission
+                            </button>
+                          </div>
+                        </dialog>
                       ) : null}
                     </div>
                   );
@@ -1604,11 +2137,13 @@ export function EventReview({
       ) : (
         <div className={styles['successNote']}>
           ✓ Everything looks good.{' '}
-          {studio === 'host' && acceptedSlotMode
-            ? 'Submitting publishes this event using the accepted Venue slot.'
-            : studio === 'host'
-              ? 'The venue will review this request before it can be published.'
-              : 'Guests will see the poster preview exactly as shown.'}
+          {draft.externalVenue
+            ? 'This event requires C1RCLE admin approval.'
+            : studio === 'host' && acceptedSlotMode
+              ? 'Submitting publishes this event using the accepted Venue slot.'
+              : studio === 'host'
+                ? 'The venue will review this request before it can be published.'
+                : 'Guests will see the poster preview exactly as shown.'}
         </div>
       )}
     </section>
@@ -1618,56 +2153,102 @@ export function EventReview({
 export function EventPreview({
   draft,
   venueName,
+  artworkOptions,
+  canPreview,
+  onArtwork,
+  onUpload,
   onOpen,
 }: {
   readonly draft: EventEditorDraft;
   readonly venueName: string;
-  readonly onOpen: () => void;
+  readonly artworkOptions: readonly PartnerEventArtwork[];
+  readonly canPreview: boolean;
+  readonly onArtwork: (artwork: PartnerEventArtwork) => void;
+  readonly onUpload: (event: ChangeEvent<HTMLInputElement>) => void;
+  readonly onOpen: (mode: 'guest' | 'mobile') => void;
 }) {
   return (
     <aside className={styles['previewColumn']}>
       <div className={styles['previewLabel']}>
         <i />
-        Live preview · what guests see
+        Guest page preview
       </div>
-      <button
-        className={styles['previewCard']}
-        type="button"
-        aria-label={`Open preview for ${draft.name.length ? draft.name : 'Your event name'}`}
-        onClick={onOpen}
-      >
-        <div
-          className={[styles['previewBackground'], gradientClass(draft.artwork.value)].join(' ')}
-        />
-        {draft.artwork.type === 'image' ? (
-          <Image
-            fill
-            sizes="380px"
-            className={styles['previewImage']}
-            src={draft.artwork.value}
-            alt=""
-          />
-        ) : null}
-        <div className={styles['previewShade']} />
-        <div className={styles['previewContent']}>
-          <span className={styles['previewStatus']}>
-            <i />
-            Draft
-          </span>
-          <div className={styles['previewPrice']}>
-            {formatMoney(draft.ticketTiers[0]?.price ?? 0)}
+      <div className={styles['previewActions']} aria-label="Event preview options">
+        {(['guest', 'mobile'] as const).map((mode) => {
+          const label = mode === 'guest' ? 'Web' : 'Mobile';
+          const tooltip = canPreview
+            ? `Preview the event page on ${mode === 'guest' ? 'web' : 'mobile'}.`
+            : 'Complete every section and finish Review to enable previews.';
+          return (
+            <span className={styles['previewAction']} key={mode} title={tooltip}>
+              <button
+                className={styles['previewOpenButton']}
+                type="button"
+                onClick={() => {
+                  onOpen(mode);
+                }}
+                disabled={!canPreview}
+              >
+                {label} preview
+              </button>
+            </span>
+          );
+        })}
+      </div>
+      <div className={styles['previewPoster']}>
+        <div className={styles['previewPosterImage']}>
+          {draft.artwork.type === 'image' ? (
+            <Image
+              fill
+              sizes="(max-width: 1050px) 100vw, 380px"
+              src={draft.artwork.value}
+              alt={`${draft.name || 'Event'} poster`}
+            />
+          ) : (
+            <div className={gradientClass(draft.artwork.value)} />
+          )}
+          <span className={styles['previewPosterBadge']}>Draft</span>
+          <div className={styles['posterControls']}>
+            <label className={styles['posterUploadAction']}>
+              <span aria-hidden="true">＋</span>
+              {draft.artwork.type === 'image' ? 'Change poster' : 'Upload poster'}
+              <input
+                aria-label="Upload event poster"
+                type="file"
+                accept="image/*"
+                onChange={onUpload}
+              />
+            </label>
+            <div className={styles['artworkChoices']} aria-label="Choose poster artwork">
+              {artworkOptions.map((option, index) => (
+                <button
+                  className={styles['artworkChoice']}
+                  key={`${option.type}-${option.value}-${String(index)}`}
+                  type="button"
+                  aria-label={`Use artwork ${String(index + 1)}`}
+                  aria-pressed={draft.artwork.value === option.value}
+                  onClick={() => {
+                    onArtwork(option);
+                  }}
+                >
+                  {option.type === 'image' ? (
+                    <Image fill sizes="34px" src={option.value} alt="" />
+                  ) : (
+                    <span className={gradientClass(option.value)} />
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className={styles['previewName']}>
-            {draft.name.length ? draft.name : 'Your event name'}
-          </div>
-          <div className={styles['previewMeta']}>
-            {venueName} · {draft.dateLabel}
-          </div>
-          <div className={styles['buyButton']}>Buy tickets</div>
-          <span className={styles['previewOpenButton']}>Open preview ↗</span>
         </div>
-      </button>
-      <div className={styles['previewHint']}>Select Guest portal or Mobile app</div>
+        <div className={styles['previewPosterDetails']}>
+          <h2 data-title-font={draft.media?.titleFont ?? 'classic'}>
+            {draft.name || 'Event name'}
+          </h2>
+          <p>{[draft.dateLabel, draft.time, venueName].filter(Boolean).join(' · ')}</p>
+          {draft.genres.length ? <p>{draft.genres.join(' · ')}</p> : null}
+        </div>
+      </div>
     </aside>
   );
 }
@@ -1676,89 +2257,152 @@ export function EventPreviewOverlay({
   mode,
   draft,
   venueName,
-  onPick,
+  role,
   onClose,
 }: {
-  readonly mode: 'picker' | 'guest' | 'mobile';
+  readonly mode: 'guest' | 'mobile';
   readonly draft: EventEditorDraft;
   readonly venueName: string;
-  readonly onPick: (mode: 'guest' | 'mobile') => void;
+  readonly role: 'venue' | 'host';
   readonly onClose: () => void;
 }) {
   const preview = (
-    <div className={styles['fullPreview']}>
-      <div className={[styles['fullPreviewArtwork'], gradientClass(draft.artwork.value)].join(' ')}>
+    <div
+      className={[
+        styles['guestEventPreview'],
+        mode === 'mobile' ? styles['guestEventPreviewMobile'] : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <div aria-hidden="true" className={styles['guestEventBackdrop']}>
         {draft.artwork.type === 'image' ? (
-          <Image fill sizes="420px" src={draft.artwork.value} alt="" />
+          <Image fill sizes="100vw" src={draft.artwork.value} alt="" />
         ) : null}
       </div>
-      <div className={styles['fullPreviewBody']}>
-        <span className={styles['previewStatus']}>
-          <i />
-          Draft
-        </span>
-        <h2>{draft.name || 'Your event name'}</h2>
-        <p>
-          {venueName} · {draft.dateLabel} · {draft.time}
-        </p>
-        <div className={styles['fullPreviewTickets']}>
-          {draft.ticketTiers.map((tier) => (
-            <div key={tier.id}>
-              <span>{tier.name}</span>
-              <strong>{formatMoney(tier.price)}</strong>
-            </div>
-          ))}
+      <div className={styles['guestEventContent']}>
+        <div className={styles['guestEventInfo']}>
+          <span className={styles['guestEventEyebrow']}>
+            {draft.genres.join(' · ') || 'C1RCLE EVENT'}
+          </span>
+          <h1 data-title-font={draft.media?.titleFont ?? 'classic'}>
+            {draft.name || 'Your event name'}
+          </h1>
+          <p className={styles['guestEventWhen']}>
+            {[draft.dateLabel, draft.time, draft.endTime].filter(Boolean).join(' · ')}
+          </p>
+          <p className={styles['guestEventVenue']}>
+            {venueName}
+            {role === 'host' ? ' · Hosted event' : ''}
+          </p>
+          <section className={styles['guestEventAbout']}>
+            <h2>About the event</h2>
+            <p>{draft.description || 'Your event description will appear here.'}</p>
+            {draft.artists.length ? (
+              <p className={styles['guestEventArtists']}>{draft.artists.join(' · ')}</p>
+            ) : null}
+            {draft.media?.youtubeUrl ? (
+              <a href={draft.media.youtubeUrl} target="_blank" rel="noopener noreferrer">
+                Watch on YouTube ↗
+              </a>
+            ) : null}
+            {draft.media?.gallery.length ? (
+              <div className={styles['mediaGallery']}>
+                {draft.media.gallery.map((image) =>
+                  image.type === 'image' ? (
+                    <Image
+                      key={image.value}
+                      src={image.value}
+                      alt={image.alt ?? ''}
+                      width={200}
+                      height={160}
+                      unoptimized
+                    />
+                  ) : null,
+                )}
+              </div>
+            ) : null}
+            {draft.media?.spotlights.map((feature) => (
+              <article className={styles['previewSpotlight']} key={feature.id}>
+                {feature.artwork?.type === 'image' ? (
+                  <Image
+                    src={feature.artwork.value}
+                    alt={feature.title}
+                    width={72}
+                    height={72}
+                    unoptimized
+                  />
+                ) : null}
+                <div>
+                  <h3>{feature.title}</h3>
+                  {feature.startTime ? (
+                    <small>
+                      {feature.startTime}
+                      {feature.endTime ? `–${feature.endTime}` : ''} IST
+                    </small>
+                  ) : null}
+                  <p>{feature.description}</p>
+                </div>
+              </article>
+            ))}
+          </section>
         </div>
-        <button className={styles['fullPreviewBuy']} type="button">
-          Buy tickets
-        </button>
+        <div className={styles['guestEventPosterColumn']}>
+          <div className={styles['guestEventPoster']}>
+            {draft.artwork.type === 'image' ? (
+              <Image
+                fill
+                sizes="(max-width: 760px) 82vw, 360px"
+                src={draft.artwork.value}
+                alt={`${draft.name || 'Event'} poster`}
+              />
+            ) : (
+              <div className={gradientClass(draft.artwork.value)} />
+            )}
+          </div>
+          <section className={styles['guestEventTickets']}>
+            <h2>Tickets</h2>
+            {draft.ticketTiers.map((tier) => (
+              <div key={tier.id}>
+                <span>
+                  <strong>{tier.name || 'Ticket tier'}</strong>
+                  <small>{tier.quantity} available</small>
+                </span>
+                <b>{formatMoney(tier.price)}</b>
+              </div>
+            ))}
+            <span className={styles['guestPreviewNotice']}>Preview only · Booking is disabled</span>
+          </section>
+        </div>
       </div>
     </div>
   );
   return (
-    <dialog className={styles['overlay']} open aria-label="Preview destination">
-      {mode === 'picker' ? (
-        <div className={styles['previewPicker']}>
-          <p>Choose where to preview this event</p>
-          <button
-            type="button"
-            onClick={() => {
-              onPick('guest');
-            }}
-          >
-            ◉ Guest portal
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              onPick('mobile');
-            }}
-          >
-            ▣ Mobile app
-          </button>
-        </div>
-      ) : (
-        <div className={styles['overlayStack']}>
-          {mode === 'guest' ? (
-            <div className={styles['deviceFrame']}>
-              <div className={styles['guestPreviewShell']}>
-                <span className={styles['previewLabel']}>Guest portal</span>
-                {preview}
-              </div>
+    <dialog
+      className={styles['overlay']}
+      open
+      aria-label={`${mode === 'guest' ? 'Web' : 'Mobile'} event preview`}
+    >
+      <div className={styles['overlayStack']}>
+        {mode === 'guest' ? (
+          <div className={styles['deviceFrame']}>
+            <div className={styles['guestPreviewShell']}>
+              <span className={styles['previewLabel']}>Web · Guest Portal</span>
+              {preview}
             </div>
-          ) : (
-            <div className={styles['mobileFrame']}>
-              <div className={styles['mobilePreviewShell']}>
-                <span className={styles['previewLabel']}>Mobile app</span>
-                {preview}
-              </div>
+          </div>
+        ) : (
+          <div className={styles['mobileFrame']}>
+            <div className={styles['mobilePreviewShell']}>
+              <span className={styles['previewLabel']}>Mobile · Guest Portal</span>
+              {preview}
             </div>
-          )}
-          <button className={styles['overlayClose']} type="button" onClick={onClose}>
-            ← Back to editing
-          </button>
-        </div>
-      )}
+          </div>
+        )}
+        <button className={styles['overlayClose']} type="button" onClick={onClose}>
+          ← Back to editing
+        </button>
+      </div>
     </dialog>
   );
 }
@@ -1766,9 +2410,11 @@ export function EventPreviewOverlay({
 export function EventEditorShell({
   children,
   studio,
+  artwork,
 }: {
   readonly children: ReactNode;
   readonly studio: 'venue' | 'host';
+  readonly artwork: PartnerEventArtwork;
 }) {
   return (
     <div
@@ -1777,6 +2423,9 @@ export function EventEditorShell({
         studio === 'host' ? styles['hostTheme'] : styles['venueTheme'],
       ].join(' ')}
     >
+      <div className={styles['editorBackdrop']} aria-hidden="true">
+        {artwork.type === 'image' ? <Image fill sizes="100vw" src={artwork.value} alt="" /> : null}
+      </div>
       {children}
     </div>
   );

@@ -1,21 +1,12 @@
 import { z } from 'zod';
 
-const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
-const timezoneOffsets = {
-  'Asia/Kolkata': 330,
-  'Asia/Dubai': 240,
-  'Europe/London': 0,
-  'America/New_York': -240,
-} as const;
+import { PRODUCT_TIME_ZONE, PRODUCT_TIME_ZONE_OFFSET_MINUTES } from '@c1rcle/contracts';
 
-const localEventTimestamp = (
-  date: string,
-  time: string,
-  timezone: keyof typeof timezoneOffsets,
-): number => {
+const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+const localEventTimestamp = (date: string, time: string): number => {
   const [year = 0, month = 0, day = 0] = date.split('-').map(Number);
   const [hour = 0, minute = 0] = time.split(':').map(Number);
-  return Date.UTC(year, month - 1, day, hour, minute) - timezoneOffsets[timezone] * 60_000;
+  return Date.UTC(year, month - 1, day, hour, minute) - PRODUCT_TIME_ZONE_OFFSET_MINUTES * 60_000;
 };
 
 export const venueTicketTierSchema = z.object({
@@ -33,13 +24,13 @@ export const venueEventDraftSchema = z
     eventDate: z.iso.date(),
     startTime: z.string().regex(timePattern),
     endTime: z.string().regex(timePattern),
-    timezone: z.enum(['Asia/Kolkata', 'Asia/Dubai', 'Europe/London', 'America/New_York']),
+    timezone: z.literal(PRODUCT_TIME_ZONE),
     capacity: z.number().int().min(1).max(20_000),
     ticketTiers: z.array(venueTicketTierSchema).min(1).max(20),
   })
   .superRefine((draft, context) => {
-    const start = localEventTimestamp(draft.eventDate, draft.startTime, draft.timezone);
-    const end = localEventTimestamp(draft.eventDate, draft.endTime, draft.timezone);
+    const start = localEventTimestamp(draft.eventDate, draft.startTime);
+    const end = localEventTimestamp(draft.eventDate, draft.endTime);
     if (end <= start)
       context.addIssue({
         code: 'custom',

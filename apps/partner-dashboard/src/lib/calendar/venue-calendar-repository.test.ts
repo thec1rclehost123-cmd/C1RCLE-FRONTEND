@@ -107,7 +107,7 @@ describe('venue calendar repository mapping', () => {
     });
     expect(days[7]).toMatchObject({
       state: 'confirmed',
-      events: [{ id: 'published', status: 'confirmed', time: '8:00 PM – 11:00 PM' }],
+      events: [{ id: 'published', status: 'confirmed', time: '8:00 PM – 11:00 PM IST' }],
     });
     expect(days[8]).toMatchObject({ state: 'unavailable', events: [] });
     expect(calendar.blocks).toEqual([
@@ -153,19 +153,19 @@ describe('venue calendar repository mapping', () => {
 
   it('builds same-day and overnight block ranges', () => {
     expect(venueBlockTimeRange({ date: '2026-09-17', from: '19:00', to: '23:00' })).toEqual({
-      startTime: '2026-09-17T19:00:00.000Z',
-      endTime: '2026-09-17T23:00:00.000Z',
+      startTime: '2026-09-17T13:30:00.000Z',
+      endTime: '2026-09-17T17:30:00.000Z',
     });
     expect(venueBlockTimeRange({ date: '2026-09-17', from: '23:00', to: '02:00' })).toEqual({
-      startTime: '2026-09-17T23:00:00.000Z',
-      endTime: '2026-09-18T02:00:00.000Z',
+      startTime: '2026-09-17T17:30:00.000Z',
+      endTime: '2026-09-17T20:30:00.000Z',
     });
   });
 
   it('shows stored UTC event instants in India venue time', () => {
     expect(eventDatePartInIndia('2026-11-06T19:30:00.000Z')).toBe('2026-11-07');
     expect(formatEventTimeRange('2026-11-07T14:30:00.000Z', '2026-11-07T17:30:00.000Z')).toBe(
-      '8:00 PM – 11:00 PM',
+      '8:00 PM – 11:00 PM IST',
     );
   });
 });

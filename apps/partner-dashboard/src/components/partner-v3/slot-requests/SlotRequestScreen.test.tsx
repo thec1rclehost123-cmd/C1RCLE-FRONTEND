@@ -61,7 +61,7 @@ describe('SlotRequestScreen', () => {
     );
     render(<SlotRequestScreen direction="incoming" />);
 
-    expect(screen.getByRole('status')).toHaveTextContent('Loading request counts');
+    expect(screen.getByText('Loading request counts…')).toHaveTextContent('Loading request counts');
     expect(screen.queryByText('Pending 0')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Pending' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'All Requests' })).toBeInTheDocument();
@@ -96,6 +96,26 @@ describe('SlotRequestScreen', () => {
     expect(cancelButtons).toHaveLength(1);
     expect(cancelButtons[0]).not.toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Accept' })).not.toBeInTheDocument();
+  });
+
+  it('links an accepted request to its event and removes live-event cancellation', async () => {
+    const data = await fixturePartnerDataSource.getHostSlotRequests();
+    loadSlotRequestsData.mockResolvedValue({
+      ...data,
+      requests: data.requests.map((request) =>
+        request.id === 'host-slot-sunday'
+          ? { ...request, eventId: 'evt_live', linkedEventStatus: 'published' }
+          : request,
+      ),
+    });
+    render(<SlotRequestScreen direction="outgoing" initialView="all" />);
+
+    const viewEvent = await screen.findByRole('link', { name: 'View event' });
+    expect(viewEvent).toHaveAttribute('href', '/partner/host/events/evt_live');
+    expect(screen.queryByRole('button', { name: 'Cancel request' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Create event from accepted slot' }),
+    ).not.toBeInTheDocument();
   });
 
   it('renders a directly addressed request review and changes preview state in the URL', async () => {

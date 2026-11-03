@@ -3,12 +3,18 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
+import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
+
 import { EmptyState, ErrorState, LoadingState } from '@/components/partner-v3/States';
 import { requestHostAvailabilitySlot } from '@/lib/calendar/host-availability-repository';
 import { useHostAvailability } from '@/lib/calendar/use-host-availability';
 import { currentMonthKey } from '@/lib/calendar/venue-calendar-repository';
 import { formatEventDateLabel } from '@/lib/events/event-time';
-import { publishVenueEvent } from '@/lib/events/venue-event-repository';
+import {
+  eventStartAtFromDraft,
+  eventEndAtFromDraft,
+  publishVenueEvent,
+} from '@/lib/events/venue-event-repository';
 import { useConnectedPromoters } from '@/lib/partner/use-connected-promoters';
 import { loadSlotRequestsData } from '@/lib/slot-requests/slot-request-repository';
 
@@ -132,7 +138,7 @@ export function HostEventEditorRoute({
           venueId: acceptedRequest.venueId ?? '',
           startAt: acceptedRequest.slotStartTime,
           endAt: acceptedRequest.slotEndTime,
-          timezone: acceptedRequest.timezone ?? 'UTC',
+          timezone: PRODUCT_TIME_ZONE,
         }
       : null;
   if (acceptedRequestId && !acceptedSlot) return <LoadingState label="Verifying accepted slot" />;
@@ -153,7 +159,7 @@ export function HostEventEditorRoute({
     .find((day) => day.date === initialDate);
   const requestedSlot = requestedDay?.slots.find((slot) => slot.id === initialSlotId);
   const acceptedDate = acceptedSlot
-    ? new Intl.DateTimeFormat('en-CA', { timeZone: acceptedSlot.timezone }).format(
+    ? new Intl.DateTimeFormat('en-CA', { timeZone: PRODUCT_TIME_ZONE }).format(
         new Date(acceptedSlot.startAt),
       )
     : undefined;
@@ -161,14 +167,14 @@ export function HostEventEditorRoute({
     ? new Intl.DateTimeFormat('en-IN', {
         hour: 'numeric',
         minute: '2-digit',
-        timeZone: acceptedSlot.timezone,
+        timeZone: PRODUCT_TIME_ZONE,
       }).format(new Date(acceptedSlot.startAt))
     : undefined;
   const acceptedEndTime = acceptedSlot
     ? new Intl.DateTimeFormat('en-IN', {
         hour: 'numeric',
         minute: '2-digit',
-        timeZone: acceptedSlot.timezone,
+        timeZone: PRODUCT_TIME_ZONE,
       }).format(new Date(acceptedSlot.endAt))
     : undefined;
   const artwork = data.artworkOptions[0] ?? data.defaultDraft.artwork;
@@ -185,15 +191,36 @@ export function HostEventEditorRoute({
       ...data.defaultDraft,
       venueId: selectedVenue.venue.id,
       date: acceptedDate ?? data.defaultDraft.date,
-      dateLabel: acceptedDate
-        ? formatEventDateLabel(acceptedDate, acceptedSlot?.timezone ?? 'UTC')
-        : data.defaultDraft.dateLabel,
-      time: acceptedTime ?? requestedSlot?.label ?? data.defaultDraft.time,
-      ...(acceptedEndTime ? { endTime: acceptedEndTime } : {}),
+      dateLabel: acceptedDate ? formatEventDateLabel(acceptedDate) : data.defaultDraft.dateLabel,
+      time:
+        acceptedTime ??
+        (requestedSlot?.startTime
+          ? new Intl.DateTimeFormat('en-GB', {
+              timeZone: PRODUCT_TIME_ZONE,
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false,
+            }).format(new Date(requestedSlot.startTime))
+          : requestedSlot?.label) ??
+        data.defaultDraft.time,
+      ...(acceptedEndTime
+        ? { endTime: acceptedEndTime }
+        : requestedSlot?.endTime
+          ? {
+              endTime: new Intl.DateTimeFormat('en-GB', {
+                timeZone: PRODUCT_TIME_ZONE,
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+              }).format(new Date(requestedSlot.endTime)),
+            }
+          : {}),
     },
   };
 
   const submitHostEvent = async (draft: EventEditorDraft, selectedSlotId: string) => {
+    if (draft.externalVenue)
+      throw new Error('Admin approval submission for non-partnered venues is not connected yet.');
     if (acceptedSlot) {
       await publishVenueEvent(organizationId, draft, {
         slotRequestId: acceptedSlot.requestId,
@@ -204,15 +231,38 @@ export function HostEventEditorRoute({
       return;
     }
     if (!selectedSlotId) throw new Error('Choose an open Venue slot before requesting it.');
-    let idempotencyKey = requestKeys.current.get(selectedSlotId);
+    let idempotencyKey = requestKeys.current.get(
+      JSON.stringify([selectedSlotId, draft.date, draft.time, draft.endTime]),
+    );
     if (!idempotencyKey) {
       idempotencyKey = crypto.randomUUID();
-      requestKeys.current.set(selectedSlotId, idempotencyKey);
+      requestKeys.current.set(
+        JSON.stringify([selectedSlotId, draft.date, draft.time, draft.endTime]),
+        idempotencyKey,
+      );
     }
+    const windowEnd = state.data?.venues
+      .find((item) => item.venue.id === draft.venueId)
+      ?.months.flatMap((month) => month.days)
+      .flatMap((day) => day.slots)
+      .find((slot) => slot.id === selectedSlotId)?.endTime;
+    const startTime = eventStartAtFromDraft(draft);
+    const fallbackEnd =
+      windowEnd && startTime
+        ? new Date(
+            Math.min(Date.parse(windowEnd), Date.parse(startTime) + 24 * 60 * 60 * 1000),
+          ).toISOString()
+        : '';
     await requestHostAvailabilitySlot({
       organizationId,
       venueId: draft.venueId,
       slotId: selectedSlotId,
+      ...(selectedSlotId.startsWith('free-')
+        ? {
+            startTime: eventStartAtFromDraft(draft) ?? '',
+            endTime: draft.endTime?.trim() ? (eventEndAtFromDraft(draft) ?? '') : fallbackEnd,
+          }
+        : {}),
       idempotencyKey,
     });
     const params = new URLSearchParams({ requested: 'true' });
@@ -227,14 +277,14 @@ export function HostEventEditorRoute({
           {new Intl.DateTimeFormat('en-IN', {
             dateStyle: 'full',
             timeStyle: 'short',
-            timeZone: acceptedSlot.timezone,
+            timeZone: PRODUCT_TIME_ZONE,
           }).format(new Date(acceptedSlot.startAt))}{' '}
           to{' '}
           {new Intl.DateTimeFormat('en-IN', {
             timeStyle: 'short',
-            timeZone: acceptedSlot.timezone,
+            timeZone: PRODUCT_TIME_ZONE,
           }).format(new Date(acceptedSlot.endAt))}{' '}
-          ({acceptedSlot.timezone}). The event will use this reserved time.
+          (IST). The event will use this reserved time.
         </p>
       ) : null}
       <PartnerEventEditor

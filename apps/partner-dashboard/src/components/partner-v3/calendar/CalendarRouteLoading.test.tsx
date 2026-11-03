@@ -16,12 +16,18 @@ describe('calendar route loading states', () => {
   it('renders an accessible loading state for the venue calendar', () => {
     render(<VenueCalendarRoute organizationId="org-m3" />);
 
-    expect(screen.getByRole('status')).toHaveTextContent('Loading venue calendar…');
+    expect(screen.getByRole('status', { name: 'Loading venue calendar…' })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
   });
 
   it('renders an accessible loading state for host availability', () => {
     render(<HostAvailabilityRoute organizationId="org-m3" />);
 
-    expect(screen.getByRole('status')).toHaveTextContent('Loading host availability…');
+    expect(screen.getByRole('status', { name: 'Loading host availability…' })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
   });
 });

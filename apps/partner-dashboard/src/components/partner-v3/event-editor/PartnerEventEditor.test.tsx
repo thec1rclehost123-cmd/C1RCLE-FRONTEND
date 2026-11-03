@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -6,11 +6,10 @@ import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
 
 import { PartnerEventEditor } from './PartnerEventEditor';
 
-import type { CalendarDay, EventEditorDraft } from '@/data/partner-data-source';
+import type { EventEditorDraft } from '@/data/partner-data-source';
 
 const push = vi.fn();
 const replace = vi.fn();
-
 vi.mock('next/image', () => ({ default: () => <span aria-hidden="true" /> }));
 vi.mock('next/navigation', () => ({
   usePathname: () => '/partner/venue/events/create',
@@ -18,243 +17,122 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-describe('PartnerEventEditor', () => {
+async function setup(initialStep?: string, host = false, acceptedSlotMode = false) {
+  const data = await (host
+    ? fixturePartnerDataSource.getHostEventEditor()
+    : fixturePartnerDataSource.getVenueEventEditor());
+  const availability = await (host
+    ? fixturePartnerDataSource.getHostAvailability()
+    : fixturePartnerDataSource.getVenueCalendar());
+  const onSubmit = vi
+    .fn<(draft: EventEditorDraft, slot: string) => Promise<void>>()
+    .mockResolvedValue(undefined);
+  render(
+    <PartnerEventEditor
+      data={{ ...data, defaultDraft: { ...data.defaultDraft, promoCodes: [] } }}
+      availability={availability}
+      mode="create"
+      onSubmit={onSubmit}
+      {...('months' in availability && availability.months[0]?.days[0]
+        ? { initialDate: availability.months[0].days[0].date }
+        : {})}
+      {...(initialStep ? { initialStep } : {})}
+      acceptedSlotMode={acceptedSlotMode}
+    />,
+  );
+  return { data, availability, onSubmit, user: userEvent.setup() };
+}
+function fillBasics() {
+  fireEvent.change(screen.getByLabelText('Event name'), { target: { value: 'Acceptance Night' } });
+  fireEvent.change(screen.getByLabelText('Event description'), {
+    target: { value: 'An evening of live music and dancing for the connected acceptance journey.' },
+  });
+}
+async function continueStep(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: 'Continue' }));
+}
+
+describe('PartnerEventEditor sequential workflow', () => {
   beforeEach(() => {
     push.mockReset();
     replace.mockReset();
   });
 
-  it('renders the Venue three-step editor and keeps publish frontend-only', async () => {
-    const user = userEvent.setup();
-    const data = await fixturePartnerDataSource.getVenueEventEditor();
-    const availability = await fixturePartnerDataSource.getVenueCalendar();
-    render(<PartnerEventEditor data={data} availability={availability} mode="create" />);
-
+  it('blocks deep links and future step buttons until prior steps are completed', async () => {
+    const { user, onSubmit } = await setup('review');
     expect(screen.getByRole('heading', { name: 'Create event' })).toBeInTheDocument();
-    expect(screen.getByText('Basics & tickets')).toBeInTheDocument();
-    expect(screen.getByText('Ticket tiers')).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    const nav = screen.getByRole('navigation', { name: 'Event setup sections' });
+    expect(within(nav).getByRole('button', { name: /Review/ })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Publish event' })).not.toBeInTheDocument();
+    expect(replace).toHaveBeenCalledWith(expect.stringContaining('step=basics'), { scroll: false });
+    await continueStep(user);
     expect(screen.getByRole('alert')).toHaveTextContent('Add an event name.');
-
-    fireEvent.change(screen.getByLabelText('Event name'), { target: { value: 'Test night' } });
-    const availableDate = availability.months[0]?.days.find((day) => day.state === 'available');
-    expect(availableDate).toBeDefined();
-    if (availableDate)
-      await user.click(screen.getByRole('button', { name: String(availableDate.day) }));
-    await user.click(screen.getByRole('button', { name: 'Continue' }));
-    expect(push).toHaveBeenLastCalledWith('/partner/venue/events/create?step=promoters', {
-      scroll: false,
-    });
-
-    await user.click(screen.getByRole('button', { name: 'Continue' }));
-    expect(push).toHaveBeenLastCalledWith('/partner/venue/events/create?step=review', {
-      scroll: false,
-    });
-    expect(screen.getByText(/publishing is unavailable/i)).toBeInTheDocument();
-  });
-
-  it('keeps an empty venue date passed from the calendar selected', async () => {
-    const data = await fixturePartnerDataSource.getVenueEventEditor();
-    const availability = await fixturePartnerDataSource.getVenueCalendar();
-    const sourceDate = availability.months[0]?.days[0];
-
-    expect(sourceDate).toBeDefined();
-    if (!sourceDate) return;
-    const emptyDate: CalendarDay = {
-      ...sourceDate,
-      state: 'unavailable',
-      events: [],
-      slots: [],
-    };
-    const availabilityWithEmptyDate = {
-      ...availability,
-      months: availability.months.map((month, index) =>
-        index === 0 ? { ...month, days: [emptyDate, ...month.days.slice(1)] } : month,
-      ),
-    };
-
-    render(
-      <PartnerEventEditor
-        data={data}
-        availability={availabilityWithEmptyDate}
-        mode="create"
-        initialDate={emptyDate.date}
-      />,
-    );
-
-    const expectedLabel = new Intl.DateTimeFormat('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      timeZone: 'UTC',
-    }).format(new Date(`${emptyDate.date}T12:00:00Z`));
-    expect(screen.getByLabelText(/^Date/)).toHaveValue(expectedLabel);
-    expect(screen.getByRole('button', { name: String(emptyDate.day) })).toBeEnabled();
-  });
-
-  it('submits a valid venue event from the review step', async () => {
-    const user = userEvent.setup();
-    const data = await fixturePartnerDataSource.getVenueEventEditor();
-    const availability = await fixturePartnerDataSource.getVenueCalendar();
-    const availableDate = availability.months
-      .find((month) => month.key === '2026-08')
-      ?.days.find((day) => day.state === 'available');
-    const onSubmit = vi
-      .fn<(draft: EventEditorDraft) => Promise<void>>()
-      .mockResolvedValue(undefined);
-
-    expect(availableDate).toBeDefined();
-    if (!availableDate) return;
-
-    render(
-      <PartnerEventEditor
-        data={data}
-        availability={availability}
-        mode="create"
-        onSubmit={onSubmit}
-      />,
-    );
-
-    fireEvent.change(screen.getByLabelText('Event name'), { target: { value: 'Backend Night' } });
-    fireEvent.change(screen.getByLabelText('Event description'), {
-      target: { value: 'A namespaced test night with music and a small guest list.' },
-    });
-    fireEvent.change(screen.getByLabelText('Who can find this event?'), {
-      target: { value: 'unlisted' },
-    });
-    fireEvent.change(screen.getByLabelText('When should guests see the full venue address?'), {
-      target: { value: 'hidden' },
-    });
-    await user.click(screen.getAllByText('Ticket options')[0]!);
-    fireEvent.change(screen.getAllByLabelText('Guests')[0]!, { target: { value: '3' } });
-    fireEvent.change(screen.getByLabelText('Admission issuance'), {
-      target: { value: 'per_person' },
-    });
-    fireEvent.change(screen.getAllByLabelText('Tier access')[0]!, { target: { value: 'code' } });
-    expect(screen.getByText('Attendee capacity')).toBeInTheDocument();
-    expect(screen.getByText('₹99,600')).toBeInTheDocument();
-    expect(screen.getByText(/Anyone with the link can view and share event details/)).toBeVisible();
-    expect(screen.getByText(/Restricted tiers stay unavailable/)).toBeVisible();
-    await user.click(screen.getByRole('button', { name: String(availableDate.day) }));
-    await user.click(screen.getByRole('button', { name: 'Continue' }));
-    await user.click(screen.getByRole('button', { name: 'Continue' }));
-
-    expect(screen.queryByText(/publishing is unavailable/i)).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /Publish event/ }));
-
-    await waitFor(() => {
-      expect(onSubmit).toHaveBeenCalledTimes(1);
-    });
-    const submittedDraft = onSubmit.mock.calls[0]?.[0];
-    expect(submittedDraft).toMatchObject({
-      name: 'Backend Night',
-      description: 'A namespaced test night with music and a small guest list.',
-      date: availableDate.date,
-      visibilityMode: 'unlisted',
-      addressDisclosure: 'hidden',
-    });
-    expect(submittedDraft?.ticketTiers[0]).toMatchObject({
-      guestCount: 3,
-      admissionMode: 'per_person',
-      accessMode: 'code',
-    });
-  });
-
-  it('keeps publish clickable and reveals validation errors on review', async () => {
-    const user = userEvent.setup();
-    const data = await fixturePartnerDataSource.getVenueEventEditor();
-    const availability = await fixturePartnerDataSource.getVenueCalendar();
-    const onSubmit = vi
-      .fn<(draft: EventEditorDraft) => Promise<void>>()
-      .mockResolvedValue(undefined);
-
-    render(
-      <PartnerEventEditor
-        data={data}
-        availability={availability}
-        mode="create"
-        initialStep="review"
-        onSubmit={onSubmit}
-      />,
-    );
-
-    const publishButton = screen.getByRole('button', { name: /Publish event/ });
-    expect(publishButton).toBeEnabled();
-    await user.click(publishButton);
-
-    expect(screen.getByText('Add an event name.')).toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it('requires Host venue availability before proceeding and exposes no Venue ownership controls', async () => {
-    const user = userEvent.setup();
-    const data = await fixturePartnerDataSource.getHostEventEditor();
-    const availability = await fixturePartnerDataSource.getHostAvailability();
-    render(
-      <PartnerEventEditor
-        data={data}
-        availability={availability}
-        mode="create"
-        initialVenueId="skyline-rooftop"
-        initialDate="2026-07-18"
-        initialStep="venue"
-      />,
-    );
+  it('requires guest-facing copy before marking event details complete', async () => {
+    const { user } = await setup();
+    fireEvent.change(screen.getByLabelText('Event name'), { target: { value: 'Title only' } });
+    await continueStep(user);
+    expect(screen.getByRole('alert')).toHaveTextContent('at least 40 characters');
+    fillBasics();
+    await continueStep(user);
+    expect(screen.getByLabelText('Start time')).toBeInTheDocument();
+    expect(push).toHaveBeenLastCalledWith(expect.stringContaining('step=schedule'), {
+      scroll: false,
+    });
+  });
 
+  it('submits completed steps with the selected date and preserves ticket limits', async () => {
+    const { user, onSubmit, availability } = await setup();
+    fillBasics();
+    await continueStep(user);
+    const date = ('months' in availability ? availability.months : [])[0]?.days.find(
+      (day) => day.state === 'available',
+    );
+    if (!date) throw new Error('Expected an available fixture date');
+    await user.click(screen.getByRole('button', { name: String(date.day) }));
+    fireEvent.change(screen.getByLabelText('Start time'), { target: { value: '20:00' } });
+    await continueStep(user);
+    expect(screen.getByText('How will guests join?')).toBeInTheDocument();
+    await continueStep(user);
+    await continueStep(user);
+    await continueStep(user);
+    await continueStep(user);
+    expect(screen.getByRole('button', { name: 'Web preview' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: 'Publish event' }));
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledOnce();
+    });
+    expect(onSubmit.mock.calls[0]?.[0]).toMatchObject({
+      name: 'Acceptance Night',
+      date: date.date,
+    });
+    expect(
+      onSubmit.mock.calls[0]?.[0].ticketTiers.every((tier) => (tier.maxPerOrder ?? 10) <= 10),
+    ).toBe(true);
+  });
+
+  it('keeps previews visible but unavailable before review', async () => {
+    await setup();
+    expect(screen.getByRole('button', { name: 'Web preview' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Mobile preview' })).toBeDisabled();
+  });
+
+  it('requires a partnered venue and time before Host details and hides unsupported external approval', async () => {
+    const { user, onSubmit } = await setup('review', true);
     expect(screen.getByText('Choose a venue')).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        'Partnered venue availability — grey dates have no open slots for requests.',
-      ),
-    ).toBeInTheDocument();
-    expect(screen.queryByText('Block date')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /8:00 PM – 11:00 PM/ }));
-    await user.click(screen.getByRole('button', { name: /Create event/ }));
-    expect(screen.getByRole('alert')).toHaveTextContent('Add an event name.');
-    expect(push).not.toHaveBeenCalledWith(
-      expect.stringContaining('step=basics'),
-      expect.anything(),
-    );
+    expect(screen.queryByRole('option', { name: 'Not a partnered venue' })).not.toBeInTheDocument();
+    await continueStep(user);
+    expect(screen.getByRole('alert')).toHaveTextContent('Choose an available');
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText('Event name')).not.toBeInTheDocument();
   });
 
-  it('explains accepted-slot publication truthfully in Host review', async () => {
-    const data = await fixturePartnerDataSource.getHostEventEditor();
-    const availability = await fixturePartnerDataSource.getHostAvailability();
-
-    render(
-      <PartnerEventEditor
-        data={data}
-        availability={availability}
-        mode="create"
-        acceptedSlotMode
-        initialStep="review"
-      />,
-    );
-
-    expect(
-      screen.getByText(/Submitting publishes this event using the accepted Venue slot\./),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText('The venue will review this request before it can be published.'),
-    ).not.toBeInTheDocument();
-  });
-
-  it('opens Guest portal and Mobile app preview choices from the live preview', async () => {
-    const user = userEvent.setup();
-    const data = await fixturePartnerDataSource.getVenueEventEditor();
-    const availability = await fixturePartnerDataSource.getVenueCalendar();
-    render(<PartnerEventEditor data={data} availability={availability} mode="create" />);
-
-    await user.click(screen.getByRole('button', { name: /Your event name/ }));
-    expect(screen.getByRole('dialog', { name: 'Preview destination' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /Guest portal/i }));
-    expect(screen.getByText('Guest portal')).toBeInTheDocument();
-    expect(screen.getAllByText('Your event name').length).toBeGreaterThan(0);
-    await user.click(screen.getByRole('button', { name: /Back to editing/i }));
-    await user.click(screen.getByRole('button', { name: /Your event name/ }));
-    await user.click(screen.getByRole('button', { name: /Mobile app/i }));
-    expect(screen.getByText('Mobile app')).toBeInTheDocument();
+  it('starts an accepted Host booking at details but still disallows a review deep link', async () => {
+    await setup('review', true, true);
+    expect(screen.getByLabelText('Event name')).toBeInTheDocument();
+    expect(screen.queryByText('Choose a venue')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Publish event' })).not.toBeInTheDocument();
   });
 });
