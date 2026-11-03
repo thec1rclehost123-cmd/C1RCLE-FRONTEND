@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState, type SyntheticEvent } from 'react';
 
+import { formatProductDateTime } from '@/lib/events/event-time';
 import {
   createEventPromoterAssignment,
   listEventPromoterAttributedOrders,
@@ -148,9 +149,8 @@ export function ConnectedEventPromoterManagement({
           />
         </dl>
         <p className="mt-4 text-xs text-stone-400">
-          Values use captured orders before refund adjustments. “Value less commission” is an
-          attribution measure, not evidence of causal sales lift. Liability follows the selected{' '}
-          {performance.liabilityReadModel} read model.
+          Captured orders before refunds · attributed value is not sales lift · liability:{' '}
+          {performance.liabilityReadModel}
         </p>
         {!performance.complete || !performance.liabilityComplete ? (
           <p role="status" className="mt-2 text-sm text-amber-200">
@@ -165,9 +165,8 @@ export function ConnectedEventPromoterManagement({
       </section>
       <section className="rounded-2xl border border-white/15 bg-neutral-950 p-6">
         <h1 className="text-2xl font-bold">Promoter assignments</h1>
-        <p className="mt-2 text-sm text-stone-300">
-          Invite an approved connected Promoter. Commission terms are frozen when the assignment is
-          created.
+        <p className="mt-1 text-xs text-stone-400">
+          Invites require an active connection; terms are fixed when sent.
         </p>
         {connections.length === 0 ? (
           <p className="mt-5 rounded-xl border border-white/10 p-4 text-sm text-stone-300">
@@ -281,8 +280,7 @@ export function ConnectedEventPromoterManagement({
               )}
             </fieldset>
             <p className="text-xs text-stone-400 md:col-span-2">
-              Terms: {ratePercent || '0'}% plus {money.format(Number(flatRupees) || 0)} per order.
-              Values are submitted to the backend for validation.
+              {ratePercent || '0'}% + {money.format(Number(flatRupees) || 0)} per order.
             </p>
             <button
               type="submit"
@@ -344,11 +342,11 @@ export function ConnectedEventPromoterManagement({
                   ) : null}
                   <p className="text-xs text-stone-400">
                     {assignment.startsAt
-                      ? new Date(assignment.startsAt).toLocaleString()
+                      ? formatProductDateTime(assignment.startsAt)
                       : 'No start limit'}
                     {' — '}
                     {assignment.expiresAt
-                      ? new Date(assignment.expiresAt).toLocaleString()
+                      ? formatProductDateTime(assignment.expiresAt)
                       : 'No expiry'}
                   </p>
                   {(linksByAssignment.get(assignment.id) ?? []).map((link) => (
@@ -497,8 +495,7 @@ function EventAttributedOrders({
         <div id={regionId} className="mt-3 rounded-xl border border-white/10 p-3">
           <h4 className="text-sm font-semibold">Attributed orders</h4>
           <p className="mt-1 text-xs text-stone-400">
-            Booking reference, ticket value and frozen commission are shown. Guest contact and
-            payment details are not included.
+            Guest contact and payment details are excluded.
           </p>
           {loading && !page ? (
             <p role="status" className="mt-3 text-sm text-stone-300">
@@ -568,9 +565,7 @@ function EventAttributedOrders({
                         <td className="px-2 py-2">
                           {money.format(order.promoterCommissionPaise / 100)}
                         </td>
-                        <td className="px-2 py-2">
-                          {new Date(order.attributedAt).toLocaleString()}
-                        </td>
+                        <td className="px-2 py-2">{formatProductDateTime(order.attributedAt)}</td>
                       </tr>
                     ))}
                   </tbody>

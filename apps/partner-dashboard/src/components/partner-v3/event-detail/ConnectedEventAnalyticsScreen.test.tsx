@@ -31,15 +31,12 @@ describe('ConnectedEventAnalyticsScreen', () => {
 
     expect(screen.getByRole('heading', { name: 'Event analytics' })).toBeInTheDocument();
     expect(screen.getByText('Gross amount paid')).toBeInTheDocument();
-    expect(screen.getByText('Ticket inventory')).toBeInTheDocument();
-    expect(screen.getByText('300')).toBeInTheDocument();
+    expect(screen.getAllByText('Ticket inventory')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('300')[0]).toBeInTheDocument();
     expect(screen.getByText('Room capacity')).toBeInTheDocument();
     expect(screen.getByText('₹1,250.00')).toBeInTheDocument();
     expect(screen.getByText('63%')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '← Event details' })).toHaveAttribute(
-      'href',
-      '/partner/venue/events/evt_123',
-    );
+    expect(screen.queryByRole('link', { name: /Event details/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/demographics/i)).toBeNull();
   });
 

@@ -1,9 +1,12 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
-import { waitlistOfferResponseSchema, waitlistQueueResponseSchema } from '@c1rcle/contracts';
+import {
+  PRODUCT_TIME_ZONE,
+  waitlistOfferResponseSchema,
+  waitlistQueueResponseSchema,
+} from '@c1rcle/contracts';
 
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 import { apiClient } from '@/lib/api/client';
@@ -12,9 +15,7 @@ import { describeApiError } from '@/lib/api/describe-error';
 import type { TicketTierDto } from '@c1rcle/contracts';
 
 export function ConnectedEventWaitlistScreen({
-  studio,
   eventId,
-  eventTitle,
   organizationId,
   tiers,
 }: {
@@ -100,18 +101,9 @@ export function ConnectedEventWaitlistScreen({
   return (
     <PageContainer>
       <main className="mx-auto max-w-5xl py-7 text-stone-100">
-        <Link
-          href={`/partner/${studio}/events/${encodeURIComponent(eventId)}`}
-          className="text-sm text-stone-400"
-        >
-          ← {eventTitle}
-        </Link>
         <section className="mt-6 rounded-2xl border border-white/15 bg-neutral-950 p-6 sm:p-7">
-          <h1 className="text-3xl font-bold">Waitlist</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-400">
-            Offer the next verified guest a ten-minute ticket reservation. Queue order is automatic;
-            this screen does not expose guest contact details.
-          </p>
+          <h1 className="text-2xl font-bold">Waitlist</h1>
+          <p className="mt-1 text-sm text-stone-400">Offers expire after 10 minutes.</p>
 
           {tiers.length === 0 ? (
             <p className="mt-8 rounded-xl border border-white/10 p-4 text-sm text-stone-400">
@@ -119,7 +111,7 @@ export function ConnectedEventWaitlistScreen({
             </p>
           ) : (
             <>
-              <div className="mt-6 flex flex-wrap items-end gap-3">
+              <div className="mt-4 flex flex-wrap items-end gap-3">
                 <label className="flex min-w-56 flex-col gap-2 text-sm">
                   Ticket tier
                   <select
@@ -173,7 +165,7 @@ export function ConnectedEventWaitlistScreen({
                   {error}
                 </p>
               ) : null}
-              <div className="mt-7 overflow-x-auto">
+              <div className="mt-5 overflow-x-auto">
                 {loading ? (
                   <p role="status" className="py-6 text-sm text-stone-400">
                     Loading queue…
@@ -279,6 +271,6 @@ function formatDateTime(value: string) {
   return new Intl.DateTimeFormat('en-IN', {
     dateStyle: 'medium',
     timeStyle: 'short',
-    timeZone: 'Asia/Kolkata',
+    timeZone: PRODUCT_TIME_ZONE,
   }).format(new Date(value));
 }

@@ -56,7 +56,9 @@ describe('ConnectedEventGuestsScreen', () => {
       />,
     );
 
-    expect(screen.getByRole('status')).toHaveTextContent('This roster is incomplete');
-    expect(screen.getByText('Showing 0 matching records; more may exist.')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Roster is incomplete');
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'a missing name may still have an issued ticket',
+    );
   });
 });

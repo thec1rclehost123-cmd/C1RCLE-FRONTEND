@@ -3,7 +3,7 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-import { organizationEventListResponseSchema } from '@c1rcle/contracts';
+import { PRODUCT_TIME_ZONE, organizationEventListResponseSchema } from '@c1rcle/contracts';
 
 import { createServerApiClient } from '@/lib/api/server-client';
 import { getActiveOrgIdFromCookieHeader } from '@/lib/org/active-org-cookie';
@@ -42,7 +42,7 @@ function mapEvent(
 ): PartnerEventRecord {
   const date = new Date(item.startAt);
   const formatter = new Intl.DateTimeFormat('en-IN', {
-    timeZone: 'Asia/Kolkata',
+    timeZone: PRODUCT_TIME_ZONE,
     day: 'numeric',
     month: 'short',
     hour: 'numeric',

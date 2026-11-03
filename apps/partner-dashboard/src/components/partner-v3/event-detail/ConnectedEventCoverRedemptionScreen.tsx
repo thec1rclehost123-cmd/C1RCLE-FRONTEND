@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { getClientEnv } from '@c1rcle/config';
 import {
+  PRODUCT_TIME_ZONE,
   createEventCoverRedemptionChallengeSchema,
   eventCoverRedemptionChallengeDtoSchema,
 } from '@c1rcle/contracts';
@@ -290,7 +291,13 @@ export function ConnectedEventCoverRedemptionScreen({
               </p>
             )}
             <p className="text-xs text-stone-400">
-              This request expires at {new Date(challenge.expiresAt).toLocaleTimeString()}.
+              This request expires at{' '}
+              {new Intl.DateTimeFormat('en-IN', {
+                hour: 'numeric',
+                minute: '2-digit',
+                timeZone: PRODUCT_TIME_ZONE,
+              }).format(new Date(challenge.expiresAt))}{' '}
+              IST.
             </p>
             {challenge.status === 'confirmed' ? (
               <button

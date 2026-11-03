@@ -1,0 +1,259 @@
+.main {
+  width: min(100% - 2rem, 76rem);
+  margin-inline: auto;
+  padding-block: 1.5rem 4rem;
+  color: #f5f5f4;
+}
+
+.backLink {
+  color: #a8a29e;
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.backLink:hover {
+  color: white;
+}
+
+.headingRow {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-block: 1.25rem;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.7rem, 3vw, 2.25rem);
+  font-weight: 750;
+  letter-spacing: -0.035em;
+}
+.subtitle {
+  margin: 0.35rem 0 0;
+  color: #a8a29e;
+}
+.range {
+  border: 1px solid #343434;
+  border-radius: 0.75rem;
+  background: #171717;
+  padding: 0.65rem 0.9rem;
+  color: #e7e5e4;
+  font-size: 0.875rem;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.875rem;
+  margin-bottom: 1rem;
+}
+.stat,
+.card {
+  border: 1px solid #292929;
+  border-radius: 1.2rem;
+  background: #151515;
+}
+.stat {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem 1.15rem;
+}
+.stat span,
+.metricGrid dt {
+  color: #a8a29e;
+  font-size: 0.84rem;
+}
+.stat strong {
+  font-size: clamp(1.1rem, 2vw, 1.55rem);
+}
+
+.gridTwo,
+.gridThree {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.gridTwo {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.gridThree {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.card {
+  min-width: 0;
+  padding: 1.15rem;
+}
+.cardTitle {
+  margin: 0;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid #242424;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.funnel {
+  display: grid;
+}
+.funnel > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #252525;
+  color: #c7c3c0;
+}
+.funnel > div:last-child {
+  border: 0;
+}
+.funnel strong {
+  color: #f5f5f4;
+}
+
+.donutCard {
+  display: flex;
+  min-height: 12rem;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1rem, 4vw, 2.5rem);
+  padding: 1rem 0.25rem;
+}
+.donutWrap {
+  position: relative;
+  width: 8.6rem;
+  height: 8.6rem;
+  flex: 0 0 auto;
+}
+.donut {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.donutTrack,
+.donutValue {
+  fill: none;
+  stroke-width: 12;
+}
+.donutTrack {
+  stroke: #303030;
+}
+.donutValue {
+  stroke: #ff5722;
+  stroke-linecap: butt;
+}
+.donutCenter {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+.legend {
+  display: grid;
+  gap: 0.75rem;
+  color: #c7c3c0;
+  font-size: 0.85rem;
+}
+.legend span {
+  display: grid;
+  grid-template-columns: 0.65rem auto auto;
+  align-items: center;
+  column-gap: 0.5rem;
+}
+.legend b {
+  color: white;
+}
+.orangeDot,
+.mutedDot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+}
+.orangeDot {
+  background: #ff5722;
+}
+.mutedDot {
+  background: #555;
+}
+
+.unavailable {
+  display: grid;
+  min-height: 9rem;
+  place-items: center;
+  margin: 0;
+  padding: 1.5rem;
+  color: #918b87;
+  text-align: center;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.singleMetric {
+  margin: 1.7rem 0 0;
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+}
+.metricCaption {
+  margin: 0.2rem 0;
+  color: #a8a29e;
+  text-align: center;
+  font-size: 0.85rem;
+}
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.2rem;
+  margin: 1rem 0 0;
+}
+.metricGrid dd {
+  margin: 0.25rem 0 0;
+  font-weight: 650;
+}
+.metricsCard {
+  margin-top: 1rem;
+}
+
+@media (max-width: 900px) {
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .gridThree {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .gridThree > :last-child {
+    grid-column: 1 / -1;
+  }
+  .metricGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .main {
+    width: min(100% - 1.25rem, 76rem);
+  }
+  .headingRow {
+    align-items: start;
+  }
+  .subtitle {
+    max-width: 17rem;
+  }
+  .gridTwo,
+  .gridThree {
+    grid-template-columns: 1fr;
+  }
+  .gridThree > :last-child {
+    grid-column: auto;
+  }
+  .donutCard {
+    gap: 1rem;
+  }
+  .donutWrap {
+    width: 7.2rem;
+    height: 7.2rem;
+  }
+  .legend {
+    font-size: 0.78rem;
+  }
+}

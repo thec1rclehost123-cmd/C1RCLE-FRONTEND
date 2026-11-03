@@ -54,7 +54,7 @@ describe('ConnectedPartnerEventScreen', () => {
     render(<ConnectedPartnerEventScreen event={event} organizationId="org_m3" studio="host" />);
 
     expect(screen.getByRole('heading', { name: 'M3 test event' })).toBeInTheDocument();
-    expect(screen.getByText('M3 test venue')).toBeInTheDocument();
+    expect(screen.getAllByText('M3 test venue').length).toBeGreaterThan(0);
     expect(screen.queryByText('Event ID')).not.toBeInTheDocument();
     expect(screen.queryByText(event.id)).not.toBeInTheDocument();
   });

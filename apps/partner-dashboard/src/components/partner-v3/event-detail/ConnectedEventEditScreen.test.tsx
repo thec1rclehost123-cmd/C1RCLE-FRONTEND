@@ -1,9 +1,10 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ConnectedEventEditScreen } from './ConnectedEventEditScreen';
 
-import type { EventOperationsDto, UpdateEventInput } from '@c1rcle/contracts';
+import type { EventOperationsDto, TicketTierDto, UpdateEventInput } from '@c1rcle/contracts';
 
 const updateEvent = vi.hoisted(() =>
   vi.fn<
@@ -16,9 +17,11 @@ const updateEvent = vi.hoisted(() =>
   >(),
 );
 const loadSlotRequests = vi.hoisted(() => vi.fn());
+const updateTierLimit = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/events/venue-event-repository', () => ({
   updatePartnerEventDetails: updateEvent,
+  updatePartnerEventTicketLimit: updateTierLimit,
 }));
 
 vi.mock('@/lib/slot-requests/slot-request-repository', () => ({
@@ -69,10 +72,87 @@ const event: EventOperationsDto = {
 beforeEach(() => {
   updateEvent.mockReset();
   loadSlotRequests.mockReset();
+  updateTierLimit.mockReset();
   loadSlotRequests.mockResolvedValue({ requests: [] });
 });
 
 describe('ConnectedEventEditScreen', () => {
+  it('loads and saves Free RSVP and paid limits through the Host editor', async () => {
+    const rsvp: TicketTierDto = {
+      id: 'tier_rsvp',
+      eventId: event.id,
+      organizationId: event.organizationId,
+      name: 'Free RSVP',
+      description: '',
+      entryType: 'general',
+      currency: 'INR',
+      priceInPaise: 0,
+      quantity: 20,
+      status: 'active',
+      salesStartAt: null,
+      salesEndAt: null,
+      maxPerOrder: null,
+      accessType: 'RSVP',
+      version: 1,
+      createdAt: event.createdAt,
+      updatedAt: event.updatedAt,
+    };
+    const paid: TicketTierDto = {
+      ...rsvp,
+      id: 'tier_paid',
+      name: 'General Entry',
+      priceInPaise: 50_000,
+      maxPerOrder: null,
+      accessType: 'ENTRY',
+    };
+    updateTierLimit.mockImplementation(
+      (_organizationId: string, _eventId: string, tierId: string, version: number, max: number) =>
+        Promise.resolve({
+          ...(tierId === rsvp.id ? rsvp : paid),
+          maxPerOrder: max,
+          version: version + 1,
+        }),
+    );
+    render(
+      <ConnectedEventEditScreen
+        event={event}
+        organizationId={event.organizationId}
+        studio="host"
+        ticketTiers={[rsvp, paid]}
+      />,
+    );
+
+    expect(screen.getByLabelText('Free RSVP maximum per order')).toHaveValue(1);
+    expect(screen.getByLabelText('General Entry maximum per order')).toHaveValue(10);
+    await userEvent.click(screen.getAllByRole('button', { name: 'Save limit' })[0]!);
+    await waitFor(() => {
+      expect(updateTierLimit).toHaveBeenCalledTimes(1);
+    });
+    expect(updateTierLimit).toHaveBeenLastCalledWith(
+      event.organizationId,
+      event.id,
+      rsvp.id,
+      1,
+      1,
+      expect.any(String),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Save limit' }));
+    await waitFor(() => {
+      expect(updateTierLimit).toHaveBeenCalledTimes(2);
+    });
+    expect(updateTierLimit).toHaveBeenLastCalledWith(
+      event.organizationId,
+      event.id,
+      paid.id,
+      1,
+      10,
+      expect.any(String),
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'General Entry per-order limit saved.',
+    );
+  });
+
   it('saves only event-copy fields and confirms the authoritative result', async () => {
     updateEvent.mockResolvedValueOnce({
       ...event,
@@ -99,9 +179,7 @@ describe('ConnectedEventEditScreen', () => {
     });
     expect(await screen.findByRole('status')).toHaveTextContent('Event details saved.');
     expect(screen.getByLabelText('Event title')).toHaveValue('M3 test event updated');
-    expect(
-      screen.getByText(/Host can apply a new date or Venue only through a slot request/),
-    ).toBeVisible();
+    expect(screen.queryByText('Venue-approved reschedule')).not.toBeInTheDocument();
   });
 
   it('saves unlisted visibility and explains that event details can be shared', async () => {
@@ -179,8 +257,8 @@ describe('ConnectedEventEditScreen', () => {
     });
     render(<ConnectedEventEditScreen event={event} organizationId="org_m3" studio="venue" />);
 
-    fireEvent.change(screen.getByLabelText('Doors open (UTC ISO 8601)'), {
-      target: { value: '2026-12-30T18:00:00.000Z' },
+    fireEvent.change(screen.getByLabelText('Doors open (IST)'), {
+      target: { value: '2026-12-30T23:30' },
     });
     fireEvent.change(screen.getByLabelText('Re-entry'), { target: { value: 'false' } });
     fireEvent.change(screen.getByLabelText('Prohibited items (one per line)'), {
@@ -208,8 +286,8 @@ describe('ConnectedEventEditScreen', () => {
           status: 'approved',
           venueId: 'venue_new',
           partnerName: 'New Venue',
-          slotStartTime: '2027-01-15T18:00:00.000Z',
-          slotEndTime: '2027-01-15T23:00:00.000Z',
+          slotStartTime: '2027-01-15T13:30:00.000Z',
+          slotEndTime: '2027-01-15T17:30:00.000Z',
           timezone: 'Asia/Kolkata',
         },
       ],
@@ -226,9 +304,12 @@ describe('ConnectedEventEditScreen', () => {
     fireEvent.change(await screen.findByLabelText('Accepted Venue slot request'), {
       target: { value: 'slot-request-new' },
     });
-    expect(screen.getByLabelText('Event start (ISO 8601 UTC)')).toHaveValue(
-      '2027-01-15T18:00:00.000Z',
-    );
+    expect(
+      screen.getByRole('option', {
+        name: /New Venue · 15 Jan 2027 · 7:00 pm IST – 11:00 pm IST/,
+      }),
+    ).toBeVisible();
+    expect(screen.getByLabelText('Event start (IST)')).toHaveValue('2027-01-15T19:00');
     expect(screen.getByRole('link', { name: 'Request another Venue slot' })).toHaveAttribute(
       'href',
       `/partner/host/calendar?event=${event.id}`,
@@ -245,8 +326,8 @@ describe('ConnectedEventEditScreen', () => {
       expect.objectContaining({
         venueId: 'venue_new',
         slotRequestId: 'slot-request-new',
-        startAt: '2027-01-15T18:00:00.000Z',
-        endAt: '2027-01-15T23:00:00.000Z',
+        startAt: '2027-01-15T13:30:00.000Z',
+        endAt: '2027-01-15T17:30:00.000Z',
       }),
     );
   });

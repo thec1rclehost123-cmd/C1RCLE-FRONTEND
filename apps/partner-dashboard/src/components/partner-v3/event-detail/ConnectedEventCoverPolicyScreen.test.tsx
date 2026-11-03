@@ -23,7 +23,7 @@ describe('ConnectedEventCoverPolicyScreen', () => {
       />,
     );
 
-    expect(screen.getByRole('heading', { name: 'Event cover policy' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Cover policy' })).toBeInTheDocument();
     expect(
       screen.getByText(
         'Cover activation is blocked. Venue acceptance remains disabled until reviewed policy approval is recorded.',

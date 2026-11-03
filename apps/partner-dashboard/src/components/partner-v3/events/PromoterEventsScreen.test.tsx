@@ -41,16 +41,8 @@ describe('PromoterEventsScreen', () => {
     expect(screen.getByRole('combobox', { name: 'Event city' })).toHaveValue('all');
     expect(screen.getByRole('region', { name: 'Discover events' })).toBeInTheDocument();
     expect(screen.getByText('Eclipse Royale')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Request Pending' })).toBeDisabled();
-    expect(
-      screen
-        .getAllByRole('link', { name: 'Request Promotion Access' })
-        .map((link) => link.getAttribute('href')),
-    ).toContain('/partner/promoter/events/testing-event');
-    expect(screen.getByRole('link', { name: 'Eclipse Royale event' })).toHaveAttribute(
-      'href',
-      '/partner/promoter/events/eclipse-royale',
-    );
+    expect(screen.getByText('Request Pending')).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /Explore event/ }).length).toBeGreaterThan(0);
     expect(screen.queryByRole('link', { name: /create event/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /slot requests/i })).not.toBeInTheDocument();
   });
@@ -123,7 +115,10 @@ describe('PromoterEventsScreen', () => {
 
     expect(screen.queryByRole('combobox', { name: 'Event city' })).not.toBeInTheDocument();
     expect(screen.getByText('Public listing')).toBeInTheDocument();
-    expect(screen.getByText(/host-issued assignment/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Explore event/ })).toHaveAttribute(
+      'href',
+      '/partner/promoter/events/evt_public',
+    );
     expect(
       screen.queryByRole('link', { name: /request promotion access/i }),
     ).not.toBeInTheDocument();

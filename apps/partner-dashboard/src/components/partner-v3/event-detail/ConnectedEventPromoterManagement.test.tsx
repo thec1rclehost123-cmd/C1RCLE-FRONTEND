@@ -259,7 +259,7 @@ describe('ConnectedEventPromoterManagement', () => {
     expect(screen.getByText('Tickets sold overall')).toBeTruthy();
     expect(screen.getByText('Promoter-attributed tickets')).toBeTruthy();
     expect(screen.getByText('Commission liability')).toBeTruthy();
-    expect(screen.getByText(/before refund adjustments/i)).toBeTruthy();
-    expect(screen.getByText(/not evidence of causal sales lift/i)).toBeTruthy();
+    expect(screen.getByText(/before refunds/i)).toBeTruthy();
+    expect(screen.getByText(/not sales lift/i)).toBeTruthy();
   });
 });

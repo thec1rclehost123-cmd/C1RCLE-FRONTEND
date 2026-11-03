@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 
 import {
@@ -13,13 +12,12 @@ import {
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 import { apiClient } from '@/lib/api/client';
 import { describeApiError } from '@/lib/api/describe-error';
+import { formatProductDateTime } from '@/lib/events/event-time';
 
 import type { TicketAccessCodeDto, TicketTierDto } from '@c1rcle/contracts';
 
 export function ConnectedEventAccessScreen({
-  studio,
   eventId,
-  eventTitle,
   eventVisibilityMode = 'public',
   organizationId,
   tiers,
@@ -115,21 +113,13 @@ export function ConnectedEventAccessScreen({
   return (
     <PageContainer>
       <main className="mx-auto max-w-5xl py-7 text-stone-100">
-        <Link
-          href={`/partner/${studio}/events/${encodeURIComponent(eventId)}`}
-          className="text-sm text-stone-400"
-        >
-          ← {eventTitle}
-        </Link>
-        <h1 className="mt-5 text-3xl font-bold">Private event and tier access</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-400">
-          Event grants unlock protected event details and public tiers. They do not unlock hidden
-          tiers unless those tier IDs are explicitly included. Tier grants unlock only selected
-          restricted tiers. Named invitations are bound to one verified email. Secrets are shown
-          once; revoking stops new access and purchases.
+        <h1 className="text-2xl font-bold">Access</h1>
+        <p className="mt-1 max-w-2xl text-xs text-stone-400">
+          Event grants include public tiers; restricted tiers require explicit selection.
+          Invitations use a verified email. Codes are shown once.
         </p>
         {tiers.length || eventVisibilityMode === 'code' || eventVisibilityMode === 'invited' ? (
-          <section className="mt-7 rounded-2xl border border-white/15 bg-neutral-950 p-5">
+          <section className="mt-4 rounded-2xl border border-white/15 bg-neutral-950 p-5">
             <h2 className="text-lg font-semibold">Create access code</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <label className="grid gap-2 text-sm">
@@ -343,7 +333,7 @@ export function ConnectedEventAccessScreen({
                     </p>
                     <p className="mt-1 text-xs text-stone-400">
                       {code.redemptionCount}/{code.maxRedemptions} used · Expires{' '}
-                      {new Date(code.expiresAt).toLocaleString()}
+                      {formatProductDateTime(code.expiresAt)}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">

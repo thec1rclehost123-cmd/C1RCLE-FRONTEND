@@ -1,14 +1,23 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
 
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 import { describeApiError } from '@/lib/api/describe-error';
-import { updatePartnerEventDetails } from '@/lib/events/venue-event-repository';
+import {
+  isoInstantToProductLocalInput,
+  productLocalInputToIsoInstant,
+} from '@/lib/events/event-time';
+import {
+  updatePartnerEventDetails,
+  updatePartnerEventTicketLimit,
+} from '@/lib/events/venue-event-repository';
 import { loadSlotRequestsData } from '@/lib/slot-requests/slot-request-repository';
 
-import type { EventEntryRulesDto, EventOperationsDto } from '@c1rcle/contracts';
+import type { EventEntryRulesDto, EventOperationsDto, TicketTierDto } from '@c1rcle/contracts';
 import type { SyntheticEvent } from 'react';
 
 interface Draft {
@@ -33,14 +42,47 @@ const emptyEntryRules: EventEntryRulesDto = {
   supportDetails: null,
 };
 
+function formatAcceptedSlot(request: {
+  readonly slotStartTime?: string | undefined;
+  readonly slotEndTime?: string | undefined;
+  readonly timezone?: string | undefined;
+}): string {
+  if (!request.slotStartTime || !request.slotEndTime) return 'Time unavailable';
+  const start = new Date(request.slotStartTime);
+  const end = new Date(request.slotEndTime);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 'Time unavailable';
+
+  try {
+    const formatDate = new Intl.DateTimeFormat('en-IN', {
+      dateStyle: 'medium',
+      timeZone: PRODUCT_TIME_ZONE,
+    });
+    const date = formatDate.format(start);
+    const endDate = formatDate.format(end);
+    const formatTime = new Intl.DateTimeFormat('en-IN', {
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZone: PRODUCT_TIME_ZONE,
+      timeZoneName: 'short',
+    });
+    const endLabel =
+      endDate === date ? formatTime.format(end) : `${endDate} ${formatTime.format(end)}`;
+    return `${date} · ${formatTime.format(start)} – ${endLabel}`;
+  } catch {
+    return 'Time unavailable';
+  }
+}
+
 export function ConnectedEventEditScreen({
   event,
   organizationId,
   studio,
+  ticketTiers = [],
 }: {
   readonly event: EventOperationsDto;
   readonly organizationId: string;
   readonly studio: 'host' | 'venue';
+  readonly ticketTiers?: readonly TicketTierDto[];
 }) {
   const [draft, setDraft] = useState<Draft>({
     title: event.title,
@@ -56,9 +98,18 @@ export function ConnectedEventEditScreen({
     Awaited<ReturnType<typeof loadSlotRequestsData>>['requests']
   >([]);
   const [slotRequestsError, setSlotRequestsError] = useState<string | null>(null);
+  const [tiers, setTiers] = useState(ticketTiers);
+  const [tierLimitInputs, setTierLimitInputs] = useState<Record<string, string>>({});
+  const [tierLimitErrors, setTierLimitErrors] = useState<Record<string, string>>({});
+  const [savingTierId, setSavingTierId] = useState<string | null>(null);
+  const tierLimitIntentKeys = useRef(new Map<string, { value: number; key: string }>());
   const [slotRequestId, setSlotRequestId] = useState('');
-  const [scheduleStartAt, setScheduleStartAt] = useState(event.startAt);
-  const [scheduleEndAt, setScheduleEndAt] = useState(event.endAt ?? '');
+  const [scheduleStartAt, setScheduleStartAt] = useState(
+    isoInstantToProductLocalInput(event.startAt),
+  );
+  const [scheduleEndAt, setScheduleEndAt] = useState(
+    event.endAt ? isoInstantToProductLocalInput(event.endAt) : '',
+  );
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -117,6 +168,13 @@ export function ConnectedEventEditScreen({
         setSaving(false);
         return;
       }
+      const scheduleStartAtIso = productLocalInputToIsoInstant(scheduleStartAt);
+      const scheduleEndAtIso = productLocalInputToIsoInstant(scheduleEndAt);
+      if (selectedSlot && (!scheduleStartAtIso || !scheduleEndAtIso)) {
+        setError('Enter a valid start and end time in IST.');
+        setSaving(false);
+        return;
+      }
       const updated = await updatePartnerEventDetails(organizationId, event.id, version, {
         title,
         summary: draft.summary.trim(),
@@ -124,12 +182,12 @@ export function ConnectedEventEditScreen({
         visibilityMode: draft.visibilityMode,
         addressDisclosure: draft.addressDisclosure,
         entryRules: draft.entryRules,
-        ...(selectedSlot
+        ...(selectedSlot && scheduleStartAtIso && scheduleEndAtIso
           ? {
               venueId: selectedSlot.venueId,
               slotRequestId: selectedSlot.id,
-              startAt: new Date(scheduleStartAt).toISOString(),
-              endAt: new Date(scheduleEndAt).toISOString(),
+              startAt: scheduleStartAtIso,
+              endAt: scheduleEndAtIso,
             }
           : {}),
       });
@@ -145,8 +203,8 @@ export function ConnectedEventEditScreen({
       setSavedDraft(nextDraft);
       setVersion(updated.version);
       setSlotRequestId('');
-      setScheduleStartAt(updated.startAt);
-      setScheduleEndAt(updated.endAt ?? '');
+      setScheduleStartAt(isoInstantToProductLocalInput(updated.startAt));
+      setScheduleEndAt(updated.endAt ? isoInstantToProductLocalInput(updated.endAt) : '');
       setMessage('Event details saved.');
     } catch (caught) {
       setError(describeApiError(caught, 'The event details could not be saved.'));
@@ -155,32 +213,72 @@ export function ConnectedEventEditScreen({
     }
   };
 
+  const saveTierLimit = async (tier: TicketTierDto) => {
+    const value = Number(
+      tierLimitInputs[tier.id] ?? String(tier.maxPerOrder ?? (tier.accessType === 'RSVP' ? 1 : 10)),
+    );
+    if (!Number.isInteger(value) || value < 1 || value > 10) {
+      setTierLimitErrors((current) => ({
+        ...current,
+        [tier.id]: 'Choose a whole number from 1 to 10.',
+      }));
+      return;
+    }
+    if (tier.accessType === 'RSVP' && value !== 1) {
+      setTierLimitErrors((current) => ({
+        ...current,
+        [tier.id]: 'Free RSVP is limited to one per order.',
+      }));
+      return;
+    }
+
+    const pending = tierLimitIntentKeys.current.get(tier.id);
+    const idempotencyKey = pending?.value === value ? pending.key : crypto.randomUUID();
+    tierLimitIntentKeys.current.set(tier.id, { value, key: idempotencyKey });
+    setSavingTierId(tier.id);
+    setTierLimitErrors((current) => ({ ...current, [tier.id]: '' }));
+    setMessage(null);
+    try {
+      const updated = await updatePartnerEventTicketLimit(
+        organizationId,
+        event.id,
+        tier.id,
+        tier.version,
+        value,
+        idempotencyKey,
+      );
+      setTiers((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+      setTierLimitInputs((current) => ({
+        ...current,
+        [tier.id]: String(updated.maxPerOrder ?? ''),
+      }));
+      tierLimitIntentKeys.current.delete(tier.id);
+      setMessage(`${tier.name} per-order limit saved.`);
+    } catch (caught) {
+      setTierLimitErrors((current) => ({
+        ...current,
+        [tier.id]: describeApiError(caught, 'The ticket limit could not be saved.'),
+      }));
+    } finally {
+      setSavingTierId(null);
+    }
+  };
+
   return (
     <PageContainer>
       <main className="mx-auto max-w-4xl py-7 text-stone-100">
-        <Link
-          href={`/partner/${studio}/events/${encodeURIComponent(event.id)}`}
-          className="text-sm font-medium text-stone-400 no-underline hover:text-stone-100"
-        >
-          ← {event.title}
-        </Link>
         <section
           aria-labelledby="event-edit-title"
-          className="mt-6 rounded-2xl border border-white/15 bg-neutral-950 p-7"
+          className="rounded-2xl border border-white/15 bg-neutral-950 p-5"
         >
-          <h1 id="event-edit-title" className="mb-2 text-3xl font-bold tracking-tight">
+          <h1 id="event-edit-title" className="mb-3 text-2xl font-bold tracking-tight">
             Edit event details
           </h1>
-          <p className="m-0 leading-6 text-stone-300">
-            Update event details and guest-facing entry facts. A Host can apply a new date or Venue
-            only through a slot request that the Venue has approved.
-          </p>
           {studio === 'host' ? (
             <div className="mt-4 rounded-xl border border-white/10 p-4">
               <h2 className="font-semibold">Venue-approved reschedule</h2>
               <p className="mt-1 text-sm text-stone-400">
-                Request an alternative time from the Host calendar. Once the Venue approves it,
-                choose that request here and set the event interval inside its reserved slot.
+                Choose an approved Venue slot and keep the event interval within it.
               </p>
               <Link
                 href={`/partner/host/calendar?event=${encodeURIComponent(event.id)}`}
@@ -196,8 +294,10 @@ export function ConnectedEventEditScreen({
                   onChange={(change) => {
                     const request = slotRequests.find((item) => item.id === change.target.value);
                     setSlotRequestId(change.target.value);
-                    if (request?.slotStartTime) setScheduleStartAt(request.slotStartTime);
-                    if (request?.slotEndTime) setScheduleEndAt(request.slotEndTime);
+                    if (request?.slotStartTime)
+                      setScheduleStartAt(isoInstantToProductLocalInput(request.slotStartTime));
+                    if (request?.slotEndTime)
+                      setScheduleEndAt(isoInstantToProductLocalInput(request.slotEndTime));
                   }}
                 >
                   <option value="">No schedule change</option>
@@ -205,8 +305,7 @@ export function ConnectedEventEditScreen({
                     .filter((request) => request.status === 'approved')
                     .map((request) => (
                       <option key={request.id} value={request.id}>
-                        {request.partnerName || 'Venue'} ·{' '}
-                        {request.slotStartTime ?? 'Time unavailable'}
+                        {request.partnerName.trim() || 'Venue'} · {formatAcceptedSlot(request)}
                       </option>
                     ))}
                 </select>
@@ -214,8 +313,9 @@ export function ConnectedEventEditScreen({
               {slotRequestId ? (
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   <label className="grid gap-2 text-sm">
-                    Event start (ISO 8601 UTC)
+                    Event start (IST)
                     <input
+                      type="datetime-local"
                       className="rounded-xl border border-white/20 bg-black px-4 py-3 text-white"
                       value={scheduleStartAt}
                       onChange={(change) => {
@@ -224,8 +324,9 @@ export function ConnectedEventEditScreen({
                     />
                   </label>
                   <label className="grid gap-2 text-sm">
-                    Event end (ISO 8601 UTC)
+                    Event end (IST)
                     <input
+                      type="datetime-local"
                       className="rounded-xl border border-white/20 bg-black px-4 py-3 text-white"
                       value={scheduleEndAt}
                       onChange={(change) => {
@@ -241,6 +342,82 @@ export function ConnectedEventEditScreen({
                 </p>
               ) : null}
             </div>
+          ) : null}
+          {studio === 'host' ? (
+            <section
+              aria-labelledby="event-ticket-limits-title"
+              className="mt-5 rounded-xl border border-white/10 p-4"
+            >
+              <h2 id="event-ticket-limits-title" className="font-semibold">
+                Ticket purchase limits
+              </h2>
+              <p className="mt-1 text-sm text-stone-400">
+                Limits apply per order. Free RSVP is limited to 1; paid tickets can be limited to
+                10.
+              </p>
+              <div className="mt-4 grid gap-3">
+                {tiers.map((tier) => {
+                  const value =
+                    tierLimitInputs[tier.id] ??
+                    String(tier.maxPerOrder ?? (tier.accessType === 'RSVP' ? 1 : 10));
+                  const parsedValue = Number(value);
+                  const valid =
+                    Number.isInteger(parsedValue) && parsedValue >= 1 && parsedValue <= 10;
+                  const changed = valid && tier.maxPerOrder !== parsedValue;
+                  return (
+                    <div
+                      key={tier.id}
+                      className="grid gap-3 rounded-lg border border-white/10 p-3 sm:grid-cols-[1fr_auto_auto] sm:items-end"
+                    >
+                      <div>
+                        <div className="font-medium">{tier.name}</div>
+                        <div className="text-sm text-stone-400">
+                          {tier.accessType === 'RSVP'
+                            ? 'Free RSVP'
+                            : `₹${(tier.priceInPaise / 100).toLocaleString('en-IN')} paid ticket`}
+                        </div>
+                      </div>
+                      <label className="grid gap-1 text-sm">
+                        Maximum per order
+                        <input
+                          aria-label={`${tier.name} maximum per order`}
+                          type="number"
+                          min="1"
+                          max="10"
+                          step="1"
+                          value={value}
+                          disabled={tier.accessType === 'RSVP'}
+                          onChange={(change) => {
+                            setTierLimitInputs((current) => ({
+                              ...current,
+                              [tier.id]: change.target.value,
+                            }));
+                            setTierLimitErrors((current) => ({ ...current, [tier.id]: '' }));
+                          }}
+                          className="rounded-lg border border-white/20 bg-black px-3 py-2 text-white disabled:opacity-70"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        disabled={savingTierId !== null || !valid || !changed}
+                        onClick={() => void saveTierLimit(tier)}
+                        className="rounded-lg border border-white/20 px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {savingTierId === tier.id ? 'Saving…' : changed ? 'Save limit' : 'Saved'}
+                      </button>
+                      {tierLimitErrors[tier.id] ? (
+                        <p role="alert" className="text-sm text-red-300 sm:col-span-3">
+                          {tierLimitErrors[tier.id]}
+                        </p>
+                      ) : null}
+                    </div>
+                  );
+                })}
+                {!tiers.length ? (
+                  <p className="text-sm text-stone-400">No ticket tiers found.</p>
+                ) : null}
+              </div>
+            </section>
           ) : null}
           <form className="mt-7 grid gap-5" onSubmit={(form) => void submit(form)}>
             <div className="grid gap-2">
@@ -261,37 +438,43 @@ export function ConnectedEventEditScreen({
             <fieldset className="grid gap-4 rounded-xl border border-white/10 p-4">
               <legend className="px-2 text-sm font-semibold">Entry information</legend>
               <p className="m-0 text-sm leading-5 text-stone-400">
-                These facts are shown to Guests. Times must be ISO 8601 UTC instants ending in Z;
-                leave a field unspecified when the Venue has not confirmed it.
+                These facts are shown to Guests. Enter times in IST; leave a field unspecified when
+                the Venue has not confirmed it.
               </p>
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="grid gap-2 text-sm">
-                  Doors open (UTC ISO 8601)
+                  Doors open (IST)
                   <input
+                    type="datetime-local"
                     className="rounded-xl border border-white/20 bg-black px-4 py-3 text-white"
-                    placeholder="2026-11-01T18:00:00.000Z"
-                    value={draft.entryRules.doorsOpenAt ?? ''}
+                    value={isoInstantToProductLocalInput(draft.entryRules.doorsOpenAt ?? '')}
                     onChange={(change) => {
+                      const value = change.target.value
+                        ? productLocalInputToIsoInstant(change.target.value)
+                        : null;
                       update({
                         entryRules: {
                           ...draft.entryRules,
-                          doorsOpenAt: change.target.value || null,
+                          doorsOpenAt: value,
                         },
                       });
                     }}
                   />
                 </label>
                 <label className="grid gap-2 text-sm">
-                  Last entry (UTC ISO 8601)
+                  Last entry (IST)
                   <input
+                    type="datetime-local"
                     className="rounded-xl border border-white/20 bg-black px-4 py-3 text-white"
-                    placeholder="2026-11-01T23:00:00.000Z"
-                    value={draft.entryRules.lastEntryAt ?? ''}
+                    value={isoInstantToProductLocalInput(draft.entryRules.lastEntryAt ?? '')}
                     onChange={(change) => {
+                      const value = change.target.value
+                        ? productLocalInputToIsoInstant(change.target.value)
+                        : null;
                       update({
                         entryRules: {
                           ...draft.entryRules,
-                          lastEntryAt: change.target.value || null,
+                          lastEntryAt: value,
                         },
                       });
                     }}

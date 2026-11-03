@@ -13,6 +13,7 @@ import {
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 import { apiClient } from '@/lib/api/client';
 import { describeApiError } from '@/lib/api/describe-error';
+import { formatProductDateTime, productLocalInputToIsoInstant } from '@/lib/events/event-time';
 
 import type { EventCoverPolicyHistoryDto } from '@c1rcle/contracts';
 
@@ -21,7 +22,6 @@ const inputClass = 'rounded-lg border border-white/20 bg-neutral-900 p-3 text-st
 export function ConnectedEventCoverPolicyScreen({
   studio,
   eventId,
-  eventTitle,
   organizationId,
   eventOrganizationId,
   initialHistory,
@@ -38,8 +38,8 @@ export function ConnectedEventCoverPolicyScreen({
   const [policyVersion, setPolicyVersion] = useState('cover-v1');
   const [coverAmount, setCoverAmount] = useState('1500.00');
   const [minimumSpend, setMinimumSpend] = useState('500.00');
-  const [opensAt, setOpensAt] = useState('');
-  const [closesAt, setClosesAt] = useState('');
+  const [opensAtLocal, setOpensAtLocal] = useState('');
+  const [closesAtLocal, setClosesAtLocal] = useState('');
   const [eligibleCategories, setEligibleCategories] = useState('food');
   const [excludedCategories, setExcludedCategories] = useState('alcohol');
   const [alcoholRule, setAlcoholRule] = useState<
@@ -75,6 +75,9 @@ export function ConnectedEventCoverPolicyScreen({
           throw new Error('Use an amount with up to two decimals.');
         return Math.round(Number(value) * 100);
       };
+      const opensAt = productLocalInputToIsoInstant(opensAtLocal);
+      const closesAt = productLocalInputToIsoInstant(closesAtLocal);
+      if (!opensAt || !closesAt) throw new Error('Enter valid redemption times in IST.');
       const body = proposeEventCoverPolicySchema.parse({
         policyVersion,
         terms: {
@@ -147,21 +150,10 @@ export function ConnectedEventCoverPolicyScreen({
   return (
     <PageContainer>
       <main className="mx-auto max-w-5xl py-7 text-stone-100">
-        <Link
-          href={`/partner/${studio}/events/${encodeURIComponent(eventId)}`}
-          className="text-sm text-stone-400"
-        >
-          ← {eventTitle}
-        </Link>
-        <h1 className="mt-5 text-3xl font-bold">Event cover policy</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-400">
-          Proposals preserve the exact terms each organization reviews. A saved proposal is not
-          legal, merchant, tax, or accounting approval. Cover checkout, balances, and redemption
-          remain unavailable until those approvals and operational controls exist.
-        </p>
+        <h1 className="text-2xl font-bold">Cover policy</h1>
         <section
           aria-label="Cover activation status"
-          className="mt-6 rounded-xl border border-amber-300/25 bg-amber-950/20 p-4 text-sm text-amber-100"
+          className="mt-3 rounded-xl border border-amber-300/25 bg-amber-950/20 p-3 text-sm text-amber-100"
         >
           Cover activation is blocked.{' '}
           {acceptanceEnabled
@@ -179,11 +171,11 @@ export function ConnectedEventCoverPolicyScreen({
         ) : null}
 
         {canPropose ? (
-          <section className="mt-7 rounded-2xl border border-white/15 bg-neutral-950 p-5">
+          <section className="mt-4 rounded-2xl border border-white/15 bg-neutral-950 p-5">
             <h2 className="text-lg font-semibold">Propose versioned terms</h2>
             <p className="mt-2 text-xs text-stone-400">
-              Redemption times must be ISO 8601 UTC instants ending in Z. Categories are
-              comma-separated labels. This form does not activate a product.
+              Enter redemption times in IST. Categories are comma-separated labels. This form does
+              not activate a product.
             </p>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <label className="grid gap-2 text-sm">
@@ -220,24 +212,24 @@ export function ConnectedEventCoverPolicyScreen({
                 />
               </label>
               <label className="grid gap-2 text-sm">
-                Redemption opens (ISO 8601 UTC)
+                Redemption opens (IST)
                 <input
+                  type="datetime-local"
                   className={inputClass}
-                  placeholder="2026-11-01T18:00:00.000Z"
-                  value={opensAt}
+                  value={opensAtLocal}
                   onChange={(e) => {
-                    setOpensAt(e.target.value);
+                    setOpensAtLocal(e.target.value);
                   }}
                 />
               </label>
               <label className="grid gap-2 text-sm">
-                Redemption closes (ISO 8601 UTC)
+                Redemption closes (IST)
                 <input
+                  type="datetime-local"
                   className={inputClass}
-                  placeholder="2026-11-02T02:00:00.000Z"
-                  value={closesAt}
+                  value={closesAtLocal}
                   onChange={(e) => {
-                    setClosesAt(e.target.value);
+                    setClosesAtLocal(e.target.value);
                   }}
                 />
               </label>
@@ -313,7 +305,7 @@ export function ConnectedEventCoverPolicyScreen({
             </div>
             <button
               type="button"
-              disabled={busy || !policyVersion.trim() || !opensAt || !closesAt}
+              disabled={busy || !policyVersion.trim() || !opensAtLocal || !closesAtLocal}
               onClick={() => void propose()}
               className="mt-5 rounded-full bg-orange-500 px-5 py-3 text-sm font-bold text-black disabled:opacity-50"
             >
@@ -362,7 +354,7 @@ export function ConnectedEventCoverPolicyScreen({
                     {proposal.termsDigest.slice(0, 12)}…
                   </p>
                   <p className="mt-1 text-xs text-stone-500">
-                    Proposed {new Date(proposal.createdAt).toLocaleString()} · exact terms remain
+                    Proposed {formatProductDateTime(proposal.createdAt)} · exact terms remain
                     versioned
                   </p>
                   <details className="mt-3 text-sm text-stone-300">

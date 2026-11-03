@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 
 import { ConnectedEventPromoterManagement } from './ConnectedEventPromoterManagement';
@@ -13,9 +11,7 @@ import type {
 } from '@c1rcle/contracts';
 
 export function ConnectedEventPromotersScreen({
-  studio,
   eventId,
-  eventTitle,
   links,
   assignments,
   connections,
@@ -34,12 +30,6 @@ export function ConnectedEventPromotersScreen({
   return (
     <PageContainer>
       <main className="mx-auto max-w-5xl py-7 text-stone-100">
-        <Link
-          href={`/partner/${studio}/events/${encodeURIComponent(eventId)}`}
-          className="text-sm text-stone-400"
-        >
-          ← {eventTitle}
-        </Link>
         <ConnectedEventPromoterManagement
           eventId={eventId}
           links={links}

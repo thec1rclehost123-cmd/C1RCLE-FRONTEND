@@ -1,13 +1,8 @@
-import Link from 'next/link';
-
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 
 import type { DoorGuest } from '@c1rcle/contracts';
 
 export function ConnectedEventGuestsScreen({
-  studio,
-  eventId,
-  eventTitle,
   guests,
   truncated,
 }: {
@@ -20,29 +15,22 @@ export function ConnectedEventGuestsScreen({
   return (
     <PageContainer>
       <main className="mx-auto max-w-5xl py-7 text-stone-100">
-        <Link
-          href={`/partner/${studio}/events/${encodeURIComponent(eventId)}`}
-          className="text-sm text-stone-400"
-        >
-          ← {eventTitle}
-        </Link>
         <section className="mt-6 rounded-2xl border border-white/15 bg-neutral-950 p-7">
-          <h1 className="text-3xl font-bold">Attendees</h1>
-          <p className="mt-2 text-stone-400">
-            {truncated
-              ? `Showing ${String(guests.length)} matching records; more may exist.`
-              : `${String(guests.length)} issued guest record${guests.length === 1 ? '' : 's'}`}
-          </p>
+          <header className="flex flex-wrap items-baseline justify-between gap-2">
+            <h1 className="text-2xl font-bold">Attendees</h1>
+            <span className="text-sm text-stone-400">
+              {guests.length.toLocaleString('en-IN')} records
+            </span>
+          </header>
           {truncated ? (
             <p role="status" className="mt-2 text-sm text-amber-200">
-              This roster is incomplete. A missing name here does not mean the ticket was not
-              issued.
+              Roster is incomplete; a missing name may still have an issued ticket.
             </p>
           ) : null}
           {guests.length === 0 ? (
             <p className="mt-8 text-stone-400">No attendees are recorded for this event.</p>
           ) : (
-            <div className="mt-8 overflow-x-auto">
+            <div className="mt-4 overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-white/15 text-stone-400">
                   <tr>

@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 
 import { paginatedSchema } from '@c1rcle/api-client';
 import {
+  PRODUCT_TIME_ZONE,
   eventDtoSchema,
   promoterAssignedEventDtoSchema,
   promoterAssignmentDtoSchema,
@@ -11,10 +12,35 @@ import {
 } from '@c1rcle/contracts';
 
 import { createServerApiClient } from '@/lib/api/server-client';
+import { formatProductDateTime } from '@/lib/events/event-time';
 import { getActiveOrgIdFromCookieHeader } from '@/lib/org/active-org-cookie';
 
-import type { PromoterEventsData } from '@/data/partner-data-source';
+import type { PartnerEventStatus, PromoterEventsData } from '@/data/partner-data-source';
 import type { ServerApiClient } from '@/lib/api/server-client';
+
+function partnerEventStatus(status: string): PartnerEventStatus {
+  switch (status) {
+    case 'published':
+    case 'started':
+      return 'Live';
+    case 'draft':
+      return 'Draft';
+    case 'review':
+      return 'Review';
+    case 'scheduled':
+      return 'Scheduled';
+    case 'sales_paused':
+      return 'Paused';
+    case 'ended':
+      return 'Past';
+    case 'archived':
+      return 'Archived';
+    case 'cancelled':
+      return 'Cancelled';
+    default:
+      return 'Draft';
+  }
+}
 
 export async function loadPromoterEvents(
   options: {
@@ -68,6 +94,8 @@ export async function loadPromoterEvents(
     ...(assignment.terms.tierRates ? { tierRates: assignment.terms.tierRates } : {}),
     startsAt: assignment.startsAt,
     expiresAt: assignment.expiresAt,
+    eventDateTime: formatProductDateTime(event.startAt),
+    eventStatus: partnerEventStatus(event.status),
     name: event.title,
     venue: event.venueId ? 'Venue details unavailable' : 'Venue not specified',
     city: '',
@@ -95,6 +123,8 @@ export async function loadPromoterEvents(
         ...(assignment.terms.tierRates ? { tierRates: assignment.terms.tierRates } : {}),
         startsAt: assignment.startsAt,
         expiresAt: assignment.expiresAt,
+        eventDateTime: formatProductDateTime(event.startAt),
+        eventStatus: partnerEventStatus(event.status),
         name: event.title,
         venue: event.venueId ? 'Venue details unavailable' : 'Venue not specified',
         city: '',
@@ -115,13 +145,16 @@ export async function loadPromoterEvents(
       venue: event.venueId ? 'Venue details unavailable' : 'Venue not specified',
       city: '',
       dateLabel: new Intl.DateTimeFormat('en-IN', {
-        timeZone: 'Asia/Kolkata',
+        timeZone: PRODUCT_TIME_ZONE,
         dateStyle: 'medium',
       }).format(date),
       timeLabel: new Intl.DateTimeFormat('en-IN', {
-        timeZone: 'Asia/Kolkata',
+        timeZone: PRODUCT_TIME_ZONE,
         timeStyle: 'short',
       }).format(date),
+      summary: event.summary,
+      description: event.description,
+      eventStatus: partnerEventStatus(event.status),
       accessState: 'public' as const,
       artwork: event.imageUrl
         ? { type: 'image' as const, value: event.imageUrl, alt: event.title }

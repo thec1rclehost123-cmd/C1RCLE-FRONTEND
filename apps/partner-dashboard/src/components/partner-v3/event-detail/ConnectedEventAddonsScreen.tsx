@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 
 import { createTicketAddonSchema, ticketAddonDtoSchema } from '@c1rcle/contracts';
@@ -13,9 +12,7 @@ import type { TicketAddonDto } from '@c1rcle/contracts';
 import type { SyntheticEvent } from 'react';
 
 export function ConnectedEventAddonsScreen({
-  studio,
   eventId,
-  eventTitle,
   organizationId,
   initialAddons,
 }: {
@@ -75,19 +72,9 @@ export function ConnectedEventAddonsScreen({
   return (
     <PageContainer>
       <main className="mx-auto max-w-5xl py-7 text-stone-100">
-        <Link
-          href={`/partner/${studio}/events/${encodeURIComponent(eventId)}`}
-          className="text-sm text-stone-400"
-        >
-          ← {eventTitle}
-        </Link>
-        <h1 className="mt-5 text-3xl font-bold">Ticket extras</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-400">
-          Create optional parking, cloakroom, or merchandise products. Extras are priced and stock
-          checked during checkout, then attached to each admission ticket.
-        </p>
+        <h1 className="text-2xl font-bold">Ticket extras</h1>
 
-        <section className="mt-7 rounded-2xl border border-white/15 bg-neutral-950 p-5">
+        <section className="mt-4 rounded-2xl border border-white/15 bg-neutral-950 p-5">
           <h2 className="text-lg font-semibold">Add an extra</h2>
           <form
             onSubmit={(event) => void createAddon(event)}

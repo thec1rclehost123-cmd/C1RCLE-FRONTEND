@@ -191,7 +191,7 @@ export function PromoterEventsScreen({
                   key={event.id}
                   event={event}
                   href={eventHref(event.id)}
-                  interactive={data.dataStatus === 'fixture'}
+                  interactive
                 />
               ))}
             </section>
@@ -263,11 +263,11 @@ function DiscoverEventCard({
             ? 'Public listing'
             : 'Access Required'}
       </span>
+      <strong className={styles['promoterNamePlate']}>{event.name}</strong>
     </div>
   );
   const details = (
     <>
-      <div className={styles['promoterEventTitle']}>{event.name}</div>
       <div className={styles['promoterVenue']}>
         <LocationIcon size={12} aria-hidden="true" />
         {event.venue}
@@ -305,24 +305,12 @@ function DiscoverEventCard({
         ) : (
           <div className={styles['promoterEventLink']}>{details}</div>
         )}
-        {event.accessState === 'public' ? (
-          <p className={styles['promoterAction']}>
-            Promotion tools require a host-issued assignment.
-          </p>
-        ) : isPending ? (
-          <button
-            className={[styles['promoterAction'], styles['promoterActionPending']].join(' ')}
-            type="button"
-            disabled
-          >
-            <TimeIcon size={14} aria-hidden="true" />
-            Request Pending
-          </button>
-        ) : (
+        {interactive ? (
           <Link className={styles['promoterAction']} href={href}>
-            <ForwardIcon size={14} aria-hidden="true" />
-            Request Promotion Access
+            Explore event <ForwardIcon size={14} aria-hidden="true" />
           </Link>
+        ) : (
+          <span className={styles['promoterAction']}>Explore event</span>
         )}
       </div>
     </article>
@@ -340,7 +328,6 @@ function LinkedEventCard({
 }) {
   const details = (
     <>
-      <div className={styles['promoterEventTitle']}>{event.name}</div>
       <div className={styles['promoterVenue']}>
         <LocationIcon size={12} aria-hidden="true" />
         {event.venue}
@@ -352,11 +339,6 @@ function LinkedEventCard({
       </div>
       {event.commissionLabel ? (
         <div className={styles['promoterLinkedMeta']}>{event.commissionLabel}</div>
-      ) : null}
-      {event.assignmentStatus ? (
-        <div className={styles['promoterLinkedMeta']}>
-          {event.assignmentStatus === 'invited' ? 'Invitation pending' : event.assignmentStatus}
-        </div>
       ) : null}
     </>
   );
@@ -370,12 +352,38 @@ function LinkedEventCard({
         >
           <div className={styles['promoterPoster']}>
             <EventPoster artwork={event.artwork} sizes="(max-width: 700px) 100vw, 320px" />
+            <span
+              className={[
+                styles['promoterBadge'],
+                event.assignmentStatus === 'invited'
+                  ? styles['promoterBadgePending']
+                  : styles['promoterBadgeAccess'],
+              ].join(' ')}
+            >
+              {event.assignmentStatus === 'invited'
+                ? 'Invitation pending'
+                : (event.assignmentStatus ?? 'Assigned')}
+            </span>
+            <strong className={styles['promoterNamePlate']}>{event.name}</strong>
           </div>
         </Link>
       ) : (
         <div className={styles['promoterPosterLink']}>
           <div className={styles['promoterPoster']}>
             <EventPoster artwork={event.artwork} sizes="(max-width: 700px) 100vw, 320px" />
+            <span
+              className={[
+                styles['promoterBadge'],
+                event.assignmentStatus === 'invited'
+                  ? styles['promoterBadgePending']
+                  : styles['promoterBadgeAccess'],
+              ].join(' ')}
+            >
+              {event.assignmentStatus === 'invited'
+                ? 'Invitation pending'
+                : (event.assignmentStatus ?? 'Assigned')}
+            </span>
+            <strong className={styles['promoterNamePlate']}>{event.name}</strong>
           </div>
         </div>
       )}
@@ -386,6 +394,15 @@ function LinkedEventCard({
           </Link>
         ) : (
           <div className={styles['promoterLinkedCard']}>{details}</div>
+        )}
+        {interactive ? (
+          <Link className={styles['promoterLinkedAction']} href={href}>
+            Explore event <ForwardIcon size={14} aria-hidden="true" />
+          </Link>
+        ) : (
+          <span className={styles['promoterLinkedAction']}>
+            Explore event <ForwardIcon size={14} aria-hidden="true" />
+          </span>
         )}
       </div>
     </article>

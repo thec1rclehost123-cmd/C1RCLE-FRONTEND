@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 
 import { ConnectedPartnerEventScreen } from '@/components/partner-v3/event-detail/ConnectedPartnerEventScreen';
 import { PromoterAssignmentDetailsScreen } from '@/components/promoter/PromoterAssignmentDetailsScreen';
+import { PromoterPublicEventDetailsScreen } from '@/components/promoter/PromoterPublicEventDetailsScreen';
 import { loadPartnerEvent } from '@/lib/events/load-partner-event';
 import { loadPromoterEvents } from '@/lib/events/load-promoter-events';
 
@@ -18,8 +19,12 @@ export default async function StudioEventDetailPage({
     const assignment = [...data.linkedEvents, ...data.invitations].find(
       (item) => item.id === eventId,
     );
-    if (!assignment) notFound();
-    return <PromoterAssignmentDetailsScreen event={assignment} links={data.referralLinks} />;
+    if (assignment) {
+      return <PromoterAssignmentDetailsScreen event={assignment} links={data.referralLinks} />;
+    }
+    const publicEvent = data.discoverEvents.find((item) => item.id === eventId);
+    if (!publicEvent) notFound();
+    return <PromoterPublicEventDetailsScreen event={publicEvent} />;
   }
 
   if (studio !== 'venue' && studio !== 'host')
@@ -34,7 +39,7 @@ export default async function StudioEventDetailPage({
     <ConnectedPartnerEventScreen
       event={event}
       organizationId={event.organizationId}
-      studio={studio}
+      showEventHeader={false}
     />
   );
 }

@@ -21,9 +21,11 @@ export function EventCard({
 }) {
   return (
     <article className={styles['eventCard']}>
-      <div className={styles['cardPoster']}>
+      <div className={styles['cardPoster']} aria-hidden="true">
         <EventPoster artwork={event.artwork} sizes="(max-width: 700px) 100vw, 260px" />
         <div className={styles['posterShade']} aria-hidden="true" />
+      </div>
+      <div className={styles['eventCardContent']}>
         <div className={styles['cardStatus']}>
           <EventStatusBadge status={event.status} />
         </div>
@@ -36,30 +38,24 @@ export function EventCard({
           <strong>{event.name}</strong>
           <span>{event.venue}</span>
         </Link>
-      </div>
-      <Link className={styles['cardDetails']} href={href}>
-        <span className={styles['dateBlock']}>
-          <strong>{event.dayLabel}</strong>
-          <small>{event.monthLabel}</small>
-        </span>
-        <span className={styles['eventMeta']}>
-          <strong>{event.timeLabel.toLowerCase()}</strong>
-          {event.host !== 'Host details unavailable' ? (
-            <span>
-              <i>{event.hostInitials}</i>
-              {event.host}
-            </span>
-          ) : null}
-        </span>
-        <span className={styles['priceBlock']}>
-          <small>From</small>
-          <strong>{event.priceLabel}</strong>
-        </span>
-      </Link>
-      <div className={styles['exploreWrap']}>
-        <Link className={styles['exploreButton']} href={href}>
-          Explore event <ForwardIcon size={14} aria-hidden="true" />
-        </Link>
+        <div className={styles['cardDetails']}>
+          <span className={styles['dateTimeBlock']}>
+            <strong>
+              {event.dayLabel} {event.monthLabel}
+            </strong>
+            <span aria-hidden="true">·</span>
+            <time>{event.timeLabel}</time>
+          </span>
+          <span className={styles['priceBlock']}>
+            <small>From</small>
+            <strong>{event.priceLabel}</strong>
+          </span>
+        </div>
+        <div className={styles['exploreWrap']}>
+          <Link className={styles['exploreButton']} href={href}>
+            Explore event <ForwardIcon size={14} aria-hidden="true" />
+          </Link>
+        </div>
       </div>
     </article>
   );

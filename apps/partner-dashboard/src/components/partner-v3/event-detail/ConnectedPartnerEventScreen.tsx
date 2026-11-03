@@ -1,42 +1,15 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useRef, useState } from 'react';
 
-import { EventStatusBadge } from '@/components/partner-v3/events/EventStatusBadge';
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 import { useOverlayFocus } from '@/components/venue/useOverlayFocus';
 import { describeApiError } from '@/lib/api/describe-error';
 import { cancelPartnerEvent } from '@/lib/events/venue-event-repository';
 
-import type { PartnerEventStatus } from '@/data/partner-data-source';
 import type { EventOperationsDto } from '@c1rcle/contracts';
 import type { SyntheticEvent } from 'react';
-
-const statusLabels: Record<EventOperationsDto['status'], PartnerEventStatus> = {
-  draft: 'Draft',
-  review: 'Review',
-  scheduled: 'Scheduled',
-  published: 'Live',
-  sales_paused: 'Paused',
-  started: 'Live',
-  ended: 'Past',
-  archived: 'Archived',
-  cancelled: 'Cancelled',
-};
-
-const eventViews = [
-  ['Edit details', 'edit'],
-  ['Analytics', 'analytics'],
-  ['Sales', 'sales'],
-  ['Attendees', 'guests'],
-  ['Waitlist', 'waitlist'],
-  ['Door scanner', 'door'],
-  ['Promoters', 'promoters'],
-  ['Access codes', 'access'],
-  ['Cover policy', 'cover'],
-] as const;
 
 const cancellableStatuses = new Set<EventOperationsDto['status']>([
   'draft',
@@ -49,11 +22,12 @@ const cancellableStatuses = new Set<EventOperationsDto['status']>([
 export function ConnectedPartnerEventScreen({
   event,
   organizationId,
-  studio,
+  showEventHeader = true,
 }: {
   readonly event: EventOperationsDto;
   readonly organizationId: string;
-  readonly studio: 'host' | 'venue';
+  readonly studio?: string;
+  readonly showEventHeader?: boolean;
 }) {
   const router = useRouter();
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -77,13 +51,6 @@ export function ConnectedPartnerEventScreen({
     restoreFocusRef: cancelTriggerRef,
     lockScroll: true,
   });
-  const when = new Intl.DateTimeFormat('en-IN', {
-    dateStyle: 'full',
-    timeStyle: 'short',
-    timeZone: 'Asia/Kolkata',
-  }).format(new Date(event.startAt));
-  const eventsHref = `/partner/${studio}/events`;
-
   const submitCancellation = async (form: SyntheticEvent<HTMLFormElement>) => {
     form.preventDefault();
     const reason = cancelReason.trim();
@@ -110,68 +77,54 @@ export function ConnectedPartnerEventScreen({
 
   return (
     <PageContainer>
-      <main className="mx-auto max-w-4xl py-7 text-stone-100">
-        <Link
-          href={eventsHref}
-          className="text-sm font-medium text-stone-400 no-underline hover:text-stone-100"
-        >
-          ← All events
-        </Link>
-        <section className="mt-6 rounded-2xl border border-white/15 bg-neutral-950 p-7">
-          <EventStatusBadge status={statusLabels[event.status]} />
-          <h1 className="mb-2 mt-4 text-3xl font-bold tracking-tight">{event.title}</h1>
-          <p className="text-stone-300">{when}</p>
-          {event.summary ? <p className="leading-7">{event.summary}</p> : null}
-          {event.description ? (
-            <p className="whitespace-pre-wrap leading-7">{event.description}</p>
+      <main className="mx-auto max-w-6xl py-7 text-stone-100">
+        <section className="mt-2 rounded-2xl border border-white/15 bg-neutral-950 p-7">
+          {showEventHeader ? <h1 className="text-2xl font-bold">{event.title}</h1> : null}
+          {showEventHeader ? (
+            <p className="mt-2 text-stone-300">
+              {event.venueName ?? (event.venueId ? 'Venue name unavailable' : 'Not specified')}
+            </p>
           ) : null}
-          <dl className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div>
-              <dt className="text-stone-400">Venue</dt>
-              <dd>
-                {event.venueName ?? (event.venueId ? 'Venue name unavailable' : 'Not specified')}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-stone-400">Tickets sold</dt>
-              <dd>
-                {event.salesCountComplete
-                  ? event.ticketsSold.toLocaleString('en-IN')
-                  : `At least ${event.ticketsSold.toLocaleString('en-IN')}`}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-stone-400">Room capacity</dt>
-              <dd>{event.capacity?.toLocaleString('en-IN') ?? 'Not set'}</dd>
-            </div>
-            <div>
-              <dt className="text-stone-400">Starting price</dt>
-              <dd>
-                {event.isFree
-                  ? 'Free'
-                  : event.startingPricePaise === null
-                    ? 'Not available'
-                    : new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(
-                        event.startingPricePaise / 100,
-                      )}
-              </dd>
-            </div>
-          </dl>
-          <p className="mt-6 text-sm text-stone-400">
-            Connected event views use the current event, finance, guest-roster, and referral-link
-            projections for this organization.
-          </p>
-          <nav aria-label="Event views" className="mt-5 flex flex-wrap gap-3">
-            {eventViews.map(([label, segment]) => (
-              <Link
-                key={segment}
-                href={`/partner/${studio}/events/${encodeURIComponent(event.id)}/${segment}`}
-                className="rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-stone-100 hover:border-white/50 hover:text-white"
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
+          <h2 className="mt-5 text-xl font-bold">Event overview</h2>
+          {event.summary ? <p className="mt-3 leading-7">{event.summary}</p> : null}
+          {event.description && event.description !== event.summary ? (
+            <p className="mt-3 whitespace-pre-wrap leading-7">{event.description}</p>
+          ) : null}
+          {showEventHeader ? (
+            <dl className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <dt className="text-stone-400">Venue</dt>
+                <dd>
+                  {event.venueName ?? (event.venueId ? 'Venue name unavailable' : 'Not specified')}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-stone-400">Tickets sold</dt>
+                <dd>
+                  {event.salesCountComplete
+                    ? event.ticketsSold.toLocaleString('en-IN')
+                    : `At least ${event.ticketsSold.toLocaleString('en-IN')}`}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-stone-400">Room capacity</dt>
+                <dd>{event.capacity?.toLocaleString('en-IN') ?? 'Not set'}</dd>
+              </div>
+              <div>
+                <dt className="text-stone-400">Starting price</dt>
+                <dd>
+                  {event.isFree
+                    ? 'Free'
+                    : event.startingPricePaise === null
+                      ? 'Not available'
+                      : new Intl.NumberFormat('en-IN', {
+                          style: 'currency',
+                          currency: 'INR',
+                        }).format(event.startingPricePaise / 100)}
+                </dd>
+              </div>
+            </dl>
+          ) : null}
           {cancellableStatuses.has(event.status) ? (
             <div className="mt-5">
               <button
