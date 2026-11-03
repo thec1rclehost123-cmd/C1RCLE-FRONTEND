@@ -1,11 +1,7 @@
 import 'server-only';
 
 import { createApiClient } from '@c1rcle/api-client';
-import {
-  discoveryFeedDtoSchema,
-  publicTicketTierListResponseSchema,
-  venueDtoSchema,
-} from '@c1rcle/contracts';
+import { discoveryFeedDtoSchema, venueDtoSchema } from '@c1rcle/contracts';
 
 import { toExploreEvent } from './explore-mapping';
 
@@ -14,7 +10,7 @@ import type { VenueDto } from '@c1rcle/contracts';
 
 /** The discovery endpoint is intentionally bounded by the backend aggregate. */
 export async function loadExploreEvents(): Promise<ExploreEvent[]> {
-  const client = createApiClient({ maxRetries: 1, timeoutMs: 5_000 });
+  const client = createApiClient({ maxRetries: 0, timeoutMs: 4_000 });
   const feed = await client.get({
     path: '/api/v2/public/discovery',
     schema: discoveryFeedDtoSchema,
@@ -35,17 +31,11 @@ export async function loadExploreEvents(): Promise<ExploreEvent[]> {
         venuePromise = cached ?? loadVenue(event.venueId);
         venueCache.set(event.venueId, venuePromise);
       }
-      const [venue, tiers] = await Promise.all([
-        venuePromise,
-        client
-          .get({
-            path: `/api/v2/public/events/${encodeURIComponent(event.slug)}/tiers`,
-            schema: publicTicketTierListResponseSchema,
-          })
-          .then((result) => result.items)
-          .catch(() => null),
-      ]);
-      return toExploreEvent(event, venue, tiers);
+      const venue = await venuePromise;
+      // Discovery already carries the authoritative starting price. Inventory
+      // remains unknown on listing cards until the backend exposes it in the
+      // aggregate; fetching every event's tiers here creates an N+1 request fan-out.
+      return toExploreEvent(event, venue, null);
     }),
   );
 }

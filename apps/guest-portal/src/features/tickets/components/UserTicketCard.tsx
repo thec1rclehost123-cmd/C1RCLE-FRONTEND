@@ -98,7 +98,7 @@ export function UserTicketCard({
           </div>
           <div className="mt-2 flex items-center justify-between gap-2">
             <span className="rounded-full border border-white/15 px-2 py-1 text-[8px] font-bold uppercase tracking-[0.1em] text-white/60 sm:text-[9px]">
-              {isPast ? 'Past' : ticket.status.replace('_', ' ')}
+              {isPast && ticket.status === 'active' ? 'Past' : ticket.status.replace('_', ' ')}
             </span>
           </div>
 

@@ -17,6 +17,7 @@ import {
 
 import { usePromoterReferralContext } from '@/features/event-detail/components/PromoterClickTracker';
 import { getEventAccentClasses } from '@/features/event-detail/eventDetailPalette';
+import { EventArtworkFallback } from '@/features/explore/components/EventArtworkFallback';
 import { useTicketAccessGrantId } from '@/lib/access/use-ticket-access-grant-id';
 import { bffClient } from '@/lib/bff/bff-client';
 import { csrfHeaders } from '@/lib/bff/csrf';
@@ -84,6 +85,7 @@ function CheckoutFlowClientState({
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useSession();
+  const [failedPosterSource, setFailedPosterSource] = useState<string | null>(null);
   const requestedTier = initialTierId ?? searchParams.get('tier') ?? undefined;
   const upgradeFromEntitlementId = searchParams.get('upgradeFromEntitlementId') ?? undefined;
   const [unlockedTiers, setUnlockedTiers] = useState<BookingEventFixture['ticketTiers']>([]);
@@ -216,7 +218,7 @@ function CheckoutFlowClientState({
           ...(tier.coverAmountPaise === undefined
             ? {}
             : { coverAmountPaise: tier.coverAmountPaise }),
-          maximumQuantity: Math.min(10, tier.availableQuantity),
+          maximumQuantity: Math.min(tier.priceInPaise === 0 ? 1 : 10, tier.availableQuantity),
           ...(tier.guestCount === undefined ? {} : { guestCount: tier.guestCount }),
           ...(tier.admissionMode === undefined ? {} : { admissionMode: tier.admissionMode }),
           ...(tier.audienceType === undefined ? {} : { audienceType: tier.audienceType }),
@@ -616,14 +618,21 @@ function CheckoutFlowClientState({
           </h1>
           <div className="flex items-start gap-4 lg:block">
             <div className="relative aspect-[0.72/1] w-[100px] shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black sm:w-[138px] lg:mx-auto lg:mt-7 lg:w-full lg:max-w-[230px]">
-              <Image
-                src={event.image}
-                alt={`${event.title} event poster`}
-                fill
-                unoptimized
-                sizes="(max-width: 640px) 96px, 250px"
-                className="object-cover"
-              />
+              {event.image === '/c1rcle-logo.webp' || failedPosterSource === event.image ? (
+                <EventArtworkFallback startsAt={event.startsAt} category={event.category} hero />
+              ) : (
+                <Image
+                  src={event.image}
+                  alt={`${event.title} event poster`}
+                  fill
+                  unoptimized
+                  sizes="(max-width: 640px) 96px, 250px"
+                  onError={() => {
+                    setFailedPosterSource(event.image);
+                  }}
+                  className="object-cover"
+                />
+              )}
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
             </div>
             <div className="min-w-0 flex-1 lg:mt-7 lg:text-center">

@@ -7,6 +7,7 @@ import { AppShell } from '@/components/app-shell';
 import { SessionProvider } from '@/components/providers/session-provider';
 import { getMetadataBase, publicRobots } from '@/lib/seo/metadata';
 
+import { eventTitleFontVariables } from './event-title-fonts';
 import './globals.css';
 
 import type { Metadata, Viewport } from 'next';
@@ -37,7 +38,7 @@ export default async function RootLayout({ children }: { readonly children: Reac
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.className} ${inter.variable} min-h-dvh bg-black text-white antialiased`}
+        className={`${inter.className} ${inter.variable} ${eventTitleFontVariables} min-h-dvh bg-black text-white antialiased`}
       >
         <a
           href="#main"

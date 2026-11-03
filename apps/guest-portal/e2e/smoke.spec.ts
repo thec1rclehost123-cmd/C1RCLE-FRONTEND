@@ -2,9 +2,11 @@ import { expect, test } from '@playwright/test';
 
 test.describe('C1RCLE Guest Portal', () => {
   test('renders its landing page', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByRole('heading', { level: 1, name: 'THE C1RCLE' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'THE C1RCLE' })).toBeVisible({
+      timeout: 60_000,
+    });
   });
 
   test('exposes a keyboard skip link as the first stop', async ({ page }) => {

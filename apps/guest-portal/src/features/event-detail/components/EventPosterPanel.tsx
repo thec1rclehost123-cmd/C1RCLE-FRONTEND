@@ -1,4 +1,7 @@
+'use client';
+
 import Image from 'next/image';
+import { useState } from 'react';
 
 import { EventArtworkFallback } from '@/features/explore/components/EventArtworkFallback';
 
@@ -11,13 +14,14 @@ const posterDateFormatter = new Intl.DateTimeFormat('en-IN', {
 });
 
 export function EventPosterPanel({ event }: { event: EventDetailFixture }) {
+  const [failedSource, setFailedSource] = useState<string | null>(null);
   return (
     <section
       aria-label="Event poster"
       className="mx-auto w-full max-w-[300px] overflow-hidden rounded-2xl bg-transparent shadow-[0_18px_52px_rgba(0,0,0,0.42)] md:max-w-[320px] lg:max-w-[340px]"
     >
       <div className="relative aspect-[4/5] max-h-[62svh] overflow-hidden bg-black/30 sm:max-h-[72vh]">
-        {event.image === '/c1rcle-logo.webp' ? (
+        {event.image === '/c1rcle-logo.webp' || failedSource === event.image ? (
           <EventArtworkFallback startsAt={event.startsAt} category={event.category} hero />
         ) : (
           <Image
@@ -26,6 +30,9 @@ export function EventPosterPanel({ event }: { event: EventDetailFixture }) {
             fill
             unoptimized
             preload
+            onError={() => {
+              setFailedSource(event.image);
+            }}
             sizes="(max-width: 1024px) 100vw, 420px"
             className="object-cover brightness-[1.08] contrast-[1.03] saturate-[1.1]"
           />

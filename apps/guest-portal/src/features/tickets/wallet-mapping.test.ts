@@ -216,8 +216,9 @@ describe('toTicketWalletData', () => {
     const wallet = await toTicketWalletData([BASE_ENTITLEMENT], resolveFor({}), NOW);
 
     expect(wallet.upcomingTickets).toHaveLength(0);
-    expect(wallet.pastTickets).toHaveLength(1);
-    expect(wallet.pastTickets[0]).toMatchObject({
+    expect(wallet.pastTickets).toHaveLength(0);
+    expect(wallet.unavailableTickets).toHaveLength(1);
+    expect(wallet.unavailableTickets?.[0]).toMatchObject({
       status: 'unavailable',
       eventTitle: 'Event details unavailable',
     });

@@ -36,7 +36,9 @@ export function toExploreEvent(
         ? 'sold-out'
         : 'available';
   const minimumPrice =
-    tiers && tiers.length > 0 ? Math.min(...tiers.map((tier) => tier.priceInPaise)) : null;
+    tiers && tiers.length > 0
+      ? Math.min(...tiers.map((tier) => tier.priceInPaise))
+      : event.startingPricePaise;
   return {
     id: event.id,
     slug: event.slug,

@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { bffClient } from '@/lib/bff/bff-client';
+
 import { CheckoutView } from './CheckoutView';
 
 import type { PaidCheckoutDeps } from '../payment/paid-checkout';
@@ -109,11 +111,40 @@ beforeEach(() => {
   mocks.pollPaymentRecovery.mockReset().mockResolvedValue(null);
   mocks.clearPaymentRecovery.mockReset().mockResolvedValue(undefined);
   mocks.searchParams = '';
+  window.location.hash = '';
   window.sessionStorage.clear();
   mocks.deps = deps();
 });
 
 describe('paid checkout step', () => {
+  it('removes a failed checkout poster without losing ticket selection', () => {
+    render(<CheckoutView event={LIVE_EVENT} />);
+    fireEvent.error(screen.getByRole('img', { name: 'Sky Night event poster' }));
+    expect(screen.queryByRole('img', { name: 'Sky Night event poster' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^General/ })).toBeInTheDocument();
+  });
+
+  it('caps an unlocked free tier at one RSVP', async () => {
+    window.location.hash = '#accessGrantId=grant_test';
+    mocks.searchParams = 'tier=private_free';
+    vi.mocked(bffClient.get).mockResolvedValue({
+      items: [
+        {
+          id: 'private_free',
+          eventId: 'evt_1',
+          name: 'Private free',
+          description: '',
+          priceInPaise: 0,
+          currency: 'INR',
+          availableQuantity: 20,
+        },
+      ],
+    });
+    render(<CheckoutView event={{ ...LIVE_EVENT, ticketTiers: [] }} />);
+    expect(
+      await screen.findByRole('button', { name: 'Increase Private free count' }),
+    ).toBeDisabled();
+  });
   it('quotes and holds server-catalog add-ons as per-entitlement selections', async () => {
     mocks.fetchQuote.mockResolvedValueOnce(quote(148_000));
     mocks.deps = deps({

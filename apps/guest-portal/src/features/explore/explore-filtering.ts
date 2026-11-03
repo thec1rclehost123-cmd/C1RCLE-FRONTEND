@@ -12,11 +12,15 @@ function dayKey(value: Date): string {
 function isUpcomingWeekend(startsAt: string, now: Date): boolean {
   const event = new Date(startsAt);
   if (Number.isNaN(event.getTime())) return false;
-  const currentDay = now.getUTCDay();
-  const daysUntilSaturday = (6 - currentDay + 7) % 7;
-  const saturday = new Date(now);
-  saturday.setUTCDate(now.getUTCDate() + daysUntilSaturday);
+  // Use the product timezone's calendar boundaries, independent of the device.
+  const istOffsetMs = 330 * 60_000;
+  const istNow = new Date(now.getTime() + istOffsetMs);
+  const currentDay = istNow.getUTCDay();
+  const daysUntilSaturday = currentDay === 0 ? -1 : (6 - currentDay + 7) % 7;
+  const saturday = new Date(istNow);
+  saturday.setUTCDate(istNow.getUTCDate() + daysUntilSaturday);
   saturday.setUTCHours(0, 0, 0, 0);
+  saturday.setTime(saturday.getTime() - istOffsetMs);
   const monday = new Date(saturday);
   monday.setUTCDate(saturday.getUTCDate() + 2);
   return event >= saturday && event < monday;

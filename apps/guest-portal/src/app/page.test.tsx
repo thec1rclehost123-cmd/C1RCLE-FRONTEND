@@ -1,9 +1,7 @@
-import { act, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import HomePage, { revalidate } from '@/app/page';
-import { HomeBackgroundVideoClient } from '@/features/home/components/HomeBackgroundVideoClient';
-import { homeFixture } from '@/features/home/fixtures/home.fixture';
 
 import type { ExploreEvent } from '@/features/explore/types/explore.types';
 
@@ -50,8 +48,6 @@ const EVENT: ExploreEvent = {
 };
 
 afterEach(() => {
-  vi.useRealTimers();
-  vi.unstubAllGlobals();
   discovery.events = [];
   discovery.error = false;
 });
@@ -61,7 +57,7 @@ describe('Home Page', () => {
     expect(revalidate).toBe(0);
   });
 
-  it('opens with the video hero and connected discovery rail', async () => {
+  it('opens with a poster-first hero and connected discovery rail', async () => {
     discovery.events = [EVENT];
     render(await HomePage());
 
@@ -146,55 +142,5 @@ describe('Home Page', () => {
     expect(
       screen.queryByRole('heading', { name: 'Nothing published yet' }),
     ).not.toBeInTheDocument();
-  });
-
-  it('keeps the background static when reduced motion is requested', () => {
-    vi.stubGlobal(
-      'matchMedia',
-      vi.fn().mockReturnValue({
-        matches: true,
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-      }),
-    );
-
-    render(
-      <HomeBackgroundVideoClient
-        desktopSrc={homeFixture.hero.desktopVideoSrc}
-        mobileSrc={homeFixture.hero.mobileVideoSrc}
-      />,
-    );
-
-    expect(screen.queryByTestId('home-background-video')).not.toBeInTheDocument();
-  });
-
-  it('loads the responsive background video after the initial poster paint', () => {
-    vi.useFakeTimers();
-    vi.stubGlobal(
-      'matchMedia',
-      vi.fn().mockReturnValue({
-        matches: false,
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-      }),
-    );
-
-    render(
-      <HomeBackgroundVideoClient
-        desktopSrc={homeFixture.hero.desktopVideoSrc}
-        mobileSrc={homeFixture.hero.mobileVideoSrc}
-      />,
-    );
-
-    expect(screen.queryByTestId('home-background-video')).not.toBeInTheDocument();
-    act(() => {
-      vi.advanceTimersByTime(1200);
-    });
-
-    const video = screen.getByTestId('home-background-video');
-    const sources = video.querySelectorAll('source');
-    expect(video).toHaveAttribute('preload', 'none');
-    expect(sources[0]).toHaveAttribute('src', homeFixture.hero.mobileVideoSrc);
-    expect(sources[1]).toHaveAttribute('src', homeFixture.hero.desktopVideoSrc);
   });
 });

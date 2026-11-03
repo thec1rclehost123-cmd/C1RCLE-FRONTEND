@@ -73,6 +73,28 @@ describe('filterExploreEvents', () => {
     ).toEqual(EVENTS);
   });
 
+  it('uses IST midnight boundaries for weekend events', () => {
+    const saturdayInIndia = { ...EVENTS[0]!, startsAt: '2026-10-16T18:45:00.000Z' };
+    const mondayInIndia = { ...EVENTS[1]!, startsAt: '2026-10-18T19:00:00.000Z' };
+    expect(
+      filterExploreEvents(
+        [saturdayInIndia, mondayInIndia],
+        { ...BASE_FILTERS, date: 'weekend' },
+        new Date('2026-10-16T06:30:00Z'),
+      ),
+    ).toEqual([saturdayInIndia]);
+  });
+
+  it('keeps the current Sunday in This weekend', () => {
+    expect(
+      filterExploreEvents(
+        [EVENTS[1]!],
+        { ...BASE_FILTERS, date: 'weekend' },
+        new Date('2026-10-18T00:30:00Z'),
+      ),
+    ).toEqual([EVENTS[1]]);
+  });
+
   it('sorts by soonest, newest, and lowest price without claiming trending data', () => {
     expect(
       filterExploreEvents(EVENTS, { ...BASE_FILTERS, sort: 'soonest' }).map(({ id }) => id),

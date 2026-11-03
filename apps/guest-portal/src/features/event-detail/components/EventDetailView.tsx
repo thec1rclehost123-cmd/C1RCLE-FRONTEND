@@ -167,7 +167,10 @@ export function EventDetailView({
             <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#ff7658]">
               {event.category} <span className="px-1 text-white/30">/</span> {event.city}
             </p>
-            <h1 className="mt-3 max-w-[18ch] break-words text-3xl font-black leading-[1.02] tracking-[-0.05em] sm:text-4xl lg:text-[clamp(2.75rem,4vw,4.5rem)]">
+            <h1
+              data-title-font={event.media?.titleFont ?? 'classic'}
+              className="mt-3 max-w-[18ch] break-words text-3xl font-black leading-[1.02] tracking-[-0.05em] sm:text-4xl lg:text-[clamp(2.75rem,4vw,4.5rem)]"
+            >
               {event.title}
             </h1>
             <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 pr-2 pb-14 sm:flex sm:flex-wrap sm:gap-x-7 md:pb-0">
@@ -217,6 +220,84 @@ export function EventDetailView({
                 <p className="text-white/45">{event.doorNote}</p>
               </div>
             </section>
+
+            {event.media?.youtubeUrl ? (
+              <section className="border-t border-white/10 py-5">
+                <h2 className="text-lg font-bold">Video</h2>
+                <a
+                  href={event.media.youtubeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex text-sm font-semibold text-orange-400"
+                >
+                  Watch on YouTube ↗
+                </a>
+              </section>
+            ) : null}
+            {event.media?.gallery.length ? (
+              <section className="border-t border-white/10 py-5">
+                <h2 className="text-lg font-bold">Gallery</h2>
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {event.media.gallery.map((photo) => (
+                    <a key={photo.url} href={photo.url} target="_blank" rel="noopener noreferrer">
+                      <Image
+                        src={photo.url}
+                        alt={photo.alt}
+                        width={320}
+                        height={240}
+                        unoptimized
+                        className="aspect-[4/3] w-full rounded-xl object-cover"
+                      />
+                    </a>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+            {event.media?.spotlights.length ? (
+              <section className="border-t border-white/10 py-5">
+                <h2 className="text-lg font-bold">In the spotlight</h2>
+                <div className="mt-4 space-y-5">
+                  {event.media.spotlights.map((feature) => (
+                    <article key={feature.id} className="flex items-start gap-4">
+                      {feature.imageUrl ? (
+                        <Image
+                          src={feature.imageUrl}
+                          alt={feature.title}
+                          width={88}
+                          height={88}
+                          unoptimized
+                          className="size-[88px] shrink-0 rounded-xl object-cover"
+                        />
+                      ) : null}
+                      <div>
+                        <h3 className="font-bold">{feature.title}</h3>
+                        {feature.startTime ? (
+                          <p className="mt-1 text-xs text-white/60">
+                            {feature.startTime}
+                            {feature.endTime ? `–${feature.endTime}` : ''} IST
+                          </p>
+                        ) : null}
+                        {feature.description ? (
+                          <p className="mt-2 text-sm leading-6 text-white/70">
+                            {feature.description}
+                          </p>
+                        ) : null}
+                        {feature.link ? (
+                          <a
+                            href={feature.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 inline-flex text-sm text-orange-400"
+                          >
+                            View profile ↗
+                          </a>
+                        ) : null}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
             <section className="border-t border-white/10 py-5">
               <p className="text-[8px] font-black uppercase tracking-[0.22em] text-white/45">

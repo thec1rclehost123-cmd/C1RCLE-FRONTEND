@@ -273,7 +273,7 @@ describe('TicketsPage real wallet', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'View ticket details' }));
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
     // Tier shows on both the card and the open preview.
     expect(screen.getAllByText('General Admission')).toHaveLength(2);
     expect(

@@ -97,9 +97,16 @@ describe('toExploreEvent', () => {
   });
 
   it('keeps a missing price distinct from an explicitly free event', () => {
-    const event = toExploreEvent(EVENT, VENUE, null);
+    const event = toExploreEvent({ ...EVENT, startingPricePaise: null }, VENUE, null);
     expect(event.price).toBeNull();
     expect(event.isFree).toBe(false);
+  });
+
+  it('uses the discovery aggregate price without loading ticket tiers', () => {
+    expect(toExploreEvent(EVENT, VENUE, null).price).toEqual({
+      amountPaise: 99900,
+      currency: 'INR',
+    });
   });
 
   it('distinguishes sold out from unavailable inventory', () => {

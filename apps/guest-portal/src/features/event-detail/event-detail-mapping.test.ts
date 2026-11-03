@@ -49,6 +49,15 @@ const TIERS: PublicTicketTierDto[] = [
 ];
 
 describe('toEventDetailFixture', () => {
+  it('preserves saved event media for the guest event page', () => {
+    const media = {
+      youtubeUrl: 'https://youtu.be/abc123',
+      gallery: [{ url: 'https://example.test/image.jpg', alt: 'Gallery' }],
+      spotlights: [],
+    };
+    expect(toEventDetailFixture({ ...EVENT, media }, TIERS).media).toEqual(media);
+  });
+
   it('maps the public relationship projection and exact tier identity', () => {
     const mapped = toEventDetailFixture(EVENT, TIERS);
     expect(mapped).toMatchObject({

@@ -217,7 +217,7 @@ describe('runPaidCheckout', () => {
     });
 
     expect(await runPaidCheckout(d, input)).toEqual({ kind: 'processing', ticketsReady: true });
-    expect(d.waitForTickets).toHaveBeenCalledWith('evt_1');
+    expect(d.waitForTickets).toHaveBeenCalledWith('evt_1', 'hold_1');
   });
 
   it('never reports a failure once the buyer has paid, even if the tickets never appear', async () => {

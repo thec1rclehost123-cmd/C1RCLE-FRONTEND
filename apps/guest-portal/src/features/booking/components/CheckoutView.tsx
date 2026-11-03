@@ -38,7 +38,7 @@ export function CheckoutView({
       )}
 
       <div
-        className={`relative z-10 mx-auto h-full w-full ${onClose ? 'max-w-none' : 'max-w-[1360px]'}`}
+        className={`relative z-10 mx-auto h-full w-full ${onClose ? 'max-h-[calc(100dvh-1rem)] max-w-none overflow-y-auto sm:max-h-[min(90dvh,760px)]' : 'max-w-[1360px]'}`}
       >
         <Suspense fallback={<CheckoutFlowSkeleton />}>
           <CheckoutFlowClient event={event} initialTierId={initialTierId} eventSlug={eventSlug} />

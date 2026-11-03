@@ -2,7 +2,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 import { loadExploreEvents } from '@/features/explore/explore-data';
-import { HomeBackgroundVideoClient } from '@/features/home/components/HomeBackgroundVideoClient';
 import { HomeBrowseByVenue } from '@/features/home/components/HomeBrowseByVenue';
 import { HomeEventCategories } from '@/features/home/components/HomeEventCategories';
 import { HomeFeaturedEvents } from '@/features/home/components/HomeFeaturedEvents';
@@ -58,12 +57,6 @@ export default async function HomePage() {
             unoptimized
             sizes="100vw"
             className="size-full scale-[1.08] object-cover blur-[20px] brightness-[0.42] saturate-[1.12] sm:blur-[36px]"
-          />
-        </div>
-        <div className="absolute -inset-[6%] overflow-hidden opacity-30 blur-[16px] sm:blur-[30px]">
-          <HomeBackgroundVideoClient
-            desktopSrc={homeFixture.hero.ambientDesktopVideoSrc}
-            mobileSrc={homeFixture.hero.ambientMobileVideoSrc}
           />
         </div>
         <div className="absolute inset-0 bg-black/35" />

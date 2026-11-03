@@ -4,7 +4,6 @@ import { isApiClientError } from '@c1rcle/api-client';
 import {
   checkoutHoldResponseSchema,
   checkoutQuoteResponseSchema,
-  entitlementsListResponseSchema,
   paymentAttemptResponseSchema,
   paymentConfirmResponseSchema,
   paymentRecoveryResponseSchema,
@@ -94,18 +93,20 @@ export async function pollPaymentRecovery(
 }
 
 /**
- * After a payment whose redirect confirmation failed, Razorpay's webhook still
- * fulfils the order server-side. Poll the buyer's tickets (about 30 seconds)
- * until one for this event appears.
+ * After redirect confirmation fails, wait for this hold's authoritative
+ * fulfillment. A pre-existing ticket for the same event proves nothing about
+ * the current payment.
  */
-async function waitForTickets(eventId: string): Promise<boolean> {
+async function waitForTickets(eventId: string, holdId: string): Promise<boolean> {
   for (let attempt = 0; attempt < TICKET_POLL_ATTEMPTS; attempt += 1) {
     try {
-      const tickets = await bffClient.get({
-        path: '/api/wallet/tickets',
-        schema: entitlementsListResponseSchema,
+      const status = await bffClient.get({
+        path: '/api/payments/recovery',
+        schema: paymentRecoveryResponseSchema,
       });
-      if (tickets.items.some((ticket) => ticket.eventId === eventId)) return true;
+      if (status.holdId !== holdId || status.eventId !== eventId) return false;
+      if (status.status === 'fulfilled' && status.orderId !== null) return true;
+      if (status.status !== 'pending' && status.status !== 'processing') return false;
     } catch {
       // A transient failure is the same as "not yet": keep waiting.
     }

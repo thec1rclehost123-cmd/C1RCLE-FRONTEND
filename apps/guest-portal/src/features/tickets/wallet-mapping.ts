@@ -46,11 +46,10 @@ function toTicketStatus(
 
 /**
  * ─── Wallet → ticket cards ───────────────────────────────────────────────────
- * Groups a buyer's entitlements by order + tier (one card per tier bundle —
- * a 2-unit order renders one card with `ticketCount: 2`, not two cards) and
- * resolves each card's event display data through the caller-supplied
- * resolver (public event + venue reads). Entitlements whose event no longer
- * resolves are skipped, never invented.
+ * Renders each independently issued entitlement as its own admission card and
+ * resolves its event display data through the caller-supplied
+ * resolver (public event + venue reads). Missing event details are retained
+ * separately, without inferring that an active entitlement is past.
  *
  * Recency split: a card is past when it can no longer admit anyone
  * (`redeemed`/`void`) or its event has ended (`endAt ?? startAt` in the
@@ -83,6 +82,7 @@ export async function toTicketWalletData(
 
   const upcomingTickets: UserTicketItem[] = [];
   const pastTickets: UserTicketItem[] = [];
+  const unavailableTickets: UserTicketItem[] = [];
 
   const resolvedGroups: {
     group: EntitlementDto[];
@@ -113,7 +113,7 @@ export async function toTicketWalletData(
   for (const { group, first, details, order } of resolvedGroups) {
     if (!details) {
       const status = toTicketStatus(group, order);
-      pastTickets.push({
+      const ticket: UserTicketItem = {
         id: first.id,
         eventId: first.eventId,
         orderId: first.orderId,
@@ -137,7 +137,7 @@ export async function toTicketWalletData(
         tierName: first.tierName,
         isVip: /vip/i.test(first.tierName),
         ticketCount: 1,
-        status: order?.eventCancellation ? status : 'unavailable',
+        status: status === 'active' ? 'unavailable' : status,
         ...(first.ticketAddons?.length
           ? {
               ticketAddons: first.ticketAddons.map(({ id, name, kind, status }) => ({
@@ -149,7 +149,8 @@ export async function toTicketWalletData(
             }
           : {}),
         ...coverSummary(eventCoversByEntitlement.get(first.id)),
-      });
+      };
+      (status === 'active' ? unavailableTickets : pastTickets).push(ticket);
       continue;
     }
 
@@ -204,7 +205,7 @@ export async function toTicketWalletData(
     }
   }
 
-  return { upcomingTickets, pastTickets };
+  return { upcomingTickets, pastTickets, unavailableTickets };
 }
 
 function coverSummary(cover: EventCoverWalletItemDto | undefined) {

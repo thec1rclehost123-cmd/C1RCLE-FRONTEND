@@ -23,12 +23,17 @@ export default async function SearchPage({
   ]);
   const rawQuery = params['q'];
   const initialQuery = Array.isArray(rawQuery) ? (rawQuery[0] ?? '') : (rawQuery ?? '');
+  const first = (value: string | string[] | undefined) =>
+    Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
 
   return (
     <SearchExperienceClient
       events={events}
       cities={deriveCities(events)}
       initialQuery={initialQuery}
+      initialCity={first(params['city'])}
+      initialCategory={first(params['category'])}
+      initialWeekend={first(params['date']) === 'weekend'}
     />
   );
 }

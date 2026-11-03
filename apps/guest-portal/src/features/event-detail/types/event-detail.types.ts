@@ -1,3 +1,5 @@
+import type { EventMediaDto } from '@c1rcle/contracts';
+
 export type EventLifecycle = 'scheduled' | 'paused' | 'cancelled' | 'completed';
 export type EventAccentTone = 'pink' | 'purple' | 'red' | 'orange';
 export type EventGuestTone = 'yellow' | 'red' | 'purple';
@@ -42,6 +44,7 @@ export interface EventDetailFixture {
   venueId: string | null;
   summary: string;
   description: readonly string[];
+  media?: EventMediaDto;
   doorNote: string;
   lifecycle: EventLifecycle;
   guests: readonly EventDetailGuest[];

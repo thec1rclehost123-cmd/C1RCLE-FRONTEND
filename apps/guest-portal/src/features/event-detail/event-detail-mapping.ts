@@ -66,6 +66,7 @@ export function toEventDetailFixture(
     host: event.organizer ? event.organizer.name.trim() : '',
     summary: summary || 'Event details not provided.',
     description: description.length > 0 ? [description] : [],
+    ...(event.media ? { media: event.media } : {}),
     doorNote: 'Ticket and entry terms are shown during checkout when available.',
     lifecycle: STATUS_LIFECYCLE[event.status] ?? 'scheduled',
     guests: [],

@@ -41,8 +41,8 @@ export interface PaidCheckoutDeps {
     signature: string;
     idempotencyKey: string;
   }): Promise<PaymentConfirmResponse>;
-  /** Resolves true once the buyer has a ticket for the event, false if it never appears. */
-  waitForTickets(eventId: string): Promise<boolean>;
+  /** Resolves true only when this hold is authoritatively fulfilled. */
+  waitForTickets(eventId: string, holdId: string): Promise<boolean>;
 }
 
 export interface PaidCheckoutInput {
@@ -160,7 +160,10 @@ export async function runPaidCheckout(
     if (refund) return refund;
     // Any other failure of the redirect confirmation: the money moved and
     // Razorpay's webhook confirms the same payment independently. Wait for it.
-    return { kind: 'processing', ticketsReady: await deps.waitForTickets(input.eventId) };
+    return {
+      kind: 'processing',
+      ticketsReady: await deps.waitForTickets(input.eventId, hold.holdId),
+    };
   }
 }
 

@@ -1,7 +1,5 @@
 import Link from 'next/link';
 
-import { HomeBackgroundVideoClient } from './HomeBackgroundVideoClient';
-
 import type { HomeHeroContent } from '../types/home.types';
 
 export function HomeHero({ hero }: { hero: HomeHeroContent }) {
@@ -28,12 +26,6 @@ export function HomeHero({ hero }: { hero: HomeHeroContent }) {
           />
         </picture>
 
-        <div className="absolute inset-0">
-          <HomeBackgroundVideoClient
-            desktopSrc={hero.desktopVideoSrc}
-            mobileSrc={hero.mobileVideoSrc}
-          />
-        </div>
         <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/25 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-transparent to-black/40" />
         <div className="nightlife-grain absolute inset-0 opacity-10 mix-blend-overlay" />

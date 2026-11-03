@@ -1,12 +1,16 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import React, { useState } from 'react';
 
-import { TicketDetailModal } from './TicketDetailModal';
 import { UserTicketCard } from './UserTicketCard';
 
 import type { TicketTab, TicketWalletData, UserTicketItem } from '../types/tickets.types';
+
+const TicketDetailModal = dynamic(() =>
+  import('./TicketDetailModal').then((module) => module.TicketDetailModal),
+);
 
 export interface UserTicketsViewProps {
   wallet: TicketWalletData;
@@ -17,6 +21,7 @@ export function UserTicketsView({ wallet }: UserTicketsViewProps) {
   const [selectedTicket, setSelectedTicket] = useState<UserTicketItem | null>(null);
 
   const tickets = activeTab === 'upcoming' ? wallet.upcomingTickets : wallet.pastTickets;
+  const unavailableTickets = wallet.unavailableTickets ?? [];
   return (
     <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pb-24 pt-32 text-white sm:px-8 sm:pt-36">
       <div
@@ -75,7 +80,7 @@ export function UserTicketsView({ wallet }: UserTicketsViewProps) {
             />
           ))}
         </div>
-      ) : (
+      ) : unavailableTickets.length === 0 ? (
         /* Empty State */
         <div className="relative z-10 flex flex-col items-center justify-center rounded-[1.75rem] border border-white/10 bg-black/45 px-4 py-16 text-center backdrop-blur-xl sm:py-20">
           <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-white/10 text-2xl">
@@ -96,15 +101,48 @@ export function UserTicketsView({ wallet }: UserTicketsViewProps) {
             EXPLORE EVENTS
           </Link>
         </div>
-      )}
+      ) : null}
+
+      {unavailableTickets.length > 0 ? (
+        <section aria-labelledby="unavailable-tickets-heading" className="relative z-10 mt-8">
+          <h2 id="unavailable-tickets-heading" className="text-xl font-semibold">
+            Passes awaiting event details
+          </h2>
+          <p role="status" className="mt-2 text-sm text-white/70">
+            Event timing is unknown. These passes have not been marked past. Refresh to try again.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              window.location.reload();
+            }}
+            className="my-4 min-h-11 rounded-full border border-white/20 px-5 text-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+          >
+            Refresh event details
+          </button>
+          <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
+            {unavailableTickets.map((ticket) => (
+              <UserTicketCard
+                key={ticket.id}
+                ticket={ticket}
+                isSelected={selectedTicket?.id === ticket.id}
+                onSelect={setSelectedTicket}
+                onAddToCalendar={downloadCalendarEvent}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {/* Authoritative ticket detail; admission credentials remain an M4 capability. */}
-      <TicketDetailModal
-        ticket={selectedTicket}
-        onClose={() => {
-          setSelectedTicket(null);
-        }}
-      />
+      {selectedTicket ? (
+        <TicketDetailModal
+          ticket={selectedTicket}
+          onClose={() => {
+            setSelectedTicket(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

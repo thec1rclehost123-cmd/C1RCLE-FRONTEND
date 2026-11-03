@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { deriveCategories, filterExploreEvents } from '../explore-filtering';
 
@@ -14,15 +14,37 @@ export function SearchExperienceClient({
   events,
   cities,
   initialQuery = '',
+  initialCity = '',
+  initialCategory = '',
+  initialWeekend = false,
 }: {
   events: readonly ExploreEvent[];
   cities: readonly ExploreCity[];
   initialQuery?: string;
+  initialCity?: string;
+  initialCategory?: string;
+  initialWeekend?: boolean;
 }) {
   const [query, setQuery] = useState(initialQuery);
-  const [city, setCity] = useState('');
-  const [category, setCategory] = useState('');
-  const [weekend, setWeekend] = useState(false);
+  const [city, setCity] = useState(initialCity);
+  const [category, setCategory] = useState(initialCategory);
+  const [weekend, setWeekend] = useState(initialWeekend);
+  function updateQuery(value: string) {
+    setQuery(value);
+  }
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    for (const [key, value] of [
+      ['q', query],
+      ['city', city],
+      ['category', category],
+      ['date', weekend ? 'weekend' : ''],
+    ] as const) {
+      if (value) url.searchParams.set(key, value);
+      else url.searchParams.delete(key);
+    }
+    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+  }, [query, city, category, weekend]);
   const categories = useMemo(() => deriveCategories(events), [events]);
   const matches = useMemo(
     () =>
@@ -67,7 +89,7 @@ export function SearchExperienceClient({
             type="search"
             value={query}
             onChange={(event) => {
-              setQuery(event.target.value);
+              updateQuery(event.target.value);
             }}
             placeholder="Search events, venues, and cities…"
             aria-label="Search events, venues, cities, or categories"
@@ -77,7 +99,7 @@ export function SearchExperienceClient({
             <button
               type="button"
               onClick={() => {
-                setQuery('');
+                updateQuery('');
               }}
               aria-label="Clear search"
               className="flex size-10 items-center justify-center rounded-full bg-white/10 text-xl hover:bg-white/20"
@@ -158,7 +180,7 @@ export function SearchExperienceClient({
             <button
               type="button"
               onClick={() => {
-                setQuery('');
+                updateQuery('');
                 setCity('');
                 setCategory('');
                 setWeekend(false);

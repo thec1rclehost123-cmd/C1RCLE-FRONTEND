@@ -227,6 +227,17 @@ body:has(#mobile-navigation) .mobile-bottom-nav {
   opacity: 0;
 }
 
+@media (hover: none), (pointer: coarse), (max-width: 639px) {
+  .event-card-details {
+    opacity: 1;
+    transform: none;
+  }
+
+  .event-card-top-pills {
+    opacity: 0;
+  }
+}
+
 @media (hover: hover) and (pointer: fine) {
   .group:hover > .event-card-details {
     opacity: 1;
@@ -680,4 +691,37 @@ body:has(#mobile-navigation) .mobile-bottom-nav {
   .story-screen-slot-5 {
     transform: translate3d(500%, 0, 0);
   }
+}
+
+:root [data-title-font='classic'] {
+  font-family: var(--font-inter), sans-serif;
+  font-weight: 800;
+}
+:root [data-title-font='eclectic'] {
+  font-family: var(--event-font-eclectic), serif;
+  font-weight: 700;
+}
+:root [data-title-font='fancy'] {
+  font-family: var(--event-font-fancy), cursive;
+  font-weight: 400;
+}
+:root [data-title-font='digital'] {
+  font-family: var(--event-font-digital), monospace;
+  font-weight: 400;
+}
+:root [data-title-font='literary'] {
+  font-family: var(--event-font-literary), serif;
+  font-weight: 600;
+}
+:root [data-title-font='impact'] {
+  font-family: var(--event-font-impact), sans-serif;
+  font-weight: 400;
+}
+:root [data-title-font='modern'] {
+  font-family: var(--event-font-modern), sans-serif;
+  font-weight: 700;
+}
+:root [data-title-font='condensed'] {
+  font-family: var(--event-font-condensed), sans-serif;
+  font-weight: 400;
 }

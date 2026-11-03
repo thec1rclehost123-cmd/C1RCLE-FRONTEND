@@ -61,5 +61,7 @@ export interface PendingReservationAlert {
 export interface TicketWalletData {
   upcomingTickets: UserTicketItem[];
   pastTickets: UserTicketItem[];
+  /** Active entitlements with unknown event timing after a failed details read. */
+  unavailableTickets?: UserTicketItem[];
   pendingReservation?: PendingReservationAlert;
 }

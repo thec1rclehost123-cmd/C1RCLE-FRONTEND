@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 
 import { createApiClient, isApiClientError } from '@c1rcle/api-client';
 import { eventPublicDetailDtoSchema, publicTicketTierListResponseSchema } from '@c1rcle/contracts';
@@ -9,6 +10,7 @@ import { PrivateTierUnlockClient } from '@/features/event-detail/components/Priv
 import { PromoterClickTracker } from '@/features/event-detail/components/PromoterClickTracker';
 import { toEventDetailFixture } from '@/features/event-detail/event-detail-mapping';
 import { loadExploreEvents } from '@/features/explore/explore-data';
+import { buildPublicMetadata } from '@/lib/seo/metadata';
 
 import type { BookingEventFixture } from '@/features/booking/types/booking.types';
 import type { EventDetailFixture } from '@/features/event-detail/types/event-detail.types';
@@ -28,35 +30,33 @@ type EventDetailResult =
   | { kind: 'unavailable' };
 
 /** Public relationships and tiers are resolved by authoritative backend projections. */
-async function getEventDetail(eventId: string): Promise<EventDetailResult> {
-  const client = createApiClient({ maxRetries: 1, timeoutMs: 5_000 });
+const getEventDetail = cache(async (eventId: string): Promise<EventDetailResult> => {
+  const client = createApiClient({ maxRetries: 0, timeoutMs: 5_000 });
   const encoded = encodeURIComponent(eventId);
-  let event;
-  try {
-    event = await client.get({
+  const [eventResult, tiersResult] = await Promise.allSettled([
+    client.get({
       path: `/api/v2/public/events/${encoded}`,
       schema: eventPublicDetailDtoSchema,
-    });
-  } catch (error) {
-    return isApiClientError(error) && error.status === 404
+    }),
+    client.get({
+      path: `/api/v2/public/events/${encoded}/tiers`,
+      schema: publicTicketTierListResponseSchema,
+    }),
+  ]);
+
+  if (eventResult.status === 'rejected') {
+    return isApiClientError(eventResult.reason) && eventResult.reason.status === 404
       ? { kind: 'private' }
       : { kind: 'unavailable' };
   }
+  if (tiersResult.status === 'rejected') return { kind: 'unavailable' };
 
-  try {
-    const tiers = await client.get({
-      path: `/api/v2/public/events/${encoded}/tiers`,
-      schema: publicTicketTierListResponseSchema,
-    });
-    return {
-      kind: 'ready',
-      event: toEventDetailFixture(event, tiers.items),
-      checkoutEvent: toBookingEventFromPublicDetail(event, tiers.items),
-    };
-  } catch {
-    return { kind: 'unavailable' };
-  }
-}
+  return {
+    kind: 'ready',
+    event: toEventDetailFixture(eventResult.value, tiersResult.value.items),
+    checkoutEvent: toBookingEventFromPublicDetail(eventResult.value, tiersResult.value.items),
+  };
+});
 
 export async function generateMetadata({ params }: EventDetailPageProps): Promise<Metadata> {
   const { eventId } = await params;
@@ -77,31 +77,20 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
     };
   }
   const { event } = result;
-  const canonical = `https://thec1rcle.com/event/${encodeURIComponent(event.slug)}`;
-  return {
-    title: `${event.title} | THE C1RCLE`,
+  return buildPublicMetadata({
+    path: `/event/${encodeURIComponent(event.slug)}`,
+    title: event.title,
     description: event.summary,
-    alternates: { canonical },
-    robots: { index: false, follow: false },
-    openGraph: {
-      title: event.title,
-      description: event.summary,
-      type: 'website',
-      url: canonical,
-      images: [{ url: event.image, alt: event.title }],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: event.title,
-      description: event.summary,
-      images: [event.image],
-    },
-  };
+    image: event.image,
+  });
 }
 
 export default async function EventDetailPage({ params, searchParams }: EventDetailPageProps) {
   const { eventId } = await params;
-  const result = await getEventDetail(decodeURIComponent(eventId));
+  const [result, discovery] = await Promise.all([
+    getEventDetail(decodeURIComponent(eventId)),
+    loadExploreEvents().catch(() => []),
+  ]);
   if (result.kind === 'not-found') notFound();
   if (result.kind === 'private') {
     return (
@@ -132,9 +121,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
       </section>
     );
   }
-  const recommendations = await loadExploreEvents()
-    .then((events) => events.filter((event) => event.id !== result.event.id).slice(0, 8))
-    .catch(() => []);
+  const recommendations = discovery.filter((event) => event.id !== result.event.id).slice(0, 8);
   const query = (await searchParams) ?? {};
   const referralCode = typeof query.ref === 'string' ? query.ref : undefined;
   return (
