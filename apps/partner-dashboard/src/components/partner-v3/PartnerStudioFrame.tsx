@@ -79,7 +79,7 @@ export function PartnerStudioFrame({
 
   return (
     <PartnerShell studio={studio} interactionData={interactionData}>
-      {activeRole !== null && activeRole !== studio ? (
+      {activeRole !== null && activeRole !== studio && !serverAuthorizedEventRoute ? (
         <PageContainer>
           <EmptyState
             title={`${config.label} is not available for this account`}

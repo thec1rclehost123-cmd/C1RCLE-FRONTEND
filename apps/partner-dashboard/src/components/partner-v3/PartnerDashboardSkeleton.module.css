@@ -1,0 +1,490 @@
+.skeletonPage {
+  --skeleton-accent: #ff5a1f;
+  width: min(1480px, 100%);
+  min-height: 70vh;
+  margin: 0 auto;
+  padding: 28px clamp(16px, 3vw, 48px) 48px;
+}
+
+.contentOnly {
+  min-height: 0;
+  padding: 0;
+}
+
+.screenReaderOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.skeletonPage[data-role='host'] {
+  --skeleton-accent: #a78bfa;
+}
+
+.skeletonPage[data-role='promoter'] {
+  --skeleton-accent: #ff8a55;
+}
+
+.heading,
+.headingText,
+.headingActions,
+.toolbar,
+.tabs,
+.tableHeader,
+.tableRow,
+.compactRow,
+.formField {
+  display: flex;
+  align-items: center;
+}
+
+.heading {
+  min-height: 66px;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.headingText,
+.headingActions {
+  gap: 10px;
+}
+
+.headingText {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.headingActions {
+  justify-content: flex-end;
+}
+
+.line,
+.lineShort,
+.lineWide,
+.lineValue,
+.control,
+.controlAccent,
+.search,
+.avatar,
+.avatarLarge,
+.pill,
+.eventPoster,
+.input,
+.calendarCell,
+.chartPlot {
+  display: block;
+  flex: none;
+  border-radius: 8px;
+  background: linear-gradient(100deg, #171717 18%, #252525 45%, #171717 72%);
+  background-size: 240% 100%;
+  animation: skeleton-shimmer 1.45s ease-in-out infinite;
+}
+
+.line {
+  width: min(320px, 48vw);
+  height: 14px;
+}
+
+.lineShort {
+  width: 112px;
+  height: 12px;
+}
+
+.lineWide {
+  width: min(520px, 65vw);
+  height: 28px;
+}
+
+.lineValue {
+  width: 132px;
+  height: 32px;
+  border-radius: 10px;
+}
+
+.control,
+.controlAccent {
+  width: 104px;
+  height: 38px;
+  border-radius: 12px;
+}
+
+.controlAccent {
+  background: color-mix(in srgb, var(--skeleton-accent) 34%, #191919);
+}
+
+.search {
+  width: min(420px, 48vw);
+  height: 42px;
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 13px;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0 0 18px;
+}
+
+.metric,
+.panel,
+.hero,
+.chart,
+.eventCard,
+.partnerCard,
+.formPanel {
+  min-width: 0;
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 18px;
+  background: rgb(20 20 20 / 84%);
+}
+
+.metric {
+  min-height: 98px;
+  display: grid;
+  align-content: center;
+  gap: 13px;
+  padding: 18px;
+}
+
+.overviewGrid,
+.chartGrid,
+.financeHero {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.eventHeader {
+  min-height: 220px;
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: center;
+  gap: 22px;
+  margin-bottom: 16px;
+  padding: 22px;
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 20px;
+  background: rgb(20 20 20 / 84%);
+}
+
+.eventHeader > .eventPoster {
+  height: 176px;
+}
+
+.eventHeaderDetails {
+  min-width: 0;
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+}
+
+.eventHeaderDetails .metrics {
+  width: 100%;
+  margin: 4px 0 0;
+}
+
+.overviewGrid {
+  grid-template-columns: minmax(0, 1.05fr) minmax(300px, 0.95fr);
+}
+
+.stack {
+  display: grid;
+  gap: 16px;
+}
+
+.hero {
+  min-height: 220px;
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+  padding: 26px;
+  background:
+    radial-gradient(
+      ellipse at 18% 0%,
+      color-mix(in srgb, var(--skeleton-accent) 11%, transparent),
+      transparent 60%
+    ),
+    rgb(20 20 20 / 88%);
+}
+
+.chart {
+  min-height: 270px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px;
+}
+
+.chartPlot {
+  width: 100%;
+  height: 100%;
+  min-height: 190px;
+  opacity: 0.72;
+}
+
+.panel {
+  padding: 20px;
+}
+
+.compactRow {
+  min-height: 62px;
+  gap: 12px;
+  border-bottom: 1px solid rgb(255 255 255 / 5%);
+}
+
+.compactRow:last-child {
+  border-bottom: 0;
+}
+
+.compactRow .line {
+  flex: 1;
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+}
+
+.avatarLarge {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+}
+
+.toolbar,
+.tabs {
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.toolbar .search {
+  flex: 1;
+}
+
+.eventGrid,
+.partnerGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.eventCard {
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px;
+}
+
+.eventPoster {
+  width: 100%;
+  height: 170px;
+  border-radius: 13px;
+}
+
+.pill {
+  width: 72px;
+  height: 24px;
+  border-radius: 999px;
+}
+
+.tableHeader,
+.tableRow {
+  gap: 18px;
+  padding: 14px 4px;
+}
+
+.tableHeader {
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+
+.tableHeader .line,
+.tableRow .line {
+  flex: 1;
+}
+
+.tableRow {
+  min-height: 58px;
+  border-bottom: 1px solid rgb(255 255 255 / 5%);
+}
+
+.tableRow:last-child {
+  border-bottom: 0;
+}
+
+.tabs {
+  width: fit-content;
+  max-width: 100%;
+  padding: 6px;
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 14px;
+  background: #121212;
+}
+
+.partnerCard {
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 18px;
+}
+
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.calendarCell {
+  min-height: 68px;
+  border: 1px solid rgb(255 255 255 / 5%);
+  border-radius: 10px;
+}
+
+.formPanel {
+  width: min(900px, 100%);
+  display: grid;
+  gap: 20px;
+  padding: 24px;
+}
+
+.formField {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input {
+  width: 100%;
+  height: 46px;
+  border: 1px solid rgb(255 255 255 / 6%);
+  border-radius: 11px;
+}
+
+@keyframes skeleton-shimmer {
+  to {
+    background-position: -240% 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .skeletonPage {
+    padding-inline: 24px;
+  }
+
+  .eventGrid,
+  .partnerGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .skeletonPage {
+    padding: 20px 16px 36px;
+  }
+
+  .heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .headingActions {
+    justify-content: flex-start;
+  }
+
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .overviewGrid,
+  .chartGrid,
+  .financeHero {
+    grid-template-columns: 1fr;
+  }
+
+  .eventHeader {
+    min-height: 0;
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .eventHeader > .eventPoster {
+    height: 102px;
+  }
+
+  .eventHeaderDetails .metrics {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .eventGrid,
+  .partnerGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .eventCard {
+    min-height: 250px;
+  }
+
+  .eventPoster {
+    height: 145px;
+  }
+
+  .tableHeader,
+  .tableRow {
+    gap: 9px;
+  }
+
+  .tableHeader .line:nth-child(2),
+  .tableRow .line:nth-child(2) {
+    flex: 1;
+  }
+
+  .tableHeader .lineShort:last-child,
+  .tableRow .pill {
+    display: none;
+  }
+
+  .calendarGrid {
+    gap: 4px;
+  }
+
+  .calendarCell {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .line,
+  .lineShort,
+  .lineWide,
+  .lineValue,
+  .control,
+  .controlAccent,
+  .search,
+  .avatar,
+  .avatarLarge,
+  .pill,
+  .eventPoster,
+  .input,
+  .calendarCell,
+  .chartPlot {
+    animation: none;
+  }
+}

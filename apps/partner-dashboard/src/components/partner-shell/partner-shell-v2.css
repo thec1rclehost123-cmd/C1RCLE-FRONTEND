@@ -332,9 +332,12 @@ body:has(
 }
 
 .partner-command-search:focus-within {
-  border-color: var(--dashboard-accent);
-  outline: 1px solid var(--dashboard-accent);
-  outline-offset: 1px;
+  border-color: rgb(255 255 255 / 30%);
+  outline: none;
+  box-shadow: none;
+}
+.partner-command-search input:focus-visible {
+  outline: none;
 }
 .partner-command-search input {
   min-width: 0;

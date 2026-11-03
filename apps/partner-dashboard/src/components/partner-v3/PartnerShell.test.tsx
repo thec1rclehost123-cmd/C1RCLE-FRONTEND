@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
@@ -64,7 +64,12 @@ describe('PartnerShell navigation layouts', () => {
     expect(
       screen.getByRole('complementary', { name: 'Venue Studio navigation' }),
     ).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Top navigation' }));
+    expect(screen.queryByText('Venue Studio workspace')).not.toBeInTheDocument();
+    expect(screen.queryByText(/read-only routes/i)).not.toBeInTheDocument();
+    const sidebar = screen.getByRole('complementary', { name: 'Venue Studio navigation' });
+    expect(within(sidebar).getByRole('button', { name: 'Use top navigation' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Help & Support' })).not.toBeInTheDocument();
+    await user.click(within(sidebar).getByRole('button', { name: 'Use top navigation' }));
 
     expect(
       screen.queryByRole('complementary', { name: 'Venue Studio navigation' }),
@@ -82,6 +87,27 @@ describe('PartnerShell navigation layouts', () => {
     ).toBeInTheDocument();
     expect(window.localStorage.getItem('c1rcle.partner.navigation-layout')).toBe('side');
   });
+
+  it.each(['venue', 'host', 'promoter'] as const)(
+    'keeps %s Settings in the account menu only',
+    async (studio) => {
+      const user = userEvent.setup();
+      navigation.pathname = `/partner/${studio}/overview`;
+      const interactionData = await fixturePartnerDataSource.getPartnerShellInteractions(studio);
+      render(
+        <PartnerShell studio={studio} interactionData={interactionData}>
+          <div>Content</div>
+        </PartnerShell>,
+      );
+      expect(screen.queryByRole('link', { name: 'Settings' })).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Account options for Rhea Kapoor' }));
+      expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute(
+        'href',
+        `/partner/${studio}/settings`,
+      );
+      expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
+    },
+  );
 
   it('restores a saved top-navigation preference', async () => {
     navigation.pathname = '/partner/host/overview';
@@ -114,6 +140,8 @@ describe('PartnerShell navigation layouts', () => {
 
     expect(screen.queryByRole('link', { name: 'Overview' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Finance' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Settings' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Account options for Rhea Kapoor' }));
     expect(screen.queryByRole('link', { name: 'Settings' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Events' })).toBeInTheDocument();
     // Segments with no backend opinion stay visible.

@@ -1,8 +1,15 @@
 .app {
+  --partner-v3-page-glow-x: calc(50% + 118px);
   height: 100dvh;
   display: grid;
-  grid-template-columns: 236px minmax(0, 1fr);
-  background: var(--partner-v3-background);
+  grid-template-columns: 256px minmax(0, 1fr);
+  background:
+    radial-gradient(
+      ellipse 100% 52rem at var(--partner-v3-page-glow-x) 0%,
+      rgb(var(--partner-v3-page-glow) / 26%),
+      transparent 62%
+    ),
+    var(--partner-v3-background);
   color: var(--partner-v3-ink);
   overflow: hidden;
   font-family: var(--font-partner-v3), sans-serif;
@@ -10,6 +17,24 @@
 
 .appTopNavigation {
   grid-template-columns: minmax(0, 1fr);
+  --partner-v3-page-glow-x: 50%;
+}
+
+.appEventEditor {
+  display: block;
+  height: 100dvh;
+  overflow: auto;
+}
+
+.appEventEditor .main {
+  display: block;
+  height: auto;
+  min-height: 100dvh;
+}
+
+.contentEventEditor {
+  min-height: 100dvh;
+  overflow: visible;
 }
 
 .sidebar {
@@ -29,25 +54,32 @@
 .brandBlock {
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 4px 6px 18px;
+  gap: 12px;
+  padding: 4px 6px 22px;
+}
+
+.brandBlock .layoutSwitchButton {
+  width: 40px;
+  height: 40px;
+  margin-left: auto;
+  border-radius: 12px;
 }
 
 .brandMark {
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--partner-v3-accent);
   color: var(--partner-v3-accent-ink);
   box-shadow: 0 4px 18px rgb(255 90 31 / 40%);
 }
 
 .brandMark i {
-  width: 15px;
-  height: 15px;
-  border: 2.5px solid #0a0a0a;
+  width: 18px;
+  height: 18px;
+  border: 3px solid #0a0a0a;
   border-radius: 50%;
 }
 
@@ -58,32 +90,32 @@
 
 .brandText strong {
   font:
-    800 12px/1.1 var(--font-display),
+    800 14px/1.1 var(--font-display),
     sans-serif;
   letter-spacing: 0.08em;
 }
 
 .brandText small {
   color: var(--partner-v3-sidebar-muted);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .sidebarNav,
 .mobileNav {
   display: grid;
-  gap: 4px;
+  gap: 6px;
 }
 
 .navItem {
-  min-height: 42px;
+  min-height: 50px;
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 0 12px;
+  gap: 12px;
+  padding: 0 14px;
   border: 1px solid transparent;
   border-radius: var(--partner-v3-radius-sm);
   color: var(--partner-v3-sidebar-muted);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 600;
   text-decoration: none;
   transition:
@@ -102,40 +134,12 @@
 .navItemActive {
   background: var(--partner-v3-accent);
   border-color: var(--partner-v3-accent);
-  color: var(--partner-v3-accent-ink);
+  color: #fff;
 }
 
-.sidebarFooter {
-  display: grid;
-  gap: 5px;
-  margin-top: auto;
-  padding: 14px 12px 2px;
-  border-top: 1px solid rgb(255 255 255 / 11%);
-}
-
-.sidebarLayoutSwitch {
-  min-height: 40px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: -4px -6px 8px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: var(--partner-v3-radius-sm);
-  background: transparent;
-  color: var(--partner-v3-sidebar-muted);
-  cursor: pointer;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  text-align: left;
-}
-
-.sidebarLayoutSwitch:hover,
-.sidebarLayoutSwitch:focus-visible {
-  background: rgb(255 255 255 / 7%);
-  color: var(--partner-v3-sidebar-ink);
-  outline: none;
+.navItemActive:hover,
+.navItemActive:focus-visible {
+  color: #fff;
 }
 
 .fixtureLabel {
@@ -143,11 +147,6 @@
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.14em;
-}
-
-.sidebarNote {
-  color: var(--partner-v3-sidebar-muted);
-  font-size: 11px;
 }
 
 .main {
@@ -166,9 +165,15 @@
   align-items: center;
   gap: 24px;
   padding: 0 32px;
-  border-bottom: 1px solid var(--partner-v3-border);
-  background: rgb(0 0 0 / 72%);
-  backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgb(255 255 255 / 10%);
+  background: rgb(10 10 12 / 42%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  backdrop-filter: blur(24px) saturate(140%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 4%);
+}
+
+.appEventWorkspace .topbar {
+  background: #070807;
 }
 
 .topbarIdentity {
@@ -192,8 +197,14 @@
 .topbarBrand {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 12px;
   flex: none;
+}
+
+.topbarTopNavigation {
+  min-height: 76px;
+  gap: 28px;
+  padding-inline: 36px;
 }
 
 .topbarTopNavigation .globalSearchField {
@@ -215,12 +226,9 @@
   min-width: 0;
   max-width: 100%;
   display: flex;
-  gap: 2px;
-  padding: 4px;
+  gap: 8px;
+  padding: 0;
   overflow-x: auto;
-  border: 1px solid var(--partner-v3-border);
-  border-radius: 14px;
-  background: var(--partner-v3-surface-muted);
   scrollbar-width: none;
 }
 
@@ -229,29 +237,38 @@
 }
 
 .topNavigationItem {
-  min-height: 34px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   flex: none;
-  padding: 0 12px;
-  border-radius: 10px;
+  justify-content: center;
+  padding: 0 18px;
+  border-radius: 12px;
   color: var(--partner-v3-ink-muted);
-  font-size: 13px;
-  font-weight: 650;
+  font-size: 14.5px;
+  font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
 }
 
-.topNavigationItem:hover,
-.topNavigationItem:focus-visible {
+.topNavigationItem:hover {
   background: rgb(255 255 255 / 6%);
   color: var(--partner-v3-ink);
-  outline: none;
+}
+
+.topNavigationItem:focus-visible {
+  outline: 2px solid rgb(255 255 255 / 72%);
+  outline-offset: 2px;
 }
 
 .topNavigationItemActive {
   background: var(--partner-v3-accent);
   color: var(--partner-v3-accent-ink);
+  box-shadow: 0 3px 12px color-mix(in srgb, var(--partner-v3-accent) 18%, transparent);
 }
 
 .topNavigationItemActive:hover,
@@ -288,7 +305,7 @@
 .searchInput:focus-within {
   border-color: var(--partner-v3-border-strong);
   background: var(--partner-v3-surface);
-  box-shadow: 0 0 0 3px rgb(255 90 31 / 25%);
+  box-shadow: none;
 }
 
 .searchInput input {
@@ -343,11 +360,33 @@
 }
 
 .accountMenu {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 9px;
   padding-left: 10px;
   border-left: 1px solid var(--partner-v3-border);
+}
+
+.accountTrigger {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--partner-v3-ink);
+  cursor: pointer;
+  font: inherit;
+}
+
+.accountTrigger:hover,
+.accountTrigger:focus-visible,
+.accountTrigger[aria-expanded='true'] {
+  border-color: var(--partner-v3-border);
+  background: var(--partner-v3-surface-muted);
+  outline: none;
 }
 
 .accountName {
@@ -360,21 +399,79 @@
   white-space: nowrap;
 }
 
-.accountAction {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 0;
-  border: 0;
-  background: transparent;
+.accountPopover {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 6px);
+  right: 0;
+  width: min(196px, calc(100vw - 24px));
+  max-height: calc(100dvh - 88px);
+  overflow-y: auto;
+  padding: 5px;
+  border: 1px solid var(--partner-v3-border-strong);
+  border-radius: 12px;
+  background: #111;
+  box-shadow: 0 16px 36px rgb(0 0 0 / 58%);
+}
+
+.accountPopoverIdentity {
+  display: grid;
+  gap: 1px;
+  padding: 6px 7px 7px;
+  border-bottom: 1px solid var(--partner-v3-border);
+}
+
+.accountPopoverIdentity strong {
+  overflow: hidden;
+  color: var(--partner-v3-ink);
+  font-size: 13px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accountPopoverIdentity span {
   color: var(--partner-v3-ink-muted);
-  cursor: pointer;
-  font: inherit;
   font-size: 11px;
 }
 
-.accountAction:hover,
-.accountAction:focus-visible {
+.accountSettings,
+.accountAction {
+  width: 100%;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--partner-v3-ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  text-decoration: none;
+}
+
+.accountSettings {
+  color: var(--partner-v3-ink);
+}
+
+.accountSettings:hover,
+.accountSettings:focus-visible {
+  background: rgb(255 255 255 / 7%);
+  color: var(--partner-v3-ink);
+  outline: none;
+}
+
+.accountSignOut {
+  color: var(--partner-v3-danger);
+}
+
+.accountSignOut:hover,
+.accountSignOut:focus-visible {
+  background: rgb(240 133 122 / 10%);
   color: var(--partner-v3-danger);
   outline: none;
 }
@@ -412,7 +509,7 @@
 .globalSearchField:focus-within {
   border-color: var(--partner-v3-border-strong);
   background: var(--partner-v3-surface);
-  box-shadow: 0 0 0 3px rgb(255 90 31 / 25%);
+  box-shadow: none;
 }
 
 .globalSearchField input {
@@ -747,7 +844,19 @@
 .pageContainer {
   width: min(1180px, 100%);
   margin: 0 auto;
-  padding: 42px 40px 64px;
+  padding: 24px 40px 48px;
+}
+
+@media (min-width: 901px) {
+  .appTopNavigation .pageContainer {
+    box-sizing: border-box;
+    width: min(1480px, 100%);
+    padding-inline: clamp(28px, 3vw, 48px);
+  }
+}
+
+.pageContainer > main {
+  padding-top: 0;
 }
 
 .pageHeader {
@@ -1048,7 +1157,7 @@
 }
 
 .mobileNav .navItem {
-  min-height: 46px;
+  min-height: 50px;
 }
 
 @media (max-width: 1100px) {
@@ -1098,13 +1207,22 @@
     display: none;
   }
   .topNavigationItem {
-    padding-inline: 11px;
+    min-height: 40px;
+    padding-inline: 12px;
+    font-size: 13px;
+  }
+  .appTopNavigation .pageContainer {
+    width: min(100%, 1480px);
+    padding-inline: 28px;
   }
 }
 
 @media (max-width: 900px) {
   .app {
     display: block;
+  }
+  .app[data-navigation-layout='side'] {
+    --partner-v3-page-glow-x: 50%;
   }
   .main {
     height: 100dvh;
@@ -1210,7 +1328,7 @@
     max-height: calc(100dvh - 78px);
   }
   .pageContainer {
-    padding: 28px 16px 42px;
+    padding: 24px 16px 42px;
   }
   .pageHeader {
     margin-bottom: 20px;
@@ -1236,6 +1354,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .topNavigationItem {
+    transition: none;
+  }
   .partnerV3Spinner,
   .skeleton {
     animation: none;

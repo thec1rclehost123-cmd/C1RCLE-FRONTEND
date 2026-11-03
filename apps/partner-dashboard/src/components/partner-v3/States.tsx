@@ -1,4 +1,5 @@
 import styles from './partner-v3.module.css';
+import { PartnerDashboardSkeleton } from './PartnerDashboardSkeleton';
 
 import type { ReactNode } from 'react';
 
@@ -32,8 +33,8 @@ export function EmptyState({
   );
 }
 
-export function LoadingState(_props: { readonly label?: string }) {
-  return null;
+export function LoadingState({ label }: { readonly label?: string }) {
+  return <PartnerDashboardSkeleton label={label ?? 'Loading workspace'} />;
 }
 
 export function ErrorState({

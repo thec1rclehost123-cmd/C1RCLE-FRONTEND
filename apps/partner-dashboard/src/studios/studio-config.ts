@@ -45,7 +45,6 @@ export const STUDIO_CONFIG: Readonly<Record<StudioRole, StudioConfig>> = {
       { label: 'Presence', href: studioPath('venue', 'presence'), icon: 'presence' },
       { label: 'Finance', href: studioPath('venue', 'finance'), icon: 'finance' },
       { label: 'Support', href: studioPath('venue', 'support'), icon: 'support' },
-      { label: 'Settings', href: studioPath('venue', 'settings'), icon: 'settings' },
     ],
   },
   host: {
@@ -61,7 +60,6 @@ export const STUDIO_CONFIG: Readonly<Record<StudioRole, StudioConfig>> = {
       { label: 'Presence', href: studioPath('host', 'presence'), icon: 'presence' },
       { label: 'Finance', href: studioPath('host', 'finance'), icon: 'finance' },
       { label: 'Support', href: studioPath('host', 'support'), icon: 'support' },
-      { label: 'Settings', href: studioPath('host', 'settings'), icon: 'settings' },
     ],
   },
   promoter: {

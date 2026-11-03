@@ -64,6 +64,27 @@ describe('PartnerStudioFrame server-authorized event routes', () => {
     expect(mocks.replace).not.toHaveBeenCalled();
   });
 
+  it('keeps server-authorized Host event pages when the client active role is stale', () => {
+    mocks.pathname = '/partner/host/events/event_live/promoters';
+    mocks.auth = {
+      loading: false,
+      user: { id: 'user_1' },
+      isApproved: true,
+      profile: { activeMembership: { partnerType: 'venue' } },
+      tabVisibility: null,
+    } as never;
+    render(
+      <PartnerStudioFrame studio="host" interactionData={{} as never}>
+        <div>Authorized Host event promoters</div>
+      </PartnerStudioFrame>,
+    );
+
+    expect(screen.getByText('Authorized Host event promoters')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Host Studio is not available for this account'),
+    ).not.toBeInTheDocument();
+  });
+
   it('keeps non-server-authorized partner routes behind the client auth gate', () => {
     mocks.pathname = '/partner/venue/finance';
 

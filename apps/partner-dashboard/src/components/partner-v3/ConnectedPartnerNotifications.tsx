@@ -3,8 +3,11 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
+import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
 import { NotificationIcon } from '@c1rcle/icons';
 
+import { PartnerDashboardSkeleton } from '@/components/partner-v3/PartnerDashboardSkeleton';
+import { Skeleton } from '@/components/partner-v3/States';
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 import {
   loadPartnerInbox,
@@ -132,7 +135,11 @@ function formatCreatedAt(value: string): string {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? 'Date unavailable'
-    : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+    : new Intl.DateTimeFormat('en-IN', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+        timeZone: PRODUCT_TIME_ZONE,
+      }).format(date);
 }
 
 function NotificationContent({ notification }: { readonly notification: NotificationDto }) {
@@ -250,9 +257,23 @@ export function ConnectedPartnerNotifications({
             </div>
           ) : null}
           {inbox.state === 'loading' || inbox.state === 'idle' ? (
-            <p className={styles['notificationEmpty']} role="status">
-              Loading notifications…
-            </p>
+            <div
+              className={styles['notificationList']}
+              role="status"
+              aria-label="Loading notifications…"
+            >
+              {[0, 1, 2].map((index) => (
+                <div className={styles['notificationItem']} key={index} aria-hidden="true">
+                  <div className={styles['notificationRow']}>
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <Skeleton className="w-48" />
+                      <Skeleton className="w-full max-w-sm" />
+                    </div>
+                    <Skeleton className="w-16" />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : inbox.state === 'error' ? (
             <button
               className={styles['notificationMarkRead']}
@@ -350,9 +371,22 @@ export function PartnerNotificationsInboxPage({
         </p>
       ) : null}
       {inbox.data === null && (inbox.state === 'loading' || inbox.state === 'idle') ? (
-        <p className="py-10 text-sm text-white/65" role="status">
-          Loading notifications…
-        </p>
+        <div className="py-5" role="status" aria-label="Loading notifications…">
+          {[0, 1, 2, 3, 4].map((index) => (
+            <div
+              className="flex items-start justify-between gap-4 border-b border-white/10 py-4"
+              key={index}
+              aria-hidden="true"
+            >
+              <div className="min-w-0 flex-1 space-y-3">
+                <Skeleton className="w-48" />
+                <Skeleton className="w-full max-w-2xl" />
+                <Skeleton className="w-28" />
+              </div>
+              <Skeleton className="w-16" />
+            </div>
+          ))}
+        </div>
       ) : inbox.data === null && inbox.state === 'error' ? (
         <button
           className="mt-5 rounded-lg border border-white/20 px-3 py-2 text-sm"
@@ -428,11 +462,7 @@ export function PartnerNotificationsInboxPage({
 export function CurrentPartnerNotificationsInboxPage() {
   const auth = useDashboardAuth();
   if (auth.loading) {
-    return (
-      <p className="mx-auto max-w-3xl px-6 py-10 text-sm text-white/65" role="status">
-        Loading organization access…
-      </p>
-    );
+    return <PartnerDashboardSkeleton label="Loading organization access…" />;
   }
   return (
     <PartnerNotificationsInboxPage
