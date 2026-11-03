@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -10,7 +10,7 @@ const venueLinks = {
   createEvent: '/partner/venue/events/create',
   calendar: '/partner/venue/calendar',
   events: '/partner/venue/events',
-  finance: '/partner/venue/finance',
+  finance: '/partner/venue/finance?view=orders',
   partners: '/partner/venue/partners',
 };
 
@@ -99,7 +99,7 @@ describe('OverviewScreen', () => {
     );
   });
 
-  it('renders authoritative order rows without exposing buyer contact data', async () => {
+  it('shows buyer names and routes View all to Finance Orders', async () => {
     const fixture = await fixturePartnerDataSource.getVenueOverview();
     render(
       <OverviewScreen
@@ -108,6 +108,7 @@ describe('OverviewScreen', () => {
           recentOrders: [
             {
               id: 'order-1',
+              buyerName: 'Maya Guest',
               eventName: 'M3 paid test event',
               ticketCount: 2,
               amountLabel: '₹217.70',
@@ -120,14 +121,35 @@ describe('OverviewScreen', () => {
       />,
     );
 
+    expect(screen.getByText('Maya Guest')).toBeInTheDocument();
     expect(screen.getByText('M3 paid test event')).toBeInTheDocument();
-    expect(screen.getByText('2 tickets · Paid · 26 Oct 2026, 8:00 pm IST')).toBeInTheDocument();
+    expect(screen.getByText('2 tickets · Paid')).toBeInTheDocument();
+    expect(screen.getByText('26 Oct 2026, 8:00 pm IST')).toBeInTheDocument();
     expect(screen.getByText('₹217.70')).toBeInTheDocument();
     expect(
-      screen.getByText(
-        /Guest totals can include platform fees and GST; they are not Partner payable/,
-      ),
-    ).toBeInTheDocument();
+      screen.queryByText(/Guest totals can include platform fees and GST/),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /view all/i })).toHaveAttribute(
+      'href',
+      '/partner/venue/finance?view=orders',
+    );
+  });
+
+  it('does not label upcoming events sold when capacity is unknown', async () => {
+    const fixture = await fixturePartnerDataSource.getVenueOverview();
+    const upcoming = fixture.upcomingEvents[0];
+    if (!upcoming) throw new Error('Expected an upcoming event fixture');
+    render(
+      <OverviewScreen
+        data={{ ...fixture, upcomingEvents: [{ ...upcoming, capacity: null }] }}
+        links={venueLinks}
+      />,
+    );
+
+    const section = screen.getByRole('heading', { name: 'Upcoming events' }).closest('section');
+    expect(section).not.toBeNull();
+    expect(within(section!).queryByText(/^sold$/i)).not.toBeInTheDocument();
+    expect(within(section!).queryByText(/%/)).not.toBeInTheDocument();
   });
 
   it('does not present a permission denial as an empty order list', async () => {
@@ -162,7 +184,7 @@ describe('OverviewScreen', () => {
           createEvent: '/partner/host/events/create',
           calendar: '/partner/host/calendar',
           events: '/partner/host/events',
-          finance: '/partner/host/finance',
+          finance: '/partner/host/finance?view=orders',
           partners: '/partner/host/partners',
         }}
       />,
@@ -182,7 +204,7 @@ describe('OverviewScreen', () => {
     ).toContain('/partner/host/events');
     expect(screen.getByRole('link', { name: /view all/i })).toHaveAttribute(
       'href',
-      '/partner/host/finance',
+      '/partner/host/finance?view=orders',
     );
   });
 });

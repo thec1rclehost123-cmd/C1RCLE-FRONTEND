@@ -40,7 +40,7 @@ describe('loadPartnerOrganizationAnalytics', () => {
     mocks.getFinanceBalance.mockResolvedValue({});
     mocks.getOrganizationTrends.mockResolvedValue({});
 
-    await loadPartnerOrganizationAnalytics();
+    await loadPartnerOrganizationAnalytics({ range: '30d', breakdown: 'day' });
 
     expect(mocks.getOrganizationTrends).toHaveBeenCalledWith(client, 'org_m3', {
       from: '2026-09-24',
@@ -48,6 +48,6 @@ describe('loadPartnerOrganizationAnalytics', () => {
       granularity: 'day',
     });
     expect(mocks.getOrganizationSalesBreakdown).toHaveBeenCalledWith(client, 'org_m3');
-    expect(mocks.getFinanceBalance).toHaveBeenCalledWith(client, 'org_m3');
+    expect(mocks.getFinanceBalance).not.toHaveBeenCalled();
   });
 });

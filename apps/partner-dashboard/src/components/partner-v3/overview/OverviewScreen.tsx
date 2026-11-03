@@ -3,6 +3,8 @@ import Link from 'next/link';
 
 import { AddIcon, ForwardIcon, TicketIcon, UsersIcon } from '@c1rcle/icons';
 
+import { isProductCalendarDay } from '@/lib/events/event-time';
+
 import { FixtureBadge } from '../FixtureBadge';
 
 import styles from './overview.module.css';
@@ -96,6 +98,8 @@ export function OverviewScreen({
   readonly studio?: 'venue' | 'host';
   readonly organizationId?: string | null;
 }) {
+  const nextEventIsToday = isProductCalendarDay(data.nextEvent.startAt);
+
   return (
     <div
       className={[styles['overview'], accent === 'lavender' ? styles['accentLavender'] : '']
@@ -128,6 +132,7 @@ export function OverviewScreen({
                 alt={data.nextEvent.imageAlt ?? ''}
                 fill
                 priority
+                className={styles['heroPoster']}
                 sizes="(max-width: 900px) 100vw, 52vw"
               />
             ) : null}
@@ -147,21 +152,42 @@ export function OverviewScreen({
               <div className={styles['heroDetails']}>
                 <p>{data.nextEvent.venue}</p>
                 <h2 id="next-event-title">{data.nextEvent.name}</h2>
-                <div className={styles['capacityLabels']}>
-                  {/* `null` capacity means the venue never declared one. Showing
-                      "0 tickets" would be a different claim, and the percentage
-                      has no denominator, so the sell-through is simply omitted. */}
-                  {data.nextEvent.capacity === null ? (
-                    <span>{data.nextEvent.sold.toLocaleString('en-IN')} tickets sold</span>
-                  ) : (
-                    <>
-                      <span>
-                        {data.nextEvent.sold.toLocaleString('en-IN')} of{' '}
-                        {data.nextEvent.capacity.toLocaleString('en-IN')} tickets sold
-                      </span>
-                      <strong>{soldPercentOf(data.nextEvent)}% full</strong>
-                    </>
-                  )}
+                <div className={styles['heroSalesRow']}>
+                  <div className={styles['capacityLabels']}>
+                    {/* `null` capacity means the venue never declared one. Showing
+                        "0 tickets" would be a different claim, and the percentage
+                        has no denominator, so the sell-through is simply omitted. */}
+                    {data.nextEvent.capacity === null ? (
+                      <span>{data.nextEvent.sold.toLocaleString('en-IN')} tickets sold</span>
+                    ) : (
+                      <>
+                        <span>
+                          {data.nextEvent.sold.toLocaleString('en-IN')} of{' '}
+                          {data.nextEvent.capacity.toLocaleString('en-IN')} tickets sold
+                        </span>
+                        <strong>{soldPercentOf(data.nextEvent)}% full</strong>
+                      </>
+                    )}
+                  </div>
+                  {data.nextEvent.id ? (
+                    <Link
+                      className={styles['heroAction']}
+                      href={
+                        nextEventIsToday
+                          ? `/partner/${studio ?? 'venue'}/events/${encodeURIComponent(data.nextEvent.id)}/door`
+                          : `/partner/${studio ?? 'venue'}/events/${encodeURIComponent(data.nextEvent.id)}/guests`
+                      }
+                    >
+                      {nextEventIsToday ? (
+                        <>Door mode</>
+                      ) : (
+                        <>
+                          <UsersIcon size={18} aria-hidden="true" />
+                          View guest list
+                        </>
+                      )}
+                    </Link>
+                  ) : null}
                 </div>
                 {data.nextEvent.capacity === null ? null : (
                   <progress
@@ -171,15 +197,6 @@ export function OverviewScreen({
                     max={100}
                   />
                 )}
-                {data.nextEvent.id ? (
-                  <Link
-                    className={styles['heroAction']}
-                    href={`/partner/${studio ?? 'venue'}/events/${encodeURIComponent(data.nextEvent.id)}/guests`}
-                  >
-                    <UsersIcon size={18} aria-hidden="true" />
-                    View guest list
-                  </Link>
-                ) : null}
               </div>
             </div>
           </article>
@@ -215,20 +232,22 @@ export function OverviewScreen({
                     <TicketIcon size={17} aria-hidden="true" />
                   </span>
                   <div>
-                    <strong>{order.eventName}</strong>
-                    <span>
-                      {order.ticketCount} {order.ticketCount === 1 ? 'ticket' : 'tickets'} ·{' '}
-                      {order.statusLabel} · {order.placedAtLabel} IST
+                    <strong>{order.buyerName}</strong>
+                    <span className={styles['activityEvent']} title={order.eventName}>
+                      {order.eventName}
+                    </span>
+                    <span className={styles['activityMeta']}>
+                      <span>
+                        {order.ticketCount} {order.ticketCount === 1 ? 'ticket' : 'tickets'} ·{' '}
+                        {order.statusLabel}
+                      </span>
+                      <time>{order.placedAtLabel} IST</time>
                     </span>
                   </div>
                   <b>{order.amountLabel}</b>
                 </div>
               );
             })}
-            <p className={styles['overviewEmpty']}>
-              Guest totals can include platform fees and GST; they are not Partner payable.
-              Payout/refund activity is not connected here.
-            </p>
           </div>
         </section>
       </div>
@@ -266,17 +285,15 @@ export function OverviewScreen({
                       {event.venue} · {event.dateLabel}
                     </span>
                   </div>
-                  {/* No declared capacity → no percentage, rather than a
-                      divide-by-zero dressed up as "0% sold". */}
-                  <b className={eventStatusClasses[event.status]}>
-                    {event.capacity === null ? (
-                      <small>sold</small>
-                    ) : (
+                  {/* Without a declared capacity, sell-through is unknown, so
+                      don't imply that the event is sold or show a percentage. */}
+                  {event.capacity !== null ? (
+                    <b className={eventStatusClasses[event.status]}>
                       <>
-                        {percent}%<small>sold</small>
+                        {percent}% <small>sold</small>
                       </>
-                    )}
-                  </b>
+                    </b>
+                  ) : null}
                 </Link>
               );
             })}

@@ -122,7 +122,7 @@ beforeEach(() => {
             id: 'order_1',
             eventId: 'evt_1',
             eventName: 'Neon Nights',
-            buyerName: 'Private buyer name',
+            buyerName: 'Maya Guest',
             ticketCount: 1,
             currency: 'INR',
             grandTotalPaise: 10_885,
@@ -238,7 +238,7 @@ describe('loadOverviewData', () => {
     expect(cards).toContain('limit=4');
   });
 
-  it('loads the newest org-scoped finance orders without forwarding buyer names to the view model', async () => {
+  it('loads the newest org-scoped finance orders with the buyer display name', async () => {
     const data = await loadOverviewData({ accent: 'orange', client, now: NOW });
     const recentOrdersCall = getMock.mock.calls.find(([call]) =>
       call.path.includes('/finance/orders?'),
@@ -249,12 +249,13 @@ describe('loadOverviewData', () => {
     expect(data.recentOrders).toEqual([
       expect.objectContaining({
         eventName: 'Neon Nights',
+        buyerName: 'Maya Guest',
         ticketCount: 1,
         amountLabel: '₹108.85',
         statusLabel: 'Paid',
       }),
     ]);
-    expect(JSON.stringify(data.recentOrders)).not.toContain('Private buyer name');
+    expect(JSON.stringify(data.recentOrders)).toContain('Maya Guest');
   });
 
   it('distinguishes a role without finance access from an empty order list', async () => {

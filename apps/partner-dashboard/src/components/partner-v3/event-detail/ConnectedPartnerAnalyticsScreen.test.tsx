@@ -86,17 +86,14 @@ describe('ConnectedPartnerAnalyticsScreen', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Analytics' })).toBeInTheDocument();
-    expect(screen.getByText('Total tickets issued')).toBeInTheDocument();
+    expect(screen.getByText('Tickets issued')).toBeInTheDocument();
     expect(screen.getByText('Free RSVP tickets')).toBeInTheDocument();
-    expect(screen.getAllByText('Paid orders')).toHaveLength(3);
-    expect(screen.getAllByText('Guest gross collected')).toHaveLength(2);
-    expect(screen.getAllByText('Ticket revenue')).toHaveLength(3);
-    expect(screen.getByRole('heading', { name: 'Partner payable' })).toBeInTheDocument();
-    expect(screen.getByText('₹145.00')).toBeInTheDocument();
-    expect(screen.getAllByText('₹100.00')).toHaveLength(4);
+    expect(screen.getByText('Revenue breakdown')).toBeInTheDocument();
+    expect(screen.getByText('Net captured after refunds')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Recent gross revenue trend' })).toBeInTheDocument();
     expect(screen.getByText('Connected event')).toBeInTheDocument();
-    expect(screen.getByText(/Window totals are separate/)).toBeInTheDocument();
-    expect(screen.getByText('Paid tickets / free RSVPs')).toBeInTheDocument();
-    expect(screen.getAllByText('Net captured after refunds')).toHaveLength(2);
+    expect(screen.getByText('Recent activity')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Time' })).toHaveValue('all');
+    expect(screen.queryByText('₹145')).not.toBeInTheDocument();
   });
 });

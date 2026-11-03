@@ -36,7 +36,6 @@ export function PromoterOverviewScreen({
           initialRange="1M"
           rangePlacement="bottom"
           showMetricSummary={false}
-          axisLabels={['26 Jul', '1 Aug', '7 Aug', '13 Aug', '19 Aug', '25 Aug']}
           chartClassName={styles['promoterChart']}
           className={styles['promoterTrendCard']}
         />

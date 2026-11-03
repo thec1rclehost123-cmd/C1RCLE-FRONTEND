@@ -77,7 +77,7 @@ export default async function StudioOverviewPage({
         createEvent: `${prefix}/events/create`,
         calendar: `${prefix}/calendar`,
         events: `${prefix}/events`,
-        finance: `${prefix}/finance`,
+        finance: `${prefix}/finance?view=orders`,
         partners: `${prefix}/partners`,
       }}
     />

@@ -17,15 +17,13 @@ describe('PromoterAnalyticsConnected', () => {
       />,
     );
 
-    expect(screen.getByRole('heading', { name: 'Campaign analytics' })).toBeInTheDocument();
-    expect(screen.getByText('27')).toBeInTheDocument();
-    expect(screen.getByText('4')).toBeInTheDocument();
-    expect(screen.getByText('₹1,234.50')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Analytics' })).toBeInTheDocument();
+    expect(screen.getAllByText('27')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('4')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('₹1,235')[0]).toBeInTheDocument();
     expect(screen.getByText(/first 1,000 referral links/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/does not represent net commission or payout balance/i),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/daily breakdown is not available/i)).toBeInTheDocument();
+    expect(screen.getByText('Gross · before refunds')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '4 conversions from 27 clicks' })).toBeInTheDocument();
   });
 
   it('does not describe empty data as campaign activity', () => {
@@ -41,7 +39,8 @@ describe('PromoterAnalyticsConnected', () => {
       />,
     );
 
-    expect(screen.getAllByText('0', { selector: 'dd' })).toHaveLength(3);
+    expect(screen.getAllByText('0', { selector: 'strong' })).toHaveLength(5);
+    expect(screen.getByRole('img', { name: '0 conversions from 0 clicks' })).toBeInTheDocument();
     expect(screen.queryByText(/first 1,000 referral links/i)).not.toBeInTheDocument();
   });
 });

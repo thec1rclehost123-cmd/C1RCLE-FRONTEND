@@ -2,72 +2,106 @@ import Link from 'next/link';
 
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 
+import styles from '../event-detail/partner-analytics.module.css';
+
 import type { PromoterCampaignSummaryDto } from '@c1rcle/contracts';
 
-const inr = (paise: number) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(paise / 100);
+const money = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  maximumFractionDigits: 0,
+});
+const number = new Intl.NumberFormat('en-IN');
+const inr = (paise: number) => money.format(paise / 100);
 
 export function PromoterAnalyticsConnected({
   summary,
 }: {
   readonly summary: PromoterCampaignSummaryDto;
 }) {
+  const conversionRate = summary.clicks > 0 ? (summary.conversions / summary.clicks) * 100 : 0;
+  const conversionWidth =
+    summary.clicks > 0 ? Math.min((summary.conversions / summary.clicks) * 100, 100) : 0;
+
   return (
     <PageContainer>
-      <main className="mx-auto w-full max-w-5xl px-4 py-8 text-white sm:px-6">
-        <header className="flex flex-wrap items-end justify-between gap-4">
+      <main className={styles['page']}>
+        <header className={styles['header']}>
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-white/50">Promoter workspace</p>
-            <h1 className="mt-2 text-3xl font-semibold">Campaign analytics</h1>
-            <p className="mt-2 max-w-2xl text-sm text-white/60">
-              Referral activity from the backend campaign read model. Ticket value is gross and does
-              not represent net commission or payout balance.
-            </p>
+            <h1>Analytics</h1>
+            <span>Promoter performance</span>
           </div>
-          <Link
-            href="/partner/promoter/events"
-            className="rounded-full border border-white/20 px-4 py-2 text-sm"
-          >
-            View campaigns
-          </Link>
+          <div className={styles['promoterHeaderActions']}>
+            <span className={styles['rangePill']}>All time</span>
+            <Link href="/partner/promoter/events">View campaigns</Link>
+          </div>
         </header>
 
-        <section className="mt-8" aria-labelledby="campaign-summary-title">
-          <h2 id="campaign-summary-title" className="text-lg font-medium">
-            All campaigns
-          </h2>
-          <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Metric label="Referral links counted" value={String(summary.linkCount)} />
-            <Metric label="Clicks" value={String(summary.clicks)} />
-            <Metric label="Conversions" value={String(summary.conversions)} />
-            <Metric
-              label="Gross attributed ticket value"
-              value={inr(summary.grossAttributedTicketRevenuePaise)}
-            />
-          </dl>
-          {summary.hasMoreLinks ? (
-            <p className="mt-3 text-xs text-white/55">
-              Totals include the first 1,000 referral links. Additional links are not included.
-            </p>
-          ) : null}
-          <p className="mt-2 text-xs text-white/55">
-            Revenue reflects referral-link counters before refund adjustments. For current pending,
-            held, and available commission, see the Promoter overview.
-          </p>
+        <section className={styles['stats']} aria-label="Promoter analytics summary">
+          <Metric label="Referral links" value={number.format(summary.linkCount)} />
+          <Metric label="Clicks" value={number.format(summary.clicks)} />
+          <Metric label="Conversions" value={number.format(summary.conversions)} />
+          <Metric
+            label="Gross attributed value"
+            value={inr(summary.grossAttributedTicketRevenuePaise)}
+          />
         </section>
 
-        <section
-          className="mt-8 rounded-2xl border border-white/10 p-5"
-          aria-labelledby="timeline-title"
-        >
-          <h2 id="timeline-title" className="font-medium">
-            Timeline
-          </h2>
-          <p className="mt-2 text-sm text-white/60">
-            A daily breakdown is not available from the current backend read model. These totals
-            show the data the service provides without estimating a timeline.
-          </p>
+        <section className={styles['promoterChart']} aria-labelledby="promoter-funnel-title">
+          <div className={styles['panelHeading']}>
+            <h2 id="promoter-funnel-title">Link performance</h2>
+            <strong>{conversionRate.toFixed(1)}% conversion</strong>
+          </div>
+          <div className={styles['funnelRow']}>
+            <div>
+              <span>Clicks</span>
+              <strong>{number.format(summary.clicks)}</strong>
+            </div>
+            <svg
+              className={styles['funnelTrack']}
+              viewBox="0 0 100 10"
+              preserveAspectRatio="none"
+              role="img"
+              aria-label={`${number.format(summary.conversions)} conversions from ${number.format(summary.clicks)} clicks`}
+            >
+              <rect
+                className={styles['funnelTrackBackground']}
+                x="0"
+                y="0"
+                width="100"
+                height="10"
+                rx="5"
+              />
+              <rect
+                className={styles['funnelTrackValue']}
+                x="0"
+                y="0"
+                width={conversionWidth}
+                height="10"
+                rx="5"
+              />
+            </svg>
+            <div>
+              <span>Conversions</span>
+              <strong>{number.format(summary.conversions)}</strong>
+            </div>
+          </div>
+          <div className={styles['funnelLegend']}>
+            <span>Conversion rate</span>
+            <strong>{conversionRate.toFixed(1)}%</strong>
+          </div>
         </section>
+
+        <section className={styles['promoterValue']}>
+          <div>
+            <h2>Attributed ticket value</h2>
+            <strong>{inr(summary.grossAttributedTicketRevenuePaise)}</strong>
+          </div>
+          <span>Gross · before refunds</span>
+        </section>
+        {summary.hasMoreLinks ? (
+          <p className={styles['limitNotice']}>Summary covers the first 1,000 referral links.</p>
+        ) : null}
       </main>
     </PageContainer>
   );
@@ -75,9 +109,9 @@ export function PromoterAnalyticsConnected({
 
 function Metric({ label, value }: { readonly label: string; readonly value: string }) {
   return (
-    <div className="rounded-xl border border-white/10 p-4">
-      <dt className="text-xs text-white/55">{label}</dt>
-      <dd className="mt-2 text-lg font-semibold">{value}</dd>
+    <div className={styles['stat']}>
+      <span>{label}</span>
+      <strong>{value}</strong>
     </div>
   );
 }

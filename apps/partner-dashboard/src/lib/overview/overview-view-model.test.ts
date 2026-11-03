@@ -126,22 +126,29 @@ function build(
 }
 
 describe('toOverviewData', () => {
+  it('formats Host event date and time in India Standard Time', () => {
+    const data = build({
+      cards: cards([card({ startAt: '2026-11-16T13:30:00.000Z' })]),
+    });
+    expect(data.nextEvent.dateLabel).toBe('16 Nov');
+    expect(data.nextEvent.timeLabel).toMatch(/7:00\s*pm/i);
+  });
+
   it('marks the data as API-backed, never fixture', () => {
     expect(build().dataStatus).toBe('api');
   });
 
-  it('formats today in UTC so hydration cannot disagree', () => {
-    // 2026-09-16 is a Wednesday. A local-time formatter would render a
-    // different weekday for a partner west of the server.
-    expect(build().todayLabel).toBe('Wednesday, 16 September · 12:00 PM');
+  it('formats today and the greeting in the fixed product timezone', () => {
+    // 2026-09-16 12:00 UTC is 17:30 in the fixed product timezone.
+    expect(build().todayLabel).toBe('Wednesday, 16 September · 5:30 PM');
   });
 
   it('greet by first name only', () => {
-    expect(build({ displayName: 'Rhea Kapoor' }).greeting).toBe('Good afternoon, Rhea');
+    expect(build({ displayName: 'Rhea Kapoor' }).greeting).toBe('Good evening, Rhea');
   });
 
   it('greets without claiming a name it does not have', () => {
-    expect(build({ displayName: null }).greeting).toBe('Good afternoon');
+    expect(build({ displayName: null }).greeting).toBe('Good evening');
   });
 
   it('omits the doors label because the backend has no doors time', () => {
@@ -262,6 +269,11 @@ describe('toOverviewData', () => {
     // The trailing bucket is the most recent day; dropping it would make
     // today's sales invisible on a chart whose whole point is today.
     expect(week?.points.at(-1)).toBe(30);
+    expect(week?.pointLabels).toHaveLength(7);
+    expect(week?.pointLabels?.at(-1)).toBe('30 Sept');
+    const month = data.trends.find((entry) => entry.metric === 'tickets' && entry.range === '1M');
+    expect(month?.pointLabels?.[0]).toBe('1 Sept – 2 Sept');
+    expect(month?.pointLabels).toHaveLength(month?.points.length ?? 0);
   });
 
   it('shows a plain zero total for an org with no sales', () => {

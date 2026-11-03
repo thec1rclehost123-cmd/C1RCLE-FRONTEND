@@ -1,202 +1,311 @@
-import Link from 'next/link';
+import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
 
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 
-import type { PartnerOrganizationAnalytics } from '@/lib/events/load-partner-organization-analytics';
+import styles from './partner-analytics.module.css';
 
-const money = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
-const date = new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeZone: 'Asia/Kolkata' });
+import type {
+  PartnerAnalyticsBreakdown,
+  PartnerAnalyticsRange,
+  PartnerOrganizationAnalytics,
+} from '@/lib/events/load-partner-organization-analytics';
+import type { TrendBucketDto } from '@c1rcle/contracts';
+
+const money = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  maximumFractionDigits: 0,
+});
+const count = new Intl.NumberFormat('en-IN');
+const ranges: readonly { value: PartnerAnalyticsRange; label: string }[] = [
+  { value: 'all', label: 'All time' },
+  { value: '30d', label: 'Last 30 days' },
+  { value: '90d', label: 'Last 90 days' },
+  { value: '12m', label: 'Last 12 months' },
+];
 
 function formatMoney(paise: number): string {
   return money.format(paise / 100);
 }
 
+function formatBucket(key: string, breakdown: PartnerAnalyticsBreakdown): string {
+  const normalized = key.length === 7 ? `${key}-01` : key.slice(0, 10);
+  const date = new Date(`${normalized}T12:00:00Z`);
+  if (Number.isNaN(date.getTime())) return key;
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: PRODUCT_TIME_ZONE,
+    ...(breakdown === 'month'
+      ? { month: 'short', year: 'numeric' }
+      : { day: 'numeric', month: 'short' }),
+  }).format(date);
+}
+
+function LineChart({
+  buckets,
+  value,
+  color,
+  format,
+  label,
+}: {
+  readonly buckets: readonly TrendBucketDto[];
+  readonly value: (bucket: TrendBucketDto) => number;
+  readonly color: string;
+  readonly format: (value: number) => string;
+  readonly label: string;
+}) {
+  const values = buckets.map(value);
+  const max = Math.max(...values, 1);
+  const points = values
+    .map((point, index) => {
+      const x = values.length < 2 ? 320 : 16 + (index / (values.length - 1)) * 608;
+      const y = 174 - (point / max) * 148;
+      return `${String(x)},${String(y)}`;
+    })
+    .join(' ');
+  const first = buckets[0]?.key;
+  const last = buckets.at(-1)?.key;
+
+  return (
+    <section className={styles['chartCard']} aria-label={label}>
+      <div className={styles['chartHeading']}>
+        <h2>{label}</h2>
+        <strong>{format(values.reduce((sum, current) => sum + current, 0))}</strong>
+      </div>
+      <svg
+        className={styles['lineChart']}
+        viewBox="0 0 640 200"
+        role="img"
+        aria-label={`${label} trend`}
+      >
+        {[26, 75, 124, 174].map((y) => (
+          <line key={y} x1="8" x2="632" y1={y} y2={y} className={styles['gridLine']} />
+        ))}
+        {values.length > 0 ? (
+          <polyline
+            points={points}
+            fill="none"
+            stroke={color}
+            strokeWidth="4"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        ) : null}
+      </svg>
+      <div className={styles['chartAxis']}>
+        <span>
+          {first
+            ? formatBucket(first, buckets[0]?.key.length === 7 ? 'month' : 'day')
+            : 'No activity'}
+        </span>
+        <span>
+          {last ? formatBucket(last, buckets.at(-1)?.key.length === 7 ? 'month' : 'day') : ''}
+        </span>
+      </div>
+    </section>
+  );
+}
+
 export function ConnectedPartnerAnalyticsScreen({
   analytics,
   studio,
+  range = 'all',
+  breakdown = 'month',
 }: {
   readonly analytics: PartnerOrganizationAnalytics;
   readonly studio: 'host' | 'venue';
+  readonly range?: PartnerAnalyticsRange;
+  readonly breakdown?: PartnerAnalyticsBreakdown;
 }) {
-  const { overview, lastThirtyDays } = analytics;
-  const windowTotals = lastThirtyDays.totals;
-  const metrics = [
-    ['Total tickets issued', analytics.salesBreakdown.totalTicketsIssued.toLocaleString('en-IN')],
-    ['Paid tickets', analytics.salesBreakdown.paidTickets.toLocaleString('en-IN')],
-    ['Free RSVP tickets', analytics.salesBreakdown.freeRsvpTickets.toLocaleString('en-IN')],
-    ['Paid orders', analytics.salesBreakdown.paidOrderCount.toLocaleString('en-IN')],
-    ['Guest gross collected', formatMoney(analytics.salesBreakdown.guestGrossCollectedPaise)],
-    ['Ticket revenue', formatMoney(analytics.salesBreakdown.ticketRevenuePaise)],
-    ['Check-ins', overview.totalCheckIns.toLocaleString('en-IN')],
-    ['Published events', overview.publishedEvents.toLocaleString('en-IN')],
-  ] as const;
-
+  const selectedTotals = range === 'all' ? null : analytics.lastThirtyDays.totals;
+  const totals = {
+    gross:
+      selectedTotals?.guestGrossCollectedPaise ?? analytics.salesBreakdown.guestGrossCollectedPaise,
+    net: selectedTotals?.revenuePaise ?? analytics.overview.totalRevenuePaise,
+    tickets: selectedTotals?.totalTicketsIssued ?? analytics.salesBreakdown.totalTicketsIssued,
+    orders: selectedTotals?.paidOrderCount ?? analytics.salesBreakdown.paidOrderCount,
+  };
+  const buckets = analytics.lastThirtyDays.buckets;
+  const rows = [...buckets].reverse();
   return (
     <PageContainer>
-      <main className="mx-auto max-w-5xl py-7 text-stone-100">
-        <Link
-          href={`/partner/${studio}/overview`}
-          className="text-sm font-medium text-stone-400 no-underline hover:text-stone-100"
-        >
-          ← Overview
-        </Link>
-        <section className="mt-6 rounded-2xl border border-white/15 bg-neutral-950 p-7">
-          <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
-          <p className="mt-2 text-stone-300">
-            Organization-wide ticket and collection totals, with Partner payable kept separate.
-          </p>
-          <dl className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {metrics.map(([label, value]) => (
-              <div key={label} className="rounded-xl border border-white/15 p-4">
-                <dt className="text-sm text-stone-400">{label}</dt>
-                <dd className="mt-1.5 text-xl font-semibold">{value}</dd>
-              </div>
-            ))}
-          </dl>
-          <div className="mt-6 rounded-xl border border-white/15 p-4">
-            <h2 className="text-base font-semibold">Partner payable</h2>
-            <p className="mt-1 text-sm text-stone-400">
-              Lifetime payable is not Guest gross collected. Values use the{' '}
-              {analytics.partnerPayable.readModel === 'financial_journal_v2'
-                ? 'financial journal'
-                : 'legacy ledger'}{' '}
-              read model.
-            </p>
-            <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {[
-                ['Lifetime payable', analytics.partnerPayable.lifetimePaise],
-                ['Available', analytics.partnerPayable.availablePaise],
-                ['Pending settlement', analytics.partnerPayable.pendingPaise],
-                ['Reserved for payout', analytics.partnerPayable.reservedPaise],
-                ['Held', analytics.partnerPayable.heldPaise],
-                ['Paid out', analytics.partnerPayable.paidPaise],
-              ].map(([label, amount]) => (
-                <div key={label}>
-                  <dt className="text-sm text-stone-400">{label}</dt>
-                  <dd className="text-lg font-semibold">{formatMoney(Number(amount))}</dd>
-                </div>
-              ))}
-            </dl>
+      <main className={styles['page']}>
+        <header className={styles['header']}>
+          <div>
+            <h1>Analytics</h1>
+            <span>{studio === 'venue' ? 'Venue' : 'Host'} performance</span>
           </div>
-          <p className="mt-4 text-sm text-stone-400">
-            Guest gross includes platform fees and GST and is before refunds. Ticket revenue is the
-            discounted ticket subtotal, excludes fees and GST, and is before refunds. Total tickets
-            issued is historical and includes tickets later voided or refunded.
-          </p>
+          <form className={styles['filters']} action={`/partner/${studio}/analytics`} method="get">
+            <label>
+              <span>Time</span>
+              <select name="range" defaultValue={range}>
+                {ranges.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Breakdown</span>
+              <select name="breakdown" defaultValue={breakdown}>
+                <option value="day">Daily</option>
+                <option value="month">Monthly</option>
+              </select>
+            </label>
+            <button type="submit">Apply</button>
+          </form>
+        </header>
+
+        <section className={styles['stats']} aria-label="Analytics summary">
+          <Metric label="Gross revenue" value={formatMoney(totals.gross)} />
+          <Metric label="Net revenue" value={formatMoney(totals.net)} />
+          <Metric label="Tickets issued" value={count.format(totals.tickets)} />
+          <Metric label="Paid orders" value={count.format(totals.orders)} />
         </section>
 
-        <section className="mt-5 rounded-2xl border border-white/15 bg-neutral-950 p-7">
-          <h2 className="text-xl font-semibold">Last 30 days</h2>
-          <p className="mt-1 text-sm text-stone-400">
-            Window totals are separate from lifetime totals and are not combined.
-          </p>
-          <dl className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <dt className="text-sm text-stone-400">Guest gross collected</dt>
-              <dd className="text-lg font-semibold">
-                {formatMoney(windowTotals.guestGrossCollectedPaise)}
-              </dd>
+        <section className={styles['splitGrid']} aria-label="Revenue and ticket breakdown">
+          <div className={styles['panel']}>
+            <h2>Revenue breakdown</h2>
+            <DataRow label="Guest payments" value={formatMoney(totals.gross)} />
+            <DataRow
+              label="Ticket revenue"
+              value={formatMoney(
+                selectedTotals?.ticketRevenuePaise ?? analytics.salesBreakdown.ticketRevenuePaise,
+              )}
+            />
+            <DataRow label="Net captured after refunds" value={formatMoney(totals.net)} />
+          </div>
+          <div className={styles['panel']}>
+            <h2>Ticket activity</h2>
+            <DataRow
+              label="Paid tickets"
+              value={count.format(
+                selectedTotals?.paidTickets ?? analytics.salesBreakdown.paidTickets,
+              )}
+            />
+            <DataRow
+              label="Free RSVP tickets"
+              value={count.format(
+                selectedTotals?.freeRsvpTickets ?? analytics.salesBreakdown.freeRsvpTickets,
+              )}
+            />
+            <DataRow
+              label="Check-ins"
+              value={count.format(selectedTotals?.checkIns ?? analytics.overview.totalCheckIns)}
+            />
+          </div>
+        </section>
+
+        <section className={styles['chartGrid']} aria-label="Performance trends">
+          <LineChart
+            buckets={buckets}
+            value={(bucket) => bucket.guestGrossCollectedPaise}
+            color="#ff6842"
+            format={formatMoney}
+            label={range === 'all' ? 'Recent gross revenue' : 'Gross revenue'}
+          />
+          <LineChart
+            buckets={buckets}
+            value={(bucket) => bucket.tickets}
+            color="#a78bfa"
+            format={(value) => count.format(value)}
+            label={range === 'all' ? 'Recent tickets issued' : 'Tickets issued'}
+          />
+        </section>
+
+        {range === 'all' ? (
+          <section className={styles['panel']}>
+            <div className={styles['panelHeading']}>
+              <h2>Top events</h2>
+              <span>Lifetime</span>
             </div>
-            <div>
-              <dt className="text-sm text-stone-400">Ticket revenue</dt>
-              <dd className="text-lg font-semibold">
-                {formatMoney(windowTotals.ticketRevenuePaise)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-sm text-stone-400">Tickets issued</dt>
-              <dd className="text-lg font-semibold">
-                {windowTotals.totalTicketsIssued.toLocaleString('en-IN')}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-sm text-stone-400">Paid tickets / free RSVPs</dt>
-              <dd className="text-lg font-semibold">
-                {windowTotals.paidTickets.toLocaleString('en-IN')} /{' '}
-                {windowTotals.freeRsvpTickets.toLocaleString('en-IN')}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-sm text-stone-400">Paid orders</dt>
-              <dd className="text-lg font-semibold">
-                {windowTotals.paidOrderCount.toLocaleString('en-IN')}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-sm text-stone-400">Net captured after refunds</dt>
-              <dd className="text-lg font-semibold">{formatMoney(windowTotals.revenuePaise)}</dd>
-            </div>
-            <div>
-              <dt className="text-sm text-stone-400">Check-ins</dt>
-              <dd className="text-lg font-semibold">
-                {windowTotals.checkIns.toLocaleString('en-IN')}
-              </dd>
-            </div>
-          </dl>
-          <div className="mt-6 overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-white/15 text-stone-400">
+            {analytics.overview.topEvents.length ? (
+              <div className={styles['tableWrap']}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Event</th>
+                      <th>Date</th>
+                      <th>Tickets</th>
+                      <th>Net revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analytics.overview.topEvents.map((event) => (
+                      <tr key={event.eventId}>
+                        <td>{event.title}</td>
+                        <td>{formatBucket(event.date.slice(0, 10), 'day')}</td>
+                        <td>{count.format(event.tickets)}</td>
+                        <td>{formatMoney(event.revenuePaise)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className={styles['empty']}>No event sales yet.</p>
+            )}
+          </section>
+        ) : null}
+
+        <section className={styles['panel']}>
+          <div className={styles['panelHeading']}>
+            <h2>
+              {range === 'all'
+                ? 'Recent activity'
+                : `Activity by ${analytics.lastThirtyDays.granularity === 'month' ? 'month' : 'day'}`}
+            </h2>
+            <span>{rows.length} periods</span>
+          </div>
+          <div className={styles['tableWrap']}>
+            <table>
+              <thead>
                 <tr>
-                  <th className="py-3">Day</th>
-                  <th>Guest gross</th>
-                  <th>Ticket revenue</th>
-                  <th>Issued</th>
-                  <th>Paid / RSVP</th>
+                  <th>Period</th>
+                  <th>Gross revenue</th>
+                  <th>Net revenue</th>
+                  <th>Tickets</th>
                   <th>Paid orders</th>
-                  <th>Net after refunds</th>
-                  <th>Check-ins</th>
                 </tr>
               </thead>
               <tbody>
-                {lastThirtyDays.buckets.map((bucket) => (
-                  <tr key={bucket.key} className="border-b border-white/10">
-                    <td className="py-3">{bucket.key}</td>
-                    <td>{formatMoney(bucket.guestGrossCollectedPaise)}</td>
-                    <td>{formatMoney(bucket.ticketRevenuePaise)}</td>
-                    <td>{bucket.totalTicketsIssued}</td>
+                {rows.map((bucket) => (
+                  <tr key={bucket.key}>
                     <td>
-                      {bucket.paidTickets} / {bucket.freeRsvpTickets}
+                      {formatBucket(
+                        bucket.key,
+                        analytics.lastThirtyDays.granularity === 'month' ? 'month' : 'day',
+                      )}
                     </td>
-                    <td>{bucket.paidOrderCount}</td>
+                    <td>{formatMoney(bucket.guestGrossCollectedPaise)}</td>
                     <td>{formatMoney(bucket.revenuePaise)}</td>
-                    <td>{bucket.checkIns}</td>
+                    <td>{count.format(bucket.totalTicketsIssued)}</td>
+                    <td>{count.format(bucket.paidOrderCount)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </section>
-
-        <section className="mt-5 rounded-2xl border border-white/15 bg-neutral-950 p-7">
-          <h2 className="text-xl font-semibold">Top events</h2>
-          {overview.topEvents.length === 0 ? (
-            <p className="mt-5 text-stone-400">No completed event sales are recorded yet.</p>
-          ) : (
-            <div className="mt-5 overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-white/15 text-stone-400">
-                  <tr>
-                    <th className="py-3">Event</th>
-                    <th>Net captured after refunds</th>
-                    <th>Ticket units</th>
-                    <th>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {overview.topEvents.map((event) => (
-                    <tr key={event.eventId} className="border-b border-white/10">
-                      <td className="py-3">{event.title}</td>
-                      <td>{formatMoney(event.revenuePaise)}</td>
-                      <td>{event.tickets}</td>
-                      <td>{date.format(new Date(event.date))}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
       </main>
     </PageContainer>
+  );
+}
+
+function Metric({ label, value }: { readonly label: string; readonly value: string }) {
+  return (
+    <div className={styles['stat']}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function DataRow({ label, value }: { readonly label: string; readonly value: string }) {
+  return (
+    <div className={styles['dataRow']}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
   );
 }

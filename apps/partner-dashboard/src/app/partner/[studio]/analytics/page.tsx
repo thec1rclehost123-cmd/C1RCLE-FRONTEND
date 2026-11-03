@@ -7,12 +7,26 @@ import { loadPromoterCampaignSummary } from '@/lib/events/load-promoter-campaign
 
 import { renderStudioSkeleton } from '../route-helpers';
 
+import type {
+  PartnerAnalyticsBreakdown,
+  PartnerAnalyticsRange,
+} from '@/lib/events/load-partner-organization-analytics';
+
+const ranges = new Set<PartnerAnalyticsRange>(['7d', '30d', '90d', '12m', 'all']);
+const breakdowns = new Set<PartnerAnalyticsBreakdown>(['day', 'month']);
+
+function firstParam(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
 export default async function StudioAnalyticsPage({
   params,
+  searchParams,
 }: {
   readonly params: Promise<{ studio: string }>;
+  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { studio } = await params;
+  const [{ studio }, query] = await Promise.all([params, searchParams]);
   if (studio === 'promoter') {
     let summary: Awaited<ReturnType<typeof loadPromoterCampaignSummary>>;
     try {
@@ -40,6 +54,21 @@ export default async function StudioAnalyticsPage({
       'Analytics are unavailable for this workspace.',
     );
   }
-  const analytics = await loadPartnerOrganizationAnalytics();
-  return <ConnectedPartnerAnalyticsScreen analytics={analytics} studio={studio} />;
+  const rangeValue = firstParam(query['range']);
+  const range = ranges.has(rangeValue as PartnerAnalyticsRange)
+    ? (rangeValue as PartnerAnalyticsRange)
+    : 'all';
+  const breakdownValue = firstParam(query['breakdown']);
+  const breakdown = breakdowns.has(breakdownValue as PartnerAnalyticsBreakdown)
+    ? (breakdownValue as PartnerAnalyticsBreakdown)
+    : 'month';
+  const analytics = await loadPartnerOrganizationAnalytics({ range, breakdown });
+  return (
+    <ConnectedPartnerAnalyticsScreen
+      analytics={analytics}
+      studio={studio}
+      range={range}
+      breakdown={breakdown}
+    />
+  );
 }

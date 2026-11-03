@@ -1,13 +1,17 @@
 import Link from 'next/link';
 
+import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
+
 import type { loadPromoterOverview } from '@/lib/events/load-promoter-overview';
 
 const inr = (paise: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(paise / 100);
 const dateTime = (value: string) =>
-  new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short' }).format(
-    new Date(value),
-  );
+  new Intl.DateTimeFormat('en-IN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: PRODUCT_TIME_ZONE,
+  }).format(new Date(value));
 
 type Overview = Awaited<ReturnType<typeof loadPromoterOverview>>;
 
