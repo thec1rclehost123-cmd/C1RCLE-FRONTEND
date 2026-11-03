@@ -53,9 +53,7 @@ describe('VenueFinanceScreen', () => {
     const data = await fixturePartnerDataSource.getVenueFinance();
     render(<VenueFinanceScreen data={{ ...data, dataStatus: 'api' }} />);
 
-    expect(screen.getByRole('note')).toHaveTextContent(
-      'Balance source: legacy ledger. Financial journal totals are not included.',
-    );
+    expect(screen.getByRole('note')).toHaveTextContent('Balance from ledger');
   });
 
   it('filters Orders by status and keeps row actions read-only', async () => {
@@ -73,17 +71,19 @@ describe('VenueFinanceScreen', () => {
     });
 
     await user.click(screen.getByRole('button', { name: 'Open actions for order #8821' }));
-    expect(screen.getByRole('menuitem', { name: 'Refund' })).toBeDisabled();
+    expect(screen.getByRole('menuitem', { name: 'View order details' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Refund' })).not.toBeInTheDocument();
   });
 
-  it('renders the read-only Bank & cards view', async () => {
+  it('shows payout account setup and an honest card state in the fixture view', async () => {
     const data = await fixturePartnerDataSource.getVenueFinance();
     render(<VenueFinanceScreen data={data} view="bank" />);
 
-    expect(screen.getByRole('heading', { name: 'Bank account' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Payment card' })).toBeInTheDocument();
-    expect(screen.getByDisplayValue('HDFC0001234')).toHaveAttribute('readonly');
-    expect(screen.getByRole('button', { name: 'Save bank details' })).toBeDisabled();
+    expect(screen.getByRole('heading', { name: 'Payout bank accounts' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Payment cards' })).toBeInTheDocument();
+    expect(screen.getByText('No payout account added')).toBeInTheDocument();
+    expect(screen.getByText('No saved card')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('HDFC0001234')).not.toBeInTheDocument();
   });
 
   it('does not call a missing payout account unverified', async () => {
@@ -104,7 +104,7 @@ describe('VenueFinanceScreen', () => {
       />,
     );
 
-    expect(screen.getByDisplayValue('Not set')).toBeInTheDocument();
+    expect(screen.getByText('No payout account added')).toBeInTheDocument();
     expect(screen.queryByText(/awaiting verification/i)).not.toBeInTheDocument();
   });
 });

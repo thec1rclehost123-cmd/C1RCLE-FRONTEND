@@ -1,3 +1,12 @@
+import {
+  PRODUCT_TIME_ZONE,
+  type BalanceSummaryResponse,
+  type BankAccountResponse,
+  type FinanceOrderDto,
+  type LedgerEntryDto,
+  type PayoutResponse,
+} from '@c1rcle/contracts';
+
 import type {
   FinanceAccent,
   FinanceBankAccount,
@@ -9,13 +18,6 @@ import type {
   FinanceTone,
   PartnerFinanceData,
 } from '@/data/partner-data-source';
-import type {
-  BalanceSummaryResponse,
-  BankAccountResponse,
-  FinanceOrderDto,
-  LedgerEntryDto,
-  PayoutResponse,
-} from '@c1rcle/contracts';
 
 /**
  * ─── Finance view model ─────────────────────────────────────────────────────
@@ -37,7 +39,7 @@ import type {
 
 /** How many trailing weeks the balance sparkline covers. */
 const TREND_WEEKS = 8;
-export const FINANCE_TIME_ZONE = 'Asia/Kolkata' as const;
+export const FINANCE_TIME_ZONE = PRODUCT_TIME_ZONE;
 
 const RUPEE = new Intl.NumberFormat('en-IN', {
   style: 'currency',

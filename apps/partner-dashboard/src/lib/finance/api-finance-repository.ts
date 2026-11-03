@@ -1,6 +1,10 @@
+import { z } from 'zod';
+
 import {
   balanceSummaryResponseSchema,
   bankAccountListResponseSchema,
+  bankAccountRequestSchema,
+  bankAccountResponseSchema,
   financeOrderListResponseSchema,
   ledgerEntryListResponseSchema,
   payoutListResponseSchema,
@@ -14,7 +18,6 @@ import type {
   LedgerEntryDto,
   PayoutResponse,
 } from '@c1rcle/contracts';
-import type { z } from 'zod';
 
 /**
  * The slice of the API client these calls need. Declared structurally rather
@@ -32,6 +35,14 @@ export interface FinanceApiClient {
     path: string;
     schema: z.ZodType<T>;
     body?: unknown;
+    headers?: Record<string, string>;
+  }): Promise<T>;
+}
+
+export interface FinanceMutationApiClient extends FinanceApiClient {
+  delete<T>(options: {
+    path: string;
+    schema: z.ZodType<T>;
     headers?: Record<string, string>;
   }): Promise<T>;
 }
@@ -207,6 +218,52 @@ export async function listBankAccounts(
     headers: orgHeaders(organizationId),
   });
   return response.items;
+}
+
+/** Adds an Indian payout destination; the response contains a masked number only. */
+export async function addBankAccount(
+  client: FinanceMutationApiClient,
+  organizationId: string,
+  input: z.infer<typeof bankAccountRequestSchema>,
+): Promise<BankAccountResponse> {
+  return client.post({
+    path: orgCollectionPath(organizationId, 'bank-accounts'),
+    body: bankAccountRequestSchema.parse(input),
+    schema: bankAccountResponseSchema,
+    headers: orgHeaders(organizationId),
+  });
+}
+
+export async function setDefaultBankAccount(
+  client: FinanceMutationApiClient,
+  organizationId: string,
+  bankAccountId: string,
+): Promise<BankAccountResponse> {
+  return client.post({
+    path: orgCollectionPath(
+      organizationId,
+      'bank-accounts',
+      `/${encodeURIComponent(bankAccountId)}/default`,
+    ),
+    schema: bankAccountResponseSchema,
+    headers: orgHeaders(organizationId),
+  });
+}
+
+export async function removeBankAccount(
+  client: FinanceMutationApiClient,
+  organizationId: string,
+  bankAccountId: string,
+): Promise<void> {
+  await client.delete({
+    path: orgCollectionPath(
+      organizationId,
+      'bank-accounts',
+      `/${encodeURIComponent(bankAccountId)}`,
+    ),
+    schema: z.unknown(),
+    headers: orgHeaders(organizationId),
+  });
 }
 
 /**

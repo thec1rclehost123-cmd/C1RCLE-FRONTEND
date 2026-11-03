@@ -1,3 +1,5 @@
+import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
+
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 
 import styles from './finance.module.css';
@@ -41,31 +43,16 @@ export function PartnerFinanceScreen({
       <div className={styles['financePage']} data-accent={data.accent}>
         <header className={styles['financeHeader']}>
           <h1>Finance</h1>
-          <p className={styles['financeDisclosure']} role="status">
-            Data read{' '}
-            {new Intl.DateTimeFormat('en-IN', {
-              dateStyle: 'medium',
-              timeStyle: 'short',
-              timeZone: data.freshness.timezone,
-            }).format(new Date(data.freshness.asOf))}{' '}
-            IST (Asia/Kolkata). Showing {String(data.coverage.orders.loaded)} of{' '}
-            {String(data.coverage.orders.total)} recent orders and{' '}
-            {String(data.coverage.payouts.loaded)} of {String(data.coverage.payouts.total)} payouts
-            {data.coverage.orders.hasMore || data.coverage.payouts.hasMore
-              ? '; additional records are not included in this view.'
-              : '.'}
-            {data.coverage.ledger.hasMore
-              ? ` The balance trend uses ${String(data.coverage.ledger.loaded)} of ${String(data.coverage.ledger.total)} ledger entries.`
-              : ''}
-          </p>
-          {data.dataStatus === 'api' ? (
+          {view === 'payouts' ? (
             <p className={styles['financeDisclosure']} role="note">
-              {data.readModel === 'legacy_ledger_v1'
-                ? 'Balance source: legacy ledger. Financial journal totals are not included.'
-                : 'Balance source: financial journal. Legacy ledger totals are not included.'}
-              {data.readModel === 'financial_journal_v2'
-                ? ' Balance trend is unavailable until journal-line trend data is connected.'
-                : ''}
+              Updated{' '}
+              {new Intl.DateTimeFormat('en-IN', {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+                timeZone: PRODUCT_TIME_ZONE,
+              }).format(new Date(data.freshness.asOf))}{' '}
+              IST · Balance from{' '}
+              {data.readModel === 'legacy_ledger_v1' ? 'ledger' : 'financial journal'}
             </p>
           ) : null}
         </header>
