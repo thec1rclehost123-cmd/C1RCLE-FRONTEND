@@ -2,6 +2,8 @@ import 'server-only';
 
 import { createApiClient } from '@c1rcle/api-client';
 
+import { withGatewaySessionCookieName } from '@/lib/api/gateway-session-cookie';
+
 import type { z } from 'zod';
 
 /**
@@ -48,7 +50,12 @@ export function createServerApiClient(cookieHeader: string): ServerApiClient {
   // to stay absent rather than being passed through as an explicit `undefined`.
   const withCookie = (headers: HeaderBag | undefined): { headers?: HeaderBag } => {
     if (!cookieHeader) return headers ? { headers } : {};
-    return { headers: { ...headers, cookie: cookieHeader } };
+    // The gateway of a production deployment reads only the `__Secure-` prefixed
+    // session cookie; without the twin every server-rendered read is a 401 and
+    // the dashboard shows "Your session has ended" straight after a good login.
+    return {
+      headers: { ...headers, cookie: withGatewaySessionCookieName(cookieHeader) },
+    };
   };
 
   return {
