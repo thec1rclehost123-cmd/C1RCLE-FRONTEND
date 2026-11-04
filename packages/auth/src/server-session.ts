@@ -42,7 +42,7 @@ export async function getServerSession(cookieHeader: string): Promise<{ user: Us
  * Emit both with the same value so server-side reads resolve the session
  * whatever cookie-name configuration the gateway uses.
  */
-function withGatewayCookieName(cookieHeader: string): string {
+export function withGatewayCookieName(cookieHeader: string): string {
   if (cookieHeader.includes('__Secure-better-auth.session_token=')) {
     return cookieHeader;
   }

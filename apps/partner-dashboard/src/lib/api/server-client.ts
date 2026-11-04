@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { createApiClient } from '@c1rcle/api-client';
+import { withGatewayCookieName } from '@c1rcle/auth/server-session';
 
 import type { z } from 'zod';
 
@@ -48,7 +49,7 @@ export function createServerApiClient(cookieHeader: string): ServerApiClient {
   // to stay absent rather than being passed through as an explicit `undefined`.
   const withCookie = (headers: HeaderBag | undefined): { headers?: HeaderBag } => {
     if (!cookieHeader) return headers ? { headers } : {};
-    return { headers: { ...headers, cookie: cookieHeader } };
+    return { headers: { ...headers, cookie: withGatewayCookieName(cookieHeader) } };
   };
 
   return {
