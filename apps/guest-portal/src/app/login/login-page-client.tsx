@@ -5,8 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import React, { useState } from 'react';
 
 import { isApiClientError } from '@c1rcle/api-client';
-import { login } from '@c1rcle/auth';
+import { login, useSessionStore } from '@c1rcle/auth';
 
+import { GoogleButton } from '@/features/auth/components/GoogleButton';
 import { safeNextPath } from '@/lib/auth/safe-next-path';
 
 import {
@@ -46,7 +47,12 @@ export function LoginPageClient() {
     setPending(true);
     try {
       await login({ email: email.trim(), password });
-      router.replace(nextPath);
+      const user = useSessionStore.getState().session?.user;
+      router.replace(
+        user?.emailVerified === false
+          ? `/verify-email?next=${encodeURIComponent(nextPath)}`
+          : nextPath,
+      );
       router.refresh();
     } catch (caught) {
       setError(describeLoginError(caught));
@@ -59,6 +65,13 @@ export function LoginPageClient() {
       {expired && !error && (
         <p role="status" className="mb-5 text-sm text-white/60">
           Your session expired. Sign in again to continue.
+        </p>
+      )}
+      <GoogleButton next={nextPath} />
+      {searchParams.get('reason') === 'google' && (
+        <p role="alert" className="mb-4 text-sm text-red-300">
+          Google sign-in was not completed. Try again, or sign in with your email to connect your
+          account.
         </p>
       )}
       <form
@@ -126,9 +139,20 @@ export function LoginPageClient() {
         <Link href="/forgot-password" className="underline hover:text-white">
           Forgot your password?
         </Link>
+        <Link
+          href={`/verify-email?next=${encodeURIComponent(nextPath)}`}
+          className="underline hover:text-white"
+        >
+          Finish email verification
+        </Link>
         <p>
-          New to THE C1RCLE? Guest sign-up is not available on the web yet. Create your account in
-          the mobile app, then sign in here.
+          New to THE C1RCLE?{' '}
+          <Link
+            href={`/signup?next=${encodeURIComponent(nextPath)}`}
+            className="underline hover:text-white"
+          >
+            Create an account
+          </Link>
         </p>
       </div>
     </AuthShell>

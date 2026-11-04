@@ -1,4 +1,6 @@
-import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
+
+import { SignupClient } from './signup-client';
 
 import type { Metadata } from 'next';
 
@@ -9,5 +11,9 @@ export const metadata: Metadata = {
 };
 
 export default function SignupPage() {
-  redirect('/login?mode=signup');
+  return (
+    <Suspense fallback={null}>
+      <SignupClient />
+    </Suspense>
+  );
 }

@@ -10,13 +10,17 @@ import { LoginPageClient } from './login-page-client';
 const replace = vi.fn();
 const refreshRouter = vi.fn();
 let search = '';
+const identity = vi.hoisted(() => ({ emailVerified: true }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace, refresh: refreshRouter }),
   useSearchParams: () => new URLSearchParams(search),
 }));
 
-vi.mock('@c1rcle/auth', () => ({ login: vi.fn() }));
+vi.mock('@c1rcle/auth', () => ({
+  login: vi.fn(),
+  useSessionStore: { getState: () => ({ session: { user: identity } }) },
+}));
 
 const mockLogin = vi.mocked(login);
 
@@ -29,6 +33,7 @@ describe('LoginPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     search = '';
+    identity.emailVerified = true;
   });
 
   it('renders a real email and password form with no fixture OTP or social stubs', () => {
@@ -104,5 +109,16 @@ describe('LoginPage', () => {
     search = 'next=/profile&reason=expired';
     render(<LoginPageClient />);
     expect(screen.getByRole('status')).toHaveTextContent(/session expired/i);
+  });
+  it('continues unverified login through verification before the intended destination', async () => {
+    identity.emailVerified = false;
+    search = 'next=/tickets';
+    mockLogin.mockResolvedValue(undefined);
+    render(<LoginPageClient />);
+    fill('synthetic@example.invalid', 'Synthetic-password-16');
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
+    await waitFor(() => {
+      expect(replace).toHaveBeenCalledWith('/verify-email?next=%2Ftickets');
+    });
   });
 });
