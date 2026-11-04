@@ -164,7 +164,15 @@ export interface PromoterOverviewLinks {
 }
 
 export type PartnerEventStatus =
-  'Live' | 'Draft' | 'Review' | 'Scheduled' | 'Paused' | 'Past' | 'Archived' | 'Cancelled';
+  | 'Live'
+  | 'Draft'
+  | 'Review'
+  | 'Scheduled'
+  | 'Paused'
+  | 'Postponed'
+  | 'Past'
+  | 'Archived'
+  | 'Cancelled';
 export type PartnerEventParty = 'venue' | 'hosts';
 
 export interface PartnerEventArtwork {

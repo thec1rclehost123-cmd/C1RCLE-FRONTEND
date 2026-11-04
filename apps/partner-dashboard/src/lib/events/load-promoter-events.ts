@@ -29,6 +29,8 @@ function partnerEventStatus(status: string): PartnerEventStatus {
       return 'Review';
     case 'scheduled':
       return 'Scheduled';
+    case 'postponed':
+      return 'Postponed';
     case 'sales_paused':
       return 'Paused';
     case 'ended':

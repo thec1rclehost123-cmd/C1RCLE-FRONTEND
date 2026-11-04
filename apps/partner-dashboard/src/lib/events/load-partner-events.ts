@@ -75,8 +75,11 @@ function mapEvent(
     venue: item.venueName ?? 'Venue not specified',
     host: 'Host details unavailable',
     hostInitials: '—',
-    dateLabel: formatter.format(date),
-    timeLabel: `${value('hour')}:${value('minute')} ${value('dayPeriod')}`,
+    dateLabel: item.status === 'postponed' ? 'New date to be announced' : formatter.format(date),
+    timeLabel:
+      item.status === 'postponed'
+        ? 'On hold'
+        : `${value('hour')}:${value('minute')} ${value('dayPeriod')}`,
     dayLabel: value('day'),
     monthLabel: value('month').toUpperCase(),
     priceLabel,
@@ -99,6 +102,8 @@ function mapStatus(status: string, startAt: Date): PartnerEventRecord['status'] 
     case 'published':
     case 'started':
       return 'Live';
+    case 'postponed':
+      return 'Postponed';
     case 'sales_paused':
       return 'Paused';
     case 'ended':
