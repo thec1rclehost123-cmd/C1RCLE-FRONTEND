@@ -10,6 +10,7 @@ import { POST as logout } from './logout/route';
 import { POST as refresh } from './refresh/route';
 import { POST as resetPassword } from './reset-password/route';
 import { GET as session } from './session/route';
+import { POST as signup } from './signup/route';
 
 vi.mock('@/lib/bff/auth-proxy', async (importOriginal) => {
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- vitest's documented mock-factory pattern
@@ -58,6 +59,21 @@ const AUTH_BODY = {
 
 beforeEach(() => {
   mockForward.mockReset();
+});
+
+describe('POST /api/auth/signup', () => {
+  it('uses Guest registration and preserves the Guest session and cookies', async () => {
+    mockForward.mockResolvedValue(
+      gw(AUTH_BODY, { status: 201, headers: { 'set-cookie': SESSION_SET_COOKIE } }),
+    );
+    const body = { email: 'g@x.com', password: 'password123', displayName: 'Guest' };
+    const response = await signup(req('POST', '/api/auth/signup', {}, body));
+    expect(response.status).toBe(201);
+    expect(mockForward).toHaveBeenCalledWith('/api/v2/auth/signup', { method: 'POST', body });
+    await expect(response.json()).resolves.toMatchObject({ user: { role: 'guest' } });
+    expect(response.headers.get('set-cookie')).toContain('better-auth.session_token=sess_abc');
+    expect(response.headers.get('set-cookie')).toContain('guest.c1rcle.csrf=');
+  });
 });
 
 describe('POST /api/auth/change-password', () => {

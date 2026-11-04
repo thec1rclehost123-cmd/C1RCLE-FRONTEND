@@ -76,6 +76,10 @@ describe('POST /api/auth/signup', () => {
     );
 
     expect(res.status).toBe(201);
+    expect(mockForward).toHaveBeenCalledWith('/api/v2/auth/partner/signup', {
+      method: 'POST',
+      body: { email: 'a@b.com', password: 'password123', displayName: 'A' },
+    });
     await expect(res.json()).resolves.toMatchObject({ accessToken: 'tok_abc' });
     const setCookie = res.headers.get('set-cookie') ?? '';
     expect(setCookie).toContain('partner.c1rcle.csrf=');
