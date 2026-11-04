@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import React, { useState } from 'react';
+import { ZodError } from 'zod';
 
 import { isApiClientError } from '@c1rcle/api-client';
 import { requestPasswordReset } from '@c1rcle/auth';
@@ -31,7 +32,7 @@ export function ForgotPasswordClient() {
         setError('Too many requests. Please wait a minute before trying again.');
       } else if (isApiClientError(caught) && caught.status === 400) {
         setError('Enter a valid email address.');
-      } else if (caught instanceof Error && !isApiClientError(caught)) {
+      } else if (caught instanceof ZodError) {
         setError('Enter a valid email address.');
       } else {
         setError('We could not send the email right now. Please try again shortly.');

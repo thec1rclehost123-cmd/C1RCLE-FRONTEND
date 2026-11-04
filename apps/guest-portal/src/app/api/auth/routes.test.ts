@@ -356,7 +356,11 @@ describe('POST /api/auth/forgot-password', () => {
     expect(a.status).toBe(200);
     expect(b.status).toBe(200);
     expect(await a.json()).toEqual(await b.json());
-    expect(mockForward.mock.calls[0]?.[0]).toBe('/api/v2/auth/forgot-password');
+    expect(mockForward).toHaveBeenCalledWith('/api/v2/auth/forgot-password', {
+      method: 'POST',
+      body: { email: 'known@x.com' },
+      headers: { origin: ORIGIN },
+    });
   });
 
   it('hides account-dependent upstream failures behind a generic 502', async () => {

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiClientError, statusToErrorCode } from '@c1rcle/api-client';
 import { requestPasswordReset } from '@c1rcle/auth';
+import { forgotPasswordRequestSchema } from '@c1rcle/contracts';
 
 import { ForgotPasswordClient } from './forgot-password-client';
 
@@ -50,7 +51,8 @@ describe('ForgotPasswordClient', () => {
   });
 
   it('reports a malformed email from client-side validation', async () => {
-    mockRequest.mockRejectedValue(new Error('invalid email'));
+    const parsed = forgotPasswordRequestSchema.safeParse({ email: 'nope' });
+    mockRequest.mockRejectedValue(parsed.error);
     render(<ForgotPasswordClient />);
 
     submit('nope');
@@ -58,5 +60,11 @@ describe('ForgotPasswordClient', () => {
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent(/valid email/i);
     });
+  });
+  it('shows a retry message for a transport failure with a valid address', async () => {
+    mockRequest.mockRejectedValue(new TypeError('Failed to fetch'));
+    render(<ForgotPasswordClient />);
+    submit('member@example.com');
+    expect(await screen.findByRole('alert')).toHaveTextContent(/try again shortly/i);
   });
 });
