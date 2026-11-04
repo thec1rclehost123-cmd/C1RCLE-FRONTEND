@@ -160,6 +160,18 @@ jobs:
         working-directory: apps/${{ matrix.app }}
         run: pnpm exec playwright install --with-deps chromium webkit
 
+      # Onboarding intercepts Identity Toolkit requests in Playwright. The
+      # browser SDK still requires public config at build time; these values
+      # identify no real Firebase project and must never be deployment config.
+      - name: Configure mocked Partner phone verification
+        if: matrix.app == 'partner-dashboard'
+        run: |
+          cat >> apps/partner-dashboard/.env.local <<'EOF'
+          NEXT_PUBLIC_FIREBASE_API_KEY=e2e-not-a-real-api-key
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=e2e.invalid
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID=e2e
+          EOF
+
       - name: Run e2e suite
         env:
           CI: "true"
