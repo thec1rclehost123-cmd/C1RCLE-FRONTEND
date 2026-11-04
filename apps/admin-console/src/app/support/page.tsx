@@ -7,6 +7,7 @@ import { Button, EmptyState, ErrorState, LoadingState, TextField } from '@c1rcle
 
 import { PageHeader } from '@/components/admin/page-header';
 import { StatusFilter } from '@/components/admin/status-filter';
+import { AdminTicketRefundReview } from '@/components/admin/ticket-refund-review';
 import {
   addSupportInternalNote,
   assignSupportTicket,
@@ -675,6 +676,34 @@ function TicketDetail({
           <div className="space-y-4 px-4 py-4">
             <div>
               <p className="text-sm text-muted-foreground">{ticket.description}</p>
+              {ticket.refundReview ? (
+                <section
+                  aria-label="Requested ticket refund"
+                  className="mt-4 border-t border-border pt-4"
+                >
+                  <h3 className="font-semibold">Ticket refund review</h3>
+                  <p className="mt-2 text-sm">
+                    This is a review request. Financial approval and execution remain separate.
+                  </p>
+                  <p className="mt-2 text-sm">
+                    Order: <code>{ticket.refundReview.orderId}</code>
+                  </p>
+                  <p className="mt-2 text-sm">Selected tickets:</p>
+                  <ul>
+                    {ticket.refundReview.entitlementIds.map((id) => (
+                      <li key={id}>
+                        <code>{id}</code>
+                      </li>
+                    ))}
+                  </ul>
+                  <AdminTicketRefundReview
+                    key={ticket.id}
+                    orderId={ticket.refundReview.orderId}
+                    ticketIds={ticket.refundReview.entitlementIds}
+                    reason={ticket.description}
+                  />
+                </section>
+              ) : null}
             </div>
 
             {ticket.messages.length > 0 || ticket.internalNotes.length > 0 ? (

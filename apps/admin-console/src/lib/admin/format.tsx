@@ -106,6 +106,7 @@ export const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
   scheduled: 'Scheduled',
   published: 'Published',
   sales_paused: 'Sales paused',
+  postponed: 'Postponed',
   started: 'Started',
   ended: 'Ended',
   archived: 'Archived',
@@ -250,6 +251,7 @@ export function eventStatusTone(status: EventStatus): Tone {
       return 'muted';
     case 'review':
     case 'sales_paused':
+    case 'postponed':
       return 'warning';
     case 'cancelled':
       return 'destructive';

@@ -386,16 +386,20 @@ export function executeRefund(refundId: string): Promise<RefundOutcome> {
 }
 
 export interface RequestRefundInput {
+  readonly targetEntitlementIds?: readonly string[];
   readonly orderId: string;
   readonly amountPaise: number;
   readonly reason: string;
 }
 
-export function requestRefund(input: RequestRefundInput): Promise<RefundOutcome> {
+export function requestRefund(
+  input: RequestRefundInput,
+  idempotencyKey = newIdempotencyKey(),
+): Promise<RefundOutcome> {
   return getAdminApiClient().post({
     path: `/api/v2/admin/refunds`,
     body: requestRefundSchema.parse(input),
-    headers: { 'idempotency-key': newIdempotencyKey() },
+    headers: { 'idempotency-key': idempotencyKey },
     schema: refundOutcomeSchema,
   });
 }
