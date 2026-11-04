@@ -327,10 +327,10 @@ export function ConnectedEventEditScreen({
               >
                 Request another Venue slot
               </Link>
-              <label className="mt-4 grid gap-2 text-sm">
+              <label className="mt-4 grid min-w-0 grid-cols-1 gap-2 text-sm">
                 Accepted Venue slot request
                 <select
-                  className="rounded-xl border border-white/20 bg-black px-4 py-3 text-white"
+                  className="min-w-0 w-full rounded-xl border border-white/20 bg-black px-4 py-3 text-white"
                   value={slotRequestId}
                   onChange={(change) => {
                     const request = slotRequests.find((item) => item.id === change.target.value);
@@ -510,7 +510,10 @@ export function ConnectedEventEditScreen({
               </div>
             </section>
           ) : null}
-          <form className="mt-7 grid gap-5" onSubmit={(form) => void submit(form)}>
+          <form
+            className="mt-7 grid min-w-0 grid-cols-1 gap-5 [&_fieldset]:min-w-0 [&_input]:min-w-0 [&_select]:min-w-0 [&_textarea]:min-w-0"
+            onSubmit={(form) => void submit(form)}
+          >
             <div className="grid gap-2 border-t border-white/10 pt-4">
               <label htmlFor="event-refund-policy" className="text-sm font-medium">
                 Refund request policy
