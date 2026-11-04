@@ -11,6 +11,7 @@ export interface PendingConfirm {
   readonly holderName: string;
   readonly tierName: string;
   readonly scansAllowed: number;
+  readonly requirement?: string | null;
 }
 
 interface ResultSheetProps {
@@ -19,6 +20,9 @@ interface ResultSheetProps {
   readonly onDismiss: () => void;
   readonly onAdmit?: () => void;
   readonly admitBusy?: boolean;
+  readonly onConfirmPair?: (confirmed: boolean) => void;
+  readonly pairExpired?: boolean;
+  readonly pairSecondsRemaining?: number;
 }
 
 /**
@@ -39,6 +43,9 @@ export function ResultSheet({
   onDismiss,
   onAdmit,
   admitBusy,
+  onConfirmPair,
+  pairExpired,
+  pairSecondsRemaining,
 }: ResultSheetProps): React.JSX.Element {
   const visible = result !== null || pending !== undefined;
 
@@ -58,7 +65,9 @@ export function ResultSheet({
             </View>
             <Text style={[styles.title, { color: colors.onSecondary }]}>Valid Ticket</Text>
             <Text style={[styles.subtitle, { color: colors.onSecondary }]}>
-              Ticket verified. Tap admit to check in.
+              {pending.requirement
+                ? `REQUIREMENT: ${pending.requirement}. Confirm eligibility before admitting.`
+                : 'Ticket verified. Tap admit to check in.'}
             </Text>
             <View style={styles.grid}>
               <View style={styles.gridCell}>
@@ -86,7 +95,13 @@ export function ResultSheet({
               </View>
               <View style={styles.admitWrap}>
                 <GalaButton
-                  label={admitBusy === true ? 'ADMITTING…' : 'ADMIT GUEST'}
+                  label={
+                    admitBusy === true
+                      ? 'ADMITTING…'
+                      : pending.requirement
+                        ? 'REQUIREMENT MET — ADMIT'
+                        : 'ADMIT GUEST'
+                  }
                   onPress={onAdmit ?? (() => undefined)}
                   loading={admitBusy ?? false}
                 />
@@ -108,10 +123,16 @@ export function ResultSheet({
     ? colors.secondary
     : isDenied
       ? colors.tertiary
-      : colors.primary;
+      : colors.secondary;
   const foregroundColor =
     isAdmitted || result.status === 'confirmation_required' ? colors.onSecondary : colors.onSurface;
-  const title = isAdmitted ? 'Admitted' : isDenied ? 'Entry Denied' : 'Couple Ticket';
+  const title = isAdmitted
+    ? 'VALID — ADMITTED'
+    : isDenied
+      ? result.denyReason === 'already_used'
+        ? 'ALREADY USED'
+        : 'REJECTED'
+      : 'Couple Ticket';
   const guestName =
     result.status === 'consumed' || result.status === 'confirmation_required'
       ? result.entitlement.holderName
@@ -131,7 +152,9 @@ export function ResultSheet({
     ? 'Guest checked in successfully.'
     : isDenied
       ? result.denyMessage
-      : 'Confirm both guests present.';
+      : pairExpired
+        ? 'Confirmation expired. Dismiss and scan the ticket again.'
+        : `REQUIREMENT: one male and one female entering together. Confirm within ${String(pairSecondsRemaining ?? 0)} seconds.`;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onDismiss}>
@@ -142,8 +165,12 @@ export function ResultSheet({
             <View style={[styles.codePill, { borderColor: foregroundColor }]}>
               <Text style={[styles.codeLabel, { color: foregroundColor }]}>
                 {result.status === 'denied'
-                  ? result.denyReason.toUpperCase()
-                  : result.status.toUpperCase()}
+                  ? result.denyReason === 'already_used'
+                    ? 'ALREADY USED'
+                    : 'REJECTED'
+                  : result.status === 'consumed'
+                    ? 'VALID'
+                    : 'CONFIRM PAIR'}
               </Text>
             </View>
             <Text style={[styles.timeLabel, { color: foregroundColor }]}>
@@ -166,10 +193,28 @@ export function ResultSheet({
               <Text style={[styles.gridValue, { color: foregroundColor }]}>{pax}</Text>
             </View>
           </View>
-          <View style={styles.actionRow}>
-            <View style={styles.dismissWrap}>
-              <GalaButton label="DISMISS" onPress={onDismiss} variant="outline" />
+          {result.status === 'confirmation_required' && !pairExpired ? (
+            <View style={styles.pairActions}>
+              <GalaButton
+                label="REJECT — KEEP UNUSED"
+                variant="secondary"
+                disabled={admitBusy ?? false}
+                onPress={() => {
+                  onConfirmPair?.(false);
+                }}
+              />
+              <GalaButton
+                label="CONFIRM MALE + FEMALE"
+                loading={admitBusy ?? false}
+                disabled={admitBusy ?? false}
+                onPress={() => {
+                  onConfirmPair?.(true);
+                }}
+              />
             </View>
+          ) : null}
+          <View style={styles.actionRow}>
+            <GalaButton label="DISMISS" onPress={onDismiss} variant="secondary" />
           </View>
         </View>
       </View>
@@ -248,6 +293,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  pairActions: { gap: spacing.sm, marginTop: spacing.xs },
   actionRow: {
     marginTop: spacing.xs,
   },
