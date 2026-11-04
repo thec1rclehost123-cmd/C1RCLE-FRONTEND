@@ -13,6 +13,7 @@
  */
 import { NextResponse } from 'next/server';
 
+import { withGatewayCookieName } from '@c1rcle/auth/server-session';
 import { getClientEnv } from '@c1rcle/config';
 
 import type { NextRequest } from 'next/server';
@@ -65,7 +66,7 @@ export async function forwardToGateway(path: string, init: ForwardInit): Promise
   }
   for (const [name, value] of Object.entries(init.headers ?? {})) headers[name] = value;
   if (init.cookie !== undefined && init.cookie !== null && init.cookie.length > 0) {
-    headers['cookie'] = init.cookie;
+    headers['cookie'] = withGatewayCookieName(init.cookie);
   }
   if (init.method === 'POST') {
     headers['idempotency-key'] = crypto.randomUUID();
