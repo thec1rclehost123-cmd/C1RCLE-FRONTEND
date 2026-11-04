@@ -149,7 +149,23 @@ export function UserTicketsView({ wallet, onRefresh }: UserTicketsViewProps) {
       ) : null}
 
       {unresolvedBookings.length > 0 ? (
-        <section aria-label="Tickets" className="relative z-10 mt-8">
+        <section aria-labelledby="unavailable-tickets-heading" className="relative z-10 mt-8">
+          <h2 id="unavailable-tickets-heading" className="text-xl font-semibold">
+            Passes awaiting event details
+          </h2>
+          <p role="status" className="mt-2 text-sm text-white/70">
+            Event timing is unavailable. These passes have not been marked past.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              if (onRefresh) onRefresh();
+              else window.location.reload();
+            }}
+            className="my-4 min-h-11 rounded-full border border-white/20 px-5 text-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+          >
+            Refresh event details
+          </button>
           <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
             {unresolvedBookings.map((booking) => (
               <UserTicketCard
