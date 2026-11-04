@@ -2196,7 +2196,14 @@ export function EventPreview({
         })}
       </div>
       <div className={styles['previewPoster']}>
-        <div className={styles['previewPosterImage']}>
+        <div
+          className={[
+            styles['previewPosterImage'],
+            draft.artwork.type !== 'image' ? styles['previewPosterEmpty'] : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
           {draft.artwork.type === 'image' ? (
             <Image
               fill
@@ -2205,7 +2212,7 @@ export function EventPreview({
               alt={`${draft.name || 'Event'} poster`}
             />
           ) : (
-            <div className={gradientClass(draft.artwork.value)} />
+            <div className={styles['posterPlaceholder']} aria-hidden="true" />
           )}
           <span className={styles['previewPosterBadge']}>Draft</span>
           <div className={styles['posterControls']}>
