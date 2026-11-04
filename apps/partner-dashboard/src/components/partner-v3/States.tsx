@@ -1,4 +1,5 @@
 import styles from './partner-v3.module.css';
+import { PartnerDashboardSkeleton } from './PartnerDashboardSkeleton';
 
 import type { ReactNode } from 'react';
 
@@ -17,7 +18,7 @@ export function EmptyState({
   action,
 }: {
   readonly title: string;
-  readonly description: string;
+  readonly description?: string;
   readonly action?: ReactNode;
 }) {
   return (
@@ -26,14 +27,14 @@ export function EmptyState({
         —
       </span>
       <h2>{title}</h2>
-      <p>{description}</p>
+      {description ? <p>{description}</p> : null}
       {action ? <div className={styles['emptyStateAction']}>{action}</div> : null}
     </section>
   );
 }
 
-export function LoadingState(_props: { readonly label?: string }) {
-  return null;
+export function LoadingState({ label }: { readonly label?: string }) {
+  return <PartnerDashboardSkeleton label={label ?? 'Loading workspace'} />;
 }
 
 export function ErrorState({

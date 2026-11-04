@@ -76,6 +76,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     !draft.organizationId ||
     typeof draft.venueId !== 'string' ||
     !draft.venueId ||
+    typeof draft.slotId !== 'string' ||
+    !draft.slotId ||
+    typeof draft.idempotencyKey !== 'string' ||
+    !draft.idempotencyKey ||
     typeof draft.name !== 'string' ||
     !draft.name.trim() ||
     typeof draft.date !== 'string' ||

@@ -2,14 +2,16 @@ import { describe, expect, it } from 'vitest';
 
 import {
   authBridgeResponseSchema,
-  createTaxRuleSchema,
-  enableTaxRuleSchema,
-  reconciliationResultSchema,
-  taxRuleDtoSchema,
   onboardingProfileSchema,
   partnerAccessDtoSchema,
   sessionSchema,
 } from '../src/client.js';
+import {
+  createTaxRuleSchema,
+  enableTaxRuleSchema,
+  reconciliationResultSchema,
+  taxRuleDtoSchema,
+} from '../src/contracts/finance-admin.js';
 
 /**
  * Smoke test for the generated `@c1rcle/contracts` mirror. Behavioural parity

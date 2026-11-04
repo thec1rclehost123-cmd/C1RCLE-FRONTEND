@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -49,7 +49,7 @@ describe('PartnerDoorModeScreen', () => {
     render(<PartnerDoorModeScreen data={data} />);
 
     expect(screen.getByRole('heading', { name: 'Door Mode' })).toBeInTheDocument();
-    expect(screen.getByText('How full we are')).toBeInTheDocument();
+    expect(screen.getByText('At the door')).toBeInTheDocument();
     expect(screen.getByText('Aisha Menon')).toBeInTheDocument();
     expect(
       screen
@@ -57,7 +57,7 @@ describe('PartnerDoorModeScreen', () => {
         .every((button) => (button as HTMLButtonElement).disabled),
     ).toBe(true);
     expect(screen.getByRole('button', { name: 'Check in walk-in' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Quick scan' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Quick scan' })).not.toBeInTheDocument();
   });
 
   it('URL-backs guest filters and search while preserving the shared fixture model', async () => {
@@ -69,8 +69,8 @@ describe('PartnerDoorModeScreen', () => {
     expect(replace).toHaveBeenLastCalledWith('/partner/venue/door?filter=walk-in', {
       scroll: false,
     });
-    const search = screen.getByPlaceholderText('Search name or scan ticket to check in');
-    await user.type(search, 'Aisha');
+    const search = screen.getByPlaceholderText('Search guest name or ticket');
+    fireEvent.change(search, { target: { value: 'Aisha' } });
     expect(replace).toHaveBeenLastCalledWith('/partner/venue/door?search=Aisha', { scroll: false });
   });
 

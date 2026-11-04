@@ -1,5 +1,5 @@
-import { HostOverviewScreen } from '@/components/host/HostOverviewScreen';
+import { redirect } from 'next/navigation';
 
 export default function HostOverviewPage() {
-  return <HostOverviewScreen />;
+  redirect('/partner/host/overview');
 }

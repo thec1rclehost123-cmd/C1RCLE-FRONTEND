@@ -64,6 +64,22 @@ export function PartnerNotifications({ data }: { readonly data: PartnerNotificat
     };
   }, [open]);
 
+  if (data.dataStatus === 'unavailable') {
+    return (
+      <div className={styles['notificationRoot']}>
+        <button
+          className={styles['notificationButton']}
+          type="button"
+          aria-label="Notifications unavailable"
+          title={data.unavailableReason}
+          disabled
+        >
+          <NotificationIcon size={18} aria-hidden="true" />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className={styles['notificationRoot']} ref={rootRef}>
       <button

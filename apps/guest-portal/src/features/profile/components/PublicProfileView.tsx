@@ -54,7 +54,7 @@ export function PublicProfileView({
   return (
     <div className="relative z-10 min-h-screen overflow-x-clip px-4 pb-24 pt-28 text-white sm:px-6 sm:pt-32 lg:px-8">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[#050505]">
-        <div className="absolute inset-x-0 top-0 h-[38rem] bg-[radial-gradient(circle_at_50%_-10%,rgba(255,68,0,0.14),transparent_62%)]" />
+        <div className="absolute inset-x-0 top-0 h-[38rem] bg-[radial-gradient(circle_at_50%_-10%,rgba(255,68,0,0.08),transparent_62%)]" />
       </div>
 
       <div className="mx-auto max-w-[1280px]">
@@ -69,6 +69,10 @@ export function PublicProfileView({
         <header
           className={`relative mt-5 overflow-hidden rounded-[2rem] border bg-[linear-gradient(128deg,rgba(255,255,255,0.055),rgba(8,8,8,0.98)_56%)] p-6 sm:p-9 lg:p-11 ${tone.border} ${tone.glow}`}
         >
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute left-[15%] top-10 h-80 w-[34rem] max-w-[80%] rounded-full bg-[radial-gradient(ellipse,rgba(255,104,66,0.20),transparent_70%)] blur-2xl"
+          />
           <div
             className={`pointer-events-none absolute -right-20 -top-24 size-72 rounded-full opacity-20 blur-[100px] ${tone.avatar}`}
           />

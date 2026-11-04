@@ -1,6 +1,10 @@
+import { z } from 'zod';
+
 import {
   balanceSummaryResponseSchema,
   bankAccountListResponseSchema,
+  bankAccountRequestSchema,
+  bankAccountResponseSchema,
   financeOrderListResponseSchema,
   ledgerEntryListResponseSchema,
   payoutListResponseSchema,
@@ -14,7 +18,6 @@ import type {
   LedgerEntryDto,
   PayoutResponse,
 } from '@c1rcle/contracts';
-import type { z } from 'zod';
 
 /**
  * The slice of the API client these calls need. Declared structurally rather
@@ -36,15 +39,21 @@ export interface FinanceApiClient {
   }): Promise<T>;
 }
 
+export interface FinanceMutationApiClient extends FinanceApiClient {
+  delete<T>(options: {
+    path: string;
+    schema: z.ZodType<T>;
+    headers?: Record<string, string>;
+  }): Promise<T>;
+}
+
 /**
  * ─── Finance (Phase 6) ─────────────────────────────────────────────────────
  *
  * Balance, ledger, orders, payouts and bank accounts for one organization.
- * Every route is `:organizationId`-scoped and `requirePermission('organization.read')`
- * server-side, so no `X-Organization-Id` header is needed here — the path
- * segment is authoritative and `requireOrgAccess` scopes the read. (Contrast
- * `venue-repository.ts`, whose venue routes *do* demand the header; that is a
- * per-route decision, not a blanket rule.)
+ * Every route is `:organizationId`-scoped, and the gateway also needs the
+ * active organization header to resolve the authenticated membership before
+ * applying the finance permission. Both scopes are sent on every read.
  *
  * The client is a **required first argument** on every function, never a module
  * import. That is the load-bearing choice in this file: the finance screens are
@@ -69,6 +78,10 @@ function orgCollectionPath(organizationId: string, collection: string, suffix = 
   return `/api/v2/organizations/${encodeURIComponent(organizationId)}/${collection}${suffix}`;
 }
 
+function orgHeaders(organizationId: string): Record<string, string> {
+  return { 'x-organization-id': organizationId };
+}
+
 /** Available / pending / lifetime, all integer paise. */
 export async function getFinanceBalance(
   client: FinanceApiClient,
@@ -77,6 +90,7 @@ export async function getFinanceBalance(
   return client.get({
     path: orgPath(organizationId, '/balance'),
     schema: balanceSummaryResponseSchema,
+    headers: orgHeaders(organizationId),
   });
 }
 
@@ -111,6 +125,7 @@ export async function listLedgerEntries(
   const response = await client.get({
     path: orgPath(organizationId, `/ledger${pageQuery(query)}`),
     schema: ledgerEntryListResponseSchema,
+    headers: orgHeaders(organizationId),
   });
   return {
     items: response.items,
@@ -147,6 +162,7 @@ export async function listFinanceOrders(
   const response = await client.get({
     path: orgPath(organizationId, `/orders${pageQuery(query)}`),
     schema: financeOrderListResponseSchema,
+    headers: orgHeaders(organizationId),
   });
   return {
     items: response.items,
@@ -163,6 +179,7 @@ export async function listPayouts(
   const response = await client.get({
     path: orgCollectionPath(organizationId, 'payouts', pageQuery(query)),
     schema: payoutListResponseSchema,
+    headers: orgHeaders(organizationId),
   });
   return {
     items: response.items,
@@ -179,6 +196,7 @@ export async function getPayout(
   return client.get({
     path: orgCollectionPath(organizationId, 'payouts', `/${encodeURIComponent(payoutId)}`),
     schema: payoutResponseSchema,
+    headers: orgHeaders(organizationId),
   });
 }
 
@@ -197,8 +215,55 @@ export async function listBankAccounts(
   const response = await client.get({
     path: orgCollectionPath(organizationId, 'bank-accounts'),
     schema: bankAccountListResponseSchema,
+    headers: orgHeaders(organizationId),
   });
   return response.items;
+}
+
+/** Adds an Indian payout destination; the response contains a masked number only. */
+export async function addBankAccount(
+  client: FinanceMutationApiClient,
+  organizationId: string,
+  input: z.infer<typeof bankAccountRequestSchema>,
+): Promise<BankAccountResponse> {
+  return client.post({
+    path: orgCollectionPath(organizationId, 'bank-accounts'),
+    body: bankAccountRequestSchema.parse(input),
+    schema: bankAccountResponseSchema,
+    headers: orgHeaders(organizationId),
+  });
+}
+
+export async function setDefaultBankAccount(
+  client: FinanceMutationApiClient,
+  organizationId: string,
+  bankAccountId: string,
+): Promise<BankAccountResponse> {
+  return client.post({
+    path: orgCollectionPath(
+      organizationId,
+      'bank-accounts',
+      `/${encodeURIComponent(bankAccountId)}/default`,
+    ),
+    schema: bankAccountResponseSchema,
+    headers: orgHeaders(organizationId),
+  });
+}
+
+export async function removeBankAccount(
+  client: FinanceMutationApiClient,
+  organizationId: string,
+  bankAccountId: string,
+): Promise<void> {
+  await client.delete({
+    path: orgCollectionPath(
+      organizationId,
+      'bank-accounts',
+      `/${encodeURIComponent(bankAccountId)}`,
+    ),
+    schema: z.unknown(),
+    headers: orgHeaders(organizationId),
+  });
 }
 
 /**
@@ -221,7 +286,7 @@ export async function requestPayout(
       idempotencyKey,
     },
     schema: payoutResponseSchema,
-    headers: { 'Idempotency-Key': idempotencyKey },
+    headers: { ...orgHeaders(organizationId), 'Idempotency-Key': idempotencyKey },
   });
 }
 

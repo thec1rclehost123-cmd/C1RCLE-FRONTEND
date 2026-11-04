@@ -1,17 +1,6 @@
 import Link from 'next/link';
-import React from 'react';
 
-import { TicketCarousel } from './TicketCarousel';
-
-import type { TicketShowcaseItem } from '../types/tickets.types';
-
-export interface TicketsGuestViewProps {
-  headline: string;
-  tagline: string;
-  items: TicketShowcaseItem[];
-}
-
-export function TicketsGuestView({ headline, tagline, items }: TicketsGuestViewProps) {
+export function TicketsGuestView() {
   return (
     <div className="relative z-10 mx-auto max-w-6xl px-6 pt-28 pb-20 sm:px-8 flex-1 flex flex-col justify-center">
       {/* Page Title */}
@@ -19,20 +8,21 @@ export function TicketsGuestView({ headline, tagline, items }: TicketsGuestViewP
         TICKETS
       </h1>
 
-      {/* Responsive Split View */}
-      <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center w-full">
-        {/* Left Copy & CTA Panel */}
-        <div className="flex flex-col items-start max-w-lg">
+      <div className="w-full max-w-2xl rounded-[2rem] border border-white/10 bg-white/[0.035] p-7 sm:p-10">
+        <div className="flex max-w-lg flex-col items-start">
           <h2 className="text-3xl sm:text-5xl md:text-6xl font-black uppercase tracking-tighter text-white mb-6 leading-[0.9]">
-            {headline}
+            Your tickets live here
           </h2>
 
-          <p className="text-sm font-medium text-white/60 leading-relaxed mb-8">{tagline}</p>
+          <p className="mb-8 text-sm font-medium leading-relaxed text-white/60">
+            Sign in to view tickets connected to your account. We never show sample passes in your
+            wallet.
+          </p>
 
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
             <Link
               href="/login"
-              className="px-8 py-3.5 rounded-full bg-white text-black font-black text-xs uppercase tracking-widest hover:bg-white/90 hover:scale-105 transition-all text-center shadow-lg shadow-white/10"
+              className="px-8 py-3.5 rounded-full bg-white text-black font-black text-xs uppercase tracking-widest hover:bg-white/90 transition-all text-center shadow-lg shadow-white/10"
             >
               LOGIN TO ACCESS
             </Link>
@@ -43,11 +33,6 @@ export function TicketsGuestView({ headline, tagline, items }: TicketsGuestViewP
               SIGN UP
             </Link>
           </div>
-        </div>
-
-        {/* Right 3D Ticket Carousel */}
-        <div className="w-full flex items-center justify-center">
-          <TicketCarousel items={items} />
         </div>
       </div>
     </div>

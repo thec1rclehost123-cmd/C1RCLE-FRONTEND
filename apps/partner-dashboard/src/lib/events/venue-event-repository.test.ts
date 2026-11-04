@@ -2,14 +2,22 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiClientError } from '@c1rcle/api-client';
-import { createEventSchema, createTicketTierSchema } from '@c1rcle/contracts';
+import { cancelEventSchema, createEventSchema, createTicketTierSchema } from '@c1rcle/contracts';
 
 import { uploadToSignedUrl } from '@/lib/onboarding/uploadToSignedUrl';
 
 import {
+  formatEventDateLabel,
+  isoInstantToProductLocalInput,
+  productLocalInputToIsoInstant,
+} from './event-time';
+import {
   eventEndAtFromDraft,
   eventStartAtFromDraft,
+  cancelPartnerEvent,
   publishVenueEvent,
+  updatePartnerEventDetails,
+  updatePartnerEventTicketLimit,
 } from './venue-event-repository';
 
 import type { EventEditorDraft } from '@/data/partner-data-source';
@@ -35,6 +43,7 @@ vi.mock('@/lib/onboarding/uploadToSignedUrl', () => ({
 
 const draft: EventEditorDraft = {
   name: 'September Night',
+  description: 'An intimate test event with live music and late-night dancing.',
   venueId: 'venue_1',
   date: '2026-09-17',
   dateLabel: 'Thu, Sep 17, 2026',
@@ -78,6 +87,107 @@ beforeEach(() => {
 });
 
 describe('publishVenueEvent', () => {
+  it('persists gallery, video and spotlight media in event creation', async () => {
+    mocks.post.mockResolvedValue({ id: 'evt_media', status: 'published' });
+    await publishVenueEvent(
+      'org_1',
+      {
+        ...draft,
+        media: {
+          titleFont: 'eclectic',
+          youtubeUrl: 'https://youtu.be/abc123',
+          gallery: [
+            { type: 'image', value: 'https://example.test/gallery.jpg', alt: 'Dance floor' },
+          ],
+          spotlights: [
+            {
+              id: 'artist-1',
+              title: 'Artist One',
+              link: 'https://example.test/artist',
+              description: 'Live set',
+              startTime: '23:00',
+              endTime: '01:00',
+            },
+          ],
+        },
+      },
+      'media-create',
+    );
+    expect(mocks.post.mock.calls[0]?.[0].body).toMatchObject({
+      media: {
+        titleFont: 'eclectic',
+        youtubeUrl: 'https://youtu.be/abc123',
+        gallery: [{ url: 'https://example.test/gallery.jpg', alt: 'Dance floor' }],
+        spotlights: [{ title: 'Artist One', imageUrl: null, startTime: '23:00', endTime: '01:00' }],
+      },
+    });
+  });
+
+  it('sends promo quantity and IST expiry before publish with a stable command key', async () => {
+    mocks.post.mockResolvedValue({ id: 'evt_promo', status: 'published' });
+    await publishVenueEvent(
+      'org_host',
+      {
+        ...draft,
+        promoCodes: ['EARLY10'],
+        promoCodeSettings: [
+          {
+            id: 'promo-local',
+            code: 'EARLY10',
+            discountType: 'percent',
+            discountValue: 10,
+            quantity: 25,
+            endsAt: '2099-11-16T19:00',
+            fundingOwner: 'host',
+          },
+        ],
+      },
+      'promo-workflow',
+    );
+    const call = mocks.post.mock.calls
+      .map(([options]) => options)
+      .find((options) => options.path.endsWith('/promo-codes'));
+    expect(call?.body).toMatchObject({
+      code: 'EARLY10',
+      maxRedemptions: 25,
+      endsAt: '2099-11-16T13:30:00.000Z',
+      discountValue: 10,
+      discountFundingOwner: 'host',
+    });
+    expect(call?.headers?.['Idempotency-Key']).toBe('promo-workflow-promo-0');
+    const paths = mocks.post.mock.calls.map(([options]) => options.path);
+    expect(paths.findIndex((path) => path.endsWith('/promo-codes'))).toBeLessThan(
+      paths.findIndex((path) => path.endsWith('/publish')),
+    );
+  });
+
+  it('creates a Host event from the accepted reservation using its exact interval and stable retry key', async () => {
+    mocks.post
+      .mockResolvedValueOnce({ id: 'evt_m3' })
+      .mockResolvedValueOnce({ id: 'tier_m3' })
+      .mockResolvedValueOnce({ id: 'evt_m3', status: 'review' })
+      .mockResolvedValueOnce({ id: 'evt_m3', status: 'published' });
+    const reservation = {
+      slotRequestId: 'slot_request_m3',
+      startAt: '2026-11-06T12:30:00.000Z',
+      endAt: '2026-11-06T16:30:00.000Z',
+    };
+    await publishVenueEvent('org_host_m3', draft, reservation);
+    const eventCall = mocks.post.mock.calls[0]?.[0];
+    expect(eventCall?.body).toMatchObject({
+      slotRequestId: 'slot_request_m3',
+      startAt: reservation.startAt,
+      endAt: reservation.endAt,
+    });
+    const keys = mocks.post.mock.calls.map(([options]) => options.headers?.['Idempotency-Key']);
+    expect(keys).toEqual([
+      'host-slot-slot_request_m3-event',
+      'host-slot-slot_request_m3-tier-0',
+      'host-slot-slot_request_m3-review',
+      'host-slot-slot_request_m3-publish',
+    ]);
+  });
+
   it('creates the event and tiers before review and publish', async () => {
     mocks.post
       .mockResolvedValueOnce({ id: 'evt_1' })
@@ -85,7 +195,9 @@ describe('publishVenueEvent', () => {
       .mockResolvedValueOnce({ id: 'evt_1', status: 'review' })
       .mockResolvedValueOnce({ id: 'evt_1', status: 'published' });
 
-    await expect(publishVenueEvent('org_1', draft)).resolves.toMatchObject({
+    await expect(
+      publishVenueEvent('org_1', { ...draft, visibilityMode: 'unlisted' }),
+    ).resolves.toMatchObject({
       id: 'evt_1',
       status: 'published',
     });
@@ -100,19 +212,52 @@ describe('publishVenueEvent', () => {
     expect(mocks.post.mock.calls[0]?.[0].body).toMatchObject({
       venueId: 'venue_1',
       title: 'September Night',
-      startAt: '2026-09-17T21:30:00.000Z',
-      endAt: '2026-09-18T03:00:00.000Z',
+      summary: 'An intimate test event with live music and late-night dancing.',
+      description: 'An intimate test event with live music and late-night dancing.',
+      startAt: '2026-09-17T16:00:00.000Z',
+      endAt: '2026-09-17T21:30:00.000Z',
       imageUrl: null,
+      visibilityMode: 'unlisted',
     });
     expect(mocks.post.mock.calls[1]?.[0].body).toMatchObject({
       name: 'General Admission',
       priceInPaise: 120_000,
       quantity: 250,
+      maxPerOrder: 10,
     });
     for (const [options] of mocks.post.mock.calls) {
       expect(options.headers).toMatchObject({ 'x-organization-id': 'org_1' });
       expect(options.headers?.['Idempotency-Key']).toMatch(/^[A-Za-z0-9_-]+$/);
     }
+  });
+
+  it('sends the safe default limits for RSVP and paid tiers during creation', async () => {
+    mocks.post
+      .mockResolvedValueOnce({ id: 'evt_limits' })
+      .mockResolvedValueOnce({ id: 'tier_rsvp' })
+      .mockResolvedValueOnce({ id: 'tier_paid' })
+      .mockResolvedValueOnce({ id: 'evt_limits', status: 'review' })
+      .mockResolvedValueOnce({ id: 'evt_limits', status: 'published' });
+    const paidTier = draft.ticketTiers[0]!;
+    const { pricingPhases: _pricingPhases, ...paidTierWithoutPhases } = paidTier;
+    const rsvpTier = {
+      ...paidTierWithoutPhases,
+      id: 'rsvp',
+      name: 'Free RSVP',
+      price: 0,
+      accessType: 'RSVP' as const,
+    };
+
+    await publishVenueEvent('org_1', { ...draft, ticketTiers: [rsvpTier, paidTier] });
+
+    expect(mocks.post.mock.calls[1]?.[0].body).toMatchObject({
+      accessType: 'RSVP',
+      maxPerOrder: 1,
+    });
+    expect(mocks.post.mock.calls[2]?.[0].body).toMatchObject({
+      name: 'General Admission',
+      maxPerOrder: 10,
+    });
   });
 
   it('uploads an uploaded-poster blob and persists its public URL as imageUrl', async () => {
@@ -264,13 +409,63 @@ describe('publishVenueEvent', () => {
   });
 });
 
+describe('updatePartnerEventDetails', () => {
+  it('uses tenant scope, optimistic versioning, and an idempotency key', async () => {
+    mocks.patch.mockResolvedValueOnce({ id: 'evt_1', version: 8, title: 'Updated title' });
+
+    await expect(
+      updatePartnerEventDetails('org_1', 'evt_1', 7, {
+        title: 'Updated title',
+        summary: 'Updated summary',
+        description: 'Updated description',
+      }),
+    ).resolves.toMatchObject({ version: 8, title: 'Updated title' });
+
+    expect(mocks.patch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: '/api/v2/events/evt_1',
+        body: {
+          title: 'Updated title',
+          summary: 'Updated summary',
+          description: 'Updated description',
+        },
+        headers: expect.objectContaining({
+          'x-organization-id': 'org_1',
+          'If-Match': '7',
+        }),
+      }),
+    );
+    expect(mocks.patch.mock.calls[0]?.[0].headers?.['Idempotency-Key']).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it('updates only the maxPerOrder field with version and retry identity', async () => {
+    mocks.patch.mockResolvedValueOnce({ id: 'tier_1', maxPerOrder: 10, version: 2 });
+
+    await expect(
+      updatePartnerEventTicketLimit('org_1', 'evt_1', 'tier_1', 1, 10, 'tier-limit-intent'),
+    ).resolves.toMatchObject({ id: 'tier_1', maxPerOrder: 10, version: 2 });
+
+    expect(mocks.patch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: '/api/v2/events/evt_1/ticket-tiers/tier_1',
+        body: { maxPerOrder: 10 },
+        headers: {
+          'x-organization-id': 'org_1',
+          'If-Match': '1',
+          'Idempotency-Key': 'tier-limit-intent',
+        },
+      }),
+    );
+  });
+});
+
 describe('eventStartAtFromDraft', () => {
-  it('parses twelve-hour and twenty-four-hour start times', () => {
+  it('converts twelve-hour and twenty-four-hour venue times from IST into UTC instants', () => {
     expect(eventStartAtFromDraft({ date: '2026-09-17', time: '9:30 PM' })).toBe(
-      '2026-09-17T21:30:00.000Z',
+      '2026-09-17T16:00:00.000Z',
     );
     expect(eventStartAtFromDraft({ date: '2026-09-17', time: '21:30' })).toBe(
-      '2026-09-17T21:30:00.000Z',
+      '2026-09-17T16:00:00.000Z',
     );
   });
 
@@ -280,19 +475,41 @@ describe('eventStartAtFromDraft', () => {
   });
 });
 
+describe('formatEventDateLabel', () => {
+  it('keeps the accepted calendar date stable across the host machine timezone', () => {
+    expect(formatEventDateLabel('2026-11-06')).toBe('6 Nov 2026');
+  });
+
+  it('rejects invalid date-only input', () => {
+    expect(formatEventDateLabel('2026-02-30')).toBe('');
+  });
+});
+
+describe('fixed IST date/time inputs', () => {
+  it('round-trips a local IST time through the persisted instant', () => {
+    const instant = productLocalInputToIsoInstant('2026-11-16T19:00');
+    expect(instant).toBe('2026-11-16T13:30:00.000Z');
+    expect(isoInstantToProductLocalInput(instant ?? '')).toBe('2026-11-16T19:00');
+  });
+
+  it('rejects invalid local dates rather than normalizing them', () => {
+    expect(productLocalInputToIsoInstant('2026-02-30T19:00')).toBeNull();
+  });
+});
+
 describe('eventEndAtFromDraft', () => {
   it('parses explicit endTime and handles overnight span', () => {
     expect(eventEndAtFromDraft({ date: '2026-09-17', time: '9:30 PM', endTime: '3:00 AM' })).toBe(
-      '2026-09-18T03:00:00.000Z',
+      '2026-09-17T21:30:00.000Z',
     );
     expect(eventEndAtFromDraft({ date: '2026-09-17', time: '18:00', endTime: '23:00' })).toBe(
-      '2026-09-17T23:00:00.000Z',
+      '2026-09-17T17:30:00.000Z',
     );
   });
 
   it('parses time range string when endTime is absent', () => {
     expect(eventEndAtFromDraft({ date: '2026-09-17', time: '9:00 PM - 3:00 AM' })).toBe(
-      '2026-09-18T03:00:00.000Z',
+      '2026-09-17T21:30:00.000Z',
     );
   });
 
@@ -313,7 +530,13 @@ describe('publishVenueEvent contract and error handling', () => {
     await publishVenueEvent('org_1', {
       ...draft,
       ticketTiers: [
-        ...draft.ticketTiers,
+        {
+          ...draft.ticketTiers[0]!,
+          quantity: 90,
+          guestCount: 3,
+          admissionMode: 'per_person',
+          accessMode: 'code',
+        },
         { id: 'rsvp', name: 'Guest list', price: 0, quantity: 50, accessType: 'RSVP' },
       ],
     });
@@ -323,6 +546,12 @@ describe('publishVenueEvent contract and error handling', () => {
     const rsvp = createTicketTierSchema.safeParse(mocks.post.mock.calls[2]?.[0].body);
     expect(paid.success).toBe(true);
     expect(rsvp.success).toBe(true);
+    expect(mocks.post.mock.calls[1]?.[0].body).toMatchObject({
+      quantity: 90,
+      guestCount: 3,
+      admissionMode: 'per_person',
+      accessMode: 'code',
+    });
     const rsvpBody = mocks.post.mock.calls[2]?.[0].body as Record<string, unknown>;
     expect(rsvpBody).not.toHaveProperty('priceInPaise');
     expect(rsvpBody).not.toHaveProperty('pricingPhases');
@@ -404,5 +633,28 @@ describe('publishVenueEvent contract and error handling', () => {
     const paths = mocks.post.mock.calls.map(([options]) => options.path);
     expect(paths).not.toContain('/api/v2/events/evt_1/review');
     expect(paths).not.toContain('/api/v2/events/evt_1/publish');
+  });
+});
+
+describe('cancelPartnerEvent', () => {
+  it('sends the tenant-scoped cancellation with a validated reason and stable intent key', async () => {
+    mocks.post.mockResolvedValueOnce({ id: 'evt_m3', status: 'cancelled' });
+
+    await cancelPartnerEvent('org_m3', 'evt_m3/unsafe', 'M3 test cancellation', 'cancel-intent-m3');
+
+    const options = mocks.post.mock.calls[0]?.[0];
+    expect(options?.path).toBe('/api/v2/events/evt_m3%2Funsafe/cancel');
+    expect(cancelEventSchema.safeParse(options?.body).success).toBe(true);
+    expect(options?.headers).toEqual({
+      'x-organization-id': 'org_m3',
+      'Idempotency-Key': 'cancel-intent-m3',
+    });
+  });
+
+  it('rejects an empty cancellation reason before calling the gateway', async () => {
+    await expect(
+      cancelPartnerEvent('org_m3', 'evt_m3', '   ', 'cancel-intent-m3'),
+    ).rejects.toThrow();
+    expect(mocks.post).not.toHaveBeenCalled();
   });
 });

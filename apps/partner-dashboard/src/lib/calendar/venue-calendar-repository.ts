@@ -1,5 +1,7 @@
 import { paginatedSchema } from '@c1rcle/api-client';
 import {
+  PRODUCT_TIME_ZONE,
+  PRODUCT_TIME_ZONE_OFFSET_MINUTES,
   eventDtoSchema,
   organizationDtoSchema,
   venueDtoSchema,
@@ -47,6 +49,76 @@ export interface CreateVenueBlockInput {
   readonly reason: string;
 }
 
+export interface PublishVenueAvailabilityInput {
+  readonly startsAtLocal: string;
+  readonly endsAtLocal: string;
+  readonly timezone: string;
+  readonly notes: string;
+}
+
+export function venueAvailabilityInstant(localDateTime: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(localDateTime);
+  if (!match) throw new Error('Choose a valid local date and time.');
+  const target = match.slice(1).map(Number);
+  const [year, month, day, hour, minute] = target;
+  if (
+    year === undefined ||
+    month === undefined ||
+    day === undefined ||
+    hour === undefined ||
+    minute === undefined ||
+    ![year, month, day, hour, minute].every(Number.isFinite)
+  ) {
+    throw new Error('Choose a valid local date and time.');
+  }
+  const localTimestamp = Date.UTC(year, month - 1, day, hour, minute);
+  const normalized = new Date(localTimestamp);
+  if (
+    normalized.getUTCFullYear() !== year ||
+    normalized.getUTCMonth() + 1 !== month ||
+    normalized.getUTCDate() !== day ||
+    normalized.getUTCHours() !== hour ||
+    normalized.getUTCMinutes() !== minute
+  ) {
+    throw new Error('Choose a valid local date and time.');
+  }
+  return new Date(localTimestamp - PRODUCT_TIME_ZONE_OFFSET_MINUTES * 60_000).toISOString();
+}
+
+export async function publishVenueAvailability({
+  organizationId,
+  venueId,
+  input,
+  idempotencyKey,
+}: {
+  readonly organizationId: string;
+  readonly venueId: string;
+  readonly input: PublishVenueAvailabilityInput;
+  readonly idempotencyKey: string;
+}): Promise<VenueSlotDto> {
+  const startTime = venueAvailabilityInstant(input.startsAtLocal);
+  const endTime = venueAvailabilityInstant(input.endsAtLocal);
+  if (Date.parse(endTime) <= Date.parse(startTime)) {
+    throw new Error('End time must be after start time.');
+  }
+  return apiClient.post({
+    path: `/api/v2/venues/${encodeURIComponent(venueId)}/calendar/availability`,
+    body: {
+      label: 'Open for Host requests',
+      startTime,
+      endTime,
+      timezone: PRODUCT_TIME_ZONE,
+      notes: input.notes.trim() || null,
+      visibleToHostIds: null,
+    },
+    headers: {
+      'x-organization-id': organizationId,
+      'Idempotency-Key': idempotencyKey,
+    },
+    schema: venueSlotDtoSchema,
+  });
+}
+
 export async function blockVenueDate({
   organizationId,
   venueId,
@@ -79,6 +151,27 @@ export async function blockVenueDate({
   });
 }
 
+export async function unblockVenueDate({
+  organizationId,
+  venueId,
+  blockId,
+  idempotencyKey,
+}: {
+  readonly organizationId: string;
+  readonly venueId: string;
+  readonly blockId: string;
+  readonly idempotencyKey: string;
+}): Promise<VenueSlotDto> {
+  return apiClient.delete({
+    path: `/api/v2/venues/${encodeURIComponent(venueId)}/calendar/blocks/${encodeURIComponent(blockId)}`,
+    headers: {
+      'x-organization-id': organizationId,
+      'Idempotency-Key': idempotencyKey,
+    },
+    schema: venueSlotDtoSchema,
+  });
+}
+
 export function venueBlockTimeRange(
   input: Pick<CreateVenueBlockInput, 'date' | 'from' | 'to'>,
 ): { readonly startTime: string; readonly endTime: string } | null {
@@ -86,19 +179,26 @@ export function venueBlockTimeRange(
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(input.from)) return null;
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(input.to)) return null;
 
-  const start = new Date(`${input.date}T${input.from}:00.000Z`);
-  const end = new Date(`${input.date}T${input.to}:00.000Z`);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
-  if (start.toISOString().slice(0, 10) !== input.date || start.getTime() === end.getTime()) {
-    return null;
+  const start = venueAvailabilityInstant(`${input.date}T${input.from}`);
+  let endDate = input.date;
+  if (input.to < input.from) {
+    const next = new Date(Date.parse(`${input.date}T00:00:00.000Z`) + 86_400_000);
+    endDate = next.toISOString().slice(0, 10);
   }
-  if (end < start) end.setUTCDate(end.getUTCDate() + 1);
-
-  return { startTime: start.toISOString(), endTime: end.toISOString() };
+  const end = venueAvailabilityInstant(`${endDate}T${input.to}`);
+  if (start === end) return null;
+  return { startTime: start, endTime: end };
 }
 
 export function currentMonthKey(now = new Date()): string {
-  return `${String(now.getUTCFullYear())}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    timeZone: PRODUCT_TIME_ZONE,
+  }).formatToParts(now);
+  const year = parts.find((part) => part.type === 'year')?.value ?? '';
+  const month = parts.find((part) => part.type === 'month')?.value ?? '';
+  return `${year}-${month}`;
 }
 
 export function calendarMonthKeys(
@@ -217,13 +317,13 @@ export function mapVenueCalendar({
 
   for (const event of events) {
     if (inactiveEventStatuses.has(event.status)) continue;
-    const date = isoDatePart(event.startAt);
+    const date = eventDatePartInIndia(event.startAt);
     if (!date) continue;
     const calendarEvent: CalendarEvent = {
       id: event.id,
       date,
       name: event.title,
-      time: formatTimeRange(event.startAt, event.endAt),
+      time: formatEventTimeRange(event.startAt, event.endAt),
       status: pendingEventStatuses.has(event.status) ? 'pending' : 'confirmed',
       venue: venue.name,
       href: `/partner/venue/events/${event.id}`,
@@ -280,7 +380,7 @@ export function mapVenueCalendar({
         label: new Intl.DateTimeFormat('en-US', {
           month: 'long',
           year: 'numeric',
-          timeZone: 'UTC',
+          timeZone: PRODUCT_TIME_ZONE,
         }).format(new Date(Date.UTC(parsed.year, parsed.month - 1, 1))),
         firstDayOffset,
         daysInMonth,
@@ -297,6 +397,7 @@ function stateForDay(
   slots: readonly VenueSlotDto[],
 ): CalendarDayState {
   if (events.some((event) => event.status === 'pending')) return 'pending';
+  if (slots.some((slot) => slot.status === 'pending')) return 'pending';
   if (events.length > 0 || slots.some((slot) => slot.status === 'booked')) return 'confirmed';
   if (slots.some((slot) => slot.status === 'blocked')) return 'blocked';
   if (slots.some((slot) => slot.status === 'open')) return 'available';
@@ -306,11 +407,15 @@ function stateForDay(
 function availabilityForSlots(slots: readonly VenueSlotDto[]): readonly AvailabilitySlot[] {
   return slots
     .filter((slot) => slot.status === 'open')
-    .map((slot) => ({
-      id: slot.id,
-      label: `${slot.label} · ${formatTimeRange(slot.startTime, slot.endTime)}`,
-      status: 'available',
-    }));
+    .map((slot) => {
+      return {
+        id: slot.id,
+        label: `${slot.label} · ${formatTimeRange(slot.startTime, slot.endTime)}`,
+        status: 'available' as const,
+        timezone: PRODUCT_TIME_ZONE,
+        notes: slot.notes ?? null,
+      };
+    });
 }
 
 export function rangeForMonthKeys(
@@ -319,9 +424,11 @@ export function rangeForMonthKeys(
   const first = parseMonthKey(monthKeys[0] ?? '');
   const last = parseMonthKey(monthKeys.at(-1) ?? '');
   if (!first || !last) return null;
+  const from = Date.UTC(first.year, first.month - 1, 1) - PRODUCT_TIME_ZONE_OFFSET_MINUTES * 60_000;
+  const to = Date.UTC(last.year, last.month, 1) - PRODUCT_TIME_ZONE_OFFSET_MINUTES * 60_000 - 1;
   return {
-    from: new Date(Date.UTC(first.year, first.month - 1, 1)).toISOString(),
-    to: new Date(Date.UTC(last.year, last.month, 0, 23, 59, 59, 999)).toISOString(),
+    from: new Date(from).toISOString(),
+    to: new Date(to).toISOString(),
   };
 }
 
@@ -346,12 +453,60 @@ function isoTimePart(value: string): string {
 }
 
 export function formatTimeRange(start: string, end: string | null): string {
-  const startLabel = formatClock(isoTimePart(start));
-  return end ? `${startLabel} – ${formatClock(isoTimePart(end))}` : startLabel;
+  const startLabel = formatZonedClock(start);
+  return end ? `${startLabel} – ${formatZonedClock(end)}` : startLabel;
 }
 
-function formatClock(value: string): string {
-  const [hours = 0, minutes = 0] = value.split(':').map(Number);
-  const period = hours >= 12 ? 'PM' : 'AM';
-  return `${String(hours % 12 || 12)}:${String(minutes).padStart(2, '0')} ${period}`;
+/** Event timestamps are stored as UTC instants and shown in the product's IST venue timezone. */
+export function formatEventTimeRange(start: string, end: string | null): string {
+  const startLabel = formatIndiaClock(start);
+  return end ? `${startLabel} – ${formatIndiaClock(end)} IST` : `${startLabel} IST`;
+}
+
+/** Event timestamps are UTC instants; calendar day grouping follows India local dates. */
+export function eventDatePartInIndia(value: string): string | null {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: PRODUCT_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((entry) => entry.type === type)?.value ?? '';
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
+function formatIndiaClock(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: PRODUCT_TIME_ZONE,
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((entry) => entry.type === type)?.value ?? '';
+  return `${part('hour')}:${part('minute')} ${part('dayPeriod')}`;
+}
+
+function formatZonedClock(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  try {
+    const parts = new Intl.DateTimeFormat('en-IN', {
+      timeZone: PRODUCT_TIME_ZONE,
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZoneName: 'short',
+    }).formatToParts(date);
+    const part = (type: Intl.DateTimeFormatPartTypes) =>
+      parts.find((entry) => entry.type === type)?.value ?? '';
+    return `${part('hour')}:${part('minute')} ${part('dayPeriod').toUpperCase()} ${part('timeZoneName')}`.trim();
+  } catch {
+    return 'Time unavailable';
+  }
 }

@@ -14,7 +14,6 @@ export const navLinks: NavLinkItem[] = [
   { label: 'Explore', href: '/explore' },
   { label: 'Hosts', href: '/hosts' },
   { label: 'Tickets', href: '/tickets' },
-  { label: 'Help', href: '/help' },
   { label: 'App', href: '/app' },
 ];
 
@@ -22,23 +21,26 @@ export function DesktopNavLinks() {
   const pathname = usePathname();
 
   return (
-    <div className="relative hidden grid-cols-5 items-center rounded-full border border-white/15 bg-black/65 p-1.5 shadow-[0_10px_35px_rgba(0,0,0,0.5)] backdrop-blur-xl lg:grid">
+    <div className="relative hidden grid-cols-4 items-center rounded-full border border-white/15 bg-black/65 p-1.5 shadow-[0_14px_38px_rgba(0,0,0,0.65)] backdrop-blur-xl lg:grid">
       {navLinks.map((link) => {
         const isActive =
-          link.href === '/'
-            ? pathname === '/'
-            : pathname.startsWith(link.href) ||
-              (link.label === 'Hosts' && pathname.startsWith('/venue/'));
+          (link.href === '/explore' &&
+            (pathname.startsWith('/explore') ||
+              pathname.startsWith('/search') ||
+              pathname.startsWith('/event/'))) ||
+          (link.href !== '/explore' && pathname.startsWith(link.href)) ||
+          (link.label === 'Hosts' &&
+            (pathname.startsWith('/host/') || pathname.startsWith('/venue/')));
 
         return (
           <Link
             key={link.href}
             href={link.href}
             aria-current={isActive ? 'page' : undefined}
-            className={`relative min-w-[112px] rounded-full px-6 py-2.5 text-center text-xs font-black uppercase tracking-widest transition-[color,background-color,box-shadow,transform] duration-200 motion-reduce:transition-none ${
+            className={`relative min-w-[102px] rounded-full px-5 py-2.5 text-center text-[12px] font-bold uppercase tracking-[0.12em] transition-[color,background-color,box-shadow,transform] duration-200 motion-reduce:transition-none ${
               isActive
-                ? 'z-10 bg-white text-black shadow-[0_0_24px_rgba(255,255,255,0.22)]'
-                : 'font-bold text-white/70 hover:bg-white/[0.07] hover:text-white'
+                ? 'z-10 bg-[#FF6842] text-white shadow-[0_8px_22px_rgba(255,104,66,0.28)]'
+                : 'text-white/70 hover:bg-white/[0.08] hover:text-white'
             }`}
           >
             {link.label}

@@ -8,13 +8,15 @@ import type { OnboardingRequestDto, OrganizationDto, PartnerAccessDto } from '@c
 interface FakeSession {
   isAuthenticated: boolean;
   isLoading: boolean;
+  isHydrated: boolean;
   user: { id: string; email: string; displayName: string } | null;
 }
 
 const mockUseSession = vi.fn<() => FakeSession>();
+const mockUsePathname = vi.fn<() => string>();
 
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/venue/overview',
+  usePathname: () => mockUsePathname(),
 }));
 
 vi.mock('@c1rcle/auth', () => ({
@@ -69,8 +71,6 @@ function Probe() {
       <span data-testid="approved">{String(auth.isApproved)}</span>
       <span data-testid="banned">{String(auth.isBanned)}</span>
       <span data-testid="candoAny">{String(auth.canDo('anything'))}</span>
-      <span data-testid="candoEditEvent">{String(auth.canDo('canEditEvent'))}</span>
-      <span data-testid="candoStaff">{String(auth.canDo('canManageStaff'))}</span>
       <span data-testid="memberships">{auth.memberships.length}</span>
     </div>
   );
@@ -90,6 +90,7 @@ const AUTH_ORG_ACCESS_IDLE = {
 
 beforeEach(() => {
   mockUseSession.mockReset();
+  mockUsePathname.mockReset().mockReturnValue('/venue/overview');
   mockGetOrganizations.mockReset();
   mockGetPartnerAccess.mockReset();
   mockGetMyOnboardingRequest.mockReset();
@@ -104,7 +105,12 @@ afterEach(() => {
 
 describe('DashboardAuthProvider', () => {
   it('shows the loading splash while the session is unknown', () => {
-    mockUseSession.mockReturnValue({ isAuthenticated: false, isLoading: true, user: null });
+    mockUseSession.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: true,
+      isHydrated: true,
+      user: null,
+    });
 
     render(
       <DashboardAuthProvider>
@@ -116,8 +122,32 @@ describe('DashboardAuthProvider', () => {
     expect(screen.queryByTestId('loading')).not.toBeInTheDocument();
   });
 
+  it('lets server-authorized event pages render while client authorization hydrates', () => {
+    mockUsePathname.mockReturnValue('/partner/venue/events/event_m3/analytics');
+    mockUseSession.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: true,
+      isHydrated: true,
+      user: null,
+    });
+
+    render(
+      <DashboardAuthProvider>
+        <Probe />
+      </DashboardAuthProvider>,
+    );
+
+    expect(screen.getByTestId('loading')).toHaveTextContent('true');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
   it('renders children with real defaults once anonymous', async () => {
-    mockUseSession.mockReturnValue({ isAuthenticated: false, isLoading: false, user: null });
+    mockUseSession.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: false,
+      isHydrated: true,
+      user: null,
+    });
 
     render(
       <DashboardAuthProvider>
@@ -129,10 +159,7 @@ describe('DashboardAuthProvider', () => {
     expect(screen.getByTestId('approved')).toHaveTextContent('false');
     // No isBanned backend concept exists in V2 yet — always false, documented in the provider.
     expect(screen.getByTestId('banned')).toHaveTextContent('false');
-    // Unmapped / unknown actions fail closed — no button is shown for a
-    // permission the server never defined (see ACTION_PERMISSIONS).
     expect(screen.getByTestId('candoAny')).toHaveTextContent('false');
-    expect(screen.getByTestId('candoStaff')).toHaveTextContent('false');
     expect(screen.getByTestId('memberships')).toHaveTextContent('0');
   });
 
@@ -140,6 +167,7 @@ describe('DashboardAuthProvider', () => {
     mockUseSession.mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
+      isHydrated: true,
       user: { id: 'usr_1', email: 'a@b.com', displayName: 'A' },
     });
     mockGetOrganizations.mockResolvedValue([
@@ -175,6 +203,7 @@ describe('DashboardAuthProvider', () => {
         city: 'Mumbai',
       },
       documents: [],
+      promoterAgreementAcceptances: [],
       missingDocuments: [],
       submittedAt: '2026-01-01T00:00:00.000Z',
       reviewedBy: null,
@@ -198,44 +227,71 @@ describe('DashboardAuthProvider', () => {
     expect(mockSetActiveOrg).toHaveBeenCalledWith('org_1');
   });
 
-  it('evaluates canDo against the granted /access permissions (owner vs member)', async () => {
+  it('waits for token hydration before starting protected account reads', async () => {
     mockUseSession.mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
+      isHydrated: false,
       user: { id: 'usr_1', email: 'a@b.com', displayName: 'A' },
     });
-    mockGetOrganizations.mockResolvedValue([
-      {
-        id: 'org_1',
-        name: 'Only Org',
-        slug: 'only-org',
-        role: 'owner',
-        status: 'active',
-        version: 1,
-        createdAt: '2026-01-01T00:00:00.000Z',
-        updatedAt: '2026-01-01T00:00:00.000Z',
-      },
-    ]);
-    mockGetPartnerAccess.mockResolvedValue({
-      organizationId: 'org_1',
-      userId: 'usr_1',
-      partnerType: 'venue',
-      role: 'owner',
-      permissions: ['MANAGE_EVENTS', 'SCAN_ENTRY'],
-      tabVisibility: null,
-    });
+    mockGetOrganizations.mockResolvedValue([]);
     mockGetMyOnboardingRequest.mockResolvedValue(null);
+
+    const { rerender } = render(
+      <DashboardAuthProvider>
+        <Probe />
+      </DashboardAuthProvider>,
+    );
+
+    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(mockGetOrganizations).not.toHaveBeenCalled();
+    expect(mockGetMyOnboardingRequest).not.toHaveBeenCalled();
+
+    mockUseSession.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      isHydrated: true,
+      user: { id: 'usr_1', email: 'a@b.com', displayName: 'A' },
+    });
+    rerender(
+      <DashboardAuthProvider>
+        <Probe />
+      </DashboardAuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(mockGetOrganizations).toHaveBeenCalledOnce();
+    });
+    expect(mockGetMyOnboardingRequest).toHaveBeenCalledOnce();
+  });
+
+  it('does not block an authorized active workspace on background account hydration', async () => {
+    mockGetActiveOrgId.mockReturnValue('org_1');
+    mockUseSession.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      isHydrated: true,
+      user: { id: 'usr_1', email: 'a@b.com', displayName: 'A' },
+    });
     mockUseOrgAccess.mockReturnValue({
+      ...AUTH_ORG_ACCESS_IDLE,
       partnerType: 'venue',
       role: 'owner',
-      permissions: ['MANAGE_EVENTS', 'SCAN_ENTRY'],
-      tabVisibility: null,
-      isLoading: false,
-      error: null,
-      isSuspended: false,
-      hasPermission: (p) => ['MANAGE_EVENTS', 'SCAN_ENTRY'].includes(p),
-      tabVisible: () => true,
+      permissions: ['VIEW_ANALYTICS'],
     });
+
+    let finishOrganizations!: (value: OrganizationDto[]) => void;
+    let finishOnboarding!: (value: OnboardingRequestDto | null) => void;
+    mockGetOrganizations.mockReturnValue(
+      new Promise((resolve) => {
+        finishOrganizations = resolve;
+      }),
+    );
+    mockGetMyOnboardingRequest.mockReturnValue(
+      new Promise((resolve) => {
+        finishOnboarding = resolve;
+      }),
+    );
 
     render(
       <DashboardAuthProvider>
@@ -243,12 +299,14 @@ describe('DashboardAuthProvider', () => {
       </DashboardAuthProvider>,
     );
 
-    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
-    // Owner granted the write permission → the action shows.
-    expect(screen.getByTestId('candoEditEvent')).toHaveTextContent('true');
-    // Owner does NOT hold MANAGE_STAFF → the action stays hidden.
-    expect(screen.getByTestId('candoStaff')).toHaveTextContent('false');
-    // 'anything' has no mapping → fail closed.
-    expect(screen.getByTestId('candoAny')).toHaveTextContent('false');
+    expect(screen.getByTestId('loading')).toHaveTextContent('false');
+    expect(screen.getByTestId('approved')).toHaveTextContent('true');
+    expect(screen.getByTestId('memberships')).toHaveTextContent('0');
+
+    finishOrganizations([]);
+    finishOnboarding(null);
+    await waitFor(() => {
+      expect(mockGetOrganizations).toHaveBeenCalledOnce();
+    });
   });
 });

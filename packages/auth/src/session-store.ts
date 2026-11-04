@@ -57,13 +57,15 @@ const markHydrated = () => {
   updateSession({ hydrated: true });
 };
 
-let state: SessionState = {
+const initialState: SessionState = {
   accessToken: null,
   expiresAt: null,
   session: null,
   status: 'unknown',
   hydrated: false,
 };
+
+let state: SessionState = initialState;
 
 const subscribe = (listener: SessionListener) => {
   listeners.add(listener);
@@ -73,9 +75,12 @@ const subscribe = (listener: SessionListener) => {
 };
 
 const getState = () => state;
+// Server rendering and the first hydration render must use the same snapshot,
+// even when another client island has already bootstrapped the browser store.
+const getServerSnapshot = () => initialState;
 
 export const useSessionStore = Object.assign(
-  () => useSyncExternalStore(subscribe, getState, getState),
+  () => useSyncExternalStore(subscribe, getState, getServerSnapshot),
   {
     getState,
     setState: updateSession,
@@ -89,6 +94,7 @@ export function useSession() {
   return {
     isAuthenticated: sessionState.status === 'authenticated',
     isLoading: sessionState.status === 'unknown',
+    isHydrated: sessionState.hydrated,
     user: sessionState.session?.user ?? null,
   };
 }

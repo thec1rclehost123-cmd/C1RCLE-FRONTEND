@@ -50,6 +50,7 @@ interface ForwardInit {
   readonly method: 'GET' | 'POST';
   readonly body?: unknown;
   readonly cookie?: string | null;
+  readonly headers?: Readonly<Record<string, string>>;
 }
 
 /**
@@ -62,6 +63,7 @@ export async function forwardToGateway(path: string, init: ForwardInit): Promise
   if (init.body !== undefined) {
     headers['content-type'] = 'application/json';
   }
+  for (const [name, value] of Object.entries(init.headers ?? {})) headers[name] = value;
   if (init.cookie !== undefined && init.cookie !== null && init.cookie.length > 0) {
     headers['cookie'] = init.cookie;
   }

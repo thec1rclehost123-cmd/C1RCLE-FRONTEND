@@ -1,10 +1,6 @@
 import { DirectoryLanding } from '@/features/directory/components/DirectoryLanding';
-import {
-  hostDirectoryFixtures,
-  venueDirectoryFixtures,
-} from '@/features/directory/fixtures/directory.fixture';
+import { loadExploreEvents } from '@/features/explore/explore-data';
 import { buildPublicMetadata } from '@/lib/seo/metadata';
-import { isProductionSeo } from '@/lib/seo/site';
 
 import type { Metadata } from 'next';
 
@@ -18,12 +14,10 @@ export function generateMetadata(): Metadata {
   });
 }
 
-export default function HostsPage() {
-  const production = isProductionSeo();
-  return (
-    <DirectoryLanding
-      hosts={production ? [] : hostDirectoryFixtures}
-      venues={production ? [] : venueDirectoryFixtures}
-    />
+export default async function HostsPage() {
+  const result = await loadExploreEvents().then(
+    (events) => ({ events, feedAvailable: true }),
+    () => ({ events: [], feedAvailable: false }),
   );
+  return <DirectoryLanding {...result} />;
 }

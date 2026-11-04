@@ -14,10 +14,7 @@ export function StudioRoutePlaceholder({
     <PageContainer>
       <PageHeader eyebrow={studioLabel} title={title} description={description} />
       <PageSection>
-        <EmptyState
-          title="Foundation route ready"
-          description="This route is intentionally a skeleton. The screen implementation begins after the shared shell is approved."
-        />
+        <EmptyState title={`${title} unavailable`} />
       </PageSection>
     </PageContainer>
   );

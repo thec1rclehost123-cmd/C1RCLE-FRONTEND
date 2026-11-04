@@ -27,6 +27,7 @@ export default async function StudioCalendarPage({
         {...(month ? { initialMonth: month } : {})}
         {...(date ? { initialDate: date } : {})}
         initialDialog={getValue(query['dialog']) === 'block'}
+        initialAvailabilityDialog={getValue(query['dialog']) === 'availability'}
       />
     );
   }
@@ -34,6 +35,7 @@ export default async function StudioCalendarPage({
   const date = getValue(query['date']);
   const venue = getValue(query['venue']);
   const slot = getValue(query['slot']);
+  const eventId = getValue(query['event']);
   return (
     <HostAvailabilityRoute
       organizationId={organizationId}
@@ -41,6 +43,7 @@ export default async function StudioCalendarPage({
       {...(date ? { initialDate: date } : {})}
       {...(venue ? { initialVenue: venue } : {})}
       {...(slot ? { initialSlot: slot } : {})}
+      {...(eventId ? { initialEventId: eventId } : {})}
     />
   );
 }

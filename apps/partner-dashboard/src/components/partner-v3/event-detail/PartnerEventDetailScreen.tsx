@@ -44,6 +44,7 @@ export function PartnerEventDetailFrame({
           accent={config.accent}
           tabs={[
             { label: 'Sales', href: baseHref, current: activeDetailTab === 'sales' },
+            { label: 'Extras', href: `${baseHref}/addons` },
             {
               label: "Who's coming",
               href: `${baseHref}/guests`,

@@ -39,6 +39,17 @@ export function colorVar(token: SemanticColor): string {
 export const radii = ['xs', 'sm', 'md', 'lg', 'xl', '2xl'] as const;
 export type Radius = (typeof radii)[number];
 
+export const elevations = ['card', 'popover'] as const;
+export type Elevation = (typeof elevations)[number];
+
+export const layoutWidths = {
+  content: '72rem',
+  wide: '90rem',
+  prose: '65ch',
+} as const;
+
+export const touchTargetMinPx = 44;
+
 export const themes = ['light', 'dark', 'system'] as const;
 export type Theme = (typeof themes)[number];
 

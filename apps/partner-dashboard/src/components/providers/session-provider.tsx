@@ -5,6 +5,7 @@ import { useEffect, type ReactNode } from 'react';
 
 import {
   logout,
+  hydrateSession,
   markAnonymous,
   markHydrated,
   refresh,
@@ -72,12 +73,12 @@ export function SessionProvider({ initialUser, children }: SessionProviderProps)
     if (initialUser !== null) {
       /*
        * The server bootstrap only proves an httpOnly session exists — the
-       * access token is not readable server-side, so it starts null and one
-       * refresh is performed to obtain it (the BFF exchanges the refresh
-       * cookie same-origin).
+       * access token is not readable server-side, so it starts null. The BFF
+       * first establishes this app's namespaced CSRF cookie, then exchanges
+       * the refresh cookie for an in-memory access token.
        */
       setSession(initialUser, null, 0);
-      void refresh().then((recovered) => {
+      void hydrateSession().then((recovered) => {
         if (!recovered) {
           markAnonymous();
         }

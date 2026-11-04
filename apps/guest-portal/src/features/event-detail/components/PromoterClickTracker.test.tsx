@@ -1,16 +1,16 @@
 import { render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { PromoterClickTracker } from './PromoterClickTracker';
+import { PromoterClickTracker, readPromoterReferralContext } from './PromoterClickTracker';
 
 interface ClickRequestOptions {
   path: string;
-  body: { eventSlug: string; code: string };
+  body: { eventSlug: string; code: string; clickId: string };
   schema: unknown;
 }
 
 interface ClickApiClient {
-  post(options: ClickRequestOptions): Promise<{ tracked: boolean }>;
+  post(options: ClickRequestOptions): Promise<{ accepted: true }>;
 }
 
 const clickApi = vi.hoisted(() => ({
@@ -26,7 +26,7 @@ describe('PromoterClickTracker', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.sessionStorage.clear();
-    clickApi.postMock.mockResolvedValue({ tracked: true });
+    clickApi.postMock.mockResolvedValue({ accepted: true });
     clickApi.getApiClientMock.mockReturnValue({ post: clickApi.postMock });
   });
 
@@ -37,7 +37,7 @@ describe('PromoterClickTracker', () => {
 
   it('does not track when no code is provided', () => {
     render(<PromoterClickTracker eventSlug="summer-fest" />);
-    expect(window.sessionStorage.getItem('c1rcle-promoter-referral-code')).toBeNull();
+    expect(window.sessionStorage.getItem('c1rcle-promoter-referral-context')).toBeNull();
     expect(clickApi.postMock).not.toHaveBeenCalled();
   });
 
@@ -54,8 +54,9 @@ describe('PromoterClickTracker', () => {
       path: '/api/v2/public/promoter-links/click',
       body: { eventSlug: 'summer-fest', code: 'SPR-123' },
     });
+    expect(calledOptions?.body.clickId).toMatch(/^[0-9a-f-]{36}$/iu);
     expect(calledOptions?.schema).toBeDefined();
-    expect(window.sessionStorage.getItem('c1rcle-promoter-referral-code')).toBe('SPR-123');
+    expect(readPromoterReferralContext('summer-fest')).toBe('SPR-123');
   });
 
   it('re-tracks when the referral code changes', async () => {
@@ -69,7 +70,39 @@ describe('PromoterClickTracker', () => {
     await waitFor(() => {
       expect(clickApi.postMock).toHaveBeenCalledTimes(2);
     });
-    expect(window.sessionStorage.getItem('c1rcle-promoter-referral-code')).toBe('B');
+    expect(readPromoterReferralContext('summer-fest')).toBe('B');
+  });
+
+  it('suppresses duplicate effect delivery for the same event and code in one session', async () => {
+    const first = render(<PromoterClickTracker eventSlug="summer-fest" code="SPR-123" />);
+    await waitFor(() => {
+      expect(clickApi.postMock).toHaveBeenCalledTimes(1);
+    });
+    first.unmount();
+
+    render(<PromoterClickTracker eventSlug="summer-fest" code="SPR-123" />);
+    await Promise.resolve();
+
+    expect(clickApi.postMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps referral context after the privacy preserving click acknowledgment', async () => {
+    window.history.replaceState({}, '', '/event/summer-fest?ref=BAD');
+    render(<PromoterClickTracker eventSlug="summer-fest" code="BAD" />);
+
+    await waitFor(() => {
+      expect(readPromoterReferralContext('summer-fest')).toBe('BAD');
+    });
+    expect(window.location.search).toBe('?ref=BAD');
+  });
+
+  it('only returns fresh context for the matching event', () => {
+    window.sessionStorage.setItem(
+      'c1rcle-promoter-referral-context',
+      JSON.stringify({ eventSlug: 'summer-fest', code: 'GOOD', capturedAt: Date.now() }),
+    );
+    expect(readPromoterReferralContext('other-event')).toBeNull();
+    expect(window.sessionStorage.getItem('c1rcle-promoter-referral-context')).toBeNull();
   });
 
   it('swallows failed click requests so a dead endpoint cannot break browsing', async () => {

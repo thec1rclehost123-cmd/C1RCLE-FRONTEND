@@ -1,5 +1,5 @@
-import { PromoterOverviewScreen } from '@/components/promoter/PromoterOverviewScreen';
+import { redirect } from 'next/navigation';
 
 export default function PromoterOverviewPage() {
-  return <PromoterOverviewScreen />;
+  redirect('/partner/promoter/overview');
 }

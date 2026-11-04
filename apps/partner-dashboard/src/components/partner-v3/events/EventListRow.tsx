@@ -10,14 +10,16 @@ export function EventListRow({
   event,
   href,
   editHref,
+  canEdit = true,
 }: {
   readonly event: PartnerEventRecord;
   readonly href: string;
   readonly editHref: string;
+  readonly canEdit?: boolean;
 }) {
-  const soldPercent = Math.round((event.sold / event.capacity) * 100);
-  const actionLabel = event.status === 'Draft' ? 'Continue' : 'View';
-  const actionHref = event.status === 'Draft' ? editHref : href;
+  const sold = event.sold;
+  const actionLabel = canEdit && event.status === 'Draft' ? 'Continue' : 'View';
+  const actionHref = canEdit && event.status === 'Draft' ? editHref : href;
 
   return (
     <div className={styles['eventListRow']}>
@@ -36,13 +38,16 @@ export function EventListRow({
       </div>
       <div className={styles['ticketMetric']}>
         <strong>
-          {event.sold.toLocaleString('en-IN')} / {event.capacity.toLocaleString('en-IN')}
+          {sold === null
+            ? 'Sales unavailable'
+            : `${event.salesCountComplete === false ? '≥ ' : ''}${sold.toLocaleString('en-IN')} ${sold === 1 ? 'ticket' : 'tickets'} issued`}
         </strong>
-        <progress
-          value={soldPercent}
-          max={100}
-          aria-label={`${String(soldPercent)}% of tickets sold`}
-        />
+        <small>
+          {event.capacity === null
+            ? 'Room capacity not configured'
+            : `Room capacity: ${event.capacity.toLocaleString('en-IN')}`}
+          {event.salesCountComplete === false ? ' · Sales count is a lower bound' : ''}
+        </small>
       </div>
       <EventStatusBadge status={event.status} />
       <Link className={styles['rowAction']} href={actionHref}>

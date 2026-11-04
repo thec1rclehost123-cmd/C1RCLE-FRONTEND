@@ -245,7 +245,8 @@
   color: var(--partner-muted);
 }
 .popoverSearch:focus-within {
-  box-shadow: 0 0 0 1px rgb(244 74 34/50%);
+  border-color: rgb(255 255 255 / 30%);
+  box-shadow: none;
 }
 .popoverSearch input {
   min-width: 0;

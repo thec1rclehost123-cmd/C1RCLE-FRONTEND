@@ -76,7 +76,7 @@ function ScrollingRow({ photos, direction, rowIndex, speedClass }: ScrollingRowP
 
 export function PhotoStringGallery() {
   return (
-    <section className="photo-string-section bg-black" aria-labelledby="photo-string-heading">
+    <section className="photo-string-section" aria-labelledby="photo-string-heading">
       <div className="photo-string-glow" aria-hidden="true" />
 
       <div className="photo-string-header">

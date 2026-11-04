@@ -17,12 +17,14 @@ export function HostAvailabilityScreen({
   initialDate,
   initialVenue,
   initialSlot,
+  onRequestSlot,
 }: {
   readonly data: HostAvailabilityData;
   readonly initialMonth?: string;
   readonly initialDate?: string;
   readonly initialVenue?: string;
   readonly initialSlot?: string;
+  readonly onRequestSlot?: (venueId: string, slotId: string) => Promise<void>;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -57,9 +59,6 @@ export function HostAvailabilityScreen({
     const nextDate = next?.days.find((day) => day.day === 16)?.date ?? next?.days[0]?.date;
     if (next && nextDate) update({ month: next.key, date: nextDate });
   };
-  const createHref = selectedSlot
-    ? `/partner/host/events/create?venue=${selectedVenue.venue.id}&date=${selectedDay.date}&slot=${selectedSlot.id}`
-    : undefined;
   return (
     <div className={[styles['page'], styles['hostTheme']].join(' ')}>
       <div className={styles['topRow']}>
@@ -90,7 +89,7 @@ export function HostAvailabilityScreen({
         <section className={styles['calendarPanel']} aria-label="Partnered venue availability">
           <CalendarHeader
             title="All events this month"
-            description={`${selectedVenue.venue.name} · grey dates are already taken.`}
+            description={`${selectedVenue.venue.name} · grey dates have no open slots for requests.`}
             monthLabel={month.label.toUpperCase()}
             onPrevious={() => {
               moveMonth(-1);
@@ -121,7 +120,11 @@ export function HostAvailabilityScreen({
           onSlotSelect={(slot: AvailabilitySlot) => {
             update({ slot: slot.id });
           }}
-          createHref={createHref}
+          onRequestSlot={
+            selectedSlot && onRequestSlot
+              ? () => onRequestSlot(selectedVenue.venue.id, selectedSlot.id)
+              : undefined
+          }
         />
       </div>
     </div>

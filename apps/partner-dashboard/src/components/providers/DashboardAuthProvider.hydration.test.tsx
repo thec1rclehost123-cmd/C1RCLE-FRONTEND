@@ -8,7 +8,10 @@ import { DashboardAuthProvider, useDashboardAuth } from './DashboardAuthProvider
 
 const mocks = vi.hoisted(() => ({
   getActiveOrgId: vi.fn<() => string | null>(),
-  useSession: vi.fn<() => { isAuthenticated: boolean; isLoading: boolean; user: unknown }>(),
+  useSession:
+    vi.fn<
+      () => { isAuthenticated: boolean; isLoading: boolean; isHydrated: boolean; user: unknown }
+    >(),
   orgAccess: {
     partnerType: 'venue',
     role: 'owner',
@@ -79,6 +82,7 @@ beforeEach(() => {
   mocks.useSession.mockReset().mockReturnValue({
     isAuthenticated: true,
     isLoading: false,
+    isHydrated: true,
     user: {
       id: 'usr_1',
       email: 'agarwal@example.com',
@@ -95,6 +99,9 @@ afterEach(() => {
 
 describe('DashboardAuthProvider hydration', () => {
   it('keeps browser-only auth state out of SSR and renders profile upon client hydration', async () => {
+    // Active-org storage is browser-only and must not be available to the
+    // server-rendered tree.
+    mocks.getActiveOrgId.mockReturnValue(null);
     const tree = (
       <DashboardAuthProvider>
         <ProfileName />

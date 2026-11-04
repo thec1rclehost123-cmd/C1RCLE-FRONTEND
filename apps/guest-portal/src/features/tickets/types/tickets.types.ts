@@ -2,7 +2,8 @@
 
 export type TicketCategory = 'GENERAL' | 'STAG' | 'VIP' | 'COUPLE' | 'GROUP';
 export type TicketTab = 'upcoming' | 'past';
-export type TicketStatus = 'active' | 'used' | 'cancelled' | 'pending';
+export type TicketStatus =
+  'active' | 'used' | 'cancelled' | 'pending' | 'refund_pending' | 'refunded' | 'unavailable';
 
 export interface TicketShowcaseItem {
   id: number;
@@ -14,7 +15,13 @@ export interface TicketShowcaseItem {
 
 export interface UserTicketItem {
   id: string;
+  eventId: string;
   orderId: string;
+  eventSlug?: string | null;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  bookingReference: string | null;
+  holderName: string;
   eventTitle: string;
   date: string;
   time: string;
@@ -25,6 +32,23 @@ export interface UserTicketItem {
   isVip?: boolean;
   ticketCount: number;
   status: TicketStatus;
+  /** An independently issued group unit that the purchaser may invite, but cannot present. */
+  custody?: 'unassigned';
+  ticketAddons?: readonly {
+    id: string;
+    name: string;
+    kind: 'parking' | 'cloakroom' | 'merchandise';
+    status: 'active' | 'redeemed' | 'void';
+  }[];
+  eventCover?: {
+    status: string;
+    issuedPaise: number;
+    remainingPaise: number;
+    reservedPaise: number;
+    redeemedPaise: number;
+    refundedPaise: number;
+    history: readonly { type: string; amountPaise: number; createdAt: string }[];
+  };
 }
 
 export interface PendingReservationAlert {
@@ -37,5 +61,7 @@ export interface PendingReservationAlert {
 export interface TicketWalletData {
   upcomingTickets: UserTicketItem[];
   pastTickets: UserTicketItem[];
+  /** Active entitlements with unknown event timing after a failed details read. */
+  unavailableTickets?: UserTicketItem[];
   pendingReservation?: PendingReservationAlert;
 }

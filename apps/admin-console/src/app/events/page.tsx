@@ -1,12 +1,14 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 
 import { Button, EmptyState, ErrorState, LoadingState } from '@c1rcle/ui';
 
 import { PageHeader } from '@/components/admin/page-header';
 import {
   listEvents,
+  getEventCoverReconciliation,
   exportEventsCsv,
   forceCompleteEvent,
   pauseEvent,
@@ -26,6 +28,7 @@ const FORCE_COMPLETABLE = new Set(['published', 'sales_paused', 'started']);
 
 export default function EventsDesk() {
   const queryClient = useQueryClient();
+  const [reconciliationEventId, setReconciliationEventId] = useState<string | null>(null);
 
   const list = useQuery({
     queryKey: ['admin', 'events'],
@@ -56,6 +59,17 @@ export default function EventsDesk() {
     mutationFn: () => exportEventsCsv(),
   });
 
+  const coverReconciliation = useQuery({
+    queryKey: ['admin', 'event-cover-reconciliation', reconciliationEventId],
+    queryFn: () => {
+      if (reconciliationEventId === null) {
+        return Promise.reject(new Error('Select an event before loading cover reconciliation'));
+      }
+      return getEventCoverReconciliation(reconciliationEventId);
+    },
+    enabled: reconciliationEventId !== null,
+  });
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
@@ -77,12 +91,92 @@ export default function EventsDesk() {
         </Button>
       </div>
 
+      {reconciliationEventId !== null ? (
+        <section
+          aria-labelledby="event-cover-reconciliation-title"
+          className="rounded-lg border border-border bg-card p-4"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 id="event-cover-reconciliation-title" className="font-semibold">
+                Event cover reconciliation
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Read-only ledger totals. Redemption value remains held and is not Venue payout
+                availability.
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setReconciliationEventId(null);
+              }}
+            >
+              Close
+            </Button>
+          </div>
+          {coverReconciliation.isPending ? (
+            <LoadingState label="Reconciling event cover…" />
+          ) : coverReconciliation.isError ? (
+            <ErrorState
+              description="Event cover totals could not be loaded. Please retry."
+              onRetry={() => {
+                void coverReconciliation.refetch();
+              }}
+            />
+          ) : (
+            <div className="mt-4 space-y-3">
+              <dl className="grid gap-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
+                {[
+                  [
+                    'Accounts',
+                    `${String(coverReconciliation.data.scannedAccountCount)} / ${String(coverReconciliation.data.accountCount)}`,
+                  ],
+                  ['Issued', formatPaise(coverReconciliation.data.issuedPaise)],
+                  ['Remaining', formatPaise(coverReconciliation.data.remainingPaise)],
+                  ['Reserved', formatPaise(coverReconciliation.data.reservedPaise)],
+                  ['Redeemed', formatPaise(coverReconciliation.data.redeemedPaise)],
+                  ['Refunded', formatPaise(coverReconciliation.data.refundedPaise)],
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="text-muted-foreground">{label}</dt>
+                    <dd className="font-medium">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p role="status" className="text-sm">
+                {coverReconciliation.data.balanced && !coverReconciliation.data.truncated
+                  ? `All ${String(coverReconciliation.data.accountCount)} scanned accounts balance. Settlement is held and ineligible.`
+                  : `Review required: ${String(coverReconciliation.data.unbalancedAccountCount)} account discrepancies; ${coverReconciliation.data.truncated ? 'the scan reached its 1,000 account limit' : 'settlement remains held and ineligible'}.`}
+              </p>
+              {coverReconciliation.data.heldRedemptionPaise !== null ? (
+                <p className="text-sm text-muted-foreground">
+                  Balanced redemption entries held:{' '}
+                  {formatPaise(coverReconciliation.data.heldRedemptionPaise)}
+                </p>
+              ) : null}
+              {coverReconciliation.data.discrepancies.length > 0 ? (
+                <ul className="list-inside list-disc text-sm text-destructive">
+                  {coverReconciliation.data.discrepancies.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          )}
+        </section>
+      ) : null}
+
       {list.isPending ? (
         <LoadingState label="Loading events…" />
       ) : list.isError ? (
         <ErrorState
           description="Events could not be loaded. Please retry."
-          onRetry={() => void list.refetch()}
+          onRetry={() => {
+            void list.refetch();
+          }}
         />
       ) : list.data.items.length === 0 ? (
         <EmptyState title="No events" description="Nothing is published yet." />
@@ -150,51 +244,61 @@ export default function EventsDesk() {
                     {formatDateTime(event.createdAt)}
                   </td>
                   <td className="px-4 py-3">
-                    {!PAUSABLE.has(event.status) && !FORCE_COMPLETABLE.has(event.status) ? (
-                      <p className="text-right text-xs text-muted-foreground">—</p>
-                    ) : (
-                      <div className="flex items-center justify-end gap-2">
-                        {event.status === 'sales_paused' ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={resumeMutation.isPending}
-                            onClick={() => {
-                              resumeMutation.mutate(event.id);
-                            }}
-                            aria-busy={resumeMutation.isPending}
-                          >
-                            {resumeMutation.isPending ? 'Resuming…' : 'Resume'}
-                          </Button>
-                        ) : event.status === 'published' ? (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={pauseMutation.isPending}
-                            onClick={() => {
-                              pauseMutation.mutate(event.id);
-                            }}
-                            aria-busy={pauseMutation.isPending}
-                          >
-                            {pauseMutation.isPending ? 'Pausing…' : 'Pause'}
-                          </Button>
-                        ) : null}
-                        {FORCE_COMPLETABLE.has(event.status) ? (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={forceCompleteMutation.isPending}
-                            onClick={() => {
-                              forceCompleteMutation.mutate(event.id);
-                            }}
-                            aria-busy={forceCompleteMutation.isPending}
-                            title="Force-end a past event whose lifecycle never transitioned"
-                          >
-                            {forceCompleteMutation.isPending ? 'Completing…' : 'Force complete'}
-                          </Button>
-                        ) : null}
-                      </div>
-                    )}
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        aria-expanded={reconciliationEventId === event.id}
+                        onClick={() => {
+                          setReconciliationEventId(event.id);
+                        }}
+                      >
+                        Reconcile cover
+                      </Button>
+                      {PAUSABLE.has(event.status) || FORCE_COMPLETABLE.has(event.status) ? (
+                        <>
+                          {event.status === 'sales_paused' ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={resumeMutation.isPending}
+                              onClick={() => {
+                                resumeMutation.mutate(event.id);
+                              }}
+                              aria-busy={resumeMutation.isPending}
+                            >
+                              {resumeMutation.isPending ? 'Resuming…' : 'Resume'}
+                            </Button>
+                          ) : event.status === 'published' ? (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={pauseMutation.isPending}
+                              onClick={() => {
+                                pauseMutation.mutate(event.id);
+                              }}
+                              aria-busy={pauseMutation.isPending}
+                            >
+                              {pauseMutation.isPending ? 'Pausing…' : 'Pause'}
+                            </Button>
+                          ) : null}
+                          {FORCE_COMPLETABLE.has(event.status) ? (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={forceCompleteMutation.isPending}
+                              onClick={() => {
+                                forceCompleteMutation.mutate(event.id);
+                              }}
+                              aria-busy={forceCompleteMutation.isPending}
+                              title="Force-end a past event whose lifecycle never transitioned"
+                            >
+                              {forceCompleteMutation.isPending ? 'Completing…' : 'Force complete'}
+                            </Button>
+                          ) : null}
+                        </>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))}

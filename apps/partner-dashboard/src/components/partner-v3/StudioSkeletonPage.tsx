@@ -1,10 +1,10 @@
-import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
+import { getStudioConfig } from '@/studios/studio-config';
 
 import { StudioRoutePlaceholder } from './StudioRoutePlaceholder';
 
 import type { StudioRole } from '@/studios/studio-config';
 
-export async function StudioSkeletonPage({
+export function StudioSkeletonPage({
   studio,
   title,
   description,
@@ -13,11 +13,9 @@ export async function StudioSkeletonPage({
   readonly title: string;
   readonly description: string;
 }) {
-  const shellData = await fixturePartnerDataSource.getStudioShell(studio);
-
   return (
     <StudioRoutePlaceholder
-      studioLabel={shellData.displayName}
+      studioLabel={getStudioConfig(studio).label}
       title={title}
       description={description}
     />

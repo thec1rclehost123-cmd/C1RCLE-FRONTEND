@@ -17,16 +17,27 @@ import {
   adminLookupResponseSchema,
   adminOrderDtoSchema,
   adminOrderListResponseSchema,
+  adminPromoterOrderInvestigationSchema,
   adminPromoListResponseSchema,
   adminPromoterActionResponseSchema,
+  adminPromoterReferralLinkActionResponseSchema,
   adminPromoterAssignmentListResponseSchema,
+  adminPromoterSuspendRequestSchema,
   adminRefundRequestDtoSchema,
   adminRefundRequestListResponseSchema,
   adminAuditRecordDtoSchema,
   adminTicketDtoSchema,
   adminTicketListResponseSchema,
+  adminTicketEventChangeRefundReviewsSchema,
+  adminTicketTransfersResponseSchema,
+  adminTicketCoverReconciliationSchema,
+  adminEventCoverReconciliationSchema,
+  adminEventCoverReversalResponseSchema,
+  adminPromoterReferralLinkListResponseSchema,
+  adminPromoterRiskFlagsResponseSchema,
   adminUserDtoSchema,
   adminUserListResponseSchema,
+  checkoutQuoteResponseSchema,
   adminVenueDtoSchema,
   adminVenueListResponseSchema,
   approveOnboardingResultSchema,
@@ -108,6 +119,9 @@ const adminAuditPageSchema = z.object({
   items: z.array(adminAuditRecordDtoSchema),
 });
 export type AdminAuditPage = z.infer<typeof adminAuditPageSchema>;
+export type AdminPromoterReferralLinkPage = z.infer<
+  typeof adminPromoterReferralLinkListResponseSchema
+>;
 
 export type AdminRefundRequestPage = z.infer<typeof adminRefundRequestListResponseSchema>;
 export type RefundOutcome = z.infer<typeof refundOutcomeSchema>;
@@ -441,6 +455,17 @@ export function listOrders(limit = 100): Promise<AdminOrderPage> {
   });
 }
 
+export type AdminPromoterOrderInvestigation = z.infer<typeof adminPromoterOrderInvestigationSchema>;
+
+export function findOrderByBookingReference(
+  bookingReference: string,
+): Promise<AdminPromoterOrderInvestigation> {
+  return getAdminApiClient().get({
+    path: `/api/v2/admin/orders/by-booking-reference/${encodeURIComponent(bookingReference)}`,
+    schema: adminPromoterOrderInvestigationSchema,
+  });
+}
+
 /** Order statuses, derived from the wire schema so the enum can never drift. */
 export const ORDER_STATUSES: readonly OrderStatus[] = adminOrderDtoSchema.shape.status.options;
 
@@ -454,6 +479,246 @@ export function listTickets(limit = 100): Promise<AdminTicketPage> {
     path: '/api/v2/admin/tickets',
     query: { limit },
     schema: adminTicketListResponseSchema,
+  });
+}
+
+export type AdminTicketTransfers = z.infer<typeof adminTicketTransfersResponseSchema>;
+
+export function listTicketTransferHistory(ticketId: string): Promise<AdminTicketTransfers> {
+  return getAdminApiClient().get({
+    path: `/api/v2/admin/tickets/${encodeURIComponent(ticketId)}/transfers`,
+    schema: adminTicketTransfersResponseSchema,
+  });
+}
+
+export type AdminTicketEventChangeRefundReviews = z.infer<
+  typeof adminTicketEventChangeRefundReviewsSchema
+>;
+
+export function listTicketEventChangeRefundReviews(
+  ticketId: string,
+): Promise<AdminTicketEventChangeRefundReviews> {
+  return getAdminApiClient().get({
+    path: `/api/v2/admin/tickets/${encodeURIComponent(ticketId)}/event-change-refund-reviews`,
+    schema: adminTicketEventChangeRefundReviewsSchema,
+  });
+}
+
+export type AdminTicketCoverReconciliation = z.infer<typeof adminTicketCoverReconciliationSchema>;
+
+export type AdminEventCoverReconciliation = z.infer<typeof adminEventCoverReconciliationSchema>;
+
+export function getEventCoverReconciliation(
+  eventId: string,
+): Promise<AdminEventCoverReconciliation> {
+  return getAdminApiClient().get({
+    path: `/api/v2/admin/events/${encodeURIComponent(eventId)}/cover-reconciliation`,
+    schema: adminEventCoverReconciliationSchema,
+  });
+}
+
+export function getTicketCoverReconciliation(
+  ticketId: string,
+): Promise<AdminTicketCoverReconciliation> {
+  return getAdminApiClient().get({
+    path: `/api/v2/admin/tickets/${encodeURIComponent(ticketId)}/cover-reconciliation`,
+    schema: adminTicketCoverReconciliationSchema,
+  });
+}
+
+export type AdminEventCoverReversal = z.infer<typeof adminEventCoverReversalResponseSchema>;
+
+export function reverseTicketCoverRedemption(
+  ticketId: string,
+  captureEntryId: string,
+  reason: string,
+): Promise<AdminEventCoverReversal> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/tickets/${encodeURIComponent(ticketId)}/cover-redemptions/${encodeURIComponent(captureEntryId)}/reverse`,
+    body: { reason },
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: adminEventCoverReversalResponseSchema,
+  });
+}
+
+const adminTransferFreezeResponseSchema = z.object({
+  id: z.string(),
+  entitlementId: z.string(),
+  eventId: z.string(),
+  status: z.enum(['frozen', 'expired']),
+  resolvedAt: z.iso.datetime(),
+});
+
+const adminTransferReleaseResponseSchema = z.object({
+  id: z.string(),
+  entitlementId: z.string(),
+  eventId: z.string(),
+  status: z.literal('frozen'),
+  lockReleased: z.literal(true),
+});
+
+export function freezeTicketTransfer(transferId: string, reason: string) {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/ticket-transfers/${encodeURIComponent(transferId)}/freeze`,
+    body: { reason },
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: adminTransferFreezeResponseSchema,
+  });
+}
+
+export function releaseFrozenTicketTransfer(transferId: string, reason: string) {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/ticket-transfers/${encodeURIComponent(transferId)}/release`,
+    body: { reason },
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: adminTransferReleaseResponseSchema,
+  });
+}
+
+const complimentaryAllocationSchema = z.object({
+  id: z.string(),
+  eventId: z.string(),
+  organizationId: z.string(),
+  tierId: z.string(),
+  category: z.enum(['artist', 'staff', 'sponsor', 'press', 'influencer']),
+  reason: z.string(),
+  quota: z.number().int(),
+  claimedCount: z.number().int(),
+  status: z.enum(['active', 'closed']),
+  expiresAt: z.iso.datetime().nullable(),
+  createdBy: z.string(),
+  createdAt: z.iso.datetime(),
+});
+const complimentaryAllocationPageSchema = z.object({
+  items: z.array(complimentaryAllocationSchema),
+  pageInfo: z.object({
+    page: z.number(),
+    pageSize: z.number(),
+    total: z.number(),
+    hasNextPage: z.boolean(),
+  }),
+});
+const complimentaryIssueSchema = z.object({
+  allocation: complimentaryAllocationSchema,
+  claim: z.object({
+    id: z.string(),
+    recipientUserId: z.string(),
+    holderName: z.string(),
+    status: z.string(),
+  }),
+  orderId: z.string(),
+  entitlements: z.array(z.object({ id: z.string(), unitKind: z.literal('complimentary') }).loose()),
+});
+export type AdminComplimentaryAllocation = z.infer<typeof complimentaryAllocationSchema>;
+
+export function listComplimentaryAllocations(eventId: string) {
+  return getAdminApiClient().get({
+    path: `/api/v2/admin/events/${encodeURIComponent(eventId)}/complimentary-allocations`,
+    query: { limit: 100 },
+    schema: complimentaryAllocationPageSchema,
+  });
+}
+
+export function createComplimentaryAllocation(input: {
+  eventId: string;
+  tierId: string;
+  category: AdminComplimentaryAllocation['category'];
+  reason: string;
+  quota: number;
+}) {
+  const { eventId, ...body } = input;
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/events/${encodeURIComponent(eventId)}/complimentary-allocations`,
+    body,
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: complimentaryAllocationSchema,
+  });
+}
+
+export function issueComplimentaryClaim(input: {
+  allocationId: string;
+  recipientUserId: string;
+  holderName: string;
+}) {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/complimentary-allocations/${encodeURIComponent(input.allocationId)}/claims`,
+    body: { recipientUserId: input.recipientUserId, holderName: input.holderName },
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: complimentaryIssueSchema,
+  });
+}
+
+export function revokeComplimentaryClaim(claimId: string, reason: string) {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/complimentary-claims/${encodeURIComponent(claimId)}/revoke`,
+    body: { reason },
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: z.object({
+      claimId: z.string(),
+      claimStatus: z.literal('revoked'),
+      entitlementId: z.string(),
+      entitlementStatus: z.literal('void'),
+    }),
+  });
+}
+
+const waitlistOfferResultSchema = z.union([
+  z.object({ offered: z.literal(false) }),
+  z.object({
+    entry: z
+      .object({
+        id: z.string(),
+        status: z.literal('offered'),
+        offerExpiresAt: z.iso.datetime(),
+      })
+      .loose(),
+    holdId: z.string(),
+    expiresAt: z.iso.datetime(),
+    pricing: checkoutQuoteResponseSchema,
+  }),
+]);
+
+export function offerNextWaitlistedGuest(eventId: string, tierId: string) {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/events/${encodeURIComponent(eventId)}/tiers/${encodeURIComponent(tierId)}/waitlist/offer-next`,
+    body: {},
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: waitlistOfferResultSchema,
+  });
+}
+
+const adminWaitlistPageSchema = z.object({
+  items: z.array(
+    z.object({
+      id: z.string(),
+      eventId: z.string(),
+      organizationId: z.string(),
+      tierId: z.string(),
+      sequence: z.number().int().positive(),
+      status: z.enum(['waiting', 'offered', 'accepted', 'expired', 'cancelled']),
+      offeredAt: z.iso.datetime().nullable(),
+      offerExpiresAt: z.iso.datetime().nullable(),
+      resolvedAt: z.iso.datetime().nullable(),
+    }),
+  ),
+  pageInfo: z.object({
+    page: z.number(),
+    pageSize: z.number(),
+    total: z.number(),
+    hasNextPage: z.boolean(),
+    nextCursor: z.string().nullable(),
+  }),
+});
+
+export function listWaitlistForAdmin(
+  eventId: string,
+  tierId: string,
+  cursor: string | null = null,
+) {
+  return getAdminApiClient().get({
+    path: `/api/v2/admin/events/${encodeURIComponent(eventId)}/tiers/${encodeURIComponent(tierId)}/waitlist`,
+    query: { limit: 100, ...(cursor ? { cursor } : {}) },
+    schema: adminWaitlistPageSchema,
   });
 }
 
@@ -485,6 +750,33 @@ export function listPromoterAssignments(limit = 100): Promise<AdminPromoterAssig
   });
 }
 
+export function listPromoterReferralLinks(
+  promoterId: string,
+  limit = 50,
+): Promise<AdminPromoterReferralLinkPage> {
+  return getAdminApiClient().get({
+    path: `/api/v2/admin/promoters/${promoterId}/referral-links`,
+    query: { limit },
+    schema: adminPromoterReferralLinkListResponseSchema,
+  });
+}
+
+export function listPromoterRiskFlags(promoterId: string) {
+  return getAdminApiClient().get({
+    path: `/api/v2/admin/promoters/${promoterId}/risk-flags`,
+    schema: adminPromoterRiskFlagsResponseSchema,
+  });
+}
+
+export function deactivatePromoterReferralLink(linkId: string, reason: string) {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/promoter-links/${linkId}/deactivate`,
+    body: adminPromoterSuspendRequestSchema.parse({ reason }),
+    headers: { 'idempotency-key': newIdempotencyKey() },
+    schema: adminPromoterReferralLinkActionResponseSchema,
+  });
+}
+
 export const PROMOTER_ASSIGNMENT_STATUSES: readonly PromoterAssignmentStatus[] = [
   'active',
   'ended',
@@ -498,18 +790,26 @@ export type AdminPromoterActionResponse = z.infer<typeof adminPromoterActionResp
  * PROMOTER_SUSPEND is a TIER2 direct command, idempotent (a repeat suspend
  * is a no-op returning `affectedAssignments: 0`).
  */
-export function suspendPromoter(promoterId: string): Promise<AdminPromoterActionResponse> {
+export function suspendPromoter(
+  promoterId: string,
+  reason: string,
+): Promise<AdminPromoterActionResponse> {
   return getAdminApiClient().post({
     path: `/api/v2/admin/promoters/${promoterId}/suspend`,
+    body: adminPromoterSuspendRequestSchema.parse({ reason }),
     headers: { 'idempotency-key': newIdempotencyKey() },
     schema: adminPromoterActionResponseSchema,
   });
 }
 
 /** Reverses `suspendPromoter` — PROMOTER_REINSTATE is a TIER2 direct command. */
-export function reinstatePromoter(promoterId: string): Promise<AdminPromoterActionResponse> {
+export function reinstatePromoter(
+  promoterId: string,
+  reason: string,
+): Promise<AdminPromoterActionResponse> {
   return getAdminApiClient().post({
     path: `/api/v2/admin/promoters/${promoterId}/reinstate`,
+    body: adminPromoterSuspendRequestSchema.parse({ reason }),
     headers: { 'idempotency-key': newIdempotencyKey() },
     schema: adminPromoterActionResponseSchema,
   });
@@ -568,6 +868,7 @@ export const ADMIN_AUDIT_ACTIONS = [
   'COMMISSION_ADJUST',
   'PROMOTER_SUSPEND',
   'PROMOTER_REINSTATE',
+  'PROMOTER_LINK_DEACTIVATE',
 ] satisfies AdminAction[];
 
 export const ADMIN_ROLES = ['super', 'admin', 'ops', 'finance', 'support'] satisfies AdminRole[];

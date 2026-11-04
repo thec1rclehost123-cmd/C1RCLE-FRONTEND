@@ -1,6 +1,7 @@
+import Image from 'next/image';
 import Link from 'next/link';
+import { useState } from 'react';
 
-import { Avatar } from '@/components/partner-v3/Avatar';
 import { Button } from '@/components/partner-v3/Button';
 
 import styles from './partners.module.css';
@@ -32,6 +33,16 @@ export function PartnerProfilePanel({
         : 'Request a date'
       : 'Connect';
   const isDiscover = !partner.status;
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const avatarSrc =
+    partner.avatarUrl && !avatarFailed ? partner.avatarUrl : '/partner-v3/staff-avatar.png';
+  const profileMeta = [
+    ...new Set(
+      [partnerLabel(partner.kind), partner.role, partner.location]
+        .filter((value) => value && value !== '—')
+        .map((value) => value.trim()),
+    ),
+  ];
   return (
     <aside className={styles['profilePanel']} aria-label={`${partner.name} profile`}>
       <div className={styles['profilePanelHeader']}>
@@ -41,7 +52,18 @@ export function PartnerProfilePanel({
         </Link>
       </div>
       <div className={styles['profileIdentity']}>
-        <Avatar name={partner.name} />
+        <span className={styles['profileAvatar']}>
+          <Image
+            src={avatarSrc}
+            alt={`${partner.name} profile`}
+            fill
+            sizes="64px"
+            unoptimized
+            onError={() => {
+              setAvatarFailed(true);
+            }}
+          />
+        </span>
         <div>
           <div className={styles['profileNameRow']}>
             <h2>{partner.name}</h2>
@@ -51,39 +73,45 @@ export function PartnerProfilePanel({
               </span>
             ) : null}
           </div>
-          <p>
-            {partner.kind === 'host' ? 'Host' : 'Promoter'} · {partner.location}
-          </p>
+          <p>{profileMeta.join(' · ')}</p>
         </div>
         {partner.status ? (
           <PartnerStatusBadge status={partner.status} hostAccent={hostAccent} />
         ) : null}
       </div>
-      <div className={styles['profileStats']}>
-        {partner.stats.map((stat) => (
-          <div key={stat.label}>
-            <strong>{stat.value}</strong>
-            <span>{stat.label}</span>
-          </div>
-        ))}
-      </div>
-      <div className={styles['profileDetails']}>
-        <div>
-          <span>Genres</span>
-          <strong>{partner.genres.join(' · ')}</strong>
+      {partner.stats.length ? (
+        <section className={styles['profileStats']} aria-label="Partner activity">
+          {partner.stats.map((stat) => (
+            <div key={stat.label}>
+              <strong>{stat.value}</strong>
+              <span>{stat.label}</span>
+            </div>
+          ))}
+        </section>
+      ) : null}
+      {partner.genres.length || partner.upcomingEvents.length ? (
+        <div className={styles['profileDetails']}>
+          {partner.genres.length ? (
+            <div>
+              <span>Genres</span>
+              <strong>{partner.genres.join(' · ')}</strong>
+            </div>
+          ) : null}
+          {partner.upcomingEvents.length ? (
+            <div>
+              <span>Upcoming events</span>
+              <div className={styles['upcomingEvents']}>
+                {partner.upcomingEvents.map((event) => (
+                  <span key={event.id}>
+                    <strong>{event.name}</strong>
+                    <small>{event.dateLabel}</small>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
-        <div>
-          <span>Upcoming events</span>
-          <div className={styles['upcomingEvents']}>
-            {partner.upcomingEvents.map((event) => (
-              <span key={event.id}>
-                <strong>{event.name}</strong>
-                <small>{event.dateLabel}</small>
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
+      ) : null}
       {connectError ? (
         <p role="alert" className={styles['requestError'] ?? ''}>
           {connectError}
@@ -116,4 +144,15 @@ export function PartnerProfilePanel({
       )}
     </aside>
   );
+}
+
+function partnerLabel(kind: PartnerRelationship['kind']): string {
+  switch (kind) {
+    case 'venue':
+      return 'Venue';
+    case 'host':
+      return 'Host';
+    case 'promoter':
+      return 'Promoter';
+  }
 }

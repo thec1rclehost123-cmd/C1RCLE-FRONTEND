@@ -1,3 +1,4 @@
+import { Inter } from 'next/font/google';
 import { cookies } from 'next/headers';
 
 import { getServerSession } from '@c1rcle/auth/server-session';
@@ -6,11 +7,14 @@ import { DashboardAuthProvider } from '@/components/providers/DashboardAuthProvi
 import { PasswordChangeGuard } from '@/components/providers/PasswordChangeGuard';
 import { SessionProvider } from '@/components/providers/session-provider';
 
+import { eventTitleFontVariables } from './event-title-fonts';
 import './globals.css';
 import '@/styles/partner-v3.css';
 
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
+
+const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' });
 
 export const metadata: Metadata = {
   title: {
@@ -34,8 +38,13 @@ export default async function RootLayout({ children }: { readonly children: Reac
   const session = await getServerSession((await cookies()).toString());
 
   return (
-    <html lang="en" className="dark" data-scroll-behavior="smooth" suppressHydrationWarning>
-      <body className="antialiased bg-[#0A0A0B] text-white">
+    <html
+      lang="en"
+      className={`${inter.variable} ${eventTitleFontVariables} dark`}
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+    >
+      <body className={`${inter.className} antialiased bg-[#070807] text-white`}>
         <SessionProvider initialUser={session}>
           <DashboardAuthProvider>
             <PasswordChangeGuard>{children}</PasswordChangeGuard>

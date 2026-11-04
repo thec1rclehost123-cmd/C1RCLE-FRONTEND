@@ -3,17 +3,16 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
-import { BankIcon, ChevronDownIcon, NextIcon, SearchIcon } from '@c1rcle/icons';
+import { BankIcon, NextIcon, SearchIcon } from '@c1rcle/icons';
 
 import styles from './finance.module.css';
 import { PayoutStatusBadge } from './PayoutStatusBadge';
 
-import type { FinanceDateRange, FinancePayout } from '@/data/partner-data-source';
+import type { FinancePayout } from '@/data/partner-data-source';
 
-function buildUrl(pathname: string, search: string, range: FinanceDateRange): string {
+function buildUrl(pathname: string, search: string): string {
   const params = new URLSearchParams();
   if (search.trim()) params.set('search', search.trim());
-  if (range !== 'current') params.set('range', range);
   const query = params.toString();
   return query ? `${pathname}?${query}` : pathname;
 }
@@ -21,17 +20,13 @@ function buildUrl(pathname: string, search: string, range: FinanceDateRange): st
 export function FinancePayoutHistory({
   rows,
   initialSearch = '',
-  initialRange = 'current',
 }: {
   readonly rows: readonly FinancePayout[];
   readonly initialSearch?: string;
-  readonly initialRange?: FinanceDateRange;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const [search, setSearch] = useState(initialSearch);
-  const [range, setRange] = useState<FinanceDateRange>(initialRange);
-  const [rangeOpen, setRangeOpen] = useState(false);
 
   const visibleRows = useMemo(() => {
     const normalized = search.trim().toLocaleLowerCase('en-IN');
@@ -46,13 +41,7 @@ export function FinancePayoutHistory({
 
   const updateSearch = (value: string) => {
     setSearch(value);
-    router.replace(buildUrl(pathname, value, range), { scroll: false });
-  };
-
-  const updateRange = (value: FinanceDateRange) => {
-    setRange(value);
-    setRangeOpen(false);
-    router.replace(buildUrl(pathname, search, value), { scroll: false });
+    router.replace(buildUrl(pathname, value), { scroll: false });
   };
 
   return (
@@ -72,42 +61,6 @@ export function FinancePayoutHistory({
               type="search"
             />
           </label>
-          <div className={styles['rangeControl']}>
-            <button
-              type="button"
-              aria-expanded={rangeOpen}
-              onClick={() => {
-                setRangeOpen((open) => !open);
-              }}
-            >
-              {range === 'all' ? 'All payout history' : 'Date range'}{' '}
-              <ChevronDownIcon size={14} aria-hidden="true" />
-            </button>
-            {rangeOpen ? (
-              <div className={styles['rangeMenu']} role="menu" aria-label="Payout date range">
-                <button
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={range === 'current'}
-                  onClick={() => {
-                    updateRange('current');
-                  }}
-                >
-                  Current payout history
-                </button>
-                <button
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={range === 'all'}
-                  onClick={() => {
-                    updateRange('all');
-                  }}
-                >
-                  All payout history
-                </button>
-              </div>
-            ) : null}
-          </div>
         </div>
       </div>
 

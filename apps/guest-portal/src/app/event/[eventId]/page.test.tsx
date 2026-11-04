@@ -9,7 +9,47 @@ import {
 
 import EventDetailPage from './page';
 
-import type { EventDto, HostPublicDto, VenueDto } from '@c1rcle/contracts';
+import type { BookingEventFixture } from '@/features/booking/types/booking.types';
+import type { EventPublicDetailDto, PublicTicketTierDto } from '@c1rcle/contracts';
+
+vi.mock('@/features/booking/components/CheckoutView', () => ({
+  CheckoutView: ({ event, onClose }: { event: BookingEventFixture; onClose: () => void }) => (
+    <section aria-label="Checkout flow">
+      <h2>Select tickets</h2>
+      <p>{event.title}</p>
+      {event.ticketTiers.map((tier) => (
+        <p key={tier.id}>{tier.name}</p>
+      ))}
+      <button type="button" onClick={onClose}>
+        Back to event
+      </button>
+    </section>
+  ),
+}));
+
+function bookingEventFor(event: (typeof eventDetailFixtures)[number]): BookingEventFixture {
+  return {
+    id: event.slug,
+    eventId: event.id,
+    title: event.title,
+    category: event.category,
+    image: event.image,
+    accentTone: event.accentTone,
+    startsAt: event.startsAt,
+    venue: event.venue,
+    address: event.address,
+    city: event.city,
+    doorNote: event.doorNote,
+    purchasable: false,
+    ticketTiers: event.ticketTiers.map((tier) => ({
+      id: tier.id,
+      name: tier.name,
+      description: tier.description,
+      price: { amountPaise: tier.price?.amountPaise ?? 0, currency: 'INR' },
+      maximumQuantity: tier.availableQuantity ?? 1,
+    })),
+  };
+}
 
 vi.mock('next/navigation', () => ({
   notFound: () => {
@@ -17,10 +57,12 @@ vi.mock('next/navigation', () => ({
   },
 }));
 
-const mockGet = vi.fn();
+const { mockGet } = vi.hoisted(() => ({ mockGet: vi.fn() }));
 
 vi.mock('@c1rcle/api-client', () => ({
   createApiClient: () => ({ get: mockGet }),
+  isApiClientError: (error: unknown) =>
+    typeof error === 'object' && error !== null && 'status' in error,
 }));
 
 vi.mock('next/image', () => ({
@@ -28,8 +70,13 @@ vi.mock('next/image', () => ({
     alt,
     preload: _preload,
     fill: _fill,
+    unoptimized: _unoptimized,
     ...props
-  }: React.ComponentProps<'img'> & { preload?: boolean; fill?: boolean }) => (
+  }: React.ComponentProps<'img'> & {
+    preload?: boolean;
+    fill?: boolean;
+    unoptimized?: boolean;
+  }) => (
     // eslint-disable-next-line @next/next/no-img-element
     <img alt={alt} {...props} />
   ),
@@ -48,7 +95,7 @@ describe('EventDetailView', () => {
     expect(event).toBeDefined();
     if (!event) return;
 
-    render(<EventDetailView event={event} />);
+    render(<EventDetailView event={event} checkoutEvent={bookingEventFor(event)} />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'Techno Bunker' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Event poster' })).toBeInTheDocument();
@@ -61,7 +108,7 @@ describe('EventDetailView', () => {
       'href',
       '/venue/sector-9',
     );
-    expect(screen.getByLabelText('Verified host')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Verified host')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Riya and 155 others going' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Guest list preview' })).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: 'View Riya profile' })[0]).toHaveAttribute(
@@ -79,31 +126,26 @@ describe('EventDetailView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Close guest list preview' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Sector 9' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Get tickets' })).toHaveAttribute(
-      'href',
-      '/checkout/techno-bunker',
-    );
-    expect(screen.getByRole('link', { name: 'Buy tickets from ₹800' })).toHaveAttribute(
-      'href',
-      '/checkout/techno-bunker',
-    );
+    expect(screen.getByRole('button', { name: 'Get tickets · From ₹800' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Get tickets · From ₹800' }));
+    expect(screen.getByRole('dialog', { name: 'Checkout for Techno Bunker' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Select tickets' })).toBeInTheDocument();
   });
 
-  it('allows local tier highlighting and links into fixture checkout', () => {
+  it('opens checkout over the event and returns to the same event when closed', () => {
     const event = eventDetailFixtures[0];
     expect(event).toBeDefined();
     if (!event) return;
 
-    render(<EventDetailView event={event} />);
-    const tier = screen.getByRole('button', { name: /Gallery Pass/i });
-    fireEvent.click(tier);
-
-    expect(tier).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('link', { name: 'Continue to checkout preview' })).toHaveAttribute(
-      'href',
-      '/checkout/neon-nights?tier=gallery-pass',
-    );
-    expect(screen.queryByRole('button', { name: /Checkout unavailable/i })).not.toBeInTheDocument();
+    render(<EventDetailView event={event} checkoutEvent={bookingEventFor(event)} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Get tickets · From ₹800' }));
+    expect(screen.getByRole('dialog', { name: 'Checkout for Neon Nights' })).toBeInTheDocument();
+    expect(screen.getByText('Gallery Pass')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Back to event' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Get tickets · From ₹800' }));
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it.each([
@@ -115,7 +157,12 @@ describe('EventDetailView', () => {
     expect(baseEvent).toBeDefined();
     if (!baseEvent) return;
 
-    render(<EventDetailView event={{ ...baseEvent, lifecycle }} />);
+    render(
+      <EventDetailView
+        event={{ ...baseEvent, lifecycle }}
+        checkoutEvent={bookingEventFor(baseEvent)}
+      />,
+    );
     expect(screen.getByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Get on the list' })).not.toBeInTheDocument();
   });
@@ -127,7 +174,7 @@ describe('EventDetailView', () => {
   });
 });
 
-const REAL_EVENT: EventDto = {
+const REAL_EVENT: EventPublicDetailDto = {
   id: 'evt_real_1',
   organizationId: 'org_1',
   venueId: 'ven_1',
@@ -139,6 +186,8 @@ const REAL_EVENT: EventDto = {
   startAt: '2026-09-18T19:30:00.000Z',
   endAt: null,
   status: 'published',
+  visibilityMode: 'public',
+  addressDisclosure: 'public',
   isPublic: true,
   tags: ['Music'],
   startingPricePaise: 99900,
@@ -147,34 +196,37 @@ const REAL_EVENT: EventDto = {
   version: 1,
   createdAt: '2026-09-01T00:00:00.000Z',
   updatedAt: '2026-09-01T00:00:00.000Z',
+  venue: {
+    id: 'ven_1',
+    name: 'Skyline Social',
+    slug: 'skyline-social',
+    photoUrl: null,
+    address: { city: 'Pune', country: 'India' },
+  },
+  organizer: { id: 'org_1', name: 'Seed Host', slug: 'seed-host' },
 };
 
-const REAL_VENUE: VenueDto = {
-  id: 'ven_1',
-  organizationId: 'org_1',
-  name: 'Skyline Social',
-  slug: 'skyline-social',
-  status: 'active',
-  description: '',
-  capacity: null,
-  city: 'Pune',
-  version: 1,
-  createdAt: '2026-09-01T00:00:00.000Z',
-  updatedAt: '2026-09-01T00:00:00.000Z',
-};
+const REAL_TIERS: PublicTicketTierDto[] = [
+  {
+    id: 'tier_real',
+    eventId: REAL_EVENT.id,
+    name: 'Early Entry',
+    description: '',
+    priceInPaise: 99_900,
+    currency: 'INR',
+    availableQuantity: 8,
+  },
+];
 
-const REAL_HOST: HostPublicDto = { id: 'org_1', name: 'Seed Host', slug: 'seed-host' };
-
-function mockDetail(event: EventDto | null) {
+function mockDetail(event: EventPublicDetailDto | null, tiers = REAL_TIERS) {
   mockGet.mockImplementation(({ path }: { path: string }) => {
-    if (path === '/api/v2/public/events/real-night') {
-      return event ? Promise.resolve(event) : Promise.reject(new Error('not found'));
+    if (path.startsWith('/api/v2/public/events/') && !path.endsWith('/tiers')) {
+      return event
+        ? Promise.resolve(event)
+        : Promise.reject(Object.assign(new Error('event not found'), { status: 404 }));
     }
-    if (path === '/api/v2/public/venues/by-id/ven_1') {
-      return Promise.resolve(REAL_VENUE);
-    }
-    if (path === '/api/v2/public/hosts/by-id/org_1') {
-      return Promise.resolve(REAL_HOST);
+    if (path.endsWith('/tiers')) {
+      return Promise.resolve({ items: tiers });
     }
     return Promise.reject(new Error(`unexpected path ${path}`));
   });
@@ -184,43 +236,45 @@ describe('EventDetailPage', () => {
   it('renders a real published event with resolved venue and host', async () => {
     mockDetail(REAL_EVENT);
     render(await EventDetailPage({ params: Promise.resolve({ eventId: 'real-night' }) }));
-
     expect(screen.getByRole('heading', { level: 1, name: 'Real Night' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Skyline Social · Pune' })).toHaveAttribute(
       'href',
-      '/venue/ven_1',
+      '/venue/skyline-social',
     );
     expect(screen.getByRole('link', { name: 'View host Seed Host' })).toHaveAttribute(
       'href',
       '/host/seed-host',
     );
-    expect(screen.getByRole('button', { name: /General Admission/i })).toBeInTheDocument();
-    expect(screen.getByText('Live pricing')).toBeInTheDocument();
     expect(screen.queryByText('Fixture preview')).not.toBeInTheDocument();
     // No guestlist data exists for real events yet — the section is skipped.
     expect(screen.queryByRole('region', { name: 'Guest list preview' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Get tickets · From ₹999' }));
+    expect(screen.getByRole('dialog', { name: 'Checkout for Real Night' })).toBeInTheDocument();
+    expect(screen.getByText('Early Entry')).toBeInTheDocument();
   });
 
   it('falls back honestly when venue and host lookups miss', async () => {
     mockGet.mockImplementation(({ path }: { path: string }) => {
       if (path === '/api/v2/public/events/real-night') {
-        return Promise.resolve({ ...REAL_EVENT, venueId: null });
+        return Promise.resolve({ ...REAL_EVENT, venueId: null, venue: null, organizer: null });
+      }
+      if (path === '/api/v2/public/events/real-night/tiers') {
+        return Promise.resolve({ items: REAL_TIERS });
       }
       return Promise.reject(new Error('not found'));
     });
     render(await EventDetailPage({ params: Promise.resolve({ eventId: 'real-night' }) }));
 
     expect(screen.getByRole('heading', { level: 1, name: 'Real Night' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Venue TBA · India' })).toHaveAttribute(
-      'href',
-      '/venue/venue-tba',
-    );
+    expect(screen.getByText('Venue TBA · Location unavailable')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Venue TBA/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('Host details unavailable')).not.toBeInTheDocument();
   });
 
-  it('not-founds unknown or unpublished slugs without fixtures', async () => {
+  it('shows the same generic access form for private and unknown slugs', async () => {
     mockDetail(null);
-    await expect(
-      EventDetailPage({ params: Promise.resolve({ eventId: 'no-such-event' }) }),
-    ).rejects.toThrow('NEXT_NOT_FOUND');
+    render(await EventDetailPage({ params: Promise.resolve({ eventId: 'no-such-event' }) }));
+    expect(screen.getByRole('heading', { name: 'Private event access' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Have an event or private ticket code?')).toBeInTheDocument();
   });
 });

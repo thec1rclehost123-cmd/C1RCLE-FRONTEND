@@ -6,11 +6,6 @@ import { eventDtoSchema, orderDtoSchema, venueDtoSchema } from '@c1rcle/contract
 
 import { toBookingEventFixture } from '@/features/booking/booking-mapping';
 import { ConfirmationView } from '@/features/booking/components/ConfirmationView';
-import {
-  bookingConfirmationFixtures,
-  findBookingConfirmationFixture,
-  findBookingEventFixture,
-} from '@/features/booking/fixtures/booking.fixture';
 
 import type {
   BookingConfirmationFixture,
@@ -22,18 +17,11 @@ interface ConfirmationPageProps {
   params: Promise<{ id: string }>;
 }
 
-export function generateStaticParams() {
-  return bookingConfirmationFixtures.map((confirmation) => ({ id: confirmation.id }));
-}
-
 export async function generateMetadata({ params }: ConfirmationPageProps): Promise<Metadata> {
-  const { id } = await params;
-  const fixture = findBookingConfirmationFixture(decodeURIComponent(id));
+  await params;
   return {
-    title: fixture ? `Confirmation Preview — ${fixture.id}` : 'Booking confirmation',
-    description: fixture
-      ? 'Fixture-only booking confirmation and digital-pass presentation.'
-      : 'Your booking confirmation and digital pass.',
+    title: 'Booking confirmation',
+    description: 'Your current booking status and ticket access.',
     robots: { index: false, follow: false },
   };
 }
@@ -70,9 +58,9 @@ async function getRealConfirmation(
       schema: eventDtoSchema,
     })
     .catch(() => null);
-  if (!event) return null;
+  if (!event && !order.eventCancellation) return null;
 
-  const venue = event.venueId
+  const venue = event?.venueId
     ? await client
         .get({
           path: `/api/v2/public/venues/by-id/${event.venueId}`,
@@ -85,30 +73,38 @@ async function getRealConfirmation(
   return {
     confirmation: {
       id: order.id,
+      bookingReference: order.bookingReference,
+      status: order.eventCancellation && order.status === 'paid' ? 'cancelled' : order.status,
       eventId: order.eventId,
       attendeeName: 'Guest',
       tierName: line?.tierName ?? 'Admission',
       quantity: order.lines.reduce((total, entry) => total + entry.quantity, 0),
       total: { amountPaise: order.grandTotalPaise, currency: 'INR' },
-      referenceLabel: `RSVP-${order.id
-        .replace(/[^A-Za-z0-9]/g, '')
-        .slice(0, 8)
-        .toUpperCase()}`,
     },
-    event: toBookingEventFixture(event, venue),
+    event: event
+      ? toBookingEventFixture(event, venue, [])
+      : {
+          id: order.eventId,
+          eventId: order.eventId,
+          title: order.eventCancellation?.eventTitle ?? 'Cancelled event',
+          category: 'Event update',
+          image: '/c1rcle-logo.webp',
+          accentTone: 'orange',
+          startsAt: order.eventCancellation?.cancelledAt ?? order.createdAt,
+          venue: 'Event details unavailable',
+          address: '',
+          city: '',
+          doorNote: '',
+          ticketTiers: [],
+          detailsAvailable: false,
+          purchasable: false,
+        },
   };
 }
 
 export default async function ConfirmationPage({ params }: ConfirmationPageProps) {
   const { id } = await params;
   const decoded = decodeURIComponent(id);
-
-  const fixtureConfirmation = findBookingConfirmationFixture(decoded);
-  if (fixtureConfirmation) {
-    const event = findBookingEventFixture(fixtureConfirmation.eventId);
-    if (!event) notFound();
-    return <ConfirmationView confirmation={fixtureConfirmation} event={event} />;
-  }
 
   const real = await getRealConfirmation(decoded);
   if (!real) notFound();

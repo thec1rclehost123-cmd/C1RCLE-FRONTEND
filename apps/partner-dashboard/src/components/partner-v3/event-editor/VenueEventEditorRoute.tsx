@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 
 import { EmptyState, ErrorState, LoadingState } from '@/components/partner-v3/States';
 import { useVenueCalendar } from '@/lib/calendar/use-venue-calendar';
@@ -30,15 +30,16 @@ export function VenueEventEditorRoute({
   readonly initialSlotId?: string;
 }) {
   const router = useRouter();
-  // B2: one Idempotency-Key per publish intent — minted on first submit and
-  // reused across retries of the same publish (a retry after a partial
-  // failure must not re-run with a fresh key and duplicate the event), then
-  // discarded once the publish succeeds.
+  // Keep the same key for retries of one publish intent.
   const workflowKeyRef = useRef<string | null>(null);
-  const anchorMonth =
+  // Keep the availability request range stable while the user changes the
+  // selected date. Changing the query param otherwise changes the request key,
+  // renders the loading state, and unmounts the editor (discarding its draft).
+  const [anchorMonth] = useState(() =>
     initialDate && /^\d{4}-\d{2}-\d{2}$/.test(initialDate)
       ? initialDate.slice(0, 7)
-      : currentMonthKey();
+      : currentMonthKey(),
+  );
   const state = useVenueCalendar({
     organizationId,
     anchorMonth,

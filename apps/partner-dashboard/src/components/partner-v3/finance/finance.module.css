@@ -26,7 +26,7 @@
 }
 
 .financeHeader {
-  margin: 0 0 22px;
+  margin: 0 0 16px;
 }
 .financeHeader h1 {
   margin: 0;
@@ -40,7 +40,7 @@
   display: flex;
   width: fit-content;
   gap: 4px;
-  margin-bottom: 22px;
+  margin-bottom: 16px;
   padding: 4px;
   border: 1px solid rgb(255 255 255 / 6%);
   border-radius: 13px;
@@ -76,14 +76,21 @@
 }
 
 .financeTopGrid {
-  margin-bottom: 20px;
+  margin-bottom: 14px;
+}
+
+.financeMetricGrid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .balanceHero {
   position: relative;
-  min-height: 264px;
+  box-sizing: border-box;
+  min-height: 210px;
   overflow: hidden;
-  padding: 28px 30px;
+  padding: 22px 24px;
   border: 1px solid rgb(255 255 255 / 9%);
   border-radius: 28px;
   background: rgb(22 17 14 / 72%);
@@ -129,7 +136,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
   color: #d8c4b8;
   font-size: 13px;
   font-weight: 600;
@@ -147,14 +154,21 @@
 }
 .balanceValue {
   display: block;
-  margin-bottom: 8px;
-  font-size: clamp(38px, 4vw, 52px);
+  margin-bottom: 5px;
+  font-size: clamp(36px, 3.5vw, 46px);
   font-weight: 800;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
+
+.financeDisclosure {
+  margin: 5px 0 0;
+  color: var(--partner-muted, #a1a1aa);
+  font-size: 11px;
+  line-height: 1.35;
+}
 .balanceHero p {
-  margin: 0 0 26px;
+  margin: 0 0 14px;
   color: #c9b7ac;
   font-size: 13px;
   font-weight: 500;
@@ -222,12 +236,13 @@
 
 .bankCard {
   position: relative;
-  min-height: 264px;
+  box-sizing: border-box;
+  min-height: 210px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   overflow: hidden;
-  padding: 26px;
+  padding: 22px;
   border: 1px solid rgb(255 255 255 / 9%);
   border-radius: 28px;
   background: linear-gradient(135deg, #2b2b30 0%, #17171b 55%, #0e0e11 100%);
@@ -316,22 +331,23 @@
 }
 
 .financeMetricGrid {
-  margin-bottom: 22px;
+  margin-bottom: 16px;
 }
 .financeMetric {
-  min-height: 88px;
+  min-width: 0;
+  min-height: 76px;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 20px 22px;
+  gap: 10px;
+  padding: 12px;
   border: 1px solid rgb(255 255 255 / 7%);
   border-radius: 20px;
   background: rgb(20 20 20 / 60%);
   backdrop-filter: blur(18px);
 }
 .financeMetricIcon {
-  width: 46px;
-  height: 46px;
+  width: 36px;
+  height: 36px;
   display: grid;
   flex: none;
   place-items: center;
@@ -356,32 +372,34 @@
   min-width: 0;
   flex: 1;
   display: grid;
-  gap: 5px;
+  gap: 3px;
 }
 .financeMetricCopy > span {
   color: #8a8a86;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
 }
 .financeMetricCopy > strong {
-  font-size: 26px;
+  overflow: hidden;
+  font-size: 20px;
   font-weight: 800;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.financeMetric:last-child .financeMetricCopy > strong {
+  font-size: 16px;
 }
 .financeMetric > small {
-  max-width: 120px;
-  color: #6a6a66;
-  font-size: 12px;
-  line-height: 1.4;
-  text-align: right;
+  display: none;
 }
 
 .payoutSection,
 .ordersSection {
   position: relative;
   overflow: visible;
-  padding: 24px 26px;
+  padding: 18px 20px;
   border: 1px solid rgb(255 255 255 / 8%);
   border-radius: 24px;
   background: rgb(20 20 20 / 55%);
@@ -590,7 +608,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 .ordersSearch {
   width: min(340px, 100%);
@@ -625,18 +643,42 @@
   color: #f5f5f3;
 }
 .ordersTableWrap {
-  overflow-x: auto;
+  overflow: hidden;
   border: 1px solid rgb(255 255 255 / 7%);
   border-radius: 18px;
   background: rgb(20 20 20 / 50%);
 }
 .ordersTable {
   width: 100%;
-  min-width: 760px;
+  table-layout: fixed;
   border-collapse: collapse;
 }
+.ordersTable th:nth-child(1),
+.ordersTable td:nth-child(1) {
+  width: 30%;
+}
+.ordersTable th:nth-child(2),
+.ordersTable td:nth-child(2) {
+  width: 32%;
+}
+.ordersTable th:nth-child(3),
+.ordersTable td:nth-child(3) {
+  width: 8%;
+}
+.ordersTable th:nth-child(4),
+.ordersTable td:nth-child(4) {
+  width: 12%;
+}
+.ordersTable th:nth-child(5),
+.ordersTable td:nth-child(5) {
+  width: 14%;
+}
+.ordersTable th:nth-child(6),
+.ordersTable td:nth-child(6) {
+  width: 4%;
+}
 .ordersTable th {
-  padding: 13px 20px;
+  padding: 10px 12px;
   border-bottom: 1px solid rgb(255 255 255 / 7%);
   color: #6a6a66;
   font-size: 11.5px;
@@ -664,7 +706,8 @@
   color: #f5f5f3;
 }
 .ordersTable td {
-  padding: 14px 20px;
+  overflow: hidden;
+  padding: 10px 12px;
   border-bottom: 1px solid rgb(255 255 255 / 5%);
   color: #c9c9c6;
   font-size: 13px;
@@ -677,15 +720,24 @@
 .ordersTable tbody tr:hover {
   background: rgb(255 255 255 / 3%);
 }
-.ordersTable td:first-child {
+.orderCustomer {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+}
+.orderCustomer .orderIdentity {
+  min-width: 0;
+}
+.orderCustomer .orderIdentity strong {
   color: #f5f5f3;
+  font-size: 14px;
 }
 .orderAvatar {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   display: grid;
   flex: none;
   place-items: center;
@@ -714,24 +766,36 @@
 }
 .orderIdentity {
   min-width: 0;
+  flex: 1;
   display: grid;
   gap: 3px;
 }
 .orderIdentity strong {
   overflow: hidden;
-  font-size: 14px;
+  font-size: 13px;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .orderIdentity small {
+  overflow: hidden;
   color: #6a6a66;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.orderActions {
-  position: relative;
+.ordersTable td.orderActions {
+  overflow: visible;
   text-align: right;
 }
-.orderActions > button {
+.orderActionsContainer {
+  position: relative;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  display: inline-block;
+}
+.orderActionsContainer > button {
   width: 30px;
   height: 30px;
   display: inline-grid;
@@ -742,8 +806,8 @@
   color: #8a8a86;
   cursor: pointer;
 }
-.orderActions > button:hover,
-.orderActions > button[aria-expanded='true'] {
+.orderActionsContainer > button:hover,
+.orderActionsContainer > button[aria-expanded='true'] {
   background: rgb(255 255 255 / 8%);
   color: #f5f5f3;
 }
@@ -766,14 +830,94 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #8a8a86;
-  cursor: not-allowed;
+  color: #dededb;
+  cursor: pointer;
   font: inherit;
   font-size: 13px;
   text-align: left;
 }
+.orderMenu button:hover,
+.orderMenu button:focus-visible {
+  background: rgb(255 255 255 / 8%);
+  color: #fff;
+  outline: none;
+}
 .orderMenu button:disabled {
   opacity: 0.65;
+}
+.orderDetailsOverlay {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(0 0 0 / 68%);
+  backdrop-filter: blur(8px);
+}
+.orderDetailsDialog {
+  width: min(480px, 100%);
+  padding: 22px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 20px;
+  background: #151515;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 48%);
+}
+.orderDetailsDialog header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+.orderDetailsDialog header span {
+  color: #999994;
+  font-size: 12px;
+}
+.orderDetailsDialog h2 {
+  margin: 5px 0 0;
+  color: #f5f5f3;
+  font-size: 20px;
+}
+.orderDetailsDialog header button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 9px;
+  background: #202020;
+  color: #f5f5f3;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+.orderDetailsDialog dl {
+  display: grid;
+  gap: 0;
+  margin: 8px 0 0;
+}
+.orderDetailsDialog dl > div {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.7fr) minmax(0, 1.3fr);
+  gap: 14px;
+  padding: 11px 0;
+  border-bottom: 1px solid rgb(255 255 255 / 6%);
+}
+.orderDetailsDialog dl > div:last-child {
+  border-bottom: 0;
+}
+.orderDetailsDialog dt {
+  color: #999994;
+  font-size: 12px;
+}
+.orderDetailsDialog dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  margin: 0;
+  color: #f5f5f3;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
 }
 .financeEmpty {
   padding: 36px 20px;
@@ -803,6 +947,131 @@
   margin: 0 0 22px;
   color: #8a8a86;
   font-size: 13px;
+}
+.bankPanelHeader,
+.bankFormActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.bankPanelHeader {
+  margin-bottom: 18px;
+}
+.bankPanelHeader > button {
+  flex: none;
+  white-space: nowrap;
+}
+.bankPanelHeader > div > p {
+  margin: 5px 0 0;
+  color: #8a8a86;
+  font-size: 13px;
+}
+.bankEmptyState {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 22px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 14px;
+  background: #101010;
+  color: #8a8a86;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.bankEmptyState strong {
+  color: #f5f5f3;
+  font-size: 15px;
+}
+.bankAccountList {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bankAccountRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  padding: 16px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 14px;
+  background: #101010;
+}
+.bankAccountIdentity,
+.bankAccountActions {
+  display: grid;
+  gap: 5px;
+}
+.bankAccountIdentity strong {
+  color: #f5f5f3;
+  font-size: 15px;
+}
+.bankAccountIdentity span {
+  color: #999995;
+  font-size: 13px;
+}
+.bankAccountActions {
+  grid-auto-flow: column;
+  align-items: center;
+  justify-content: end;
+}
+.bankVerified,
+.bankPending,
+.bankDefault {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgb(78 208 135 / 12%);
+  color: #69d99a;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.bankPending {
+  background: rgb(255 180 65 / 12%);
+  color: #ffbe55;
+}
+.bankDefault {
+  background: rgb(255 255 255 / 8%);
+  color: #dededb;
+}
+.bankAccountForm {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 14px;
+  background: #101010;
+}
+.bankAccountForm label {
+  display: grid;
+  gap: 7px;
+  color: #c9c9c6;
+  font-size: 13px;
+  font-weight: 600;
+}
+.bankAccountForm input {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 0 13px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 10px;
+  background: #0b0b0b;
+  color: #f5f5f3;
+  font: inherit;
+}
+.financeFormError,
+.financeFormNotice {
+  margin: 0 0 14px;
+  color: #ff8880;
+  font-size: 13px;
+}
+.financeFormNotice {
+  color: #69d99a;
 }
 .accountForm {
   display: grid;
@@ -907,12 +1176,22 @@
 
 @media (max-width: 900px) {
   .financeTopGrid,
-  .financeMetricGrid,
   .accountGrid {
     grid-template-columns: 1fr;
   }
+  .financeMetricGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .accountGrid {
     max-width: none;
+  }
+  .bankAccountRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .bankAccountActions {
+    grid-auto-flow: row;
+    justify-content: stretch;
   }
   .accountNote {
     grid-column: auto;
@@ -953,6 +1232,9 @@
     padding-inline: 11px;
     font-size: 12px;
   }
+  .financeMetricGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .balanceHero,
   .bankCard {
     min-height: 250px;
@@ -979,6 +1261,12 @@
   .ordersSection {
     padding: 18px 14px;
     border-radius: 18px;
+  }
+  .ordersTableWrap {
+    overflow-x: auto;
+  }
+  .ordersTable {
+    min-width: 680px;
   }
   .payoutControls {
     align-items: stretch;

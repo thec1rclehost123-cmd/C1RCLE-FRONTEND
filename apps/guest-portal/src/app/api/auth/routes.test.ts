@@ -3,12 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { forwardToGateway } from '@/lib/bff/auth-proxy';
 
+import { POST as changePassword } from './change-password/route';
 import { POST as forgotPassword } from './forgot-password/route';
 import { POST as login } from './login/route';
 import { POST as logout } from './logout/route';
 import { POST as refresh } from './refresh/route';
 import { POST as resetPassword } from './reset-password/route';
 import { GET as session } from './session/route';
+import { POST as signup } from './signup/route';
 
 vi.mock('@/lib/bff/auth-proxy', async (importOriginal) => {
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports -- vitest's documented mock-factory pattern
@@ -57,6 +59,81 @@ const AUTH_BODY = {
 
 beforeEach(() => {
   mockForward.mockReset();
+});
+
+describe('POST /api/auth/signup', () => {
+  it('uses Guest registration and preserves the Guest session and cookies', async () => {
+    mockForward.mockResolvedValue(
+      gw(AUTH_BODY, { status: 201, headers: { 'set-cookie': SESSION_SET_COOKIE } }),
+    );
+    const body = { email: 'g@x.com', password: 'password123', displayName: 'Guest' };
+    const response = await signup(req('POST', '/api/auth/signup', {}, body));
+    expect(response.status).toBe(201);
+    expect(mockForward).toHaveBeenCalledWith('/api/v2/auth/signup', { method: 'POST', body });
+    await expect(response.json()).resolves.toMatchObject({ user: { role: 'guest' } });
+    expect(response.headers.get('set-cookie')).toContain('better-auth.session_token=sess_abc');
+    expect(response.headers.get('set-cookie')).toContain('guest.c1rcle.csrf=');
+  });
+});
+
+describe('POST /api/auth/change-password', () => {
+  const passwordBody = { currentPassword: 'old-password', newPassword: 'new-password' };
+
+  it('requires a signed-in session and CSRF before forwarding', async () => {
+    const unsigned = await changePassword(
+      req('POST', '/api/auth/change-password', {}, passwordBody),
+    );
+    expect(unsigned.status).toBe(401);
+
+    const noCsrf = await changePassword(
+      req(
+        'POST',
+        '/api/auth/change-password',
+        { cookie: 'better-auth.session_token=sess' },
+        passwordBody,
+      ),
+    );
+    expect(noCsrf.status).toBe(403);
+    expect(mockForward).not.toHaveBeenCalled();
+  });
+
+  it('forwards validated credentials and re-scopes the refreshed session cookie', async () => {
+    mockForward.mockResolvedValue(gw(AUTH_BODY, { headers: { 'set-cookie': SESSION_SET_COOKIE } }));
+    const response = await changePassword(
+      req('POST', '/api/auth/change-password', csrfHeaders, passwordBody),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockForward).toHaveBeenCalledWith('/api/v2/auth/change-password', {
+      method: 'POST',
+      body: passwordBody,
+      cookie: csrfHeaders.cookie,
+    });
+    expect(response.headers.get('set-cookie')).toContain('better-auth.session_token=sess_abc');
+    expect(response.headers.get('set-cookie')?.toLowerCase()).not.toContain('domain=');
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+  });
+
+  it('does not forward invalid or cross-origin requests', async () => {
+    const invalid = await changePassword(
+      req('POST', '/api/auth/change-password', csrfHeaders, {
+        currentPassword: 'same-password',
+        newPassword: 'same-password',
+      }),
+    );
+    expect(invalid.status).toBe(422);
+
+    const crossOrigin = await changePassword(
+      req(
+        'POST',
+        '/api/auth/change-password',
+        { ...csrfHeaders, origin: 'http://evil.example' },
+        passwordBody,
+      ),
+    );
+    expect(crossOrigin.status).toBe(403);
+    expect(mockForward).not.toHaveBeenCalled();
+  });
 });
 
 describe('POST /api/auth/login', () => {

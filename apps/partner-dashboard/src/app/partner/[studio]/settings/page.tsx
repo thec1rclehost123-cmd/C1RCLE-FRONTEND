@@ -1,5 +1,4 @@
-import { PartnerSettingsScreen } from '@/components/partner-v3/settings/PartnerSettingsScreen';
-import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
+import { PartnerSettingsUnavailable } from '@/components/partner-v3/settings/PartnerSettingsUnavailable';
 
 import { renderStudioSkeleton } from '../route-helpers';
 
@@ -9,13 +8,19 @@ export default async function StudioSettingsPage({
   readonly params: Promise<{ studio: string }>;
 }) {
   const { studio } = await params;
-  if (studio === 'venue')
-    return <PartnerSettingsScreen data={await fixturePartnerDataSource.getVenueSettings()} />;
-  if (studio === 'host')
-    return <PartnerSettingsScreen data={await fixturePartnerDataSource.getHostSettings()} />;
-  return renderStudioSkeleton(
-    Promise.resolve({ studio }),
-    'Settings',
-    'Settings is available for Venue and Host in this checkpoint.',
-  );
+  if (studio === 'promoter') {
+    return renderStudioSkeleton(
+      Promise.resolve({ studio }),
+      'Settings',
+      'Promoter profile and payout settings are not connected to an authorized workspace model yet.',
+    );
+  }
+  if (studio !== 'venue' && studio !== 'host') {
+    return renderStudioSkeleton(
+      Promise.resolve({ studio }),
+      'Settings',
+      'Settings are not available for this workspace.',
+    );
+  }
+  return <PartnerSettingsUnavailable studio={studio} />;
 }

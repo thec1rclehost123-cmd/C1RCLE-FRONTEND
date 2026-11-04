@@ -1,8 +1,8 @@
 import Link from 'next/link';
 
 import { Breadcrumbs } from '@/components/seo/Breadcrumbs';
+import { absoluteClientUrl } from '@/lib/seo/client-site';
 import { JsonLd } from '@/lib/seo/json-ld';
-import { absoluteUrl } from '@/lib/seo/site';
 
 import type { EventPublicDetailDto, EventVenuePublicDto } from '@c1rcle/contracts';
 
@@ -30,6 +30,7 @@ function venueGeoJsonLd(venue: EventVenuePublicDto): Record<string, unknown> | n
 export function AuthoritativeEventView({ detail }: { readonly detail: EventPublicDetailDto }) {
   const { venue, organizer } = detail;
   const event = detail;
+  const entryRules = event.entryRules;
   const address = venue === null ? null : venueAddressJsonLd(venue);
   const geo = venue === null ? null : venueGeoJsonLd(venue);
   const jsonLd = {
@@ -42,14 +43,14 @@ export function AuthoritativeEventView({ detail }: { readonly detail: EventPubli
     endDate: event.endAt ?? undefined,
     eventStatus: 'https://schema.org/EventScheduled',
     eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
-    url: absoluteUrl(`/event/${encodeURIComponent(event.slug)}`),
+    url: absoluteClientUrl(`/event/${encodeURIComponent(event.slug)}`),
     ...(venue === null
       ? {}
       : {
           location: {
             '@type': 'Place',
             name: venue.name,
-            url: absoluteUrl(`/venue/${encodeURIComponent(venue.slug)}`),
+            url: absoluteClientUrl(`/venue/${encodeURIComponent(venue.slug)}`),
             ...(venue.photoUrl === null ? {} : { image: venue.photoUrl }),
             ...(address === null ? {} : { address }),
             ...(geo === null ? {} : { geo }),
@@ -116,6 +117,89 @@ export function AuthoritativeEventView({ detail }: { readonly detail: EventPubli
           <p className="mt-5 whitespace-pre-line leading-8 text-white/60">{event.description}</p>
         </section>
       )}
+      {entryRules && (
+        <section aria-labelledby="event-entry-heading" className="mt-12 max-w-3xl">
+          <h2 id="event-entry-heading" className="text-3xl font-black uppercase tracking-tight">
+            Entry information
+          </h2>
+          <dl className="mt-5 grid gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:grid-cols-2">
+            {entryRules.doorsOpenAt ? (
+              <div>
+                <dt className="text-xs font-bold uppercase tracking-widest text-white/45">
+                  Doors open (UTC)
+                </dt>
+                <dd className="mt-1 text-sm text-white/75">
+                  {formatEntryTime(entryRules.doorsOpenAt)}
+                </dd>
+              </div>
+            ) : null}
+            {entryRules.lastEntryAt ? (
+              <div>
+                <dt className="text-xs font-bold uppercase tracking-widest text-white/45">
+                  Last entry (UTC)
+                </dt>
+                <dd className="mt-1 text-sm text-white/75">
+                  {formatEntryTime(entryRules.lastEntryAt)}
+                </dd>
+              </div>
+            ) : null}
+            {entryRules.reentryAllowed !== null ? (
+              <EntryFact
+                label="Re-entry"
+                value={entryRules.reentryAllowed ? 'Allowed' : 'Not allowed'}
+              />
+            ) : null}
+            {entryRules.minimumAge !== null ? (
+              <EntryFact label="Minimum age" value={`${String(entryRules.minimumAge)}+`} />
+            ) : null}
+            {entryRules.idRequired !== null ? (
+              <EntryFact
+                label="Photo ID"
+                value={entryRules.idRequired ? 'Required' : 'Not required'}
+              />
+            ) : null}
+            {entryRules.accessibilityNotes ? (
+              <EntryFact label="Accessibility" value={entryRules.accessibilityNotes} />
+            ) : null}
+            {entryRules.dressCode ? (
+              <EntryFact label="Dress code" value={entryRules.dressCode} />
+            ) : null}
+            {entryRules.alcoholPolicy ? (
+              <EntryFact label="Alcohol policy" value={entryRules.alcoholPolicy} />
+            ) : null}
+            {entryRules.prohibitedItems.length ? (
+              <div>
+                <dt className="text-xs font-bold uppercase tracking-widest text-white/45">
+                  Prohibited items
+                </dt>
+                <dd className="mt-1 text-sm text-white/75">
+                  {entryRules.prohibitedItems.join(', ')}
+                </dd>
+              </div>
+            ) : null}
+            {entryRules.supportDetails ? (
+              <EntryFact label="Guest support" value={entryRules.supportDetails} />
+            ) : null}
+          </dl>
+        </section>
+      )}
     </article>
   );
+}
+
+function EntryFact({ label, value }: { readonly label: string; readonly value: string }) {
+  return (
+    <div>
+      <dt className="text-xs font-bold uppercase tracking-widest text-white/45">{label}</dt>
+      <dd className="mt-1 whitespace-pre-line text-sm text-white/75">{value}</dd>
+    </div>
+  );
+}
+
+function formatEntryTime(value: string): string {
+  return new Intl.DateTimeFormat('en-IN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'UTC',
+  }).format(new Date(value));
 }

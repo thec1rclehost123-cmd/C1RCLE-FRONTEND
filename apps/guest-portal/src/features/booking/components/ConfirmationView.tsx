@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
+import { getOrderStatusPresentation } from '@/features/booking/status-presentation';
 import { getEventAccentClasses } from '@/features/event-detail/eventDetailPalette';
 
 import type { BookingConfirmationFixture, BookingEventFixture } from '../types/booking.types';
@@ -25,6 +26,13 @@ export function ConfirmationView({
   event: BookingEventFixture;
 }) {
   const accent = getEventAccentClasses(event.accentTone);
+  const status = getOrderStatusPresentation(confirmation.status);
+  const statusTone = {
+    success: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400',
+    warning: 'border-amber-500/20 bg-amber-500/10 text-amber-300',
+    danger: 'border-red-500/20 bg-red-500/10 text-red-300',
+    neutral: 'border-white/15 bg-white/[0.06] text-white/65',
+  }[status.tone];
 
   return (
     <div className="relative z-10 min-h-screen overflow-hidden pb-28 pt-20 text-white sm:pt-24 lg:pb-8 lg:pt-20">
@@ -39,10 +47,10 @@ export function ConfirmationView({
             aria-hidden="true"
             className={`mx-auto flex size-14 items-center justify-center rounded-full border text-2xl font-black lg:size-12 lg:text-xl ${accent.borderStrong} ${accent.panel}`}
           >
-            ✓
+            {status.tone === 'success' ? '✓' : '•'}
           </div>
           <h1 className="mt-3 text-5xl font-black uppercase leading-[0.86] tracking-[-0.06em] sm:text-6xl lg:text-6xl">
-            You&apos;re on the list.
+            {status.heading}
           </h1>
         </header>
 
@@ -70,10 +78,12 @@ export function ConfirmationView({
             <div>
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50">
-                  Confirmation #{confirmation.id}
+                  Booking {confirmation.bookingReference}
                 </span>
-                <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-400 border border-emerald-500/20">
-                  Confirmed
+                <span
+                  className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${statusTone}`}
+                >
+                  {status.label}
                 </span>
               </div>
 
@@ -85,24 +95,37 @@ export function ConfirmationView({
               </h2>
 
               <div className="mt-6 space-y-4">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
-                    Date & Time
-                  </p>
-                  <p className="mt-1 text-sm font-bold text-white">
-                    {dateFormatter.format(new Date(event.startsAt))}
-                  </p>
-                </div>
+                {event.detailsAvailable === false ? (
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
+                      Event update
+                    </p>
+                    <p className="mt-1 text-sm font-bold text-white">
+                      This event was cancelled. Contact support if you need help with this booking.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
+                        Date & Time
+                      </p>
+                      <p className="mt-1 text-sm font-bold text-white">
+                        {dateFormatter.format(new Date(event.startsAt))}
+                      </p>
+                    </div>
 
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
-                    Venue
-                  </p>
-                  <p className="mt-1 text-sm font-bold text-white">{event.venue}</p>
-                  <p className="text-xs text-white/60">
-                    {event.address}, {event.city}
-                  </p>
-                </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
+                        Venue
+                      </p>
+                      <p className="mt-1 text-sm font-bold text-white">{event.venue}</p>
+                      <p className="text-xs text-white/60">
+                        {event.address}, {event.city}
+                      </p>
+                    </div>
+                  </>
+                )}
 
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
@@ -118,7 +141,7 @@ export function ConfirmationView({
             <div className="mt-8 border-t border-white/10 pt-6">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-widest text-white/60">
-                  Total Paid
+                  {status.amountLabel}
                 </span>
                 <span className="text-xl font-black text-white">
                   {moneyFormatter.format(confirmation.total.amountPaise / 100)}
@@ -126,17 +149,30 @@ export function ConfirmationView({
               </div>
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                <Link
-                  href="/tickets"
-                  className="flex-1 rounded-full bg-white px-6 py-3 text-center text-xs font-black uppercase tracking-widest text-black hover:bg-white/90 transition-all"
-                >
-                  View in My Tickets
-                </Link>
+                {status.ticketAccess ? (
+                  <Link
+                    href="/tickets"
+                    className="flex-1 rounded-full bg-white px-6 py-3 text-center text-xs font-black uppercase tracking-widest text-black hover:bg-white/90 transition-all"
+                  >
+                    View in My Tickets
+                  </Link>
+                ) : null}
                 <Link
                   href="/explore"
                   className="flex-1 rounded-full border border-white/20 px-6 py-3 text-center text-xs font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all"
                 >
                   Explore More Events
+                </Link>
+              </div>
+              <div className="mt-4 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-white/50">
+                {confirmation.status === 'paid' ? (
+                  <span>Your booking details are available in My Tickets.</span>
+                ) : null}
+                <Link
+                  href={`/help?booking=${encodeURIComponent(confirmation.bookingReference)}`}
+                  className="underline underline-offset-4 hover:text-white"
+                >
+                  Need help with this booking?
                 </Link>
               </div>
             </div>

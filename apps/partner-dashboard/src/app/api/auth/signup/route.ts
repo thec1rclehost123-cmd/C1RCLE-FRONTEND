@@ -27,7 +27,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return errorEnvelope('validation', 'Request body must be valid JSON.', 400);
   }
 
-  const gatewayResponse = await forwardToGateway('/api/v2/auth/signup', { method: 'POST', body });
+  const gatewayResponse = await forwardToGateway('/api/v2/auth/partner/signup', {
+    method: 'POST',
+    body,
+  });
   const bodyText = await gatewayResponse.text();
 
   if (!gatewayResponse.ok) {

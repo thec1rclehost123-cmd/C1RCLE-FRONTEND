@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import robots from './robots';
-import sitemap from './sitemap';
+import sitemap, { revalidate as sitemapRevalidate } from './sitemap';
 
 const mocks = vi.hoisted(() => ({ production: true }));
 
@@ -29,6 +29,7 @@ describe('SEO metadata routes', () => {
   });
 
   it('publishes production robots and an authoritative-only sitemap', async () => {
+    expect(sitemapRevalidate).toBe(0);
     expect(robots()).toMatchObject({
       rules: { userAgent: '*', allow: '/' },
       sitemap: 'https://thec1rcle.com/sitemap.xml',

@@ -14,11 +14,21 @@
   --door-glow: rgb(255 90 31 / 44%);
 }
 .doorHeader {
+  min-height: 188px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 22px;
+  gap: 28px;
+  margin-bottom: 24px;
+  padding: 28px 32px;
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 24px;
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--door-accent) 10%, transparent),
+    rgb(20 20 20 / 78%) 58%
+  );
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 4%);
 }
 .doorHeaderIdentity {
   display: flex;
@@ -43,8 +53,8 @@
   background: #202020;
 }
 .doorHeaderPoster {
-  width: 44px;
-  height: 58px;
+  width: 76px;
+  height: 100px;
   flex: none;
   border: 1px solid rgb(255 255 255 / 10%);
   border-radius: 11px;
@@ -57,7 +67,7 @@
 .doorTitle h1 {
   margin: 0;
   font:
-    800 26px/1 var(--font-display),
+    800 30px/1 var(--font-display),
     sans-serif;
   letter-spacing: -0.02em;
 }
@@ -74,9 +84,9 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  margin: 7px 0 0;
+  margin: 10px 0 0;
   color: #8a8a86;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
 }
 .doorMeta {
@@ -178,8 +188,7 @@
 }
 .headcountCard,
 .listCard,
-.formCard,
-.activityCard {
+.formCard {
   position: relative;
   overflow: hidden;
   border: 1px solid rgb(255 255 255 / 8%);
@@ -287,14 +296,12 @@
   font-weight: 500;
 }
 .listCard,
-.formCard,
-.activityCard {
+.formCard {
   padding: 24px;
   border-radius: 24px;
 }
 .listCard h2,
-.formCard h2,
-.activityCard h2 {
+.formCard h2 {
   margin: 0 0 16px;
   font-size: 16px;
   font-weight: 700;
@@ -312,8 +319,8 @@
   color: #8a8a86;
 }
 .doorSearch:focus-within {
-  border-color: var(--door-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--door-accent) 18%, transparent);
+  border-color: rgb(255 255 255 / 30%);
+  box-shadow: none;
 }
 .doorSearch input {
   min-width: 0;
@@ -531,77 +538,6 @@
   font-size: 11px;
   line-height: 1.45;
 }
-.activityCard h2 {
-  margin-bottom: 16px;
-}
-.activityActions {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-.activityActions button {
-  min-height: 42px;
-  display: inline-flex;
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px solid rgb(255 255 255 / 10%);
-  border-radius: 999px;
-  background: rgb(255 255 255 / 4%);
-  color: #f5f5f3;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-}
-.activityActions button:disabled {
-  cursor: not-allowed;
-  opacity: 0.65;
-}
-.activityList {
-  display: grid;
-  gap: 10px;
-}
-.activityRow {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid rgb(255 255 255 / 6%);
-  border-radius: 14px;
-  background: rgb(255 255 255 / 4%);
-}
-.activityRow > span:last-child {
-  display: grid;
-  flex: 1;
-  gap: 3px;
-}
-.activityRow strong {
-  color: #f5f5f3;
-  font-size: 13px;
-  font-weight: 600;
-}
-.activityRow small {
-  color: #6a6a66;
-  font-size: 11px;
-}
-.incidentIcon,
-.noteIcon {
-  width: 28px;
-  height: 28px;
-  display: grid;
-  flex: none;
-  place-items: center;
-  border-radius: 8px;
-}
-.incidentIcon {
-  background: rgb(240 133 122 / 14%);
-  color: #f0857a;
-}
-.noteIcon {
-  background: rgb(255 255 255 / 7%);
-  color: #b5b5b0;
-}
 .emptyCopy {
   margin: 10px 0;
   color: #8a8a86;
@@ -664,10 +600,179 @@
   clip-path: inset(50%);
 }
 
+.doorWorkspace {
+  display: grid;
+  gap: 16px;
+}
+.previewNotice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -8px 0 16px;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--door-accent) 25%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--door-accent) 7%, #111);
+  color: #c7c1bd;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.previewNotice > span {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--door-accent) 18%, transparent);
+  color: var(--door-accent-light);
+  font-size: 12px;
+  font-weight: 800;
+}
+.previewNotice p {
+  margin: 0;
+}
+.doorGrid {
+  grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.85fr);
+  gap: 16px;
+}
+.doorColumn {
+  gap: 16px;
+}
+.headcountCard {
+  min-height: 210px;
+  padding: 32px 36px 24px;
+  border-radius: 20px;
+}
+.headcountGlow {
+  top: -120px;
+  right: 8%;
+  width: 260px;
+  height: 260px;
+}
+.headcountTopline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.sectionEyebrow {
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+.headcountValue {
+  gap: 10px;
+  margin-bottom: 0;
+}
+.headcountValue strong {
+  font-size: 60px;
+}
+.headcountValue span {
+  font-size: 15px;
+}
+.doorMetrics {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+.doorMetrics > div {
+  min-width: 94px;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  padding: 2px 16px;
+  border-left: 1px solid rgb(255 255 255 / 10%);
+}
+.doorMetrics strong {
+  color: #f5f5f3;
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.doorMetrics span {
+  color: #96938f;
+  font-size: 11px;
+}
+.capacityTrack {
+  height: 7px;
+  margin: 16px 0 8px;
+}
+.capacityTrack span {
+  max-width: 100%;
+}
+.headcountCard p {
+  color: #9f958e;
+  font-size: 11px;
+}
+.listCard,
+.formCard,
+.listCard h2,
+.formCard h2 {
+  margin-bottom: 12px;
+  font-size: 15px;
+}
+.doorSearch {
+  min-height: 42px;
+  border-radius: 12px;
+}
+.guestFilters {
+  margin-bottom: 10px;
+}
+.guestFilters button {
+  padding: 6px 10px;
+}
+.guestList {
+  gap: 6px;
+}
+.guestRow {
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 13px;
+}
+.guestRow:hover {
+  background: rgb(255 255 255 / 4%);
+}
+.checkInButton:disabled,
+.walkInSubmit:disabled {
+  border: 1px solid rgb(255 255 255 / 9%);
+  background: rgb(255 255 255 / 5%);
+  color: #8e8b87;
+  cursor: not-allowed;
+  opacity: 1;
+}
+.checkedInButton:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+.cardTitle {
+  margin-bottom: 14px;
+}
+.walkInFields {
+  gap: 10px;
+}
+.walkInFields input,
+.paymentOptions button {
+  min-height: 42px;
+}
+.paymentOptions button[aria-pressed='true'] {
+  border-color: rgb(255 255 255 / 16%);
+  background: rgb(255 255 255 / 8%);
+  color: #e6e3df;
+}
+.walkInSubmit {
+  min-height: 44px;
+  margin-top: 0;
+}
+.noEvent {
+  min-height: 260px;
+  border-radius: 20px;
+}
+
 @media (max-width: 1100px) {
   .doorHeader {
+    min-height: 0;
     align-items: flex-start;
     flex-direction: column;
+    padding: 24px;
   }
   .doorHeaderActions {
     width: 100%;
@@ -690,16 +795,25 @@
     justify-content: center;
     padding-inline: 10px;
   }
+  .doorMetrics > div {
+    min-width: 76px;
+    padding-inline: 11px;
+  }
 }
 @media (max-width: 520px) {
   .doorHeader {
     gap: 16px;
+    padding: 18px 16px;
   }
   .doorHeaderIdentity {
     align-items: flex-start;
   }
   .doorTitle h1 {
     font-size: 23px;
+  }
+  .doorHeaderPoster {
+    width: 56px;
+    height: 74px;
   }
   .doorSubtitle {
     align-items: flex-start;
@@ -720,7 +834,24 @@
   }
   .headcountCard {
     min-height: 0;
-    padding: 24px 20px;
+    padding: 18px 16px;
+  }
+  .headcountTopline {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .doorMetrics {
+    width: 100%;
+  }
+  .doorMetrics > div {
+    min-width: 0;
+    flex: 1;
+    padding-inline: 10px;
+  }
+  .doorMetrics > div:first-child {
+    padding-left: 0;
+    border-left: 0;
   }
   .headcountValue {
     gap: 9px;
@@ -732,9 +863,8 @@
     font-size: 15px;
   }
   .listCard,
-  .formCard,
-  .activityCard {
-    padding: 20px 16px;
+  .formCard {
+    padding: 16px 13px;
   }
   .guestRow {
     gap: 9px;
@@ -751,4 +881,23 @@
     border-radius: 9px;
     font-size: 11px;
   }
+}
+
+.capacityTrack {
+  width: 100%;
+  appearance: none;
+  border: 0;
+  background: rgb(255 255 255 / 12%);
+}
+.capacityTrack::-webkit-progress-bar {
+  border-radius: inherit;
+  background: rgb(255 255 255 / 12%);
+}
+.capacityTrack::-webkit-progress-value {
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--door-accent), var(--door-accent-light));
+}
+.capacityTrack::-moz-progress-bar {
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--door-accent), var(--door-accent-light));
 }

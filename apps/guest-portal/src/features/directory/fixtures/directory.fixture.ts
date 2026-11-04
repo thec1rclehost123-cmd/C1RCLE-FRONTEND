@@ -18,7 +18,7 @@ const events: readonly DirectoryEventSummary[] = eventDetailFixtures.map((event)
   startsAt: event.startsAt,
   title: event.title,
   venue: event.venue,
-  venueId: event.venueId,
+  venueId: event.venueId ?? '',
 }));
 
 const eventsForSlugs = (...slugs: readonly string[]) =>

@@ -25,12 +25,24 @@ export function LoadingState({ label = 'Loading…', className }: LoadingStatePr
       className={cn('flex flex-col items-center justify-center gap-3 p-10', className)}
     >
       <span
-        className="size-6 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent"
+        className="size-6 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent motion-reduce:animate-none"
         aria-hidden="true"
       />
       <span className="text-sm text-muted-foreground">{label}</span>
     </div>
   );
+}
+
+export interface UnavailableStateProps extends Omit<ErrorStateProps, 'title'> {
+  readonly title?: string;
+}
+
+/** A reachable service failed. This is intentionally distinct from an empty collection. */
+export function UnavailableState({
+  title = 'Temporarily unavailable',
+  ...props
+}: UnavailableStateProps) {
+  return <ErrorState title={title} {...props} />;
 }
 
 export interface EmptyStateProps {

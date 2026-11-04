@@ -1,10 +1,11 @@
 import { cookies } from 'next/headers';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { OverviewLoadFailureState } from '@/components/partner-v3/overview/OverviewLoadFailureState';
 import { OverviewScreen } from '@/components/partner-v3/overview/OverviewScreen';
-import { PromoterOverviewScreen } from '@/components/partner-v3/overview/PromoterOverviewScreen';
-import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
+import { PromoterOverviewConnected } from '@/components/partner-v3/promoter/PromoterOverviewConnected';
+import { loadPromoterOverview } from '@/lib/events/load-promoter-overview';
 import { getActiveOrgIdFromCookieHeader } from '@/lib/org/active-org-cookie';
 import { loadOverviewData, OverviewLoadError } from '@/lib/overview/load-overview-data';
 import { isStudioRole } from '@/studios/studio-config';
@@ -18,26 +19,30 @@ export default async function StudioOverviewPage({
   if (!isStudioRole(studio)) notFound();
 
   if (studio === 'promoter') {
-    // The promoter overview is a DIFFERENT model (`PromoterOverviewData`): its
-    // headline is link clicks and commission, which the organization-scoped
-    // analytics routes do not model. It stays on the fixture until a promoter
-    // read model exists, rather than being forced into the venue shape.
-    const overview = await fixturePartnerDataSource.getPromoterOverview();
-    return (
-      <PromoterOverviewScreen
-        data={overview}
-        links={{
-          events: '/partner/promoter/events',
-          guests: '/partner/promoter/guests',
-          analytics: '/partner/promoter/analytics',
-          finance: '/partner/promoter/finance',
-        }}
-      />
-    );
+    let data: Awaited<ReturnType<typeof loadPromoterOverview>>;
+    try {
+      data = await loadPromoterOverview();
+    } catch {
+      return (
+        <section className="mx-auto flex min-h-[50vh] max-w-2xl flex-col items-start justify-center px-6 text-white">
+          <p className="text-xs uppercase tracking-[0.2em] text-white/50">Promoter workspace</p>
+          <h1 className="mt-3 text-2xl font-semibold">Performance unavailable</h1>
+          <p className="mt-3 text-sm text-white/65">
+            Current referral or finance data could not be loaded. Retry to check the live backend
+            state.
+          </p>
+          <Link className="mt-5 underline" href="/partner/promoter/overview">
+            Try again
+          </Link>
+        </section>
+      );
+    }
+    return <PromoterOverviewConnected data={data} />;
   }
 
   const isHost = studio === 'host';
   const prefix = `/partner/${studio}`;
+  const organizationId = getActiveOrgIdFromCookieHeader((await cookies()).toString());
 
   // Real reads. The accent is a role tint, nothing more — the gateway decides
   // whether this viewer may read this org's numbers.
@@ -50,7 +55,10 @@ export default async function StudioOverviewPage({
   // `reason` intact and lets each case offer the right next step.
   let overview: Awaited<ReturnType<typeof loadOverviewData>>;
   try {
-    overview = await loadOverviewData({ accent: isHost ? 'lavender' : 'orange' });
+    overview = await loadOverviewData({
+      accent: isHost ? 'lavender' : 'orange',
+      organizationId,
+    });
   } catch (cause) {
     if (cause instanceof OverviewLoadError) {
       return <OverviewLoadFailureState reason={cause.reason} />;
@@ -58,8 +66,6 @@ export default async function StudioOverviewPage({
     // Not ours — rethrow so the route's `error.tsx` reports it as unexpected.
     throw cause;
   }
-
-  const organizationId = getActiveOrgIdFromCookieHeader((await cookies()).toString());
 
   return (
     <OverviewScreen
@@ -71,7 +77,7 @@ export default async function StudioOverviewPage({
         createEvent: `${prefix}/events/create`,
         calendar: `${prefix}/calendar`,
         events: `${prefix}/events`,
-        finance: `${prefix}/finance`,
+        finance: `${prefix}/finance?view=orders`,
         partners: `${prefix}/partners`,
       }}
     />

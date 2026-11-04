@@ -45,7 +45,7 @@ describe('VenueEventsScreen', () => {
     );
     expect(screen.getByRole('tab', { name: 'Analytics' })).toHaveAttribute(
       'href',
-      '/partner/venue/events/analytics',
+      '/partner/venue/analytics',
     );
     expect(screen.getByRole('region', { name: 'Venue events gallery' })).toBeInTheDocument();
     expect(screen.getByText('Neon Nights: Afrobeats')).toBeInTheDocument();

@@ -4,7 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
-import { visibleStudioNavigation } from '@/lib/access/studio-tab-access';
+import { isTabVisibleForAccess, visibleStudioNavigation } from '@/lib/access/studio-tab-access';
 import { getStudioConfig, type StudioRole } from '@/studios/studio-config';
 
 import { MobileNavigation } from './MobileNavigation';
@@ -18,6 +18,10 @@ type PartnerNavigationLayout = 'side' | 'top';
 
 const NAVIGATION_LAYOUT_STORAGE_KEY = 'c1rcle.partner.navigation-layout';
 const NAVIGATION_LAYOUT_CHANGE_EVENT = 'partner-navigation-layout-change';
+
+const subscribeToHydration = (_onStoreChange: () => void) => () => undefined;
+const getClientHydrationSnapshot = () => true;
+const getServerHydrationSnapshot = () => false;
 
 const getStoredNavigationLayout = (): PartnerNavigationLayout => {
   const savedLayout = window.localStorage.getItem(NAVIGATION_LAYOUT_STORAGE_KEY);
@@ -46,15 +50,25 @@ export function PartnerShell({
 }) {
   const config = getStudioConfig(studio);
   const pathname = usePathname();
+  const fullPageEventEditor = /\/events\/create\/?$/.test(pathname);
+  const eventWorkspace = !fullPageEventEditor && /\/events\/[^/]+(?:\/|$)/.test(pathname);
   const router = useRouter();
   const auth = useDashboardAuth();
+  const clientMounted = useSyncExternalStore(
+    subscribeToHydration,
+    getClientHydrationSnapshot,
+    getServerHydrationSnapshot,
+  );
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigationLayout = useSyncExternalStore(
     subscribeToNavigationLayout,
     getStoredNavigationLayout,
     getServerNavigationLayout,
   );
-  const userName = auth.profile?.displayName ?? 'Partner';
+  // The session store is populated from an HTTP-only cookie on the client,
+  // while server renders use the generic identity. Keep the first client
+  // render deterministic, then reveal the authenticated display name.
+  const userName = clientMounted ? (auth.profile?.displayName ?? 'Partner') : 'Partner';
   // Role-limited navigation: tabs the backend's per-role matrix withholds
   // never render. Fail-open while access is still loading (a null map shows
   // every tab until the access read lands).
@@ -93,13 +107,16 @@ export function PartnerShell({
       className={[
         appClass,
         navigationLayout === 'top' ? styles['appTopNavigation'] : '',
+        fullPageEventEditor ? styles['appEventEditor'] : '',
+        eventWorkspace ? styles['appEventWorkspace'] : '',
         'partner-v3-app',
       ]
         .filter(Boolean)
         .join(' ')}
       data-navigation-layout={navigationLayout}
+      data-studio-role={studio}
     >
-      {navigationLayout === 'side' ? (
+      {!fullPageEventEditor && navigationLayout === 'side' ? (
         <PartnerSidebar
           config={visibleConfig}
           pathname={pathname}
@@ -107,30 +124,41 @@ export function PartnerShell({
         />
       ) : null}
       <div className={styles['main']}>
-        <PartnerTopbar
-          config={config}
-          activeLabel={activeLabel}
-          userName={userName}
-          searchData={interactionData.search}
-          notificationsData={interactionData.notifications}
-          navigationLayout={navigationLayout}
-          mobileOpen={mobileOpen}
-          onMobileToggle={() => {
-            setMobileOpen((value) => !value);
-          }}
-          onLayoutToggle={toggleNavigationLayout}
-          onSignOut={() => void signOut()}
-        />
-        <main className={styles['content']}>{children}</main>
+        {!fullPageEventEditor ? (
+          <PartnerTopbar
+            config={config}
+            settingsHref={
+              isTabVisibleForAccess(`/partner/${studio}/settings`, auth.tabVisibility)
+                ? `/partner/${studio}/settings`
+                : undefined
+            }
+            activeLabel={activeLabel}
+            userName={userName}
+            searchData={interactionData.search}
+            organizationId={auth.profile?.activeMembership?.partnerId ?? null}
+            navigationLayout={navigationLayout}
+            mobileOpen={mobileOpen}
+            onMobileToggle={() => {
+              setMobileOpen((value) => !value);
+            }}
+            onLayoutToggle={toggleNavigationLayout}
+            onSignOut={() => void signOut()}
+          />
+        ) : null}
+        <main className={fullPageEventEditor ? styles['contentEventEditor'] : styles['content']}>
+          {children}
+        </main>
       </div>
-      <MobileNavigation
-        config={visibleConfig}
-        pathname={pathname}
-        open={mobileOpen}
-        onClose={() => {
-          setMobileOpen(false);
-        }}
-      />
+      {!fullPageEventEditor ? (
+        <MobileNavigation
+          config={visibleConfig}
+          pathname={pathname}
+          open={mobileOpen}
+          onClose={() => {
+            setMobileOpen(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

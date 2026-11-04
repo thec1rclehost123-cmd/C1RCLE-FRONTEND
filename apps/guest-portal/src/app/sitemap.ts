@@ -9,7 +9,7 @@ import { absoluteUrl, isProductionSeo } from '@/lib/seo/site';
 
 import type { MetadataRoute } from 'next';
 
-export const revalidate = 300;
+export const revalidate = 0;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (!isProductionSeo()) return [];

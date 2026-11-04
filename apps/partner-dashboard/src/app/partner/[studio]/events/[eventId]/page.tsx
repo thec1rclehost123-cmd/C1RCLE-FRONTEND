@@ -1,8 +1,10 @@
 import { notFound } from 'next/navigation';
 
-import { HostEventDetailScreen } from '@/components/partner-v3/event-detail/HostEventDetailScreen';
-import { VenueEventDetailScreen } from '@/components/partner-v3/event-detail/VenueEventDetailScreen';
-import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
+import { ConnectedPartnerEventScreen } from '@/components/partner-v3/event-detail/ConnectedPartnerEventScreen';
+import { PromoterAssignmentDetailsScreen } from '@/components/promoter/PromoterAssignmentDetailsScreen';
+import { PromoterPublicEventDetailsScreen } from '@/components/promoter/PromoterPublicEventDetailsScreen';
+import { loadPartnerEvent } from '@/lib/events/load-partner-event';
+import { loadPromoterEvents } from '@/lib/events/load-promoter-events';
 
 import { renderStudioSkeleton } from '../../route-helpers';
 
@@ -12,6 +14,19 @@ export default async function StudioEventDetailPage({
   readonly params: Promise<{ studio: string; eventId: string }>;
 }) {
   const { studio, eventId } = await params;
+  if (studio === 'promoter') {
+    const data = await loadPromoterEvents();
+    const assignment = [...data.linkedEvents, ...data.invitations].find(
+      (item) => item.id === eventId,
+    );
+    if (assignment) {
+      return <PromoterAssignmentDetailsScreen event={assignment} links={data.referralLinks} />;
+    }
+    const publicEvent = data.discoverEvents.find((item) => item.id === eventId);
+    if (!publicEvent) notFound();
+    return <PromoterPublicEventDetailsScreen event={publicEvent} />;
+  }
+
   if (studio !== 'venue' && studio !== 'host')
     return renderStudioSkeleton(
       Promise.resolve({ studio }),
@@ -19,14 +34,12 @@ export default async function StudioEventDetailPage({
       'Event detail routes are reserved for a later screen implementation.',
     );
 
-  const data =
-    studio === 'host'
-      ? await fixturePartnerDataSource.getHostEventDetail(eventId)
-      : await fixturePartnerDataSource.getVenueEventDetail(eventId);
-  if (!data) notFound();
-  return studio === 'host' ? (
-    <HostEventDetailScreen data={data} />
-  ) : (
-    <VenueEventDetailScreen data={data} />
+  const event = await loadPartnerEvent(eventId);
+  return (
+    <ConnectedPartnerEventScreen
+      event={event}
+      organizationId={event.organizationId}
+      showEventHeader={false}
+    />
   );
 }

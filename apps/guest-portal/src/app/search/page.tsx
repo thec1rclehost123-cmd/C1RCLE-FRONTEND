@@ -1,0 +1,39 @@
+import { SearchExperienceClient } from '@/features/explore/components/SearchExperienceClient';
+import { loadExploreEvents } from '@/features/explore/explore-data';
+import { deriveCities } from '@/features/explore/explore-mapping';
+
+import type { Metadata } from 'next';
+
+export const revalidate = 0;
+
+export const metadata: Metadata = {
+  title: 'Search Events | THE C1RCLE',
+  description: 'Search public C1RCLE events by event, venue, category, and city.',
+  robots: { index: false, follow: true },
+};
+
+export default async function SearchPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [events, params] = await Promise.all([
+    loadExploreEvents(),
+    searchParams ?? Promise.resolve({} as Record<string, string | string[] | undefined>),
+  ]);
+  const rawQuery = params['q'];
+  const initialQuery = Array.isArray(rawQuery) ? (rawQuery[0] ?? '') : (rawQuery ?? '');
+  const first = (value: string | string[] | undefined) =>
+    Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
+
+  return (
+    <SearchExperienceClient
+      events={events}
+      cities={deriveCities(events)}
+      initialQuery={initialQuery}
+      initialCity={first(params['city'])}
+      initialCategory={first(params['category'])}
+      initialWeekend={first(params['date']) === 'weekend'}
+    />
+  );
+}

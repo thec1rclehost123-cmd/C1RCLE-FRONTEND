@@ -6,9 +6,11 @@ const hostEventsConfig = {
   accent: 'lavender',
   analyticsHref: '/partner/host/analytics',
   createEventHref: '/partner/host/events/create',
+  defaultParty: 'hosts',
   eventsBaseHref: '/partner/host/events',
   eventSectionLabel: 'Host',
-  partyFilterLabel: 'Event partners',
+  emptyDescription: 'Events created or assigned to this host organization will appear here.',
+  partyFilterLabel: 'Event ownership',
   showViewToggle: false,
   slotRequestsHref: '/partner/host/slot-requests',
 } as const;

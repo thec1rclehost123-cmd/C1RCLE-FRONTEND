@@ -907,9 +907,7 @@
 .informationPanel > button:focus-visible,
 .panelHeading a:focus-visible,
 .chartToggle button:focus-visible,
-.ordersHeading label:focus-within,
 .ordersHeading button:focus-visible,
-.guestSearch:focus-within,
 .ticketFilter:focus-within,
 .guestToolbar > button:focus-visible,
 .guestTable button:focus-visible,
@@ -921,6 +919,13 @@
 .emptyState a:focus-visible {
   outline: 2px solid var(--dashboard-accent);
   outline-offset: 2px;
+}
+
+.ordersHeading label:focus-within,
+.guestSearch:focus-within {
+  border-color: rgb(255 255 255 / 30%);
+  outline: none;
+  box-shadow: none;
 }
 
 .srOnly {

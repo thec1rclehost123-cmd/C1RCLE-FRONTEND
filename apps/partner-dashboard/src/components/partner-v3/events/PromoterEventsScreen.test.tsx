@@ -41,16 +41,8 @@ describe('PromoterEventsScreen', () => {
     expect(screen.getByRole('combobox', { name: 'Event city' })).toHaveValue('all');
     expect(screen.getByRole('region', { name: 'Discover events' })).toBeInTheDocument();
     expect(screen.getByText('Eclipse Royale')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Request Pending' })).toBeDisabled();
-    expect(
-      screen
-        .getAllByRole('link', { name: 'Request Promotion Access' })
-        .map((link) => link.getAttribute('href')),
-    ).toContain('/partner/promoter/events/testing-event');
-    expect(screen.getByRole('link', { name: 'Eclipse Royale event' })).toHaveAttribute(
-      'href',
-      '/partner/promoter/events/eclipse-royale',
-    );
+    expect(screen.getByText('Request Pending')).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /Explore event/ }).length).toBeGreaterThan(0);
     expect(screen.queryByRole('link', { name: /create event/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /slot requests/i })).not.toBeInTheDocument();
   });
@@ -82,5 +74,63 @@ describe('PromoterEventsScreen', () => {
     expect(replace).toHaveBeenLastCalledWith('/partner/promoter/events?city=Mumbai', {
       scroll: false,
     });
+  });
+
+  it('does not invent promotion access or referral metrics for API-backed events', async () => {
+    const data = {
+      dataStatus: 'api' as const,
+      discoverCount: 1,
+      linkedCount: 1,
+      discoverTotal: 1,
+      discoverHasMore: false,
+      discoverEvents: [
+        {
+          id: 'evt_public',
+          name: 'Public event',
+          venue: 'Venue details unavailable',
+          city: '',
+          dateLabel: '20 Sep 2026',
+          timeLabel: '11:30 PM',
+          accessState: 'public' as const,
+          artwork: { type: 'gradient' as const, value: 'placeholder' },
+        },
+      ],
+      linkedEvents: [
+        {
+          id: 'evt_assigned',
+          name: 'Assigned event',
+          venue: 'Venue details unavailable',
+          city: '',
+          clicks: null,
+          sales: null,
+          commissionLabel: '15% commission',
+          artwork: { type: 'gradient' as const, value: 'placeholder' },
+        },
+      ],
+      invitations: [],
+      referralLinks: [],
+      referralLinksHaveMore: true,
+    };
+    render(<PromoterEventsScreen data={data} />);
+
+    expect(screen.queryByRole('combobox', { name: 'Event city' })).not.toBeInTheDocument();
+    expect(screen.getByText('Public listing')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Explore event/ })).toHaveAttribute(
+      'href',
+      '/partner/promoter/events/evt_public',
+    );
+    expect(
+      screen.queryByRole('link', { name: /request promotion access/i }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.setup().click(screen.getByRole('tab', { name: /Linked Events/ }));
+    expect(screen.getByText(/first 100 referral links only/)).toBeInTheDocument();
+    expect(screen.getByText(/Clicks unavailable/)).toBeInTheDocument();
+    expect(screen.getByText(/sales unavailable/)).toBeInTheDocument();
+    expect(screen.getByText('15% commission')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Assigned event linked event' })).toHaveAttribute(
+      'href',
+      '/partner/promoter/events/evt_assigned',
+    );
   });
 });

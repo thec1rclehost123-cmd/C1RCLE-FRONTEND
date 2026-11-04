@@ -89,32 +89,32 @@ export function HomePhoneMockup({
           />
 
           {/* Screen 1: Discover New Events */}
-          <div ref={screen1Ref} className="absolute inset-0 translate-x-0">
+          <div ref={screen1Ref} className="story-screen-slot-0 absolute inset-0">
             {renderScreen(0)}
           </div>
 
           {/* Screen 2: Interested People */}
-          <div ref={screen2Ref} className="absolute inset-0 translate-x-full">
+          <div ref={screen2Ref} className="story-screen-slot-1 absolute inset-0">
             {renderScreen(1)}
           </div>
 
           {/* Screen 3: Ask Outs */}
-          <div ref={screen3Ref} className="absolute inset-0 translate-x-full">
+          <div ref={screen3Ref} className="story-screen-slot-2 absolute inset-0">
             {renderScreen(2)}
           </div>
 
           {/* Screen 4: Buy, Share, Transfer Tickets */}
-          <div ref={screen4Ref} className="absolute inset-0 translate-x-full">
+          <div ref={screen4Ref} className="story-screen-slot-3 absolute inset-0">
             {renderScreen(3)}
           </div>
 
           {/* Screen 5: Event Only Group Chat */}
-          <div ref={screen5Ref} className="absolute inset-0 translate-x-full">
+          <div ref={screen5Ref} className="story-screen-slot-4 absolute inset-0">
             {renderScreen(4)}
           </div>
 
           {/* Screen 6: Priority Passes */}
-          <div ref={screen6Ref} className="absolute inset-0 translate-x-full">
+          <div ref={screen6Ref} className="story-screen-slot-5 absolute inset-0">
             {renderScreen(5)}
           </div>
         </div>

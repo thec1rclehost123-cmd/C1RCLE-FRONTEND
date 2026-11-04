@@ -1,21 +1,23 @@
 :root {
-  --partner-v3-background: #000000;
-  --partner-v3-surface: #141414;
-  --partner-v3-surface-muted: #0d0d0d;
-  --partner-v3-border: rgb(255 255 255 / 6%);
-  --partner-v3-border-strong: rgb(255 255 255 / 12%);
+  --partner-v3-background: #070807;
+  --partner-v3-surface: rgb(20 20 20 / 82%);
+  --partner-v3-surface-muted: rgb(255 255 255 / 5%);
+  --partner-v3-border: rgb(255 255 255 / 9%);
+  --partner-v3-border-strong: rgb(255 255 255 / 17%);
   --partner-v3-ink: #f5f5f3;
   --partner-v3-ink-muted: #8a8a86;
   --partner-v3-ink-subtle: #6a6a66;
-  --partner-v3-accent: #ff5a1f;
+  --partner-v3-supporting-text-size: 13px;
+  --partner-v3-accent: #ff6842;
+  --partner-v3-page-glow: 255 68 0;
   --partner-v3-accent-ink: #0a0a0a;
   --partner-v3-danger: #f0857a;
-  --partner-v3-sidebar: #000000;
+  --partner-v3-sidebar: rgb(7 8 7 / 88%);
   --partner-v3-sidebar-ink: #f5f5f3;
   --partner-v3-sidebar-muted: #8a8a86;
-  --partner-v3-radius-sm: 10px;
-  --partner-v3-radius-md: 14px;
-  --partner-v3-radius-lg: 20px;
+  --partner-v3-radius-sm: 12px;
+  --partner-v3-radius-md: 18px;
+  --partner-v3-radius-lg: 24px;
   --partner-v3-shadow: 0 24px 60px rgb(0 0 0 / 60%);
 
   /* Legacy token aliases so V2-origin screens render correctly in the V3 shell */
@@ -181,4 +183,52 @@
 
 .partner-v3-organization-missing p {
   margin: 5px 0 0;
+}
+
+/* Search-page visual language: quiet glass surfaces over a low-contrast
+   nightlife glow, with one shared Inter and C1RCLE orange system. */
+.partner-v3-app {
+  background:
+    radial-gradient(
+      ellipse 100% 52rem at var(--partner-v3-page-glow-x, 50%) 0%,
+      rgb(var(--partner-v3-page-glow) / 26%),
+      transparent 62%
+    ),
+    var(--partner-v3-background);
+  font-family: var(--font-inter), Inter, system-ui, sans-serif;
+}
+
+.partner-v3-app[data-studio-role='host'] {
+  --partner-v3-page-glow: 167 139 250;
+}
+
+.partner-v3-app[data-studio-role='promoter'] {
+  --partner-v3-page-glow: 255 90 31;
+}
+
+.partner-v3-app :is(button, input, select, textarea) {
+  font-family: inherit;
+}
+
+/* Keep supporting copy readable and sentence-cased throughout Venue, Host,
+   and Promoter workspaces. Data labels remain compact through their layout,
+   not tiny tracked lettering. */
+.partner-v3-app p {
+  font-family: inherit !important;
+  font-size: max(14px, 1em) !important;
+  letter-spacing: normal !important;
+  line-height: 1.45;
+  text-transform: none !important;
+}
+.partner-v3-app small {
+  font-family: inherit !important;
+  font-size: max(var(--partner-v3-supporting-text-size), 0.8125em) !important;
+  letter-spacing: normal !important;
+  line-height: 1.45;
+  text-transform: none !important;
+}
+
+/* The event editor is a focused workspace with a neutral canvas. */
+.partner-v3-app:has([aria-label='Event setup sections']) {
+  background: var(--partner-v3-background);
 }

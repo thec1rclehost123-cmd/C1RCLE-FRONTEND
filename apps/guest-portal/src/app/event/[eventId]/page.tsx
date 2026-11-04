@@ -1,94 +1,141 @@
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 
-import { createApiClient } from '@c1rcle/api-client';
-import { eventDtoSchema, hostPublicDtoSchema, venueDtoSchema } from '@c1rcle/contracts';
+import { createApiClient, isApiClientError } from '@c1rcle/api-client';
+import { eventPublicDetailDtoSchema, publicTicketTierListResponseSchema } from '@c1rcle/contracts';
 
+import { toBookingEventFromPublicDetail } from '@/features/booking/booking-mapping';
 import { EventDetailView } from '@/features/event-detail/components/EventDetailView';
+import { PrivateTierUnlockClient } from '@/features/event-detail/components/PrivateTierUnlockClient';
+import { PromoterClickTracker } from '@/features/event-detail/components/PromoterClickTracker';
 import { toEventDetailFixture } from '@/features/event-detail/event-detail-mapping';
-import { isProductionSeo } from '@/lib/seo/site';
+import { loadExploreEvents } from '@/features/explore/explore-data';
+import { buildPublicMetadata } from '@/lib/seo/metadata';
 
+import type { BookingEventFixture } from '@/features/booking/types/booking.types';
 import type { EventDetailFixture } from '@/features/event-detail/types/event-detail.types';
 import type { Metadata } from 'next';
 
+export const revalidate = 0;
+
 interface EventDetailPageProps {
   params: Promise<{ eventId: string }>;
+  searchParams?: Promise<{ ref?: string | string[] }>;
 }
 
-/**
- * Real published events only — `GET /api/v2/public/events/:idOrSlug` 404s
- * drafts, review, scheduled, ended, archived, and cancelled events, so no
- * dummy content can reach this page. Venue/host names resolve through the
- * public by-id lookups; a missing venue/host renders honest placeholders.
- */
-async function getEventDetail(eventId: string): Promise<EventDetailFixture | null> {
-  const client = createApiClient();
+type EventDetailResult =
+  | { kind: 'ready'; event: EventDetailFixture; checkoutEvent: BookingEventFixture }
+  | { kind: 'private' }
+  | { kind: 'not-found' }
+  | { kind: 'unavailable' };
 
-  let event;
-  try {
-    event = await client.get({
-      path: `/api/v2/public/events/${encodeURIComponent(eventId)}`,
-      schema: eventDtoSchema,
-    });
-  } catch {
-    return null;
-  }
-
-  const [venue, host] = await Promise.all([
-    event.venueId
-      ? client
-          .get({
-            path: `/api/v2/public/venues/by-id/${event.venueId}`,
-            schema: venueDtoSchema,
-          })
-          .catch(() => null)
-      : null,
-    client
-      .get({
-        path: `/api/v2/public/hosts/by-id/${event.organizationId}`,
-        schema: hostPublicDtoSchema,
-      })
-      .catch(() => null),
+/** Public relationships and tiers are resolved by authoritative backend projections. */
+const getEventDetail = cache(async (eventId: string): Promise<EventDetailResult> => {
+  const client = createApiClient({ maxRetries: 0, timeoutMs: 5_000 });
+  const encoded = encodeURIComponent(eventId);
+  const [eventResult, tiersResult] = await Promise.allSettled([
+    client.get({
+      path: `/api/v2/public/events/${encoded}`,
+      schema: eventPublicDetailDtoSchema,
+    }),
+    client.get({
+      path: `/api/v2/public/events/${encoded}/tiers`,
+      schema: publicTicketTierListResponseSchema,
+    }),
   ]);
 
-  return toEventDetailFixture(event, venue, host);
-}
+  if (eventResult.status === 'rejected') {
+    return isApiClientError(eventResult.reason) && eventResult.reason.status === 404
+      ? { kind: 'private' }
+      : { kind: 'unavailable' };
+  }
+  if (tiersResult.status === 'rejected') return { kind: 'unavailable' };
+
+  return {
+    kind: 'ready',
+    event: toEventDetailFixture(eventResult.value, tiersResult.value.items),
+    checkoutEvent: toBookingEventFromPublicDetail(eventResult.value, tiersResult.value.items),
+  };
+});
 
 export async function generateMetadata({ params }: EventDetailPageProps): Promise<Metadata> {
   const { eventId } = await params;
-  const event = await getEventDetail(decodeURIComponent(eventId));
-  if (!event) {
-    if (isProductionSeo()) notFound();
+  const result = await getEventDetail(decodeURIComponent(eventId));
+  if (result.kind === 'not-found') notFound();
+  if (result.kind === 'private') {
     return {
-      title: 'Event unavailable | THE C1RCLE',
-      description: 'This C1RCLE event is unavailable or has been removed.',
+      title: 'Private event access | THE C1RCLE',
+      description: 'Enter an event access code or invitation to continue.',
+      robots: { index: false, follow: false, noarchive: true },
+    };
+  }
+  if (result.kind === 'unavailable') {
+    return {
+      title: 'Event temporarily unavailable | THE C1RCLE',
+      description: 'Current event details could not be loaded.',
       robots: { index: false, follow: false },
     };
   }
-  const canonical = `https://thec1rcle.com/event/${encodeURIComponent(event.slug)}`;
-  return {
-    title: `${event.title} | THE C1RCLE`,
+  const { event } = result;
+  return buildPublicMetadata({
+    path: `/event/${encodeURIComponent(event.slug)}`,
+    title: event.title,
     description: event.summary,
-    alternates: { canonical },
-    robots: { index: false, follow: false },
-    openGraph: {
-      title: event.title,
-      description: event.summary,
-      type: 'website',
-      url: canonical,
-      images: [{ url: event.image, alt: event.title }],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: event.title,
-      description: event.summary,
-      images: [event.image],
-    },
-  };
+    image: event.image,
+  });
 }
 
-export default async function EventDetailPage({ params }: EventDetailPageProps) {
+export default async function EventDetailPage({ params, searchParams }: EventDetailPageProps) {
   const { eventId } = await params;
-  const event = await getEventDetail(decodeURIComponent(eventId));
-  if (!event) notFound();
-  return <EventDetailView event={event} />;
+  const [result, discovery] = await Promise.all([
+    getEventDetail(decodeURIComponent(eventId)),
+    loadExploreEvents().catch(() => []),
+  ]);
+  if (result.kind === 'not-found') notFound();
+  if (result.kind === 'private') {
+    return (
+      <section className="relative z-10 mx-auto flex min-h-[75vh] max-w-2xl flex-col justify-center px-6 py-24 text-white">
+        <h1 className="text-3xl font-black uppercase">Private event access</h1>
+        <p className="mt-3 text-sm leading-6 text-white/60">
+          Enter an event access code or invitation secret. Event details appear only after your
+          verified account is authorized.
+        </p>
+        <div className="mt-6">
+          <PrivateTierUnlockClient eventId={decodeURIComponent(eventId)} accentTone="orange" />
+        </div>
+      </section>
+    );
+  }
+  if (result.kind === 'unavailable') {
+    return (
+      <section className="relative z-10 mx-auto flex min-h-[75vh] max-w-3xl flex-col items-center justify-center px-6 py-32 text-center text-white">
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#FF6842]">
+          Event details
+        </p>
+        <h1 className="mt-5 text-5xl font-black uppercase leading-[0.9] tracking-[-0.055em] sm:text-7xl">
+          Event temporarily unavailable
+        </h1>
+        <p className="mt-6 max-w-xl text-sm leading-7 text-white/50">
+          We could not confirm the current event or ticket availability. Refresh to try again.
+        </p>
+      </section>
+    );
+  }
+  const recommendations = discovery.filter((event) => event.id !== result.event.id).slice(0, 8);
+  const query = (await searchParams) ?? {};
+  const referralCode = typeof query.ref === 'string' ? query.ref : undefined;
+  return (
+    <>
+      <PromoterClickTracker
+        eventSlug={result.event.slug}
+        {...(referralCode ? { code: referralCode } : {})}
+      />
+      <EventDetailView
+        event={result.event}
+        checkoutEvent={result.checkoutEvent}
+        recommendations={recommendations}
+        {...(referralCode ? { referralCode } : {})}
+      />
+    </>
+  );
 }

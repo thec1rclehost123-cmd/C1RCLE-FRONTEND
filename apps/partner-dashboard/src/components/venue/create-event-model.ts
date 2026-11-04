@@ -1,3 +1,5 @@
+import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
+
 import { venueEventDraftSchema } from '@/lib/partner/venue-event-schema';
 
 import { venueEventSource } from './venue-events-model';
@@ -146,7 +148,7 @@ export const validateEventDraft = (draft: CreateEventDraft): readonly string[] =
     eventDate: draft.date,
     startTime: draft.startTime,
     endTime: draft.endTime,
-    timezone: 'Asia/Kolkata',
+    timezone: PRODUCT_TIME_ZONE,
     capacity: draft.venueCapacity,
     ticketTiers: draft.tickets.map((ticket) => ({
       name: ticket.name,

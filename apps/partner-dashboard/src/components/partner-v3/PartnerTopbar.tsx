@@ -1,28 +1,24 @@
 import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
 
-import {
-  AccountIcon,
-  MenuIcon,
-  NavigationSideIcon,
-  NavigationTopIcon,
-  SupportIcon,
-} from '@c1rcle/icons';
+import { AccountIcon, BackIcon, CalendarIcon, MenuIcon } from '@c1rcle/icons';
 
+import { ConnectedPartnerNotifications } from './ConnectedPartnerNotifications';
 import styles from './partner-v3.module.css';
 import { PartnerGlobalSearch } from './PartnerGlobalSearch';
-import { PartnerNotifications } from './PartnerNotifications';
 
 import { Avatar, IconButton } from './index';
 
-import type { PartnerNotificationsData, PartnerSearchData } from '@/data/partner-data-source';
+import type { PartnerSearchData } from '@/data/partner-data-source';
 import type { StudioConfig } from '@/studios/studio-config';
 
 export function PartnerTopbar({
   config,
   activeLabel,
+  settingsHref,
   userName,
   searchData,
-  notificationsData,
+  organizationId,
   navigationLayout,
   mobileOpen,
   onMobileToggle,
@@ -31,15 +27,39 @@ export function PartnerTopbar({
 }: {
   readonly config: StudioConfig;
   readonly activeLabel: string;
+  readonly settingsHref: string | undefined;
   readonly userName: string;
   readonly searchData: PartnerSearchData;
-  readonly notificationsData: PartnerNotificationsData;
+  readonly organizationId: string | null;
   readonly navigationLayout: 'side' | 'top';
   readonly mobileOpen: boolean;
   readonly onMobileToggle: () => void;
   readonly onLayoutToggle: () => void;
   readonly onSignOut: () => void;
 }) {
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!accountMenuRef.current?.contains(event.target as Node)) {
+        setAccountMenuOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setAccountMenuOpen(false);
+    };
+
+    document.addEventListener('pointerdown', closeOnOutsideClick);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsideClick);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [accountMenuOpen]);
+
   return (
     <header
       className={[styles['topbar'], navigationLayout === 'top' ? styles['topbarTopNavigation'] : '']
@@ -64,6 +84,14 @@ export function PartnerTopbar({
               <strong>THE C1RCLE</strong>
               <small>{config.label}</small>
             </span>
+            <IconButton
+              label="Use side navigation"
+              className={styles['layoutSwitchButton']}
+              aria-pressed="true"
+              onClick={onLayoutToggle}
+            >
+              <BackIcon size={20} aria-hidden="true" />
+            </IconButton>
           </div>
           <nav className={styles['topNavigation']} aria-label={`${config.label} navigation`}>
             <div className={styles['topNavigationList']}>
@@ -104,36 +132,61 @@ export function PartnerTopbar({
       )}
       <div className={styles['topbarActions']}>
         <PartnerGlobalSearch data={searchData} />
+        <ConnectedPartnerNotifications organizationId={organizationId} studioRole={config.role} />
         {config.role !== 'promoter' ? (
           <Link
-            href={`/partner/${config.role}/support`}
+            href={`/partner/${config.role}/calendar`}
             className={styles['iconButton']}
-            aria-label="Help & Support"
-            title="Help & Support"
+            aria-label="Open calendar"
+            title="Calendar"
           >
-            <SupportIcon size={17} aria-hidden="true" />
+            <CalendarIcon size={18} aria-hidden="true" />
           </Link>
         ) : null}
-        <PartnerNotifications data={notificationsData} />
-        <IconButton
-          label={navigationLayout === 'side' ? 'Use top navigation' : 'Use side navigation'}
-          className={styles['layoutSwitchButton']}
-          aria-pressed={navigationLayout === 'top'}
-          onClick={onLayoutToggle}
-        >
-          {navigationLayout === 'side' ? (
-            <NavigationTopIcon size={17} aria-hidden="true" />
-          ) : (
-            <NavigationSideIcon size={17} aria-hidden="true" />
-          )}
-        </IconButton>
-        <div className={styles['accountMenu']}>
-          <Avatar name={userName} size="small" />
-          <span className={styles['accountName']}>{userName}</span>
-          <button type="button" className={styles['accountAction']} onClick={onSignOut}>
-            <AccountIcon size={15} aria-hidden="true" />
-            <span>Sign out</span>
+        <div className={styles['accountMenu']} ref={accountMenuRef}>
+          <button
+            type="button"
+            className={styles['accountTrigger']}
+            aria-label={`Account options for ${userName}`}
+            aria-expanded={accountMenuOpen}
+            aria-controls="partner-account-options"
+            onClick={() => {
+              setAccountMenuOpen((open) => !open);
+            }}
+          >
+            <Avatar name={userName} size="small" />
+            <span className={styles['accountName']}>{userName}</span>
           </button>
+          {accountMenuOpen ? (
+            <div className={styles['accountPopover']} id="partner-account-options">
+              <div className={styles['accountPopoverIdentity']}>
+                <strong>{userName}</strong>
+                <span>{config.label}</span>
+              </div>
+              {settingsHref ? (
+                <Link
+                  className={styles['accountSettings']}
+                  href={settingsHref}
+                  onClick={() => {
+                    setAccountMenuOpen(false);
+                  }}
+                >
+                  Settings
+                </Link>
+              ) : null}
+              <button
+                type="button"
+                className={[styles['accountAction'], styles['accountSignOut']].join(' ')}
+                onClick={() => {
+                  setAccountMenuOpen(false);
+                  onSignOut();
+                }}
+              >
+                <AccountIcon size={15} aria-hidden="true" />
+                <span>Sign out</span>
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
     </header>

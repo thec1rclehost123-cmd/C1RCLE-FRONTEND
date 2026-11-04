@@ -1,10 +1,12 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PartnerSupportScreen } from './PartnerSupportScreen';
 
 import type { PartnerSupportTicket } from '@/lib/support/support-repository';
+
+const supportRepository = vi.hoisted(() => ({ listPartnerTickets: vi.fn() }));
 
 vi.mock('@/components/providers/DashboardAuthProvider', () => ({
   useDashboardAuth: () => ({
@@ -14,6 +16,11 @@ vi.mock('@/components/providers/DashboardAuthProvider', () => ({
       },
     },
   }),
+}));
+
+vi.mock('@/lib/support/support-repository', async (importOriginal) => ({
+  ...(await importOriginal()),
+  listPartnerTickets: supportRepository.listPartnerTickets,
 }));
 
 const mockTickets: readonly PartnerSupportTicket[] = [
@@ -84,6 +91,11 @@ const mockTickets: readonly PartnerSupportTicket[] = [
 ];
 
 describe('PartnerSupportScreen', () => {
+  beforeEach(() => {
+    supportRepository.listPartnerTickets.mockReset();
+    supportRepository.listPartnerTickets.mockResolvedValue(mockTickets);
+  });
+
   it('renders support desk metrics, filters, and ticket list', () => {
     render(<PartnerSupportScreen initialTickets={mockTickets} />);
 
@@ -174,5 +186,42 @@ describe('PartnerSupportScreen', () => {
     expect(
       screen.queryByRole('heading', { level: 2, name: 'Raise Support Ticket' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('keeps a failed ticket read distinct from an empty support desk', async () => {
+    supportRepository.listPartnerTickets.mockRejectedValueOnce(new Error('Network unavailable'));
+    render(<PartnerSupportScreen />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Support tickets could not be loaded: Network unavailable',
+    );
+    expect(
+      screen.queryByText('No support requests yet. Raise your first ticket to get assistance.'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+    expect(screen.getByText('Total Requests').nextElementSibling).toHaveTextContent('—');
+    expect(screen.getByText('Active Inquiries').nextElementSibling).toHaveTextContent('—');
+    expect(screen.getByText('Resolved / Merged').nextElementSibling).toHaveTextContent('—');
+  });
+
+  it('does not report empty metrics before the initial ticket request completes', async () => {
+    let resolveTickets!: (tickets: readonly PartnerSupportTicket[]) => void;
+    supportRepository.listPartnerTickets.mockReturnValueOnce(
+      new Promise<readonly PartnerSupportTicket[]>((resolve) => {
+        resolveTickets = resolve;
+      }),
+    );
+    render(<PartnerSupportScreen />);
+
+    expect(screen.getByText('Total Requests').nextElementSibling).toHaveTextContent('—');
+    expect(screen.getByText('Active Inquiries').nextElementSibling).toHaveTextContent('—');
+    expect(screen.getByText('Resolved / Merged').nextElementSibling).toHaveTextContent('—');
+
+    resolveTickets(mockTickets);
+
+    expect(await screen.findByText('Total Requests')).toBeInTheDocument();
+    expect(screen.getByText('Total Requests').nextElementSibling).toHaveTextContent('2');
+    expect(screen.getByText('Active Inquiries').nextElementSibling).toHaveTextContent('1');
+    expect(screen.getByText('Resolved / Merged').nextElementSibling).toHaveTextContent('1');
   });
 });

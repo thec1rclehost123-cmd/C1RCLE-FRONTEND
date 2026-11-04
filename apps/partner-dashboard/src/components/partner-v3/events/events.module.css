@@ -1,9 +1,15 @@
 .page {
   width: min(1400px, 100%);
   margin: 0 auto;
-  padding: 28px 32px 60px;
+  padding: 0 32px 60px;
   color: #f5f5f3;
   font-family: var(--font-partner-v3), sans-serif;
+  --events-accent: #ff5a1f;
+  --events-accent-ink: #0a0a0a;
+}
+.hostTheme {
+  --events-accent: #a78bfa;
+  --events-accent-ink: #0a0a0a;
 }
 
 .pageHeader {
@@ -76,30 +82,43 @@
 .subTabs {
   display: flex;
   width: fit-content;
-  gap: 4px;
-  margin-bottom: 22px;
-  padding: 4px;
+  gap: 3px;
+  margin-bottom: 20px;
+  padding: 3px;
   border: 1px solid rgb(255 255 255 / 6%);
-  border-radius: 13px;
-  background: #141414;
+  border-radius: 12px;
+  background: rgb(20 20 20 / 82%);
 }
 .subTab {
-  min-height: 38px;
-  padding: 0 18px;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
   border: 0;
   border-radius: 9px;
   background: transparent;
   color: #8a8a86;
   cursor: pointer;
   font: inherit;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   text-decoration: none;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
 }
-.subTab[aria-selected='true'],
-.subTab:hover {
-  background: #262626;
+.subTab[aria-selected='true'] {
+  background: var(--events-accent);
+  color: var(--events-accent-ink);
+}
+.subTab:hover:not([aria-selected='true']) {
+  background: rgb(255 255 255 / 6%);
   color: #f5f5f3;
+}
+.subTab:focus-visible {
+  outline: 2px solid var(--events-accent);
+  outline-offset: 2px;
 }
 .toolbar {
   display: flex;
@@ -109,7 +128,9 @@
   margin-bottom: 18px;
 }
 .searchControl {
-  width: min(360px, 100%);
+  width: auto;
+  min-width: 0;
+  flex: 1 1 320px;
   min-height: 42px;
   display: flex;
   align-items: center;
@@ -121,8 +142,8 @@
   color: #8a8a86;
 }
 .searchControl:focus-within {
-  border-color: rgb(255 90 31 / 60%);
-  box-shadow: 0 0 0 3px rgb(255 90 31 / 15%);
+  border-color: rgb(255 255 255 / 30%);
+  box-shadow: none;
 }
 .searchControl input {
   min-width: 0;
@@ -202,6 +223,23 @@
   clip-path: inset(50%);
 }
 
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 20px;
+  padding: 14px 18px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 14px;
+  color: #aaa;
+  font-size: 13px;
+}
+.pagination a {
+  color: #ff7444;
+  font-weight: 700;
+}
+
 .eventTable {
   overflow-x: auto;
   border: 1px solid rgb(255 255 255 / 7%);
@@ -212,7 +250,7 @@
 .eventListRow {
   min-width: 720px;
   display: grid;
-  grid-template-columns: 2.2fr 1.3fr 1.4fr 1fr 0.8fr;
+  grid-template-columns: 2.4fr 1.45fr 1.5fr 0.55fr 0.75fr;
   gap: 12px;
   align-items: center;
 }
@@ -420,10 +458,11 @@
 
 .eventGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
 }
 .eventCard {
+  position: relative;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -433,25 +472,42 @@
   box-shadow: 0 20px 46px rgb(0 0 0 / 45%);
 }
 .cardPoster {
-  position: relative;
-  height: 176px;
-  flex: none;
+  position: absolute;
+  inset: 0;
   overflow: hidden;
 }
 .cardPoster > .eventPoster {
   position: absolute;
   inset: 0;
 }
+.cardPoster .eventPoster > img {
+  transform: scale(1.2);
+  filter: blur(30px);
+  opacity: 0.72;
+}
+.cardPoster .eventPosterGradient {
+  transform: scale(1.2);
+  filter: blur(24px);
+}
 .posterShade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, rgb(0 0 0 / 15%), transparent 44%, rgb(0 0 0 / 35%) 72%);
+  background: linear-gradient(180deg, rgb(0 0 0 / 25%), rgb(0 0 0 / 24%) 44%, rgb(0 0 0 / 58%));
   pointer-events: none;
+}
+.eventCardContent {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 420px;
+  flex: 1;
+  flex-direction: column;
+  padding: 16px;
 }
 .cardStatus {
   position: absolute;
-  top: 14px;
-  left: 14px;
+  top: 16px;
+  left: 16px;
 }
 .cardStatus .statusBadge {
   border: 1px solid rgb(255 255 255 / 28%);
@@ -472,8 +528,8 @@
 }
 .editEvent {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  top: 16px;
+  right: 16px;
   padding: 6px 12px;
   border: 1px solid rgb(255 255 255 / 28%);
   border-radius: 999px;
@@ -489,89 +545,63 @@
   background: rgb(255 255 255 / 14%);
 }
 .namePlate {
-  position: absolute;
-  right: 14px;
-  bottom: 12px;
-  left: 14px;
+  position: relative;
+  margin: 68px 0 auto;
   display: grid;
-  gap: 4px;
-  padding: 11px 14px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, rgb(236 48 19 / 55%), rgb(10 10 10 / 70%));
+  gap: 7px;
+  padding: 0;
   color: #fff;
+  text-align: center;
   text-decoration: none;
+  text-shadow: 0 2px 18px rgb(0 0 0 / 85%);
 }
 .namePlate strong {
-  font-size: 16px;
-  line-height: 1.15;
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 20px;
+  line-height: 1.16;
+  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 .namePlate span {
-  color: #ff8a55;
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+  overflow: hidden;
+  color: rgb(255 255 255 / 90%);
+  font-size: 14px;
+  text-shadow: 0 2px 12px rgb(0 0 0 / 90%);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .cardDetails {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 16px 18px;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 0;
   color: #f5f5f3;
   text-decoration: none;
+  text-shadow: 0 2px 12px rgb(0 0 0 / 90%);
 }
-.dateBlock {
-  display: grid;
-  min-width: 48px;
-  padding: 7px 12px;
-  border: 1px solid rgb(255 255 255 / 8%);
-  border-radius: 12px;
-  background: #1a1a1c;
-  text-align: center;
-}
-.dateBlock strong {
-  font-size: 20px;
-  line-height: 1;
-}
-.dateBlock small {
-  margin-top: 2px;
-  color: #ff8a55;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-.eventMeta {
+.dateTimeBlock {
   min-width: 0;
-  display: grid;
-  gap: 5px;
-}
-.eventMeta > strong {
-  font-size: 14px;
-  font-weight: 700;
-}
-.eventMeta > span {
   display: flex;
+  flex: 1;
   align-items: center;
-  gap: 6px;
-  overflow: hidden;
-  color: #8a8a86;
-  font-size: 12.5px;
-  font-weight: 600;
-  text-overflow: ellipsis;
+  gap: 8px;
   white-space: nowrap;
 }
-.eventMeta i {
-  display: inline-grid;
-  width: 18px;
-  height: 18px;
-  place-items: center;
-  flex: none;
-  border-radius: 50%;
-  background: rgb(255 90 31 / 18%);
-  color: #ff8a55;
-  font-size: 8px;
-  font-style: normal;
-  font-weight: 800;
+.dateTimeBlock strong,
+.dateTimeBlock time {
+  color: #f5f5f3;
+  font-size: 13px;
+  font-weight: 700;
+}
+.dateTimeBlock > span {
+  color: #8a8a86;
+  font-size: 14px;
+}
+.dateTimeBlock time {
+  text-transform: uppercase;
 }
 .priceBlock {
   display: grid;
@@ -591,7 +621,7 @@
   font-size: 15px;
 }
 .exploreWrap {
-  padding: 0 14px 14px;
+  padding-top: 14px;
 }
 .exploreButton {
   display: flex;
@@ -648,13 +678,6 @@
 .hostTheme .controlGroup button[aria-pressed='true'] .filterCount {
   background: #a78bfa;
 }
-.hostTheme .dateBlock small {
-  color: #f5f5f3;
-}
-.hostTheme .eventMeta i {
-  background: rgb(167 139 250 / 18%);
-  color: #ded1f5;
-}
 .hostTheme .priceBlock strong {
   color: #f5f5f3;
 }
@@ -663,6 +686,12 @@
 }
 .hostTheme .exploreButton {
   background: #a78bfa;
+}
+
+@media (max-width: 1100px) {
+  .eventGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 .hostTheme .exploreButton:hover {
   background: #f3e8ff;
@@ -730,8 +759,8 @@
   color: #6a6a66;
 }
 .promoterSearch:focus-within {
-  border-color: rgb(255 90 31 / 60%);
-  box-shadow: 0 0 0 3px rgb(255 90 31 / 15%);
+  border-color: rgb(255 255 255 / 30%);
+  box-shadow: none;
 }
 .promoterSearch input {
   min-width: 0;
@@ -766,31 +795,89 @@
 }
 .promoterGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
 }
 .promoterCard {
+  position: relative;
+  display: flex;
+  min-height: 420px;
+  flex-direction: column;
   overflow: hidden;
-  border: 1px solid rgb(255 255 255 / 8%);
-  border-radius: 18px;
-  background: #101010;
+  border: 1px solid rgb(255 90 31 / 20%);
+  border-radius: 24px;
+  background: #100e0e;
+  box-shadow:
+    0 0 38px -20px rgb(255 82 38 / 42%),
+    0 16px 42px -28px rgb(0 0 0 / 90%);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
 }
 .promoterCard:hover {
-  border-color: rgb(255 255 255 / 16%);
+  transform: translateY(-2px);
+  border-color: rgb(255 90 31 / 45%);
+  box-shadow:
+    0 0 48px -16px rgb(255 82 38 / 50%),
+    0 18px 44px -26px rgb(0 0 0 / 95%);
+}
+.promoterPosterLink {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  display: block;
+  color: inherit;
+  text-decoration: none;
 }
 .promoterPoster {
   position: relative;
-  height: 180px;
+  height: 100%;
   overflow: hidden;
 }
 .promoterPoster > .eventPoster {
   position: absolute;
   inset: 0;
 }
+.promoterPoster .eventPoster > img {
+  transform: scale(1.2);
+  filter: blur(30px);
+  opacity: 0.72;
+}
+.promoterPoster .eventPosterGradient {
+  transform: scale(1.2);
+  filter: blur(24px);
+}
+.promoterPoster::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(0 0 0 / 25%), rgb(0 0 0 / 24%) 44%, rgb(0 0 0 / 58%));
+  content: '';
+  pointer-events: none;
+}
+.promoterNamePlate {
+  position: absolute;
+  z-index: 1;
+  top: 72px;
+  right: 16px;
+  left: 16px;
+  display: -webkit-box;
+  overflow: hidden;
+  color: #fff;
+  padding: 0;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.18;
+  text-overflow: ellipsis;
+  text-shadow: 0 2px 12px rgb(0 0 0 / 65%);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
 .promoterBadge {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  z-index: 2;
+  top: 16px;
+  left: 16px;
   padding: 5px 11px;
   border-radius: 999px;
   font-size: 10.5px;
@@ -805,36 +892,35 @@
   color: #6ee79b;
 }
 .promoterCardBody {
-  padding: 16px 18px;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  margin: auto 16px 16px;
+  flex-direction: column;
+  padding: 0;
+  text-shadow: 0 2px 12px rgb(0 0 0 / 90%);
 }
 .promoterEventLink {
   display: block;
   color: #f5f5f3;
   text-decoration: none;
 }
-.promoterEventLink:hover .promoterEventTitle {
-  color: #ff8a55;
-}
-.promoterEventTitle {
-  font-size: 16px;
-  font-weight: 800;
-}
 .promoterVenue {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 6px;
-  color: #8a8a86;
-  font-size: 12.5px;
+  margin-top: 0;
+  color: rgb(255 255 255 / 86%);
+  font-size: 13px;
 }
 .promoterEventMeta {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-top: 10px;
-  color: #8a8a86;
-  font-size: 12.5px;
+  margin-top: 8px;
+  color: rgb(255 255 255 / 72%);
+  font-size: 12px;
 }
 .promoterEventMeta span {
   display: inline-flex;
@@ -842,50 +928,82 @@
   gap: 6px;
 }
 .promoterAction {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   width: 100%;
   min-height: 42px;
-  margin-top: 14px;
+  margin-top: 10px;
+  padding: 8px 12px;
   border: 0;
   border-radius: 11px;
-  background: rgb(110 231 155 / 14%);
-  color: #6ee79b;
+  background: #f5f5f3;
+  color: #0a0a0a;
   cursor: pointer;
   font: inherit;
   font-size: 13px;
   font-weight: 700;
   text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 .promoterAction:hover {
-  background: rgb(110 231 155 / 22%);
-}
-.promoterActionPending {
-  background: rgb(255 176 32 / 14%);
-  color: #ffb020;
-  cursor: default;
-}
-.promoterActionPending:hover {
-  background: rgb(255 176 32 / 14%);
+  background: #fff;
 }
 .promoterLinkedMeta {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 7px;
   color: #6ee79b;
   font-size: 12px;
   font-weight: 700;
+}
+.promoterLinkedAction {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #f5f5f3;
+  color: #0a0a0a;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+.promoterLinkedAction:hover {
+  background: #fff;
 }
 .promoterLinkedCard {
   display: block;
   color: inherit;
   text-decoration: none;
 }
-.promoterLinkedCard:hover .promoterEventTitle {
-  color: #ff8a55;
+.promoterCard a:focus-visible {
+  outline: 2px solid #ff5a1f;
+  outline-offset: -3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .promoterCard {
+    transition: none;
+  }
+  .subTab {
+    transition: none;
+  }
+  .promoterCard:hover {
+    transform: none;
+  }
 }
 
 .page a:focus-visible,
@@ -893,6 +1011,9 @@
 .page input:focus-visible {
   outline: 2px solid #ff5a1f;
   outline-offset: 2px;
+}
+.page .searchControl input:focus-visible {
+  outline: none;
 }
 
 @media (max-width: 1100px) {
@@ -910,11 +1031,14 @@
     width: 100%;
     justify-content: space-between;
   }
+  .promoterGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 700px) {
   .page {
-    padding: 20px 16px 42px;
+    padding: 0 16px 42px;
   }
   .pageHeader {
     align-items: flex-start;
@@ -943,6 +1067,9 @@
     padding-inline: 9px;
   }
   .eventGrid {
+    grid-template-columns: 1fr;
+  }
+  .promoterGrid {
     grid-template-columns: 1fr;
   }
   .promoterToolbar {
@@ -977,7 +1104,7 @@
   .eventGrid {
     gap: 16px;
   }
-  .cardPoster {
-    height: 190px;
+  .eventCardContent {
+    min-height: 400px;
   }
 }

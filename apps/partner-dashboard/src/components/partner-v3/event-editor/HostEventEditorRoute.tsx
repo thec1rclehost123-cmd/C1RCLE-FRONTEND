@@ -1,13 +1,22 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
 
 import { EmptyState, ErrorState, LoadingState } from '@/components/partner-v3/States';
+import { requestHostAvailabilitySlot } from '@/lib/calendar/host-availability-repository';
 import { useHostAvailability } from '@/lib/calendar/use-host-availability';
 import { currentMonthKey } from '@/lib/calendar/venue-calendar-repository';
-import { submitHostEventRequest } from '@/lib/events/venue-event-repository';
+import { formatEventDateLabel } from '@/lib/events/event-time';
+import {
+  eventStartAtFromDraft,
+  eventEndAtFromDraft,
+  publishVenueEvent,
+} from '@/lib/events/venue-event-repository';
 import { useConnectedPromoters } from '@/lib/partner/use-connected-promoters';
+import { loadSlotRequestsData } from '@/lib/slot-requests/slot-request-repository';
 
 import { PartnerEventEditor } from './PartnerEventEditor';
 
@@ -20,6 +29,7 @@ export function HostEventEditorRoute({
   initialVenueId,
   initialDate,
   initialSlotId,
+  acceptedRequestId,
 }: {
   readonly organizationId: string | null;
   readonly data: EventEditorData;
@@ -27,18 +37,60 @@ export function HostEventEditorRoute({
   readonly initialVenueId?: string;
   readonly initialDate?: string;
   readonly initialSlotId?: string;
+  readonly acceptedRequestId?: string;
 }) {
   const router = useRouter();
-  // B2: one Idempotency-Key per submit intent — reused across retries of the
-  // same submit so a partial server-side write can never be duplicated by a
-  // fresh key, and discarded once the submit succeeds.
-  const workflowKeyRef = useRef<string | null>(null);
-  const anchorMonth =
+  const requestKeys = useRef(new Map<string, string>());
+  const [acceptedRequest, setAcceptedRequest] = useState<
+    Awaited<ReturnType<typeof loadSlotRequestsData>>['requests'][number] | null
+  >(null);
+  const [acceptedRequestError, setAcceptedRequestError] = useState<string | null>(null);
+  const [acceptedRequestLoading, setAcceptedRequestLoading] = useState(Boolean(acceptedRequestId));
+  // Keep the availability request range stable while the user changes the
+  // selected date. Changing the query param otherwise changes the request key,
+  // renders the loading state, and unmounts the editor (discarding its draft).
+  const [anchorMonth] = useState(() =>
     initialDate && /^\d{4}-\d{2}-\d{2}$/.test(initialDate)
       ? initialDate.slice(0, 7)
-      : currentMonthKey();
+      : currentMonthKey(),
+  );
   const state = useHostAvailability({ organizationId, anchorMonth, monthsAfter: 12 });
   const promoters = useConnectedPromoters(organizationId);
+
+  useEffect(() => {
+    if (!acceptedRequestId) return;
+    let active = true;
+    loadSlotRequestsData('outgoing')
+      .then((result) => {
+        if (!active) return;
+        const request = result.requests.find((item) => item.id === acceptedRequestId);
+        if (
+          request?.status !== 'approved' ||
+          !request.venueId ||
+          !request.slotId ||
+          !request.slotStartTime ||
+          !request.slotEndTime
+        ) {
+          setAcceptedRequestError(
+            'This accepted Venue slot is not available to the current Host session.',
+          );
+          return;
+        }
+        setAcceptedRequest(request);
+      })
+      .catch((error: unknown) => {
+        if (active)
+          setAcceptedRequestError(
+            error instanceof Error ? error.message : 'Could not verify the accepted slot.',
+          );
+      })
+      .finally(() => {
+        if (active) setAcceptedRequestLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [acceptedRequestId]);
 
   if (!organizationId) {
     return (
@@ -48,7 +100,10 @@ export function HostEventEditorRoute({
       />
     );
   }
-  if (state.loading || promoters.loading) return <LoadingState label="Loading event setup" />;
+  if (state.loading || promoters.loading || acceptedRequestLoading)
+    return <LoadingState label="Loading event setup" />;
+  if (acceptedRequestError)
+    return <ErrorState title="Accepted slot unavailable" description={acceptedRequestError} />;
   if (state.error) {
     return (
       <ErrorState
@@ -76,13 +131,52 @@ export function HostEventEditorRoute({
     );
   }
 
+  const acceptedSlot =
+    acceptedRequest?.slotStartTime && acceptedRequest.slotEndTime
+      ? {
+          requestId: acceptedRequest.id,
+          venueId: acceptedRequest.venueId ?? '',
+          startAt: acceptedRequest.slotStartTime,
+          endAt: acceptedRequest.slotEndTime,
+          timezone: PRODUCT_TIME_ZONE,
+        }
+      : null;
+  if (acceptedRequestId && !acceptedSlot) return <LoadingState label="Verifying accepted slot" />;
+  const requestedVenueId = acceptedSlot?.venueId ?? initialVenueId;
   const selectedVenue =
-    state.data.venues.find((item) => item.venue.id === initialVenueId) ?? state.data.venues[0];
-  if (!selectedVenue) return null;
+    state.data.venues.find((item) => item.venue.id === requestedVenueId) ??
+    (acceptedSlot ? undefined : state.data.venues[0]);
+  if (!selectedVenue) {
+    return (
+      <ErrorState
+        title="Accepted slot unavailable"
+        description="The Venue for this approved slot is no longer available to the current Host organization. Refresh your partnerships and try again."
+      />
+    );
+  }
   const requestedDay = selectedVenue.months
     .flatMap((month) => month.days)
     .find((day) => day.date === initialDate);
   const requestedSlot = requestedDay?.slots.find((slot) => slot.id === initialSlotId);
+  const acceptedDate = acceptedSlot
+    ? new Intl.DateTimeFormat('en-CA', { timeZone: PRODUCT_TIME_ZONE }).format(
+        new Date(acceptedSlot.startAt),
+      )
+    : undefined;
+  const acceptedTime = acceptedSlot
+    ? new Intl.DateTimeFormat('en-IN', {
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZone: PRODUCT_TIME_ZONE,
+      }).format(new Date(acceptedSlot.startAt))
+    : undefined;
+  const acceptedEndTime = acceptedSlot
+    ? new Intl.DateTimeFormat('en-IN', {
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZone: PRODUCT_TIME_ZONE,
+      }).format(new Date(acceptedSlot.endAt))
+    : undefined;
   const artwork = data.artworkOptions[0] ?? data.defaultDraft.artwork;
   const liveData: EventEditorData = {
     ...data,
@@ -96,28 +190,114 @@ export function HostEventEditorRoute({
     defaultDraft: {
       ...data.defaultDraft,
       venueId: selectedVenue.venue.id,
-      time: requestedSlot?.label ?? data.defaultDraft.time,
+      date: acceptedDate ?? data.defaultDraft.date,
+      dateLabel: acceptedDate ? formatEventDateLabel(acceptedDate) : data.defaultDraft.dateLabel,
+      time:
+        acceptedTime ??
+        (requestedSlot?.startTime
+          ? new Intl.DateTimeFormat('en-GB', {
+              timeZone: PRODUCT_TIME_ZONE,
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false,
+            }).format(new Date(requestedSlot.startTime))
+          : requestedSlot?.label) ??
+        data.defaultDraft.time,
+      ...(acceptedEndTime
+        ? { endTime: acceptedEndTime }
+        : requestedSlot?.endTime
+          ? {
+              endTime: new Intl.DateTimeFormat('en-GB', {
+                timeZone: PRODUCT_TIME_ZONE,
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+              }).format(new Date(requestedSlot.endTime)),
+            }
+          : {}),
     },
   };
 
-  const submitHostEvent = async (draft: EventEditorDraft) => {
-    workflowKeyRef.current ??= crypto.randomUUID();
-    await submitHostEventRequest(organizationId, draft, workflowKeyRef.current);
-    workflowKeyRef.current = null;
+  const submitHostEvent = async (draft: EventEditorDraft, selectedSlotId: string) => {
+    if (draft.externalVenue)
+      throw new Error('Admin approval submission for non-partnered venues is not connected yet.');
+    if (acceptedSlot) {
+      await publishVenueEvent(organizationId, draft, {
+        slotRequestId: acceptedSlot.requestId,
+        startAt: acceptedSlot.startAt,
+        endAt: acceptedSlot.endAt,
+      });
+      router.push('/partner/host/events');
+      return;
+    }
+    if (!selectedSlotId) throw new Error('Choose an open Venue slot before requesting it.');
+    let idempotencyKey = requestKeys.current.get(
+      JSON.stringify([selectedSlotId, draft.date, draft.time, draft.endTime]),
+    );
+    if (!idempotencyKey) {
+      idempotencyKey = crypto.randomUUID();
+      requestKeys.current.set(
+        JSON.stringify([selectedSlotId, draft.date, draft.time, draft.endTime]),
+        idempotencyKey,
+      );
+    }
+    const windowEnd = state.data?.venues
+      .find((item) => item.venue.id === draft.venueId)
+      ?.months.flatMap((month) => month.days)
+      .flatMap((day) => day.slots)
+      .find((slot) => slot.id === selectedSlotId)?.endTime;
+    const startTime = eventStartAtFromDraft(draft);
+    const fallbackEnd =
+      windowEnd && startTime
+        ? new Date(
+            Math.min(Date.parse(windowEnd), Date.parse(startTime) + 24 * 60 * 60 * 1000),
+          ).toISOString()
+        : '';
+    await requestHostAvailabilitySlot({
+      organizationId,
+      venueId: draft.venueId,
+      slotId: selectedSlotId,
+      ...(selectedSlotId.startsWith('free-')
+        ? {
+            startTime: eventStartAtFromDraft(draft) ?? '',
+            endTime: draft.endTime?.trim() ? (eventEndAtFromDraft(draft) ?? '') : fallbackEnd,
+          }
+        : {}),
+      idempotencyKey,
+    });
     const params = new URLSearchParams({ requested: 'true' });
     router.push(`/partner/host/slot-requests?${params.toString()}`);
   };
 
   return (
-    <PartnerEventEditor
-      data={liveData}
-      availability={state.data}
-      mode="create"
-      initialVenueId={selectedVenue.venue.id}
-      onSubmit={submitHostEvent}
-      {...(initialStep ? { initialStep } : {})}
-      {...(requestedDay?.state === 'available' ? { initialDate: requestedDay.date } : {})}
-      {...(requestedSlot ? { initialSlotId: requestedSlot.id } : {})}
-    />
+    <>
+      {acceptedSlot ? (
+        <p role="status">
+          Reserved Host slot:{' '}
+          {new Intl.DateTimeFormat('en-IN', {
+            dateStyle: 'full',
+            timeStyle: 'short',
+            timeZone: PRODUCT_TIME_ZONE,
+          }).format(new Date(acceptedSlot.startAt))}{' '}
+          to{' '}
+          {new Intl.DateTimeFormat('en-IN', {
+            timeStyle: 'short',
+            timeZone: PRODUCT_TIME_ZONE,
+          }).format(new Date(acceptedSlot.endAt))}{' '}
+          (IST). The event will use this reserved time.
+        </p>
+      ) : null}
+      <PartnerEventEditor
+        data={liveData}
+        availability={state.data}
+        mode="create"
+        initialVenueId={selectedVenue.venue.id}
+        onSubmit={submitHostEvent}
+        {...(initialStep ? { initialStep } : {})}
+        {...(requestedDay?.state === 'available' ? { initialDate: requestedDay.date } : {})}
+        {...(requestedSlot ? { initialSlotId: requestedSlot.id } : {})}
+        {...(acceptedSlot ? { acceptedSlotMode: true } : {})}
+      />
+    </>
   );
 }

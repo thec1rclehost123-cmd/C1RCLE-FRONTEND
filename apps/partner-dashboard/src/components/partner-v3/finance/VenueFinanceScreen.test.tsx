@@ -28,7 +28,6 @@ vi.mock('@c1rcle/icons', () => {
     SettingsIcon: Icon,
     SortableIcon: Icon,
     TrendUpIcon: Icon,
-    WithdrawIcon: Icon,
   };
 });
 
@@ -46,8 +45,15 @@ describe('VenueFinanceScreen', () => {
     expect(screen.getAllByText('₹4,86,200')).toHaveLength(3);
     expect(screen.getByRole('heading', { name: 'Payout history' })).toBeInTheDocument();
     expect(screen.getByText(/Neon Nights \+ 2 events/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Withdraw/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Request payout' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Request payout/ })).toBeDisabled();
+  });
+
+  it('labels the connected accounting source without implying a journal merge', async () => {
+    const data = await fixturePartnerDataSource.getVenueFinance();
+    render(<VenueFinanceScreen data={{ ...data, dataStatus: 'api' }} />);
+
+    expect(screen.getByRole('note')).toHaveTextContent('Balance from ledger');
   });
 
   it('filters Orders by status and keeps row actions read-only', async () => {
@@ -65,16 +71,40 @@ describe('VenueFinanceScreen', () => {
     });
 
     await user.click(screen.getByRole('button', { name: 'Open actions for order #8821' }));
-    expect(screen.getByRole('menuitem', { name: 'Refund' })).toBeDisabled();
+    expect(screen.getByRole('menuitem', { name: 'View order details' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Refund' })).not.toBeInTheDocument();
   });
 
-  it('renders the read-only Bank & cards view', async () => {
+  it('shows payout account setup and an honest card state in the fixture view', async () => {
     const data = await fixturePartnerDataSource.getVenueFinance();
     render(<VenueFinanceScreen data={data} view="bank" />);
 
-    expect(screen.getByRole('heading', { name: 'Bank account' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Payment card' })).toBeInTheDocument();
-    expect(screen.getByDisplayValue('HDFC0001234')).toHaveAttribute('readonly');
-    expect(screen.getByRole('button', { name: 'Save bank details' })).toBeDisabled();
+    expect(screen.getByRole('heading', { name: 'Payout bank accounts' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Payment cards' })).toBeInTheDocument();
+    expect(screen.getByText('No payout account added')).toBeInTheDocument();
+    expect(screen.getByText('No saved card')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('HDFC0001234')).not.toBeInTheDocument();
+  });
+
+  it('does not call a missing payout account unverified', async () => {
+    const data = await fixturePartnerDataSource.getVenueFinance();
+    render(
+      <VenueFinanceScreen
+        data={{
+          ...data,
+          bankAccount: {
+            bankName: 'No payout account',
+            displayNumber: 'Not set',
+            ifscCode: '—',
+            accountHolder: '—',
+            verified: false,
+          },
+        }}
+        view="bank"
+      />,
+    );
+
+    expect(screen.getByText('No payout account added')).toBeInTheDocument();
+    expect(screen.queryByText(/awaiting verification/i)).not.toBeInTheDocument();
   });
 });

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -10,7 +10,7 @@ const venueLinks = {
   createEvent: '/partner/venue/events/create',
   calendar: '/partner/venue/calendar',
   events: '/partner/venue/events',
-  finance: '/partner/venue/finance',
+  finance: '/partner/venue/finance?view=orders',
   partners: '/partner/venue/partners',
 };
 
@@ -42,7 +42,8 @@ describe('OverviewScreen', () => {
     expect(
       screen.getByRole('heading', { name: 'Neon Nights: Afrobeats Edition' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Recent orders' })).toBeInTheDocument();
+    expect(screen.getByText('No orders have been recorded yet.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'July 2026' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Upcoming events' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'My network' })).toBeInTheDocument();
@@ -55,6 +56,110 @@ describe('OverviewScreen', () => {
       'href',
       '/partner/venue/events/create',
     );
+  });
+
+  it('limits the My network preview to four entries and links to the full list', async () => {
+    const fixture = await fixturePartnerDataSource.getVenueOverview();
+    const firstMember = fixture.network[0];
+    if (!firstMember) throw new Error('Expected overview network fixture');
+    render(
+      <OverviewScreen
+        data={{
+          ...fixture,
+          network: [
+            ...fixture.network,
+            { ...firstMember, id: 'network-preview-fifth', name: 'Fifth network partner' },
+            { ...firstMember, id: 'network-preview-sixth', name: 'Sixth network partner' },
+          ],
+        }}
+        links={venueLinks}
+      />,
+    );
+
+    expect(screen.getByText('Skyline Rooftop')).toBeInTheDocument();
+    expect(screen.getByText('Arjun (Pulse)')).toBeInTheDocument();
+    expect(screen.getByText('The Docks')).toBeInTheDocument();
+    expect(screen.getByText('Maya (Staff)')).toBeInTheDocument();
+    expect(screen.queryByText('Fifth network partner')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sixth network partner')).not.toBeInTheDocument();
+    expect(
+      screen
+        .getAllByRole('link', { name: 'See all' })
+        .some((link) => link.getAttribute('href') === venueLinks.partners),
+    ).toBe(true);
+  });
+
+  it('routes the host guest-list action through the authenticated Host workspace', async () => {
+    const data = await fixturePartnerDataSource.getVenueOverview();
+    render(<OverviewScreen data={data} links={venueLinks} studio="host" />);
+
+    expect(screen.getByRole('link', { name: /view guest list/i })).toHaveAttribute(
+      'href',
+      `/partner/host/events/${encodeURIComponent(data.nextEvent.id)}/guests`,
+    );
+  });
+
+  it('shows buyer names and routes View all to Finance Orders', async () => {
+    const fixture = await fixturePartnerDataSource.getVenueOverview();
+    render(
+      <OverviewScreen
+        data={{
+          ...fixture,
+          recentOrders: [
+            {
+              id: 'order-1',
+              buyerName: 'Maya Guest',
+              eventName: 'M3 paid test event',
+              ticketCount: 2,
+              amountLabel: '₹217.70',
+              statusLabel: 'Paid',
+              placedAtLabel: '26 Oct 2026, 8:00 pm',
+            },
+          ],
+        }}
+        links={venueLinks}
+      />,
+    );
+
+    expect(screen.getByText('Maya Guest')).toBeInTheDocument();
+    expect(screen.getByText('M3 paid test event')).toBeInTheDocument();
+    expect(screen.getByText('2 tickets · Paid')).toBeInTheDocument();
+    expect(screen.getByText('26 Oct 2026, 8:00 pm IST')).toBeInTheDocument();
+    expect(screen.getByText('₹217.70')).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Guest totals can include platform fees and GST/),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /view all/i })).toHaveAttribute(
+      'href',
+      '/partner/venue/finance?view=orders',
+    );
+  });
+
+  it('does not label upcoming events sold when capacity is unknown', async () => {
+    const fixture = await fixturePartnerDataSource.getVenueOverview();
+    const upcoming = fixture.upcomingEvents[0];
+    if (!upcoming) throw new Error('Expected an upcoming event fixture');
+    render(
+      <OverviewScreen
+        data={{ ...fixture, upcomingEvents: [{ ...upcoming, capacity: null }] }}
+        links={venueLinks}
+      />,
+    );
+
+    const section = screen.getByRole('heading', { name: 'Upcoming events' }).closest('section');
+    expect(section).not.toBeNull();
+    expect(within(section!).queryByText(/^sold$/i)).not.toBeInTheDocument();
+    expect(within(section!).queryByText(/%/)).not.toBeInTheDocument();
+  });
+
+  it('does not present a permission denial as an empty order list', async () => {
+    const fixture = await fixturePartnerDataSource.getVenueOverview();
+    render(<OverviewScreen data={{ ...fixture, recentOrders: null }} links={venueLinks} />);
+
+    expect(
+      screen.getByText('Order details are not available to this workspace role.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('No orders have been recorded yet.')).not.toBeInTheDocument();
   });
 
   it('switches the local performance presentation without a mutation', async () => {
@@ -79,7 +184,7 @@ describe('OverviewScreen', () => {
           createEvent: '/partner/host/events/create',
           calendar: '/partner/host/calendar',
           events: '/partner/host/events',
-          finance: '/partner/host/finance',
+          finance: '/partner/host/finance?view=orders',
           partners: '/partner/host/partners',
         }}
       />,
@@ -99,7 +204,7 @@ describe('OverviewScreen', () => {
     ).toContain('/partner/host/events');
     expect(screen.getByRole('link', { name: /view all/i })).toHaveAttribute(
       'href',
-      '/partner/host/finance',
+      '/partner/host/finance?view=orders',
     );
   });
 });

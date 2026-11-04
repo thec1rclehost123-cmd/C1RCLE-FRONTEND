@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { CalendarIcon, LocationIcon, TimeIcon, TicketIcon } from '@c1rcle/icons';
 
 import { Button } from '@/components/partner-v3/Button';
@@ -25,7 +27,11 @@ export function SlotRequestCard({
 }: SlotRequestCardProps) {
   const isIncoming = request.direction === 'incoming';
   const canDecide = isIncoming && request.status === 'pending';
-  const canCancel = !isIncoming && request.status === 'approved';
+  const isLinkedEventLive =
+    request.linkedEventStatus === 'published' ||
+    request.linkedEventStatus === 'sales_paused' ||
+    request.linkedEventStatus === 'started';
+  const canCancel = !isIncoming && request.status === 'approved' && !isLinkedEventLive;
   return (
     <article className={styles['requestCard']}>
       <button type="button" className={styles['requestCardMain']} onClick={onOpen}>
@@ -120,6 +126,29 @@ export function SlotRequestCard({
               {actionError}
             </p>
           ) : null}
+        </div>
+      ) : null}
+      {!isIncoming && request.status === 'approved' && request.eventId ? (
+        <div className={styles['requestCardActions']}>
+          <Link
+            className={styles['emptyLink']}
+            href={`/partner/host/events/${encodeURIComponent(request.eventId)}`}
+          >
+            View event
+          </Link>
+        </div>
+      ) : !isIncoming &&
+        request.slotId &&
+        request.venueId &&
+        request.slotStartTime &&
+        request.slotEndTime ? (
+        <div className={styles['requestCardActions']}>
+          <Link
+            className={styles['emptyLink']}
+            href={`/partner/host/events/create?request=${encodeURIComponent(request.id)}`}
+          >
+            Create event from accepted slot
+          </Link>
         </div>
       ) : null}
     </article>

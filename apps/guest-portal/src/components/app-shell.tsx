@@ -1,4 +1,5 @@
 import { Footer } from './layout/Footer';
+import { MobileBottomNav } from './layout/MobileBottomNav';
 import { Navbar } from './layout/Navbar';
 import { RitualBackground } from './layout/RitualBackground';
 import { RouteFooter } from './layout/RouteFooter';
@@ -10,6 +11,7 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
     <div className="relative flex min-h-screen w-full flex-col justify-between bg-black text-white selection:bg-[#FF4400]/30 selection:text-white">
       <RitualBackground />
       <Navbar />
+      <MobileBottomNav />
       <main id="main" tabIndex={-1} className="relative w-full flex-1">
         {children}
       </main>

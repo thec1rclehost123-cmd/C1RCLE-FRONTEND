@@ -42,9 +42,7 @@ function toneOf(id: string): PartnerCardTone {
   return CARD_TONES[hash % CARD_TONES.length] ?? 'slate';
 }
 
-function shortId(id: string): string {
-  return id.length <= 12 ? id : `${id.slice(0, 8)}…`;
-}
+const PARTNER_NAME_UNAVAILABLE = 'Partner name unavailable';
 
 const ROLE_LABEL: Readonly<Record<PartnerKind, string>> = {
   host: 'Host',
@@ -163,7 +161,7 @@ export function toVenuePartnersData(input: {
     connected: partnerships
       .filter((item) => item.status === 'active')
       .map((item): PartnerRelationship => {
-        const name = item.hostName ?? shortId(item.hostOrganizationId);
+        const name = item.hostName ?? PARTNER_NAME_UNAVAILABLE;
         return {
           ...relationshipBase(item.id, 'host', name, null, false),
           status: 'Partnered',
@@ -174,12 +172,7 @@ export function toVenuePartnersData(input: {
     })),
     requests: splitPending(
       partnerships.map((item) =>
-        partnershipRequestRow(
-          item,
-          'venue',
-          'host',
-          item.hostName ?? shortId(item.hostOrganizationId),
-        ),
+        partnershipRequestRow(item, 'venue', 'host', item.hostName ?? PARTNER_NAME_UNAVAILABLE),
       ),
     ),
   };
@@ -191,7 +184,7 @@ export function toVenuePartnersData(input: {
     connected: venueConnections
       .filter((item) => item.status === 'active')
       .map((item): PartnerRelationship => {
-        const name = item.promoterName ?? shortId(item.promoterId);
+        const name = item.promoterName ?? PARTNER_NAME_UNAVAILABLE;
         return {
           ...relationshipBase(item.id, 'promoter', name, item.targetCity, false),
           status: 'Partnered',
@@ -206,7 +199,7 @@ export function toVenuePartnersData(input: {
           item,
           'target',
           'promoter',
-          item.promoterName ?? shortId(item.promoterId),
+          item.promoterName ?? PARTNER_NAME_UNAVAILABLE,
         ),
       ),
     ),
@@ -228,7 +221,7 @@ export function toHostPartnersData(input: {
     connected: partnerships
       .filter((item) => item.status === 'active')
       .map((item): PartnerRelationship => {
-        const name = item.venueName ?? shortId(item.venueOrganizationId);
+        const name = item.venueName ?? PARTNER_NAME_UNAVAILABLE;
         return {
           ...relationshipBase(item.id, 'venue', name, null, false),
           status: 'Partnered',
@@ -239,12 +232,7 @@ export function toHostPartnersData(input: {
     })),
     requests: splitPending(
       partnerships.map((item) =>
-        partnershipRequestRow(
-          item,
-          'host',
-          'venue',
-          item.venueName ?? shortId(item.venueOrganizationId),
-        ),
+        partnershipRequestRow(item, 'host', 'venue', item.venueName ?? PARTNER_NAME_UNAVAILABLE),
       ),
     ),
   };
@@ -253,7 +241,7 @@ export function toHostPartnersData(input: {
     connected: promoterConnections
       .filter((item) => item.status === 'active')
       .map((item): PartnerRelationship => {
-        const name = item.promoterName ?? shortId(item.promoterId);
+        const name = item.promoterName ?? PARTNER_NAME_UNAVAILABLE;
         return {
           ...relationshipBase(item.id, 'promoter', name, item.targetCity, false),
           status: 'Partnered',
@@ -268,7 +256,7 @@ export function toHostPartnersData(input: {
           item,
           'target',
           'promoter',
-          item.promoterName ?? shortId(item.promoterId),
+          item.promoterName ?? PARTNER_NAME_UNAVAILABLE,
         ),
       ),
     ),
@@ -291,7 +279,7 @@ export function toPromoterPartnersData(input: {
     state: PromoterPartnerRecord['state'],
   ): PromoterPartnerRecord => {
     const kind = item.targetType;
-    const name = item.targetName ?? shortId(item.targetId);
+    const name = item.targetName ?? PARTNER_NAME_UNAVAILABLE;
     return {
       id: item.id,
       name,
@@ -336,7 +324,7 @@ export function toPromoterPartnersData(input: {
           item,
           'promoter',
           item.targetType,
-          item.targetName ?? shortId(item.targetId),
+          item.targetName ?? PARTNER_NAME_UNAVAILABLE,
         ).request,
     );
   const pending = mine
@@ -348,7 +336,7 @@ export function toPromoterPartnersData(input: {
           item,
           'promoter',
           item.targetType,
-          item.targetName ?? shortId(item.targetId),
+          item.targetName ?? PARTNER_NAME_UNAVAILABLE,
         ).request,
     );
   const declined = mine
@@ -360,7 +348,7 @@ export function toPromoterPartnersData(input: {
           item,
           'promoter',
           item.targetType,
-          item.targetName ?? shortId(item.targetId),
+          item.targetName ?? PARTNER_NAME_UNAVAILABLE,
         ).request,
     );
 

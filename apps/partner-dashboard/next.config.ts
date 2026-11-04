@@ -31,7 +31,16 @@ const nextConfig: NextConfig = {
   /* A type error must never reach a deploy. */
   typescript: { ignoreBuildErrors: false },
 
-  images: { formats: ['image/avif', 'image/webp'] },
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'c1-rcle-frontend-partner-dashboard.vercel.app',
+        pathname: '/partner-v3/**',
+      },
+    ],
+  },
 
   /*
    * H2 — the legacy `/venue`, `/host`, `/promoter` and `/partner-network`
@@ -70,12 +79,17 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/venue/finance/orders',
-        destination: '/partner/venue/finance',
+        destination: '/partner/venue/finance?view=orders',
         permanent: false,
       },
       {
         source: '/venue/notifications',
         destination: '/partner/venue/overview',
+        permanent: false,
+      },
+      {
+        source: '/host/events/analytics',
+        destination: '/partner/host/analytics',
         permanent: false,
       },
       {
@@ -105,7 +119,7 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/host/finance/orders',
-        destination: '/partner/host/finance',
+        destination: '/partner/host/finance?view=orders',
         permanent: false,
       },
       {
@@ -125,12 +139,38 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/promoter/finance/orders',
-        destination: '/partner/promoter/finance',
+        destination: '/partner/promoter/finance?view=orders',
         permanent: false,
       },
       {
         source: '/promoter/links',
         destination: '/partner/promoter/overview',
+        permanent: false,
+      },
+
+      {
+        source: '/partner/venue/finance/orders',
+        destination: '/partner/venue/finance?view=orders',
+        permanent: false,
+      },
+      {
+        source: '/partner/host/finance/orders',
+        destination: '/partner/host/finance?view=orders',
+        permanent: false,
+      },
+      {
+        source: '/partner/promoter/finance/orders',
+        destination: '/partner/promoter/finance?view=orders',
+        permanent: false,
+      },
+      {
+        source: '/partner/venue/events/analytics',
+        destination: '/partner/venue/analytics',
+        permanent: false,
+      },
+      {
+        source: '/partner/host/events/analytics',
+        destination: '/partner/host/analytics',
         permanent: false,
       },
 
@@ -169,7 +209,6 @@ const nextConfig: NextConfig = {
            * merge as the *intersection* of both policies, silently breaking
            * whichever directive is narrower.
            */
-          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
         ],
       },
     ]);

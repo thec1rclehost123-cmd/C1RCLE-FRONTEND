@@ -1,7 +1,7 @@
 .page {
   width: min(1400px, 100%);
   margin: 0 auto;
-  padding: 28px 32px 60px;
+  padding: 0 32px 60px;
   color: #f5f5f3;
   font-family: var(--font-partner-v3), sans-serif;
 }
@@ -256,7 +256,7 @@
 }
 @media (max-width: 600px) {
   .page {
-    padding: 20px 16px 42px;
+    padding: 0 16px 42px;
   }
   .header {
     gap: 14px;

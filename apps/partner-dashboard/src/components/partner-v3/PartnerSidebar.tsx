@@ -7,15 +7,17 @@ import {
   DashboardIcon,
   GuestIcon,
   GuestPortalIcon,
+  ForwardIcon,
   PendingIcon,
   PartnerIcon,
-  NavigationTopIcon,
   SettingsIcon,
   SupportIcon,
   TrendUpIcon,
 } from '@c1rcle/icons';
 
 import styles from './partner-v3.module.css';
+
+import { IconButton } from './index';
 
 import type { StudioConfig, StudioIconName } from '@/studios/studio-config';
 
@@ -53,6 +55,14 @@ export function PartnerSidebar({
           <strong>THE C1RCLE</strong>
           <small>{config.label}</small>
         </span>
+        <IconButton
+          label="Use top navigation"
+          className={styles['layoutSwitchButton']}
+          aria-pressed="false"
+          onClick={onLayoutToggle}
+        >
+          <ForwardIcon size={20} aria-hidden="true" />
+        </IconButton>
       </div>
       <nav className={styles['sidebarNav']}>
         {config.navigation.map((item) => {
@@ -67,20 +77,12 @@ export function PartnerSidebar({
                 .join(' ')}
               aria-current={active ? 'page' : undefined}
             >
-              <Icon size={17} aria-hidden="true" />
+              <Icon size={20} aria-hidden="true" />
               <span>{item.label}</span>
             </Link>
           );
         })}
       </nav>
-      <div className={styles['sidebarFooter']}>
-        <button type="button" className={styles['sidebarLayoutSwitch']} onClick={onLayoutToggle}>
-          <NavigationTopIcon size={16} aria-hidden="true" />
-          <span>Top navigation</span>
-        </button>
-        <span className={styles['fixtureLabel']}>FOUNDATION</span>
-        <span className={styles['sidebarNote']}>V3 shell · read-only routes</span>
-      </div>
     </aside>
   );
 }

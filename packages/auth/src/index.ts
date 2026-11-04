@@ -16,6 +16,7 @@ export {
   refresh,
   logout,
   fetchSession,
+  hydrateSession,
   changePassword,
   requestPasswordReset,
   resetPassword,

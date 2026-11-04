@@ -1,3 +1,5 @@
+import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
+
 import type {
   CalendarBlock,
   CalendarDayState,
@@ -210,6 +212,7 @@ const venueOverviewData: OverviewData = {
       tone: 'positive',
     },
   ],
+  recentOrders: [],
   calendar: {
     monthLabel: 'July 2026',
     firstDayOffset: 3,
@@ -561,10 +564,13 @@ const makeEventSalesData = (
     ),
   ].slice(0, 3);
   const comparison = comparisonEvents.map((candidate, index) => {
-    const fillPercent = Math.round((candidate.sold / candidate.capacity) * 100);
+    const fillPercent =
+      candidate.sold !== null && candidate.capacity !== null && candidate.capacity > 0
+        ? Math.round((candidate.sold / candidate.capacity) * 100)
+        : 0;
     return {
       name: index === 0 ? `${candidate.name} (this)` : candidate.name,
-      sold: candidate.sold.toLocaleString('en-IN'),
+      sold: candidate.sold?.toLocaleString('en-IN') ?? '—',
       revenue: candidate.revenueLabel,
       fill: `${String(fillPercent)}%`,
       tone: salesToneForFill(fillPercent),
@@ -1209,6 +1215,8 @@ const promoterEventsData: PromoterEventsData = {
   linkedCount: 4,
   discoverEvents: promoterDiscoverEvents,
   linkedEvents: promoterLinkedEvents,
+  invitations: [],
+  referralLinks: [],
 };
 
 const partnerProfileDefaults = {
@@ -1845,6 +1853,12 @@ const venueFinanceData: VenueFinanceData = {
     tone: 'positive',
   },
   readModel: 'legacy_ledger_v1',
+  freshness: { asOf: '2026-10-01T00:00:00.000Z', timezone: PRODUCT_TIME_ZONE },
+  coverage: {
+    ledger: { loaded: 0, total: 0, hasMore: false },
+    payouts: { loaded: 0, total: 0, hasMore: false },
+    orders: { loaded: 0, total: 0, hasMore: false },
+  },
   payoutRequest: null,
   nextPayout: {
     label: 'Next payout',
@@ -2539,6 +2553,7 @@ const editorPromoters: readonly EventEditorPromoterOption[] = promoterPartners.c
 
 const defaultEditorDraft = (role: 'venue' | 'host'): EventEditorDraft => ({
   name: '',
+  description: '',
   venueId: role === 'host' ? (editorVenues[0]?.id ?? '') : 'skyline-rooftop',
   date: '',
   dateLabel: 'No date picked yet',

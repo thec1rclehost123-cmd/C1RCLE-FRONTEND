@@ -1,21 +1,26 @@
 import {
   assignPromoterSchema,
+  cancelEventSchema,
   createEventSchema,
   createTicketTierSchema,
   eventDtoSchema,
+  eventMediaSchema,
   posterUploadUrlDtoSchema,
   promoterAssignmentDtoSchema,
+  promoCodeDtoSchema,
   ticketTierDtoSchema,
+  updateTicketTierLimitsSchema,
   updateEventSchema,
 } from '@c1rcle/contracts';
 
 import { apiClient } from '@/lib/api/client';
+import { validateEventMedia } from '@/lib/events/event-media';
+import { promoRequestsFromDraft } from '@/lib/events/event-promo-codes';
 import { eventEndAtFromDraft, eventStartAtFromDraft } from '@/lib/events/event-time';
 import { uploadToSignedUrl } from '@/lib/onboarding/uploadToSignedUrl';
-import { submitHostSlotRequest } from '@/lib/slot-requests/slot-request-repository';
 
 import type { EventEditorDraft } from '@/data/partner-data-source';
-import type { EventDto } from '@c1rcle/contracts';
+import type { EventDto, TicketTierDto, UpdateEventInput } from '@c1rcle/contracts';
 
 export { eventEndAtFromDraft, eventStartAtFromDraft } from '@/lib/events/event-time';
 
@@ -32,12 +37,28 @@ export { eventEndAtFromDraft, eventStartAtFromDraft } from '@/lib/events/event-t
 export async function publishVenueEvent(
   organizationId: string,
   draft: EventEditorDraft,
-  idempotencyKey?: string,
+  reservationOrKey?:
+    | {
+        readonly slotRequestId: string;
+        readonly startAt: string;
+        readonly endAt: string;
+      }
+    | string,
 ): Promise<EventDto> {
-  const startAt = eventStartAtFromDraft(draft);
+  const promoRequests = promoRequestsFromDraft(draft);
+  const mediaErrors = validateEventMedia(draft);
+  if (mediaErrors.length) throw new Error(mediaErrors.join(' '));
+  const slotReservation = typeof reservationOrKey === 'string' ? undefined : reservationOrKey;
+  const idempotencyKey = typeof reservationOrKey === 'string' ? reservationOrKey : undefined;
+  const startAt = slotReservation?.startAt ?? eventStartAtFromDraft(draft);
   if (!startAt) throw new Error('Enter a valid event date and start time.');
 
-  const workflowId = idempotencyKey ?? crypto.randomUUID();
+  // Stable across retries for an accepted reservation: if a network failure
+  // happens midway through tier creation/publish, each completed command is
+  // replayed instead of producing a second event or catalog row.
+  const workflowId = slotReservation
+    ? `host-slot-${slotReservation.slotRequestId}`
+    : (idempotencyKey ?? crypto.randomUUID());
   const paidTierIds = new Set(
     draft.ticketTiers.filter((tier) => tier.accessType !== 'RSVP').map((tier) => tier.id),
   );
@@ -48,14 +69,25 @@ export async function publishVenueEvent(
   });
 
   const imageUrl = await resolvePosterImageUrl(organizationId, draft);
+  const media = await resolveEventMedia(organizationId, draft);
   const event = await apiClient.post({
     path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/events`,
     body: createEventSchema.parse({
       venueId: draft.venueId,
+      ...(slotReservation ? { slotRequestId: slotReservation.slotRequestId } : {}),
       title: draft.name.trim(),
+      summary: draft.description.trim().slice(0, 1000),
+      description: draft.description.trim(),
       imageUrl,
+      ...(media ? { media } : {}),
       startAt,
-      endAt: eventEndAtFromDraft(draft),
+      endAt: slotReservation?.endAt ?? eventEndAtFromDraft(draft),
+      visibilityMode: draft.visibilityMode ?? 'public',
+      addressDisclosure:
+        draft.addressDisclosure ??
+        (draft.visibilityMode === 'code' || draft.visibilityMode === 'invited'
+          ? 'hidden'
+          : 'public'),
       tags: [...new Set([...draft.genres, ...draft.artists])].slice(0, 50),
       compensation:
         hasPaidTiers && draft.selectedPromoterIds.length
@@ -93,10 +125,15 @@ export async function publishVenueEvent(
       body: createTicketTierSchema.parse({
         name: tier.name.trim(),
         ...(!isRsvp ? { priceInPaise: Math.round(tier.price * 100) } : {}),
+        ...(!isRsvp && (tier.coverAmountPaise ?? 0) > 0
+          ? { coverAmountPaise: tier.coverAmountPaise }
+          : {}),
         quantity: tier.quantity,
+        ...(!isRsvp && tier.accessMode ? { accessMode: tier.accessMode } : {}),
         ...(tier.accessType ? { accessType: tier.accessType } : {}),
         ...(tier.audienceType ? { audienceType: tier.audienceType } : {}),
         ...(tier.guestCount ? { guestCount: tier.guestCount } : {}),
+        ...(!isRsvp && tier.admissionMode ? { admissionMode: tier.admissionMode } : {}),
         ...(!isRsvp && tier.doorPrice != null
           ? { doorPriceInPaise: Math.round(tier.doorPrice * 100) }
           : {}),
@@ -120,12 +157,21 @@ export async function publishVenueEvent(
         ...(!isRsvp && tier.commissionEligible != null
           ? { commissionEligible: tier.commissionEligible }
           : {}),
-        ...(tier.maxPerOrder != null ? { maxPerOrder: tier.maxPerOrder } : {}),
+        maxPerOrder: tier.maxPerOrder ?? (isRsvp ? 1 : 10),
       }),
       schema: ticketTierDtoSchema,
       headers: commandHeaders(`tier-${String(index)}`),
     });
     serverTierIds.set(tier.id, createdTier.id);
+  }
+
+  for (const [index, promo] of promoRequests.entries()) {
+    await apiClient.post({
+      path: `/api/v2/events/${encodeURIComponent(event.id)}/promo-codes`,
+      body: promo,
+      schema: promoCodeDtoSchema,
+      headers: commandHeaders(`promo-${String(index)}`),
+    });
   }
 
   // The editor stores compensation by its local tier ids, while the API
@@ -193,30 +239,58 @@ export async function publishVenueEvent(
   });
 }
 
-/**
- * Submits a host slot request (BFF writes draft event + slot request). The
- * caller mints the Idempotency-Key once per submit intent (B2) and reuses it
- * across retries so the gateway's two writes cannot double-create.
- */
-export async function submitHostEventRequest(
+export async function updatePartnerEventDetails(
   organizationId: string,
-  draft: EventEditorDraft,
-  idempotencyKey?: string,
-): Promise<void> {
-  const imageUrl = await resolvePosterImageUrl(organizationId, draft);
+  eventId: string,
+  version: number,
+  changes: UpdateEventInput,
+): Promise<EventDto> {
+  return apiClient.patch({
+    path: `/api/v2/events/${encodeURIComponent(eventId)}`,
+    body: updateEventSchema.parse(changes),
+    schema: eventDtoSchema,
+    headers: {
+      'x-organization-id': organizationId,
+      'If-Match': String(version),
+      'Idempotency-Key': crypto.randomUUID(),
+    },
+  });
+}
 
-  await submitHostSlotRequest({
-    organizationId,
-    venueId: draft.venueId,
-    name: draft.name.trim(),
-    date: draft.date,
-    time: draft.time,
-    ...(draft.endTime ? { endTime: draft.endTime } : {}),
-    dateLabel: draft.dateLabel,
-    genres: draft.genres,
-    artists: draft.artists,
-    posterPublicUrl: imageUrl ?? null,
-    idempotencyKey: idempotencyKey ?? crypto.randomUUID(),
+export async function updatePartnerEventTicketLimit(
+  organizationId: string,
+  eventId: string,
+  tierId: string,
+  version: number,
+  maxPerOrder: number,
+  idempotencyKey = crypto.randomUUID(),
+): Promise<TicketTierDto> {
+  return apiClient.patch({
+    path: `/api/v2/events/${encodeURIComponent(eventId)}/ticket-tiers/${encodeURIComponent(tierId)}`,
+    body: updateTicketTierLimitsSchema.parse({ maxPerOrder }),
+    schema: ticketTierDtoSchema,
+    headers: {
+      'x-organization-id': organizationId,
+      'If-Match': String(version),
+      'Idempotency-Key': idempotencyKey,
+    },
+  });
+}
+
+export async function cancelPartnerEvent(
+  organizationId: string,
+  eventId: string,
+  reason: string,
+  idempotencyKey = crypto.randomUUID(),
+): Promise<EventDto> {
+  return apiClient.post({
+    path: `/api/v2/events/${encodeURIComponent(eventId)}/cancel`,
+    body: cancelEventSchema.parse({ reason: reason.trim() }),
+    schema: eventDtoSchema,
+    headers: {
+      'x-organization-id': organizationId,
+      'Idempotency-Key': idempotencyKey,
+    },
   });
 }
 
@@ -277,6 +351,40 @@ function posterContentType(draft: Pick<EventEditorDraft, 'artwork'>): PosterCont
     default:
       return 'image/jpeg';
   }
+}
+
+export async function resolveEventMedia(
+  organizationId: string,
+  draft: Pick<EventEditorDraft, 'media'>,
+) {
+  if (!draft.media) return undefined;
+  const gallery = [];
+  for (const artwork of draft.media.gallery) {
+    const url = await resolvePosterImageUrl(organizationId, { artwork });
+    if (!url) throw new Error('Choose a valid gallery image.');
+    gallery.push({ url, alt: artwork.alt ?? '' });
+  }
+  const spotlights = [];
+  for (const feature of draft.media.spotlights) {
+    const imageUrl = feature.artwork
+      ? await resolvePosterImageUrl(organizationId, { artwork: feature.artwork })
+      : null;
+    spotlights.push({
+      id: feature.id,
+      title: feature.title.trim(),
+      description: feature.description,
+      link: feature.link || null,
+      imageUrl,
+      startTime: feature.startTime || null,
+      endTime: feature.endTime || null,
+    });
+  }
+  return eventMediaSchema.parse({
+    titleFont: draft.media.titleFont,
+    youtubeUrl: draft.media.youtubeUrl || null,
+    gallery,
+    spotlights,
+  });
 }
 
 async function resolvePosterImageUrl(

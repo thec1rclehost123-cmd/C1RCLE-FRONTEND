@@ -152,5 +152,11 @@ export async function loadFinanceData(options: FinanceLoaderOptions): Promise<Pa
     payouts: payouts.items,
     bankAccounts,
     orders: orders.items,
+    coverage: {
+      ledger: { loaded: ledger.items.length, total: ledger.total, hasMore: ledger.hasNextPage },
+      payouts: { loaded: payouts.items.length, total: payouts.total, hasMore: payouts.hasNextPage },
+      orders: { loaded: orders.items.length, total: orders.total, hasMore: orders.hasNextPage },
+    },
+    asOf: new Date().toISOString(),
   });
 }

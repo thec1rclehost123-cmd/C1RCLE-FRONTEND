@@ -88,8 +88,31 @@ describe('toVenuePartnersData', () => {
       discoveredPromoters: [],
     });
 
-    expect(data.hosts.connected[0]?.name).toBe('org_host');
+    expect(data.hosts.connected[0]?.name).toBe('Partner name unavailable');
     expect(data.hosts.requests).toEqual({ incoming: [], outgoing: [] });
+  });
+
+  it('does not expose a counterparty organization ID when a partnership name is missing', () => {
+    const data = toVenuePartnersData({
+      partnerships: [{ ...partnership, status: 'active', hostName: null }],
+      promoterConnections: [],
+      discoveredHosts: [],
+      discoveredPromoters: [],
+    });
+
+    expect(data.hosts.connected[0]?.name).toBe('Partner name unavailable');
+    expect(data.hosts.connected[0]?.name).not.toContain('org_host');
+  });
+
+  it('does not expose a target organization ID for an unnamed promoter relationship', () => {
+    const data = toPromoterPartnersData({
+      organizationId: 'org_promoter',
+      promoterConnections: [{ ...connection, status: 'active', targetName: null }],
+      discovered: [],
+    });
+
+    expect(data.active[0]?.name).toBe('Partner name unavailable');
+    expect(data.active[0]?.name).not.toContain('org_venue');
   });
 });
 

@@ -6,6 +6,10 @@ import { EventPromoterSelector } from './EventEditorParts';
 
 import type { EventEditorData, EventEditorDraft } from '@/data/partner-data-source';
 
+HTMLDialogElement.prototype.showModal = function () {
+  this.setAttribute('open', '');
+};
+
 const testData: EventEditorData = {
   dataStatus: 'fixture',
   role: 'venue',
@@ -18,6 +22,7 @@ const testData: EventEditorData = {
   genres: [],
   extraGenres: [],
   defaultDraft: {
+    description: '',
     venueId: '',
     date: '',
     dateLabel: '',
@@ -40,6 +45,7 @@ const testData: EventEditorData = {
 function renderPromoterSelector(initialDraft?: Partial<EventEditorDraft>) {
   let draft: EventEditorDraft = {
     name: 'Party Night',
+    description: '',
     venueId: 'v1',
     date: '2026-10-01',
     dateLabel: 'Thu, Oct 1',
@@ -88,15 +94,11 @@ describe('EventPromoterSelector compensation models and promoter overrides', () 
     await user.type(globalCommissionInput, '18');
     expect(getDraft().commissionRate).toBe(18);
 
-    // Promoter override for Alex Promoter
-    expect(screen.getAllByText('Alex Promoter')).toHaveLength(2);
-    expect(screen.getByText('Event default')).toBeInTheDocument();
+    expect(screen.queryByText('Alex Promoter')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '+ Add promoter for custom commission' }));
+    await user.click(screen.getByRole('button', { name: 'Alex Promoter→' }));
 
-    const overrideBtn = screen.getByRole('button', { name: '+ Set custom commission' });
-    await user.click(overrideBtn);
-
-    expect(getDraft().promoterOverrides?.['promoter-1']).toEqual({ default: 18 });
-    expect(screen.getByText('Custom override')).toBeInTheDocument();
+    expect(getDraft().promoterOverrides?.['promoter-1']).toBeUndefined();
 
     const customRateInput = screen.getByLabelText('Alex Promoter custom commission percentage');
     expect(customRateInput).toHaveValue(18);
@@ -104,6 +106,7 @@ describe('EventPromoterSelector compensation models and promoter overrides', () 
     await user.clear(customRateInput);
     await user.type(customRateInput, '25');
 
+    await user.click(screen.getByRole('button', { name: 'Save commission' }));
     expect(getDraft().promoterOverrides?.['promoter-1']).toEqual({ default: 25 });
   });
 
@@ -128,7 +131,8 @@ describe('EventPromoterSelector compensation models and promoter overrides', () 
     expect(getDraft().tierCommissions).toEqual({ 'tier-1': 10, 'tier-2': 20 });
 
     // Set custom override for promoter
-    await user.click(screen.getByRole('button', { name: '+ Set custom commission' }));
+    await user.click(screen.getByRole('button', { name: '+ Add promoter for custom commission' }));
+    await user.click(screen.getByRole('button', { name: 'Alex Promoter→' }));
 
     const customGaInput = screen.getByLabelText(
       'Alex Promoter General Admission custom commission',
@@ -141,6 +145,7 @@ describe('EventPromoterSelector compensation models and promoter overrides', () 
     await user.clear(customGaInput);
     await user.type(customGaInput, '12');
 
+    await user.click(screen.getByRole('button', { name: 'Save commission' }));
     expect(getDraft().promoterOverrides?.['promoter-1']).toEqual({ 'tier-1': 12, 'tier-2': 20 });
   });
 
@@ -172,7 +177,8 @@ describe('EventPromoterSelector compensation models and promoter overrides', () 
     expect(getDraft().salaryPeriod).toBe('per_month');
 
     // Promoter override in salary mode
-    await user.click(screen.getByRole('button', { name: '+ Set custom commission' }));
+    await user.click(screen.getByRole('button', { name: '+ Add promoter for custom commission' }));
+    await user.click(screen.getByRole('button', { name: 'Alex Promoter→' }));
 
     const customSalaryInput = screen.getByLabelText('Alex Promoter custom salary amount');
     expect(customSalaryInput).toHaveValue(7500);
@@ -180,6 +186,7 @@ describe('EventPromoterSelector compensation models and promoter overrides', () 
     await user.clear(customSalaryInput);
     await user.type(customSalaryInput, '10000');
 
+    await user.click(screen.getByRole('button', { name: 'Save commission' }));
     expect(getDraft().promoterOverrides?.['promoter-1']).toEqual({ default: 10000 });
   });
 
@@ -189,10 +196,36 @@ describe('EventPromoterSelector compensation models and promoter overrides', () 
       promoterOverrides: { 'promoter-1': { default: 20 } },
     });
 
-    expect(screen.getByText('Custom override')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Use Event Default' }));
+    await user.click(screen.getByRole('button', { name: '+ Add promoter for custom commission' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Remove custom commission for Alex Promoter' }),
+    );
 
     expect(getDraft().promoterOverrides?.['promoter-1']).toBeUndefined();
-    expect(screen.getByText('Event default')).toBeInTheDocument();
+    expect(screen.getByText('0 custom commissions')).toBeInTheDocument();
+  });
+  it('selects all partnered promoters and removes a promoter with its override', async () => {
+    const user = userEvent.setup();
+    const { getDraft } = renderPromoterSelector({ selectedPromoterIds: [], promoterOverrides: {} });
+    await user.click(screen.getByRole('button', { name: '+ Add promoter' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Select all' }));
+    expect(getDraft().selectedPromoterIds).toEqual([]);
+    await user.click(screen.getByRole('button', { name: 'Apply selection' }));
+    expect(getDraft().selectedPromoterIds).toEqual(['promoter-1', 'promoter-2']);
+    expect(screen.queryByText('Alex Promoter')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '+ Add promoter' }));
+    await user.click(screen.getByRole('checkbox', { name: /Alex Promoter/ }));
+    await user.click(screen.getByRole('button', { name: 'Apply selection' }));
+    expect(getDraft().selectedPromoterIds).toEqual(['promoter-2']);
+  });
+  it('cancels custom commission changes from the promoter picker', async () => {
+    const user = userEvent.setup();
+    const { getDraft } = renderPromoterSelector();
+    await user.click(screen.getByRole('button', { name: '+ Add promoter for custom commission' }));
+    await user.click(screen.getByRole('button', { name: 'Alex Promoter→' }));
+    await user.clear(screen.getByLabelText('Alex Promoter custom commission percentage'));
+    await user.type(screen.getByLabelText('Alex Promoter custom commission percentage'), '22');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(getDraft().promoterOverrides?.['promoter-1']).toBeUndefined();
   });
 });

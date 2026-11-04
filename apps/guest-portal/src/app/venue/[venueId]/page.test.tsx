@@ -1,4 +1,3 @@
-import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import VenueProfilePage, { dynamic, generateMetadata } from './page';
@@ -21,56 +20,25 @@ vi.mock('next/navigation', () => ({
   },
 }));
 
+vi.mock('@/lib/seo/public-data', () => ({
+  getPublicVenueForSeo: () => Promise.resolve(null),
+  isEligiblePublicVenue: () => false,
+}));
+
 describe('VenueProfilePage', () => {
   it('renders public venue profiles on demand', () => {
     expect(dynamic).toBe('force-dynamic');
   });
 
-  it('renders venue identity, location, and upcoming event destination', async () => {
-    render(await VenueProfilePage({ params: Promise.resolve({ venueId: 'skyline-social' }) }));
-
-    expect(screen.getByRole('heading', { level: 1, name: 'Skyline Social' })).toBeInTheDocument();
-    expect(screen.getAllByText('Koregaon Park, Pune')).toHaveLength(2);
-    expect(screen.getAllByRole('link', { name: 'Directions' })[0]).toHaveAttribute(
-      'href',
-      expect.stringContaining('google.com/maps/search'),
-    );
-    expect(screen.getAllByRole('link', { name: 'View menu' })[0]).toHaveAttribute('href', '#menu');
-    expect(screen.getByRole('heading', { name: 'A menu made for sharing' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'View Rooftop Jazz' })).toHaveAttribute(
-      'href',
-      '/event/rooftop-jazz',
-    );
-  });
-
-  it('renders the experience-venue template for a non-restaurant venue', async () => {
-    render(
-      await VenueProfilePage({
-        params: Promise.resolve({ venueId: 'the-glass-house-mumbai' }),
-      }),
-    );
-
-    expect(screen.getByRole('heading', { level: 1, name: 'The Glass House' })).toBeInTheDocument();
-    expect(screen.getByText('250 standing · 140 seated')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Spaces and formats' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /High Spirits Collective/i })).toHaveAttribute(
-      'href',
-      '/host/high-spirits-collective',
-    );
-  });
-
-  it('uses notFound for an unknown venue', async () => {
+  it('does not substitute fixture profiles when a public venue is unavailable', async () => {
     await expect(
-      VenueProfilePage({ params: Promise.resolve({ venueId: 'missing-venue' }) }),
+      VenueProfilePage({ params: Promise.resolve({ venueId: 'skyline-social' }) }),
     ).rejects.toThrow('NEXT_NOT_FOUND');
   });
 
-  it('generates venue-specific metadata', async () => {
-    const metadata = await generateMetadata({
-      params: Promise.resolve({ venueId: 'skyline-social' }),
-    });
-
-    expect(metadata.title).toEqual({ absolute: 'Skyline Social | THE C1RCLE' });
-    expect(metadata.robots).toMatchObject({ follow: false, index: false, noarchive: true });
+  it('does not generate metadata for a fixture-only venue', async () => {
+    await expect(
+      generateMetadata({ params: Promise.resolve({ venueId: 'skyline-social' }) }),
+    ).rejects.toThrow('NEXT_NOT_FOUND');
   });
 });

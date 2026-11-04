@@ -42,6 +42,22 @@ describe('pollAuthoritativePaymentStatus', () => {
     expect(pause).toHaveBeenCalledTimes(2);
   });
 
+  it('reconciles one captured payment after the read-only status reports processing', async () => {
+    const read = vi
+      .fn<() => Promise<PaymentRecoveryResponse | null>>()
+      .mockResolvedValueOnce(status('processing'))
+      .mockResolvedValueOnce(status('fulfilled', 'ord_1'));
+    const reconcile = vi.fn().mockResolvedValue(status('fulfilled', 'ord_1'));
+    const pause = vi.fn().mockResolvedValue(undefined);
+
+    await expect(
+      pollAuthoritativePaymentStatus({ read, reconcile, pause }, 'evt_1', vi.fn()),
+    ).resolves.toEqual(status('fulfilled', 'ord_1'));
+    expect(reconcile).toHaveBeenCalledTimes(1);
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(pause).not.toHaveBeenCalled();
+  });
+
   it.each(['failed', 'cancelled', 'expired', 'refunded', 'requires_support'] as const)(
     'stops immediately on terminal state %s',
     async (terminal) => {

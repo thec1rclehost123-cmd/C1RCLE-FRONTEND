@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -28,15 +28,13 @@ vi.mock('@c1rcle/icons', () => {
   };
 });
 
-const { applySlotRequestAction } = vi.hoisted(() => ({
+const { applySlotRequestAction, loadSlotRequestsData } = vi.hoisted(() => ({
   applySlotRequestAction: vi.fn<() => Promise<void>>(),
+  loadSlotRequestsData: vi.fn(),
 }));
 
 vi.mock('@/lib/slot-requests/slot-request-repository', () => ({
-  loadSlotRequestsData: async (direction: 'incoming' | 'outgoing') =>
-    direction === 'incoming'
-      ? fixturePartnerDataSource.getVenueSlotRequests()
-      : fixturePartnerDataSource.getHostSlotRequests(),
+  loadSlotRequestsData,
   applySlotRequestAction,
 }));
 
@@ -45,6 +43,34 @@ describe('SlotRequestScreen', () => {
     push.mockReset();
     replace.mockReset();
     applySlotRequestAction.mockReset();
+    loadSlotRequestsData.mockImplementation((direction: 'incoming' | 'outgoing') =>
+      direction === 'incoming'
+        ? fixturePartnerDataSource.getVenueSlotRequests()
+        : fixturePartnerDataSource.getHostSlotRequests(),
+    );
+  });
+
+  it('does not present initial loading counts as real zeroes', async () => {
+    let resolveRequests:
+      | ((value: Awaited<ReturnType<typeof fixturePartnerDataSource.getVenueSlotRequests>>) => void)
+      | undefined;
+    loadSlotRequestsData.mockReturnValue(
+      new Promise((resolve) => {
+        resolveRequests = resolve;
+      }),
+    );
+    render(<SlotRequestScreen direction="incoming" />);
+
+    expect(screen.getByText('Loading request counts…')).toHaveTextContent('Loading request counts');
+    expect(screen.queryByText('Pending 0')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pending' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'All Requests' })).toBeInTheDocument();
+
+    await act(async () => {
+      resolveRequests?.(await fixturePartnerDataSource.getVenueSlotRequests());
+    });
+    const summary = await screen.findByRole('region', { name: 'Slot request summary' });
+    expect(summary).toHaveTextContent(/Pending\s*2\s*Needs your review/);
   });
 
   it('renders Venue incoming requests from live data and offers accepted decisions', async () => {
@@ -70,6 +96,26 @@ describe('SlotRequestScreen', () => {
     expect(cancelButtons).toHaveLength(1);
     expect(cancelButtons[0]).not.toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Accept' })).not.toBeInTheDocument();
+  });
+
+  it('links an accepted request to its event and removes live-event cancellation', async () => {
+    const data = await fixturePartnerDataSource.getHostSlotRequests();
+    loadSlotRequestsData.mockResolvedValue({
+      ...data,
+      requests: data.requests.map((request) =>
+        request.id === 'host-slot-sunday'
+          ? { ...request, eventId: 'evt_live', linkedEventStatus: 'published' }
+          : request,
+      ),
+    });
+    render(<SlotRequestScreen direction="outgoing" initialView="all" />);
+
+    const viewEvent = await screen.findByRole('link', { name: 'View event' });
+    expect(viewEvent).toHaveAttribute('href', '/partner/host/events/evt_live');
+    expect(screen.queryByRole('button', { name: 'Cancel request' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Create event from accepted slot' }),
+    ).not.toBeInTheDocument();
   });
 
   it('renders a directly addressed request review and changes preview state in the URL', async () => {

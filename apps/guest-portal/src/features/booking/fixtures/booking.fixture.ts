@@ -113,12 +113,13 @@ export const bookingEventFixtures: readonly BookingEventFixture[] = [
 export const bookingConfirmationFixtures: readonly BookingConfirmationFixture[] =
   bookingEventFixtures.map((event) => ({
     id: `preview-${event.id}`,
+    bookingReference: 'C1-00000-00000-00000-00000',
+    status: 'paid',
     eventId: event.id,
     attendeeName: 'Guest Preview',
     tierName: event.ticketTiers[0]?.name ?? 'Admission Preview',
     quantity: 1,
     total: event.ticketTiers[0]?.price ?? { amountPaise: 0, currency: 'INR' },
-    referenceLabel: `PREVIEW-${event.id.toUpperCase()}`,
   }));
 
 export function findBookingEventFixture(eventId: string) {

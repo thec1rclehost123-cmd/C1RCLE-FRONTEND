@@ -1,0 +1,48 @@
+# M5 Migration and Rollback Plan
+
+This is a planning artifact only. No live backfill, migration, index deployment, or destructive data operation is authorized.
+
+## Rollout order
+
+1. Add optional/versioned contract fields and domain decoders that preserve legacy records without manufacturing holder, eligibility, access grant, cover balance, or policy approval.
+2. Add persistence/repository operations and composite indexes. Validate all query shapes and transaction behavior in Firestore Emulator.
+3. Deploy backend readers/writers and server-enforced flags disabled. Old clients continue to read legacy DTO shapes through explicit compatibility mapping.
+4. Deploy Guest, Partner, Admin and scanner clients that handle unavailable/disabled states. Keep new write actions hidden or rejected while flags/approval are false.
+5. Run a read-only inventory and dry-run report against approved non-production data; validate counts, missing-field classifications and journal invariants. Do not mutate the connected project to manufacture a dataset.
+6. Enable only deterministic emulator/test fixtures. Live business activation requires separate legal, accounting, merchant and release authorization.
+
+## Dry-run and recovery requirements
+
+- Use a stable run ID and resumable checkpoints, bounded batches, before/after counts, invariant totals and a redacted failure report.
+- Preserve every order, entitlement, booking reference, attribution snapshot, journal fact, scan record and ownership history.
+- Unknown legacy ownership or cover state remains `unknown`/review-required; never infer an entitlement-linked cover balance from a generic wallet.
+- Do not rerun a partially completed operation without its checkpoint and idempotency keys.
+- Compare per-event inventory and per-order entitlement counts before/after. Any mismatch blocks activation.
+- Compare cover/journal totals in integer paise; any unbalanced or ambiguous record blocks financial enablement.
+- Rollback disables new access grants, transfers, cover issuance and redemption server-side while preserving already-sold admission rights, existing refund paths and the ability to inspect/reconcile records.
+- Pending invitations, holds, authorizations and provider refunds must be resolved or remain visibly frozen/recoverable; a flag flip must not erase them.
+- No rollback deletes additive fields, history, ledger entries or outbox records.
+
+## Implemented additive fields and query
+
+`v2_entitlements` now reads legacy records with purchaser-as-holder, credential version `1`, and inferred `unitKind` (`RSVP-` order ids become `free_rsvp`; other legacy ticket orders become `paid`). New issuance persists `currentHolderUserId`, `credentialVersion`, and `unitKind`. Explicit `currentHolderUserId: null` remains distinct from a missing legacy field and represents purchaser custody.
+
+The purchaser quota query uses `userId ==` and `eventId ==` on `v2_entitlements`, then filters void and non-paid ticket units in application code. A matching composite index has been added to `firestore.indexes.json`; it has **not** been deployed or emulator-validated. The hold count uses active reservations ordered by their per-event sequence and does not introduce a counter/backfill.
+
+Ticket QR version 1 retains its prior key and payload. Credential versions above 1 derive distinct per-ticket keys and use `id:version:window:signature`; online scanner admission checks the version inside the entitlement transaction. Ticket transfer now requires `m5OfflineTicketManifests=false` and `m5OfflineManifestDrainComplete=true`; the latter is an operator attestation that the 12-hour manifest and 24-hour sync grace has elapsed after offline issuance was disabled. Gateway configuration is wired, defaults transfers off/manifests on/drain false, and is documented in `.env.example`. Transfer remains disabled until offline-manifest drain is evidenced.
+
+Pending/complete transfer records use the additive `v2_ticket_transfers` collection. `v2_entitlements.pendingTransferId` and its version are updated in the same Firestore transaction as transfer creation/resolution; acceptance updates the current holder and credential version in that transaction. New invitations persist `recipientUserId: null` and only a SHA-256 verifier of the normalized recipient email. Accept/decline require a persisted verified account and pass its email verifier into the transaction; legacy direct-account records remain readable. The transfer collection query is single-field by entitlement ID. The `demo-c1rcle` Firestore Emulator test verifies concurrent pending-transfer creation, wrong-email rejection, matching email claim, ownership rotation, stale-version admission denial, freeze, redacted outbox evidence and freeze-lock release. Admin freeze/release actions audit reasons; release preserves frozen history and holder/credential version while clearing only the matching unused entitlement lock. No index deployment has run. API responses omit recipient IDs/verifiers. Guest has a manually shared invite link, a sign-in-gated explicit accept screen, and sender status/link/cancel controls that reload after reopening ticket details; C1RCLE does not send the invitation email. Durable provider delivery/resend and connected acceptance remain incomplete. Transfer stays disabled and also requires offline-manifest disable/drain attestation.
+
+RSVP creation now reads the Better Auth account from `v2_auth_users` through `UserAccountRepository` and requires `emailVerified === true`; missing or unverified accounts receive 403 before order or entitlement creation. The deterministic event/account order ID enforces one active RSVP order across tiers. This signal is account verification only and does not prove a unique human identity. No PII was added to RSVP orders.
+
+RSVP group admission is rejected by `createTicketTier` and again by `CheckoutService.createRsvp` to fail closed if a malformed/legacy tier row exists. Ticket transfer request and acceptance reject free RSVP entitlements, including legacy records inferred from the `RSVP-` order ID prefix, so transfer cannot grant a recipient another free RSVP allowance. Firestore Emulator coverage verifies Better Auth's `emailVerified` decoding (`firestore-user-account.integration.test.ts`, 1 test); service coverage includes missing/unverified accounts and RSVP transfer prohibition.
+
+Event `visibilityMode` is additive; legacy documents decode as `public`. `unlisted` events are written with `isPublic=false`, which excludes them from indexed public discovery/search without an index change. Private `code`/`invited` detail and tiers require user-bound grants; private detail is no-store/noindex and omits long-lived public poster URLs. Private access is feature-gated off by default; previous public poster URLs are not revoked, so secure media and other export/cache surfaces remain activation blockers. Optional `addressDisclosure` (`public`, `after_grant`, `hidden`) is additive. New private events default to hidden; legacy private events without the field fail closed in public detail; exact venue address is revealed after a valid event grant only when configured. This does not retract the independent public venue profile or previously issued public media URLs.
+
+Unrelated updates preserve a legacy event's stored `isPublic` value; only an explicit `visibilityMode` change recomputes discoverability. This prevents a title/summary edit from exposing a previously hidden published record. Domain regression tests cover hidden legacy rows and explicit public/unlisted changes.
+
+New group tiers can opt into `admissionMode: per_person` with a canonical `guestCount >= 2`. The hold snapshots those values; inventory, paid purchaser limits and tier per-user caps count attendee units. Fulfillment emits deterministic per-person entitlements; one per bundle is assigned to the purchaser and remaining units stay explicitly unassigned in purchaser custody. Legacy bundle/couple entitlements retain their existing one-credential multi-admit shape. Firestore emulator validation confirmed two paid bundles of three count as six tier units and one active hold counts as three. Guest wallet mapping now displays each entitlement separately. No connected migration/backfill was run.
+
+M5 cover currently has domain-only, deterministic policy/account/reserve/capture/void primitives; no persistent cover ledger, checkout integration, canonical finance postings, refund/reconciliation workflow or POS/Guest surface exists. Do not infer M5 cover from the generic legacy wallet. Cover sales/redemption remain disabled. No migration or index deployment has run. Rollback remains reader-compatible because new Event/Entitlement fields are optional; disabling new transfer/private-access/cover writes does not require deleting fields. Do not roll back to a scanner build that cannot parse versioned QR payloads after any ownership change has occurred. The offline-manifest drain flag is operational input and must not be asserted until evidence shows all previously issued manifests and sync-grace periods have elapsed.
+
+Ticket add-on grants are optional embedded entitlement data, and Firestore readers remain compatible with legacy documents that lack the field. `M5_TICKET_ADDONS_ENABLED` defaults false; the public sell projection returns no products and quote/hold reject new add-on sales while disabled, but scanner redemption of existing grants remains available. Do not enable sales until the approved seller, tax, fee, capture, refund and liability mapping is implemented and reviewed. No add-on migration or index deployment is required by the optional field.

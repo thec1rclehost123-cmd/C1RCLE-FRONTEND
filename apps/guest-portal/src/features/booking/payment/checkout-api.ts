@@ -4,13 +4,13 @@ import { isApiClientError } from '@c1rcle/api-client';
 import {
   checkoutHoldResponseSchema,
   checkoutQuoteResponseSchema,
-  entitlementsListResponseSchema,
   paymentAttemptResponseSchema,
   paymentConfirmResponseSchema,
   paymentRecoveryResponseSchema,
 } from '@c1rcle/contracts';
 
 import { bffClient } from '@/lib/bff/bff-client';
+import { csrfHeaders } from '@/lib/bff/csrf';
 
 import { pollAuthoritativePaymentStatus } from './payment-recovery-poll';
 import { openRazorpayCheckout } from './razorpay-checkout';
@@ -18,21 +18,23 @@ import { openRazorpayCheckout } from './razorpay-checkout';
 import type { PaidCheckoutDeps } from './paid-checkout';
 import type { CheckoutQuoteResponse, PaymentRecoveryResponse } from '@c1rcle/contracts';
 
-/** The double-submit CSRF token the auth BFF sets; echoed back on every write. */
-function csrfHeader(): Record<string, string> {
-  if (typeof document === 'undefined') return {};
-  const match = /(?:^|;\s*)(?:[a-zA-Z0-9_-]+\.)?c1rcle\.csrf=([^;]+)/.exec(document.cookie);
-  return match?.[1] ? { 'x-csrf-token': decodeURIComponent(match[1]) } : {};
-}
-
 const writeHeaders = (idempotencyKey?: string): Record<string, string> => ({
-  ...csrfHeader(),
+  ...csrfHeaders(),
   ...(idempotencyKey ? { 'idempotency-key': idempotencyKey } : {}),
 });
 
 export function fetchQuote(input: {
   eventId: string;
-  lines: { tierId: string; quantity: number }[];
+  lines: {
+    tierId: string;
+    quantity: number;
+    accessGrantId?: string;
+    eligibilityAttested?: boolean;
+    ticketAddons?: { addonId: string; quantityPerEntitlement: number }[];
+  }[];
+  promoCode?: string | null;
+  referralCode?: string | null;
+  upgradeFromEntitlementId?: string;
 }): Promise<CheckoutQuoteResponse> {
   return bffClient.post({
     path: '/api/checkout/quote',
@@ -75,6 +77,13 @@ export async function pollPaymentRecovery(
           throw error;
         }
       },
+      reconcile: () =>
+        bffClient.post({
+          path: '/api/payments/recovery/reconcile',
+          body: {},
+          headers: writeHeaders('m3-payment-recovery-reconcile'),
+          schema: paymentRecoveryResponseSchema,
+        }),
       pause: () => sleep(RECOVERY_POLL_INTERVAL_MS),
     },
     eventId,
@@ -84,18 +93,20 @@ export async function pollPaymentRecovery(
 }
 
 /**
- * After a payment whose redirect confirmation failed, Razorpay's webhook still
- * fulfils the order server-side. Poll the buyer's tickets (about 30 seconds)
- * until one for this event appears.
+ * After redirect confirmation fails, wait for this hold's authoritative
+ * fulfillment. A pre-existing ticket for the same event proves nothing about
+ * the current payment.
  */
-async function waitForTickets(eventId: string): Promise<boolean> {
+async function waitForTickets(eventId: string, holdId: string): Promise<boolean> {
   for (let attempt = 0; attempt < TICKET_POLL_ATTEMPTS; attempt += 1) {
     try {
-      const tickets = await bffClient.get({
-        path: '/api/wallet/tickets',
-        schema: entitlementsListResponseSchema,
+      const status = await bffClient.get({
+        path: '/api/payments/recovery',
+        schema: paymentRecoveryResponseSchema,
       });
-      if (tickets.items.some((ticket) => ticket.eventId === eventId)) return true;
+      if (status.holdId !== holdId || status.eventId !== eventId) return false;
+      if (status.status === 'fulfilled' && status.orderId !== null) return true;
+      if (status.status !== 'pending' && status.status !== 'processing') return false;
     } catch {
       // A transient failure is the same as "not yet": keep waiting.
     }
