@@ -72,7 +72,7 @@ describe('Guest Google BFF', () => {
         headers: { cookie: 'better-auth.oauth_state=synthetic' },
       }),
     );
-    expect(response.headers.get('location')).toBe(`${origin}/profile`);
+    expect(response.headers.get('location')).toBe(`${origin}/auth/continue?next=%2Fprofile`);
     expect(response.headers.get('set-cookie')).toContain('better-auth.session_token=synthetic');
     expect(response.headers.get('set-cookie')).toContain('guest.c1rcle.csrf=');
     expect(forward.mock.calls[0]?.[1].cookie).toContain(

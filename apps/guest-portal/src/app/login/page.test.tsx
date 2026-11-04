@@ -58,7 +58,7 @@ describe('LoginPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
 
     await waitFor(() => {
-      expect(replace).toHaveBeenCalledWith('/tickets');
+      expect(replace).toHaveBeenCalledWith('/auth/continue?next=%2Ftickets');
     });
     expect(mockLogin).toHaveBeenCalledWith({ email: 'g@x.com', password: 'password123' });
   });
@@ -72,7 +72,7 @@ describe('LoginPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
 
     await waitFor(() => {
-      expect(replace).toHaveBeenCalledWith('/profile');
+      expect(replace).toHaveBeenCalledWith('/auth/continue?next=%2Fexplore');
     });
   });
 

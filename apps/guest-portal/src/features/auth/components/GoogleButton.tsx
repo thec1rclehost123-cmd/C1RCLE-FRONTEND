@@ -1,15 +1,19 @@
 'use client';
 
+import Image from 'next/image';
 import { useState } from 'react';
 import { z } from 'zod';
 
 import { createApiClient } from '@c1rcle/api-client';
+
+import { captureGuestReturnFragment } from '@/lib/auth/return-fragment';
 
 export function GoogleButton({ next }: { readonly next: string }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(false);
   async function start() {
     if (pending) return;
+    captureGuestReturnFragment(next);
     setPending(true);
     setError(false);
     try {
@@ -37,8 +41,9 @@ export function GoogleButton({ next }: { readonly next: string }) {
         onClick={() => {
           void start();
         }}
-        className="min-h-12 w-full rounded-full border border-white/25 px-5 text-sm text-white disabled:opacity-50"
+        className="flex min-h-12 w-full items-center justify-center gap-3 rounded-full border border-[#747775] bg-white px-3 text-sm font-medium text-[#1F1F1F] disabled:opacity-50"
       >
+        <Image src="/auth/google-g.png" width={20} height={20} alt="" aria-hidden />
         {pending ? 'Connecting…' : 'Continue with Google'}
       </button>
       {error && (

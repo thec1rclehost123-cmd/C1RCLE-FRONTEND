@@ -44,7 +44,7 @@ export function proxy(request: NextRequest): NextResponse {
     !request.cookies.has(SECURE_SESSION_COOKIE)
   ) {
     const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('next', url.pathname);
+    loginUrl.searchParams.set('next', url.pathname + url.search);
     const response = NextResponse.redirect(loginUrl);
     response.headers.set('Cache-Control', 'private, no-store');
     response.headers.set(

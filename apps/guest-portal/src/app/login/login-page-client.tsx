@@ -8,6 +8,9 @@ import { isApiClientError } from '@c1rcle/api-client';
 import { login, useSessionStore } from '@c1rcle/auth';
 
 import { GoogleButton } from '@/features/auth/components/GoogleButton';
+import { guestContinuePath } from '@/lib/auth/continue-path';
+import { isGuestProtectedPath } from '@/lib/auth/protected-path';
+import { captureGuestReturnFragment } from '@/lib/auth/return-fragment';
 import { safeNextPath } from '@/lib/auth/safe-next-path';
 
 import {
@@ -29,16 +32,18 @@ function describeLoginError(error: unknown): string {
   return 'We could not sign you in. Check your details and try again.';
 }
 
-export function LoginPageClient() {
+export function LoginPageClient({
+  suggestedEmail = '',
+}: { readonly suggestedEmail?: string } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(suggestedEmail);
   const [password, setPassword] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const expired = searchParams.get('reason') === 'expired';
-  const nextPath = safeNextPath(searchParams.get('next'));
+  const nextPath = safeNextPath(searchParams.get('next'), '/explore');
 
   const handleSubmit = async (event: React.SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -47,11 +52,12 @@ export function LoginPageClient() {
     setPending(true);
     try {
       await login({ email: email.trim(), password });
+      captureGuestReturnFragment(nextPath);
       const user = useSessionStore.getState().session?.user;
       router.replace(
-        user?.emailVerified === false
+        user?.emailVerified === false && isGuestProtectedPath(nextPath)
           ? `/verify-email?next=${encodeURIComponent(nextPath)}`
-          : nextPath,
+          : guestContinuePath(nextPath),
       );
       router.refresh();
     } catch (caught) {

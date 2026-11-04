@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 
-import { SignupClient } from './signup-client';
+import { AuthEntryClient } from '@/features/auth/components/AuthEntryClient';
 
 import type { Metadata } from 'next';
 
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function SignupPage() {
   return (
     <Suspense fallback={null}>
-      <SignupClient />
+      <AuthEntryClient />
     </Suspense>
   );
 }

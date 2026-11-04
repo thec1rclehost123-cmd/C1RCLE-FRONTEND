@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 
+import { guestContinuePath } from '@/lib/auth/continue-path';
 import {
   forwardToGateway,
   mintCsrfToken,
@@ -28,7 +29,9 @@ export async function GET(req: NextRequest) {
     if (target.origin !== req.nextUrl.origin) return failure();
     // Keep native callback errors out of Guest URLs and text.
     if (target.searchParams.has('error')) return failure();
-    const response = NextResponse.redirect(target);
+    const response = NextResponse.redirect(
+      new URL(guestContinuePath(target.pathname + target.search + target.hash), req.url),
+    );
     rescopeSessionCookies(upstream, response);
     setCsrfCookie(response, mintCsrfToken());
     response.headers.set('cache-control', 'no-store');

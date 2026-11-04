@@ -7,7 +7,9 @@ import { useState, type SyntheticEvent } from 'react';
 import { fetchSession, signup } from '@c1rcle/auth';
 
 import { GoogleButton } from '@/features/auth/components/GoogleButton';
+import { guestContinuePath } from '@/lib/auth/continue-path';
 import { sendEmailVerification, verifyEmail } from '@/lib/auth/email-verification';
+import { captureGuestReturnFragment } from '@/lib/auth/return-fragment';
 import { safeNextPath } from '@/lib/auth/safe-next-path';
 
 import {
@@ -16,11 +18,17 @@ import {
   authInputClass,
 } from '../../features/auth/components/AuthShell';
 
-export function SignupClient({ initialEmail }: { readonly initialEmail?: string }) {
+export function SignupClient({
+  initialEmail,
+  suggestedEmail = '',
+}: {
+  readonly initialEmail?: string;
+  readonly suggestedEmail?: string;
+}) {
   const router = useRouter();
   const params = useSearchParams();
   const [name, setName] = useState('');
-  const [email, setEmail] = useState(initialEmail ?? '');
+  const [email, setEmail] = useState(initialEmail ?? suggestedEmail);
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [code, setCode] = useState('');
@@ -52,7 +60,8 @@ export function SignupClient({ initialEmail }: { readonly initialEmail?: string 
       } else {
         await verifyEmail(email.trim(), code);
         await fetchSession();
-        router.replace(safeNextPath(params.get('next')));
+        captureGuestReturnFragment(safeNextPath(params.get('next'), '/explore'));
+        router.replace(guestContinuePath(params.get('next')));
         router.refresh();
       }
     } catch {

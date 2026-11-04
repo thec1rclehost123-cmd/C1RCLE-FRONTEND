@@ -48,7 +48,7 @@ describe('Guest signup', () => {
     expect(replace).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Verify email' }));
     await vi.waitFor(() => {
-      expect(replace).toHaveBeenCalledWith('/profile');
+      expect(replace).toHaveBeenCalledWith('/auth/continue?next=%2Fexplore');
     });
     expect(verifyEmail).toHaveBeenCalledWith('synthetic@example.invalid', '123456');
   });

@@ -201,6 +201,9 @@ importers:
       '@tanstack/react-query':
         specifier: 5.101.4
         version: 5.101.4(react@19.2.8)
+      firebase:
+        specifier: 12.19.0
+        version: 12.19.0
       lucide-react:
         specifier: 1.28.0
         version: 1.28.0(react@19.2.8)
