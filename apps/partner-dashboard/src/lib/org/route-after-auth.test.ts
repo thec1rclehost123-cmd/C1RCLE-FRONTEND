@@ -1,9 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { redirectToFirstPendingInvite, resolveLandingPath } from './route-after-auth';
+import {
+  redirectToFirstPendingInvite,
+  resolveLandingPath,
+  routeAfterAuth,
+} from './route-after-auth';
 
 const mocks = vi.hoisted(() => ({
   listMyInvitations: vi.fn(),
+  getOrganizations: vi.fn(),
+  activateOrganizationWorkspace: vi.fn(),
   getPartnerAccess: vi.fn(),
   push: vi.fn(),
   replace: vi.fn(),
@@ -14,8 +20,12 @@ vi.mock('@/lib/api/staff-api', () => ({
 }));
 
 vi.mock('@/lib/org/org-repository', () => ({
-  getOrganizations: vi.fn(),
+  getOrganizations: mocks.getOrganizations,
   getPartnerAccess: mocks.getPartnerAccess,
+}));
+
+vi.mock('@/lib/org/active-org', () => ({
+  activateOrganizationWorkspace: mocks.activateOrganizationWorkspace,
 }));
 
 const router = { push: mocks.push, replace: mocks.replace } as unknown as Parameters<
@@ -108,5 +118,25 @@ describe('resolveLandingPath', () => {
     mocks.getPartnerAccess.mockRejectedValue(new Error('network down'));
 
     await expect(resolveLandingPath('org-1')).resolves.toBe('/partner/select-organization');
+  });
+});
+
+describe('routeAfterAuth', () => {
+  it('activates an approved Promoter workspace through a fresh document navigation', async () => {
+    mocks.getOrganizations.mockResolvedValue([{ id: 'approved-promoter' }]);
+    mocks.getPartnerAccess.mockResolvedValue({ partnerType: 'promoter', tabVisibility: null });
+    await routeAfterAuth(router as Parameters<typeof routeAfterAuth>[0]);
+    expect(mocks.activateOrganizationWorkspace).toHaveBeenCalledWith(
+      'approved-promoter',
+      '/partner/promoter/overview',
+    );
+    expect(mocks.push).not.toHaveBeenCalled();
+  });
+
+  it('requires membership selection when multiple organizations are available', async () => {
+    mocks.getOrganizations.mockResolvedValue([{ id: 'host-org' }, { id: 'venue-org' }]);
+    await routeAfterAuth(router as Parameters<typeof routeAfterAuth>[0]);
+    expect(mocks.push).toHaveBeenCalledWith('/partner/select-organization');
+    expect(mocks.activateOrganizationWorkspace).not.toHaveBeenCalled();
   });
 });

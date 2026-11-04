@@ -96,5 +96,6 @@ describe('PartnerStudioFrame server-authorized event routes', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent('Authorizing Partner V3');
     expect(screen.queryByText('Protected finance content')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('partner-shell')).not.toBeInTheDocument();
   });
 });

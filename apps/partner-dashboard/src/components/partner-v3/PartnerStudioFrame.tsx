@@ -66,11 +66,7 @@ export function PartnerStudioFrame({
   ]);
 
   if (clientAuthorizationLoading) {
-    return (
-      <PartnerShell studio={studio} interactionData={interactionData}>
-        <LoadingState label="Authorizing Partner V3" />
-      </PartnerShell>
-    );
+    return <LoadingState label="Authorizing Partner V3" />;
   }
 
   if ((!auth.user || !auth.isApproved || !activeRole) && !serverAuthorizedEventRoute) {

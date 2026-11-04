@@ -25,13 +25,14 @@ import { useState, useEffect, Suspense } from 'react';
 import { isApiClientError } from '@c1rcle/api-client';
 import { login, useSessionStore } from '@c1rcle/auth';
 
-import {
-  normalizePartnerRole,
-  resolvePartnerV3Path,
-} from '@/components/partner-shell/partner-role-routing';
-import { setActiveOrg } from '@/lib/org/active-org';
+import { normalizePartnerRole } from '@/components/partner-shell/partner-role-routing';
+import { activateOrganizationWorkspace } from '@/lib/org/active-org';
 import { getOrganizations } from '@/lib/org/org-repository';
-import { filterOrgsByPartnerType, redirectToFirstPendingInvite } from '@/lib/org/route-after-auth';
+import {
+  filterOrgsByPartnerType,
+  redirectToFirstPendingInvite,
+  resolveLandingPath,
+} from '@/lib/org/route-after-auth';
 import { safeNextPath } from '@/lib/safe-next-path';
 
 import type { WorkspaceType } from '@/lib/org/route-after-auth';
@@ -338,8 +339,7 @@ function LoginForm() {
       }
 
       if (matches.length === 1 && matches[0]) {
-        setActiveOrg(matches[0].id);
-        router.push(resolvePartnerV3Path(userType) ?? '/partner/select-organization');
+        activateOrganizationWorkspace(matches[0].id, await resolveLandingPath(matches[0].id));
         return;
       }
 

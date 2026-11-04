@@ -115,5 +115,8 @@ export async function POST(req: NextRequest, ctx: RouteParams): Promise<NextResp
     return passThroughGatewayError(confirmResponse.status, confirmText);
   }
 
-  return NextResponse.json(parseJson(confirmText), { status: 200 });
+  return NextResponse.json(parseJson(confirmText), {
+    status: 200,
+    headers: { 'cache-control': 'private, no-store' },
+  });
 }
