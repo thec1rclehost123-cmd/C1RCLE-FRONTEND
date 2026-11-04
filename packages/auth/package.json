@@ -6,7 +6,8 @@
   "type": "module",
   "exports": {
     ".": "./dist/index.js",
-    "./server-session": "./dist/server-session.js"
+    "./server-session": "./dist/server-session.js",
+    "./gateway-session-cookie": "./dist/gateway-session-cookie.js"
   },
   "types": "./dist/index.d.ts",
   "files": [

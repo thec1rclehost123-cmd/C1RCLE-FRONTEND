@@ -1,8 +1,7 @@
 import 'server-only';
 
 import { createApiClient } from '@c1rcle/api-client';
-
-import { withGatewaySessionCookieName } from '@/lib/api/gateway-session-cookie';
+import { withGatewaySessionCookieName } from '@c1rcle/auth/gateway-session-cookie';
 
 import type { z } from 'zod';
 

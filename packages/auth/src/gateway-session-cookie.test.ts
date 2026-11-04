@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { withGatewaySessionCookieName } from './gateway-session-cookie';
+import { withGatewaySessionCookieName } from './gateway-session-cookie.js';
 
 describe('withGatewaySessionCookieName', () => {
   it('adds the __Secure- twin with the same value, keeping every other cookie', () => {

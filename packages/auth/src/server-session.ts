@@ -3,6 +3,8 @@ import 'server-only';
 import { createApiClient } from '@c1rcle/api-client';
 import { sessionSchema } from '@c1rcle/contracts';
 
+import { withGatewaySessionCookieName } from './gateway-session-cookie.js';
+
 import type { User } from '@c1rcle/contracts';
 
 /**
@@ -27,28 +29,11 @@ export async function getServerSession(cookieHeader: string): Promise<{ user: Us
     const session = await createApiClient().get({
       path: '/api/v2/auth/session',
       schema: sessionSchema,
-      headers: { cookie: withGatewayCookieName(cookieHeader) },
+      headers: { cookie: withGatewaySessionCookieName(cookieHeader) },
     });
 
     return { user: session.user };
   } catch {
     return null;
   }
-}
-
-/**
- * The frontend stores the session cookie under the unprefixed name; a
- * production gateway (`useSecureCookies`) reads the `__Secure-` prefixed name.
- * Emit both with the same value so server-side reads resolve the session
- * whatever cookie-name configuration the gateway uses.
- */
-function withGatewayCookieName(cookieHeader: string): string {
-  if (cookieHeader.includes('__Secure-better-auth.session_token=')) {
-    return cookieHeader;
-  }
-  const match = /(?:^|;)\s*better-auth\.session_token=([^;]+)/.exec(cookieHeader);
-  if (match === null) return cookieHeader;
-  const value = match[1];
-  if (value === undefined) return cookieHeader;
-  return `${cookieHeader}; __Secure-better-auth.session_token=${value}`;
 }

@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 
 import { createApiClient } from '@c1rcle/api-client';
+import { withGatewaySessionCookieName } from '@c1rcle/auth/gateway-session-cookie';
 import { eventDtoSchema, orderDtoSchema, venueDtoSchema } from '@c1rcle/contracts';
 
 import { toBookingEventFixture } from '@/features/booking/booking-mapping';
@@ -36,10 +37,12 @@ export async function generateMetadata({ params }: ConfirmationPageProps): Promi
 async function getRealConfirmation(
   id: string,
 ): Promise<{ confirmation: BookingConfirmationFixture; event: BookingEventFixture } | null> {
-  const cookieHeader = (await cookies())
-    .getAll()
-    .map((cookie) => `${cookie.name}=${cookie.value}`)
-    .join('; ');
+  const cookieHeader = withGatewaySessionCookieName(
+    (await cookies())
+      .getAll()
+      .map((cookie) => `${cookie.name}=${cookie.value}`)
+      .join('; '),
+  );
   const client = createApiClient();
   const authed = cookieHeader.length > 0 ? { cookie: cookieHeader } : {};
 
