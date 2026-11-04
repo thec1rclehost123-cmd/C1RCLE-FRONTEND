@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 
 import { useSession } from '@c1rcle/auth';
 import { ticketTransferPreviewSchema } from '@c1rcle/contracts';
+import { useMounted } from '@c1rcle/hooks';
 import { Dialog } from '@c1rcle/ui';
 
 import { bffClient } from '@/lib/bff/bff-client';
@@ -27,6 +28,7 @@ const secondary =
 
 export function TicketTransferClaimClient({ transferId }: { transferId: string }) {
   const router = useRouter();
+  const mounted = useMounted();
   const { isAuthenticated, isLoading } = useSession();
   const [preview, setPreview] = useState<TicketTransferPreview | null>(null);
   const [readState, setReadState] = useState<'loading' | 'ready' | 'failed'>('loading');
@@ -97,7 +99,7 @@ export function TicketTransferClaimClient({ transferId }: { transferId: string }
   }
   const accepted = resolved === 'accepted' || preview?.status === 'accepted';
   const declined = resolved === 'declined' || preview?.status === 'declined';
-  if (typeof document === 'undefined') return null;
+  if (!mounted) return null;
   return createPortal(
     <Dialog
       open
