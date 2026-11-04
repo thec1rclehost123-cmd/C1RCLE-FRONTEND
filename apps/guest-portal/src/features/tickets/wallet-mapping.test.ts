@@ -401,3 +401,60 @@ describe('authoritative postponed ticket dates', () => {
     expect(wallet.pastTickets[0]?.status).toBe('cancelled');
   });
 });
+
+describe('authoritative management without an event end', () => {
+  it.each([true, false])(
+    'keeps the ticket upcoming through start plus six hours (public read: %s)',
+    async (withPublic) => {
+      const startsAt = '2026-09-23T11:00:00.000Z';
+      const managed = {
+        ...MANAGEMENT,
+        id: BASE_ENTITLEMENT.id,
+        eventId: BASE_ENTITLEMENT.eventId,
+        orderId: BASE_ENTITLEMENT.orderId,
+        startsAt,
+        endsAt: null,
+      };
+      const wallet = await toTicketWalletData(
+        withPublic ? [BASE_ENTITLEMENT] : [],
+        resolveFor({ evt_1: { ...FUTURE_EVENT, startAt: startsAt, endAt: null } }),
+        NOW,
+        [],
+        [],
+        [managed],
+      );
+      expect(wallet.upcomingTickets.map((ticket) => ticket.id)).toEqual([BASE_ENTITLEMENT.id]);
+      expect(wallet.pastTickets).toEqual([]);
+      const expired = await toTicketWalletData(
+        [],
+        () => Promise.resolve(null),
+        new Date('2026-09-23T17:00:00.000Z'),
+        [],
+        [],
+        [managed],
+      );
+      expect(expired.upcomingTickets).toEqual([]);
+      expect(expired.pastTickets.map((ticket) => ticket.id)).toEqual([BASE_ENTITLEMENT.id]);
+    },
+  );
+  it('uses current managed venue details when the public projection is stale', async () => {
+    const wallet = await toTicketWalletData(
+      [BASE_ENTITLEMENT],
+      resolveFor({ evt_1: FUTURE_EVENT }),
+      NOW,
+      [],
+      [],
+      [
+        {
+          ...MANAGEMENT,
+          id: BASE_ENTITLEMENT.id,
+          eventId: BASE_ENTITLEMENT.eventId,
+          orderId: BASE_ENTITLEMENT.orderId,
+          venueName: 'New venue',
+          venueCity: 'Pune',
+        },
+      ],
+    );
+    expect(wallet.upcomingTickets[0]).toMatchObject({ venueName: 'New venue', city: 'Pune' });
+  });
+});

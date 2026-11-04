@@ -239,6 +239,8 @@ export async function toTicketWalletData(
           ? 'postponed'
           : managed.status;
       existing.holderName = managed.holderName ?? 'Unassigned';
+      existing.venueName = managed.venueName ?? 'Venue details unavailable';
+      existing.city = managed.venueCity ?? '';
       existing.eventTitle = managed.eventTitle;
       existing.eventSlug = managed.eventSlug;
       existing.startsAt = managed.startsAt;
@@ -305,7 +307,11 @@ export async function toTicketWalletData(
     pastTickets.length = 0;
     unavailableTickets.length = 0;
     for (const item of all) {
-      const end = item.endsAt ?? item.startsAt;
+      const end =
+        item.endsAt ??
+        (item.startsAt
+          ? new Date(Date.parse(item.startsAt) + 6 * 60 * 60_000).toISOString()
+          : null);
       if (item.status === 'postponed') upcomingTickets.push(item);
       else if (item.status === 'unavailable' || (item.status === 'active' && !end))
         unavailableTickets.push(item);
