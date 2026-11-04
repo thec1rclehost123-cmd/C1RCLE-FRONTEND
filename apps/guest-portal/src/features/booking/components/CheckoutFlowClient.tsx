@@ -4,12 +4,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { z } from 'zod';
 
 import { isApiClientError } from '@c1rcle/api-client';
 import { useSession } from '@c1rcle/auth';
 import {
-  checkoutQuoteResponseSchema,
   publicTicketAddonListResponseSchema,
   publicTicketTierListResponseSchema,
   rsvpResponseSchema,
@@ -31,7 +29,7 @@ import {
 import { runPaidCheckout } from '../payment/paid-checkout';
 
 import type { BookingEventFixture } from '../types/booking.types';
-import type { CheckoutHoldResponse, CheckoutQuoteResponse } from '@c1rcle/contracts';
+import type { CheckoutQuoteResponse } from '@c1rcle/contracts';
 
 const moneyFormatter = new Intl.NumberFormat('en-IN', {
   currency: 'INR',
@@ -49,19 +47,27 @@ type CheckoutStep = 1 | 2;
 type PayState = 'idle' | 'paying' | 'processing';
 type QuoteState = 'idle' | 'loading' | 'ready' | 'error';
 
-const acceptedWaitlistOfferSchema = z.object({
-  entry: z.object({ eventId: z.string(), tierId: z.string() }),
-  holdId: z.string(),
-  expiresAt: z.iso.datetime(),
-  pricing: checkoutQuoteResponseSchema,
-});
-
 export function CheckoutFlowClient(props: {
   event: BookingEventFixture;
   initialTierId?: string | undefined;
   eventSlug?: string;
 }) {
   const accessGrantId = useTicketAccessGrantId();
+  const searchParams = useSearchParams();
+  if (searchParams.get('waitlist') === '1')
+    return (
+      <section className="mx-auto max-w-lg px-5 py-10">
+        <p role="alert" className="text-white">
+          Waitlist checkout is unavailable. Choose available tickets from the event.
+        </p>
+        <Link
+          href={`/event/${encodeURIComponent(props.eventSlug ?? props.event.id)}`}
+          className="mt-4 inline-block text-sm text-white underline"
+        >
+          Return to event
+        </Link>
+      </section>
+    );
   return (
     <CheckoutFlowClientState
       key={accessGrantId ?? 'public'}
@@ -125,13 +131,6 @@ function CheckoutFlowClientState({
     key: string;
     quote: CheckoutQuoteResponse | null;
   } | null>(null);
-  const [reservedWaitlistOffer, setReservedWaitlistOffer] = useState<{
-    eventId: string;
-    tierId: string;
-    holdId: string;
-    expiresAt: string;
-    pricing: CheckoutQuoteResponse;
-  } | null>(null);
   const [requoteCount, setRequoteCount] = useState(0);
   const [promoInput, setPromoInput] = useState('');
   const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
@@ -149,55 +148,6 @@ function CheckoutFlowClientState({
   const [eligibilityAttestedFor, setEligibilityAttestedFor] = useState<string | null>(null);
   const [alreadyOnList, setAlreadyOnList] = useState(false);
   const accent = getEventAccentClasses(event.accentTone);
-
-  useEffect(() => {
-    if (searchParams.get('waitlist') !== '1') return;
-    const entryId = sessionStorage.getItem('c1rcle.waitlist.accepted-entry-id');
-    if (!entryId) {
-      void Promise.resolve().then(() => {
-        setPayMessage(
-          'This waitlist reservation is unavailable. Return to Tickets and refresh your waitlist.',
-        );
-      });
-      return;
-    }
-    let cancelled = false;
-    void bffClient
-      .get({
-        path: `/api/waitlist/${encodeURIComponent(entryId)}`,
-        schema: acceptedWaitlistOfferSchema,
-        retries: 0,
-      })
-      .then((offer) => {
-        if (cancelled) return;
-        if (offer.entry.eventId !== event.eventId || Date.parse(offer.expiresAt) <= Date.now()) {
-          sessionStorage.removeItem('c1rcle.waitlist.accepted-entry-id');
-          setPayMessage(
-            'This waitlist reservation expired. Return to Tickets to check for another offer.',
-          );
-          return;
-        }
-        setReservedWaitlistOffer({
-          eventId: offer.entry.eventId,
-          tierId: offer.entry.tierId,
-          holdId: offer.holdId,
-          expiresAt: offer.expiresAt,
-          pricing: offer.pricing,
-        });
-        setExpandedTierId(offer.entry.tierId);
-        setQuantities({ [offer.entry.tierId]: 1 });
-        setStep(2);
-      })
-      .catch(() => {
-        if (!cancelled)
-          setPayMessage(
-            'This waitlist reservation could not be loaded. Return to Tickets and refresh your waitlist.',
-          );
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [event.eventId, searchParams]);
 
   useEffect(() => {
     if (!accessGrantId) return;
@@ -299,11 +249,6 @@ function CheckoutFlowClientState({
     0,
   );
   const totalTickets = selectedTickets.reduce((total, tier) => total + tier.quantity, 0);
-  const soleSelectedTicket = selectedTickets.length === 1 ? selectedTickets[0] : undefined;
-  const usesReservedOffer =
-    reservedWaitlistOffer?.eventId === event.eventId &&
-    soleSelectedTicket?.id === reservedWaitlistOffer.tierId &&
-    soleSelectedTicket.quantity === 1;
   // A ₹0 total is fulfilled as RSVP without the payment provider. Paid
   // selections proceed only when the authoritative event mapping allows it.
   const isFreeBooking =
@@ -326,7 +271,7 @@ function CheckoutFlowClientState({
     )
     .join('|');
   const eligibilityAttested = eligibilityAttestedFor === eligibilitySignature;
-  const eligibilityReady = usesReservedOffer || !eligibilityRequired || eligibilityAttested;
+  const eligibilityReady = !eligibilityRequired || eligibilityAttested;
 
   const canPay = (event.purchasable === true || unlockedTiers.length > 0) && !isFreeBooking;
   const lines = useMemo(
@@ -366,20 +311,14 @@ function CheckoutFlowClientState({
   const wantsQuote = step === 2 && canPay && lines.length > 0;
   const quoteKey = `${event.eventId}|${lineSignature}|${upgradeFromEntitlementId ?? ''}|${appliedPromo ?? ''}|${referralCode ?? ''}|${String(requoteCount)}`;
   const currentQuote = quoteResult?.key === quoteKey ? quoteResult : null;
-  const quote = wantsQuote
-    ? usesReservedOffer
-      ? reservedWaitlistOffer.pricing
-      : (currentQuote?.quote ?? null)
-    : null;
+  const quote = wantsQuote ? (currentQuote?.quote ?? null) : null;
   const quoteState: QuoteState = !wantsQuote
     ? 'idle'
-    : usesReservedOffer
-      ? 'ready'
-      : currentQuote === null
-        ? 'loading'
-        : currentQuote.quote === null
-          ? 'error'
-          : 'ready';
+    : currentQuote === null
+      ? 'loading'
+      : currentQuote.quote === null
+        ? 'error'
+        : 'ready';
 
   // The hold id is retained only in an httpOnly, short-lived BFF cookie. On a
   // reload, check the owner-scoped backend status before enabling another pay
@@ -441,7 +380,7 @@ function CheckoutFlowClientState({
   const discountPaise = quote?.discountPaise ?? 0;
   // Price the selection on the server when the buyer reaches the payment step.
   useEffect(() => {
-    if (!wantsQuote || usesReservedOffer) return;
+    if (!wantsQuote) return;
     let cancelled = false;
     fetchQuote({
       eventId: event.eventId,
@@ -463,7 +402,6 @@ function CheckoutFlowClientState({
     };
   }, [
     wantsQuote,
-    usesReservedOffer,
     quoteKey,
     event.eventId,
     lines,
@@ -490,27 +428,14 @@ function CheckoutFlowClientState({
       promoCode: appliedPromo,
       ...(referralCode ? { referralCode } : {}),
       ...(upgradeFromEntitlementId ? { upgradeFromEntitlementId } : {}),
-      ...(usesReservedOffer
-        ? {
-            reservedHold: {
-              holdId: reservedWaitlistOffer.holdId,
-              expiresAt: reservedWaitlistOffer.expiresAt,
-              status: 'active',
-              convertedOrderId: null,
-              pricing: reservedWaitlistOffer.pricing,
-            } satisfies CheckoutHoldResponse,
-          }
-        : {}),
     });
 
     switch (result.kind) {
       case 'confirmed':
-        sessionStorage.removeItem('c1rcle.waitlist.accepted-entry-id');
         await clearPaymentRecovery().catch(() => undefined);
         router.push(`/confirmation/${encodeURIComponent(result.orderId)}`);
         return;
       case 'processing':
-        sessionStorage.removeItem('c1rcle.waitlist.accepted-entry-id');
         setPayState('processing');
         if (result.ticketsReady) router.push('/tickets');
         return;
@@ -522,7 +447,6 @@ function CheckoutFlowClientState({
         setRequoteCount((count) => count + 1);
         break;
       case 'refunded':
-        sessionStorage.removeItem('c1rcle.waitlist.accepted-entry-id');
         // Final: the money is already on its way back, so nothing is pending and
         // there is nothing to retry against this hold.
         setPayMessage(result.message);

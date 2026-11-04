@@ -1,15 +1,19 @@
 'use client';
 
 import Image from 'next/image';
-import Link from 'next/link';
 import { useState } from 'react';
+
+import { summarizeTicketTiers } from '../booking-ticket-groups';
+import { formatEventTitle } from '../ticket-presentation';
 
 import type { UserTicketItem } from '../types/tickets.types';
 import type { ReactNode } from 'react';
 
 export interface UserTicketCardProps {
   ticket: UserTicketItem;
+  bookingTickets?: readonly UserTicketItem[];
   onSelect: (ticket: UserTicketItem) => void;
+  onShowQr?: ((ticket: UserTicketItem) => void) | undefined;
   onAddToCalendar: (ticket: UserTicketItem) => void;
   isPast?: boolean;
   isSelected?: boolean;
@@ -17,13 +21,44 @@ export interface UserTicketCardProps {
 
 export function UserTicketCard({
   ticket,
+  bookingTickets = [ticket],
   onSelect,
+  onShowQr,
   onAddToCalendar,
   isPast = false,
   isSelected = false,
 }: UserTicketCardProps) {
   const [posterUnavailable, setPosterUnavailable] = useState(false);
   const hasPoster = ticket.posterUrl !== '/c1rcle-logo.webp' && !posterUnavailable;
+  const isActive =
+    !isPast &&
+    bookingTickets.every(
+      (item) =>
+        item.status === 'active' &&
+        item.management?.eventStatus !== 'postponed' &&
+        item.custody !== 'unassigned' &&
+        item.management?.ownership !== 'transferred',
+    );
+  const canShowQr = ticket.management?.canPresent === true;
+  const showQr = () => {
+    (onShowQr ?? onSelect)(ticket);
+  };
+  const tiers = summarizeTicketTiers(bookingTickets);
+  const statusLabel = [
+    ...new Set(
+      bookingTickets.map((item) =>
+        item.management?.eventStatus === 'postponed'
+          ? 'Postponed'
+          : item.management?.ownership === 'transferred'
+            ? 'Transferred'
+            : item.custody === 'unassigned'
+              ? 'Unassigned'
+              : isPast && item.status === 'active'
+                ? 'Past'
+                : item.status.replace('_', ' '),
+      ),
+    ),
+  ].join(' · ');
   const eventTitle = formatEventTitle(ticket.eventTitle);
   const eventDate = formatEventDate(ticket.date);
   const eventDay =
@@ -41,6 +76,13 @@ export function UserTicketCard({
             : 'border-[#ff6842]/20 shadow-[0_0_38px_-20px_rgba(255,82,38,0.42),0_16px_42px_-28px_rgba(0,0,0,0.9)] hover:border-[#ff6842]/45 hover:shadow-[0_0_48px_-16px_rgba(255,82,38,0.5),0_18px_44px_-26px_rgba(0,0,0,0.95)]'
         }`}
       >
+        <button
+          type="button"
+          aria-label={`Open ticket QR for ${eventTitle}`}
+          disabled={!canShowQr}
+          onClick={showQr}
+          className="absolute inset-0 z-10 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#ff6842] enabled:cursor-pointer disabled:cursor-default"
+        />
         {hasPoster ? (
           <Image
             src={ticket.posterUrl}
@@ -66,18 +108,33 @@ export function UserTicketCard({
             {eventDay}
           </span>
         ) : null}
+        {isActive ? (
+          <span
+            role="img"
+            aria-label="Active ticket"
+            title="Active ticket"
+            className="pointer-events-none absolute right-3 top-3 z-10 text-emerald-400 sm:right-4 sm:top-4"
+          >
+            <svg aria-hidden="true" className="size-5 sm:size-6" viewBox="0 0 24 24" fill="none">
+              <path
+                d="m12 2 2.8 1.6 3.2.2 1.4 2.9 2.5 2-.6 3.2.6 3.2-2.5 2-1.4 2.9-3.2.2L12 22l-2.8-1.6-3.2-.2-1.4-2.9-2.5-2 .6-3.2-.6-3.2 2.5-2L6 3.8l3.2-.2L12 2Z"
+                fill="currentColor"
+              />
+              <path
+                d="m7.8 12 2.7 2.7 5.7-5.7"
+                stroke="#061710"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+        ) : null}
         <div className="relative flex flex-1 flex-col px-3 pb-3 pt-4 sm:px-5 sm:pb-5 sm:pt-6">
-          <h2 className="line-clamp-2 text-center text-base font-semibold leading-tight tracking-[-0.04em] sm:text-xl">
-            {ticket.eventSlug ? (
-              <Link
-                href={`/event/${encodeURIComponent(ticket.eventSlug)}`}
-                className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6842]"
-              >
-                {eventTitle}
-              </Link>
-            ) : (
-              eventTitle
-            )}
+          <h2
+            className={`line-clamp-2 text-center text-base font-semibold leading-tight tracking-[-0.04em] sm:text-xl ${isActive ? 'px-6' : ''}`}
+          >
+            {eventTitle}
           </h2>
           <div className="mt-2 flex min-h-5 items-center justify-center gap-1.5 text-center text-[10px] leading-4 text-white/70 sm:text-xs">
             <CalendarGlyph />
@@ -87,27 +144,35 @@ export function UserTicketCard({
             </span>
           </div>
 
-          <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 text-[11px] sm:mt-5 sm:gap-x-3 sm:text-sm">
-            <span className="flex min-w-0 items-center gap-2 text-left text-white/90">
-              <TicketGlyph />
-              <span className="line-clamp-2 min-w-0 leading-4">{ticket.tierName}</span>
-            </span>
-            <span className="whitespace-nowrap text-right tabular-nums text-white/80">
-              {ticket.ticketCount} {ticket.ticketCount === 1 ? 'pass' : 'passes'}
-            </span>
-          </div>
-          <div className="mt-2 flex items-center justify-between gap-2">
-            <span className="rounded-full border border-white/15 px-2 py-1 text-[8px] font-bold uppercase tracking-[0.1em] text-white/60 sm:text-[9px]">
-              {isPast && ticket.status === 'active' ? 'Past' : ticket.status.replace('_', ' ')}
-            </span>
-          </div>
+          <dl aria-label="Ticket tiers" className="mt-4 space-y-2 text-[11px] sm:mt-5 sm:text-sm">
+            {tiers.map((tier) => (
+              <div
+                key={tier.key}
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3"
+              >
+                <dt className="flex min-w-0 items-start gap-2 text-white/90">
+                  <TicketGlyph />
+                  <span className="min-w-0 break-words leading-5">{tier.name}</span>
+                </dt>
+                <dd className="whitespace-nowrap text-right leading-5 tabular-nums text-white/80">
+                  ×{tier.quantity}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          {!isActive ? (
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <span className="rounded-full border border-white/15 px-2 py-1 text-[8px] font-bold uppercase tracking-[0.1em] text-white/60 sm:text-[9px]">
+                {statusLabel}
+              </span>
+            </div>
+          ) : null}
 
-          <div className="mt-auto grid grid-cols-4 place-items-center pt-3">
+          <div className="relative z-20 mt-auto grid grid-cols-4 place-items-center pt-3">
             <ActionButton
               label={`Show QR code for ${eventTitle}`}
-              onClick={() => {
-                onSelect(ticket);
-              }}
+              disabled={!canShowQr}
+              onClick={showQr}
             >
               <QrGlyph />
             </ActionButton>
@@ -242,20 +307,6 @@ function CalendarGlyph() {
       />
     </svg>
   );
-}
-
-function formatEventTitle(value: string) {
-  return value
-    .replace(/-\d{8}(?:-\d+)?(?:-.*)?$/i, '')
-    .replace(/[-_]+/g, ' ')
-    .replace(/\bcap(\d+)\b/gi, 'Cap $1')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .replace(/\b\w+/g, (word) => {
-      if (/^m\d+$/i.test(word)) return word.toUpperCase();
-      if (word.toLowerCase() === 'rsvp') return 'RSVP';
-      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-    });
 }
 
 function formatEventDate(value: string) {

@@ -1,6 +1,7 @@
 import type { TicketStatus, TicketWalletData, UserTicketItem } from './types/tickets.types';
 import type {
   EntitlementDto,
+  ManagedTicket,
   EventCoverWalletItemDto,
   EventDto,
   OrderDto,
@@ -61,6 +62,7 @@ export async function toTicketWalletData(
   now: Date = new Date(),
   orders: readonly OrderDto[] = [],
   eventCovers: readonly EventCoverWalletItemDto[] = [],
+  managedTickets?: readonly ManagedTicket[],
 ): Promise<TicketWalletData> {
   const ordersById = new Map(orders.map((order) => [order.id, order]));
   const eventCoversByEntitlement = new Map(
@@ -135,6 +137,7 @@ export async function toTicketWalletData(
         city: '',
         posterUrl: FALLBACK_POSTER,
         tierName: first.tierName,
+        tierId: first.tierId,
         isVip: /vip/i.test(first.tierName),
         ticketCount: 1,
         status: status === 'active' ? 'unavailable' : status,
@@ -155,8 +158,15 @@ export async function toTicketWalletData(
     }
 
     const { event, venue } = details;
-    const status = toTicketStatus(group, order);
-    const endsAt = event.endAt ?? event.startAt;
+    const entitlementStatus = toTicketStatus(group, order);
+    const status =
+      event.status === 'cancelled'
+        ? 'cancelled'
+        : event.status === 'postponed' && entitlementStatus === 'active'
+          ? 'postponed'
+          : entitlementStatus;
+    const endsAt =
+      event.endAt ?? new Date(Date.parse(event.startAt) + 6 * 60 * 60_000).toISOString();
     const ended = Number.isNaN(Date.parse(endsAt)) ? false : Date.parse(endsAt) <= now.getTime();
     const startsAt = new Date(event.startAt);
 
@@ -165,8 +175,8 @@ export async function toTicketWalletData(
       orderId: first.orderId,
       eventId: event.id,
       eventSlug: event.slug,
-      startsAt: event.startAt,
-      endsAt: event.endAt ?? null,
+      startsAt: event.status === 'postponed' ? null : event.startAt,
+      endsAt: event.status === 'postponed' ? null : (event.endAt ?? null),
       bookingReference: order?.bookingReference ?? null,
       holderName:
         first.currentHolderUserId === null && first.userId
@@ -176,12 +186,21 @@ export async function toTicketWalletData(
         ? { custody: 'unassigned' as const }
         : {}),
       eventTitle: event.title,
-      date: Number.isNaN(startsAt.getTime()) ? event.title : dateFormatter.format(startsAt),
-      time: Number.isNaN(startsAt.getTime()) ? '' : `${timeFormatter.format(startsAt)} IST`,
+      date:
+        event.status === 'postponed'
+          ? 'New date to be announced'
+          : Number.isNaN(startsAt.getTime())
+            ? event.title
+            : dateFormatter.format(startsAt),
+      time:
+        event.status === 'postponed' || Number.isNaN(startsAt.getTime())
+          ? ''
+          : `${timeFormatter.format(startsAt)} IST`,
       venueName: venue?.name ?? 'Venue TBA',
       city: venue?.city ?? '',
       posterUrl: event.imageUrl ?? FALLBACK_POSTER,
       tierName: first.tierName,
+      tierId: first.tierId,
       isVip: /vip/i.test(first.tierName),
       ticketCount: 1,
       status,
@@ -198,14 +217,109 @@ export async function toTicketWalletData(
       ...coverSummary(eventCoversByEntitlement.get(first.id)),
     };
 
-    if (status === 'active' && !ended) {
+    if (status === 'postponed' || (status === 'active' && !ended)) {
       upcomingTickets.push(ticket);
     } else {
       pastTickets.push(ticket);
     }
   }
 
-  return { upcomingTickets, pastTickets, unavailableTickets };
+  const known = new Map(
+    [...upcomingTickets, ...pastTickets, ...unavailableTickets].map((ticket) => [
+      ticket.id,
+      ticket,
+    ]),
+  );
+  for (const managed of managedTickets ?? []) {
+    const existing = known.get(managed.id);
+    if (existing) {
+      existing.management = managed;
+      existing.status =
+        managed.eventStatus === 'postponed' && managed.status === 'active'
+          ? 'postponed'
+          : managed.status;
+      existing.holderName = managed.holderName ?? 'Unassigned';
+      existing.eventTitle = managed.eventTitle;
+      existing.eventSlug = managed.eventSlug;
+      existing.startsAt = managed.startsAt;
+      existing.endsAt = managed.endsAt;
+      existing.date = managed.eventStatus === 'postponed' ? 'New date to be announced' : '';
+      existing.time = '';
+      if (managed.startsAt && !Number.isNaN(Date.parse(managed.startsAt))) {
+        const start = new Date(managed.startsAt);
+        existing.startsAt = managed.startsAt;
+        existing.endsAt = managed.endsAt;
+        existing.date = dateFormatter.format(start);
+        existing.time = `${timeFormatter.format(start)} IST`;
+        existing.eventTitle = managed.eventTitle;
+        existing.eventSlug = managed.eventSlug;
+      }
+      continue;
+    }
+    const start = managed.startsAt ? new Date(managed.startsAt) : null;
+    const validDate = start && !Number.isNaN(start.getTime());
+    const item: UserTicketItem = {
+      id: managed.id,
+      orderId: managed.orderId,
+      eventId: managed.eventId,
+      tierId: managed.tierId,
+      tierName: managed.tierName,
+      bookingReference: managed.bookingReference,
+      holderName: managed.holderName ?? 'Unassigned',
+      management: managed,
+      eventTitle: managed.eventTitle,
+      eventSlug: managed.eventSlug,
+      startsAt: managed.startsAt,
+      endsAt: managed.endsAt,
+      date:
+        managed.eventStatus === 'postponed'
+          ? 'New date to be announced'
+          : validDate
+            ? dateFormatter.format(start)
+            : '',
+      time: validDate ? `${timeFormatter.format(start)} IST` : '',
+      venueName: managed.venueName ?? 'Venue details unavailable',
+      city: managed.venueCity ?? '',
+      posterUrl: managed.posterUrl ?? FALLBACK_POSTER,
+      ticketCount: 1,
+      status:
+        managed.eventStatus === 'postponed' && managed.status === 'active'
+          ? 'postponed'
+          : managed.status,
+      ...(managed.ownership === 'unassigned' ? { custody: 'unassigned' as const } : {}),
+    };
+    const end =
+      managed.endsAt ??
+      (managed.startsAt
+        ? new Date(Date.parse(managed.startsAt) + 6 * 60 * 60_000).toISOString()
+        : null);
+    if (item.status === 'postponed') upcomingTickets.push(item);
+    else if (managed.status !== 'active' || (end && Date.parse(end) <= now.getTime()))
+      pastTickets.push(item);
+    else if (validDate) upcomingTickets.push(item);
+    else unavailableTickets.push(item);
+  }
+  if (managedTickets !== undefined) {
+    const all = [...upcomingTickets, ...pastTickets, ...unavailableTickets];
+    upcomingTickets.length = 0;
+    pastTickets.length = 0;
+    unavailableTickets.length = 0;
+    for (const item of all) {
+      const end = item.endsAt ?? item.startsAt;
+      if (item.status === 'postponed') upcomingTickets.push(item);
+      else if (item.status === 'unavailable' || (item.status === 'active' && !end))
+        unavailableTickets.push(item);
+      else if (item.status === 'active' && end && Date.parse(end) > now.getTime())
+        upcomingTickets.push(item);
+      else pastTickets.push(item);
+    }
+  }
+  return {
+    upcomingTickets,
+    pastTickets,
+    unavailableTickets,
+    ownershipAvailable: managedTickets !== undefined,
+  };
 }
 
 function coverSummary(cover: EventCoverWalletItemDto | undefined) {

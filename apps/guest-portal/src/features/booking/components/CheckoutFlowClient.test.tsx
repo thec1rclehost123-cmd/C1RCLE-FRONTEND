@@ -117,6 +117,20 @@ beforeEach(() => {
 });
 
 describe('paid checkout step', () => {
+  it('refuses a direct waitlist checkout URL without reading or consuming its reservation', () => {
+    mocks.searchParams = 'waitlist=1&tier=tier_1';
+    window.sessionStorage.setItem('c1rcle.waitlist.accepted-entry-id', 'legacy-offer');
+    vi.mocked(bffClient.get).mockClear();
+    render(<CheckoutView event={LIVE_EVENT} initialTierId="tier_1" />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Waitlist checkout is unavailable');
+    expect(screen.queryByRole('button', { name: 'Review order →' })).not.toBeInTheDocument();
+    expect(bffClient.get).not.toHaveBeenCalled();
+    expect(mocks.fetchQuote).not.toHaveBeenCalled();
+    expect(mocks.pollPaymentRecovery).not.toHaveBeenCalled();
+    expect(mocks.deps.createHold).not.toHaveBeenCalled();
+    expect(mocks.deps.createAttempt).not.toHaveBeenCalled();
+  });
+
   it('removes a failed checkout poster without losing ticket selection', () => {
     render(<CheckoutView event={LIVE_EVENT} />);
     fireEvent.error(screen.getByRole('img', { name: 'Sky Night event poster' }));

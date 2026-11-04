@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { MANAGEMENT } from './fixtures/ticket-management.test-fixtures';
 import { toTicketWalletData } from './wallet-mapping';
 
 import type { WalletEventDetails } from './wallet-mapping';
@@ -331,5 +332,72 @@ describe('toTicketWalletData', () => {
     expect(wallet.upcomingTickets[0]?.ticketAddons).toEqual([
       { id: 'TAE-parking-1', name: 'Parking pass', kind: 'parking', status: 'active' },
     ]);
+  });
+});
+
+describe('authoritative postponed ticket dates', () => {
+  const postponed = {
+    ...MANAGEMENT,
+    id: BASE_ENTITLEMENT.id,
+    eventId: BASE_ENTITLEMENT.eventId,
+    orderId: BASE_ENTITLEMENT.orderId,
+    eventStatus: 'postponed' as const,
+    startsAt: null,
+    endsAt: null,
+    canPresent: false,
+    canTransfer: false,
+  };
+  it('clears a stale public schedule and keeps the preserved ticket upcoming', async () => {
+    const wallet = await toTicketWalletData(
+      [BASE_ENTITLEMENT],
+      resolveFor({
+        evt_1: {
+          ...FUTURE_EVENT,
+          startAt: '2025-01-01T00:00:00.000Z',
+          endAt: '2025-01-02T00:00:00.000Z',
+        },
+      }),
+      NOW,
+      [],
+      [],
+      [postponed],
+    );
+    expect(wallet.upcomingTickets).toHaveLength(1);
+    expect(wallet.upcomingTickets[0]).toMatchObject({
+      status: 'postponed',
+      startsAt: null,
+      endsAt: null,
+      date: 'New date to be announced',
+      time: '',
+    });
+    expect(wallet.pastTickets).toEqual([]);
+    expect(wallet.unavailableTickets).toEqual([]);
+  });
+  it('keeps a management-only postponed booking visible without a public event read', async () => {
+    const wallet = await toTicketWalletData(
+      [],
+      () => Promise.resolve(null),
+      NOW,
+      [],
+      [],
+      [postponed],
+    );
+    expect(wallet.upcomingTickets[0]).toMatchObject({
+      status: 'postponed',
+      date: 'New date to be announced',
+    });
+    expect(wallet.unavailableTickets).toEqual([]);
+  });
+  it('moves authoritative cancellation out of upcoming before entitlement voiding', async () => {
+    const wallet = await toTicketWalletData(
+      [BASE_ENTITLEMENT],
+      resolveFor({ evt_1: FUTURE_EVENT }),
+      NOW,
+      [],
+      [],
+      [{ ...postponed, eventStatus: 'cancelled', status: 'cancelled' }],
+    );
+    expect(wallet.upcomingTickets).toEqual([]);
+    expect(wallet.pastTickets[0]?.status).toBe('cancelled');
   });
 });

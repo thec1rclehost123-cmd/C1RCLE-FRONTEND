@@ -358,7 +358,7 @@ export function EventDetailView({
             ) : event.ticketTiers.some((tier) => tier.availableQuantity === 0) ? (
               <details className="mt-4 rounded-2xl border border-white/10 bg-black/55 p-3">
                 <summary className="cursor-pointer px-2 py-2 text-xs font-bold text-white/75">
-                  Waitlist and additional ticket options
+                  Ticket availability and options
                 </summary>
                 <div className="mt-3">
                   <EventTicketSelectorClient

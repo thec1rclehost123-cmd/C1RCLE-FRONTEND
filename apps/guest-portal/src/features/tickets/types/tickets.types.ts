@@ -1,9 +1,18 @@
+import type { ManagedTicket } from '@c1rcle/contracts';
+
 // FIXTURE_ONLY: Temporary UI development tickets view models.
 
 export type TicketCategory = 'GENERAL' | 'STAG' | 'VIP' | 'COUPLE' | 'GROUP';
 export type TicketTab = 'upcoming' | 'past';
 export type TicketStatus =
-  'active' | 'used' | 'cancelled' | 'pending' | 'refund_pending' | 'refunded' | 'unavailable';
+  | 'active'
+  | 'postponed'
+  | 'used'
+  | 'cancelled'
+  | 'pending'
+  | 'refund_pending'
+  | 'refunded'
+  | 'unavailable';
 
 export interface TicketShowcaseItem {
   id: number;
@@ -22,6 +31,7 @@ export interface UserTicketItem {
   endsAt?: string | null;
   bookingReference: string | null;
   holderName: string;
+  management?: ManagedTicket;
   eventTitle: string;
   date: string;
   time: string;
@@ -29,6 +39,7 @@ export interface UserTicketItem {
   city: string;
   posterUrl: string;
   tierName: string;
+  tierId?: string;
   isVip?: boolean;
   ticketCount: number;
   status: TicketStatus;
@@ -59,6 +70,7 @@ export interface PendingReservationAlert {
 }
 
 export interface TicketWalletData {
+  ownershipAvailable?: boolean;
   upcomingTickets: UserTicketItem[];
   pastTickets: UserTicketItem[];
   /** Active entitlements with unknown event timing after a failed details read. */

@@ -5,6 +5,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useSession } from '@c1rcle/auth';
 import {
   entitlementsListResponseSchema,
+  managedTicketListSchema,
+  managedTicketSchema,
   eventCoverWalletResponseSchema,
   eventDtoSchema,
   ordersListResponseSchema,
@@ -17,10 +19,31 @@ import { bffClient } from '@/lib/bff/bff-client';
 import { EventChangeNoticesClient } from '../../features/tickets/components/EventChangeNoticesClient';
 import { TicketsGuestView } from '../../features/tickets/components/TicketsGuestView';
 import { UserTicketsView } from '../../features/tickets/components/UserTicketsView';
-import { WaitlistOffersClient } from '../../features/tickets/components/WaitlistOffersClient';
 import { toTicketWalletData } from '../../features/tickets/wallet-mapping';
 
 import type { TicketWalletData } from '../../features/tickets/types/tickets.types';
+import type { ManagedTicket } from '@c1rcle/contracts';
+
+async function loadPurchasedTickets(): Promise<ManagedTicket[]> {
+  const items: ManagedTicket[] = [];
+  const seen = new Set<string>();
+  let cursor: string | null = null;
+  do {
+    const page: { items: ManagedTicket[]; nextCursor: string | null; total: number } =
+      await bffClient.get({
+        path: '/api/wallet/booking-tickets',
+        query: cursor ? { cursor } : {},
+        schema: managedTicketListSchema,
+        timeoutMs: 15_000,
+        retries: 0,
+      });
+    items.push(...page.items);
+    cursor = page.nextCursor;
+    if (cursor && seen.has(cursor)) throw new Error('Booking pagination did not advance');
+    if (cursor) seen.add(cursor);
+  } while (cursor);
+  return items;
+}
 
 const WALLET_READ_TIMEOUT_MS = 15_000;
 const WALLET_ENRICHMENT_TIMEOUT_MS = 10_000;
@@ -68,6 +91,7 @@ export function TicketsClient() {
             timeoutMs: WALLET_READ_TIMEOUT_MS,
             retries: 0,
           }),
+          loadPurchasedTickets(),
           bffClient.get({
             path: '/api/wallet/orders',
             query: { limit: 50 },
@@ -77,8 +101,25 @@ export function TicketsClient() {
           }),
         ]);
       })
-      .then(([tickets, eventCovers, orders]) =>
-        toTicketWalletData(
+      .then(async ([tickets, eventCovers, purchasedTickets, orders]) => {
+        const managedTickets = [...purchasedTickets];
+        const known = new Set(managedTickets.map((ticket) => ticket.id));
+        const received = tickets.items.filter((ticket) => !known.has(ticket.id));
+        for (let index = 0; index < received.length; index += 6) {
+          managedTickets.push(
+            ...(await Promise.all(
+              received.slice(index, index + 6).map((ticket) =>
+                bffClient.get({
+                  path: `/api/tickets/${encodeURIComponent(ticket.id)}/management`,
+                  schema: managedTicketSchema,
+                  timeoutMs: WALLET_READ_TIMEOUT_MS,
+                  retries: 0,
+                }),
+              ),
+            )),
+          );
+        }
+        return toTicketWalletData(
           tickets.items,
           async (eventId) => {
             const event = await apiClient
@@ -105,8 +146,9 @@ export function TicketsClient() {
           new Date(),
           orders.items,
           eventCovers,
-        ),
-      )
+          managedTickets,
+        );
+      })
       .then((data) => {
         if (!cancelled) setWalletState({ kind: 'ready', wallet: data });
       })
@@ -153,11 +195,8 @@ export function TicketsClient() {
         </div>
       ) : (
         <>
-          <div className="relative z-10 mx-auto w-full max-w-5xl px-4 pt-24 sm:px-6">
-            <EventChangeNoticesClient />
-            <WaitlistOffersClient />
-          </div>
-          <UserTicketsView wallet={walletState.wallet} />
+          <EventChangeNoticesClient />
+          <UserTicketsView wallet={walletState.wallet} onRefresh={retry} />
         </>
       )}
     </div>
