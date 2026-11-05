@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 
@@ -92,18 +91,6 @@ export function PartnerStudioFrame({
         </PageContainer>
       ) : (
         <>
-          {studio !== 'promoter' &&
-            ['owner', 'admin', 'manager'].includes(auth.profile?.activeMembership?.role ?? '') &&
-            !pathname.endsWith('/social-guestlists') && (
-              <div className="flex justify-end px-5 pt-4">
-                <Link
-                  href={`/partner/${studio}/social-guestlists`}
-                  className="inline-flex min-h-10 items-center text-sm text-muted-foreground underline underline-offset-4"
-                >
-                  Guestlist privacy
-                </Link>
-              </div>
-            )}
           {children}
         </>
       )}
