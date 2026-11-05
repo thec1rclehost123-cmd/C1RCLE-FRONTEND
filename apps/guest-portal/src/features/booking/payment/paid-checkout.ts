@@ -70,6 +70,9 @@ export interface PaidCheckoutInput {
   readonly reservedHold?: CheckoutHoldResponse;
 }
 
+export const PAYMENT_SUPPORT_MESSAGE =
+  'We could not reconcile the existing checkout automatically. Contact support before trying again. No replacement payment has been started; keep this checkout available for support.';
+
 export type PaidCheckoutResult =
   | { readonly kind: 'confirmed'; readonly orderId: string }
   /** Paid, but the server has not confirmed yet; the webhook will finish the job. */
@@ -84,6 +87,7 @@ export type PaidCheckoutResult =
   /** Authoritative server evidence confirms the completed refund. */
   | { readonly kind: 'refunded'; readonly message: string }
   | { readonly kind: 'cancelled'; readonly reason?: string }
+  | { readonly kind: 'requires_support'; readonly message: string }
   | { readonly kind: 'unavailable' }
   | { readonly kind: 'error'; readonly message: string };
 
@@ -214,6 +218,15 @@ function refundOutcome(error: unknown): PaidCheckoutResult | null {
 
 function failureBeforePayment(error: unknown): PaidCheckoutResult {
   const { status, code } = errorFacts(error);
+  const message =
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof error.message === 'string'
+      ? error.message
+      : '';
+  if (status !== undefined && status >= 400 && status < 500 && /\brequires_support\b/.test(message))
+    return { kind: 'requires_support', message: PAYMENT_SUPPORT_MESSAGE };
   if (status === 503) return { kind: 'unavailable' };
   if (status === 409 || code === 'conflict') {
     return {

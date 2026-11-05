@@ -299,6 +299,50 @@ describe('paid checkout step', () => {
     expect(mocks.clearPaymentRecovery).toHaveBeenCalledTimes(1);
   });
 
+  it('preserves an uncertain recovered creation and never enables or creates a replacement payment', async () => {
+    mocks.pollPaymentRecovery.mockImplementation((_eventId, onStatus) => {
+      const status = {
+        holdId: 'hold_uncertain',
+        eventId: 'evt_1',
+        status: 'requires_support',
+        orderId: null,
+        expiresAt: '2026-11-04T00:00:00Z',
+        updatedAt: '2026-11-04T00:00:00Z',
+      };
+      (onStatus as (value: typeof status) => void)(status);
+      return Promise.resolve(status);
+    });
+    toPaymentStep();
+    const pay = await screen.findByRole('button', { name: 'Pay ₹1,180' });
+    await screen.findByText(/Contact support before trying again/);
+    expect(pay).toBeDisabled();
+    fireEvent.click(pay);
+    expect(mocks.clearPaymentRecovery).not.toHaveBeenCalled();
+    expect(mocks.deps.createHold).not.toHaveBeenCalled();
+    expect(mocks.deps.createAttempt).not.toHaveBeenCalled();
+    expect(mocks.deps.openCheckout).not.toHaveBeenCalled();
+  });
+
+  it('blocks replacement creation immediately when the server marks the initial attempt requires_support', async () => {
+    mocks.deps = deps({
+      createAttempt: vi.fn().mockRejectedValue({
+        status: 400,
+        code: 'invalid_operation',
+        message: 'Payment creation requires_support; provider identity is unresolved',
+      }),
+    });
+    toPaymentStep();
+    fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180' }));
+    await screen.findByText(/Contact support before trying again/);
+    const pay = screen.getByRole('button', { name: 'Pay ₹1,180' });
+    expect(pay).toBeDisabled();
+    fireEvent.click(pay);
+    expect(mocks.deps.createHold).toHaveBeenCalledTimes(1);
+    expect(mocks.deps.createAttempt).toHaveBeenCalledTimes(1);
+    expect(mocks.deps.openCheckout).not.toHaveBeenCalled();
+    expect(mocks.clearPaymentRecovery).not.toHaveBeenCalled();
+  });
+
   it('keeps a timed-out recovered payment in a safe processing state', async () => {
     mocks.pollPaymentRecovery.mockImplementation((_eventId, onStatus) => {
       const status = {

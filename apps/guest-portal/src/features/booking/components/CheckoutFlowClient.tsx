@@ -26,7 +26,7 @@ import {
   paidCheckoutDeps,
   pollPaymentRecovery,
 } from '../payment/checkout-api';
-import { runPaidCheckout } from '../payment/paid-checkout';
+import { PAYMENT_SUPPORT_MESSAGE, runPaidCheckout } from '../payment/paid-checkout';
 
 import { BookingFeeDisclosure } from './BookingFeeDisclosure';
 
@@ -47,7 +47,7 @@ const dateFormatter = new Intl.DateTimeFormat('en-IN', {
 });
 
 type CheckoutStep = 1 | 2;
-type PayState = 'idle' | 'paying' | 'processing' | 'refund_pending';
+type PayState = 'idle' | 'paying' | 'processing' | 'refund_pending' | 'requires_support';
 type QuoteState = 'idle' | 'loading' | 'ready' | 'error';
 
 export function CheckoutFlowClient(props: {
@@ -359,6 +359,11 @@ function CheckoutFlowClientState({
         setPayMessage('Your payment is still processing. You can safely refresh and check again.');
         return;
       }
+      if (status.status === 'requires_support') {
+        setPayState('requires_support');
+        setPayMessage(PAYMENT_SUPPORT_MESSAGE);
+        return;
+      }
       await clearPaymentRecovery().catch(() => undefined);
       setPayState('idle');
       const messages = {
@@ -366,8 +371,6 @@ function CheckoutFlowClientState({
         expired: 'The previous ticket hold expired. Review availability before trying again.',
         failed: 'The previous payment did not complete. You can try again.',
         refunded: 'The previous payment was refunded. No tickets were issued.',
-        requires_support:
-          'We could not reconcile the previous payment automatically. Contact support before trying again.',
       } as const;
       setPayMessage(messages[status.status]);
     });
@@ -474,6 +477,10 @@ function CheckoutFlowClientState({
             : 'Payment cancelled. Your tickets are held for a few minutes if you want to try again.',
         );
         break;
+      case 'requires_support':
+        setPayState('requires_support');
+        setPayMessage(result.message);
+        return;
       case 'unavailable':
         setPayMessage('Online payments are not available right now. Please try again later.');
         break;

@@ -111,7 +111,9 @@ export function ConfirmationView({
                       Event update
                     </p>
                     <p className="mt-1 text-sm font-bold text-white">
-                      This event was cancelled. Contact support if you need help with this booking.
+                      {confirmation.status === 'cancelled'
+                        ? 'This event was cancelled. Contact support if you need help with this booking.'
+                        : 'Event details are unavailable. Contact support if you need help with this booking.'}
                     </p>
                   </div>
                 ) : (

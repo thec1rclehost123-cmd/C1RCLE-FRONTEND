@@ -299,6 +299,20 @@ describe('runPaidCheckout', () => {
     );
   });
 
+  it('keeps authoritative uncertain provider creation blocked for support without opening payment', async () => {
+    const d = deps({
+      createAttempt: vi.fn().mockRejectedValue({
+        status: 400,
+        code: 'invalid_operation',
+        message: 'Payment creation requires_support; provider identity is unresolved',
+      }),
+    });
+    expect(await runPaidCheckout(d, input)).toMatchObject({ kind: 'requires_support' });
+    expect(d.openCheckout).not.toHaveBeenCalled();
+    expect(d.createHold).toHaveBeenCalledTimes(1);
+    expect(d.createAttempt).toHaveBeenCalledTimes(1);
+  });
+
   it('does not confirm a paid order while authoritative fulfillment remains pending', async () => {
     const d = deps({
       verify: vi.fn().mockResolvedValue({
