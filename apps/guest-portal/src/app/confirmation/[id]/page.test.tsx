@@ -27,6 +27,18 @@ vi.mock('next/image', () => ({
 }));
 
 describe('ConfirmationView', () => {
+  it('uses existing artwork fallback for a valid confirmation without a poster', () => {
+    const confirmation = bookingConfirmationFixtures[0];
+    if (!confirmation) throw new Error('Missing fixture');
+    const event = findBookingEventFixture(confirmation.eventId);
+    if (!event) throw new Error('Missing event');
+    const { container } = render(
+      <ConfirmationView confirmation={confirmation} event={{ ...event, image: '' }} />,
+    );
+    for (const image of container.querySelectorAll('img'))
+      expect(image.getAttribute('src')).toBeTruthy();
+  });
+
   it('renders booking confirmation header, details, and navigation CTAs', () => {
     const confirmation = bookingConfirmationFixtures[0];
     expect(confirmation).toBeDefined();
@@ -124,6 +136,56 @@ describe('ConfirmationView', () => {
     expect(screen.getByText('Payment reference: pay_test_reference')).toBeInTheDocument();
     expect(screen.getByText('Original fee policy: test-original-v1')).toBeInTheDocument();
     expect(screen.getByText('₹108.88')).toBeInTheDocument();
+  });
+
+  it('shows all admissions refunded with the actual retained balance instead of Confirmed', () => {
+    const confirmation = bookingConfirmationFixtures[0];
+    if (!confirmation) throw new Error('Missing fixture');
+    const event = findBookingEventFixture(confirmation.eventId);
+    if (!event) throw new Error('Missing event');
+    render(
+      <ConfirmationView
+        confirmation={{
+          ...confirmation,
+          status: 'paid',
+          fulfillmentState: 'complete',
+          admissionRefundState: 'all',
+          refundedPaise: 10000,
+          total: { amountPaise: 10888, currency: 'INR' },
+        }}
+        event={event}
+      />,
+    );
+    expect(screen.getByRole('heading', { name: 'Admissions refunded' })).toBeInTheDocument();
+    expect(screen.queryByText('Confirmed')).not.toBeInTheDocument();
+    expect(screen.queryByText('View in My Tickets')).not.toBeInTheDocument();
+    expect(screen.getByText('Refunded to date')).toBeInTheDocument();
+    expect(screen.getByText('Amount retained')).toBeInTheDocument();
+    expect(screen.getByText('₹8.88')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Your booking details are available in My Tickets.'),
+    ).not.toBeInTheDocument();
+  });
+  it('explains a partial admission refund and retains access only to unaffected admissions', () => {
+    const confirmation = bookingConfirmationFixtures[0];
+    if (!confirmation) throw new Error('Missing fixture');
+    const event = findBookingEventFixture(confirmation.eventId);
+    if (!event) throw new Error('Missing event');
+    render(
+      <ConfirmationView
+        confirmation={{
+          ...confirmation,
+          status: 'paid',
+          admissionRefundState: 'partial',
+          refundedPaise: 5000,
+        }}
+        event={event}
+      />,
+    );
+    expect(screen.getByText('Partially refunded')).toBeInTheDocument();
+    expect(screen.getByText(/Unrefunded admissions remain available/)).toBeInTheDocument();
+    expect(screen.getByText('View in My Tickets')).toBeInTheDocument();
+    expect(screen.queryByText('Confirmed')).not.toBeInTheDocument();
   });
 
   it('keeps fixture confirmations isolated from backend authority', () => {

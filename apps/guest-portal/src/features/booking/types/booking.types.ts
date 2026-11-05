@@ -59,6 +59,8 @@ export interface BookingConfirmationFixture {
   bookingReference: string;
   status: OrderDto['status'];
   fulfillmentState?: OrderDto['fulfillmentState'];
+  admissionRefundState?: OrderDto['admissionRefundState'];
+  refundedPaise?: number;
   receiptFacts?: OrderDto['receiptFacts'];
   eventId: string;
   attendeeName: string;

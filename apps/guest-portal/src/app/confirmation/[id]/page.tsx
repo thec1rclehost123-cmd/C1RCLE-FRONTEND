@@ -76,6 +76,8 @@ async function getRealConfirmation(
       bookingReference: order.bookingReference,
       status: order.eventCancellation && order.status === 'paid' ? 'cancelled' : order.status,
       fulfillmentState: order.fulfillmentState,
+      admissionRefundState: order.admissionRefundState,
+      refundedPaise: order.refundedPaise,
       receiptFacts: order.receiptFacts,
       eventId: order.eventId,
       attendeeName: 'Guest',

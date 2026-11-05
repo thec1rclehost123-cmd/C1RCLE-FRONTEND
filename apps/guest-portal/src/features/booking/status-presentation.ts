@@ -70,13 +70,30 @@ const ORDER_STATUS_PRESENTATION: Record<OrderDto['status'], OrderStatusPresentat
 export function getOrderStatusPresentation(
   status: OrderDto['status'],
   fulfillmentState?: OrderDto['fulfillmentState'],
+  admissionRefundState?: OrderDto['admissionRefundState'],
 ): OrderStatusPresentation {
+  if (status === 'paid' && admissionRefundState === 'all')
+    return {
+      heading: 'Admissions refunded',
+      label: 'Admissions refunded',
+      amountLabel: 'Original total paid',
+      ticketAccess: false,
+      tone: 'neutral',
+    };
   if (status === 'paid' && fulfillmentState === 'pending')
     return {
       heading: 'Booking processing',
       label: 'Processing',
       amountLabel: 'Total paid',
       ticketAccess: false,
+      tone: 'warning',
+    };
+  if (status === 'paid' && admissionRefundState === 'partial')
+    return {
+      heading: 'Booking partially refunded',
+      label: 'Partially refunded',
+      amountLabel: 'Original total paid',
+      ticketAccess: true,
       tone: 'warning',
     };
   return ORDER_STATUS_PRESENTATION[status];

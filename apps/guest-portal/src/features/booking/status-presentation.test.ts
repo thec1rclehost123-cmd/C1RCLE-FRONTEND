@@ -25,4 +25,17 @@ describe('getOrderStatusPresentation', () => {
       tone: 'danger',
     });
   });
+  it('does not confirm a financially paid order after every original admission was refunded', () => {
+    expect(getOrderStatusPresentation('paid', 'complete', 'all')).toMatchObject({
+      heading: 'Admissions refunded',
+      label: 'Admissions refunded',
+      ticketAccess: false,
+    });
+  });
+  it('retains access to unaffected admissions while clearly reporting a partial admission refund', () => {
+    expect(getOrderStatusPresentation('paid', 'complete', 'partial')).toMatchObject({
+      label: 'Partially refunded',
+      ticketAccess: true,
+    });
+  });
 });

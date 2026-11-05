@@ -292,6 +292,8 @@ export const orderReceiptFactsSchema = z.object({
 });
 
 export const checkoutOrderDtoSchema = z.object({
+  /** Settled original admission identities; absent when a legacy order has no snapshot. */
+  admissionRefundState: z.enum(['none', 'partial', 'all']).optional(),
   fulfillmentState: z.enum(['pending', 'complete']).optional(),
   fulfillmentCompletedAt: z.iso.datetime().optional(),
   receiptFacts: orderReceiptFactsSchema.optional(),
