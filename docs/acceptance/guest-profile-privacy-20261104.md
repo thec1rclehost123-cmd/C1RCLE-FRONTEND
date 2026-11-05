@@ -1,6 +1,6 @@
 # Pass 4 — Guest profiles and privacy
 
-Status: independently implementable profile/privacy work is implemented and locally verified. **The founder decision batch remains pending**; no social visibility or social-policy approval is inferred from silence. Other-Guest profiles retain their existing unavailable behavior. Do not describe new social features as accepted or enabled.
+Status: **Pass 4 locally accepted.** Founder decisions are confirmed: other-Guest profiles remain unavailable in V1; attendance/interests remain own-only; social visibility, Guest discovery, profile-linked guestlist policy, handles, blocking and reporting are deferred to Pass6. Existing unavailable-profile and owner-scoped APIs already enforce this approved scope; no public Guest DTO or social endpoint is introduced.
 
 ## Candidate and boundaries
 
@@ -82,31 +82,21 @@ The existing M3-owned GuestlistPreviewClient links guest IDs to `/profile/:id`; 
 
 The M3-owned EventDetailView contains a Save button without a persistence handler; no saved/favorite profile collection/API was found in the traced profile surface. Record this dependency for its owning pass. Do not implement it here. Any persistent Save action must retain the protected action/onboarding boundary and must not publish saved events by default.
 
-## OPEN PRODUCT DECISION batch — pending founder reply
+## Founder decisions — resolved
 
-### DECISION — Profile visibility
+### Profile visibility
 
-**Current behavior:** other-Guest route404, no connected public profile API.
+**Confirmed by founder:** “Keep other-Guest profiles unavailable for V1; defer social visibility to Pass 6.”
 
-**Question:** who may see a Guest profile in V1?
+The existing `/profile/[userId]` page and metadata return notFound for all IDs. There is no public Guest profile API. This matches the approved V1 behavior; it is an intentional privacy boundary, not a placeholder to enable implicitly. No strict public/social DTO is needed while no identity projection is authorized. Pass6 must define that explicit backend projection before enabling visibility; the own-profile DTO must never be reused publicly.
 
-**Options:** preserve unavailable/defer; authenticated Guests see minimal name/avatar; publicly viewable minimal name/avatar.
+### Social scope and privacy semantics
 
-**Recommendation:** preserve unavailable for V1 and defer social visibility to Pass6. This matches current connected behavior and avoids inventing identity exposure or consent policy. DOB/phone/email/interests/attendance remain private under every offered minimal projection option unless separately approved.
+**Confirmed by founder:** “Yes—keep these private/deferred for Pass 6.”
 
-**Independent work:** own editing, owner DTO/caching, authorization, Firestore/native-auth tests and responsive browser acceptance completed above. No public DTO/endpoint added without an approved visibility policy.
+Attendance and interests remain own-only. Guest search/discovery, attendance sharing, profile-linked social guestlist policy, handles, blocking and Guest-reporting semantics remain deferred. Existing authorized admission/Scanner and ticket-assignment behavior is unchanged. No open product decision blocks local Pass4 acceptance.
 
-### DECISION — Social scope and privacy semantics
-
-**Current behavior:** no connected Guest search, attendance-sharing controls, blocking or reporting. Historical guestlist links exist; live mapping empty.
-
-**Question:** preserve own-only attendance/interests and defer social features, profile-linked guestlist policy, handles and reporting semantics to Pass6, or specify selected features now?
-
-**Options:** defer all to Pass6; founder specifies selected Pass4 features and their audience/consent/enforcement policy.
-
-**Recommendation:** defer. Blocking/reporting/search should have coherent semantics and an actual support destination rather than placeholder controls.
-
-**Independent work:** all profile privacy hardening and own functionality above completed. No silent policy assumption or timeout approval.
+A focused rerun of the three existing unavailable-profile/metadata tests passed after confirmation. No behavior change was necessary; the 72-test affected sweep and browser evidence above remain applicable. No broad suite or previous-pass audit was restarted.
 
 ## Final affected verification
 
