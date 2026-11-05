@@ -1,0 +1,377 @@
+
+ RUN  v4.1.10 /Users/aayushdivase/Desktop/C1RCLE-PRODUCT-COMPLETENESS-FRONTEND/apps/partner-dashboard
+
+(node:50015) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50012) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50016) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50011) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50013) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50014) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50010) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50089) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50090) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50093) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50094) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50095) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50101) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50100) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50122) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50123) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50124) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50125) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50126) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50127) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50128) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50132) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50138) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50154) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50160) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50158) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50161) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50162) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ src/components/partner-v3/partners/VenuePartnersScreen.test.tsx (3 tests | 1 failed) 1005ms
+     × renders requests, staff access, and fixture-safe staff invitation entry 184ms
+(node:50164) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50165) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50167) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50169) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50171) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50170) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50172) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50173) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50175) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50176) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50177) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/partner-v3/partners/VenuePartnersScreen.test.tsx > VenuePartnersScreen > renders requests, staff access, and fixture-safe staff invitation entry
+TestingLibraryElementError: Unable to find an element with the text: Door check-in. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"_pageContainer_ae2cf0"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m""[39m
+      [36m>[39m
+        [36m<header[39m
+          [33mclass[39m=[32m"_partnersHeader_8754b7"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"_partnersTitle_8754b7"[39m
+          [36m>[39m
+            [36m<h1>[39m
+              [0mPartners[0m
+            [36m</h1>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"_partnersHeaderActions_8754b7"[39m
+          [36m>[39m
+            [36m<nav[39m
+              [33maria-label[39m=[32m"Partner type"[39m
+              [33mclass[39m=[32m"_segmentTabs_8754b7"[39m
+            [36m>[39m
+              [36m<a[39m
+                [33mclass[39m=[32m""[39m
+                [33mhref[39m=[32m"/partner/venue/partners"[39m
+              [36m>[39m
+                [0mHosts[0m
+              [36m</a>[39m
+              [36m<a[39m
+                [33mclass[39m=[32m""[39m
+                [33mhref[39m=[32m"/partner/venue/partners?tab=promoters"[39m
+              [36m>[39m
+                [0mPromoters[0m
+              [36m</a>[39m
+              [36m<a[39m
+                [33maria-current[39m=[32m"page"[39m
+                [33mclass[39m=[32m"_segmentTabActive_8754b7"[39m
+                [33mhref[39m=[32m"/partner/venue/partners?tab=staff"[39m
+              [36m>[39m
+                [0mStaff[0m
+              [36m</a>[39m
+            [36m</nav>[39m
+          [36m</div>[39m
+        [36m</header>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"_partnerToolbar_8754b7 _partnerToolbarStaff_8754b7"[39m
+        [36m>[39m
+          [36m<form[39m
+            [33maction[39m=[32m"/partner/venue/partners"[39m
+            [33mclass[39m=[32m"_staffSearchForm_8754b7"[39m
+            [33mmethod[39m=[32m"get"[39m
+          [36m>[39m
+            [36m<input[39m
+              [33mname[39m=[32m"tab"[39m
+              [33mtype[39m=[32m"hidden"[39m
+              [33mvalue[39m=[32m"staff"[39m
+            [36m/>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"_searchInput_ae2cf0 _staffSearchInput_8754b7"[39m
+            [36m>[39m
+              [36m<svg[39m
+                [33maria-hidden[39m=[32m"true"[39m
+                [33mclass[39m=[32m"lucide lucide-search"[39m
+                [33mfill[39m=[32m"none"[39m
+                [33mheight[39m=[32m"16"[39m
+                [33mstroke[39m=[32m"currentColor"[39m
+                [33mstroke-linecap[39m=[32m"round"[39m
+                [33mstroke-linejoin[39m=[32m"round"[39m
+                [33mstroke-width[39m=[32m"2"[39m
+                [33mviewBox[39m=[32m"0 0 24 24"[39m
+                [33mwidth[39m=[32m"16"[39m
+                [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+              [36m>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"m21 21-4.34-4.34"[39m
+                [36m/>[39m
+                [36m<circle[39m
+                  [33mcx[39m=[32m"11"[39m
+                  [33mcy[39m=[32m"11"[39m
+                  [33mr[39m=[32m"8"[39m
+                [36m/>[39m
+              [36m</svg>[39m
+              [36m<input[39m
+                [33maria-label[39m=[32m"Search staff"[39m
+                [33mname[39m=[32m"search"[39m
+                [33mplaceholder[39m=[32m"Search staff"[39m
+                [33mtype[39m=[32m"search"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+            [36m</label>[39m
+          [36m</form>[39m
+          [36m<button[39m
+            [33mclass[39m=[32m"_button_ae2cf0 _buttonPrimary_ae2cf0"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mAdd staff[0m
+          [36m</button>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"_staffSection_8754b7"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"_staffGrid_8754b7"[39m
+          [36m>[39m
+            [36m<article[39m
+              [33mclass[39m=[32m"_staffCard_8754b7"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"_staffSummary_8754b7"[39m
+              [36m>[39m
+                [36m<span[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"_staffAvatar_8754b7"[39m
+                [36m>[39m
+                  [0mMS[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"_staffSummaryCopy_8754b7"[39m
+                [36m>[39m
+                  [36m<strong>[39m
+                    [0mMaya S.[0m
+                  [36m</strong>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"_staffRoleText_8754b7"[39m
+                  [36m>[39m
+                    [0mDoor lead · Full access[0m
+                  [36m</span>[39m
+                [36m</span>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"_staffExpanded_8754b7"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"_staffExpandedMeta_8754b7"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"_badge_ae2cf0 _badgeSuccess_ae2cf0"[39m
+                  [36m>[39m
+                    [0mActive[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"_staffDetails_8754b7"[39m
+                [36m/>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"_staffCardActions_8754b7"[39m
+                [36m>[39m
+                  [36m<button[39m
+                    [33mclass[39m=[32m"_button_ae2cf0 _buttonSecondary_ae2cf0"[39m
+                    [33mtype[39m=[32m"button"[39m
+                  [36m>[39m
+                    [0mManage access[0m
+                  [36m</button>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</article>[39m
+            [36m<article[39m
+              [33mclass[39m=[32m"_staffCard_8754b7"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"_staffSummary_8754b7"[39m
+              [36m>[39m
+                [36m<span[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"_staffAvatar_8754b7"[39m
+                [36m>[39m
+                  [0mRK[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"_staffSummaryCopy_8754b7"[39m
+                [36m>[39m
+                  [36m<strong>[39m
+                    [0mRavi K.[0m
+                  [36m</strong>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"_staffRoleText_8754b7"[39m
+                  [36m>[39m
+                    [0mCheck-in · Scan only[0m
+                  [36m</span>[39m
+                [36m</span>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"_staffExpanded_8754b7"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"_staffExpandedMeta_8754b7"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"_badge_ae2cf0 _badgeSuccess_ae2cf0"[39m
+                  [36m>[39m
+                    [0mActive[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"_staffDetails_8754b7"[39m
+                [36m/>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"_staffCardActions_8754b7"[39m
+                [36m>[39m
+                  [36m<button[39m
+                    [33mclass[39m=[32m"_button_ae2cf0 _buttonSecondary_ae2cf0"[39m
+                    [33mtype[39m=[32m"button"[39m
+                  [36m>[39m
+                    [0mManage access[0m
+                  [36m</button>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</article>[39m
+            [36m<article[39m
+              [33mclass[39m=[32m"_staffCard_8754b7"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"_staffSummary_8754b7"[39m
+              [36m>[39m
+                [36m<span[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"_staffAvatar_8754b7"[39m
+                [36m>[39m
+                  [0mTD[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"_staffSummaryCopy_8754b7"[39m
+                [36m>[39m
+                  [36m<strong>[39m
+                    [0mTina D.[0m
+                  [36m</strong>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"_staffRoleText_8754b7"[39m
+                  [36m>[39m
+                    [0mBar · Menu & orders[0m
+                  [36m</span>[39m
+                [36m</span>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"_staffExpanded_8754b7"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"_staffExpandedMeta_8754b7"[39m
+                [36m>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"_badge_ae2cf0 _badgeSuccess_ae2cf0"[39m
+                  [36m>[39m
+                    [0mActive[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"_staffDetails_8754b7"[39m
+                [36m/>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"_staffCardActions_8754b7"[39m
+                [36m>[39m
+                  [36m<button[39m
+                    [33mclass[39m=[32m"_button_ae2cf0 _buttonSecondary_ae2cf0"[39m
+                    [33mtype[39m=[32m"button"[39m
+                  [36m>[39m
+                    [0mManage access[0m
+                  [36m</button>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</article>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ ../../node_modules/.pnpm/@testing-library+dom@10.4.1/node_modules/@testing-library/dom/dist/query-helpers.js:109:15
+ ❯ src/components/partner-v3/partners/VenuePartnersScreen.test.tsx:59:19
+     57|     rerender(<VenuePartnersScreen data={data} segment="staff" />);
+     58|     expect(screen.getByText('Maya S.')).toBeInTheDocument();
+     59|     expect(screen.getAllByText('Door check-in').length).toBeGreaterTha…
+       |                   ^
+     60|     expect(screen.getByRole('button', { name: 'Add staff' })).toBeInTh…
+     61|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 38 passed (39)
+      Tests  1 failed | 119 passed (120)
+   Start at  21:56:44
+   Duration  73.01s (transform 32.47s, setup 84.85s, import 95.16s, tests 89.22s, environment 196.14s)

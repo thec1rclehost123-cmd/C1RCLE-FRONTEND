@@ -1,0 +1,842 @@
+[
+  {
+    "file": "01-overview-desktop.jpg",
+    "surface": "Overview \u2014 full desktop view, upper section",
+    "change": "Preserved connected event context, restrained orange trend and compact recent orders",
+    "viewport": {
+      "dpr": 1,
+      "height": 1000,
+      "width": 1440
+    },
+    "url": "http://localhost:3100/partner/venue/overview",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:28:05.990Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1440,
+      "height": 1000
+    }
+  },
+  {
+    "file": "02-overview-tickets-graph.jpg",
+    "surface": "Overview \u2014 Tickets graph",
+    "change": "Smooth orange curve, subtle fill, actual dated ticket counts and compact controls",
+    "viewport": {
+      "dpr": 1,
+      "height": 1000,
+      "width": 1440
+    },
+    "url": "http://localhost:3100/partner/venue/overview",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": true,
+    "capturedAt": "2026-11-05T05:28:06.494Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 659,
+      "height": 439
+    }
+  },
+  {
+    "file": "03-overview-revenue-graph.jpg",
+    "surface": "Overview \u2014 Revenue graph",
+    "change": "Authoritative revenue toggle with restrained styling and actual dated values",
+    "viewport": {
+      "dpr": 1,
+      "height": 1000,
+      "width": 1440
+    },
+    "url": "http://localhost:3100/partner/venue/overview",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": true,
+    "capturedAt": "2026-11-05T05:28:51.425Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 665,
+      "height": 439
+    }
+  },
+  {
+    "file": "04-overview-recent-activity.jpg",
+    "surface": "Overview \u2014 Recent Activity / Orders",
+    "change": "Compact connected order rows with names, event context, status, time and recorded amounts",
+    "viewport": {
+      "dpr": 1,
+      "height": 1000,
+      "width": 1440
+    },
+    "url": "http://localhost:3100/partner/venue/overview",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": true,
+    "capturedAt": "2026-11-05T05:28:21.721Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 444,
+      "height": 727
+    }
+  },
+  {
+    "file": "05-overview-desktop-continuation.jpg",
+    "surface": "Overview \u2014 full desktop view, lower section",
+    "change": "Legitimate calendar, upcoming events and network content retained below the cleaned primary surface",
+    "viewport": {
+      "dpr": 1,
+      "height": 1000,
+      "width": 1440
+    },
+    "url": "http://localhost:3100/partner/venue/overview",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:28:22.141Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1440,
+      "height": 1000
+    }
+  },
+  {
+    "file": "06-overview-laptop.jpg",
+    "surface": "Overview \u2014 laptop",
+    "change": "Existing operational content remains usable with compact activity and chart controls at laptop width",
+    "viewport": {
+      "dpr": 1,
+      "height": 800,
+      "width": 1280
+    },
+    "url": "http://localhost:3100/partner/venue/overview",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:28:52.484Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1280,
+      "height": 800
+    }
+  },
+  {
+    "file": "07-events-all-events.jpg",
+    "surface": "Events \u2014 All Events",
+    "change": "Existing discovery, filters and event actions preserved; All Events / Analytics switch remains inside Events",
+    "viewport": {
+      "dpr": 1,
+      "height": 1000,
+      "width": 1440
+    },
+    "url": "http://localhost:3100/partner/venue/events",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:29:23.719Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1440,
+      "height": 1000
+    }
+  },
+  {
+    "file": "08-events-analytics-full-top.jpg",
+    "surface": "Events \u2192 Analytics \u2014 full view, upper section",
+    "change": "Connected recorded totals, exact chart dates and restrained Sales over time chart",
+    "viewport": {
+      "dpr": 1,
+      "height": 1000,
+      "width": 1440
+    },
+    "url": "http://localhost:3100/partner/venue/analytics",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:29:25.251Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1440,
+      "height": 1000
+    }
+  },
+  {
+    "file": "09-events-analytics-connected-insights.jpg",
+    "surface": "Events \u2192 Analytics \u2014 connected metrics and charts, middle section",
+    "change": "Authoritative money/ticket breakdowns, issued units by tier, attribution and purchase timing",
+    "viewport": {
+      "dpr": 1,
+      "height": 1000,
+      "width": 1440
+    },
+    "url": "http://localhost:3100/partner/venue/analytics",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:29:38.346Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1440,
+      "height": 1000
+    }
+  },
+  {
+    "file": "09a-events-analytics-breakdowns.jpg",
+    "surface": "Events Analytics \u2014 revenue and ticket activity",
+    "change": "Captured revenue and issuance breakdowns with explicit connected source labels",
+    "viewport": {
+      "dpr": 1,
+      "height": 1000,
+      "width": 1440
+    },
+    "url": "http://localhost:3100/partner/venue/analytics",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:38:16.927Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1440,
+      "height": 1000
+    }
+  },
+  {
+    "file": "10-events-analytics-history.jpg",
+    "surface": "Events \u2192 Analytics \u2014 full view, lower section",
+    "change": "Recorded event and period rows retained with source-backed values and honest zero periods",
+    "viewport": {
+      "dpr": 1,
+      "height": 1000,
+      "width": 1440
+    },
+    "url": "http://localhost:3100/partner/venue/analytics",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:29:38.697Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1440,
+      "height": 1000
+    }
+  },
+  {
+    "file": "11-event-detail-full.jpg",
+    "surface": "Individual Event Detail \u2014 full cleaned / floating view",
+    "change": "Artwork atmosphere, unboxed header, restrained metrics and retained operational actions",
+    "viewport": {
+      "dpr": 1,
+      "height": 1000,
+      "width": 1440
+    },
+    "url": "http://localhost:3100/partner/venue/events/preview-event-0",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:30:19.515Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1440,
+      "height": 1000
+    }
+  },
+  {
+    "file": "12-event-detail-header.jpg",
+    "surface": "Individual Event Detail \u2014 poster and header",
+    "change": "Poster, name, date, venue context and existing Edit / Door actions arranged without a chunky card",
+    "viewport": {
+      "dpr": 1,
+      "height": 1000,
+      "width": 1440
+    },
+    "url": "http://localhost:3100/partner/venue/events/preview-event-0",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": true,
+    "capturedAt": "2026-11-05T05:30:20.237Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1094,
+      "height": 248
+    }
+  },
+  {
+    "file": "13-event-detail-navigation.jpg",
+    "surface": "Individual Event Detail \u2014 consolidated navigation",
+    "change": "Six meaningful groups with contextual secondary links; underlying capabilities and routes retained",
+    "viewport": {
+      "dpr": 1,
+      "height": 1000,
+      "width": 1440
+    },
+    "url": "http://localhost:3100/partner/venue/events/preview-event-0",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": true,
+    "capturedAt": "2026-11-05T05:30:20.866Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1100,
+      "height": 82
+    }
+  },
+  {
+    "file": "14-partners-host-cards.jpg",
+    "surface": "Partners \u2014 Host cards",
+    "change": "Vertical atmospheric card family, canonical name and descriptor, simple profile action",
+    "viewport": {
+      "dpr": 1,
+      "height": 1000,
+      "width": 1440
+    },
+    "url": "http://localhost:3100/partner/venue/partners?view=discover",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:31:03.259Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1440,
+      "height": 1000
+    }
+  },
+  {
+    "file": "15-partners-promoter-cards.jpg",
+    "surface": "Partners \u2014 Promoter cards",
+    "change": "The same restrained atmospheric family without permission or invented metadata clutter",
+    "viewport": {
+      "dpr": 1,
+      "height": 1000,
+      "width": 1440
+    },
+    "url": "http://localhost:3100/partner/venue/partners?tab=promoters&view=discover",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:31:03.992Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1440,
+      "height": 1000
+    }
+  },
+  {
+    "file": "16-partners-staff-cards.jpg",
+    "surface": "Partners \u2014 Staff cards",
+    "change": "Name, concise role and status with Manage access; permission pills removed from cards",
+    "viewport": {
+      "dpr": 1,
+      "height": 1000,
+      "width": 1440
+    },
+    "url": "http://localhost:3100/partner/venue/partners?tab=staff",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:31:04.566Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1440,
+      "height": 1000
+    }
+  },
+  {
+    "file": "17-staff-manage-access.jpg",
+    "surface": "Staff \u2192 Manage Access",
+    "change": "Available canonical access details and the existing role editor live behind Manage access instead of permission pills on cards",
+    "viewport": {
+      "dpr": 1,
+      "height": 1000,
+      "width": 1440
+    },
+    "url": "http://localhost:3100/partner/venue/partners?tab=staff",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:31:29.331Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1440,
+      "height": 1000
+    }
+  },
+  {
+    "file": "18-marketing-full-table.jpg",
+    "surface": "Marketing \u2014 full attendee table",
+    "change": "Tenant-scoped current holders, canonical events, ticket units and own event spend; name-only search and clear page selection",
+    "viewport": {
+      "dpr": 1,
+      "height": 1000,
+      "width": 1440
+    },
+    "url": "http://localhost:3100/partner/venue/marketing",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:31:31.793Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1440,
+      "height": 1000
+    }
+  },
+  {
+    "file": "19-marketing-event-filter.jpg",
+    "surface": "Marketing \u2014 Event filter applied",
+    "change": "Canonical Neon Nights filter narrows the connected audience to that event",
+    "viewport": {
+      "dpr": 1,
+      "height": 1000,
+      "width": 1440
+    },
+    "url": "http://localhost:3100/partner/venue/marketing?search=&eventId=preview-event-0&tierId=",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:32:13.409Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1440,
+      "height": 1000
+    }
+  },
+  {
+    "file": "20-marketing-ticket-filter.jpg",
+    "surface": "Marketing \u2014 Ticket Type filter",
+    "change": "VIP filter applied with canonical event/tier identity and cleared selection",
+    "viewport": {
+      "dpr": 1,
+      "height": 1000,
+      "width": 1440
+    },
+    "url": "http://localhost:3100/partner/venue/marketing?search=&eventId=preview-event-0&tierId=preview-tier-0-1",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:37:53.505Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1440,
+      "height": 1000
+    }
+  },
+  {
+    "file": "21-marketing-selected-attendees.jpg",
+    "surface": "Marketing \u2014 selected-attendee state",
+    "change": "Visible-page selection, explicit selected count, clear action and enabled preview-composer entry",
+    "viewport": {
+      "dpr": 1,
+      "height": 1000,
+      "width": 1440
+    },
+    "url": "http://localhost:3100/partner/venue/marketing?search=&eventId=preview-event-0&tierId=preview-tier-0-1",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:32:15.531Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1440,
+      "height": 1000
+    }
+  },
+  {
+    "file": "22-blast-whatsapp.jpg",
+    "surface": "Marketing Blast \u2014 WhatsApp preview",
+    "change": "Local live first-name personalization, audience context, link/action and phone conversation preview",
+    "viewport": {
+      "dpr": 1,
+      "height": 1100,
+      "width": 1600
+    },
+    "url": "http://localhost:3100/partner/venue/marketing?search=&eventId=preview-event-0&tierId=preview-tier-0-1",
+    "data": "Local ephemeral preview using synthetic attendees from the connected local gateway and Firestore emulator; no delivery",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:34:35.373Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1600,
+      "height": 1100
+    }
+  },
+  {
+    "file": "23-blast-sms.jpg",
+    "surface": "Marketing Blast \u2014 SMS preview",
+    "change": "Messages-like live copy and link preview with a clear preview-only character limit",
+    "viewport": {
+      "dpr": 1,
+      "height": 1100,
+      "width": 1600
+    },
+    "url": "http://localhost:3100/partner/venue/marketing?search=&eventId=preview-event-0&tierId=preview-tier-0-1",
+    "data": "Local ephemeral preview using synthetic attendees from the connected local gateway and Firestore emulator; no delivery",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:34:35.935Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1600,
+      "height": 1100
+    }
+  },
+  {
+    "file": "24-blast-email.jpg",
+    "surface": "Marketing Blast \u2014 Email preview",
+    "change": "Subject, personalized plain text and action label update immediately in a mobile email preview",
+    "viewport": {
+      "dpr": 1,
+      "height": 1100,
+      "width": 1600
+    },
+    "url": "http://localhost:3100/partner/venue/marketing?search=&eventId=preview-event-0&tierId=preview-tier-0-1",
+    "data": "Local ephemeral preview using synthetic attendees from the connected local gateway and Firestore emulator; no delivery",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:34:36.732Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1600,
+      "height": 1100
+    }
+  },
+  {
+    "file": "25-blast-notification.jpg",
+    "surface": "Marketing Blast \u2014 Notification",
+    "change": "Channel-specific notification title and sample preview; delivery disabled",
+    "viewport": {
+      "dpr": 1,
+      "height": 1100,
+      "width": 1600
+    },
+    "url": "http://localhost:3100/partner/venue/marketing?search=&eventId=preview-event-0&tierId=preview-tier-0-1",
+    "data": "Local ephemeral preview using synthetic attendees from the connected local gateway and Firestore emulator; no delivery",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:37:32.092Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 1600,
+      "height": 1100
+    }
+  },
+  {
+    "file": "26-overview-mobile.jpg",
+    "surface": "Overview \u2014 mobile",
+    "change": "Responsive metric hierarchy and preserved event content",
+    "viewport": {
+      "dpr": 1,
+      "height": 844,
+      "width": 390
+    },
+    "url": "http://localhost:3100/partner/venue/overview",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:38:26.434Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  {
+    "file": "27-overview-mobile-graph.jpg",
+    "surface": "Overview \u2014 mobile graph/activity",
+    "change": "Smooth responsive graph and compact real order rows",
+    "viewport": {
+      "dpr": 1,
+      "height": 844,
+      "width": 390
+    },
+    "url": "http://localhost:3100/partner/venue/overview",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:38:36.549Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  {
+    "file": "28-events-mobile.jpg",
+    "surface": "All Events \u2014 mobile",
+    "change": "Compact responsive search, event tabs and retained cards",
+    "viewport": {
+      "dpr": 1,
+      "height": 844,
+      "width": 390
+    },
+    "url": "http://localhost:3100/partner/venue/events",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:40:43.006Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 380,
+      "height": 822
+    }
+  },
+  {
+    "file": "29-analytics-mobile.jpg",
+    "surface": "Events Analytics \u2014 mobile",
+    "change": "Stacked connected summary, filters and graph",
+    "viewport": {
+      "dpr": 1,
+      "height": 844,
+      "width": 390
+    },
+    "url": "http://localhost:3100/partner/venue/analytics",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:38:50.036Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  {
+    "file": "30-analytics-mobile-chart.jpg",
+    "surface": "Events Analytics \u2014 mobile chart",
+    "change": "Responsive smooth chart and revenue breakdown",
+    "viewport": {
+      "dpr": 1,
+      "height": 844,
+      "width": 390
+    },
+    "url": "http://localhost:3100/partner/venue/analytics",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:38:57.292Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  {
+    "file": "31-analytics-mobile-insights.jpg",
+    "surface": "Events Analytics \u2014 mobile insights",
+    "change": "Stacked canonical tier and attribution metrics",
+    "viewport": {
+      "dpr": 1,
+      "height": 844,
+      "width": 390
+    },
+    "url": "http://localhost:3100/partner/venue/analytics",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:38:57.743Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  {
+    "file": "32-event-detail-mobile.jpg",
+    "surface": "Event Detail \u2014 mobile",
+    "change": "Floating poster/header and consolidated navigation at phone width",
+    "viewport": {
+      "dpr": 1,
+      "height": 844,
+      "width": 390
+    },
+    "url": "http://localhost:3100/partner/venue/events/preview-event-0",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:39:00.749Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  {
+    "file": "33-host-cards-mobile.jpg",
+    "surface": "Partners \u2014 Host cards mobile",
+    "change": "Vertical atmospheric partner cards with honest initials fallback",
+    "viewport": {
+      "dpr": 1,
+      "height": 844,
+      "width": 390
+    },
+    "url": "http://localhost:3100/partner/venue/partners?view=discover",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:39:23.012Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  {
+    "file": "34-staff-cards-mobile.jpg",
+    "surface": "Partners \u2014 Staff mobile",
+    "change": "Role/status cards without permission pill clutter",
+    "viewport": {
+      "dpr": 1,
+      "height": 844,
+      "width": 390
+    },
+    "url": "http://localhost:3100/partner/venue/partners?tab=staff",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:39:23.558Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  {
+    "file": "35-staff-mobile-manage-button.jpg",
+    "surface": "Staff \u2014 mobile continuation",
+    "change": "Manager card exposes Manage access without permission pills",
+    "viewport": {
+      "dpr": 1,
+      "height": 844,
+      "width": 390
+    },
+    "url": "http://localhost:3100/partner/venue/partners?tab=staff",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:39:28.916Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  {
+    "file": "36-manage-access-mobile.jpg",
+    "surface": "Staff Manage Access \u2014 mobile",
+    "change": "Existing role editor and available capability details retained in dialog",
+    "viewport": {
+      "dpr": 1,
+      "height": 844,
+      "width": 390
+    },
+    "url": "http://localhost:3100/partner/venue/partners?tab=staff",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:39:29.738Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  {
+    "file": "37-marketing-mobile.jpg",
+    "surface": "Marketing \u2014 mobile",
+    "change": "Stacked filters and horizontally scrollable authorized table",
+    "viewport": {
+      "dpr": 1,
+      "height": 844,
+      "width": 390
+    },
+    "url": "http://localhost:3100/partner/venue/marketing",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:39:36.596Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  {
+    "file": "38-marketing-mobile-table-right.jpg",
+    "surface": "Marketing \u2014 mobile table continuation",
+    "change": "Native table horizontal scroll exposes ticket units and own-event spend",
+    "viewport": {
+      "dpr": 1,
+      "height": 844,
+      "width": 390
+    },
+    "url": "http://localhost:3100/partner/venue/marketing",
+    "data": "Connected local gateway, native authentication and Firestore emulator; synthetic fixture data",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:39:43.215Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  {
+    "file": "39-blast-mobile-editor.jpg",
+    "surface": "Marketing Blast \u2014 mobile editor",
+    "change": "Stacked ephemeral composer with selected audience context",
+    "viewport": {
+      "dpr": 1,
+      "height": 844,
+      "width": 390
+    },
+    "url": "http://localhost:3100/partner/venue/marketing",
+    "data": "Local ephemeral preview using synthetic attendees from the connected local gateway and Firestore emulator; no delivery",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:39:44.032Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  {
+    "file": "39a-blast-mobile-channels.jpg",
+    "surface": "Marketing Blast \u2014 mobile channel controls",
+    "change": "Four-channel controls and audience remain usable in stacked dialog",
+    "viewport": {
+      "dpr": 1,
+      "height": 844,
+      "width": 390
+    },
+    "url": "http://localhost:3100/partner/venue/marketing",
+    "data": "Local ephemeral preview using synthetic attendees from the connected local gateway and Firestore emulator; no delivery",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:39:51.092Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  {
+    "file": "40-blast-mobile-preview.jpg",
+    "surface": "Marketing Blast \u2014 mobile phone preview",
+    "change": "Below-fold phone preview renders substituted sample name without sending",
+    "viewport": {
+      "dpr": 1,
+      "height": 844,
+      "width": 390
+    },
+    "url": "http://localhost:3100/partner/venue/marketing",
+    "data": "Local ephemeral preview using synthetic attendees from the connected local gateway and Firestore emulator; no delivery",
+    "detailCrop": false,
+    "capturedAt": "2026-11-05T05:39:51.497Z",
+    "frontendCommit": "68efffd",
+    "backendCommit": "0718ad5",
+    "imagePixels": {
+      "width": 390,
+      "height": 844
+    }
+  }
+]
