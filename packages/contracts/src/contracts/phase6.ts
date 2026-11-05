@@ -30,6 +30,7 @@ export type LedgerEntryDto = z.infer<typeof ledgerEntryDtoSchema>;
 export const ledgerEntryListResponseSchema = paginatedSchema(ledgerEntryDtoSchema);
 
 export const balanceSummaryResponseSchema = z.object({
+  payoutsEnabled: z.boolean().optional(),
   availablePaise: z.number().int(),
   pendingPaise: z.number().int().nonnegative(),
   reservedPaise: z.number().int().nonnegative(),
@@ -41,7 +42,11 @@ export const balanceSummaryResponseSchema = z.object({
     cancellationPaise: z.number().int().nonnegative(),
     chargebackPaise: z.number().int().nonnegative(),
     reconciliationPaise: z.number().int().nonnegative(),
+    refundPaise: z.number().int().nonnegative().optional(),
+    disputePaise: z.number().int().nonnegative().optional(),
+    providerUncertaintyPaise: z.number().int().nonnegative().optional(),
   }),
+  settlementUnavailableReason: z.string().nullable().optional(),
   readModel: z.enum(['legacy_ledger_v1', 'financial_journal_v2']),
 });
 export type BalanceSummaryResponse = z.infer<typeof balanceSummaryResponseSchema>;

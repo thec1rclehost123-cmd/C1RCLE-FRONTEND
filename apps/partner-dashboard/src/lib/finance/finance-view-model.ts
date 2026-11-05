@@ -399,7 +399,7 @@ export function toPartnerFinanceData(input: FinanceScreenInput): PartnerFinanceD
   const pendingBalance: FinanceMetric = {
     label: 'Pending settlement',
     value: formatPaise(balances.pendingPaise),
-    detail: 'Clears once the sale settles',
+    detail: 'Not yet settlement eligible',
     tone: balances.pendingPaise > 0 ? 'warning' : 'neutral',
   };
 
@@ -414,11 +414,19 @@ export function toPartnerFinanceData(input: FinanceScreenInput): PartnerFinanceD
     balances.holds.cancellationPaise > 0 ? 'cancelled event' : null,
     balances.holds.chargebackPaise > 0 ? 'chargeback' : null,
     balances.holds.reconciliationPaise > 0 ? 'reconciliation' : null,
+    (balances.holds.refundPaise ?? 0) > 0 ? 'pending refunds' : null,
+    (balances.holds.disputePaise ?? 0) > 0 ? 'disputes' : null,
+    (balances.holds.providerUncertaintyPaise ?? 0) > 0 ? 'provider verification' : null,
   ].filter((part): part is string => part !== null);
   const heldBalance: FinanceMetric = {
     label: 'On hold',
     value: formatPaise(balances.heldPaise),
-    detail: holdParts.length === 0 ? 'No active finance holds' : holdParts.join(' · '),
+    detail:
+      holdParts.length > 0
+        ? holdParts.join(' · ')
+        : balances.heldPaise > 0
+          ? 'Financial hold; contact support for details'
+          : 'No active finance holds',
     tone: balances.heldPaise > 0 ? 'warning' : 'neutral',
   };
   const paidBalance: FinanceMetric = {
@@ -443,6 +451,7 @@ export function toPartnerFinanceData(input: FinanceScreenInput): PartnerFinanceD
     heldBalance,
     paidBalance,
     readModel: balances.readModel,
+    settlementUnavailableReason: balances.settlementUnavailableReason ?? null,
     freshness: { asOf: input.asOf ?? new Date().toISOString(), timezone: FINANCE_TIME_ZONE },
     coverage: input.coverage ?? {
       ledger: { loaded: ledger.length, total: ledger.length, hasMore: false },
@@ -452,6 +461,8 @@ export function toPartnerFinanceData(input: FinanceScreenInput): PartnerFinanceD
     payoutRequest: input.organizationId
       ? {
           organizationId: input.organizationId,
+          payoutsEnabled: balances.payoutsEnabled === true,
+          settlementUnavailableReason: balances.settlementUnavailableReason ?? null,
           availablePaise: balances.availablePaise,
           bankAccountId: defaultAccount?.id ?? null,
         }

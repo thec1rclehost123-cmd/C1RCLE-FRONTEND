@@ -28,12 +28,15 @@ import {
 } from '../payment/checkout-api';
 import { runPaidCheckout } from '../payment/paid-checkout';
 
+import { BookingFeeDisclosure } from './BookingFeeDisclosure';
+
 import type { BookingEventFixture } from '../types/booking.types';
 import type { CheckoutQuoteResponse } from '@c1rcle/contracts';
 
 const moneyFormatter = new Intl.NumberFormat('en-IN', {
   currency: 'INR',
-  maximumFractionDigits: 0,
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
   style: 'currency',
 });
 
@@ -423,6 +426,7 @@ function CheckoutFlowClientState({
       eventTitle: event.title,
       lines,
       expectedTotalPaise: quote.grandTotalPaise,
+      ...(quote.feePolicy ? { expectedFeePolicyVersion: quote.feePolicy.version } : {}),
       idempotencyKey: attemptKey.current.value,
       ...(prefill ? { prefill, attendee: prefill } : {}),
       promoCode: appliedPromo,
@@ -441,7 +445,9 @@ function CheckoutFlowClientState({
         return;
       case 'price_changed':
         setPayMessage(
-          `The price changed to ${moneyFormatter.format(result.grandTotalPaise / 100)}. Review the total and pay again.`,
+          result.feePolicyChanged
+            ? 'The fee policy changed. Review the refreshed quote and refund policy before paying again.'
+            : `The price changed to ${moneyFormatter.format(result.grandTotalPaise / 100)}. Review the total and pay again.`,
         );
         // A new key forces a fresh quote, and the fresh quote a fresh attempt.
         setRequoteCount((count) => count + 1);
@@ -919,14 +925,22 @@ function CheckoutFlowClientState({
                     </summary>
                     <div className="space-y-2 border-t border-white/10 py-2 text-[11px]">
                       <div className="flex justify-between gap-4">
-                        <dt>Platform and payment fees</dt>
+                        <dt>C1RCLE booking fee</dt>
                         <dd>
                           <AnimatedValue
                             value={
                               authoritativeFeesPaise === null
                                 ? '—'
-                                : moneyFormatter.format(authoritativeFeesPaise / 100)
+                                : moneyFormatter.format((quote?.platformFeePaise ?? 0) / 100)
                             }
+                          />
+                        </dd>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <dt>Payment fee</dt>
+                        <dd>
+                          <AnimatedValue
+                            value={quote ? moneyFormatter.format(quote.paymentFeePaise / 100) : '—'}
                           />
                         </dd>
                       </div>
@@ -957,6 +971,7 @@ function CheckoutFlowClientState({
                     </dd>
                   </div>
                 </dl>
+                {quote ? <BookingFeeDisclosure policy={quote.feePolicy} /> : null}
               </div>
 
               {isFreeBooking ? (

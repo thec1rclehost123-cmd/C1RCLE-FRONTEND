@@ -3,6 +3,21 @@ import { z } from 'zod';
 
 import { opaqueIdSchema, paginatedSchema, idempotencyKeySchema } from './shared.js';
 
+/** Disclosed server-owned policy, frozen into original purchase evidence. */
+export const bookingFeePolicySchema = z
+  .object({
+    version: z.string().trim().min(1).max(80),
+    label: z.string().trim().min(1).max(240),
+    payer: z.literal('guest'),
+    environment: z.literal('test'),
+    platformFeeBasisPoints: z.number().int().min(0).max(10000),
+    paymentFeeBasisPoints: z.number().int().min(0).max(10000),
+    feeTaxBasisPoints: z.number().int().min(0).max(10000),
+    guestRefund: z.literal('admission_only'),
+    organizerRefund: z.literal('full_paid'),
+  })
+  .strict();
+
 export const ticketAddonSelectionSchema = z.object({
   addonId: opaqueIdSchema,
   name: z.string().min(1).max(120),
@@ -70,6 +85,7 @@ export type PricingLineDto = z.infer<typeof pricingLineDtoSchema>;
  * fees only; see `domain/models/pricing.ts`). Money is always integer paise.
  */
 export const pricingBreakdownDtoSchema = z.object({
+  feePolicy: bookingFeePolicySchema.optional(),
   lines: z.array(pricingLineDtoSchema),
   subtotalPaise: z.number().int().nonnegative(),
   admissionSubtotalPaise: z.number().int().nonnegative().optional(),
@@ -254,6 +270,7 @@ const checkoutOrderLineDtoSchema = z.object({
  * left for the orders/tickets/wallet PR.
  */
 export const checkoutOrderDtoSchema = z.object({
+  feePolicy: bookingFeePolicySchema.optional(),
   id: opaqueIdSchema,
   bookingReference: z.string().regex(/^C1-[A-F0-9]{5}(?:-[A-F0-9]{5}){3}$/),
   eventId: opaqueIdSchema,

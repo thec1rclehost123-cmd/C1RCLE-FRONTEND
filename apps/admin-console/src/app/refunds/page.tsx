@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Button, EmptyState, ErrorState, LoadingState, TextField } from '@c1rcle/ui';
 
 import { PageHeader } from '@/components/admin/page-header';
+import { RefundRecovery } from '@/components/admin/refund-recovery';
 import { StatusFilter } from '@/components/admin/status-filter';
 import {
   approveRefund,
@@ -86,7 +87,7 @@ export default function RefundsDesk() {
       <div className="flex items-start justify-between gap-4">
         <PageHeader
           title="Refunds"
-          description="Approve the request first, then execute the provider refund. A refund is settled only after authoritative provider confirmation; failed or uncertain attempts remain visible and safe to retry."
+          description="Approve the request first, then execute the provider refund. Settlement requires authoritative provider confirmation. Uncertain executions require provider reconciliation before processing can resume."
         />
         <div className="flex items-center gap-2">
           <StatusFilter
@@ -250,6 +251,8 @@ export default function RefundsDesk() {
                           {request.status === 'failed' ? 'Retry provider refund' : 'Execute refund'}
                         </Button>
                       </div>
+                    ) : request.status === 'executing' ? (
+                      <RefundRecovery request={request} onUpdated={invalidate} />
                     ) : (
                       <p className="text-right text-xs text-muted-foreground">
                         {request.providerRefundId === null

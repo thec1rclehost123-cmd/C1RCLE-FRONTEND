@@ -152,6 +152,66 @@ describe('runPaidCheckout', () => {
     expect(d.openCheckout).not.toHaveBeenCalled();
   });
 
+  it('requires re-confirmation when the server fee-policy version changes even if the total stays the same', async () => {
+    const held = hold();
+    const d = deps({
+      createHold: vi.fn().mockResolvedValue({
+        ...held,
+        pricing: { ...held.pricing, feePolicy: { version: 'test-policy-two' } },
+      }),
+    });
+    const result = await runPaidCheckout(d, {
+      ...input,
+      expectedFeePolicyVersion: 'test-policy-one',
+    });
+    expect(result).toEqual({
+      kind: 'price_changed',
+      grandTotalPaise: input.expectedTotalPaise,
+      feePolicyChanged: true,
+    });
+    expect(d.createAttempt).not.toHaveBeenCalled();
+    expect(d.openCheckout).not.toHaveBeenCalled();
+    expect(d.verify).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { quoted: undefined, held: 'new-test-policy' },
+    { quoted: 'test-policy-one', held: undefined },
+  ])(
+    'rejects adding or removing the disclosed fee-policy snapshot ($quoted -> $held)',
+    async ({ quoted, held }) => {
+      const reserved = hold();
+      const d = deps({
+        createHold: vi.fn().mockResolvedValue({
+          ...reserved,
+          pricing: { ...reserved.pricing, ...(held ? { feePolicy: { version: held } } : {}) },
+        }),
+      });
+      expect(
+        await runPaidCheckout(d, {
+          ...input,
+          ...(quoted ? { expectedFeePolicyVersion: quoted } : {}),
+        }),
+      ).toMatchObject({ kind: 'price_changed', feePolicyChanged: true });
+      expect(d.createAttempt).not.toHaveBeenCalled();
+      expect(d.openCheckout).not.toHaveBeenCalled();
+    },
+  );
+
+  it('continues with the provider only when the shown and held fee-policy versions match', async () => {
+    const reserved = hold();
+    const d = deps({
+      createHold: vi.fn().mockResolvedValue({
+        ...reserved,
+        pricing: { ...reserved.pricing, feePolicy: { version: 'test-policy-one' } },
+      }),
+    });
+    expect(
+      await runPaidCheckout(d, { ...input, expectedFeePolicyVersion: 'test-policy-one' }),
+    ).toEqual({ kind: 'confirmed', orderId: 'ord_9' });
+    expect(d.createAttempt).toHaveBeenCalledOnce();
+  });
+
   it('reports payments as unavailable when the server cannot take them (503)', async () => {
     const d = deps({ createAttempt: vi.fn().mockRejectedValue({ status: 503, code: 'server' }) });
 

@@ -54,6 +54,18 @@ const quote = (grandTotalPaise = 118_000) => ({
   currency: 'INR',
 });
 
+const TEST_FEE_POLICY = {
+  version: 'synthetic-quote-policy-one',
+  label: 'Synthetic quote policy',
+  payer: 'guest',
+  environment: 'test',
+  platformFeeBasisPoints: 500,
+  paymentFeeBasisPoints: 250,
+  feeTaxBasisPoints: 1800,
+  guestRefund: 'admission_only',
+  organizerRefund: 'full_paid',
+} as const;
+
 const LIVE_EVENT: BookingEventFixture = {
   id: 'sky-night',
   eventId: 'evt_1',
@@ -452,6 +464,57 @@ describe('paid checkout step', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Card declined');
     expect(screen.getByRole('button', { name: 'Pay ₹1,180' })).toBeEnabled();
     expect(mocks.push).not.toHaveBeenCalled();
+  });
+
+  it('discloses the server-owned test policy, Guest-paid fee components and original-paid refund distinction before payment', async () => {
+    mocks.fetchQuote.mockResolvedValue({
+      ...quote(118_003),
+      platformFeePaise: 10_001,
+      paymentFeePaise: 2_001,
+      gstPaise: 6_001,
+      feePolicy: TEST_FEE_POLICY,
+    });
+    toPaymentStep();
+    await screen.findByRole('button', { name: 'Pay ₹1,180.03' });
+    const policy = screen.getByRole('region', { name: 'Booking fee and refund policy' });
+    expect(policy).toHaveTextContent('Test pricing policy: Synthetic quote policy');
+    expect(policy).toHaveTextContent('non-production testing; production rates are not approved');
+    expect(policy).toHaveTextContent('You pay the C1RCLE booking and payment fees');
+    expect(policy).toHaveTextContent('selected tickets’ admission value');
+    expect(policy).toHaveTextContent(
+      'full affected amount originally paid, including applicable fees and taxes',
+    );
+    expect(policy).toHaveTextContent('Policy version: synthetic-quote-policy-one');
+    expect(screen.getByText('C1RCLE booking fee').parentElement).toHaveTextContent('₹100.01');
+    expect(screen.getByText('Payment fee').parentElement).toHaveTextContent('₹20.01');
+    expect(mocks.deps.createHold).not.toHaveBeenCalled();
+  });
+
+  it('re-quotes for a same-total fee-policy version change before opening any payment attempt', async () => {
+    const changedPolicy = { ...TEST_FEE_POLICY, version: 'synthetic-quote-policy-two' };
+    mocks.fetchQuote
+      .mockResolvedValueOnce({ ...quote(), feePolicy: TEST_FEE_POLICY })
+      .mockResolvedValueOnce({ ...quote(), feePolicy: changedPolicy });
+    mocks.deps = deps({
+      createHold: vi.fn().mockResolvedValue({
+        holdId: 'hold_changed_policy',
+        expiresAt: '2026-10-11T18:00:00.000Z',
+        status: 'active',
+        convertedOrderId: null,
+        pricing: { ...quote(), feePolicy: changedPolicy },
+      }),
+    });
+    toPaymentStep();
+    fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('The fee policy changed');
+    await waitFor(() => {
+      expect(mocks.fetchQuote).toHaveBeenCalledTimes(2);
+    });
+    expect(screen.getByRole('region', { name: 'Booking fee and refund policy' })).toHaveTextContent(
+      'synthetic-quote-policy-two',
+    );
+    expect(mocks.deps.createAttempt).not.toHaveBeenCalled();
+    expect(mocks.deps.openCheckout).not.toHaveBeenCalled();
   });
 
   it('re-quotes and asks again when the held price differs from the one shown', async () => {

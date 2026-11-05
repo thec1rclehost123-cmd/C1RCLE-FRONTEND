@@ -57,6 +57,8 @@ export interface PaidCheckoutInput {
   }[];
   /** The total the buyer was shown; a hold priced differently stops for re-confirmation. */
   readonly expectedTotalPaise: number;
+  /** Version of the server-owned policy shown with the quote, absent for legacy quotes. */
+  readonly expectedFeePolicyVersion?: string;
   /** One per checkout attempt, so a double-click or retry replays rather than repeats. */
   readonly idempotencyKey: string;
   readonly promoCode?: string | null;
@@ -72,7 +74,11 @@ export type PaidCheckoutResult =
   | { readonly kind: 'confirmed'; readonly orderId: string }
   /** Paid, but the server has not confirmed yet; the webhook will finish the job. */
   | { readonly kind: 'processing'; readonly ticketsReady: boolean }
-  | { readonly kind: 'price_changed'; readonly grandTotalPaise: number }
+  | {
+      readonly kind: 'price_changed';
+      readonly grandTotalPaise: number;
+      readonly feePolicyChanged?: boolean;
+    }
   /** The payment was captured but could not be honoured, and has been refunded in full. */
   | { readonly kind: 'refunded'; readonly message: string }
   | { readonly kind: 'cancelled'; readonly reason?: string }
@@ -110,6 +116,13 @@ export async function runPaidCheckout(
       }));
     if (hold.pricing.grandTotalPaise !== input.expectedTotalPaise) {
       return { kind: 'price_changed', grandTotalPaise: hold.pricing.grandTotalPaise };
+    }
+    if (hold.pricing.feePolicy?.version !== input.expectedFeePolicyVersion) {
+      return {
+        kind: 'price_changed',
+        grandTotalPaise: hold.pricing.grandTotalPaise,
+        feePolicyChanged: true,
+      };
     }
     attempt = await deps.createAttempt({
       holdId: hold.holdId,

@@ -21,6 +21,7 @@ vi.mock('@/lib/api/client', () => ({ apiClient: { kind: 'test-client' } }));
 vi.mock('@/lib/finance/api-finance-repository', () => ({ requestPayout }));
 
 const request = {
+  payoutsEnabled: true,
   organizationId: 'org_1',
   availablePaise: 50_000,
   bankAccountId: 'bank_1',
@@ -72,6 +73,36 @@ describe('PayoutRequestAction', () => {
       expect(requestPayout).toHaveBeenCalledTimes(2);
     });
     expect(requestPayout.mock.calls[1]?.[3]).toBe(requestPayout.mock.calls[0]?.[3]);
+  });
+
+  it.each([false, undefined])(
+    'requires explicit server payout enablement even with an eligible balance (%s)',
+    (payoutsEnabled) => {
+      render(<PayoutRequestAction request={{ ...request, payoutsEnabled }} />);
+      expect(screen.getByRole('button', { name: 'Request payout' })).toBeDisabled();
+      expect(requestPayout).not.toHaveBeenCalled();
+    },
+  );
+
+  it('removes an open request form if server payout authorization is revoked', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<PayoutRequestAction request={request} />);
+    await user.click(screen.getByRole('button', { name: 'Request payout' }));
+    expect(screen.getByRole('button', { name: 'Confirm payout' })).toBeInTheDocument();
+    rerender(<PayoutRequestAction request={{ ...request, payoutsEnabled: false }} />);
+    expect(screen.queryByRole('button', { name: 'Confirm payout' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Request payout' })).toBeDisabled();
+    expect(requestPayout).not.toHaveBeenCalled();
+  });
+
+  it('cannot request a payout while the server reports settlement unavailable', () => {
+    render(
+      <PayoutRequestAction
+        request={{ ...request, settlementUnavailableReason: 'Historical balance review required' }}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Request payout' })).toBeDisabled();
+    expect(requestPayout).not.toHaveBeenCalled();
   });
 
   it('stays unavailable without an API-backed organization and bank account', () => {

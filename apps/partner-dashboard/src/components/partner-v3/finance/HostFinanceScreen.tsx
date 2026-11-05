@@ -7,5 +7,7 @@ type HostFinanceScreenProps = Omit<PartnerFinanceScreenProps, 'baseHref' | 'data
 };
 
 export function HostFinanceScreen({ data, ...props }: HostFinanceScreenProps) {
-  return <PartnerFinanceScreen {...props} data={data} baseHref="/partner/host/finance" />;
+  return (
+    <PartnerFinanceScreen {...props} data={data} baseHref="/partner/host/finance" hostSettlement />
+  );
 }
