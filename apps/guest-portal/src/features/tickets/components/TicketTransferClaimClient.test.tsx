@@ -1,16 +1,20 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TicketTransferClaimClient } from './TicketTransferClaimClient';
 
-const { mockPost, mockReplace, mockUseSession } = vi.hoisted(() => ({
+const { mockGet, mockPost, mockReplace, mockUseSession } = vi.hoisted(() => ({
+  mockGet: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
   mockPost: vi.fn<(...args: readonly unknown[]) => Promise<unknown>>(),
   mockReplace: vi.fn(),
   mockUseSession: vi.fn<() => { isAuthenticated: boolean; isLoading: boolean }>(),
 }));
 
 vi.mock('@/lib/bff/bff-client', () => ({
-  bffClient: { post: (...args: unknown[]) => mockPost(...args) },
+  bffClient: {
+    get: (...args: unknown[]) => mockGet(...args),
+    post: (...args: unknown[]) => mockPost(...args),
+  },
 }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: mockReplace }) }));
 vi.mock('@c1rcle/auth', () => ({ useSession: () => mockUseSession() }));
@@ -31,6 +35,23 @@ const ACCEPTED = {
   entitlement: { id: 'ENT-test-1' },
 };
 
+const PREVIEW = {
+  id: 'TRF-test-1',
+  status: 'pending',
+  expiresAt: '2026-12-10T12:00:00.000Z',
+  eventTitle: 'A night out',
+  startsAt: null,
+  tierName: 'General',
+  senderName: 'Sender',
+  canAccept: true,
+  unavailableReason: null,
+};
+beforeEach(() => {
+  mockGet.mockReset();
+  mockPost.mockReset();
+  mockGet.mockResolvedValue(PREVIEW);
+});
+
 describe('TicketTransferClaimClient', () => {
   it('requires sign-in before showing an explicit accept action', () => {
     mockUseSession.mockReturnValue({ isAuthenticated: false, isLoading: false });
@@ -49,7 +70,7 @@ describe('TicketTransferClaimClient', () => {
     mockPost.mockResolvedValue(ACCEPTED);
     render(<TicketTransferClaimClient transferId="TRF-test-1" />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Accept ticket' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Accept ticket' }));
 
     expect(await screen.findByText(/previous entry code has been replaced/i)).toBeInTheDocument();
     expect(mockPost).toHaveBeenCalledWith(
@@ -67,7 +88,7 @@ describe('TicketTransferClaimClient', () => {
     mockPost.mockRejectedValue(new Error('not found'));
     render(<TicketTransferClaimClient transferId="TRF-test-1" />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Accept ticket' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Accept ticket' }));
 
     expect(
       await screen.findByText(
@@ -83,7 +104,7 @@ describe('TicketTransferClaimClient', () => {
     });
     render(<TicketTransferClaimClient transferId="TRF-test-1" />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Decline invitation' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Decline invitation' }));
 
     expect(await screen.findByText(/ticket stays with its current holder/i)).toBeInTheDocument();
     expect(mockPost).toHaveBeenCalledWith(
@@ -93,4 +114,27 @@ describe('TicketTransferClaimClient', () => {
       }),
     );
   });
+});
+
+it('does not reveal a preview or offer acceptance after a mismatched identity', async () => {
+  mockUseSession.mockReturnValue({ isAuthenticated: true, isLoading: false });
+  mockGet.mockRejectedValue(new Error('not found'));
+  render(<TicketTransferClaimClient transferId="TRF-test-1" />);
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'does not match your verified account',
+  );
+  expect(screen.queryByRole('button', { name: 'Accept ticket' })).not.toBeInTheDocument();
+  expect(mockPost).not.toHaveBeenCalled();
+});
+it('shows expired invitations without a claim action', async () => {
+  mockUseSession.mockReturnValue({ isAuthenticated: true, isLoading: false });
+  mockGet.mockResolvedValue({
+    ...PREVIEW,
+    status: 'expired',
+    canAccept: false,
+    unavailableReason: 'This invitation is expired.',
+  });
+  render(<TicketTransferClaimClient transferId="TRF-test-1" />);
+  expect(await screen.findByText('This invitation is expired.')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Accept ticket' })).not.toBeInTheDocument();
 });

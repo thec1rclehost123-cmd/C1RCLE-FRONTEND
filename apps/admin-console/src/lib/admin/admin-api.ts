@@ -65,6 +65,7 @@ import {
   proposeActionSchema,
   rejectKycDocumentSchema,
   rejectRefundRequestSchema,
+  reconcileRefundRequestSchema,
   resolveProposalSchema,
   resolveSupportTicketSchema,
   requestRefundSchema,
@@ -368,34 +369,69 @@ export function approveRefund(refundId: string): Promise<RefundOutcome> {
   });
 }
 
-export function rejectRefund(refundId: string, reason: string): Promise<RefundOutcome> {
+export function rejectRefund(
+  refundId: string,
+  reason: string,
+  idempotencyKey = newIdempotencyKey(),
+): Promise<RefundOutcome> {
   return getAdminApiClient().post({
     path: `/api/v2/admin/refunds/${refundId}/reject`,
     body: rejectRefundRequestSchema.parse({ reason }),
-    headers: { 'idempotency-key': newIdempotencyKey() },
+    headers: { 'idempotency-key': idempotencyKey },
     schema: refundOutcomeSchema,
   });
 }
 
-export function executeRefund(refundId: string): Promise<RefundOutcome> {
+export function executeRefund(
+  refundId: string,
+  idempotencyKey = newIdempotencyKey(),
+): Promise<RefundOutcome> {
   return getAdminApiClient().post({
     path: `/api/v2/admin/refunds/${refundId}/execute`,
-    headers: { 'idempotency-key': newIdempotencyKey() },
+    headers: { 'idempotency-key': idempotencyKey },
+    schema: refundOutcomeSchema,
+  });
+}
+
+export function requestOriginalFeeReview(
+  refundId: string,
+  idempotencyKey = newIdempotencyKey(),
+): Promise<RefundOutcome> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/refunds/${encodeURIComponent(refundId)}/policy-remedy`,
+    headers: { 'idempotency-key': idempotencyKey },
+    schema: refundOutcomeSchema,
+  });
+}
+
+export function reconcileRefund(
+  refundId: string,
+  input: z.infer<typeof reconcileRefundRequestSchema>,
+  idempotencyKey = newIdempotencyKey(),
+): Promise<RefundOutcome> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/refunds/${encodeURIComponent(refundId)}/reconcile`,
+    body: reconcileRefundRequestSchema.parse(input),
+    headers: { 'idempotency-key': idempotencyKey },
     schema: refundOutcomeSchema,
   });
 }
 
 export interface RequestRefundInput {
+  readonly targetEntitlementIds?: readonly string[];
   readonly orderId: string;
   readonly amountPaise: number;
   readonly reason: string;
 }
 
-export function requestRefund(input: RequestRefundInput): Promise<RefundOutcome> {
+export function requestRefund(
+  input: RequestRefundInput,
+  idempotencyKey = newIdempotencyKey(),
+): Promise<RefundOutcome> {
   return getAdminApiClient().post({
     path: `/api/v2/admin/refunds`,
     body: requestRefundSchema.parse(input),
-    headers: { 'idempotency-key': newIdempotencyKey() },
+    headers: { 'idempotency-key': idempotencyKey },
     schema: refundOutcomeSchema,
   });
 }

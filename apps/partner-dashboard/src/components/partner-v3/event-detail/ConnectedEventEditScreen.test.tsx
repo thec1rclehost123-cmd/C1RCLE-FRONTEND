@@ -2,6 +2,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { eventOperationsDtoSchema } from '@c1rcle/contracts';
+
 import { ConnectedEventEditScreen } from './ConnectedEventEditScreen';
 
 import type { EventOperationsDto, TicketTierDto, UpdateEventInput } from '@c1rcle/contracts';
@@ -106,10 +108,16 @@ describe('ConnectedEventEditScreen', () => {
       accessType: 'ENTRY',
     };
     updateTierLimit.mockImplementation(
-      (_organizationId: string, _eventId: string, tierId: string, version: number, max: number) =>
+      (
+        _organizationId: string,
+        _eventId: string,
+        tierId: string,
+        version: number,
+        changes: { maxPerOrder?: number; quantity?: number; priceInPaise?: number },
+      ) =>
         Promise.resolve({
           ...(tierId === rsvp.id ? rsvp : paid),
-          maxPerOrder: max,
+          ...changes,
           version: version + 1,
         }),
     );
@@ -133,7 +141,7 @@ describe('ConnectedEventEditScreen', () => {
       event.id,
       rsvp.id,
       1,
-      1,
+      { maxPerOrder: 1 },
       expect.any(String),
     );
     await userEvent.click(screen.getByRole('button', { name: 'Save limit' }));
@@ -145,12 +153,63 @@ describe('ConnectedEventEditScreen', () => {
       event.id,
       paid.id,
       1,
-      10,
+      { maxPerOrder: 10 },
       expect.any(String),
     );
     expect(await screen.findByRole('status')).toHaveTextContent(
       'General Entry per-order limit saved.',
     );
+    fireEvent.change(screen.getByLabelText('General Entry total inventory'), {
+      target: { value: '40' },
+    });
+    fireEvent.change(screen.getByLabelText('General Entry future price'), {
+      target: { value: '650.50' },
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Save ticket settings' }));
+    await waitFor(() => {
+      expect(updateTierLimit).toHaveBeenCalledTimes(3);
+    });
+    expect(updateTierLimit).toHaveBeenLastCalledWith(
+      event.organizationId,
+      event.id,
+      paid.id,
+      2,
+      { quantity: 40, priceInPaise: 65050 },
+      expect.any(String),
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'General Entry ticket settings saved.',
+    );
+  });
+
+  it('saves a standardized refund-request cutoff in the product timezone', async () => {
+    updateEvent.mockImplementation((_org, _event, _version, changes) =>
+      Promise.resolve(
+        eventOperationsDtoSchema.parse({
+          ...event,
+          ...Object.fromEntries(Object.entries(changes).filter(([, value]) => value !== undefined)),
+          version: 5,
+        }),
+      ),
+    );
+    render(<ConnectedEventEditScreen event={event} organizationId="org_m3" studio="host" />);
+    fireEvent.change(screen.getByLabelText('Refund request policy'), {
+      target: { value: 'until_cutoff' },
+    });
+    fireEvent.change(screen.getByLabelText('Refund request deadline (IST)'), {
+      target: { value: '2026-12-29T12:30' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save details' }));
+    await waitFor(() => {
+      expect(updateEvent).toHaveBeenCalledWith(
+        'org_m3',
+        'evt_m3',
+        4,
+        expect.objectContaining({
+          refundPolicy: { kind: 'until_cutoff', cutoffAt: '2026-12-29T07:00:00.000Z' },
+        }),
+      );
+    });
   });
 
   it('saves only event-copy fields and confirms the authoritative result', async () => {
@@ -175,7 +234,7 @@ describe('ConnectedEventEditScreen', () => {
       description: 'Original description',
       visibilityMode: 'public',
       addressDisclosure: 'public',
-      entryRules: event.entryRules,
+      entryRules: { ...event.entryRules, reentryAllowed: false },
     });
     expect(await screen.findByRole('status')).toHaveTextContent('Event details saved.');
     expect(screen.getByLabelText('Event title')).toHaveValue('M3 test event updated');
@@ -201,7 +260,7 @@ describe('ConnectedEventEditScreen', () => {
       description: 'Original description',
       visibilityMode: 'unlisted',
       addressDisclosure: 'public',
-      entryRules: event.entryRules,
+      entryRules: { ...event.entryRules, reentryAllowed: false },
     });
     expect(await screen.findByLabelText('Who can find this event?')).toHaveValue('unlisted');
   });
@@ -233,7 +292,7 @@ describe('ConnectedEventEditScreen', () => {
       description: 'Original description',
       visibilityMode: 'code',
       addressDisclosure: 'after_grant',
-      entryRules: event.entryRules,
+      entryRules: { ...event.entryRules, reentryAllowed: false },
     });
     expect(screen.getByLabelText('Full venue address')).toHaveValue('after_grant');
   });

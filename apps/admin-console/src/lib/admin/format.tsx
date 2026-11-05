@@ -22,7 +22,8 @@ export function formatPaise(paise: number): string {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
   }).format(paise / 100);
 }
 
@@ -106,6 +107,7 @@ export const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
   scheduled: 'Scheduled',
   published: 'Published',
   sales_paused: 'Sales paused',
+  postponed: 'Postponed',
   started: 'Started',
   ended: 'Ended',
   archived: 'Archived',
@@ -250,6 +252,7 @@ export function eventStatusTone(status: EventStatus): Tone {
       return 'muted';
     case 'review':
     case 'sales_paused':
+    case 'postponed':
       return 'warning';
     case 'cancelled':
       return 'destructive';

@@ -15,7 +15,7 @@ const slot: AvailabilitySlot = {
 };
 
 describe('Event time timeline', () => {
-  it('selects an overnight end using duration and labels the next day', () => {
+  it('selects an overnight end using the end time and labels the next day', () => {
     const onSelect = vi.fn();
     const { rerender } = render(
       <EventTimeTimeline
@@ -27,7 +27,7 @@ describe('Event time timeline', () => {
         onSelect={onSelect}
       />,
     );
-    fireEvent.change(screen.getByLabelText('Event duration'), { target: { value: '300' } });
+    fireEvent.change(screen.getByLabelText('Event end time'), { target: { value: '02:00' } });
     expect(onSelect).toHaveBeenCalledWith(slot, '21:00', '02:00');
     rerender(
       <EventTimeTimeline
@@ -41,7 +41,7 @@ describe('Event time timeline', () => {
     );
     expect(screen.getByText(/9:00 PM → 2:00 AM · next day IST/)).toBeVisible();
   });
-  it('rejects a duration crossing an occupied interval after midnight', () => {
+  it('rejects an end time crossing an occupied interval after midnight', () => {
     const onSelect = vi.fn();
     render(
       <EventTimeTimeline
@@ -53,11 +53,11 @@ describe('Event time timeline', () => {
         onSelect={onSelect}
       />,
     );
-    fireEvent.change(screen.getByLabelText('Event duration'), { target: { value: '300' } });
+    fireEvent.change(screen.getByLabelText('Event end time'), { target: { value: '02:00' } });
     expect(onSelect).not.toHaveBeenCalled();
     expect(screen.getByRole('alert')).toHaveTextContent('available interval');
   });
-  it('supports keyboard range changes and exact end time entry', () => {
+  it('keeps exact time inputs without redundant sliders or duration', () => {
     const onSelect = vi.fn();
     render(
       <EventTimeTimeline
@@ -69,8 +69,10 @@ describe('Event time timeline', () => {
         onSelect={onSelect}
       />,
     );
-    fireEvent.change(screen.getByLabelText('Adjust event end'), { target: { value: '1560' } });
-    expect(onSelect).toHaveBeenLastCalledWith(slot, '21:00', '02:00');
+    expect(screen.queryByRole('slider')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Event duration')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Event start time'), { target: { value: '20:00' } });
+    expect(onSelect).toHaveBeenLastCalledWith(slot, '20:00', '22:00');
     fireEvent.change(screen.getByLabelText('Event end time'), { target: { value: '01:00' } });
     expect(onSelect).toHaveBeenLastCalledWith(slot, '21:00', '01:00');
   });

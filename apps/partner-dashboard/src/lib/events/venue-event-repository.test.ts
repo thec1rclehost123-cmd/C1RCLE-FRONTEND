@@ -442,7 +442,14 @@ describe('updatePartnerEventDetails', () => {
     mocks.patch.mockResolvedValueOnce({ id: 'tier_1', maxPerOrder: 10, version: 2 });
 
     await expect(
-      updatePartnerEventTicketLimit('org_1', 'evt_1', 'tier_1', 1, 10, 'tier-limit-intent'),
+      updatePartnerEventTicketLimit(
+        'org_1',
+        'evt_1',
+        'tier_1',
+        1,
+        { maxPerOrder: 10 },
+        'tier-limit-intent',
+      ),
     ).resolves.toMatchObject({ id: 'tier_1', maxPerOrder: 10, version: 2 });
 
     expect(mocks.patch).toHaveBeenCalledWith(

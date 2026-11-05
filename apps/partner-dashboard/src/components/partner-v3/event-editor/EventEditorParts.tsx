@@ -986,6 +986,9 @@ export function TicketTierEditor({
                             updateTier(tier.id, {
                               audienceType: event.target
                                 .value as EventEditorTicketTier['audienceType'],
+                              ...(event.target.value === 'COUPLE'
+                                ? { guestCount: 2, admissionMode: 'bundle' as const }
+                                : {}),
                             });
                           }}
                         >
@@ -995,8 +998,6 @@ export function TicketTierEditor({
                             ['FEMALE', 'Women'],
                             ['COUPLE', 'Couple'],
                             ['GROUP', 'Group'],
-                            ['STUDENT', 'Student'],
-                            ['MEMBER', 'Member'],
                           ].map(([value, label]) => (
                             <option key={value} value={value}>
                               {label}
@@ -1011,6 +1012,7 @@ export function TicketTierEditor({
                         Guests
                         <input
                           aria-label="Guests"
+                          disabled={tier.audienceType === 'COUPLE'}
                           type="number"
                           min="1"
                           value={String(tier.guestCount ?? 1)}
@@ -1023,7 +1025,9 @@ export function TicketTierEditor({
                           }}
                         />
                       </label>
-                      {tier.accessType !== 'RSVP' && (tier.guestCount ?? 1) > 1 ? (
+                      {tier.accessType !== 'RSVP' &&
+                      tier.audienceType !== 'COUPLE' &&
+                      (tier.guestCount ?? 1) > 1 ? (
                         <label>
                           Admission issuance
                           <select
@@ -2196,7 +2200,14 @@ export function EventPreview({
         })}
       </div>
       <div className={styles['previewPoster']}>
-        <div className={styles['previewPosterImage']}>
+        <div
+          className={[
+            styles['previewPosterImage'],
+            draft.artwork.type !== 'image' ? styles['previewPosterEmpty'] : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
           {draft.artwork.type === 'image' ? (
             <Image
               fill
@@ -2205,7 +2216,7 @@ export function EventPreview({
               alt={`${draft.name || 'Event'} poster`}
             />
           ) : (
-            <div className={gradientClass(draft.artwork.value)} />
+            <div className={styles['posterPlaceholder']} aria-hidden="true" />
           )}
           <span className={styles['previewPosterBadge']}>Draft</span>
           <div className={styles['posterControls']}>

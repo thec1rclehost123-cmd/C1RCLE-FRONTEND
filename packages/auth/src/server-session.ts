@@ -37,3 +37,20 @@ export async function getServerSession(cookieHeader: string): Promise<{ user: Us
     return null;
   }
 }
+
+/**
+ * The frontend stores the session cookie under the unprefixed name; a
+ * production gateway (`useSecureCookies`) reads the `__Secure-` prefixed name.
+ * Emit both with the same value so server-side reads resolve the session
+ * whatever cookie-name configuration the gateway uses.
+ */
+export function withGatewayCookieName(cookieHeader: string): string {
+  if (cookieHeader.includes('__Secure-better-auth.session_token=')) {
+    return cookieHeader;
+  }
+  const match = /(?:^|;)\s*better-auth\.session_token=([^;]+)/.exec(cookieHeader);
+  if (match === null) return cookieHeader;
+  const value = match[1];
+  if (value === undefined) return cookieHeader;
+  return `${cookieHeader}; __Secure-better-auth.session_token=${value}`;
+}

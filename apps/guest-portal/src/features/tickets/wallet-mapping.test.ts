@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { MANAGEMENT } from './fixtures/ticket-management.test-fixtures';
 import { toTicketWalletData } from './wallet-mapping';
 
 import type { WalletEventDetails } from './wallet-mapping';
@@ -115,6 +116,39 @@ function resolveFor(
     return Promise.resolve({ event, venue: VENUE });
   };
 }
+
+describe('pending fulfillment wallet', () => {
+  it('keeps a paid pending order in Processing when event details are unavailable', async () => {
+    const wallet = await toTicketWalletData(
+      [BASE_ENTITLEMENT],
+      () => Promise.resolve(null),
+      new Date('2026-11-04T00:00:00Z'),
+      [{ ...ORDER, status: 'paid', fulfillmentState: 'pending' }],
+    );
+    expect(wallet.upcomingTickets[0]?.status).toBe('processing');
+    expect(wallet.pastTickets).toHaveLength(0);
+  });
+  it('labels server-managed pending units as processing, preserving their non-admission authority', async () => {
+    const managed = {
+      ...MANAGEMENT,
+      status: 'processing' as const,
+      canPresent: false,
+      canTransfer: false,
+      qrUnavailableReason: 'Booking is still processing',
+    };
+    const wallet = await toTicketWalletData(
+      [],
+      () => Promise.resolve(null),
+      new Date('2026-11-04T00:00:00Z'),
+      [],
+      [],
+      [managed],
+    );
+    expect(wallet.upcomingTickets[0]?.status).toBe('processing');
+    expect(wallet.upcomingTickets[0]?.management?.canPresent).toBe(false);
+    expect(wallet.pastTickets).toHaveLength(0);
+  });
+});
 
 describe('toTicketWalletData', () => {
   it('resolves distinct event details concurrently', async () => {
@@ -331,5 +365,129 @@ describe('toTicketWalletData', () => {
     expect(wallet.upcomingTickets[0]?.ticketAddons).toEqual([
       { id: 'TAE-parking-1', name: 'Parking pass', kind: 'parking', status: 'active' },
     ]);
+  });
+});
+
+describe('authoritative postponed ticket dates', () => {
+  const postponed = {
+    ...MANAGEMENT,
+    id: BASE_ENTITLEMENT.id,
+    eventId: BASE_ENTITLEMENT.eventId,
+    orderId: BASE_ENTITLEMENT.orderId,
+    eventStatus: 'postponed' as const,
+    startsAt: null,
+    endsAt: null,
+    canPresent: false,
+    canTransfer: false,
+  };
+  it('clears a stale public schedule and keeps the preserved ticket upcoming', async () => {
+    const wallet = await toTicketWalletData(
+      [BASE_ENTITLEMENT],
+      resolveFor({
+        evt_1: {
+          ...FUTURE_EVENT,
+          startAt: '2025-01-01T00:00:00.000Z',
+          endAt: '2025-01-02T00:00:00.000Z',
+        },
+      }),
+      NOW,
+      [],
+      [],
+      [postponed],
+    );
+    expect(wallet.upcomingTickets).toHaveLength(1);
+    expect(wallet.upcomingTickets[0]).toMatchObject({
+      status: 'postponed',
+      startsAt: null,
+      endsAt: null,
+      date: 'New date to be announced',
+      time: '',
+    });
+    expect(wallet.pastTickets).toEqual([]);
+    expect(wallet.unavailableTickets).toEqual([]);
+  });
+  it('keeps a management-only postponed booking visible without a public event read', async () => {
+    const wallet = await toTicketWalletData(
+      [],
+      () => Promise.resolve(null),
+      NOW,
+      [],
+      [],
+      [postponed],
+    );
+    expect(wallet.upcomingTickets[0]).toMatchObject({
+      status: 'postponed',
+      date: 'New date to be announced',
+    });
+    expect(wallet.unavailableTickets).toEqual([]);
+  });
+  it('moves authoritative cancellation out of upcoming before entitlement voiding', async () => {
+    const wallet = await toTicketWalletData(
+      [BASE_ENTITLEMENT],
+      resolveFor({ evt_1: FUTURE_EVENT }),
+      NOW,
+      [],
+      [],
+      [{ ...postponed, eventStatus: 'cancelled', status: 'cancelled' }],
+    );
+    expect(wallet.upcomingTickets).toEqual([]);
+    expect(wallet.pastTickets[0]?.status).toBe('cancelled');
+  });
+});
+
+describe('authoritative management without an event end', () => {
+  it.each([true, false])(
+    'keeps the ticket upcoming through start plus six hours (public read: %s)',
+    async (withPublic) => {
+      const startsAt = '2026-09-23T11:00:00.000Z';
+      const managed = {
+        ...MANAGEMENT,
+        id: BASE_ENTITLEMENT.id,
+        eventId: BASE_ENTITLEMENT.eventId,
+        orderId: BASE_ENTITLEMENT.orderId,
+        startsAt,
+        endsAt: null,
+      };
+      const wallet = await toTicketWalletData(
+        withPublic ? [BASE_ENTITLEMENT] : [],
+        resolveFor({ evt_1: { ...FUTURE_EVENT, startAt: startsAt, endAt: null } }),
+        NOW,
+        [],
+        [],
+        [managed],
+      );
+      expect(wallet.upcomingTickets.map((ticket) => ticket.id)).toEqual([BASE_ENTITLEMENT.id]);
+      expect(wallet.pastTickets).toEqual([]);
+      const expired = await toTicketWalletData(
+        [],
+        () => Promise.resolve(null),
+        new Date('2026-09-23T17:00:00.000Z'),
+        [],
+        [],
+        [managed],
+      );
+      expect(expired.upcomingTickets).toEqual([]);
+      expect(expired.pastTickets.map((ticket) => ticket.id)).toEqual([BASE_ENTITLEMENT.id]);
+    },
+  );
+  it('uses current managed venue details when the public projection is stale', async () => {
+    const wallet = await toTicketWalletData(
+      [BASE_ENTITLEMENT],
+      resolveFor({ evt_1: FUTURE_EVENT }),
+      NOW,
+      [],
+      [],
+      [
+        {
+          ...MANAGEMENT,
+          id: BASE_ENTITLEMENT.id,
+          eventId: BASE_ENTITLEMENT.eventId,
+          orderId: BASE_ENTITLEMENT.orderId,
+          venueName: 'New venue',
+          venueCity: 'Pune',
+        },
+      ],
+    );
+    expect(wallet.upcomingTickets[0]).toMatchObject({ venueName: 'New venue', city: 'Pune' });
   });
 });

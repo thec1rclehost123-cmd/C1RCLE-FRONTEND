@@ -30,9 +30,11 @@ function areaPath(points: readonly number[], width = 600, height = 190): string 
 export function FinanceSummary({
   data,
   bankHref,
+  hostSettlement = false,
 }: {
   readonly data: PartnerFinanceData;
   readonly bankHref: string;
+  readonly hostSettlement?: boolean;
 }) {
   const sparkLine = linePath(data.balanceTrend);
   const sparkArea = areaPath(data.balanceTrend);
@@ -59,13 +61,19 @@ export function FinanceSummary({
           </svg>
           <div className={styles['balanceContent']}>
             <div className={styles['balanceLabelRow']}>
-              <span id="available-balance-title">Available balance</span>
+              <span id="available-balance-title">
+                {hostSettlement ? 'Settlement eligible' : 'Available balance'}
+              </span>
               <span className={styles['balanceDelta']}>
                 <TrendUpIcon size={12} aria-hidden="true" />
                 {data.balanceDelta}
               </span>
             </div>
-            <strong className={styles['balanceValue']}>{data.availableBalance}</strong>
+            <strong className={styles['balanceValue']}>
+              {hostSettlement && data.settlementUnavailableReason
+                ? 'Unavailable'
+                : data.availableBalance}
+            </strong>
             <p>{data.balanceDetail}</p>
             <div className={styles['balanceActions']}>
               <PayoutRequestAction request={data.payoutRequest} />
@@ -116,6 +124,28 @@ export function FinanceSummary({
         />
         <FinanceMetric metric={data.nextPayout} icon={<ScheduledPayoutIcon size={20} />} />
       </div>
+      {hostSettlement ? (
+        <section aria-label="Host settlement policy" className={styles['financeDisclosure']}>
+          <p>
+            Host proceeds become settlement-eligible in stages: up to 75% at 24 hours after the
+            event’s effective end, with the remaining 25% at 72 hours.
+          </p>
+          <p>
+            Refunds, disputes, cancellation liability, provider verification and reconciliation
+            holds can retain affected proceeds. Postponed events do not release proceeds on the
+            original schedule.
+          </p>
+          <p>
+            Eligibility does not automatically send a payout. Payout requests are currently{' '}
+            {data.payoutRequest?.payoutsEnabled === true ? 'enabled' : 'disabled'}.
+          </p>
+          {data.settlementUnavailableReason ? (
+            <p role="status">
+              Settlement eligibility unavailable: {data.settlementUnavailableReason}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
     </div>
   );
 }

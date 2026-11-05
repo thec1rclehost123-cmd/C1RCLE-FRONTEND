@@ -181,29 +181,6 @@ export function EventTimeTimeline({
           />
         </label>
         <label>
-          Duration
-          <select
-            aria-label="Event duration"
-            value={selectedSlotId ? String(end - start) : ''}
-            onChange={(event) => {
-              commit(start, start + Number(event.target.value));
-            }}
-          >
-            <option value="" disabled>
-              Select duration
-            </option>
-            {![60, 120, 180, 240, 300, 360, 480, 720, 1440].includes(end - start) &&
-            selectedSlotId ? (
-              <option value={end - start}>{(end - start) / 60} hours</option>
-            ) : null}
-            {[60, 120, 180, 240, 300, 360, 480, 720, 1440].map((value) => (
-              <option value={value} key={value}>
-                {value / 60} {value === 60 ? 'hour' : 'hours'}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
           End time (optional)
           <input
             type="time"
@@ -218,37 +195,6 @@ export function EventTimeTimeline({
               let to = h * 60 + m;
               if (to <= start) to += 1440;
               commit(start, to);
-            }}
-          />
-        </label>
-      </div>
-      <div className={styles['timelineKeyboard']}>
-        <label>
-          Adjust start
-          <input
-            aria-label="Adjust event start"
-            type="range"
-            min={0}
-            max={1425}
-            step={15}
-            value={start}
-            onChange={(event) => {
-              const from = Number(event.target.value);
-              commit(from, from + (end - start));
-            }}
-          />
-        </label>
-        <label>
-          Adjust end
-          <input
-            aria-label="Adjust event end"
-            type="range"
-            min={start + 15}
-            max={Math.min(start + 1440, 2880)}
-            step={15}
-            value={end}
-            onChange={(event) => {
-              commit(start, Number(event.target.value));
             }}
           />
         </label>

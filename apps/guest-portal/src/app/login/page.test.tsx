@@ -1,12 +1,13 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiClientError, statusToErrorCode } from '@c1rcle/api-client';
 import { login } from '@c1rcle/auth';
 
 import { LoginPageClient } from './login-page-client';
 
+const assignDocument = vi.fn();
 const replace = vi.fn();
 const refreshRouter = vi.fn();
 let search = '';
@@ -29,6 +30,11 @@ describe('LoginPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     search = '';
+    vi.stubGlobal('location', { assign: assignDocument });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('renders a real email and password form with no fixture OTP or social stubs', () => {
@@ -53,9 +59,11 @@ describe('LoginPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
 
     await waitFor(() => {
-      expect(replace).toHaveBeenCalledWith('/tickets');
+      expect(assignDocument).toHaveBeenCalledWith('/tickets');
     });
     expect(mockLogin).toHaveBeenCalledWith({ email: 'g@x.com', password: 'password123' });
+    expect(replace).not.toHaveBeenCalled();
+    expect(refreshRouter).not.toHaveBeenCalled();
   });
 
   it('ignores an open-redirect next target', async () => {
@@ -67,7 +75,7 @@ describe('LoginPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
 
     await waitFor(() => {
-      expect(replace).toHaveBeenCalledWith('/profile');
+      expect(assignDocument).toHaveBeenCalledWith('/profile');
     });
   });
 
@@ -80,6 +88,9 @@ describe('LoginPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/incorrect email or password/i);
     expect(replace).not.toHaveBeenCalled();
+    expect(refreshRouter).not.toHaveBeenCalled();
+    expect(assignDocument).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /^sign in$/i })).toBeEnabled();
   });
 
   it('shows a back-off message on rate limiting', async () => {
@@ -98,6 +109,28 @@ describe('LoginPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/too many attempts/i);
+  });
+
+  it('keeps submission pending until authentication succeeds, then performs one document navigation', async () => {
+    let complete: (() => void) | undefined;
+    mockLogin.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          complete = resolve;
+        }),
+    );
+    render(<LoginPageClient />);
+    fill('g@x.com', 'password123');
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
+    expect(screen.getByRole('button', { name: /signing in/i })).toBeDisabled();
+    expect(assignDocument).not.toHaveBeenCalled();
+    complete?.();
+    await waitFor(() => {
+      expect(assignDocument).toHaveBeenCalledOnce();
+    });
+    expect(assignDocument).toHaveBeenCalledWith('/profile');
+    expect(replace).not.toHaveBeenCalled();
+    expect(refreshRouter).not.toHaveBeenCalled();
   });
 
   it('explains an expired session', () => {

@@ -28,7 +28,10 @@ export function ConnectedEventTicketsScreen({
                     <th className="py-3 pr-4">Ticket type</th>
                     <th className="py-3 pr-4">Status</th>
                     <th className="py-3 pr-4">Price</th>
-                    <th className="py-3 pr-4">Inventory</th>
+                    <th className="py-3 pr-4">Total inventory</th>
+                    <th className="py-3 pr-4">Sold</th>
+                    <th className="py-3 pr-4">Held</th>
+                    <th className="py-3 pr-4">Available</th>
                     <th className="py-3">Max per order</th>
                   </tr>
                 </thead>
@@ -51,6 +54,15 @@ export function ConnectedEventTicketsScreen({
                       </td>
                       <td className="py-4 pr-4 text-stone-300">
                         {tier.quantity.toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-4 pr-4 text-stone-300">
+                        {tier.soldQuantity?.toLocaleString('en-IN') ?? 'Unavailable'}
+                      </td>
+                      <td className="py-4 pr-4 text-stone-300">
+                        {tier.heldQuantity?.toLocaleString('en-IN') ?? 'Unavailable'}
+                      </td>
+                      <td className="py-4 pr-4 text-stone-300">
+                        {tier.availableQuantity?.toLocaleString('en-IN') ?? 'Unavailable'}
                       </td>
                       <td className="py-4 text-stone-300">{tier.maxPerOrder ?? 'Not set'}</td>
                     </tr>

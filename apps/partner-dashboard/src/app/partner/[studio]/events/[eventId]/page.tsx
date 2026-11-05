@@ -39,6 +39,7 @@ export default async function StudioEventDetailPage({
     <ConnectedPartnerEventScreen
       event={event}
       organizationId={event.organizationId}
+      studio={studio}
       showEventHeader={false}
     />
   );

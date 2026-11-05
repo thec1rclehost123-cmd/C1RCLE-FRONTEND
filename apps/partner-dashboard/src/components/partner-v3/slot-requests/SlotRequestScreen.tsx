@@ -320,6 +320,7 @@ export function SlotRequestScreen({
             busy={busyRequestId === selectedRequest.id}
             actionError={actionError?.id === selectedRequest.id ? actionError.message : null}
             onAction={handleAction}
+            onBookingCancelled={refresh}
           />
         ) : null}
       </div>

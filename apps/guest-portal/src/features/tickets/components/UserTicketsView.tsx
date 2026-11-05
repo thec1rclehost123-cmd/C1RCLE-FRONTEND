@@ -2,7 +2,9 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
+
+import { groupTicketsByBooking } from '../booking-ticket-groups';
 
 import { UserTicketCard } from './UserTicketCard';
 
@@ -14,14 +16,35 @@ const TicketDetailModal = dynamic(() =>
 
 export interface UserTicketsViewProps {
   wallet: TicketWalletData;
+  onRefresh?: (() => void) | undefined;
 }
 
-export function UserTicketsView({ wallet }: UserTicketsViewProps) {
+export function UserTicketsView({ wallet, onRefresh }: UserTicketsViewProps) {
+  const [detailView, setDetailView] = useState<'booking' | 'details' | 'qr'>('details');
   const [activeTab, setActiveTab] = useState<TicketTab>('upcoming');
   const [selectedTicket, setSelectedTicket] = useState<UserTicketItem | null>(null);
 
-  const tickets = activeTab === 'upcoming' ? wallet.upcomingTickets : wallet.pastTickets;
   const unavailableTickets = wallet.unavailableTickets ?? [];
+  const bookings = groupTicketsByBooking([
+    ...wallet.upcomingTickets,
+    ...wallet.pastTickets,
+    ...unavailableTickets,
+  ]);
+  const upcomingIds = new Set(wallet.upcomingTickets.map((ticket) => ticket.id));
+  const pastIds = new Set(wallet.pastTickets.map((ticket) => ticket.id));
+  const visibleBookings = bookings.filter((booking) =>
+    activeTab === 'upcoming'
+      ? booking.tickets.some((ticket) => upcomingIds.has(ticket.id))
+      : booking.tickets.every((ticket) => pastIds.has(ticket.id)),
+  );
+  const unresolvedBookings = bookings.filter(
+    (booking) =>
+      !booking.tickets.some((ticket) => upcomingIds.has(ticket.id)) &&
+      !booking.tickets.every((ticket) => pastIds.has(ticket.id)),
+  );
+  const selectedBooking = selectedTicket
+    ? bookings.find((booking) => booking.tickets.some((ticket) => ticket.id === selectedTicket.id))
+    : undefined;
   return (
     <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pb-24 pt-32 text-white sm:px-8 sm:pt-36">
       <div
@@ -66,21 +89,43 @@ export function UserTicketsView({ wallet }: UserTicketsViewProps) {
         </div>
       </div>
 
+      {wallet.ownershipAvailable === false ? (
+        <p role="status" className="relative z-10 mb-5 text-sm text-white/60">
+          Some booking ownership details could not be loaded.{' '}
+          {onRefresh ? (
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="min-h-11 underline underline-offset-4"
+            >
+              Retry
+            </button>
+          ) : null}
+        </p>
+      ) : null}
       {/* Ticket List Grid */}
-      {tickets.length > 0 ? (
+      {visibleBookings.length > 0 ? (
         <div className="relative z-10 grid w-full grid-cols-2 items-stretch gap-3 sm:gap-5 lg:grid-cols-3">
-          {tickets.map((ticket) => (
+          {visibleBookings.map((booking) => (
             <UserTicketCard
-              key={ticket.id}
-              ticket={ticket}
+              key={booking.key}
+              ticket={booking.primaryTicket}
+              bookingTickets={booking.tickets}
               isPast={activeTab === 'past'}
-              isSelected={selectedTicket?.id === ticket.id}
-              onSelect={setSelectedTicket}
+              isSelected={booking.tickets.some((ticket) => selectedTicket?.id === ticket.id)}
+              onSelect={(item) => {
+                setDetailView(booking.tickets.length > 1 ? 'booking' : 'details');
+                setSelectedTicket(item);
+              }}
+              onShowQr={(item) => {
+                setDetailView('qr');
+                setSelectedTicket(item);
+              }}
               onAddToCalendar={downloadCalendarEvent}
             />
           ))}
         </div>
-      ) : unavailableTickets.length === 0 ? (
+      ) : unresolvedBookings.length === 0 ? (
         /* Empty State */
         <div className="relative z-10 flex flex-col items-center justify-center rounded-[1.75rem] border border-white/10 bg-black/45 px-4 py-16 text-center backdrop-blur-xl sm:py-20">
           <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-white/10 text-2xl">
@@ -103,30 +148,39 @@ export function UserTicketsView({ wallet }: UserTicketsViewProps) {
         </div>
       ) : null}
 
-      {unavailableTickets.length > 0 ? (
+      {unresolvedBookings.length > 0 ? (
         <section aria-labelledby="unavailable-tickets-heading" className="relative z-10 mt-8">
           <h2 id="unavailable-tickets-heading" className="text-xl font-semibold">
             Passes awaiting event details
           </h2>
           <p role="status" className="mt-2 text-sm text-white/70">
-            Event timing is unknown. These passes have not been marked past. Refresh to try again.
+            Event timing is unavailable. These passes have not been marked past.
           </p>
           <button
             type="button"
             onClick={() => {
-              window.location.reload();
+              if (onRefresh) onRefresh();
+              else window.location.reload();
             }}
             className="my-4 min-h-11 rounded-full border border-white/20 px-5 text-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
           >
             Refresh event details
           </button>
           <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
-            {unavailableTickets.map((ticket) => (
+            {unresolvedBookings.map((booking) => (
               <UserTicketCard
-                key={ticket.id}
-                ticket={ticket}
-                isSelected={selectedTicket?.id === ticket.id}
-                onSelect={setSelectedTicket}
+                key={booking.key}
+                ticket={booking.primaryTicket}
+                bookingTickets={booking.tickets}
+                isSelected={booking.tickets.some((ticket) => selectedTicket?.id === ticket.id)}
+                onSelect={(item) => {
+                  setDetailView(booking.tickets.length > 1 ? 'booking' : 'details');
+                  setSelectedTicket(item);
+                }}
+                onShowQr={(item) => {
+                  setDetailView('qr');
+                  setSelectedTicket(item);
+                }}
                 onAddToCalendar={downloadCalendarEvent}
               />
             ))}
@@ -136,12 +190,31 @@ export function UserTicketsView({ wallet }: UserTicketsViewProps) {
 
       {/* Authoritative ticket detail; admission credentials remain an M4 capability. */}
       {selectedTicket ? (
-        <TicketDetailModal
-          ticket={selectedTicket}
-          onClose={() => {
-            setSelectedTicket(null);
-          }}
-        />
+        <Suspense
+          fallback={
+            <p
+              role="status"
+              className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-full bg-black px-5 py-3 text-sm text-white"
+            >
+              Loading tickets…
+            </p>
+          }
+        >
+          <TicketDetailModal
+            key={selectedTicket.id}
+            ticket={selectedTicket}
+            bookingTickets={selectedBooking?.tickets}
+            initialView={detailView}
+            onOwnershipChanged={onRefresh}
+            onSelectTicket={(item) => {
+              setDetailView('details');
+              setSelectedTicket(item);
+            }}
+            onClose={() => {
+              setSelectedTicket(null);
+            }}
+          />
+        </Suspense>
       ) : null}
     </div>
   );

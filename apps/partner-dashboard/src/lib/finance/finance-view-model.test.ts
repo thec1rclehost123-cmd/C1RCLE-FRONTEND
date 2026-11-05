@@ -463,6 +463,41 @@ const balances: BalanceSummaryResponse = {
 };
 
 describe('toPartnerFinanceData', () => {
+  it('retains server settlement and hold categories without calculating client release amounts', () => {
+    const data = toPartnerFinanceData({
+      organizationId: 'org_1',
+      accent: 'lavender',
+      balances: {
+        ...balances,
+        availablePaise: 123_456,
+        pendingPaise: 987_654,
+        heldPaise: 100_001,
+        payoutsEnabled: false,
+        settlementUnavailableReason: 'Historical balance review required',
+        holds: {
+          ...balances.holds,
+          refundPaise: 11,
+          disputePaise: 22,
+          providerUncertaintyPaise: 33,
+          reconciliationPaise: 44,
+        },
+      },
+      ledger: [],
+      payouts: [],
+      bankAccounts: [bank],
+      orders: [],
+    });
+    expect(data.availableBalance).toBe('₹1,234.56');
+    expect(data.pendingBalance.value).toBe('₹9,876.54');
+    expect(data.heldBalance.value).toBe('₹1,000.01');
+    expect(data.heldBalance.detail).toContain('pending refunds');
+    expect(data.heldBalance.detail).toContain('disputes');
+    expect(data.heldBalance.detail).toContain('provider verification');
+    expect(data.heldBalance.detail).toContain('reconciliation');
+    expect(data.settlementUnavailableReason).toBe('Historical balance review required');
+    expect(data.payoutRequest?.payoutsEnabled).toBe(false);
+  });
+
   it('marks the result as API-backed', () => {
     const data = toPartnerFinanceData({
       organizationId: 'org_1',
@@ -475,6 +510,8 @@ describe('toPartnerFinanceData', () => {
     });
     expect(data.dataStatus).toBe('api');
     expect(data.payoutRequest).toEqual({
+      payoutsEnabled: false,
+      settlementUnavailableReason: null,
       organizationId: 'org_1',
       availablePaise: balances.availablePaise,
       bankAccountId: bank.id,

@@ -22,6 +22,7 @@ type OrderStatusFilter = 'All' | FinanceOrderStatus;
 export interface PartnerFinanceScreenProps {
   readonly data: PartnerFinanceData;
   readonly baseHref: string;
+  readonly hostSettlement?: boolean;
   readonly view?: FinanceView;
   readonly search?: string;
   readonly status?: OrderStatusFilter;
@@ -32,6 +33,7 @@ export interface PartnerFinanceScreenProps {
 export function PartnerFinanceScreen({
   data,
   baseHref,
+  hostSettlement = false,
   view = 'payouts',
   search = '',
   status = 'All',
@@ -69,7 +71,11 @@ export function PartnerFinanceScreen({
           <FinanceBankCards data={data} />
         ) : (
           <>
-            <FinanceSummary data={data} bankHref={`${baseHref}?view=bank`} />
+            <FinanceSummary
+              data={data}
+              bankHref={`${baseHref}?view=bank`}
+              hostSettlement={hostSettlement}
+            />
             <FinancePayoutHistory rows={data.payouts} initialSearch={search} />
           </>
         )}

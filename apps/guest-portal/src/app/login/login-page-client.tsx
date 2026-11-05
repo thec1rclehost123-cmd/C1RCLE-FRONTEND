@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import React, { useState } from 'react';
 
 import { isApiClientError } from '@c1rcle/api-client';
@@ -29,7 +29,6 @@ function describeLoginError(error: unknown): string {
 }
 
 export function LoginPageClient() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -46,8 +45,9 @@ export function LoginPageClient() {
     setPending(true);
     try {
       await login({ email: email.trim(), password });
-      router.replace(nextPath);
-      router.refresh();
+      // Read the newly issued session cookie in a fresh document, avoiding
+      // competing replace/refresh requests against the pre-login router cache.
+      globalThis.location.assign(nextPath);
     } catch (caught) {
       setError(describeLoginError(caught));
       setPending(false);

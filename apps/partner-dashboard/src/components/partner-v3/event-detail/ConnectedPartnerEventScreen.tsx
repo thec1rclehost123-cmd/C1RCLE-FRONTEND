@@ -8,6 +8,8 @@ import { useOverlayFocus } from '@/components/venue/useOverlayFocus';
 import { describeApiError } from '@/lib/api/describe-error';
 import { cancelPartnerEvent } from '@/lib/events/venue-event-repository';
 
+import { EventLifecycleActions } from './EventLifecycleActions';
+
 import type { EventOperationsDto } from '@c1rcle/contracts';
 import type { SyntheticEvent } from 'react';
 
@@ -17,12 +19,15 @@ const cancellableStatuses = new Set<EventOperationsDto['status']>([
   'scheduled',
   'published',
   'sales_paused',
+  'postponed',
+  'started',
 ]);
 
 export function ConnectedPartnerEventScreen({
   event,
   organizationId,
   showEventHeader = true,
+  studio = 'host',
 }: {
   readonly event: EventOperationsDto;
   readonly organizationId: string;
@@ -125,6 +130,12 @@ export function ConnectedPartnerEventScreen({
               </div>
             </dl>
           ) : null}
+          <EventLifecycleActions
+            key={`${event.id}:${String(event.version)}`}
+            event={event}
+            organizationId={organizationId}
+            studio={studio === 'venue' ? 'venue' : 'host'}
+          />
           {cancellableStatuses.has(event.status) ? (
             <div className="mt-5">
               <button

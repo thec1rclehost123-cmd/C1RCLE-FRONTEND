@@ -164,7 +164,15 @@ export interface PromoterOverviewLinks {
 }
 
 export type PartnerEventStatus =
-  'Live' | 'Draft' | 'Review' | 'Scheduled' | 'Paused' | 'Past' | 'Archived' | 'Cancelled';
+  | 'Live'
+  | 'Draft'
+  | 'Review'
+  | 'Scheduled'
+  | 'Paused'
+  | 'Postponed'
+  | 'Past'
+  | 'Archived'
+  | 'Cancelled';
 export type PartnerEventParty = 'venue' | 'hosts';
 
 export interface PartnerEventArtwork {
@@ -749,6 +757,7 @@ export interface PartnerFinanceData {
   readonly heldBalance: FinanceMetric;
   readonly paidBalance: FinanceMetric;
   readonly readModel: 'legacy_ledger_v1' | 'financial_journal_v2';
+  readonly settlementUnavailableReason?: string | null;
   readonly freshness: { readonly asOf: string; readonly timezone: typeof PRODUCT_TIME_ZONE };
   readonly coverage: {
     readonly ledger: FinanceCollectionCoverage;
@@ -757,6 +766,8 @@ export interface PartnerFinanceData {
   };
   /** Present only for API-backed screens that can submit a real payout intent. */
   readonly payoutRequest: {
+    readonly payoutsEnabled?: boolean | undefined;
+    readonly settlementUnavailableReason?: string | null;
     readonly organizationId: string;
     readonly availablePaise: number;
     readonly bankAccountId: string | null;
