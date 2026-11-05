@@ -19,6 +19,7 @@ export interface EventWorkspaceMetric {
 export interface EventWorkspaceTab {
   readonly label: string;
   readonly href: string;
+  readonly children?: readonly { readonly label: string; readonly href: string }[];
 }
 
 export interface EventWorkspaceModel {

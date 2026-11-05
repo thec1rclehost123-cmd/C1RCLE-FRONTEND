@@ -3,6 +3,7 @@ import 'server-only';
 import { cookies } from 'next/headers';
 
 import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
+import { ticketTierPerformanceSchema } from '@c1rcle/contracts/partner-marketing';
 
 import { createServerApiClient } from '@/lib/api/server-client';
 import { getActiveOrgIdFromCookieHeader } from '@/lib/org/active-org-cookie';
@@ -12,12 +13,15 @@ import {
   getOrganizationTrends,
 } from '@/lib/overview/api-overview-repository';
 
+import { monthlyAnalyticsView } from './organization-analytics-view';
+
 import type {
   BalanceSummaryResponse,
   OrganizationOverviewDto,
   OrganizationSalesBreakdownDto,
   OrganizationTrendsDto,
 } from '@c1rcle/contracts';
+import type { z } from 'zod';
 
 export type PartnerAnalyticsRange = '7d' | '30d' | '90d' | '12m' | 'all';
 export type PartnerAnalyticsBreakdown = 'day' | 'month';
@@ -56,6 +60,7 @@ export interface PartnerOrganizationAnalytics {
   readonly salesBreakdown: OrganizationSalesBreakdownDto;
   readonly partnerPayable?: BalanceSummaryResponse;
   readonly lastThirtyDays: OrganizationTrendsDto;
+  readonly ticketTiers?: z.infer<typeof ticketTierPerformanceSchema> | null;
 }
 
 export async function loadPartnerOrganizationAnalytics(
@@ -77,11 +82,11 @@ export async function loadPartnerOrganizationAnalytics(
       ? breakdown === 'month'
         ? firstDayOfMonthOffset(today, -11)
         : offsetDayKey(today, -89)
-      : range === '12m' && breakdown === 'month'
-        ? firstDayOfMonthOffset(today, -11)
-        : offsetDayKey(today, -(RANGE_DAYS[range] - 1));
-  const granularity = breakdown;
-  const [overview, salesBreakdown, lastThirtyDays] = await Promise.all([
+      : offsetDayKey(today, -(RANGE_DAYS[range] - 1));
+  // The gateway's month buckets include whole boundary months. Fetch exact
+  // daily bounds first, then group locally so ‘30 days’ stays 30 days.
+  const granularity = 'day';
+  const [overview, salesBreakdown, dailyTrends] = await Promise.all([
     getOrganizationOverview(client, organizationId),
     getOrganizationSalesBreakdown(client, organizationId),
     getOrganizationTrends(client, organizationId, {
@@ -90,5 +95,13 @@ export async function loadPartnerOrganizationAnalytics(
       granularity,
     }),
   ]);
-  return { overview, salesBreakdown, lastThirtyDays };
+  const lastThirtyDays = breakdown === 'month' ? monthlyAnalyticsView(dailyTrends) : dailyTrends;
+  const ticketTiers = await client
+    .get({
+      path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/analytics/ticket-tiers?${new URLSearchParams({ from: firstDay, to: today })}`,
+      schema: ticketTierPerformanceSchema,
+      headers: { 'x-organization-id': organizationId },
+    })
+    .catch(() => null);
+  return { overview, salesBreakdown, lastThirtyDays, ticketTiers };
 }

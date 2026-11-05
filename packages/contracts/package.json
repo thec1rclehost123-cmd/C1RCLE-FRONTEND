@@ -49,6 +49,10 @@
       "types": "./dist/contracts/saved-events.d.ts",
       "import": "./dist/contracts/saved-events.js",
       "require": "./dist/contracts/saved-events.js"
+    },
+    "./partner-marketing": {
+      "types": "./src/contracts/partner-marketing.ts",
+      "import": "./src/contracts/partner-marketing.ts"
     }
   },
   "files": [

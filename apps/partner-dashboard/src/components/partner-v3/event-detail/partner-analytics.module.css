@@ -1,4 +1,8 @@
 .page {
+  --overview-accent: #ff652e;
+  --overview-accent-soft: #ffad7b;
+  --overview-accent-rgb: 255 101 46;
+  --overview-accent-ink: #100b07;
   width: min(100%, 82rem);
   margin-inline: auto;
   padding: 12px 0 56px;
@@ -347,4 +351,90 @@
   .panel {
     padding: 16px;
   }
+}
+
+.eventViews {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid #34302c;
+  padding: 4px 0 14px;
+  font-size: 14px;
+}
+.eventViews a {
+  color: #a7a39e;
+}
+.eventViews a[aria-current='page'] {
+  color: #ff8c59;
+}
+.stat,
+.panel {
+  border-radius: 8px;
+  box-shadow: none;
+}
+.stat {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #34302c;
+  padding-inline: 0;
+}
+.filters {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+.tierRow {
+  margin-top: 18px;
+}
+.tierRow > div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.tierRow progress {
+  width: 100%;
+  height: 5px;
+  accent-color: #ff652e;
+}
+.tierRow progress::-webkit-progress-bar {
+  background: #2f2a25;
+  border-radius: 8px;
+}
+.tierRow progress::-webkit-progress-value {
+  background: #ff652e;
+  border-radius: 8px;
+}
+
+.timingRow {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 12px;
+}
+.timingRow progress {
+  width: 100%;
+  height: 4px;
+  accent-color: #ff652e;
+}
+.timingRow strong {
+  text-align: right;
+}
+
+.timingRow progress::-webkit-progress-bar {
+  background: #302b26;
+  border-radius: 8px;
+}
+.timingRow progress::-webkit-progress-value {
+  background: #ff652e;
+  border-radius: 8px;
+}
+
+.scopeNote {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #aaa59d;
 }

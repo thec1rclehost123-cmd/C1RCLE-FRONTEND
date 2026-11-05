@@ -1,5 +1,8 @@
+import Link from 'next/link';
+
 import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
 
+import { OverviewTrendCard } from '@/components/partner-v3/overview/OverviewTrendCard';
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 
 import styles from './partner-analytics.module.css';
@@ -9,7 +12,6 @@ import type {
   PartnerAnalyticsRange,
   PartnerOrganizationAnalytics,
 } from '@/lib/events/load-partner-organization-analytics';
-import type { TrendBucketDto } from '@c1rcle/contracts';
 
 const money = new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -18,7 +20,8 @@ const money = new Intl.NumberFormat('en-IN', {
 });
 const count = new Intl.NumberFormat('en-IN');
 const ranges: readonly { value: PartnerAnalyticsRange; label: string }[] = [
-  { value: 'all', label: 'All time' },
+  { value: 'all', label: 'Recorded history' },
+  { value: '7d', label: 'Last 7 days' },
   { value: '30d', label: 'Last 30 days' },
   { value: '90d', label: 'Last 90 days' },
   { value: '12m', label: 'Last 12 months' },
@@ -38,71 +41,6 @@ function formatBucket(key: string, breakdown: PartnerAnalyticsBreakdown): string
       ? { month: 'short', year: 'numeric' }
       : { day: 'numeric', month: 'short' }),
   }).format(date);
-}
-
-function LineChart({
-  buckets,
-  value,
-  color,
-  format,
-  label,
-}: {
-  readonly buckets: readonly TrendBucketDto[];
-  readonly value: (bucket: TrendBucketDto) => number;
-  readonly color: string;
-  readonly format: (value: number) => string;
-  readonly label: string;
-}) {
-  const values = buckets.map(value);
-  const max = Math.max(...values, 1);
-  const points = values
-    .map((point, index) => {
-      const x = values.length < 2 ? 320 : 16 + (index / (values.length - 1)) * 608;
-      const y = 174 - (point / max) * 148;
-      return `${String(x)},${String(y)}`;
-    })
-    .join(' ');
-  const first = buckets[0]?.key;
-  const last = buckets.at(-1)?.key;
-
-  return (
-    <section className={styles['chartCard']} aria-label={label}>
-      <div className={styles['chartHeading']}>
-        <h2>{label}</h2>
-        <strong>{format(values.reduce((sum, current) => sum + current, 0))}</strong>
-      </div>
-      <svg
-        className={styles['lineChart']}
-        viewBox="0 0 640 200"
-        role="img"
-        aria-label={`${label} trend`}
-      >
-        {[26, 75, 124, 174].map((y) => (
-          <line key={y} x1="8" x2="632" y1={y} y2={y} className={styles['gridLine']} />
-        ))}
-        {values.length > 0 ? (
-          <polyline
-            points={points}
-            fill="none"
-            stroke={color}
-            strokeWidth="4"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-        ) : null}
-      </svg>
-      <div className={styles['chartAxis']}>
-        <span>
-          {first
-            ? formatBucket(first, buckets[0]?.key.length === 7 ? 'month' : 'day')
-            : 'No activity'}
-        </span>
-        <span>
-          {last ? formatBucket(last, buckets.at(-1)?.key.length === 7 ? 'month' : 'day') : ''}
-        </span>
-      </div>
-    </section>
-  );
 }
 
 export function ConnectedPartnerAnalyticsScreen({
@@ -126,6 +64,7 @@ export function ConnectedPartnerAnalyticsScreen({
   };
   const buckets = analytics.lastThirtyDays.buckets;
   const rows = [...buckets].reverse();
+  const insights = analytics.ticketTiers;
   return (
     <PageContainer>
       <main className={styles['page']}>
@@ -156,6 +95,12 @@ export function ConnectedPartnerAnalyticsScreen({
           </form>
         </header>
 
+        <nav className={styles['eventViews']} aria-label="Event views">
+          <Link href={`/partner/${studio}/events`}>All Events</Link>
+          <Link href={`/partner/${studio}/analytics`} aria-current="page">
+            Analytics
+          </Link>
+        </nav>
         <section className={styles['stats']} aria-label="Analytics summary">
           <Metric label="Gross revenue" value={formatMoney(totals.gross)} />
           <Metric label="Net revenue" value={formatMoney(totals.net)} />
@@ -163,6 +108,38 @@ export function ConnectedPartnerAnalyticsScreen({
           <Metric label="Paid orders" value={count.format(totals.orders)} />
         </section>
 
+        {range === 'all' ? (
+          <p className={styles['scopeNote']}>
+            Recorded totals use the existing bounded analytics read model. The chart shows its
+            stated dates.
+          </p>
+        ) : null}
+        <OverviewTrendCard
+          title="Sales over time"
+          series={(['tickets', 'revenue'] as const).map((metric) => ({
+            metric,
+            range: 'All' as const,
+            value:
+              metric === 'tickets'
+                ? count.format(buckets.reduce((sum, b) => sum + b.totalTicketsIssued, 0))
+                : formatMoney(buckets.reduce((sum, b) => sum + b.guestGrossCollectedPaise, 0)),
+            delta: '',
+            points: buckets.map((bucket) =>
+              metric === 'tickets'
+                ? bucket.totalTicketsIssued
+                : bucket.guestGrossCollectedPaise / 100,
+            ),
+            caption: `${analytics.lastThirtyDays.from} – ${analytics.lastThirtyDays.to}`,
+            pointLabels: buckets.map((bucket) =>
+              formatBucket(
+                bucket.key,
+                analytics.lastThirtyDays.granularity === 'month' ? 'month' : 'day',
+              ),
+            ),
+          }))}
+          rangeOptions={[]}
+          initialRange="All"
+        />
         <section className={styles['splitGrid']} aria-label="Revenue and ticket breakdown">
           <div className={styles['panel']}>
             <h2>Revenue breakdown</h2>
@@ -196,28 +173,75 @@ export function ConnectedPartnerAnalyticsScreen({
           </div>
         </section>
 
-        <section className={styles['chartGrid']} aria-label="Performance trends">
-          <LineChart
-            buckets={buckets}
-            value={(bucket) => bucket.guestGrossCollectedPaise}
-            color="#ff6842"
-            format={formatMoney}
-            label={range === 'all' ? 'Recent gross revenue' : 'Gross revenue'}
-          />
-          <LineChart
-            buckets={buckets}
-            value={(bucket) => bucket.tickets}
-            color="#a78bfa"
-            format={(value) => count.format(value)}
-            label={range === 'all' ? 'Recent tickets issued' : 'Tickets issued'}
-          />
+        <section className={styles['panel']} aria-label="Tickets by tier">
+          <div className={styles['panelHeading']}>
+            <h2>Tickets by tier</h2>
+            <span>
+              {analytics.lastThirtyDays.from} – {analytics.lastThirtyDays.to}
+            </span>
+          </div>
+          <p className={styles['empty']}>Issued ticket units · before refunds.</p>
+          {insights === null || insights === undefined ? (
+            <p>Tier performance unavailable.</p>
+          ) : insights.rows.length === 0 ? (
+            <p>No ticket issuance in this period.</p>
+          ) : (
+            insights.rows.map((row) => (
+              <div className={styles['tierRow']} key={`${row.eventId}:${row.tierId}`}>
+                <div>
+                  <span>
+                    {row.name} · {row.eventName}
+                  </span>
+                  <strong>{count.format(row.tickets)}</strong>
+                </div>
+                <progress
+                  aria-label={`${row.name} issued units`}
+                  value={row.tickets}
+                  max={Math.max(...insights.rows.map((r) => r.tickets), 1)}
+                />
+              </div>
+            ))
+          )}
         </section>
-
+        {insights ? (
+          <section className={styles['splitGrid']} aria-label="Sales insights">
+            <div className={styles['panel']}>
+              <h2>Sales attribution</h2>
+              <DataRow
+                label="Promoter-attributed units"
+                value={count.format(insights.channels.promoter)}
+              />
+              <DataRow
+                label="Unattributed units"
+                value={count.format(insights.channels.unattributed)}
+              />
+              <p className={styles['empty']}>
+                Captured order attribution, before refunds. Unattributed does not imply a marketing
+                channel.
+              </p>
+            </div>
+            <div className={styles['panel']}>
+              <h2>Purchase timing</h2>
+              <p className={styles['empty']}>Confirmed orders · weekday UTC · includes Free RSVP</p>
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
+                <div className={styles['timingRow']} key={day}>
+                  <span>{day}</span>
+                  <progress
+                    aria-label={`${day} captured orders`}
+                    value={insights.purchaseDays[index]}
+                    max={Math.max(...insights.purchaseDays, 1)}
+                  />
+                  <strong>{insights.purchaseDays[index]}</strong>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
         {range === 'all' ? (
           <section className={styles['panel']}>
             <div className={styles['panelHeading']}>
               <h2>Top events</h2>
-              <span>Lifetime</span>
+              <span>Recorded history</span>
             </div>
             {analytics.overview.topEvents.length ? (
               <div className={styles['tableWrap']}>

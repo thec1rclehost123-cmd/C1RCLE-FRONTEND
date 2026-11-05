@@ -90,7 +90,7 @@ describe('ConnectedPartnerAnalyticsScreen', () => {
     expect(screen.getByText('Free RSVP tickets')).toBeInTheDocument();
     expect(screen.getByText('Revenue breakdown')).toBeInTheDocument();
     expect(screen.getByText('Net captured after refunds')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Recent gross revenue trend' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /tickets All trend/i })).toBeInTheDocument();
     expect(screen.getByText('Connected event')).toBeInTheDocument();
     expect(screen.getByText('Recent activity')).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Time' })).toHaveValue('all');
