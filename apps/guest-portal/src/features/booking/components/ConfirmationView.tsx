@@ -3,12 +3,14 @@ import Link from 'next/link';
 
 import { getOrderStatusPresentation } from '@/features/booking/status-presentation';
 import { getEventAccentClasses } from '@/features/event-detail/eventDetailPalette';
+import { EventArtworkFallback } from '@/features/explore/components/EventArtworkFallback';
 
 import type { BookingConfirmationFixture, BookingEventFixture } from '../types/booking.types';
 
 const moneyFormatter = new Intl.NumberFormat('en-IN', {
   currency: 'INR',
-  maximumFractionDigits: 0,
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
   style: 'currency',
 });
 
@@ -26,7 +28,11 @@ export function ConfirmationView({
   event: BookingEventFixture;
 }) {
   const accent = getEventAccentClasses(event.accentTone);
-  const status = getOrderStatusPresentation(confirmation.status);
+  const status = getOrderStatusPresentation(
+    confirmation.status,
+    confirmation.fulfillmentState,
+    confirmation.admissionRefundState,
+  );
   const statusTone = {
     success: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400',
     warning: 'border-amber-500/20 bg-amber-500/10 text-amber-300',
@@ -60,14 +66,18 @@ export function ConfirmationView({
         >
           <div className="relative flex flex-col items-center justify-center p-6 text-center md:p-8">
             <div className="relative aspect-[3/4] w-full max-w-[240px] overflow-hidden rounded-2xl border border-white/10 shadow-2xl">
-              <Image
-                src={event.image}
-                alt={event.title}
-                fill
-                unoptimized
-                priority
-                className="object-cover"
-              />
+              {event.image ? (
+                <Image
+                  src={event.image}
+                  alt={event.title}
+                  fill
+                  unoptimized
+                  priority
+                  className="object-cover"
+                />
+              ) : (
+                <EventArtworkFallback startsAt={event.startsAt} category={event.category} hero />
+              )}
             </div>
             <p className="mt-4 text-[10px] font-black uppercase tracking-[0.2em] text-white/50">
               {event.category}
@@ -101,7 +111,9 @@ export function ConfirmationView({
                       Event update
                     </p>
                     <p className="mt-1 text-sm font-bold text-white">
-                      This event was cancelled. Contact support if you need help with this booking.
+                      {confirmation.status === 'cancelled'
+                        ? 'This event was cancelled. Contact support if you need help with this booking.'
+                        : 'Event details are unavailable. Contact support if you need help with this booking.'}
                     </p>
                   </div>
                 ) : (
@@ -148,6 +160,83 @@ export function ConfirmationView({
                 </span>
               </div>
 
+              {confirmation.status === 'paid' && confirmation.admissionRefundState === 'all' ? (
+                <p role="status" className="mt-4 text-sm text-white/70">
+                  All original admissions have been refunded and cannot be used.
+                </p>
+              ) : confirmation.status === 'paid' &&
+                confirmation.admissionRefundState === 'partial' ? (
+                <p role="status" className="mt-4 text-sm text-amber-200">
+                  Unrefunded admissions remain available in My Tickets. Refunded admissions cannot
+                  be used.
+                </p>
+              ) : null}
+              {confirmation.refundedPaise !== undefined && confirmation.refundedPaise > 0 ? (
+                <dl aria-label="Refund totals" className="mt-4 space-y-2 text-sm text-white/70">
+                  <div className="flex justify-between gap-4">
+                    <dt>Refunded to date</dt>
+                    <dd>{moneyFormatter.format(confirmation.refundedPaise / 100)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt>Amount retained</dt>
+                    <dd>
+                      {moneyFormatter.format(
+                        (confirmation.total.amountPaise - confirmation.refundedPaise) / 100,
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+              ) : null}
+              {confirmation.status === 'paid' && confirmation.fulfillmentState === 'pending' ? (
+                <p role="status" className="mt-4 text-sm text-amber-200">
+                  Payment received. Your booking is still processing; admission and QR access will
+                  become available after fulfillment completes.
+                </p>
+              ) : null}
+              {confirmation.status === 'refund_requested' ? (
+                <p role="status" className="mt-4 text-sm text-amber-200">
+                  Your refund request is awaiting review or provider settlement. A requested refund
+                  is not a completed refund.
+                </p>
+              ) : null}
+              {confirmation.receiptFacts ? (
+                <section
+                  aria-label="Original payment receipt"
+                  className="mt-5 space-y-2 text-sm text-white/70"
+                >
+                  <h3 className="font-bold text-white">Original payment receipt</h3>
+                  {(
+                    [
+                      ['Admission after discount', confirmation.receiptFacts.admissionPaise],
+                      ['Cover', confirmation.receiptFacts.coverPaise],
+                      ['Add-ons', confirmation.receiptFacts.addOnPaise],
+                      [
+                        'Discount applied (included above)',
+                        confirmation.receiptFacts.discountPaise,
+                      ],
+                      ['Platform fee', confirmation.receiptFacts.platformFeePaise],
+                      ['Payment fee', confirmation.receiptFacts.paymentFeePaise],
+                      ['Tax on fees', confirmation.receiptFacts.feeTaxPaise],
+                      ['Original total paid', confirmation.receiptFacts.grandTotalPaise],
+                    ] as const
+                  ).map(([label, amount]) => (
+                    <p key={label} className="flex justify-between gap-4">
+                      <span>{label}</span>
+                      <span>{moneyFormatter.format(amount / 100)}</span>
+                    </p>
+                  ))}
+                  {confirmation.receiptFacts.providerPaymentId ? (
+                    <p className="break-all text-xs">
+                      Payment reference: {confirmation.receiptFacts.providerPaymentId}
+                    </p>
+                  ) : null}
+                  {confirmation.receiptFacts.bookingFeePolicyVersion ? (
+                    <p className="text-xs">
+                      Original fee policy: {confirmation.receiptFacts.bookingFeePolicyVersion}
+                    </p>
+                  ) : null}
+                </section>
+              ) : null}
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 {status.ticketAccess ? (
                   <Link
@@ -165,7 +254,9 @@ export function ConfirmationView({
                 </Link>
               </div>
               <div className="mt-4 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-white/50">
-                {confirmation.status === 'paid' ? (
+                {confirmation.status === 'paid' &&
+                confirmation.fulfillmentState !== 'pending' &&
+                confirmation.admissionRefundState !== 'all' ? (
                   <span>Your booking details are available in My Tickets.</span>
                 ) : null}
                 <Link

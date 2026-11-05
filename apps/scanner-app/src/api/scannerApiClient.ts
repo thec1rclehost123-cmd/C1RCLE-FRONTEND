@@ -160,6 +160,7 @@ export async function checkIn(input: {
   qrPayload: string;
   operatorName?: string;
   gate?: string | null;
+  eligibilityVerified?: boolean;
 }): Promise<CheckInResult> {
   return getClient().post({
     path: '/api/v2/door/check-ins',
@@ -300,10 +301,11 @@ export async function fetchGuests(input: {
 export async function manualCheckIn(
   entitlementId: string,
   eventId: string,
+  options: { eligibilityVerified?: boolean; coupleConfirmed?: boolean; reason?: string } = {},
 ): Promise<ManualCheckInResponse> {
   return getClient().post({
     path: '/api/v2/door/guests/check-in',
-    body: { entitlementId, eventId },
+    body: { entitlementId, eventId, ...options },
     headers: await withSessionHeader(),
     schema: manualCheckInResponseSchema,
   });

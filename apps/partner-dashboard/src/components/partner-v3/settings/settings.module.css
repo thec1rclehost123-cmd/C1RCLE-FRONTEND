@@ -327,17 +327,19 @@
 .previewStats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  gap: 0;
   margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px solid rgb(255 255 255 / 10%);
 }
 .previewStats div {
   display: grid;
   gap: 2px;
   padding: 13px 8px;
-  border: 1px solid rgb(255 255 255 / 7%);
-  border-radius: 14px;
-  background: rgb(255 255 255 / 4%);
   text-align: center;
+}
+.previewStats div + div {
+  border-left: 1px solid rgb(255 255 255 / 10%);
 }
 .previewStats strong {
   font-size: 19px;
@@ -587,6 +589,10 @@
   }
   .previewStats {
     grid-template-columns: 1fr;
+  }
+  .previewStats div + div {
+    border-left: 0;
+    border-top: 1px solid rgb(255 255 255 / 10%);
   }
   .menuStatus {
     padding-inline: 16px;

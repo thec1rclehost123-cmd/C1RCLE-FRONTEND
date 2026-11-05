@@ -20,7 +20,12 @@ import { eventEndAtFromDraft, eventStartAtFromDraft } from '@/lib/events/event-t
 import { uploadToSignedUrl } from '@/lib/onboarding/uploadToSignedUrl';
 
 import type { EventEditorDraft } from '@/data/partner-data-source';
-import type { EventDto, TicketTierDto, UpdateEventInput } from '@c1rcle/contracts';
+import type {
+  EventDto,
+  TicketTierDto,
+  UpdateEventInput,
+  UpdateTicketTierLimitsRequest,
+} from '@c1rcle/contracts';
 
 export { eventEndAtFromDraft, eventStartAtFromDraft } from '@/lib/events/event-time';
 
@@ -262,12 +267,12 @@ export async function updatePartnerEventTicketLimit(
   eventId: string,
   tierId: string,
   version: number,
-  maxPerOrder: number,
+  changes: UpdateTicketTierLimitsRequest,
   idempotencyKey = crypto.randomUUID(),
 ): Promise<TicketTierDto> {
   return apiClient.patch({
     path: `/api/v2/events/${encodeURIComponent(eventId)}/ticket-tiers/${encodeURIComponent(tierId)}`,
-    body: updateTicketTierLimitsSchema.parse({ maxPerOrder }),
+    body: updateTicketTierLimitsSchema.parse(changes),
     schema: ticketTierDtoSchema,
     headers: {
       'x-organization-id': organizationId,
@@ -442,4 +447,28 @@ async function resolvePosterImageUrl(
   const file = new File([blob], fileName, { type: contentType });
   await uploadToSignedUrl(grant.uploadUrl, grant.headers, file);
   return grant.publicUrl;
+}
+
+/** Explicit lifecycle commands retain event history and the server's accepted-slot validation. */
+export async function changePartnerEventLifecycle(
+  organizationId: string,
+  eventId: string,
+  command:
+    | { action: 'postpone'; reason: string }
+    | {
+        action: 'reschedule';
+        startAt: string;
+        endAt?: string | null;
+        slotRequestId?: string;
+        venueId?: string;
+        expectedVersion: number;
+      },
+  idempotencyKey: string,
+): Promise<EventDto> {
+  return apiClient.post({
+    path: `/api/v2/events/${encodeURIComponent(eventId)}/lifecycle`,
+    body: command,
+    schema: eventDtoSchema,
+    headers: { 'x-organization-id': organizationId, 'Idempotency-Key': idempotencyKey },
+  });
 }

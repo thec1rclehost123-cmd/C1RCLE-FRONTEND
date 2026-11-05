@@ -31,7 +31,8 @@ export async function generateMetadata({ params }: ConfirmationPageProps): Promi
  * `ConfirmationView` as the fixtures. The order read is buyer-scoped and
  * cookie-authenticated, so strangers and logged-out guests land on `notFound`
  * — never on someone else's pass. The gateway asserts ownership (404, never
- * 403), and any transport failure maps to `notFound` here as well.
+ * 403), and an unavailable order maps to `notFound`. Public event details may
+ * disappear after purchase; the authorized order still supplies financial facts.
  */
 async function getRealConfirmation(
   id: string,
@@ -58,7 +59,6 @@ async function getRealConfirmation(
       schema: eventDtoSchema,
     })
     .catch(() => null);
-  if (!event && !order.eventCancellation) return null;
 
   const venue = event?.venueId
     ? await client
@@ -75,6 +75,10 @@ async function getRealConfirmation(
       id: order.id,
       bookingReference: order.bookingReference,
       status: order.eventCancellation && order.status === 'paid' ? 'cancelled' : order.status,
+      fulfillmentState: order.fulfillmentState,
+      admissionRefundState: order.admissionRefundState,
+      refundedPaise: order.refundedPaise,
+      receiptFacts: order.receiptFacts,
       eventId: order.eventId,
       attendeeName: 'Guest',
       tierName: line?.tierName ?? 'Admission',
@@ -86,11 +90,11 @@ async function getRealConfirmation(
       : {
           id: order.eventId,
           eventId: order.eventId,
-          title: order.eventCancellation?.eventTitle ?? 'Cancelled event',
+          title: order.eventCancellation?.eventTitle ?? 'Your booking',
           category: 'Event update',
           image: '/c1rcle-logo.webp',
           accentTone: 'orange',
-          startsAt: order.eventCancellation?.cancelledAt ?? order.createdAt,
+          startsAt: '',
           venue: 'Event details unavailable',
           address: '',
           city: '',

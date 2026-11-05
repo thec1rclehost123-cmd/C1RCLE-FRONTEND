@@ -27,6 +27,7 @@ interface Draft {
   readonly visibilityMode: 'public' | 'unlisted' | 'code' | 'invited';
   readonly addressDisclosure: 'public' | 'after_grant' | 'hidden';
   readonly entryRules: EventEntryRulesDto;
+  readonly refundPolicy: NonNullable<EventOperationsDto['refundPolicy']>;
 }
 
 const emptyEntryRules: EventEntryRulesDto = {
@@ -90,7 +91,8 @@ export function ConnectedEventEditScreen({
     description: event.description,
     visibilityMode: event.visibilityMode,
     addressDisclosure: event.addressDisclosure,
-    entryRules: event.entryRules ?? emptyEntryRules,
+    entryRules: { ...(event.entryRules ?? emptyEntryRules), reentryAllowed: false },
+    refundPolicy: event.refundPolicy ?? { kind: 'organizer_reviewed' },
   });
   const [savedDraft, setSavedDraft] = useState(draft);
   const [version, setVersion] = useState(event.version);
@@ -100,9 +102,11 @@ export function ConnectedEventEditScreen({
   const [slotRequestsError, setSlotRequestsError] = useState<string | null>(null);
   const [tiers, setTiers] = useState(ticketTiers);
   const [tierLimitInputs, setTierLimitInputs] = useState<Record<string, string>>({});
+  const [tierQuantityInputs, setTierQuantityInputs] = useState<Record<string, string>>({});
+  const [tierPriceInputs, setTierPriceInputs] = useState<Record<string, string>>({});
   const [tierLimitErrors, setTierLimitErrors] = useState<Record<string, string>>({});
   const [savingTierId, setSavingTierId] = useState<string | null>(null);
-  const tierLimitIntentKeys = useRef(new Map<string, { value: number; key: string }>());
+  const tierLimitIntentKeys = useRef(new Map<string, { value: string; key: string }>());
   const [slotRequestId, setSlotRequestId] = useState('');
   const [scheduleStartAt, setScheduleStartAt] = useState(
     isoInstantToProductLocalInput(event.startAt),
@@ -140,6 +144,7 @@ export function ConnectedEventEditScreen({
     draft.visibilityMode !== savedDraft.visibilityMode ||
     draft.addressDisclosure !== savedDraft.addressDisclosure ||
     JSON.stringify(draft.entryRules) !== JSON.stringify(savedDraft.entryRules) ||
+    JSON.stringify(draft.refundPolicy) !== JSON.stringify(savedDraft.refundPolicy) ||
     slotRequestId !== '';
 
   const update = (changes: Partial<Draft>) => {
@@ -182,6 +187,9 @@ export function ConnectedEventEditScreen({
         visibilityMode: draft.visibilityMode,
         addressDisclosure: draft.addressDisclosure,
         entryRules: draft.entryRules,
+        ...(JSON.stringify(draft.refundPolicy) !== JSON.stringify(savedDraft.refundPolicy)
+          ? { refundPolicy: draft.refundPolicy }
+          : {}),
         ...(selectedSlot && scheduleStartAtIso && scheduleEndAtIso
           ? {
               venueId: selectedSlot.venueId,
@@ -198,6 +206,7 @@ export function ConnectedEventEditScreen({
         visibilityMode: updated.visibilityMode,
         addressDisclosure: updated.addressDisclosure,
         entryRules: updated.entryRules ?? emptyEntryRules,
+        refundPolicy: updated.refundPolicy ?? { kind: 'organizer_reviewed' as const },
       };
       setDraft(nextDraft);
       setSavedDraft(nextDraft);
@@ -232,9 +241,32 @@ export function ConnectedEventEditScreen({
       return;
     }
 
+    const quantity = Number(tierQuantityInputs[tier.id] ?? tier.quantity);
+    const priceInput = tierPriceInputs[tier.id] ?? String(tier.priceInPaise / 100);
+    const priceInPaise = Math.round(Number(priceInput) * 100);
+    if (
+      !Number.isSafeInteger(quantity) ||
+      quantity < 0 ||
+      (tier.accessType !== 'RSVP' &&
+        (!/^\d+(\.\d{1,2})?$/.test(priceInput) ||
+          !Number.isSafeInteger(priceInPaise) ||
+          priceInPaise <= 0))
+    ) {
+      setTierLimitErrors((current) => ({
+        ...current,
+        [tier.id]: 'Enter a whole inventory quantity and a positive price with up to two decimals.',
+      }));
+      return;
+    }
+    const changes = {
+      ...(tier.maxPerOrder === value ? {} : { maxPerOrder: value }),
+      ...(tier.quantity === quantity ? {} : { quantity }),
+      ...(tier.accessType === 'RSVP' || tier.priceInPaise === priceInPaise ? {} : { priceInPaise }),
+    };
+    const intent = JSON.stringify(changes);
     const pending = tierLimitIntentKeys.current.get(tier.id);
-    const idempotencyKey = pending?.value === value ? pending.key : crypto.randomUUID();
-    tierLimitIntentKeys.current.set(tier.id, { value, key: idempotencyKey });
+    const idempotencyKey = pending?.value === intent ? pending.key : crypto.randomUUID();
+    tierLimitIntentKeys.current.set(tier.id, { value: intent, key: idempotencyKey });
     setSavingTierId(tier.id);
     setTierLimitErrors((current) => ({ ...current, [tier.id]: '' }));
     setMessage(null);
@@ -244,7 +276,7 @@ export function ConnectedEventEditScreen({
         event.id,
         tier.id,
         tier.version,
-        value,
+        changes,
         idempotencyKey,
       );
       setTiers((current) => current.map((item) => (item.id === updated.id ? updated : item)));
@@ -252,8 +284,17 @@ export function ConnectedEventEditScreen({
         ...current,
         [tier.id]: String(updated.maxPerOrder ?? ''),
       }));
+      setTierQuantityInputs((current) => ({ ...current, [tier.id]: String(updated.quantity) }));
+      setTierPriceInputs((current) => ({
+        ...current,
+        [tier.id]: String(updated.priceInPaise / 100),
+      }));
       tierLimitIntentKeys.current.delete(tier.id);
-      setMessage(`${tier.name} per-order limit saved.`);
+      setMessage(
+        changes.quantity !== undefined || changes.priceInPaise !== undefined
+          ? `${tier.name} ticket settings saved.`
+          : `${tier.name} per-order limit saved.`,
+      );
     } catch (caught) {
       setTierLimitErrors((current) => ({
         ...current,
@@ -286,10 +327,10 @@ export function ConnectedEventEditScreen({
               >
                 Request another Venue slot
               </Link>
-              <label className="mt-4 grid gap-2 text-sm">
+              <label className="mt-4 grid min-w-0 grid-cols-1 gap-2 text-sm">
                 Accepted Venue slot request
                 <select
-                  className="rounded-xl border border-white/20 bg-black px-4 py-3 text-white"
+                  className="min-w-0 w-full rounded-xl border border-white/20 bg-black px-4 py-3 text-white"
                   value={slotRequestId}
                   onChange={(change) => {
                     const request = slotRequests.find((item) => item.id === change.target.value);
@@ -349,11 +390,12 @@ export function ConnectedEventEditScreen({
               className="mt-5 rounded-xl border border-white/10 p-4"
             >
               <h2 id="event-ticket-limits-title" className="font-semibold">
-                Ticket purchase limits
+                Ticket inventory, prices and purchase limits
               </h2>
               <p className="mt-1 text-sm text-stone-400">
-                Limits apply per order. Free RSVP is limited to 1; paid tickets can be limited to
-                10.
+                Inventory is independent for each tier. Existing purchases keep their original
+                price. Inventory cannot be reduced below sold and actively held tickets. Free RSVP
+                is limited to one per order.
               </p>
               <div className="mt-4 grid gap-3">
                 {tiers.map((tier) => {
@@ -363,11 +405,18 @@ export function ConnectedEventEditScreen({
                   const parsedValue = Number(value);
                   const valid =
                     Number.isInteger(parsedValue) && parsedValue >= 1 && parsedValue <= 10;
-                  const changed = valid && tier.maxPerOrder !== parsedValue;
+                  const quantityValue = tierQuantityInputs[tier.id] ?? String(tier.quantity);
+                  const priceValue = tierPriceInputs[tier.id] ?? String(tier.priceInPaise / 100);
+                  const quantityChanged = Number(quantityValue) !== tier.quantity;
+                  const priceChanged =
+                    tier.accessType !== 'RSVP' &&
+                    Math.round(Number(priceValue) * 100) !== tier.priceInPaise;
+                  const changed =
+                    valid && (tier.maxPerOrder !== parsedValue || quantityChanged || priceChanged);
                   return (
                     <div
                       key={tier.id}
-                      className="grid gap-3 rounded-lg border border-white/10 p-3 sm:grid-cols-[1fr_auto_auto] sm:items-end"
+                      className="grid gap-3 border-t border-white/10 py-4 sm:grid-cols-2 lg:grid-cols-4 sm:items-end"
                     >
                       <div>
                         <div className="font-medium">{tier.name}</div>
@@ -377,6 +426,42 @@ export function ConnectedEventEditScreen({
                             : `₹${(tier.priceInPaise / 100).toLocaleString('en-IN')} paid ticket`}
                         </div>
                       </div>
+                      <label className="grid gap-1 text-sm">
+                        Total inventory
+                        <input
+                          aria-label={`${tier.name} total inventory`}
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={quantityValue}
+                          onChange={(change) => {
+                            setTierQuantityInputs((current) => ({
+                              ...current,
+                              [tier.id]: change.target.value,
+                            }));
+                          }}
+                          className="rounded-lg border border-white/20 bg-black px-3 py-2 text-white"
+                        />
+                      </label>
+                      {tier.accessType !== 'RSVP' ? (
+                        <label className="grid gap-1 text-sm">
+                          Future price (₹)
+                          <input
+                            aria-label={`${tier.name} future price`}
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            value={priceValue}
+                            onChange={(change) => {
+                              setTierPriceInputs((current) => ({
+                                ...current,
+                                [tier.id]: change.target.value,
+                              }));
+                            }}
+                            className="rounded-lg border border-white/20 bg-black px-3 py-2 text-white"
+                          />
+                        </label>
+                      ) : null}
                       <label className="grid gap-1 text-sm">
                         Maximum per order
                         <input
@@ -403,7 +488,13 @@ export function ConnectedEventEditScreen({
                         onClick={() => void saveTierLimit(tier)}
                         className="rounded-lg border border-white/20 px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {savingTierId === tier.id ? 'Saving…' : changed ? 'Save limit' : 'Saved'}
+                        {savingTierId === tier.id
+                          ? 'Saving…'
+                          : changed
+                            ? quantityChanged || priceChanged
+                              ? 'Save ticket settings'
+                              : 'Save limit'
+                            : 'Saved'}
                       </button>
                       {tierLimitErrors[tier.id] ? (
                         <p role="alert" className="text-sm text-red-300 sm:col-span-3">
@@ -419,7 +510,57 @@ export function ConnectedEventEditScreen({
               </div>
             </section>
           ) : null}
-          <form className="mt-7 grid gap-5" onSubmit={(form) => void submit(form)}>
+          <form
+            className="mt-7 grid min-w-0 grid-cols-1 gap-5 [&_fieldset]:min-w-0 [&_input]:min-w-0 [&_select]:min-w-0 [&_textarea]:min-w-0"
+            onSubmit={(form) => void submit(form)}
+          >
+            <div className="grid gap-2 border-t border-white/10 pt-4">
+              <label htmlFor="event-refund-policy" className="text-sm font-medium">
+                Refund request policy
+              </label>
+              <select
+                id="event-refund-policy"
+                value={draft.refundPolicy.kind}
+                onChange={(change) => {
+                  const kind = change.target.value;
+                  update({
+                    refundPolicy:
+                      kind === 'until_cutoff'
+                        ? { kind, cutoffAt: '' }
+                        : { kind: kind === 'no_refunds' ? 'no_refunds' : 'organizer_reviewed' },
+                  });
+                }}
+                className="rounded-lg border border-white/20 bg-black px-3 py-2"
+              >
+                <option value="organizer_reviewed">Organizer-reviewed requests</option>
+                <option value="until_cutoff">Requests until a deadline</option>
+                <option value="no_refunds">No refund requests</option>
+              </select>
+              {draft.refundPolicy.kind === 'until_cutoff' ? (
+                <label className="grid gap-2 text-sm">
+                  Refund request deadline (IST)
+                  <input
+                    type="datetime-local"
+                    required
+                    value={isoInstantToProductLocalInput(draft.refundPolicy.cutoffAt)}
+                    onChange={(change) => {
+                      update({
+                        refundPolicy: {
+                          kind: 'until_cutoff',
+                          cutoffAt: productLocalInputToIsoInstant(change.target.value) ?? '',
+                        },
+                      });
+                    }}
+                    className="rounded-lg border border-white/20 bg-black px-3 py-2"
+                  />
+                </label>
+              ) : null}
+              <p className="text-sm text-stone-400">
+                Cancellation, postponement and material event changes preserve the purchaser’s right
+                to request a refund. Requests never issue an instant refund.
+              </p>
+            </div>
+
             <div className="grid gap-2">
               <label htmlFor="event-edit-title-input" className="text-sm font-medium">
                 Event title
@@ -483,24 +624,10 @@ export function ConnectedEventEditScreen({
                 <label className="grid gap-2 text-sm">
                   Re-entry
                   <select
+                    disabled
+                    value="false"
                     className="rounded-xl border border-white/20 bg-black px-4 py-3 text-white"
-                    value={
-                      draft.entryRules.reentryAllowed === null
-                        ? ''
-                        : String(draft.entryRules.reentryAllowed)
-                    }
-                    onChange={(change) => {
-                      update({
-                        entryRules: {
-                          ...draft.entryRules,
-                          reentryAllowed:
-                            change.target.value === '' ? null : change.target.value === 'true',
-                        },
-                      });
-                    }}
                   >
-                    <option value="">Unspecified</option>
-                    <option value="true">Allowed</option>
                     <option value="false">Not allowed</option>
                   </select>
                 </label>

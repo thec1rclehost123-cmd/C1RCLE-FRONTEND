@@ -39,11 +39,12 @@ describe('TicketTierEditor ticket dimensions', () => {
     await openTicketOptions(user);
 
     await user.selectOptions(screen.getByLabelText('Ticket type / access'), 'VIP');
-    expect(screen.getByRole('option', { name: 'Student' })).toHaveValue('STUDENT');
-    expect(screen.getByRole('option', { name: 'Member' })).toHaveValue('MEMBER');
+    expect(screen.queryByRole('option', { name: 'Student' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Member' })).not.toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText('Audience'), 'COUPLE');
-    await user.clear(screen.getByLabelText('Guests'));
-    await user.type(screen.getByLabelText('Guests'), '2');
+    expect(screen.getByLabelText('Guests')).toHaveValue(2);
+    expect(screen.getByLabelText('Guests')).toBeDisabled();
+    expect(screen.queryByLabelText('Admission issuance')).not.toBeInTheDocument();
     await user.type(screen.getByLabelText('Door price (₹)'), '2500');
     await user.type(screen.getByLabelText('Ticket description'), 'Entry, Drinks');
     await user.type(screen.getByLabelText('Max per user'), '2');

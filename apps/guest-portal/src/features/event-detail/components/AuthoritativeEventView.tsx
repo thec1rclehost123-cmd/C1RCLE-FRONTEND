@@ -143,12 +143,7 @@ export function AuthoritativeEventView({ detail }: { readonly detail: EventPubli
                 </dd>
               </div>
             ) : null}
-            {entryRules.reentryAllowed !== null ? (
-              <EntryFact
-                label="Re-entry"
-                value={entryRules.reentryAllowed ? 'Allowed' : 'Not allowed'}
-              />
-            ) : null}
+            <EntryFact label="Re-entry" value="Not allowed" />
             {entryRules.minimumAge !== null ? (
               <EntryFact label="Minimum age" value={`${String(entryRules.minimumAge)}+`} />
             ) : null}

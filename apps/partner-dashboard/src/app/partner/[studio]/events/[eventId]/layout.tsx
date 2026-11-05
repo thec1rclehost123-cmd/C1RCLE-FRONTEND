@@ -113,7 +113,10 @@ export default async function EventWorkspaceLayout({
     id: event.id,
     title: event.title,
     venue: event.venueName ?? (event.venueId ? 'Venue name unavailable' : 'Venue not specified'),
-    dateTime: formatProductDateTime(event.startAt),
+    dateTime:
+      event.status === 'postponed'
+        ? 'New date to be announced'
+        : formatProductDateTime(event.startAt),
     statusLabel:
       event.status === 'published' || event.status === 'started'
         ? 'Live'
@@ -123,13 +126,15 @@ export default async function EventWorkspaceLayout({
             ? 'Review'
             : event.status === 'scheduled'
               ? 'Scheduled'
-              : event.status === 'sales_paused'
-                ? 'Paused'
-                : event.status === 'ended'
-                  ? 'Past'
-                  : event.status === 'archived'
-                    ? 'Archived'
-                    : 'Cancelled',
+              : event.status === 'postponed'
+                ? 'Postponed'
+                : event.status === 'sales_paused'
+                  ? 'Paused'
+                  : event.status === 'ended'
+                    ? 'Past'
+                    : event.status === 'archived'
+                      ? 'Archived'
+                      : 'Cancelled',
     artwork: event.imageUrl
       ? { type: 'image', value: event.imageUrl, alt: event.title }
       : { type: 'gradient', value: 'placeholder' },

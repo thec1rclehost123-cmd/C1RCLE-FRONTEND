@@ -35,17 +35,23 @@ export function PayoutRequestAction({
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState('');
   const canRequest =
-    request?.bankAccountId != null && request.availablePaise >= MINIMUM_PAYOUT_PAISE;
+    request?.payoutsEnabled === true &&
+    !request.settlementUnavailableReason &&
+    request.bankAccountId != null &&
+    request.availablePaise >= MINIMUM_PAYOUT_PAISE;
   const unavailableReason =
     request === null
-      ? 'Payout requests are available on API-backed finance screens.'
-      : request.bankAccountId === null
-        ? 'Add a payout bank account first.'
-        : request.availablePaise < MINIMUM_PAYOUT_PAISE
-          ? 'The minimum payout is ₹100.'
-          : undefined;
+      ? 'Payout requests are unavailable.'
+      : request.payoutsEnabled !== true
+        ? 'Payout requests are currently disabled.'
+        : (request.settlementUnavailableReason ??
+          (request.bankAccountId === null
+            ? 'Add a payout bank account first.'
+            : request.availablePaise < MINIMUM_PAYOUT_PAISE
+              ? 'The minimum payout is ₹100.'
+              : undefined));
 
-  if (!open) {
+  if (!open || !canRequest) {
     return (
       <Button
         className={styles['financeSecondaryAction']}
@@ -67,7 +73,7 @@ export function PayoutRequestAction({
       className={styles['payoutRequestForm']}
       onSubmit={(event) => {
         event.preventDefault();
-        if (!request?.bankAccountId) return;
+        if (submitting || !request.bankAccountId) return;
         const amountPaise = rupeesToPaise(amount);
         if (amountPaise === null || amountPaise < MINIMUM_PAYOUT_PAISE) {
           setNotice('Enter at least ₹100 using no more than two decimal places.');

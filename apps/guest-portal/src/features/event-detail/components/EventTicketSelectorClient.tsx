@@ -2,20 +2,10 @@
 
 import Link from 'next/link';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { z } from 'zod';
-
-import { useTicketAccessGrantId } from '@/lib/access/use-ticket-access-grant-id';
-import { bffClient } from '@/lib/bff/bff-client';
-import { csrfHeaders } from '@/lib/bff/csrf';
 
 import { getEventAccentClasses } from '../eventDetailPalette';
 
 import type { EventAccentTone, EventDetailTicketTier } from '../types/event-detail.types';
-
-const waitlistEntrySchema = z.object({
-  id: z.string(),
-  status: z.enum(['waiting', 'offered', 'accepted', 'expired', 'cancelled']),
-});
 
 const moneyFormatter = new Intl.NumberFormat('en-IN', {
   currency: 'INR',
@@ -48,15 +38,6 @@ export function EventTicketSelectorClient({
 }) {
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
-  const [eligibilityAttested, setEligibilityAttested] = useState(false);
-  const [waitlistState, setWaitlistState] = useState<{
-    tierId: string;
-    message: string;
-    error: boolean;
-  } | null>(null);
-  const [joiningTierId, setJoiningTierId] = useState<string | null>(null);
-  const grantFromUrl = useTicketAccessGrantId();
-  const effectiveGrantId = accessGrantId ?? grantFromUrl;
   const dialogRef = useRef<HTMLElement>(null);
   const accent = getEventAccentClasses(accentTone);
   const hasHiddenTiers = tiers.length > initialVisibleCount;
@@ -182,82 +163,14 @@ export function EventTicketSelectorClient({
                 <span className="text-right">
                   <span className="block text-sm font-black text-white">{price}</span>
                   <span className="mt-1 block text-[9px] uppercase tracking-[0.14em] text-white/30">
-                    {tier.availabilityLabel}
+                    {soldOut ? 'Sold Out' : tier.availabilityLabel}
                   </span>
                 </span>
               </button>
-              {soldOut ? (
-                <div className="-mt-1 rounded-b-2xl border border-t-0 border-white/10 bg-white/[0.025] px-4 pb-3 pt-1">
-                  <button
-                    type="button"
-                    disabled={joiningTierId !== null}
-                    onClick={() => {
-                      setJoiningTierId(tier.id);
-                      setWaitlistState(null);
-                      void bffClient
-                        .post({
-                          path: '/api/waitlist',
-                          body: {
-                            eventId,
-                            tierId: tier.id,
-                            eligibilityAttested,
-                            ...(effectiveGrantId ? { accessGrantId: effectiveGrantId } : {}),
-                          },
-                          headers: csrfHeaders(),
-                          schema: waitlistEntrySchema,
-                        })
-                        .then(() => {
-                          setWaitlistState({
-                            tierId: tier.id,
-                            message:
-                              'You are on the waitlist. We will show any offer in your Tickets area.',
-                            error: false,
-                          });
-                        })
-                        .catch(() => {
-                          setWaitlistState({
-                            tierId: tier.id,
-                            message:
-                              'Could not join. Sign in with a verified account and try again; eligibility and access are checked by the event service.',
-                            error: true,
-                          });
-                        })
-                        .finally(() => {
-                          setJoiningTierId(null);
-                        });
-                    }}
-                    className={`min-h-10 rounded-full border px-4 text-[9px] font-black uppercase tracking-[0.16em] disabled:opacity-50 ${accent.border} ${accent.text}`}
-                  >
-                    {joiningTierId === tier.id ? 'Joining…' : 'Join waitlist'}
-                  </button>
-                  {waitlistState?.tierId === tier.id ? (
-                    <p
-                      role={waitlistState.error ? 'alert' : 'status'}
-                      className="mt-2 text-xs text-white/60"
-                    >
-                      {waitlistState.message}
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
             </div>
           );
         })}
       </div>
-
-      {tiers.some((tier) => tier.availableQuantity === 0) ? (
-        <label className="mt-4 flex cursor-pointer items-start gap-3 text-xs leading-5 text-white/55">
-          <input
-            type="checkbox"
-            checked={eligibilityAttested}
-            onChange={(event) => {
-              setEligibilityAttested(event.currentTarget.checked);
-            }}
-            className="mt-1 size-4 accent-orange-500"
-          />
-          <span>I confirm I meet the ticket eligibility requirements for the tier I join.</span>
-        </label>
-      ) : null}
 
       {hasHiddenTiers && (
         <button

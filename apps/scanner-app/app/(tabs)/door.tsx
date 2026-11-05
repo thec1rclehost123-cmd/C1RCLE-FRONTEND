@@ -2,12 +2,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import {
-  fetchDoorSales,
-  submitDineIn,
-  submitTicketSale,
-  submitWalkIn,
-} from '@/api/scannerApiClient';
+import { fetchDoorSales, submitDineIn, submitWalkIn } from '@/api/scannerApiClient';
 import { getSessionMeta } from '@/auth/scannerSession';
 import { showToast } from '@/features/toast/toastStore';
 import { colors } from '@/theme/tokens';
@@ -78,19 +73,25 @@ function ChoiceButton({
   selected,
   onPress,
   compact = false,
+  disabled = false,
 }: {
   readonly label: string;
   readonly selected: boolean;
   readonly onPress: () => void;
   readonly compact?: boolean;
+  readonly disabled?: boolean;
 }): React.JSX.Element {
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={[
         styles.choice,
         compact && styles.choiceCompact,
         selected ? styles.choiceOn : styles.choiceOff,
+        disabled && { opacity: 0.45 },
       ]}
     >
       <Text
@@ -193,6 +194,10 @@ export default function DoorScreen(): React.JSX.Element {
   };
 
   const handleSubmit = (): void => {
+    if (entryType === 'ticket') {
+      setFormError('Ticket sales at the door are unavailable in V1. Use verified Guest checkout.');
+      return;
+    }
     if (name.trim().length === 0) {
       setFormError('Person name is required.');
       return;
@@ -211,10 +216,6 @@ export default function DoorScreen(): React.JSX.Element {
     }
     if (entryType === null) {
       setFormError('Select entry type.');
-      return;
-    }
-    if (entryType === 'ticket' && selectedTier === null) {
-      setFormError('Select a ticket tier.');
       return;
     }
     setFormError(null);
@@ -255,22 +256,6 @@ export default function DoorScreen(): React.JSX.Element {
           idempotencyKey: submissionKey,
           ...(email.trim().length > 0 ? { guestEmail: email.trim() } : {}),
         };
-        if (submittedType === 'ticket' && selectedTier !== null) {
-          const sale = await submitTicketSale({
-            eventId: meta.event.id,
-            tierId: selectedTier.id,
-            quantity,
-            ...person,
-          });
-          // The contract is explicit: a replayed sale is the SAME order.
-          // Staff must be told not to take the money twice.
-          showToast(
-            sale.replayed
-              ? `Already sold — do not collect again (${rupees(sale.amountPaise)})`
-              : `${submittedName} · ${String(sale.quantity)} × ${selectedTier.name} · ${rupees(sale.amountPaise)}`,
-          );
-          return;
-        }
         const entry = {
           eventId: meta.event.id,
           totalGuests: guests,
@@ -441,7 +426,8 @@ export default function DoorScreen(): React.JSX.Element {
                 }}
               />
               <ChoiceButton
-                label="Ticket"
+                label="Ticket sales unavailable"
+                disabled
                 selected={entryType === 'ticket'}
                 onPress={() => {
                   setEntryType('ticket');
@@ -556,11 +542,11 @@ export default function DoorScreen(): React.JSX.Element {
 
           <Pressable
             onPress={handleSubmit}
-            disabled={submitting}
+            disabled={submitting || isTicket}
             style={[styles.submit, styles.submitOn]}
           >
             <Text style={styles.submitLabel}>
-              {submitting ? 'SUBMITTING…' : isTicket ? 'SELL TICKET' : 'SUBMIT ENTRY'}
+              {submitting ? 'SUBMITTING…' : isTicket ? 'TICKET SALES UNAVAILABLE' : 'SUBMIT ENTRY'}
             </Text>
           </Pressable>
         </View>

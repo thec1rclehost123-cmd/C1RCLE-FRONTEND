@@ -49,9 +49,11 @@ function initials(name: string): string {
 function AdmitButton({
   onPress,
   disabled,
+  label,
 }: {
   readonly onPress: () => void;
   readonly disabled: boolean;
+  readonly label: string;
 }): React.JSX.Element {
   const [scale] = useState(() => new Animated.Value(1));
 
@@ -74,6 +76,8 @@ function AdmitButton({
 
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
       onPress={onPress}
       onPressIn={() => {
         animateTo(0.88);
@@ -97,6 +101,8 @@ export default function GuestsScreen(): React.JSX.Element {
   const [truncated, setTruncated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('All');
+  const [pendingAdmission, setPendingAdmission] = useState<Guest | null>(null);
+  const [admitting, setAdmitting] = useState(false);
   const staffCanOverride = canOverride(getStaffUser()?.role);
 
   useEffect(() => {
@@ -137,13 +143,29 @@ export default function GuestsScreen(): React.JSX.Element {
     if (event === null || !staffCanOverride) {
       return;
     }
-    void manualCheckIn(guest.id, event.id)
+    setPendingAdmission(guest);
+  };
+
+  const confirmManualAdmission = () => {
+    if (!pendingAdmission || !event || admitting) return;
+    setAdmitting(true);
+    void manualCheckIn(pendingAdmission.id, event.id, {
+      eligibilityVerified: true,
+      coupleConfirmed: pendingAdmission.quantity === 2,
+      reason: 'QR unavailable; door staff confirmed eligibility',
+    })
       .then((result) => {
-        setGuests((current) => current.map((g) => (g.id === result.guest.id ? result.guest : g)));
+        setGuests((current) =>
+          current.map((guest) => (guest.id === result.guest.id ? result.guest : guest)),
+        );
+        setPendingAdmission(null);
         showToast(`${result.guest.name} admitted`);
       })
       .catch((cause: unknown) => {
         showToast(cause instanceof Error ? cause.message : 'Check-in failed');
+      })
+      .finally(() => {
+        setAdmitting(false);
       });
   };
 
@@ -193,6 +215,37 @@ export default function GuestsScreen(): React.JSX.Element {
         </Text>
       ) : null}
 
+      {pendingAdmission ? (
+        <View style={[styles.listCard, styles.confirmationCard]} accessibilityLiveRegion="polite">
+          <Text style={styles.guestName}>Confirm manual admission: {pendingAdmission.name}</Text>
+          <Text style={styles.notice}>
+            {pendingAdmission.requirement
+              ? `REQUIREMENT: ${pendingAdmission.requirement}`
+              : 'Confirm this guest is present and meets the ticket requirement.'}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            disabled={admitting}
+            onPress={confirmManualAdmission}
+            style={styles.chip}
+          >
+            <Text style={styles.chipLabel}>
+              {admitting ? 'ADMITTING…' : 'REQUIREMENT MET — ADMIT'}
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            disabled={admitting}
+            onPress={() => {
+              setPendingAdmission(null);
+            }}
+            style={styles.chip}
+          >
+            <Text style={styles.chipLabel}>REJECT — KEEP TICKET UNUSED</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       <View style={styles.listCard}>
         {visible.length === 0 ? <Text style={styles.empty}>No guests match.</Text> : null}
         {visible.map((guest) => {
@@ -204,10 +257,10 @@ export default function GuestsScreen(): React.JSX.Element {
               </View>
               <View style={styles.rowText}>
                 <Text style={styles.guestName} numberOfLines={1}>
-                  {guest.name}
+                  {guest.name || 'Awaiting assignment'}
                 </Text>
                 <Text style={styles.guestMeta} numberOfLines={1}>
-                  {guest.ticketType} · {guest.entryType}
+                  {guest.ticketType} · {guest.requirement ?? guest.entryType}
                   {guest.quantity > 1 ? ` · ×${String(guest.quantity)}` : ''}
                 </Text>
               </View>
@@ -217,7 +270,8 @@ export default function GuestsScreen(): React.JSX.Element {
                 </View>
               ) : (
                 <AdmitButton
-                  disabled={!staffCanOverride}
+                  label={`Admit ${guest.name || 'guest'}`}
+                  disabled={!staffCanOverride || guest.ownershipStatus === 'unassigned'}
                   onPress={() => {
                     handleCheckIn(guest);
                   }}
@@ -232,6 +286,7 @@ export default function GuestsScreen(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
+  confirmationCard: { padding: 16, gap: 12 },
   screen: { flex: 1, backgroundColor: colors.background },
   container: { padding: 16, paddingBottom: 110, gap: 12 },
   titleRow: {

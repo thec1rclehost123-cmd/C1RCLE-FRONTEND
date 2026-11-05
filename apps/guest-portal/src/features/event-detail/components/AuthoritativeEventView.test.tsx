@@ -125,3 +125,15 @@ describe('AuthoritativeEventView structured data', () => {
     expect(jsonLd).not.toHaveProperty('offers');
   });
 });
+
+it('does not promise automatic re-entry from a legacy organizer field', () => {
+  const rules = detail.entryRules;
+  if (!rules) throw new Error('Missing fixture entry rules');
+  const { getByText, queryByText } = render(
+    <AuthoritativeEventView
+      detail={{ ...detail, entryRules: { ...rules, reentryAllowed: true } }}
+    />,
+  );
+  expect(getByText('Not allowed')).toBeInTheDocument();
+  expect(queryByText('Allowed')).not.toBeInTheDocument();
+});

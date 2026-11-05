@@ -12,6 +12,7 @@ import { EventPoster } from '@/components/partner-v3/events/EventPoster';
 
 import styles from './slot-requests.module.css';
 import { SlotRequestStatusBadge } from './SlotRequestStatusBadge';
+import { VenueBookingCancellation } from './VenueBookingCancellation';
 
 import type { SlotRequest, SlotRequestActionKind } from '@/data/partner-data-source';
 
@@ -27,6 +28,7 @@ export interface SlotRequestReviewProps {
   readonly onPanelChange: (panel: ReviewPanel) => void;
   readonly onPreviewModeChange: (mode: PreviewMode) => void;
   readonly onClose: () => void;
+  readonly onBookingCancelled?: () => void;
   readonly onAction?: (id: string, kind: SlotRequestActionKind) => void;
 }
 
@@ -40,6 +42,7 @@ export function SlotRequestReview({
   onPreviewModeChange,
   onClose,
   onAction,
+  onBookingCancelled,
 }: SlotRequestReviewProps) {
   const isIncoming = request.direction === 'incoming';
   const canDecide = isIncoming && request.status === 'pending';
@@ -121,6 +124,12 @@ export function SlotRequestReview({
             />
           )}
         </div>
+        {isIncoming && request.status === 'approved' ? (
+          <VenueBookingCancellation
+            requestId={request.id}
+            {...(onBookingCancelled ? { onCancelled: onBookingCancelled } : {})}
+          />
+        ) : null}
         <footer className={styles['reviewFooter']}>
           <Button type="button" variant="secondary" onClick={onClose}>
             Close

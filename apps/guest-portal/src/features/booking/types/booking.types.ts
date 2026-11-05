@@ -58,6 +58,10 @@ export interface BookingConfirmationFixture {
   id: string;
   bookingReference: string;
   status: OrderDto['status'];
+  fulfillmentState?: OrderDto['fulfillmentState'];
+  admissionRefundState?: OrderDto['admissionRefundState'];
+  refundedPaise?: number;
+  receiptFacts?: OrderDto['receiptFacts'];
   eventId: string;
   attendeeName: string;
   tierName: string;

@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useSessionStore } from '@c1rcle/auth';
 
+import { MANAGEMENT } from '../../features/tickets/fixtures/ticket-management.test-fixtures';
+
 import TicketsPage from './page';
 
 const mockBffGet = vi.fn<(...args: readonly unknown[]) => Promise<unknown>>();
@@ -86,9 +88,44 @@ const REAL_VENUE = {
   updatedAt: '2026-09-01T00:00:00.000Z',
 };
 
+function managedRead(path: string, entitlements: unknown[]): Promise<unknown> | null {
+  const managed = entitlements.map((value) => {
+    const ticket = value as typeof ENTITLEMENT;
+    return {
+      ...MANAGEMENT,
+      id: ticket.id,
+      orderId: ticket.orderId,
+      eventId: ticket.eventId,
+      tierId: ticket.tierId,
+      tierName: ticket.tierName,
+      holderName: ticket.holderName,
+      eventTitle: REAL_EVENT.title,
+      startsAt: REAL_EVENT.startAt,
+      endsAt: REAL_EVENT.endAt,
+      status:
+        ticket.status === 'redeemed' ? 'used' : ticket.status === 'void' ? 'cancelled' : 'active',
+      canPresent: ticket.status === 'valid',
+      unitKind: 'free_rsvp',
+      canTransfer: false,
+      transferUnavailableReason: 'Free RSVPs cannot be transferred.',
+    };
+  });
+  if (path === '/api/wallet/booking-tickets')
+    return Promise.resolve({ items: managed, nextCursor: null, total: managed.length });
+  if (path.endsWith('/management')) {
+    const ticket = managed.find((item) => path === `/api/tickets/${item.id}/management`);
+    return ticket
+      ? Promise.resolve(ticket)
+      : Promise.reject(new Error('Unknown ticket management'));
+  }
+  return null;
+}
+
 function mockWalletFeed(entitlements: unknown[] = [ENTITLEMENT]) {
   mockBffGet.mockImplementation((arg: unknown) => {
     const { path } = arg as { path: string };
+    const management = managedRead(path, entitlements);
+    if (management) return management;
     if (path === '/api/tickets/ENT-rsvp-1/qr') {
       return Promise.resolve({
         qrPayload: 'ENT-rsvp-1:1791800000:test-signature',
@@ -215,6 +252,8 @@ describe('TicketsPage real wallet', () => {
       .mockRejectedValueOnce(new Error('gateway down'))
       .mockImplementation((arg: unknown) => {
         const { path } = arg as { path: string };
+        const management = managedRead(path, [ENTITLEMENT]);
+        if (management) return management;
         if (path === '/api/wallet/event-covers') return Promise.resolve([]);
         const items = path === '/api/wallet/tickets' ? [ENTITLEMENT] : [];
         return Promise.resolve({
@@ -240,6 +279,10 @@ describe('TicketsPage real wallet', () => {
     authenticate();
     mockBffGet.mockImplementation((arg: unknown) => {
       const { path } = arg as { path: string };
+      const management = managedRead(path, [
+        { ...ENTITLEMENT, id: 'ENT-past-1', status: 'redeemed', scanCount: 1 },
+      ]);
+      if (management) return management;
       if (path === '/api/wallet/event-covers') return Promise.resolve([]);
       const items =
         path === '/api/wallet/tickets'
@@ -274,8 +317,9 @@ describe('TicketsPage real wallet', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'View ticket details' }));
 
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
-    // Tier shows on both the card and the open preview.
+    // The booking card and selected ticket both preserve the authoritative tier.
     expect(screen.getAllByText('General Admission')).toHaveLength(2);
+    fireEvent.click(await screen.findByRole('button', { name: 'Show entry code' }));
     expect(
       await screen.findByRole('img', { name: 'Entry code for RSVP Night' }),
     ).toBeInTheDocument();

@@ -20,7 +20,7 @@ export function CheckoutView({
     <div
       className={`relative isolate ${onClose ? 'h-full min-h-0 bg-transparent' : 'min-h-dvh bg-[#050505]'} overflow-hidden text-white`}
     >
-      {onClose ? null : (
+      {onClose || !event.image ? null : (
         <div
           aria-hidden="true"
           className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-[#08070a]"
