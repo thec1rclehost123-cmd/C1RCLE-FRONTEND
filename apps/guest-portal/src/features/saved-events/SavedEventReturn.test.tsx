@@ -26,6 +26,8 @@ beforeEach(() => {
   mocks.router.replace.mockReset();
   mocks.read.mockReset();
   mocks.session.session.user.emailVerified = true;
+  mocks.session.hydrated = true;
+  mocks.session.status = 'authenticated';
   window.history.replaceState(null, '', '/profile/saved/return?event=%2Fevent%2Fnight-a');
 });
 it('waits for the existing onboarding guard before returning a completed Guest to the event', async () => {
@@ -64,5 +66,29 @@ it('resumes email verification before onboarding or event return', async () => {
   });
   expect(mocks.router.replace.mock.calls[0]?.[0]).toMatch(/^\/verify-email\?next=/);
   expect(mocks.read).not.toHaveBeenCalled();
+  expect(mocks.router.replace).not.toHaveBeenCalledWith('/event/night-a');
+});
+
+it('does not redirect during anonymous bootstrap before protected-route setup checks', async () => {
+  mocks.session.hydrated = false;
+  mocks.session.status = 'anonymous';
+  mocks.read.mockResolvedValue({ complete: false });
+  const view = render(
+    <OnboardingGuard>
+      <SavedEventReturn destination="/event/night-a" />
+    </OnboardingGuard>,
+  );
+  expect(mocks.router.replace).not.toHaveBeenCalled();
+  mocks.session.hydrated = true;
+  mocks.session.status = 'authenticated';
+  view.rerender(
+    <OnboardingGuard>
+      <SavedEventReturn destination="/event/night-a" />
+    </OnboardingGuard>,
+  );
+  await waitFor(() => {
+    expect(mocks.router.replace).toHaveBeenCalled();
+  });
+  expect(mocks.router.replace.mock.calls[0]?.[0]).toMatch(/^\/onboarding\?next=/);
   expect(mocks.router.replace).not.toHaveBeenCalledWith('/event/night-a');
 });
