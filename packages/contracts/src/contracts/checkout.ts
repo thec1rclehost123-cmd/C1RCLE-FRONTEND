@@ -269,7 +269,32 @@ const checkoutOrderLineDtoSchema = z.object({
  * reconciling that DTO is out of scope for the checkout/payments slice and
  * left for the orders/tickets/wallet PR.
  */
+export const orderReceiptFactsSchema = z.object({
+  version: z.literal('m4-paid-receipt-v1'),
+  orderId: opaqueIdSchema,
+  bookingReference: z.string(),
+  currency: z.string().length(3),
+  subtotalPaise: z.number().int().nonnegative(),
+  discountPaise: z.number().int().nonnegative(),
+  discountedSubtotalPaise: z.number().int().nonnegative(),
+  admissionPaise: z.number().int().nonnegative(),
+  coverPaise: z.number().int().nonnegative(),
+  addOnPaise: z.number().int().nonnegative(),
+  platformFeePaise: z.number().int().nonnegative(),
+  paymentFeePaise: z.number().int().nonnegative(),
+  feeTaxPaise: z.number().int().nonnegative(),
+  grandTotalPaise: z.number().int().nonnegative(),
+  providerOrderId: z.string().nullable(),
+  providerPaymentId: z.string().nullable(),
+  paidAt: z.iso.datetime().nullable(),
+  bookingFeePolicyVersion: z.string().nullable(),
+  accountingPolicyVersion: z.string().nullable(),
+});
+
 export const checkoutOrderDtoSchema = z.object({
+  fulfillmentState: z.enum(['pending', 'complete']).optional(),
+  fulfillmentCompletedAt: z.iso.datetime().optional(),
+  receiptFacts: orderReceiptFactsSchema.optional(),
   feePolicy: bookingFeePolicySchema.optional(),
   id: opaqueIdSchema,
   bookingReference: z.string().regex(/^C1-[A-F0-9]{5}(?:-[A-F0-9]{5}){3}$/),

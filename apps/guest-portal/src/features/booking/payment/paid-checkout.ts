@@ -73,13 +73,15 @@ export interface PaidCheckoutInput {
 export type PaidCheckoutResult =
   | { readonly kind: 'confirmed'; readonly orderId: string }
   /** Paid, but the server has not confirmed yet; the webhook will finish the job. */
-  | { readonly kind: 'processing'; readonly ticketsReady: boolean }
+  | { readonly kind: 'processing'; readonly ticketsReady: boolean; readonly orderId?: string }
   | {
       readonly kind: 'price_changed';
       readonly grandTotalPaise: number;
       readonly feePolicyChanged?: boolean;
     }
-  /** The payment was captured but could not be honoured, and has been refunded in full. */
+  /** Captured money has a durable refund request; provider settlement is still pending. */
+  | { readonly kind: 'refund_pending'; readonly message: string; readonly orderId?: string }
+  /** Authoritative server evidence confirms the completed refund. */
   | { readonly kind: 'refunded'; readonly message: string }
   | { readonly kind: 'cancelled'; readonly reason?: string }
   | { readonly kind: 'unavailable' }
@@ -164,6 +166,20 @@ export async function runPaidCheckout(
       signature: outcome.signature,
       idempotencyKey: `${input.idempotencyKey}-verify`,
     });
+    if (confirmed.order.status === 'refund_requested')
+      return {
+        kind: 'refund_pending',
+        orderId: confirmed.order.id,
+        message:
+          'Your payment was received. A refund request is pending. Review, required approvals and provider confirmation must complete before it is shown as refunded.',
+      };
+    if (confirmed.order.status === 'refunded')
+      return {
+        kind: 'refunded',
+        message: 'The server confirmed your refund. No admission is available for this payment.',
+      };
+    if (confirmed.order.status !== 'paid' || confirmed.order.fulfillmentState === 'pending')
+      return { kind: 'processing', ticketsReady: false, orderId: confirmed.order.id };
     return { kind: 'confirmed', orderId: confirmed.order.id };
   } catch (error) {
     // The server may have answered "your payment arrived too late, the seats are
@@ -189,7 +205,10 @@ function refundOutcome(error: unknown): PaidCheckoutResult | null {
   if (typeof error !== 'object' || error === null) return null;
   const { status } = errorFacts(error);
   const message = 'message' in error && typeof error.message === 'string' ? error.message : '';
-  if (status === 409 && /refund/i.test(message)) return { kind: 'refunded', message };
+  if (status === 409 && /refund/i.test(message) && /pending|review|approval|queued/i.test(message))
+    return { kind: 'refund_pending', message };
+  if (status === 409 && /has been refunded in full/i.test(message))
+    return { kind: 'refunded', message };
   return null;
 }
 

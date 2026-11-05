@@ -67,6 +67,17 @@ const ORDER_STATUS_PRESENTATION: Record<OrderDto['status'], OrderStatusPresentat
   },
 };
 
-export function getOrderStatusPresentation(status: OrderDto['status']): OrderStatusPresentation {
+export function getOrderStatusPresentation(
+  status: OrderDto['status'],
+  fulfillmentState?: OrderDto['fulfillmentState'],
+): OrderStatusPresentation {
+  if (status === 'paid' && fulfillmentState === 'pending')
+    return {
+      heading: 'Booking processing',
+      label: 'Processing',
+      amountLabel: 'Total paid',
+      ticketAccess: false,
+      tone: 'warning',
+    };
   return ORDER_STATUS_PRESENTATION[status];
 }

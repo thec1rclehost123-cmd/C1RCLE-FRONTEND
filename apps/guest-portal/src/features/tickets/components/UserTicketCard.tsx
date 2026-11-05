@@ -39,7 +39,7 @@ export function UserTicketCard({
         item.custody !== 'unassigned' &&
         item.management?.ownership !== 'transferred',
     );
-  const canShowQr = ticket.management?.canPresent === true;
+  const canShowQr = ticket.status === 'active' && ticket.management?.canPresent === true;
   const showQr = () => {
     (onShowQr ?? onSelect)(ticket);
   };

@@ -28,6 +28,11 @@ export interface TicketDetailModalProps {
   onOwnershipChanged?: (() => void) | undefined;
 }
 const STATUS_COPY = {
+  processing: {
+    label: 'Processing',
+    detail:
+      'Payment received. Admission and QR access are unavailable until booking fulfillment completes.',
+  },
   active: { label: 'Active', detail: 'Booking confirmed.' },
   postponed: {
     label: 'Postponed',

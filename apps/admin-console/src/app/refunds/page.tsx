@@ -6,11 +6,11 @@ import { useState } from 'react';
 import { Button, EmptyState, ErrorState, LoadingState, TextField } from '@c1rcle/ui';
 
 import { PageHeader } from '@/components/admin/page-header';
+import { RefundPolicyAction } from '@/components/admin/refund-policy-action';
 import { RefundRecovery } from '@/components/admin/refund-recovery';
 import { StatusFilter } from '@/components/admin/status-filter';
 import {
   approveRefund,
-  executeRefund,
   exportRefundsCsv,
   listRefunds,
   REFUND_STATUSES,
@@ -69,11 +69,6 @@ export default function RefundsDesk() {
       setReason('');
       invalidate();
     },
-  });
-
-  const executeMutation = useMutation({
-    mutationFn: (refundId: string) => executeRefund(refundId),
-    onSuccess: invalidate,
   });
 
   const stagedAmount = (total: number) => formatPaise(total);
@@ -161,6 +156,12 @@ export default function RefundsDesk() {
                   <td className="px-4 py-3 font-medium">{stagedAmount(request.amountPaise)}</td>
                   <td className="max-w-md px-4 py-3 text-muted-foreground">
                     {request.reason}
+                    {request.remedyForRefundRequestId ? (
+                      <p className="mt-1 text-xs">
+                        Original-fee supplement for refund{' '}
+                        {shortId(request.remedyForRefundRequestId)}; approval is required.
+                      </p>
+                    ) : null}
                     <p className="mt-1 text-xs text-muted-foreground/70">
                       {request.status === 'rejected' && request.rejectionReason !== null
                         ? `Rejected: ${request.rejectionReason}`
@@ -238,19 +239,16 @@ export default function RefundsDesk() {
                           </Button>
                         )}
                       </div>
-                    ) : request.status === 'approved' || request.status === 'failed' ? (
-                      <div className="flex justify-end">
-                        <Button
-                          size="sm"
-                          variant={request.status === 'failed' ? 'outline' : 'primary'}
-                          disabled={executeMutation.isPending}
-                          onClick={() => {
-                            executeMutation.mutate(request.id);
-                          }}
-                        >
-                          {request.status === 'failed' ? 'Retry provider refund' : 'Execute refund'}
-                        </Button>
-                      </div>
+                    ) : request.status === 'approved' ||
+                      request.status === 'failed' ||
+                      (request.status === 'settled' &&
+                        request.refundCause === 'guest_request' &&
+                        !request.remedyForRefundRequestId) ? (
+                      <RefundPolicyAction
+                        key={request.id}
+                        request={request}
+                        onUpdated={invalidate}
+                      />
                     ) : request.status === 'executing' ? (
                       <RefundRecovery request={request} onUpdated={invalidate} />
                     ) : (
@@ -268,7 +266,7 @@ export default function RefundsDesk() {
         </div>
       )}
 
-      {approveMutation.isError || rejectMutation.isError || executeMutation.isError ? (
+      {approveMutation.isError || rejectMutation.isError ? (
         <p role="alert" className="text-sm text-destructive">
           The decision could not be saved. It is safe to retry — the request is idempotency-keyed.
         </p>

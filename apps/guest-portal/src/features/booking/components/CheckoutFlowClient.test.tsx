@@ -105,7 +105,7 @@ function deps(overrides: Partial<PaidCheckoutDeps> = {}): PaidCheckoutDeps {
     openCheckout: vi
       .fn()
       .mockResolvedValue({ kind: 'paid', paymentId: 'pay_1', orderId: 'order_1', signature: 's' }),
-    verify: vi.fn().mockResolvedValue({ order: { id: 'ord_9' }, entitlements: [] }),
+    verify: vi.fn().mockResolvedValue({ order: { id: 'ord_9', status: 'paid' }, entitlements: [] }),
     waitForTickets: vi.fn().mockResolvedValue(false),
     ...overrides,
   };
@@ -547,6 +547,31 @@ describe('paid checkout step', () => {
     expect(screen.getByRole('link', { name: 'My Tickets' })).toHaveAttribute('href', '/tickets');
     expect(mocks.push).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ['paid', 'pending-booking'],
+    ['refund_requested', 'compensating-booking'],
+  ])(
+    'routes authoritative %s pending orders to current server status without another payment',
+    async (status, id) => {
+      mocks.deps = deps({
+        verify: vi
+          .fn()
+          .mockResolvedValue({
+            order: { id, status, fulfillmentState: 'pending' },
+            entitlements: [],
+          }),
+      });
+      toPaymentStep();
+      fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180' }));
+      await waitFor(() => {
+        expect(mocks.push).toHaveBeenCalledWith(`/confirmation/${id}`);
+      });
+      expect(mocks.deps.openCheckout).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('button', { name: 'Pay ₹1,180' })).toBeDisabled();
+      expect(screen.queryByText(/It has been refunded in full/)).not.toBeInTheDocument();
+    },
+  );
 
   it('tells a buyer whose late payment was refunded that they were refunded, not that it is processing', async () => {
     const message =

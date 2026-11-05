@@ -36,6 +36,7 @@ function toTicketStatus(
   order: OrderDto | undefined,
 ): TicketStatus {
   if (order?.status === 'refund_requested') return 'refund_pending';
+  if (order?.status === 'paid' && order.fulfillmentState === 'pending') return 'processing';
   if (order?.eventCancellation) return 'cancelled';
   if (items.every((item) => item.status === 'void') && (order?.refundedPaise ?? 0) > 0) {
     return 'refunded';
@@ -153,7 +154,12 @@ export async function toTicketWalletData(
           : {}),
         ...coverSummary(eventCoversByEntitlement.get(first.id)),
       };
-      (status === 'active' ? unavailableTickets : pastTickets).push(ticket);
+      (status === 'processing'
+        ? upcomingTickets
+        : status === 'active'
+          ? unavailableTickets
+          : pastTickets
+      ).push(ticket);
       continue;
     }
 
@@ -217,7 +223,7 @@ export async function toTicketWalletData(
       ...coverSummary(eventCoversByEntitlement.get(first.id)),
     };
 
-    if (status === 'postponed' || (status === 'active' && !ended)) {
+    if (status === 'processing' || status === 'postponed' || (status === 'active' && !ended)) {
       upcomingTickets.push(ticket);
     } else {
       pastTickets.push(ticket);
@@ -295,7 +301,7 @@ export async function toTicketWalletData(
       (managed.startsAt
         ? new Date(Date.parse(managed.startsAt) + 6 * 60 * 60_000).toISOString()
         : null);
-    if (item.status === 'postponed') upcomingTickets.push(item);
+    if (item.status === 'processing' || item.status === 'postponed') upcomingTickets.push(item);
     else if (managed.status !== 'active' || (end && Date.parse(end) <= now.getTime()))
       pastTickets.push(item);
     else if (validDate) upcomingTickets.push(item);
@@ -312,7 +318,7 @@ export async function toTicketWalletData(
         (item.startsAt
           ? new Date(Date.parse(item.startsAt) + 6 * 60 * 60_000).toISOString()
           : null);
-      if (item.status === 'postponed') upcomingTickets.push(item);
+      if (item.status === 'processing' || item.status === 'postponed') upcomingTickets.push(item);
       else if (item.status === 'unavailable' || (item.status === 'active' && !end))
         unavailableTickets.push(item);
       else if (item.status === 'active' && end && Date.parse(end) > now.getTime())

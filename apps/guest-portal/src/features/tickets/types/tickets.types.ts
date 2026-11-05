@@ -9,6 +9,7 @@ export type TicketStatus =
   | 'postponed'
   | 'used'
   | 'cancelled'
+  | 'processing'
   | 'pending'
   | 'refund_pending'
   | 'refunded'

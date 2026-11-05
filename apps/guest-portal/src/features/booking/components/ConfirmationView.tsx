@@ -8,7 +8,8 @@ import type { BookingConfirmationFixture, BookingEventFixture } from '../types/b
 
 const moneyFormatter = new Intl.NumberFormat('en-IN', {
   currency: 'INR',
-  maximumFractionDigits: 0,
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
   style: 'currency',
 });
 
@@ -26,7 +27,7 @@ export function ConfirmationView({
   event: BookingEventFixture;
 }) {
   const accent = getEventAccentClasses(event.accentTone);
-  const status = getOrderStatusPresentation(confirmation.status);
+  const status = getOrderStatusPresentation(confirmation.status, confirmation.fulfillmentState);
   const statusTone = {
     success: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400',
     warning: 'border-amber-500/20 bg-amber-500/10 text-amber-300',
@@ -148,6 +149,56 @@ export function ConfirmationView({
                 </span>
               </div>
 
+              {confirmation.status === 'paid' && confirmation.fulfillmentState === 'pending' ? (
+                <p role="status" className="mt-4 text-sm text-amber-200">
+                  Payment received. Your booking is still processing; admission and QR access will
+                  become available after fulfillment completes.
+                </p>
+              ) : null}
+              {confirmation.status === 'refund_requested' ? (
+                <p role="status" className="mt-4 text-sm text-amber-200">
+                  Your refund request is awaiting review or provider settlement. A requested refund
+                  is not a completed refund.
+                </p>
+              ) : null}
+              {confirmation.receiptFacts ? (
+                <section
+                  aria-label="Original payment receipt"
+                  className="mt-5 space-y-2 text-sm text-white/70"
+                >
+                  <h3 className="font-bold text-white">Original payment receipt</h3>
+                  {(
+                    [
+                      ['Admission after discount', confirmation.receiptFacts.admissionPaise],
+                      ['Cover', confirmation.receiptFacts.coverPaise],
+                      ['Add-ons', confirmation.receiptFacts.addOnPaise],
+                      [
+                        'Discount applied (included above)',
+                        confirmation.receiptFacts.discountPaise,
+                      ],
+                      ['Platform fee', confirmation.receiptFacts.platformFeePaise],
+                      ['Payment fee', confirmation.receiptFacts.paymentFeePaise],
+                      ['Tax on fees', confirmation.receiptFacts.feeTaxPaise],
+                      ['Original total paid', confirmation.receiptFacts.grandTotalPaise],
+                    ] as const
+                  ).map(([label, amount]) => (
+                    <p key={label} className="flex justify-between gap-4">
+                      <span>{label}</span>
+                      <span>{moneyFormatter.format(amount / 100)}</span>
+                    </p>
+                  ))}
+                  {confirmation.receiptFacts.providerPaymentId ? (
+                    <p className="break-all text-xs">
+                      Payment reference: {confirmation.receiptFacts.providerPaymentId}
+                    </p>
+                  ) : null}
+                  {confirmation.receiptFacts.bookingFeePolicyVersion ? (
+                    <p className="text-xs">
+                      Original fee policy: {confirmation.receiptFacts.bookingFeePolicyVersion}
+                    </p>
+                  ) : null}
+                </section>
+              ) : null}
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 {status.ticketAccess ? (
                   <Link
@@ -165,7 +216,7 @@ export function ConfirmationView({
                 </Link>
               </div>
               <div className="mt-4 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-white/50">
-                {confirmation.status === 'paid' ? (
+                {confirmation.status === 'paid' && confirmation.fulfillmentState !== 'pending' ? (
                   <span>Your booking details are available in My Tickets.</span>
                 ) : null}
                 <Link

@@ -117,6 +117,39 @@ function resolveFor(
   };
 }
 
+describe('pending fulfillment wallet', () => {
+  it('keeps a paid pending order in Processing when event details are unavailable', async () => {
+    const wallet = await toTicketWalletData(
+      [BASE_ENTITLEMENT],
+      () => Promise.resolve(null),
+      new Date('2026-11-04T00:00:00Z'),
+      [{ ...ORDER, status: 'paid', fulfillmentState: 'pending' }],
+    );
+    expect(wallet.upcomingTickets[0]?.status).toBe('processing');
+    expect(wallet.pastTickets).toHaveLength(0);
+  });
+  it('labels server-managed pending units as processing, preserving their non-admission authority', async () => {
+    const managed = {
+      ...MANAGEMENT,
+      status: 'processing' as const,
+      canPresent: false,
+      canTransfer: false,
+      qrUnavailableReason: 'Booking is still processing',
+    };
+    const wallet = await toTicketWalletData(
+      [],
+      () => Promise.resolve(null),
+      new Date('2026-11-04T00:00:00Z'),
+      [],
+      [],
+      [managed],
+    );
+    expect(wallet.upcomingTickets[0]?.status).toBe('processing');
+    expect(wallet.upcomingTickets[0]?.management?.canPresent).toBe(false);
+    expect(wallet.pastTickets).toHaveLength(0);
+  });
+});
+
 describe('toTicketWalletData', () => {
   it('resolves distinct event details concurrently', async () => {
     const eventIds = ['evt_1', 'evt_2'];

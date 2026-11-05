@@ -38,7 +38,7 @@ function deps(overrides: Partial<PaidCheckoutDeps> = {}): PaidCheckoutDeps {
       .fn()
       .mockResolvedValue({ paymentIntentId: 'order_1', amountPaise: 118_000, keyId: 'rzp_test_x' }),
     openCheckout: vi.fn().mockResolvedValue(paid),
-    verify: vi.fn().mockResolvedValue({ order: { id: 'ord_9' }, entitlements: [] }),
+    verify: vi.fn().mockResolvedValue({ order: { id: 'ord_9', status: 'paid' }, entitlements: [] }),
     waitForTickets: vi.fn().mockResolvedValue(false),
     ...overrides,
   };
@@ -297,6 +297,30 @@ describe('runPaidCheckout', () => {
     expect(d.openCheckout).toHaveBeenCalledWith(
       expect.objectContaining({ prefill: { name: 'A Buyer', email: 'b@example.com' } }),
     );
+  });
+
+  it('does not confirm a paid order while authoritative fulfillment remains pending', async () => {
+    const d = deps({
+      verify: vi.fn().mockResolvedValue({
+        order: { id: 'ord_pending', status: 'paid', fulfillmentState: 'pending' },
+        entitlements: [],
+      }),
+    });
+    expect(await runPaidCheckout(d, input)).toEqual({
+      kind: 'processing',
+      ticketsReady: false,
+      orderId: 'ord_pending',
+    });
+  });
+  it('shows durable approval-gated compensation as pending rather than refunded or confirmed', async () => {
+    const d = deps({
+      verify: vi.fn().mockResolvedValue({
+        order: { id: 'ord_comp', status: 'refund_requested', fulfillmentState: 'pending' },
+        entitlements: [],
+      }),
+    });
+    expect((await runPaidCheckout(d, input)).kind).toBe('refund_pending');
+    expect(d.waitForTickets).not.toHaveBeenCalled();
   });
 
   describe('a payment that arrived too late and was refunded', () => {

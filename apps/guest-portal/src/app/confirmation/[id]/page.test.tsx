@@ -65,6 +65,67 @@ describe('ConfirmationView', () => {
     expect(screen.queryByText('Confirmed')).not.toBeInTheDocument();
   });
 
+  it('keeps a captured pending booking processing without ticket access', () => {
+    const confirmation = bookingConfirmationFixtures[0];
+    if (!confirmation) throw new Error('Missing fixture');
+    const event = findBookingEventFixture(confirmation.eventId);
+    if (!event) throw new Error('Missing event');
+    render(
+      <ConfirmationView
+        confirmation={{ ...confirmation, status: 'paid', fulfillmentState: 'pending' }}
+        event={event}
+      />,
+    );
+    expect(screen.getByRole('heading', { name: 'Booking processing' })).toBeInTheDocument();
+    expect(
+      screen.getByText(/Payment received. Your booking is still processing/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Confirmed')).not.toBeInTheDocument();
+    expect(screen.queryByText('View in My Tickets')).not.toBeInTheDocument();
+  });
+
+  it('renders original server receipt paise and policy facts without recomputing fees', () => {
+    const confirmation = bookingConfirmationFixtures[0];
+    if (!confirmation) throw new Error('Missing fixture');
+    const event = findBookingEventFixture(confirmation.eventId);
+    if (!event) throw new Error('Missing event');
+    render(
+      <ConfirmationView
+        confirmation={{
+          ...confirmation,
+          receiptFacts: {
+            version: 'm4-paid-receipt-v1',
+            orderId: confirmation.id,
+            bookingReference: confirmation.bookingReference,
+            currency: 'INR',
+            subtotalPaise: 10000,
+            discountPaise: 0,
+            discountedSubtotalPaise: 10000,
+            admissionPaise: 10000,
+            coverPaise: 0,
+            addOnPaise: 0,
+            platformFeePaise: 501,
+            paymentFeePaise: 252,
+            feeTaxPaise: 135,
+            grandTotalPaise: 10888,
+            providerOrderId: 'order_test_reference',
+            providerPaymentId: 'pay_test_reference',
+            paidAt: '2026-11-04T00:00:00Z',
+            bookingFeePolicyVersion: 'test-original-v1',
+            accountingPolicyVersion: 'accounting-original-v1',
+          },
+        }}
+        event={event}
+      />,
+    );
+    expect(screen.getByRole('region', { name: 'Original payment receipt' })).toHaveTextContent(
+      '₹5.01',
+    );
+    expect(screen.getByText('Payment reference: pay_test_reference')).toBeInTheDocument();
+    expect(screen.getByText('Original fee policy: test-original-v1')).toBeInTheDocument();
+    expect(screen.getByText('₹108.88')).toBeInTheDocument();
+  });
+
   it('keeps fixture confirmations isolated from backend authority', () => {
     const serialized = JSON.stringify(bookingConfirmationFixtures);
     expect(bookingConfirmationFixtures).toHaveLength(6);

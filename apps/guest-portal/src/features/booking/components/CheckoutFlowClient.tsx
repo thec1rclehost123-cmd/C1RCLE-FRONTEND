@@ -47,7 +47,7 @@ const dateFormatter = new Intl.DateTimeFormat('en-IN', {
 });
 
 type CheckoutStep = 1 | 2;
-type PayState = 'idle' | 'paying' | 'processing';
+type PayState = 'idle' | 'paying' | 'processing' | 'refund_pending';
 type QuoteState = 'idle' | 'loading' | 'ready' | 'error';
 
 export function CheckoutFlowClient(props: {
@@ -351,6 +351,10 @@ function CheckoutFlowClientState({
         );
         return;
       }
+      if (status.status === 'processing' && status.orderId) {
+        router.push(`/confirmation/${encodeURIComponent(status.orderId)}`);
+        return;
+      }
       if (status.status === 'pending' || status.status === 'processing') {
         setPayMessage('Your payment is still processing. You can safely refresh and check again.');
         return;
@@ -441,7 +445,8 @@ function CheckoutFlowClientState({
         return;
       case 'processing':
         setPayState('processing');
-        if (result.ticketsReady) router.push('/tickets');
+        if (result.orderId) router.push(`/confirmation/${encodeURIComponent(result.orderId)}`);
+        else if (result.ticketsReady) router.push('/tickets');
         return;
       case 'price_changed':
         setPayMessage(
@@ -452,9 +457,13 @@ function CheckoutFlowClientState({
         // A new key forces a fresh quote, and the fresh quote a fresh attempt.
         setRequoteCount((count) => count + 1);
         break;
+      case 'refund_pending':
+        setPayState('refund_pending');
+        setPayMessage(result.message);
+        if (result.orderId) router.push(`/confirmation/${encodeURIComponent(result.orderId)}`);
+        return;
       case 'refunded':
-        // Final: the money is already on its way back, so nothing is pending and
-        // there is nothing to retry against this hold.
+        // Do not create another payment against this captured purchase.
         setPayMessage(result.message);
         await clearPaymentRecovery().catch(() => undefined);
         break;

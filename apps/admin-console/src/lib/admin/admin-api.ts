@@ -369,11 +369,15 @@ export function approveRefund(refundId: string): Promise<RefundOutcome> {
   });
 }
 
-export function rejectRefund(refundId: string, reason: string): Promise<RefundOutcome> {
+export function rejectRefund(
+  refundId: string,
+  reason: string,
+  idempotencyKey = newIdempotencyKey(),
+): Promise<RefundOutcome> {
   return getAdminApiClient().post({
     path: `/api/v2/admin/refunds/${refundId}/reject`,
     body: rejectRefundRequestSchema.parse({ reason }),
-    headers: { 'idempotency-key': newIdempotencyKey() },
+    headers: { 'idempotency-key': idempotencyKey },
     schema: refundOutcomeSchema,
   });
 }
@@ -384,6 +388,17 @@ export function executeRefund(
 ): Promise<RefundOutcome> {
   return getAdminApiClient().post({
     path: `/api/v2/admin/refunds/${refundId}/execute`,
+    headers: { 'idempotency-key': idempotencyKey },
+    schema: refundOutcomeSchema,
+  });
+}
+
+export function requestOriginalFeeReview(
+  refundId: string,
+  idempotencyKey = newIdempotencyKey(),
+): Promise<RefundOutcome> {
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/refunds/${encodeURIComponent(refundId)}/policy-remedy`,
     headers: { 'idempotency-key': idempotencyKey },
     schema: refundOutcomeSchema,
   });

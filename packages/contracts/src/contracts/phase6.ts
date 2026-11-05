@@ -210,6 +210,7 @@ export const raiseDisputeRequestSchema = z
   .object({
     orderId: opaqueIdSchema,
     ledgerEntryId: opaqueIdSchema.optional(),
+    journalId: opaqueIdSchema.optional(),
     reason: z.string().min(1).max(2000),
     amountPaise: z.number().int().positive(),
   })
@@ -231,6 +232,7 @@ export const disputeResponseSchema = z.object({
   organizationId: opaqueIdSchema,
   orderId: opaqueIdSchema,
   ledgerEntryId: opaqueIdSchema.nullable(),
+  journalId: opaqueIdSchema.nullable().optional(),
   raisedBy: opaqueIdSchema,
   reason: z.string(),
   amountPaise: z.number().int().positive(),
@@ -262,7 +264,8 @@ export type AdminResolveDisputeInput = z.infer<typeof adminResolveDisputeSchema>
 export const requestRefundSchema = z
   .object({
     orderId: opaqueIdSchema,
-    amountPaise: z.number().int().positive(),
+    amountPaise: z.number().int().positive().optional(),
+    refundCause: z.enum(['guest_request', 'organizer_cancel', 'material_change']).optional(),
     reason: z.string().min(1).max(2000),
     targetEntitlementIds: z.array(opaqueIdSchema).min(1).max(100).optional(),
     ticketLines: z
@@ -312,9 +315,22 @@ export type AdminRefundRequestStatus = z.infer<typeof adminRefundRequestStatusSc
 
 export const adminRefundRequestDtoSchema = z.object({
   id: opaqueIdSchema,
+  remedyForRefundRequestId: opaqueIdSchema.optional(),
+  sourceEventVersion: z.number().int().positive().optional(),
   orderId: opaqueIdSchema,
   organizationId: opaqueIdSchema,
   amountPaise: z.number().int().positive(),
+  refundCause: z.enum(['guest_request', 'organizer_cancel', 'material_change', 'fulfillment_failure']).optional(),
+  refundComponents: z
+    .object({
+      admissionPaise: z.number().int().nonnegative(),
+      platformFeePaise: z.number().int().nonnegative(),
+      paymentFeePaise: z.number().int().nonnegative(),
+      feeTaxPaise: z.number().int().nonnegative(),
+      otherPaidPaise: z.number().int().nonnegative(),
+    })
+    .optional(),
+  purchasePolicyVersion: z.string().min(1).optional(),
   requestedBy: opaqueIdSchema,
   reason: z.string(),
   scope: z.enum(['amount_only', 'ticket_lines']),
