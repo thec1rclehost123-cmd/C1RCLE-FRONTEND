@@ -10,6 +10,10 @@
  */
 import { NextResponse } from 'next/server';
 
+import {
+  SESSION_COOKIE_NAME,
+  withGatewaySessionCookieName,
+} from '@c1rcle/auth/gateway-session-cookie';
 import { getClientEnv } from '@c1rcle/config';
 
 import type { NextRequest } from 'next/server';
@@ -32,42 +36,12 @@ function gatewayBaseUrl(): string {
   return getClientEnv().NEXT_PUBLIC_API_BASE_URL.replace(/\/$/, '');
 }
 
-/** Name the frontend uses for the Better-Auth session cookie (proxy + BFF). */
-export const SESSION_COOKIE_NAME = 'better-auth.session_token';
-
 /**
- * A production gateway (`useSecureCookies`) itself reads the `__Secure-`
- * prefixed session cookie; a development gateway reads the unprefixed name.
- * The frontend always stores the unprefixed name (see `rescopeSessionCookies`),
- * so when forwarding browser cookies to the gateway we emit both names with
- * the same value — the gateway picks whichever name it is configured for, and
- * the other is ignored.
+ * Name the frontend uses for the Better-Auth session cookie (proxy + BFF).
+ * Re-exported from the shared module that also owns the `__Secure-` twin rule,
+ * so there is exactly one definition of both.
  */
-function withGatewaySessionCookieName(
-  cookieHeader: string | null | undefined,
-): string | null | undefined {
-  if (cookieHeader === undefined || cookieHeader === null || cookieHeader.length === 0) {
-    return cookieHeader;
-  }
-  if (cookieHeader.includes(`__Secure-${SESSION_COOKIE_NAME}=`)) {
-    return cookieHeader;
-  }
-  const match = new RegExp(`(?:^|;)\\s*${escapeRegExp(SESSION_COOKIE_NAME)}=([^;]+)`).exec(
-    cookieHeader,
-  );
-  if (match === null) {
-    return cookieHeader;
-  }
-  const value = match[1];
-  if (value === undefined) {
-    return cookieHeader;
-  }
-  return `${cookieHeader}; __Secure-${SESSION_COOKIE_NAME}=${value}`;
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+export { SESSION_COOKIE_NAME };
 
 function isProduction(): boolean {
   return getClientEnv().NEXT_PUBLIC_ENVIRONMENT === 'production';
@@ -256,9 +230,8 @@ export async function forwardToGateway(path: string, init: ForwardInit): Promise
   if (init.body !== undefined) {
     headers['content-type'] = 'application/json';
   }
-  const cookieHeader = withGatewaySessionCookieName(init.cookie);
-  if (cookieHeader !== undefined && cookieHeader !== null && cookieHeader.length > 0) {
-    headers['cookie'] = cookieHeader;
+  if (init.cookie !== undefined && init.cookie !== null && init.cookie.length > 0) {
+    headers['cookie'] = withGatewaySessionCookieName(init.cookie);
   }
   for (const [key, value] of Object.entries(init.headers ?? {})) {
     headers[key] = value;

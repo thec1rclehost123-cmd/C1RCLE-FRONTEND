@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 
 import { createApiClient, isApiClientError } from '@c1rcle/api-client';
+import { withGatewaySessionCookieName } from '@c1rcle/auth/gateway-session-cookie';
 import {
   entitlementsListResponseSchema,
   eventPublicDetailDtoSchema,
@@ -86,7 +87,7 @@ async function collectPages<T>(
 
 export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const session = await requireGuestSession('/profile');
-  const cookieHeader = (await cookies()).toString();
+  const cookieHeader = withGatewaySessionCookieName((await cookies()).toString());
   const guestProfile = await createApiClient()
     .get({
       path: '/api/v2/profile/me',
