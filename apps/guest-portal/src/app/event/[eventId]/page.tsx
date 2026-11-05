@@ -10,6 +10,7 @@ import { PrivateTierUnlockClient } from '@/features/event-detail/components/Priv
 import { PromoterClickTracker } from '@/features/event-detail/components/PromoterClickTracker';
 import { toEventDetailFixture } from '@/features/event-detail/event-detail-mapping';
 import { loadExploreEvents } from '@/features/explore/explore-data';
+import { SaveEventControl } from '@/features/saved-events/SaveEventControl';
 import { SocialEventEntry } from '@/features/social/SocialEventEntry';
 import { buildPublicMetadata } from '@/lib/seo/metadata';
 
@@ -134,6 +135,13 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
       <EventDetailView
         event={result.event}
         checkoutEvent={result.checkoutEvent}
+        saveAction={
+          <SaveEventControl
+            key={result.event.id}
+            eventId={result.event.id}
+            slug={result.event.slug}
+          />
+        }
         recommendations={recommendations}
         {...(referralCode ? { referralCode } : {})}
       />

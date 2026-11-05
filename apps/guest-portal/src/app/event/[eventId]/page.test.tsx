@@ -51,7 +51,11 @@ function bookingEventFor(event: (typeof eventDetailFixtures)[number]): BookingEv
   };
 }
 
+// Resolve the async server-only social composition outside this DOM fixture.
+vi.mock('@/features/social/SocialEventEntry', () => ({ SocialEventEntry: () => null }));
+
 vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
   notFound: () => {
     throw new Error('NEXT_NOT_FOUND');
   },

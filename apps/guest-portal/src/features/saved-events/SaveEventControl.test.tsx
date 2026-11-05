@@ -52,7 +52,9 @@ it('sends anonymous Save through the existing trusted event-return flow without 
   mocks.session.status = 'anonymous';
   render(<SaveEventControl eventId="event-a" slug="night-a" />);
   fireEvent.click(screen.getByRole('button', { name: 'Save event' }));
-  expect(mocks.push).toHaveBeenCalledWith('/auth/continue?next=%2Fevent%2Fnight-a');
+  expect(mocks.push).toHaveBeenCalledWith(
+    '/login?next=%2Fprofile%2Fsaved%2Freturn%3Fevent%3D%252Fevent%252Fnight-a',
+  );
   expect(mocks.put).not.toHaveBeenCalled();
 });
 it('does not reuse A’s saved state when the authenticated identity changes to B', async () => {
@@ -82,7 +84,9 @@ it('keeps public browsing open when setup is incomplete and resumes only on Save
   await waitFor(() => expect(screen.getByRole('button', { name: 'Save event' })).toBeEnabled());
   expect(mocks.push).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Save event' }));
-  expect(mocks.push).toHaveBeenCalledWith('/auth/continue?next=%2Fevent%2Fnight-a');
+  expect(mocks.push).toHaveBeenCalledWith(
+    '/auth/continue?next=%2Fprofile%2Fsaved%2Freturn%3Fevent%3D%252Fevent%252Fnight-a',
+  );
   expect(mocks.put).not.toHaveBeenCalled();
 });
 

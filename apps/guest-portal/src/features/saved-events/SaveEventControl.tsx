@@ -10,6 +10,7 @@ import { guestContinuePath } from '@/lib/auth/continue-path';
 import { csrfHeaders } from '@/lib/bff/csrf';
 
 import { savedClient } from './client';
+import { savedEventReturnPath } from './return-intent';
 
 export function SaveEventControl({ eventId, slug }: { eventId: string; slug: string }) {
   const session = useSessionStore();
@@ -32,8 +33,9 @@ export function SaveEventControl({ eventId, slug }: { eventId: string; slug: str
       ? snapshot.saved
       : undefined;
   const path = `/api/saved-events/${encodeURIComponent(eventId)}`;
-  const continuePath = guestContinuePath(
-    `/event/${encodeURIComponent(slug)}${typeof window === 'undefined' ? '' : window.location.search}`,
+  const continuePath = savedEventReturnPath(
+    slug,
+    typeof window === 'undefined' ? '' : window.location.search,
   );
   useEffect(() => {
     if (session.status !== 'authenticated' || !userId) return;
@@ -59,8 +61,12 @@ export function SaveEventControl({ eventId, slug }: { eventId: string; slug: str
   }, [path, userId, session.status, eventId]);
   async function toggle() {
     if (busy) return;
-    if (session.status !== 'authenticated' || !userId || accountRequired) {
-      router.push(continuePath);
+    if (session.status !== 'authenticated' || !userId) {
+      router.push(`/login?next=${encodeURIComponent(continuePath)}`);
+      return;
+    }
+    if (accountRequired) {
+      router.push(guestContinuePath(continuePath));
       return;
     }
     setBusy(true);
