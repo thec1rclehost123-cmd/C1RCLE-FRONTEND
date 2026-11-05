@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import { SocialPrivacyPanel } from '@/features/social/SocialPrivacyPanel';
+
 import { ChangePasswordFormClient } from './ChangePasswordFormClient';
 import { PersonalProfileFormClient } from './PersonalProfileFormClient';
 import { SignOutControl } from './SignOutControl';
@@ -14,8 +16,8 @@ const settingsSections: readonly {
 }[] = [
   { href: '/profile?view=settings&section=personal', label: 'Personal profile', value: 'personal' },
   {
-    href: '/profile?view=settings&section=social#social-links',
-    label: 'Social links',
+    href: '/profile?view=settings&section=social',
+    label: 'Privacy',
     value: 'social',
   },
   { href: '/profile?view=settings&section=account', label: 'Account & security', value: 'account' },
@@ -31,19 +33,28 @@ export function ProfileSettings({
   profileFields: Pick<UpsertGuestProfileRequest, 'dateOfBirth' | 'tastes' | 'intents'> | null;
 }) {
   return (
-    <section id="profile-settings" aria-labelledby="profile-settings-heading">
-      <p className="text-[9px] font-black uppercase tracking-[0.3em] text-[#FF6B4A]">Account</p>
-      <h2
+    <section
+      id="profile-settings"
+      aria-labelledby="profile-settings-heading"
+      className="mx-auto max-w-4xl"
+    >
+      <Link
+        href="/profile"
+        className="mb-5 inline-flex min-h-11 items-center text-sm text-white/60 hover:text-white"
+      >
+        ← Profile
+      </Link>
+      <h1
         id="profile-settings-heading"
-        className="mt-3 text-4xl font-black uppercase tracking-[-0.055em] text-white sm:text-6xl"
+        className="text-3xl font-bold uppercase tracking-[-0.04em] text-white sm:text-4xl"
       >
         Settings
-      </h2>
+      </h1>
 
-      <div className="mt-8 grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
+      <div className="mt-6 grid gap-8 lg:mt-9 lg:grid-cols-[176px_minmax(0,1fr)] lg:gap-12">
         <nav
           aria-label="Settings categories"
-          className="flex gap-2 overflow-x-auto rounded-[1.5rem] border border-white/10 bg-black/45 p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:flex-col lg:self-start"
+          className="flex flex-wrap gap-x-5 gap-y-1 border-b border-white/10 lg:flex-col lg:gap-x-0 lg:gap-y-1 lg:self-start lg:border-b-0"
         >
           {settingsSections.map((section) => {
             const active = section.value === activeSection;
@@ -52,10 +63,10 @@ export function ProfileSettings({
                 key={section.value}
                 href={section.href}
                 aria-current={active ? 'page' : undefined}
-                className={`inline-flex min-h-12 shrink-0 items-center rounded-2xl px-5 text-[9px] font-black uppercase tracking-[0.18em] transition-colors ${
+                className={`inline-flex min-h-11 items-center border-b-2 text-sm transition-colors lg:border-b-0 lg:border-l-2 lg:pl-4 ${
                   active
-                    ? 'bg-[#FF4400] text-white'
-                    : 'text-white/40 hover:bg-white/10 hover:text-white'
+                    ? 'border-[#FF4400] font-semibold text-white'
+                    : 'border-transparent text-white/60 hover:text-white'
                 }`}
               >
                 {section.label}
@@ -77,44 +88,12 @@ export function ProfileSettings({
             </div>
           )
         ) : activeSection === 'social' ? (
-          <SocialLinksPanel />
+          <SocialPrivacyPanel />
         ) : (
           <AccountSecurityPanel identity={identity} />
         )}
       </div>
     </section>
-  );
-}
-
-function SocialLinksPanel() {
-  return (
-    <div
-      id="social-links"
-      className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-6 sm:p-8"
-    >
-      <p className="text-[9px] font-black uppercase tracking-[0.25em] text-white/35">
-        Profile links
-      </p>
-      <h3 className="mt-3 text-xl font-black uppercase tracking-[-0.03em] text-white">
-        Instagram &amp; X
-      </h3>
-      <p className="mt-3 max-w-xl text-sm leading-6 text-white/55">
-        Social links are not supported by the Guest profile service yet, so there is no saveable
-        field here. Your profile icons will become links after that support is available.
-      </p>
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl border border-white/[0.08] bg-black/25 px-4 py-4">
-          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/35">
-            Instagram
-          </p>
-          <p className="mt-2 text-sm text-white/45">Not connected</p>
-        </div>
-        <div className="rounded-2xl border border-white/[0.08] bg-black/25 px-4 py-4">
-          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/35">X</p>
-          <p className="mt-2 text-sm text-white/45">Not connected</p>
-        </div>
-      </div>
-    </div>
   );
 }
 

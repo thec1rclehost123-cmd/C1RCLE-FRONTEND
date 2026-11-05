@@ -8,7 +8,7 @@
   --events-accent-ink: #0a0a0a;
 }
 .hostTheme {
-  --events-accent: #a78bfa;
+  --events-accent: #ff5a1f;
   --events-accent-ink: #0a0a0a;
 }
 
@@ -1025,7 +1025,9 @@
     flex-direction: column;
   }
   .searchControl {
-    width: min(100%, 420px);
+    width: 100%;
+    min-height: 44px;
+    flex: none;
   }
   .toolbarControls {
     width: 100%;

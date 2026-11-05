@@ -1,0 +1,53 @@
+{
+  "FRONTEND": {
+    "files": [
+      "apps/guest-portal/src/app/api/auth/forgot-password/route.ts",
+      "apps/guest-portal/src/app/api/auth/google/callback/route.ts",
+      "apps/guest-portal/src/app/api/auth/google/route.ts",
+      "apps/guest-portal/src/app/api/auth/google/routes.test.ts",
+      "apps/guest-portal/src/app/api/auth/routes.test.ts",
+      "apps/guest-portal/src/app/forgot-password/forgot-password-client.tsx",
+      "apps/guest-portal/src/app/forgot-password/page.test.tsx",
+      "apps/guest-portal/src/app/login/login-page-client.tsx",
+      "apps/guest-portal/src/app/login/page.test.tsx",
+      "apps/guest-portal/src/app/reset-password/page.test.tsx",
+      "apps/guest-portal/src/app/reset-password/reset-password-client.tsx",
+      "apps/guest-portal/src/app/signup/page.tsx",
+      "apps/guest-portal/src/app/signup/signup-client.test.tsx",
+      "apps/guest-portal/src/app/signup/signup-client.tsx",
+      "apps/guest-portal/src/app/verify-email/page.tsx",
+      "apps/guest-portal/src/features/auth/components/GoogleButton.tsx",
+      "apps/guest-portal/src/lib/auth/email-verification.ts",
+      "apps/partner-dashboard/src/app/api/auth/forgot-password/route.ts",
+      "apps/partner-dashboard/src/app/api/auth/routes.test.ts",
+      "apps/partner-dashboard/src/app/forgot-password/PageClient.test.tsx",
+      "apps/partner-dashboard/src/app/forgot-password/PageClient.tsx",
+      "apps/partner-dashboard/src/app/reset-password/PageClient.test.tsx",
+      "apps/partner-dashboard/src/app/reset-password/PageClient.tsx",
+      "docs/acceptance/auth-account-20261104.md",
+      "docs/acceptance/candidate-files-20261104.json",
+      "docs/acceptance/m3-overlap-20261104.json"
+    ],
+    "working_overlap": [],
+    "committed_overlap": [],
+    "head": "6c51ddaee3bc9a401a64994f6f010f3b9058ab68",
+    "staging": "6c51ddaee3bc9a401a64994f6f010f3b9058ab68"
+  },
+  "BACKEND": {
+    "files": [
+      "apps/api-gateway/src/config/google-auth.test.ts",
+      "apps/api-gateway/src/config/google-auth.ts",
+      "apps/api-gateway/src/plugins/auth.ts",
+      "apps/api-gateway/src/routes/v2/auth/google-identity.integration.test.ts",
+      "apps/api-gateway/src/routes/v2/auth/index.test.ts",
+      "apps/api-gateway/src/routes/v2/auth/index.ts",
+      "apps/api-gateway/src/routes/v2/auth/native-callbacks.test.ts",
+      "apps/api-gateway/src/routes/v2/auth/native-callbacks.ts",
+      "apps/api-gateway/src/routes/v2/auth/session-security.integration.test.ts"
+    ],
+    "working_overlap": [],
+    "committed_overlap": [],
+    "head": "353999712a63fa74c61d4b60c67e3a2450585ca2",
+    "staging": "353999712a63fa74c61d4b60c67e3a2450585ca2"
+  }
+}

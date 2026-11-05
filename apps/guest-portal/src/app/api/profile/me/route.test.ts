@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { forwardToGateway } from '@/lib/bff/auth-proxy';
 
-import { PUT } from './route';
+import { GET, PUT } from './route';
 
 vi.mock('@/lib/bff/auth-proxy', async (importOriginal) => {
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports
@@ -77,5 +77,26 @@ describe('PUT /api/profile/me BFF', () => {
       '/api/v2/profile/me',
       expect.objectContaining({ method: 'PUT', body: PROFILE }),
     );
+  });
+});
+
+describe('private profile reads', () => {
+  it('marks private reads no-store and returns a useful response on gateway outage', async () => {
+    mockForward.mockResolvedValue(
+      new Response(JSON.stringify({ userId: 'guest_1', ...PROFILE }), { status: 200 }),
+    );
+    const response = await GET(
+      new NextRequest(`${ORIGIN}/api/profile/me`, {
+        headers: { origin: ORIGIN, cookie: 'better-auth.session_token=valid-session' },
+      }),
+    );
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+    mockForward.mockRejectedValue(new Error('offline'));
+    const failed = await GET(
+      new NextRequest(`${ORIGIN}/api/profile/me`, {
+        headers: { origin: ORIGIN, cookie: 'better-auth.session_token=valid-session' },
+      }),
+    );
+    expect(failed.status).toBe(502);
   });
 });

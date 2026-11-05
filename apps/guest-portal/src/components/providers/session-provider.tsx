@@ -5,6 +5,8 @@ import { useEffect, type ReactNode } from 'react';
 
 import { hydrateSession, logout, markAnonymous, markHydrated, setSession } from '@c1rcle/auth';
 
+import { OnboardingGuard } from '@/features/onboarding/OnboardingGuard';
+
 import type { getServerSession } from '@c1rcle/auth/server-session';
 
 /**
@@ -79,5 +81,5 @@ export function SessionProvider({ initialUser, children }: SessionProviderProps)
     };
   }, [router]);
 
-  return <>{children}</>;
+  return <OnboardingGuard>{children}</OnboardingGuard>;
 }

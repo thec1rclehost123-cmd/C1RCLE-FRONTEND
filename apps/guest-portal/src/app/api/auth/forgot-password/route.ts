@@ -35,6 +35,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     gatewayResponse = await forwardToGateway('/api/v2/auth/forgot-password', {
       method: 'POST',
       body,
+      headers: { origin: req.nextUrl.origin },
     });
   } catch {
     return gatewayUnreachable();

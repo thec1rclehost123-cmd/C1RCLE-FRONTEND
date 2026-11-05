@@ -56,7 +56,7 @@ export default async function StudioOverviewPage({
   let overview: Awaited<ReturnType<typeof loadOverviewData>>;
   try {
     overview = await loadOverviewData({
-      accent: isHost ? 'lavender' : 'orange',
+      accent: 'orange',
       organizationId,
     });
   } catch (cause) {
@@ -70,7 +70,7 @@ export default async function StudioOverviewPage({
   return (
     <OverviewScreen
       data={overview}
-      accent={isHost ? 'lavender' : 'orange'}
+      accent="orange"
       studio={isHost ? 'host' : 'venue'}
       organizationId={organizationId}
       links={{

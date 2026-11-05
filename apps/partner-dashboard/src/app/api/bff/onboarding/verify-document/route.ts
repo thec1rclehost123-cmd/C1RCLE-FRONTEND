@@ -41,5 +41,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return passThroughGatewayError(gatewayResponse.status, bodyText);
   }
 
-  return NextResponse.json(parseJson(bodyText), { status: 200 });
+  return NextResponse.json(parseJson(bodyText), {
+    status: 200,
+    headers: { 'cache-control': 'private, no-store' },
+  });
 }

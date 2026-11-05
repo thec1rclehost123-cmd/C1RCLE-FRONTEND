@@ -11,13 +11,17 @@ const assignDocument = vi.fn();
 const replace = vi.fn();
 const refreshRouter = vi.fn();
 let search = '';
+const identity = vi.hoisted(() => ({ id: 'synthetic-guest', emailVerified: true }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace, refresh: refreshRouter }),
   useSearchParams: () => new URLSearchParams(search),
 }));
 
-vi.mock('@c1rcle/auth', () => ({ login: vi.fn() }));
+vi.mock('@c1rcle/auth', () => ({
+  login: vi.fn(),
+  useSessionStore: { getState: () => ({ session: { user: identity } }) },
+}));
 
 const mockLogin = vi.mocked(login);
 
@@ -30,7 +34,9 @@ describe('LoginPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     search = '';
-    vi.stubGlobal('location', { assign: assignDocument });
+    sessionStorage.clear();
+    identity.emailVerified = true;
+    vi.stubGlobal('location', { assign: assignDocument, href: 'http://localhost:3000/login' });
   });
 
   afterEach(() => {
@@ -59,7 +65,7 @@ describe('LoginPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
 
     await waitFor(() => {
-      expect(assignDocument).toHaveBeenCalledWith('/tickets');
+      expect(assignDocument).toHaveBeenCalledWith('/auth/continue?next=%2Ftickets');
     });
     expect(mockLogin).toHaveBeenCalledWith({ email: 'g@x.com', password: 'password123' });
     expect(replace).not.toHaveBeenCalled();
@@ -75,7 +81,7 @@ describe('LoginPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
 
     await waitFor(() => {
-      expect(assignDocument).toHaveBeenCalledWith('/profile');
+      expect(assignDocument).toHaveBeenCalledWith('/auth/continue?next=%2Fexplore');
     });
   });
 
@@ -128,7 +134,7 @@ describe('LoginPage', () => {
     await waitFor(() => {
       expect(assignDocument).toHaveBeenCalledOnce();
     });
-    expect(assignDocument).toHaveBeenCalledWith('/profile');
+    expect(assignDocument).toHaveBeenCalledWith('/auth/continue?next=%2Fexplore');
     expect(replace).not.toHaveBeenCalled();
     expect(refreshRouter).not.toHaveBeenCalled();
   });
@@ -137,5 +143,44 @@ describe('LoginPage', () => {
     search = 'next=/profile&reason=expired';
     render(<LoginPageClient />);
     expect(screen.getByRole('status')).toHaveTextContent(/session expired/i);
+  });
+  it('continues unverified login through verification before the intended destination', async () => {
+    identity.emailVerified = false;
+    search = 'next=/tickets';
+    mockLogin.mockResolvedValue(undefined);
+    render(<LoginPageClient />);
+    fill('synthetic@example.invalid', 'Synthetic-password-16');
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
+    await waitFor(() => {
+      expect(assignDocument).toHaveBeenCalledWith('/verify-email?next=%2Ftickets');
+    });
+    expect(replace).not.toHaveBeenCalled();
+    expect(refreshRouter).not.toHaveBeenCalled();
+  });
+
+  it('keeps the financial return destination and private fragment across fresh-document sign-in', async () => {
+    search = 'next=%2Fconfirmation%2Forder_integration';
+    vi.stubGlobal('location', {
+      assign: assignDocument,
+      href: 'http://localhost:3000/login#private-ticket-claim',
+      hash: '#private-ticket-claim',
+    });
+    mockLogin.mockResolvedValue(undefined);
+    render(<LoginPageClient />);
+    fill('synthetic@example.invalid', 'Synthetic-password-16');
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
+    await waitFor(() => {
+      expect(assignDocument).toHaveBeenCalledWith(
+        '/auth/continue?next=%2Fconfirmation%2Forder_integration',
+      );
+    });
+    expect(assignDocument).toHaveBeenCalledOnce();
+    expect(replace).not.toHaveBeenCalled();
+    expect(refreshRouter).not.toHaveBeenCalled();
+    expect(JSON.parse(sessionStorage.getItem('guest.auth.return-fragment') ?? 'null')).toEqual({
+      userId: 'synthetic-guest',
+      path: '/confirmation/order_integration',
+      fragment: '#private-ticket-claim',
+    });
   });
 });

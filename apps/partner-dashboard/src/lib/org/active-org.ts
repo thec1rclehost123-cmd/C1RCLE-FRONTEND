@@ -1,5 +1,7 @@
 import { getClientEnv } from '@c1rcle/config';
 
+import { safeNextPath } from '@/lib/safe-next-path';
+
 import {
   ACTIVE_ORG_COOKIE_NAME,
   getActiveOrgId,
@@ -50,4 +52,10 @@ export function setActiveOrg(orgId: string | null): void {
   } else {
     document.cookie = `${ACTIVE_ORG_COOKIE_NAME}=; path=/; SameSite=Lax; max-age=0${secure}`;
   }
+}
+
+/** Rehydrate the root auth provider after changing its cookie-backed workspace. */
+export function activateOrganizationWorkspace(orgId: string, destination: string): void {
+  setActiveOrg(orgId);
+  window.location.assign(safeNextPath(destination) ?? '/partner/select-organization');
 }

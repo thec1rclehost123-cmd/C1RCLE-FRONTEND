@@ -1,4 +1,6 @@
-import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
+
+import { AuthEntryClient } from '@/features/auth/components/AuthEntryClient';
 
 import type { Metadata } from 'next';
 
@@ -9,5 +11,9 @@ export const metadata: Metadata = {
 };
 
 export default function SignupPage() {
-  redirect('/login?mode=signup');
+  return (
+    <Suspense fallback={null}>
+      <AuthEntryClient />
+    </Suspense>
+  );
 }

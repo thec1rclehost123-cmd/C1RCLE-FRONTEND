@@ -24,6 +24,35 @@
         "types": "./dist/client.d.ts",
         "default": "./dist/client.js"
       }
+    },
+    "./guest-onboarding": {
+      "import": {
+        "types": "./dist/contracts/guest-onboarding.d.ts",
+        "default": "./dist/contracts/guest-onboarding.js"
+      },
+      "require": {
+        "types": "./dist/contracts/guest-onboarding.d.ts",
+        "default": "./dist/contracts/guest-onboarding.js"
+      }
+    },
+    "./guest-social": {
+      "import": {
+        "types": "./dist/contracts/guest-social.d.ts",
+        "default": "./dist/contracts/guest-social.js"
+      },
+      "require": {
+        "types": "./dist/contracts/guest-social.d.ts",
+        "default": "./dist/contracts/guest-social.js"
+      }
+    },
+    "./saved-events": {
+      "types": "./dist/contracts/saved-events.d.ts",
+      "import": "./dist/contracts/saved-events.js",
+      "require": "./dist/contracts/saved-events.js"
+    },
+    "./partner-marketing": {
+      "types": "./src/contracts/partner-marketing.ts",
+      "import": "./src/contracts/partner-marketing.ts"
     }
   },
   "files": [

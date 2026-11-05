@@ -182,6 +182,50 @@ export function OnboardingApplicationDetail({
           </dl>
         </div>
 
+        {profile.kyc ? (
+          <section aria-labelledby="private-kyc-details">
+            <h3
+              id="private-kyc-details"
+              className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+            >
+              Private KYC details
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Applicant declarations for manual review. Format checks do not confirm identity.
+            </p>
+            <dl className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {profile.kyc.identity ? (
+                <>
+                  <Field label="Identity document type" value={profile.kyc.identity.idType} />
+                  <Field label="Identity document number" value={profile.kyc.identity.idNumber} />
+                </>
+              ) : null}
+              {profile.kyc.business ? (
+                <>
+                  <Field label="Business PAN" value={profile.kyc.business.pan} />
+                  <Field label="Registered address" value={profile.kyc.business.address} />
+                  {profile.kyc.business.gst ? (
+                    <Field label="GST number" value={profile.kyc.business.gst} />
+                  ) : null}
+                </>
+              ) : null}
+              {profile.kyc.signatory ? (
+                <>
+                  <Field label="Signatory name" value={profile.kyc.signatory.fullName} />
+                  <Field label="Designation" value={profile.kyc.signatory.designation} />
+                  <Field label="Signatory email" value={profile.kyc.signatory.email} />
+                  {profile.kyc.signatory.phone ? (
+                    <Field label="Signatory phone" value={profile.kyc.signatory.phone} />
+                  ) : null}
+                  <Field label="Signatory ID type" value={profile.kyc.signatory.idType} />
+                  <Field label="Signatory ID number" value={profile.kyc.signatory.idNumber} />
+                  <Field label="Authorization declaration" value={'Confirmed by applicant'} />
+                </>
+              ) : null}
+            </dl>
+          </section>
+        ) : null}
+
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Documents

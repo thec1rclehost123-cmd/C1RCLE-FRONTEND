@@ -1,0 +1,14 @@
+
+ RUN  v4.1.10 /Users/aayushdivase/Desktop/C1RCLE-PRODUCT-COMPLETENESS-FRONTEND/apps/partner-dashboard
+
+(node:52274) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:52271) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:52273) Warning: `--localstorage-file` was provided without a valid path
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  3 passed (3)
+      Tests  4 passed (4)
+   Start at  22:15:57
+   Duration  4.28s (transform 1.66s, setup 1.45s, import 2.41s, tests 635ms, environment 4.68s)

@@ -1,0 +1,9 @@
+
+> c1rcle-web@0.0.0 boundaries /Users/aayushdivase/Desktop/C1RCLE-PRODUCT-COMPLETENESS-FRONTEND
+> pnpm --filter @c1rcle/scripts run check-boundaries
+
+
+> @c1rcle/scripts@0.0.0 check-boundaries /Users/aayushdivase/Desktop/C1RCLE-PRODUCT-COMPLETENESS-FRONTEND/tooling/scripts
+> node dist/check-boundaries.js
+
+✓ No architectural violations across 19 workspace members.

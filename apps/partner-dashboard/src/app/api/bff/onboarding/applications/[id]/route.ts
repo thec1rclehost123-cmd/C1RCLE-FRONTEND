@@ -58,7 +58,10 @@ export async function PATCH(req: NextRequest, ctx: RouteParams): Promise<NextRes
     return passThroughGatewayError(gatewayResponse.status, bodyText);
   }
 
-  const res = NextResponse.json(parseJson(bodyText), { status: 200 });
+  const res = NextResponse.json(parseJson(bodyText), {
+    status: 200,
+    headers: { 'cache-control': 'private, no-store' },
+  });
   rescopeSessionCookies(gatewayResponse, res);
   return res;
 }

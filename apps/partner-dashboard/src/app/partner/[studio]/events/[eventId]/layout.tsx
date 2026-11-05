@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 
+import { eventTabs } from '@/components/partner-v3/event-detail/event-workspace-navigation';
 import { EventWorkspaceChrome } from '@/components/partner-v3/event-detail/EventWorkspaceChrome';
 import { formatProductDateTime } from '@/lib/events/event-time';
 import { loadPartnerEvent } from '@/lib/events/load-partner-event';
@@ -13,23 +14,6 @@ import type { PromoterLinkedEvent } from '@/data/partner-data-source';
 import type { ReactNode } from 'react';
 
 const money = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
-
-function eventTabs(studio: 'venue' | 'host', eventId: string): EventWorkspaceTab[] {
-  const base = `/partner/${studio}/events/${encodeURIComponent(eventId)}`;
-  return [
-    { label: 'Overview', href: base },
-    { label: 'Analytics', href: `${base}/analytics` },
-    { label: 'Attendees', href: `${base}/guests` },
-    { label: 'Tickets', href: `${base}/tickets` },
-    { label: 'Orders', href: `${base}/sales` },
-    { label: 'Extras', href: `${base}/addons` },
-    { label: 'Waitlist', href: `${base}/waitlist` },
-    { label: 'Promoters', href: `${base}/promoters` },
-    { label: 'Access', href: `${base}/access` },
-    { label: 'Door', href: `${base}/door` },
-    { label: 'Cover', href: `${base}/cover` },
-  ];
-}
 
 function promoterTabs(eventId: string): EventWorkspaceTab[] {
   const base = `/partner/promoter/events/${encodeURIComponent(eventId)}`;

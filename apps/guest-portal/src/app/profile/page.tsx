@@ -163,13 +163,13 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
     displayName: guestProfile?.displayName ?? session.user.displayName,
     initials: initialsFor(guestProfile?.displayName ?? session.user.displayName),
     email: session.user.email,
-    phoneNumber: null,
+    phoneNumber: guestProfile?.phoneNumber ?? null,
     city: guestProfile?.city ?? null,
     instagram: null,
     gender: null,
     memberSince: guestProfile?.createdAt ?? null,
     badges: ['Member'],
-    signInMethod: 'Email',
+    signInMethod: 'C1RCLE account',
   };
   const profile: ProfileFixture = {
     identity,
@@ -201,7 +201,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         className="pointer-events-none fixed inset-0 z-[-1] bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.42)_82%,rgba(0,0,0,0.62)_100%)]"
       />
       <div className="relative z-10 mx-auto max-w-[1500px]">
-        <ProfileHeader identity={profile.identity} featured={activeSection !== 'settings'} />
+        {activeSection !== 'settings' && <ProfileHeader identity={profile.identity} />}
 
         {activeSection === 'overview' && <ProfileOverview profile={profile} />}
         {activeSection === 'events' && (

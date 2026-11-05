@@ -59,11 +59,11 @@ export function PersonalProfileFormClient({
   );
 
   function validateName(value: string): string | null {
-    return value.trim().length < 2 ? 'Enter at least two characters.' : null;
+    if (value.trim().length < 2) return 'Enter at least two characters.';
+    return value.trim().length > 200 ? 'Name must be 200 characters or fewer.' : null;
   }
 
   function validateCity(value: string): string | null {
-    if (value.trim().length === 0) return 'Enter a city.';
     return value.trim().length > 100 ? 'City must be 100 characters or fewer.' : null;
   }
 
@@ -90,9 +90,7 @@ export function PersonalProfileFormClient({
         .filter(Boolean),
     });
     if (!parsed.success) {
-      setSaveError(
-        'Check your date of birth, enter at least three interests, and add one reason for joining.',
-      );
+      setSaveError('Check your date of birth and enter at least one interest.');
       return;
     }
 
@@ -119,7 +117,9 @@ export function PersonalProfileFormClient({
       setSaveError(
         isApiClientError(error) && error.status === 401
           ? 'Your session expired. Sign in again to update your profile.'
-          : 'Your profile could not be saved. Check your connection and try again.',
+          : isApiClientError(error) && (error.status === 400 || error.status === 422)
+            ? 'Check your profile details and birth date. Guests must be at least 18 years old.'
+            : 'Your profile could not be saved. Check your connection and try again.',
       );
     } finally {
       setSaving(false);
@@ -192,7 +192,7 @@ export function PersonalProfileFormClient({
 
         <label className="block">
           <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">
-            City
+            City (optional)
           </span>
           <input
             name="address-level2"
@@ -223,18 +223,22 @@ export function PersonalProfileFormClient({
       <div className="mt-5 grid gap-5 sm:grid-cols-2">
         <label className="block">
           <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">
-            Date of birth
+            Date of birth (private)
           </span>
           <input
             type="date"
             autoComplete="bday"
             value={draft.dateOfBirth}
+            aria-describedby="profile-dob-help"
             className={inputClass}
             onChange={(event) => {
               setDraft((current) => ({ ...current, dateOfBirth: event.target.value }));
               setSaved(false);
             }}
           />
+          <span id="profile-dob-help" className="mt-1 block text-xs text-white/40">
+            Your birthday and contact details are private.
+          </span>
         </label>
         <label className="block">
           <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">
@@ -250,12 +254,12 @@ export function PersonalProfileFormClient({
             }}
           />
           <span id="profile-interests-help" className="mt-1 block text-xs text-white/40">
-            Separate at least three interests with commas.
+            Separate one or more interests with commas.
           </span>
         </label>
         <label className="block sm:col-span-2">
           <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">
-            What brings you here
+            What brings you here (optional)
           </span>
           <input
             value={draft.intents}

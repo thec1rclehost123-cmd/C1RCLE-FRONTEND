@@ -1,0 +1,96 @@
+{
+  "fe": {
+    "changed": [
+      "apps/partner-dashboard/src/app/partner/[studio]/events/[eventId]/layout.tsx",
+      "apps/partner-dashboard/src/app/partner/[studio]/marketing/page.tsx",
+      "apps/partner-dashboard/src/app/partner/[studio]/overview/page.tsx",
+      "apps/partner-dashboard/src/components/partner-v3/event-detail/ConnectedPartnerAnalyticsScreen.test.tsx",
+      "apps/partner-dashboard/src/components/partner-v3/event-detail/ConnectedPartnerAnalyticsScreen.tsx",
+      "apps/partner-dashboard/src/components/partner-v3/event-detail/EventWorkspaceChrome.tsx",
+      "apps/partner-dashboard/src/components/partner-v3/event-detail/EventWorkspaceTabs.test.tsx",
+      "apps/partner-dashboard/src/components/partner-v3/event-detail/EventWorkspaceTabs.tsx",
+      "apps/partner-dashboard/src/components/partner-v3/event-detail/event-workspace-navigation.ts",
+      "apps/partner-dashboard/src/components/partner-v3/event-detail/event-workspace.module.css",
+      "apps/partner-dashboard/src/components/partner-v3/event-detail/partner-analytics.module.css",
+      "apps/partner-dashboard/src/components/partner-v3/events/events.module.css",
+      "apps/partner-dashboard/src/components/partner-v3/marketing/AudienceWorkspace.test.tsx",
+      "apps/partner-dashboard/src/components/partner-v3/marketing/AudienceWorkspace.tsx",
+      "apps/partner-dashboard/src/components/partner-v3/marketing/BlastComposer.tsx",
+      "apps/partner-dashboard/src/components/partner-v3/marketing/audience.module.css",
+      "apps/partner-dashboard/src/components/partner-v3/overview/OverviewTrendCard.tsx",
+      "apps/partner-dashboard/src/components/partner-v3/overview/overview.module.css",
+      "apps/partner-dashboard/src/components/partner-v3/partners/PartnerCard.tsx",
+      "apps/partner-dashboard/src/components/partner-v3/partners/PartnerNetworkScreen.tsx",
+      "apps/partner-dashboard/src/components/partner-v3/partners/PartnerStaff.test.tsx",
+      "apps/partner-dashboard/src/components/partner-v3/partners/PartnerStaffEditRoleDialog.tsx",
+      "apps/partner-dashboard/src/components/partner-v3/partners/VenuePartnersScreen.test.tsx",
+      "apps/partner-dashboard/src/components/partner-v3/partners/partners.module.css",
+      "apps/partner-dashboard/src/lib/events/load-partner-organization-analytics.test.ts",
+      "apps/partner-dashboard/src/lib/events/load-partner-organization-analytics.ts",
+      "apps/partner-dashboard/src/lib/events/organization-analytics-view.test.ts",
+      "apps/partner-dashboard/src/lib/events/organization-analytics-view.ts",
+      "packages/contracts/package.json",
+      "packages/contracts/src/contracts/partner-marketing.ts"
+    ],
+    "m3Overlap": [
+      "apps/partner-dashboard/src/app/partner/[studio]/events/[eventId]/layout.tsx",
+      "apps/partner-dashboard/src/components/partner-v3/event-detail/event-workspace.module.css",
+      "apps/partner-dashboard/src/components/partner-v3/overview/overview.module.css"
+    ],
+    "m3Final": {
+      "head": "283299f9b90d3d07753ced28855eae4162a4bb50",
+      "status": [],
+      "sameHeadAsStart": true
+    },
+    "m4Overlap": [
+      "apps/partner-dashboard/src/app/partner/[studio]/events/[eventId]/layout.tsx",
+      "apps/partner-dashboard/src/components/partner-v3/event-detail/event-workspace.module.css",
+      "apps/partner-dashboard/src/components/partner-v3/overview/overview.module.css"
+    ],
+    "m4Final": {
+      "head": "b8ad579af4c7a22cf5dd569a4374d1586136460a",
+      "status": [],
+      "sameHeadAsStart": true
+    },
+    "m3FinalOverlap": [
+      "apps/partner-dashboard/src/app/partner/[studio]/events/[eventId]/layout.tsx",
+      "apps/partner-dashboard/src/components/partner-v3/event-detail/event-workspace.module.css",
+      "apps/partner-dashboard/src/components/partner-v3/overview/overview.module.css"
+    ],
+    "m4FinalOverlap": [
+      "apps/partner-dashboard/src/app/partner/[studio]/events/[eventId]/layout.tsx",
+      "apps/partner-dashboard/src/components/partner-v3/event-detail/event-workspace.module.css",
+      "apps/partner-dashboard/src/components/partner-v3/overview/overview.module.css"
+    ]
+  },
+  "be": {
+    "changed": [
+      "apps/api-gateway/src/routes/v2/partner/marketing.integration.test.ts",
+      "apps/api-gateway/src/routes/v2/partner/marketing.ts",
+      "apps/api-gateway/src/routes/v2/route-manifest.ts",
+      "apps/api-gateway/src/scripts/partner-refinement-fixture.ts",
+      "apps/api-gateway/src/scripts/preview-partner-refinement.ts",
+      "packages/contracts/package.json",
+      "packages/contracts/src/contracts/partner-marketing.ts",
+      "packages/core/package.json",
+      "packages/core/src/application/partner-marketing/partner-marketing-service.test.ts",
+      "packages/core/src/application/partner-marketing/partner-marketing-service.ts",
+      "packages/core/src/partner-marketing.ts",
+      "scripts/partner-marketing-contract-parity.mjs"
+    ],
+    "m3Overlap": ["apps/api-gateway/src/routes/v2/route-manifest.ts"],
+    "m3Final": {
+      "head": "f01c3eb042436c539ab91982f066fffcdac65055",
+      "status": [],
+      "sameHeadAsStart": true
+    },
+    "m4Overlap": ["apps/api-gateway/src/routes/v2/route-manifest.ts"],
+    "m4Final": {
+      "head": "93121203670b01b9c599b6efd8250bcd20c976a3",
+      "status": [],
+      "sameHeadAsStart": false
+    },
+    "m3FinalOverlap": ["apps/api-gateway/src/routes/v2/route-manifest.ts"],
+    "m4FinalOverlap": ["apps/api-gateway/src/routes/v2/route-manifest.ts"]
+  }
+}

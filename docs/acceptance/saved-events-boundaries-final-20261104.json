@@ -1,0 +1,80 @@
+{
+  "FRONTEND": {
+    "start": "4270b4c9b8baf3b86f567628921ea9c52b32e96b",
+    "head": "c7e475f9e4e026546b4c2336e10bbee918de208e",
+    "passPaths": [
+      "apps/guest-portal/src/app/api/saved-events/[[...segments]]/route.test.ts",
+      "apps/guest-portal/src/app/api/saved-events/[[...segments]]/route.ts",
+      "apps/guest-portal/src/app/event/[eventId]/page.test.tsx",
+      "apps/guest-portal/src/app/event/[eventId]/page.tsx",
+      "apps/guest-portal/src/app/profile/saved/page.tsx",
+      "apps/guest-portal/src/app/profile/saved/return/page.tsx",
+      "apps/guest-portal/src/features/event-detail/components/EventDetailView.tsx",
+      "apps/guest-portal/src/features/profile/components/ProfileOverview.tsx",
+      "apps/guest-portal/src/features/saved-events/SaveEventControl.test.tsx",
+      "apps/guest-portal/src/features/saved-events/SaveEventControl.tsx",
+      "apps/guest-portal/src/features/saved-events/SavedEventReturn.test.tsx",
+      "apps/guest-portal/src/features/saved-events/SavedEventReturn.tsx",
+      "apps/guest-portal/src/features/saved-events/SavedEventsView.test.tsx",
+      "apps/guest-portal/src/features/saved-events/SavedEventsView.tsx",
+      "apps/guest-portal/src/features/saved-events/client.ts",
+      "apps/guest-portal/src/features/saved-events/return-intent.test.ts",
+      "apps/guest-portal/src/features/saved-events/return-intent.ts",
+      "docs/acceptance/saved-events-20261104.md",
+      "docs/acceptance/saved-events-boundaries-20261104.json",
+      "docs/acceptance/saved-events-boundaries-pending-20261104.json",
+      "docs/acceptance/saved-events-m3-proposed.patch",
+      "docs/acceptance/screenshots/saved-events-20261104/empty-phone.png",
+      "docs/acceptance/screenshots/saved-events-20261104/event-desktop.png",
+      "docs/acceptance/screenshots/saved-events-20261104/event-phone.png",
+      "docs/acceptance/screenshots/saved-events-20261104/guest-b-empty.png",
+      "docs/acceptance/screenshots/saved-events-20261104/view-desktop.png",
+      "docs/acceptance/screenshots/saved-events-20261104/view-phone.png",
+      "packages/contracts/package.json",
+      "packages/contracts/src/contracts/saved-events.ts"
+    ],
+    "milestones": {
+      "M3": {
+        "head": "283299f9b90d3d07753ced28855eae4162a4bb50",
+        "passOverlap": [
+          "apps/guest-portal/src/features/event-detail/components/EventDetailView.tsx"
+        ]
+      },
+      "M4": {
+        "head": "b8ad579af4c7a22cf5dd569a4374d1586136460a",
+        "passOverlap": [
+          "apps/guest-portal/src/features/event-detail/components/EventDetailView.tsx"
+        ]
+      }
+    }
+  },
+  "BACKEND": {
+    "start": "a7ae1fcdb199feec473816d0cfe0e999e09cd17b",
+    "head": "cc8b943f5ae0c42a2ddc072b93933ef858aed025",
+    "passPaths": [
+      "apps/api-gateway/src/lib/saved-events.ts",
+      "apps/api-gateway/src/routes/v2/profile.ts",
+      "apps/api-gateway/src/routes/v2/saved-events.integration.test.ts",
+      "apps/api-gateway/src/routes/v2/saved-events.ts",
+      "packages/contracts/package.json",
+      "packages/contracts/src/contracts/saved-events.ts",
+      "packages/core/package.json",
+      "packages/core/src/application/saved-events/saved-event-service.test.ts",
+      "packages/core/src/application/saved-events/saved-event-service.ts",
+      "packages/core/src/domain/ports/saved-event-repository.ts",
+      "packages/core/src/infrastructure/firestore/firestore-saved-event-repository.ts",
+      "packages/core/src/infrastructure/memory/memory-saved-event-repository.ts",
+      "packages/core/src/saved-events.ts"
+    ],
+    "milestones": {
+      "M3": {
+        "head": "f01c3eb042436c539ab91982f066fffcdac65055",
+        "passOverlap": []
+      },
+      "M4": {
+        "head": "488d6d8953bb1797d09fb122f3028a9a9bc8f16d",
+        "passOverlap": []
+      }
+    }
+  }
+}

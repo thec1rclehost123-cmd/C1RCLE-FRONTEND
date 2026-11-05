@@ -84,6 +84,7 @@ describe('GET /api/bff/onboarding/me', () => {
     );
 
     expect(res.status).toBe(200);
+    expect(res.headers.get('cache-control')).toBe('private, no-store');
     expect(mockForward).toHaveBeenCalledWith('/api/v2/onboarding/me', {
       method: 'GET',
       cookie: 'better-auth.session_token=sess_abc',

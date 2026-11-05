@@ -436,11 +436,12 @@
   display: flex;
   align-items: center;
   gap: 13px;
-  padding: 14px 0;
-}
-
-.activityRow + .activityRow {
-  border-top: 1px solid rgb(255 255 255 / 8%);
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .activityIcon {
@@ -963,4 +964,23 @@
   font:
     11px var(--font-inter),
     sans-serif;
+}
+
+.activityRow {
+  padding-block: 14px;
+  gap: 12px;
+}
+.activityRow > div {
+  row-gap: 3px;
+}
+.activityMeta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: start;
+  gap: 8px;
+}
+.activityIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
 }

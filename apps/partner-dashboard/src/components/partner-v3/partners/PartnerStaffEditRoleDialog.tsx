@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Avatar, Button, IconButton } from '@/components/partner-v3';
 import { staffApi } from '@/lib/api/staff-api';
@@ -45,22 +45,46 @@ export function PartnerStaffEditRoleDialog({
   readonly onUpdated?: (() => void) | undefined;
   readonly organizationId?: string | undefined;
 }) {
+  const dialogRef = useRef<HTMLElement>(null);
   const initialRole = getInitialRole(member.backendRole);
   const [role, setRole] = useState<EditableRole>(initialRole);
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState('');
 
   useEffect(() => {
+    const previousFocus = document.activeElement;
+    const focusable = () =>
+      Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), [href]',
+        ) ?? [],
+      );
+    focusable()[0]?.focus();
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
+      if (event.key === 'Tab') {
+        const items = focusable();
+        const first = items[0];
+        const last = items.at(-1);
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }
     };
     window.addEventListener('keydown', handleEscape);
     return () => {
       window.removeEventListener('keydown', handleEscape);
+      if (previousFocus instanceof HTMLElement) previousFocus.focus();
     };
   }, [onClose]);
 
   const canSubmit = role !== initialRole && !submitting;
+  const accessDetails =
+    member.permissions.length > 0 ? member.permissions : (member.capabilities ?? []);
 
   const handleProceed = () => {
     setSubmitting(true);
@@ -106,6 +130,7 @@ export function PartnerStaffEditRoleDialog({
         onClick={onClose}
       />
       <section
+        ref={dialogRef}
         className={styles['staffDialog']}
         role="dialog"
         aria-modal="true"
@@ -131,6 +156,16 @@ export function PartnerStaffEditRoleDialog({
           </div>
         </div>
 
+        {accessDetails.length > 0 ? (
+          <details className={styles['currentAccess']}>
+            <summary>Current access</summary>
+            <ul>
+              {accessDetails.map((permission) => (
+                <li key={permission}>{permission}</li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
         <fieldset className={styles['permissionFieldset']}>
           <legend>New Role</legend>
           <div className={styles['permissionOptions']}>

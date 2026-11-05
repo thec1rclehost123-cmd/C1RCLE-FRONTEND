@@ -92,4 +92,10 @@ describe('ResetPasswordClient', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/invalid or has expired/i);
     expect(screen.queryByText(/secret-tok|bad token/)).not.toBeInTheDocument();
   });
+  it('offers retry guidance instead of invalidating the link on a transport failure', async () => {
+    mockReset.mockRejectedValue(new TypeError('Failed to fetch'));
+    render(<ResetPasswordClient />);
+    fill('password123', 'password123');
+    expect(await screen.findByRole('alert')).toHaveTextContent(/try again shortly/i);
+  });
 });
