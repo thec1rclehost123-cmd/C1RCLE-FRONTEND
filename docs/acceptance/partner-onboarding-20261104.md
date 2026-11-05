@@ -1,16 +1,17 @@
 # Pass 3 — Partner onboarding and KYC acceptance
 
-Status: implementation and local browser journeys completed; **pass closure pending the test-fixture ownership decision below**. This is local acceptance evidence, not production readiness. No PR, push, merge or deployment.
+Status: **Pass 3 locally accepted**, including the explicitly authorized legacy test-fixture migration and final affected verification. This is local acceptance evidence, not production readiness. No PR, push, merge or deployment.
 
 ## Scope and lineage
 
 Host/Venue/Promoter application, private KYC, resume, submission, review, approval and correct workspace access. No operational event/ticket/finance implementation changes. Existing canonical auth/session and onboarding lifecycle reused. Pass 1/2 remain intact.
 
 - Backend implementation: `265a4a8` on `codex/product-completeness-20261104`, starting from `0e34970`.
+- Backend fixture follow-up: `abe85ab` (18 test files and one test-only helper).
 - Frontend implementation: `f5100bc` on the same branch, starting from `6752561`.
 - Initial boundaries: `pass3-boundaries-20261104.json`; refreshed boundaries: `pass3-boundaries-final-20261104.json`.
 - Staging remote reverified unchanged: BE `353999712a63fa74c61d4b60c67e3a2450585ca2`; FE `6c51ddaee3bc9a401a64994f6f010f3b9058ab68`.
-- M3 advanced during acceptance to FE `283299f9b90d3d07753ced28855eae4162a4bb50`, BE `f01c3eb042436c539ab91982f066fffcdac65055`; both working trees clean at refresh. Pass 3 source overlap: **zero**. Entire candidate now overlaps M3 in two inherited Pass 1 Guest login files (`login-page-client.tsx`, `page.test.tsx`). M3 changed fresh-document login navigation; candidate contains Google/trusted Guest continuation. Reconcile at eventual integration; neither lineage was modified to combine them here.
+- M3 advanced during acceptance to FE `283299f9b90d3d07753ced28855eae4162a4bb50`, BE `f01c3eb042436c539ab91982f066fffcdac65055`; both working trees clean at refresh. Pass 3 production source overlap: **zero**. The later authorized fixture migration creates 10 documented M3-owned test-file overlaps; see `pass3-fixture-migration-20261104.md`. Beyond those test-only overlaps, the candidate overlaps M3 in two inherited Pass 1 Guest login files (`login-page-client.tsx`, `page.test.tsx`). M3 changed fresh-document login navigation; candidate contains Google/trusted Guest continuation. Reconcile at eventual integration; neither lineage was modified to combine them here.
 
 ## Product decision
 
@@ -71,15 +72,13 @@ Final affected sweep:
 - Architecture checks passed in both repositories (frontend 19 workspaces); contract parity **247 checks**; exporter **0 writes, 28 unchanged, 0 removals**.
 - Diff checks passed. Frontend Node emitted the existing `--localstorage-file` warning; tests still passed.
 
-This is **not an all-green repository claim**. A subsequent focused legacy idempotency test reproduced **1 failure** (`expected 201, received 403`) because it assumes the now-forbidden direct organization creation endpoint. Other operational suites contain the same legacy fixture pattern by source inspection; they were not run as unrelated full-product suites.
+The legacy idempotency failure (`expected 201, received 403`) was reproduced before migration. After explicit human authorization, 18 affected legacy test files were migrated to proper approved-workspace setup; **311 tests passed**, followed by a fresh **169-test** backend Pass 3 sweep. The previous fixture integration blocker is resolved. This remains affected-scope verification, not an all-green full-repository claim.
 
 Commands used: backend root `FIRESTORE_EMULATOR_HOST=127.0.0.1:8089 pnpm exec vitest run` with the ten paths above and `--maxWorkers=2`; Partner `pnpm exec vitest run` with the thirteen paths above and `--maxWorkers=2`; Admin queue/detail with `--maxWorkers=1`; app-local `pnpm exec tsc -p tsconfig.json --noEmit`; backend filtered core/contracts/gateway `typecheck`; both `boundaries`; backend `node scripts/contract-parity.mjs --frontend <candidate-FE>` and exporter dry-run. No Scanner or full-product sweep.
 
-## Pending decision / integration blocker
+## Fixture integration decision — resolved
 
-Async question remains pending: authorize a **test-only fixture migration** in legacy event/ticket/finance-owned files to seed already-approved organizations directly through repositories, retaining operational assertions and implementation. This is needed because blocking direct applicant provisioning intentionally invalidates the old fixture shortcut. Do not silently modify M3-owned files or weaken the approval boundary to satisfy legacy setup. The representative idempotency test also needs relocation to an allowed idempotent command so it continues testing replay/conflict rather than organization creation.
-
-The two nonoverlapping organization/invitation test fixtures needed for this pass were already migrated. No M3 operational test/implementation files were changed. Until the ownership decision and affected fixture validation are resolved, do not describe Pass 3 as fully closed or the candidate as integration-ready.
+The human explicitly authorized affected legacy test fixtures only. The migration is completed and verified, preserving the direct-provisioning denial and operational implementation/assertions. Exact 10 M3-owned test paths, the 8 other affected test paths, preserved assertion intent and commands are documented in `pass3-fixture-migration-20261104.md`. The shared helper lives only under gateway test-utils. No pending product decision blocks local Pass 3 acceptance. Hosted/provider evidence and deliberate integration of documented overlap remain separate.
 
 ## Remaining connected evidence and cleanup
 
