@@ -129,6 +129,17 @@ beforeEach(() => {
 });
 
 describe('paid checkout step', () => {
+  it('uses existing artwork fallback for a valid event without a poster', () => {
+    const { container } = render(
+      <CheckoutView event={{ ...LIVE_EVENT, image: '' }} initialTierId="tier_1" />,
+    );
+    expect(
+      screen.queryByRole('img', { name: `${LIVE_EVENT.title} event poster` }),
+    ).not.toBeInTheDocument();
+    for (const image of container.querySelectorAll('img'))
+      expect(image.getAttribute('src')).toBeTruthy();
+  });
+
   it('refuses a direct waitlist checkout URL without reading or consuming its reservation', () => {
     mocks.searchParams = 'waitlist=1&tier=tier_1';
     window.sessionStorage.setItem('c1rcle.waitlist.accepted-entry-id', 'legacy-offer');
@@ -555,12 +566,10 @@ describe('paid checkout step', () => {
     'routes authoritative %s pending orders to current server status without another payment',
     async (status, id) => {
       mocks.deps = deps({
-        verify: vi
-          .fn()
-          .mockResolvedValue({
-            order: { id, status, fulfillmentState: 'pending' },
-            entitlements: [],
-          }),
+        verify: vi.fn().mockResolvedValue({
+          order: { id, status, fulfillmentState: 'pending' },
+          entitlements: [],
+        }),
       });
       toPaymentStep();
       fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180' }));

@@ -557,7 +557,9 @@ function CheckoutFlowClientState({
           </h1>
           <div className="flex items-start gap-4 lg:block">
             <div className="relative aspect-[0.72/1] w-[100px] shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black sm:w-[138px] lg:mx-auto lg:mt-7 lg:w-full lg:max-w-[230px]">
-              {event.image === '/c1rcle-logo.webp' || failedPosterSource === event.image ? (
+              {!event.image ||
+              event.image === '/c1rcle-logo.webp' ||
+              failedPosterSource === event.image ? (
                 <EventArtworkFallback startsAt={event.startsAt} category={event.category} hero />
               ) : (
                 <Image
