@@ -437,10 +437,11 @@
   align-items: center;
   gap: 13px;
   padding: 10px 14px;
-  border: 1px solid rgb(255 255 255 / 7%);
-  border-radius: 16px;
-  background: rgb(255 255 255 / 4.5%);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 5%);
+  border: 0;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .activityIcon {
@@ -963,4 +964,23 @@
   font:
     11px var(--font-inter),
     sans-serif;
+}
+
+.activityRow {
+  padding-block: 14px;
+  gap: 12px;
+}
+.activityRow > div {
+  row-gap: 3px;
+}
+.activityMeta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: start;
+  gap: 8px;
+}
+.activityIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
 }
