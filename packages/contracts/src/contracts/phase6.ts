@@ -320,7 +320,9 @@ export const adminRefundRequestDtoSchema = z.object({
   orderId: opaqueIdSchema,
   organizationId: opaqueIdSchema,
   amountPaise: z.number().int().positive(),
-  refundCause: z.enum(['guest_request', 'organizer_cancel', 'material_change', 'fulfillment_failure']).optional(),
+  refundCause: z
+    .enum(['guest_request', 'organizer_cancel', 'material_change', 'fulfillment_failure'])
+    .optional(),
   refundComponents: z
     .object({
       admissionPaise: z.number().int().nonnegative(),
