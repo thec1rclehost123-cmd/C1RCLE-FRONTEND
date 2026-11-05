@@ -1,0 +1,61 @@
+{
+  "FRONTEND": {
+    "staging": "6c51ddaee3bc9a401a64994f6f010f3b9058ab68",
+    "remote_staging": "6c51ddaee3bc9a401a64994f6f010f3b9058ab68",
+    "candidate_head": "f5100bcb9ee4518b7d7ce99a970efeb872eacab7",
+    "m3_head": "283299f9b90d3d07753ced28855eae4162a4bb50",
+    "m3_working": [],
+    "overlap": [
+      "apps/guest-portal/src/app/login/login-page-client.tsx",
+      "apps/guest-portal/src/app/login/page.test.tsx"
+    ],
+    "pass3_paths": [
+      "apps/admin-console/src/components/admin/onboarding-application-detail.test.tsx",
+      "apps/admin-console/src/components/admin/onboarding-application-detail.tsx",
+      "apps/partner-dashboard/src/app/api/bff/onboarding/applications/[id]/documents/upload/route.ts",
+      "apps/partner-dashboard/src/app/api/bff/onboarding/applications/[id]/route.ts",
+      "apps/partner-dashboard/src/app/api/bff/onboarding/applications/[id]/submit/route.ts",
+      "apps/partner-dashboard/src/app/api/bff/onboarding/applications/route.ts",
+      "apps/partner-dashboard/src/app/api/bff/onboarding/me/route.ts",
+      "apps/partner-dashboard/src/app/api/bff/onboarding/routes.test.ts",
+      "apps/partner-dashboard/src/app/api/bff/onboarding/verify-document/route.ts",
+      "apps/partner-dashboard/src/app/login/PageClient.test.tsx",
+      "apps/partner-dashboard/src/app/login/PageClient.tsx",
+      "apps/partner-dashboard/src/app/onboard/PageClient.test.tsx",
+      "apps/partner-dashboard/src/app/onboard/PageClient.tsx",
+      "apps/partner-dashboard/src/components/partner-v3/PartnerStudioFrame.test.tsx",
+      "apps/partner-dashboard/src/components/partner-v3/PartnerStudioFrame.tsx",
+      "apps/partner-dashboard/src/lib/org/active-org.test.ts",
+      "apps/partner-dashboard/src/lib/org/active-org.ts",
+      "apps/partner-dashboard/src/lib/org/route-after-auth.test.ts",
+      "apps/partner-dashboard/src/lib/org/route-after-auth.ts",
+      "packages/contracts/src/contracts/onboarding.ts"
+    ],
+    "pass3_overlap": []
+  },
+  "BACKEND": {
+    "staging": "353999712a63fa74c61d4b60c67e3a2450585ca2",
+    "remote_staging": "353999712a63fa74c61d4b60c67e3a2450585ca2",
+    "candidate_head": "265a4a8ffb65bad06c33ebad4b3089e07218d5c9",
+    "m3_head": "f01c3eb042436c539ab91982f066fffcdac65055",
+    "m3_working": [],
+    "overlap": [],
+    "pass3_paths": [
+      "apps/api-gateway/src/routes/v2/admin/onboarding-review.ts",
+      "apps/api-gateway/src/routes/v2/onboarding.test.ts",
+      "apps/api-gateway/src/routes/v2/onboarding.ts",
+      "apps/api-gateway/src/routes/v2/partner/invitations.test.ts",
+      "apps/api-gateway/src/routes/v2/partner/organizations.test.ts",
+      "apps/api-gateway/src/routes/v2/partner/organizations.ts",
+      "packages/contracts/src/contracts/onboarding.ts",
+      "packages/contracts/src/partner-kyc.test.ts",
+      "packages/core/src/application/onboarding/onboarding-service.test.ts",
+      "packages/core/src/application/onboarding/onboarding-service.ts",
+      "packages/core/src/domain/models/onboarding.ts",
+      "packages/core/src/domain/onboarding.test.ts",
+      "packages/core/src/infrastructure/firestore/firestore-onboarding-repository.ts",
+      "packages/core/src/infrastructure/firestore/firestore-partner-onboarding.integration.test.ts"
+    ],
+    "pass3_overlap": []
+  }
+}

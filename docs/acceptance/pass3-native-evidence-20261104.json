@@ -1,0 +1,77 @@
+{
+  "native-evidence": {
+    "pending_memberships": [],
+    "forged_workspace_status": 403,
+    "direct_provision_status": 403,
+    "cross_applicant_patch_status": 404,
+    "applicant_admin_detail_status": 401,
+    "anonymous_progress_status": 401,
+    "admin_detail_cache": "private, no-store",
+    "request_changes_status": 500,
+    "request_changes_status_note": "Historical pre-fix 500: status persisted; metadata forwarding and undefined audit serialization fixed and regression-tested afterward. Not counted as a successful HTTP decision."
+  },
+  "guest-isolation": {
+    "own_progress": {
+      "status": 200,
+      "empty": true
+    },
+    "other_applicant": {
+      "status": 404
+    },
+    "admin_detail": {
+      "status": 401
+    }
+  },
+  "document-evidence": {
+    "admin_signed_read": 200,
+    "synthetic_bytes_match": true,
+    "cache": "private, no-store",
+    "unsigned_read_status": 403
+  },
+  "multi-org": {
+    "organizationListStatus": 200,
+    "organizations": {
+      "items": [
+        {
+          "id": "onboarding_754e5b8e-ffca-49fe-8fab-d559b9202f1d",
+          "name": "PASS3 Synthetic venue",
+          "slug": "pass3-synthetic-venue-202f1d",
+          "role": "manager",
+          "status": "active",
+          "version": 2,
+          "createdAt": "2026-11-04T23:35:11.404Z",
+          "updatedAt": "2026-11-04T23:53:33.688Z"
+        },
+        {
+          "id": "onboarding_ff1ba75c-a243-4a4c-b263-ef4122adab9b",
+          "name": "Synthetic Host",
+          "slug": "synthetic-host-adab9b",
+          "role": "owner",
+          "status": "active",
+          "version": 1,
+          "createdAt": "2026-11-04T23:28:35.302Z",
+          "updatedAt": "2026-11-04T23:28:35.302Z"
+        }
+      ],
+      "pageInfo": {
+        "page": 1,
+        "pageSize": 20,
+        "total": 2,
+        "hasNextPage": false
+      }
+    },
+    "access": [
+      {
+        "status": 200,
+        "partnerType": "host",
+        "role": "OWNER"
+      },
+      {
+        "status": 200,
+        "partnerType": "venue",
+        "role": "MANAGER"
+      }
+    ],
+    "forgedAccessStatus": 403
+  }
+}
