@@ -1477,3 +1477,113 @@
   font-size: 12px;
   line-height: 1.45;
 }
+
+/* One restrained vertical family for organizations, promoters and staff. */
+.partnerCard,
+.promoterPartnerCard,
+.staffCard {
+  overflow: hidden;
+  border: 1px solid #36312b;
+  border-radius: 12px;
+  background: #171512;
+  box-shadow: none;
+}
+.partnerCard {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  min-height: 300px;
+}
+.partnerCardArtwork {
+  width: 100%;
+  height: 180px;
+  flex: none;
+  border-radius: 0;
+  background: linear-gradient(150deg, #713c24, #231e1a);
+}
+.partnerCardArtwork img {
+  object-fit: cover;
+}
+.partnerCardBody {
+  padding: 20px;
+  gap: 20px;
+  flex: 1;
+}
+.partnerCardIdentity p {
+  margin: 6px 0 0;
+  color: #b4aaa0;
+  font-size: 12px;
+}
+.partnerCardIdentity h3 {
+  font-size: 21px;
+  letter-spacing: -0.025em;
+}
+.partnerCardBody > .profileLink {
+  color: #ff9b6b;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  justify-content: start;
+}
+.promoterPartnerCover,
+.promoterPartnerCover[class] {
+  background: linear-gradient(145deg, #73452d, #27201a);
+  min-height: 150px;
+}
+.staffSummary {
+  min-height: 180px;
+  align-items: end;
+  padding: 22px;
+  background: linear-gradient(145deg, #70412b, #211d19);
+}
+.staffExpanded {
+  padding: 20px;
+  background: #171512;
+}
+.staffGrid {
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+
+.partnerInitials {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font-size: 62px;
+  font-weight: 650;
+  letter-spacing: -0.07em;
+  color: #f2d0ba;
+}
+.staffAvatar {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  background: #1b1510;
+  color: #f2d0ba;
+  font-size: 20px;
+  font-weight: 650;
+}
+
+.currentAccess {
+  padding: 12px 0;
+  color: #b9b0a7;
+  font-size: 12px;
+}
+.currentAccess summary {
+  cursor: pointer;
+  min-height: 32px;
+}
+.currentAccess ul {
+  columns: 2;
+  padding-left: 16px;
+  line-height: 1.8;
+}
+.staffDetailLabel {
+  flex: none;
+  white-space: nowrap;
+}
+
+.staffSummary {
+  cursor: default;
+}

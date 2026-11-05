@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -116,15 +115,6 @@ const relationshipRecords = (
   data[segment === 'promoters' ? 'promoters' : 'primary'][
     subView === 'connected' ? 'connected' : 'discover'
   ];
-
-function staffChips(member: StaffMember): readonly string[] {
-  if (member.capabilities && member.capabilities.length > 0) {
-    return member.backendRole
-      ? [member.backendRole, ...member.capabilities]
-      : [...member.capabilities];
-  }
-  return member.permissions;
-}
 
 function formatJoinedDate(isoString?: string): string {
   if (!isoString) return '';
@@ -360,32 +350,24 @@ function StaffList({
               member.email?.toLowerCase() === effectiveUserEmail?.toLowerCase();
             const isYou = isSameUser || isSameEmail;
             return (
-              <details className={styles['staffCard']} key={member.id}>
-                <summary className={styles['staffSummary']}>
-                  <Image
-                    className={styles['staffAvatar']}
-                    src="/partner-v3/staff-avatar.png"
-                    alt=""
-                    width={56}
-                    height={56}
-                  />
+              <article className={styles['staffCard']} key={member.id}>
+                <div className={styles['staffSummary']}>
+                  <span className={styles['staffAvatar']} aria-hidden="true">
+                    {member.name
+                      .split(/\s+/)
+                      .map((part) => part[0])
+                      .slice(0, 2)
+                      .join('')}
+                  </span>
                   <span className={styles['staffSummaryCopy']}>
                     <strong>{member.name}</strong>
                     <span className={styles['staffRoleText']}>{member.role}</span>
                   </span>
-                  <span className={styles['staffDisclosureIcon']} aria-hidden="true">
-                    ⌄
-                  </span>
-                </summary>
+                </div>
                 <div className={styles['staffExpanded']}>
                   <div className={styles['staffExpandedMeta']}>
                     <Badge tone="success">{member.status}</Badge>
                     {isYou ? <Badge tone="accent">You</Badge> : null}
-                  </div>
-                  <div className={styles['permissionChips']}>
-                    {staffChips(member).map((chip) => (
-                      <span key={chip}>{chip}</span>
-                    ))}
                   </div>
                   <div className={styles['staffDetails']}>
                     {member.email ? (
@@ -415,7 +397,7 @@ function StaffList({
                               setEditingMember(member);
                             }}
                           >
-                            Edit role
+                            Manage access
                           </Button>
                           {!isYou && onRevokeMemberAccess ? (
                             <div className={styles['staffCardActionsRight']}>
@@ -445,7 +427,7 @@ function StaffList({
                     </div>
                   ) : null}
                 </div>
-              </details>
+              </article>
             );
           })}
         </div>

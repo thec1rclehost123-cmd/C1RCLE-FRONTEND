@@ -19,25 +19,35 @@ export function PartnerCard({
   readonly onConnect?: ((partner: PartnerRelationship) => void) | undefined;
 }) {
   const [avatarFailed, setAvatarFailed] = useState(false);
-  const avatarSrc =
-    partner.avatarUrl && !avatarFailed ? partner.avatarUrl : '/partner-v3/staff-avatar.png';
+  const avatarSrc = partner.avatarUrl && !avatarFailed ? partner.avatarUrl : null;
   return (
     <article className={styles['partnerCard']}>
       <div className={styles['partnerCardArtwork']}>
-        <Image
-          src={avatarSrc}
-          alt={`${partner.name} profile`}
-          fill
-          sizes="88px"
-          unoptimized
-          onError={() => {
-            setAvatarFailed(true);
-          }}
-        />
+        {avatarSrc ? (
+          <Image
+            src={avatarSrc}
+            alt={`${partner.name} profile`}
+            fill
+            sizes="320px"
+            unoptimized
+            onError={() => {
+              setAvatarFailed(true);
+            }}
+          />
+        ) : (
+          <span className={styles['partnerInitials']} aria-hidden="true">
+            {partner.initials}
+          </span>
+        )}
       </div>
       <div className={styles['partnerCardBody']}>
         <div className={styles['partnerCardIdentity']}>
           <h3>{partner.name}</h3>
+          <p>
+            {[partner.role, partner.location === '—' ? '' : partner.location]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
         </div>
         <Link className={styles['profileLink']} href={href}>
           View profile <span aria-hidden="true">↗</span>
