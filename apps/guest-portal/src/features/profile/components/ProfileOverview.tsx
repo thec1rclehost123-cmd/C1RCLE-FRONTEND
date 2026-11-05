@@ -7,6 +7,12 @@ import type { ProfileFixture } from '../types/profile.types';
 export function ProfileOverview({ profile }: { profile: ProfileFixture }) {
   return (
     <div className="space-y-12 sm:space-y-16">
+      <Link
+        href="/profile/saved"
+        className="inline-flex min-h-11 items-center text-sm text-white/70 hover:text-white"
+      >
+        Saved events →
+      </Link>
       <OverviewEventSection
         title="Upcoming events"
         eyebrow="On your calendar"

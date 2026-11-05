@@ -44,6 +44,11 @@
         "types": "./dist/contracts/guest-social.d.ts",
         "default": "./dist/contracts/guest-social.js"
       }
+    },
+    "./saved-events": {
+      "types": "./dist/contracts/saved-events.d.ts",
+      "import": "./dist/contracts/saved-events.js",
+      "require": "./dist/contracts/saved-events.js"
     }
   },
   "files": [
