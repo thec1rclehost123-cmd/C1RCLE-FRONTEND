@@ -10,6 +10,7 @@ import { PrivateTierUnlockClient } from '@/features/event-detail/components/Priv
 import { PromoterClickTracker } from '@/features/event-detail/components/PromoterClickTracker';
 import { toEventDetailFixture } from '@/features/event-detail/event-detail-mapping';
 import { loadExploreEvents } from '@/features/explore/explore-data';
+import { SocialEventEntry } from '@/features/social/SocialEventEntry';
 import { buildPublicMetadata } from '@/lib/seo/metadata';
 
 import type { BookingEventFixture } from '@/features/booking/types/booking.types';
@@ -136,6 +137,7 @@ export default async function EventDetailPage({ params, searchParams }: EventDet
         recommendations={recommendations}
         {...(referralCode ? { referralCode } : {})}
       />
+      <SocialEventEntry eventId={result.event.id} />
     </>
   );
 }

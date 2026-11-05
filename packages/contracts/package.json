@@ -34,6 +34,16 @@
         "types": "./dist/contracts/guest-onboarding.d.ts",
         "default": "./dist/contracts/guest-onboarding.js"
       }
+    },
+    "./guest-social": {
+      "import": {
+        "types": "./dist/contracts/guest-social.d.ts",
+        "default": "./dist/contracts/guest-social.js"
+      },
+      "require": {
+        "types": "./dist/contracts/guest-social.d.ts",
+        "default": "./dist/contracts/guest-social.js"
+      }
     }
   },
   "files": [

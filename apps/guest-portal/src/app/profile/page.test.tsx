@@ -66,6 +66,14 @@ describe('ProfilePage', () => {
     clearSession();
     mockApiGet.mockImplementation((arg: unknown) => {
       const { path } = arg as { path: string };
+      if (path === '/api/social/privacy')
+        return Promise.resolve({
+          profileVisible: false,
+          showOnGuestlists: false,
+          showUpcomingEvents: false,
+          blockedUsers: [],
+          hiddenEvents: [],
+        });
       if (path === '/api/v2/profile/me') return Promise.resolve(GUEST_PROFILE);
       if (path === '/api/v2/orders?limit=50') {
         return Promise.resolve({
@@ -100,6 +108,14 @@ describe('ProfilePage', () => {
   it('shows the owner their verified contact from the private profile', async () => {
     mockApiGet.mockImplementation((arg: unknown) => {
       const { path } = arg as { path: string };
+      if (path === '/api/social/privacy')
+        return Promise.resolve({
+          profileVisible: false,
+          showOnGuestlists: false,
+          showUpcomingEvents: false,
+          blockedUsers: [],
+          hiddenEvents: [],
+        });
       if (path === '/api/v2/profile/me')
         return Promise.resolve({ ...GUEST_PROFILE, phoneNumber: '+919000000041' });
       return Promise.resolve({ items: [], pageInfo: { hasNextPage: false } });
@@ -226,6 +242,14 @@ describe('ProfilePage', () => {
     ];
     mockApiGet.mockImplementation((arg: unknown) => {
       const { path } = arg as { path: string };
+      if (path === '/api/social/privacy')
+        return Promise.resolve({
+          profileVisible: false,
+          showOnGuestlists: false,
+          showUpcomingEvents: false,
+          blockedUsers: [],
+          hiddenEvents: [],
+        });
       if (path === '/api/v2/profile/me') return Promise.resolve(GUEST_PROFILE);
       if (path === '/api/v2/orders?limit=50') {
         return Promise.resolve({
@@ -266,6 +290,14 @@ describe('ProfilePage', () => {
   it('does not claim an empty attended history when the wallet read failed', async () => {
     mockApiGet.mockImplementation((arg: unknown) => {
       const { path } = arg as { path: string };
+      if (path === '/api/social/privacy')
+        return Promise.resolve({
+          profileVisible: false,
+          showOnGuestlists: false,
+          showUpcomingEvents: false,
+          blockedUsers: [],
+          hiddenEvents: [],
+        });
       if (path === '/api/v2/profile/me') return Promise.resolve(GUEST_PROFILE);
       if (path === '/api/v2/orders?limit=50') {
         return Promise.resolve({
@@ -307,18 +339,26 @@ describe('ProfilePage', () => {
     expect(screen.queryByText(/saved successfully/i)).not.toBeInTheDocument();
   });
 
-  it('shows social settings without pretending unsupported links can be saved', async () => {
+  it('shows concise Privacy settings without unsupported social-link UI', async () => {
     render(
       await ProfilePage({
         searchParams: Promise.resolve({ section: 'social', view: 'settings' }),
       }),
     );
 
-    expect(screen.getByRole('heading', { name: 'Instagram & X' })).toBeInTheDocument();
-    expect(screen.getByText(/not supported by the Guest profile service yet/i)).toBeInTheDocument();
-    expect(screen.getByText('Instagram', { exact: true })).toBeInTheDocument();
-    expect(screen.getByText('X', { exact: true })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /save.*social/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Privacy' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('checkbox', { name: 'Show my social profile' }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('checkbox')).toHaveLength(3);
+    expect(screen.getByRole('link', { name: 'Privacy' })).toHaveAttribute('aria-current', 'page');
+    expect(
+      screen.queryByText(/Instagram|Not connected|not supported by the Guest profile/i),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Add .* profile link/i })).not.toBeInTheDocument();
+    expect(screen.getByText('No blocked guests.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Report Guest' })).not.toBeInTheDocument();
   });
 
   it('clears the local session and returns to login after sign-out confirmation', async () => {
