@@ -6,5 +6,10 @@
   "outputDirectory": ".next",
   "github": {
     "silent": true
+  },
+  "git": {
+    "deploymentEnabled": {
+      "codex/m4-connected-payments-20261104": false
+    }
   }
 }
