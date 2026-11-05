@@ -27,7 +27,7 @@ export function ProfileHeader({
         />
       ) : null}
       <Link
-        href={socialSettingsHref}
+        href="/profile?view=settings&section=personal"
         aria-label="Open profile settings"
         className="absolute right-1 top-1 z-10 inline-flex size-11 items-center justify-center rounded-full border border-white/10 bg-black/35 text-white/65 transition-colors hover:border-white/25 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:right-2 sm:top-2"
       >

@@ -13,7 +13,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@c1rcle/api-client', () => ({
   createApiClient: () => ({ put: mocks.put }),
-  isApiClientError: () => false,
+  isApiClientError: (error: unknown) =>
+    typeof error === 'object' && error !== null && 'status' in error,
 }));
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: mocks.refresh }) }));
@@ -44,6 +45,21 @@ beforeEach(() => {
 });
 
 describe('PersonalProfileFormClient', () => {
+  it('saves a Pass 2 profile with one interest and no city or joining reason', async () => {
+    const fields = { dateOfBirth: '1990-01-01', tastes: ['House'], intents: [] };
+    mocks.put.mockResolvedValue({ ...fields, displayName: 'Updated Guest', city: '' });
+    render(
+      <PersonalProfileFormClient identity={{ ...IDENTITY, city: '' }} profileFields={fields} />,
+    );
+    fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Updated Guest' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => {
+      expect(mocks.put).toHaveBeenCalledWith(
+        expect.objectContaining({ body: { ...fields, displayName: 'Updated Guest', city: '' } }),
+      );
+    });
+  });
+
   it('persists supported fields while preserving required profile fields', async () => {
     mocks.put.mockResolvedValue({
       ...RETAINED_FIELDS,
@@ -53,7 +69,7 @@ describe('PersonalProfileFormClient', () => {
     render(<PersonalProfileFormClient identity={IDENTITY} profileFields={RETAINED_FIELDS} />);
 
     fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'M3 Guest Updated' } });
-    fireEvent.change(screen.getByLabelText('City'), { target: { value: 'Mumbai' } });
+    fireEvent.change(screen.getByLabelText('City (optional)'), { target: { value: 'Mumbai' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
 
     await waitFor(() => {
@@ -78,12 +94,24 @@ describe('PersonalProfileFormClient', () => {
     render(<PersonalProfileFormClient identity={IDENTITY} profileFields={RETAINED_FIELDS} />);
 
     fireEvent.change(screen.getByLabelText('Full name'), { target: { value: ' ' } });
-    fireEvent.change(screen.getByLabelText('City'), { target: { value: ' ' } });
+    fireEvent.change(screen.getByLabelText('City (optional)'), {
+      target: { value: 'x'.repeat(101) },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
 
     expect(screen.getByText('Enter at least two characters.')).toBeInTheDocument();
-    expect(screen.getByText('Enter a city.')).toBeInTheDocument();
+    expect(screen.getByText('City must be 100 characters or fewer.')).toBeInTheDocument();
     expect(mocks.put).not.toHaveBeenCalled();
+  });
+
+  it('shows useful validation rather than a connection error for an invalid DOB', async () => {
+    mocks.put.mockRejectedValueOnce({ status: 400 });
+    render(<PersonalProfileFormClient identity={IDENTITY} profileFields={RETAINED_FIELDS} />);
+    fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Updated Guest' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Guests must be at least 18 years old.',
+    );
   });
 
   it('offers a retry after a save failure and resets only unsaved changes', async () => {

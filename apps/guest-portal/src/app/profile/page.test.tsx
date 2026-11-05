@@ -14,6 +14,8 @@ vi.mock('next/image', () => ({
   ),
 }));
 
+const sessionAvatar = vi.hoisted(() => ({ value: null as string | null }));
+
 const replace = vi.fn<(href: string) => void>();
 const mockApiGet = vi.fn<(...args: readonly unknown[]) => Promise<unknown>>();
 
@@ -39,7 +41,7 @@ vi.mock('@/lib/auth/require-session', () => ({
         email: 'aayush@example.com',
         displayName: 'Aayush Divase',
         role: 'guest',
-        avatarUrl: null,
+        avatarUrl: sessionAvatar.value,
         mustChangePassword: false,
       },
     }),
@@ -60,6 +62,7 @@ const GUEST_PROFILE = {
 describe('ProfilePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionAvatar.value = null;
     clearSession();
     mockApiGet.mockImplementation((arg: unknown) => {
       const { path } = arg as { path: string };
@@ -80,6 +83,36 @@ describe('ProfilePage', () => {
     });
   });
 
+  it('renders the owner’s existing canonical session image without offering a fake upload', async () => {
+    sessionAvatar.value = 'http://localhost:3100/c1rcle-logo.webp';
+    render(
+      await ProfilePage({
+        searchParams: Promise.resolve({ view: 'settings', section: 'personal' }),
+      }),
+    );
+    expect(screen.getByRole('img', { name: 'Current profile photo' })).toHaveAttribute(
+      'src',
+      sessionAvatar.value,
+    );
+    expect(screen.getByText(/photo uploads are not available yet/i)).toBeInTheDocument();
+  });
+
+  it('shows the owner their verified contact from the private profile', async () => {
+    mockApiGet.mockImplementation((arg: unknown) => {
+      const { path } = arg as { path: string };
+      if (path === '/api/v2/profile/me')
+        return Promise.resolve({ ...GUEST_PROFILE, phoneNumber: '+919000000041' });
+      return Promise.resolve({ items: [], pageInfo: { hasNextPage: false } });
+    });
+    render(
+      await ProfilePage({
+        searchParams: Promise.resolve({ view: 'settings', section: 'account' }),
+      }),
+    );
+    expect(screen.getByText('+919000000041')).toBeInTheDocument();
+    expect(screen.getByText('C1RCLE account')).toBeInTheDocument();
+  });
+
   it('renders the authenticated profile identity without fixture data', async () => {
     render(await ProfilePage({}));
 
@@ -88,7 +121,7 @@ describe('ProfilePage', () => {
     expect(screen.queryByRole('navigation', { name: 'Profile sections' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open profile settings' })).toHaveAttribute(
       'href',
-      '/profile?view=settings&section=social#social-links',
+      '/profile?view=settings&section=personal',
     );
     expect(screen.getByRole('link', { name: 'Edit profile name' })).toHaveAttribute(
       'href',

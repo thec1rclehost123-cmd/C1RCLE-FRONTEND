@@ -163,13 +163,13 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
     displayName: guestProfile?.displayName ?? session.user.displayName,
     initials: initialsFor(guestProfile?.displayName ?? session.user.displayName),
     email: session.user.email,
-    phoneNumber: null,
+    phoneNumber: guestProfile?.phoneNumber ?? null,
     city: guestProfile?.city ?? null,
     instagram: null,
     gender: null,
     memberSince: guestProfile?.createdAt ?? null,
     badges: ['Member'],
-    signInMethod: 'Email',
+    signInMethod: 'C1RCLE account',
   };
   const profile: ProfileFixture = {
     identity,

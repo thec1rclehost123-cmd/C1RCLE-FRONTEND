@@ -8,10 +8,10 @@ export default function PublicProfileNotFound() {
           Member unavailable
         </p>
         <h1 className="mt-4 text-3xl font-black uppercase tracking-tight">
-          This profile is off the guestlist
+          This profile is unavailable
         </h1>
         <p className="mt-3 text-sm leading-6 text-white/55">
-          The member reference is missing, unavailable, or no longer public.
+          No profile information is available at this address.
         </p>
         <Link
           href="/explore"
