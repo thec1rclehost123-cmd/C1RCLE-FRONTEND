@@ -1,0 +1,128 @@
+{
+  "FRONTEND": {
+    "start": "3f2a2e41bfe4c215f694fdde0c1e3e242c0ef4c9",
+    "candidateHead": "1e4ba60c17316c41feba3ad7f639e5c3cffe767f",
+    "changedPaths": [
+      "apps/guest-portal/src/app/api/profile/me/route.test.ts",
+      "apps/guest-portal/src/app/api/profile/me/route.ts",
+      "apps/guest-portal/src/app/profile/[userId]/not-found.tsx",
+      "apps/guest-portal/src/app/profile/page.test.tsx",
+      "apps/guest-portal/src/app/profile/page.tsx",
+      "apps/guest-portal/src/features/profile/components/PersonalProfileFormClient.test.tsx",
+      "apps/guest-portal/src/features/profile/components/PersonalProfileFormClient.tsx",
+      "apps/guest-portal/src/features/profile/components/ProfileHeader.tsx",
+      "docs/acceptance/guest-profile-privacy-20261104.md",
+      "docs/acceptance/pass4-boundaries-20261104.json",
+      "docs/acceptance/screenshots/pass4-anonymous-explore.jpg",
+      "docs/acceptance/screenshots/pass4-profile-desktop.jpg",
+      "docs/acceptance/screenshots/pass4-profile-phone-controls.jpg",
+      "docs/acceptance/screenshots/pass4-profile-phone.jpg",
+      "packages/contracts/src/contracts/guest-profile.ts"
+    ],
+    "milestones": {
+      "M3": {
+        "head": "283299f9b90d3d07753ced28855eae4162a4bb50",
+        "workingPaths": [],
+        "pass4Overlap": []
+      },
+      "M4": {
+        "head": "283299f9b90d3d07753ced28855eae4162a4bb50",
+        "workingPaths": [
+          "M apps/admin-console/src/app/refunds/page.tsx",
+          " M apps/admin-console/src/lib/admin/admin-api.ts",
+          " M apps/guest-portal/src/features/booking/components/CheckoutFlowClient.test.tsx",
+          " M apps/guest-portal/src/features/booking/components/CheckoutFlowClient.tsx",
+          " M apps/guest-portal/src/features/booking/payment/paid-checkout.test.ts",
+          " M apps/guest-portal/src/features/booking/payment/paid-checkout.ts",
+          " M apps/partner-dashboard/src/components/partner-v3/finance/FinanceSummary.tsx",
+          " M apps/partner-dashboard/src/components/partner-v3/finance/HostFinanceScreen.test.tsx",
+          " M apps/partner-dashboard/src/components/partner-v3/finance/HostFinanceScreen.tsx",
+          " M apps/partner-dashboard/src/components/partner-v3/finance/PartnerFinanceScreen.tsx",
+          " M apps/partner-dashboard/src/components/partner-v3/finance/PayoutRequestAction.test.tsx",
+          " M apps/partner-dashboard/src/components/partner-v3/finance/PayoutRequestAction.tsx",
+          " M apps/partner-dashboard/src/data/partner-data-source.ts",
+          " M apps/partner-dashboard/src/lib/finance/finance-view-model.test.ts",
+          " M apps/partner-dashboard/src/lib/finance/finance-view-model.ts",
+          " M packages/contracts/src/contracts/admin-settings.ts",
+          " M packages/contracts/src/contracts/checkout.ts",
+          " M packages/contracts/src/contracts/phase6.ts",
+          "?? apps/admin-console/src/components/admin/refund-recovery.test.tsx",
+          "?? apps/admin-console/src/components/admin/refund-recovery.tsx",
+          "?? apps/admin-console/src/lib/admin/refund-recovery-api.test.ts",
+          "?? apps/guest-portal/src/features/booking/components/BookingFeeDisclosure.tsx"
+        ],
+        "pass4Overlap": []
+      }
+    }
+  },
+  "BACKEND": {
+    "start": "abe85ab96e2e5ef1103fdd31f041a872cc02225e",
+    "candidateHead": "c12baea156f50e6ed6be47f1ca9ea8e483d6207a",
+    "changedPaths": [
+      "apps/api-gateway/src/routes/v2/profile-privacy.integration.test.ts",
+      "apps/api-gateway/src/routes/v2/profile.test.ts",
+      "apps/api-gateway/src/routes/v2/profile.ts",
+      "packages/contracts/src/contracts/guest-profile.ts",
+      "packages/core/src/application/guest-profile/guest-profile-service.test.ts"
+    ],
+    "milestones": {
+      "M3": {
+        "head": "f01c3eb042436c539ab91982f066fffcdac65055",
+        "workingPaths": [],
+        "pass4Overlap": []
+      },
+      "M4": {
+        "head": "9383480512a9f521ec90c8fa71d7b3a4bf60922f",
+        "workingPaths": [
+          "M apps/api-gateway/src/lib/payments/razorpay-adapter.ts",
+          " M apps/api-gateway/src/lib/payments/unconfigured-provider.ts",
+          " M apps/api-gateway/src/lib/v2-services.ts",
+          " M apps/api-gateway/src/routes/v2/admin/refunds.ts",
+          " M apps/api-gateway/src/routes/v2/admin/settings.ts",
+          " M apps/api-gateway/src/routes/v2/finance/finance-routes.ts",
+          " M packages/contracts/src/contracts/admin-settings.ts",
+          " M packages/contracts/src/contracts/checkout.ts",
+          " M packages/contracts/src/contracts/phase6.ts",
+          " M packages/core/src/application/admin/admin-ops-service.ts",
+          " M packages/core/src/application/checkout/checkout-service.ts",
+          " M packages/core/src/application/checkout/payment-audit.test.ts",
+          " M packages/core/src/application/finance/finance-service.ts",
+          " M packages/core/src/application/finance/finance-services.test.ts",
+          " M packages/core/src/application/finance/payout-service.ts",
+          " M packages/core/src/application/finance/reconciliation-service.test.ts",
+          " M packages/core/src/application/finance/reconciliation-service.ts",
+          " M packages/core/src/application/finance/refund-service.ts",
+          " M packages/core/src/application/pricing/pricing-service.ts",
+          " M packages/core/src/domain/index.ts",
+          " M packages/core/src/domain/models/cart-reservation.ts",
+          " M packages/core/src/domain/models/financial-journal.ts",
+          " M packages/core/src/domain/models/order.ts",
+          " M packages/core/src/domain/models/platform-settings.ts",
+          " M packages/core/src/domain/models/pricing.ts",
+          " M packages/core/src/domain/models/refund-request.ts",
+          " M packages/core/src/domain/ports/payment-provider.ts",
+          " M packages/core/src/domain/ports/repositories.ts",
+          " M packages/core/src/infrastructure/firestore/firestore-cart-reservation-repository.ts",
+          " M packages/core/src/infrastructure/firestore/firestore-order-repository.ts",
+          " M packages/core/src/infrastructure/firestore/firestore-refund-request-repository.ts",
+          " M packages/core/src/infrastructure/memory/memory-cart-reservation-bind.test.ts",
+          " M packages/core/src/infrastructure/memory/memory-repositories.ts",
+          " M packages/core/src/infrastructure/utils.ts",
+          "?? apps/api-gateway/src/lib/payments/order-recovery.test.ts",
+          "?? docs/operations/milestone-4-implementation.md",
+          "?? packages/core/src/application/finance/refund-component-posting.test.ts",
+          "?? packages/core/src/application/finance/settlement-policy.test.ts",
+          "?? packages/core/src/application/finance/settlement-policy.ts",
+          "?? packages/core/src/domain/models/booking-fee-policy.test.ts",
+          "?? packages/core/src/domain/models/booking-fee-policy.ts",
+          "?? packages/core/src/domain/models/purchase-refund-snapshot.test.ts",
+          "?? packages/core/src/domain/models/purchase-refund-snapshot.ts",
+          "?? packages/core/src/domain/models/refund-intake.ts",
+          "?? packages/core/src/infrastructure/firestore/firestore-provider-order-claim.integration.test.ts",
+          "?? packages/core/src/infrastructure/firestore/firestore-refund-intake.integration.test.ts"
+        ],
+        "pass4Overlap": []
+      }
+    }
+  }
+}
