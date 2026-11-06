@@ -44,6 +44,7 @@ import { isApiClientError } from '@c1rcle/api-client';
 import { getClientEnv } from '@c1rcle/config';
 import { onboardingProfileSchema } from '@c1rcle/contracts';
 
+import { PromoterAgreementPanel } from '@/components/promoter/PromoterAgreementPanel';
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 import { confirmPhoneOtp, getTestingBypassEnabled, sendPhoneOtp } from '@/lib/firebase/phone-auth';
 import { resolveKnownCity, searchCities, type CityEntry } from '@/lib/onboarding/cities';
@@ -1044,6 +1045,7 @@ export function OnboardingPage() {
       )}
 
       <main className="max-w-xl mx-auto px-6 pb-24">
+        {partnerType === 'promoter' && submittedRequestId && <PromoterAgreementPanel />}
         <AnimatePresence mode="wait">
           {/* ── Sign Up ── */}
           {step === 'signup' && (

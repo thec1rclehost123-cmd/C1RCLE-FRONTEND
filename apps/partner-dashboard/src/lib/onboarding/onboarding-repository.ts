@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { isApiClientError } from '@c1rcle/api-client';
 import {
   onboardingRequestDtoSchema,
+  promoterAgreementStatusDtoSchema,
   startOnboardingSchema,
   verificationResultDtoSchema,
 } from '@c1rcle/contracts/client';
@@ -184,4 +185,26 @@ export async function verifyDocument(input: VerifyDocumentRequest): Promise<Veri
     body: input,
     schema: verificationResultDtoSchema,
   });
+}
+
+export async function getPromoterAgreement() {
+  return bffClient.get({
+    path: '/api/bff/onboarding/promoter-agreement',
+    schema: promoterAgreementStatusDtoSchema,
+  });
+}
+
+export async function acceptPromoterAgreement(
+  requestId: string,
+  version: string,
+  idempotencyKey: string,
+) {
+  const dto = await bffClient.post({
+    path: `/api/bff/onboarding/applications/${encodeURIComponent(requestId)}/promoter-agreement/accept`,
+    body: { version },
+    schema: onboardingRequestDtoSchema,
+    headers: { ...csrfHeaders(), 'Idempotency-Key': idempotencyKey },
+  });
+  recordVersion(requestId, dto);
+  return dto;
 }

@@ -4,10 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { csrfCookieName, forwardToGateway, putToStorage } from '@/lib/bff/auth-proxy';
 
 import { POST as upload } from './applications/[id]/documents/upload/route';
+import { POST as acceptAgreement } from './applications/[id]/promoter-agreement/accept/route';
 import { PATCH as autosave } from './applications/[id]/route';
 import { POST as submit } from './applications/[id]/submit/route';
 import { POST as apply } from './applications/route';
 import { GET as me } from './me/route';
+import { GET as agreement } from './promoter-agreement/route';
 import { POST as verifyDocument } from './verify-document/route';
 
 import type { ForwardInit } from '@/lib/bff/auth-proxy';
@@ -555,5 +557,66 @@ describe('POST /api/bff/onboarding/applications/[id]/documents/upload', () => {
     expect(res.status).toBe(422);
     await expect(res.json()).resolves.toMatchObject({ code: 'validation' });
     expect(mockPut).not.toHaveBeenCalled();
+  });
+});
+
+describe('Promoter agreement BFF', () => {
+  it('reads the server artifact with the existing authenticated cookie', async () => {
+    mockForward.mockResolvedValue(gatewayResponse({ agreement: null, activationAvailable: false }));
+    const result = await agreement(
+      new NextRequest(`${APP_ORIGIN}/api/bff/onboarding/promoter-agreement`, {
+        headers: authedHeaders(),
+      }),
+    );
+    expect(result.status).toBe(200);
+    expect(mockForward).toHaveBeenCalledWith(
+      '/api/v2/onboarding/promoter-agreement',
+      expect.objectContaining({
+        method: 'GET',
+        cookie: `${csrfCookieName()}=tok; better-auth.session_token=sess_abc`,
+      }),
+    );
+  });
+  it('requires CSRF and rejects caller-supplied artifact content', async () => {
+    const ctx = { params: Promise.resolve({ id: 'app_1' }) };
+    const missing = await acceptAgreement(
+      jsonRequest(
+        '/api/bff/onboarding/applications/app_1/promoter-agreement/accept',
+        {},
+        { version: 'staging-v1' },
+      ),
+      ctx,
+    );
+    expect(missing.status).toBe(403);
+    const forged = await acceptAgreement(
+      jsonRequest(
+        '/api/bff/onboarding/applications/app_1/promoter-agreement/accept',
+        authedHeaders(),
+        { version: 'staging-v1', status: 'approved' },
+      ),
+      ctx,
+    );
+    expect(forged.status).toBe(400);
+    expect(mockForward).not.toHaveBeenCalled();
+  });
+  it('forwards only the selected version and preserves the idempotency key', async () => {
+    mockForward.mockResolvedValue(gatewayResponse({ id: 'app_1' }));
+    const result = await acceptAgreement(
+      jsonRequest(
+        '/api/bff/onboarding/applications/app_1/promoter-agreement/accept',
+        authedHeaders({ 'idempotency-key': 'agreement-key' }),
+        { version: 'staging-v1' },
+      ),
+      { params: Promise.resolve({ id: 'app_1' }) },
+    );
+    expect(result.status).toBe(200);
+    expect(mockForward).toHaveBeenCalledWith(
+      '/api/v2/onboarding/applications/app_1/promoter-agreement/accept',
+      expect.objectContaining({
+        method: 'POST',
+        body: { version: 'staging-v1' },
+        headers: { 'Idempotency-Key': 'agreement-key' },
+      }),
+    );
   });
 });
