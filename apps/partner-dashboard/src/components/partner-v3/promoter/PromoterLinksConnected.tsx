@@ -60,6 +60,9 @@ export function PromoterLinksConnected({
       <header>
         <p className="text-xs uppercase tracking-[0.2em] text-white/50">Promoter workspace</p>
         <h1 className="mt-3 text-2xl font-semibold">Promotion links</h1>
+        <Link href="/partner/promoter/settings" className="mt-3 inline-block text-sm underline">
+          Review Promoter agreement
+        </Link>
         <p className="mt-2 max-w-2xl text-sm text-white/65">
           Referral codes and activity come from the backend. Deactivation stops new attribution
           while keeping historical orders linked to the original campaign.

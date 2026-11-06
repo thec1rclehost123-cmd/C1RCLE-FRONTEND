@@ -18,6 +18,8 @@ const apiError = (init: {
 const mocks = vi.hoisted(() => ({
   auth: { user: null as any, loading: false, isApproved: false },
   getMine: vi.fn(),
+  getPromoterAgreement: vi.fn(),
+  acceptPromoterAgreement: vi.fn(),
   saveProgress: vi.fn(),
   start: vi.fn(),
   submit: vi.fn(),
@@ -64,6 +66,8 @@ vi.mock('@/lib/firebase/phone-auth', () => ({
 }));
 vi.mock('@/lib/onboarding/onboarding-repository', () => ({
   getMine: mocks.getMine,
+  getPromoterAgreement: mocks.getPromoterAgreement,
+  acceptPromoterAgreement: mocks.acceptPromoterAgreement,
   saveProgress: mocks.saveProgress,
   start: mocks.start,
   submit: mocks.submit,
@@ -115,6 +119,7 @@ async function upload(input: HTMLInputElement, label: string) {
 describe('Partner onboarding wizard', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mocks.getPromoterAgreement.mockResolvedValue({ agreement: null, activationAvailable: false });
     mocks.saveProgress.mockImplementation((_id, patch) => Promise.resolve(dto({}, patch)));
     mocks.auth.user = { id: 'user_1', email: 'a@b.co' };
     mocks.auth.loading = false;
