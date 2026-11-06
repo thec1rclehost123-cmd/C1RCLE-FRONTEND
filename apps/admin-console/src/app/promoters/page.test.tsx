@@ -27,7 +27,7 @@ const assignment = {
   id: 'assignment_1',
   eventId: 'event_1',
   promoterId: 'organization_promoter_1',
-  status: 'active',
+  status: 'accepted',
   ratePercent: 10,
   flatPaise: 0,
   termsVersion: 2,
@@ -137,6 +137,29 @@ describe('PromotersDesk', () => {
     });
   });
 
+  it('keeps the legacy active-assignment suspension control available', async () => {
+    vi.mocked(api.listPromoterAssignments).mockResolvedValue({
+      items: [{ ...assignment, status: 'active' }],
+      pageInfo: { page: 1, pageSize: 100, total: 1, hasNextPage: false },
+    } as never);
+    renderDesk();
+
+    expect(await screen.findByRole('button', { name: 'Suspend' })).toBeInTheDocument();
+  });
+
+  it('shows one suspension confirmation when a promoter has multiple assignments', async () => {
+    vi.mocked(api.listPromoterAssignments).mockResolvedValue({
+      items: [assignment, { ...assignment, id: 'assignment_2', eventId: 'event_2' }],
+      pageInfo: { page: 1, pageSize: 100, total: 2, hasNextPage: false },
+    } as never);
+    renderDesk();
+    const [suspend] = await screen.findAllByRole('button', { name: 'Suspend' });
+    fireEvent.click(suspend!);
+
+    expect(await screen.findAllByLabelText('Reason for suspension')).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Confirm suspend' })).toHaveLength(1);
+  });
+
   it('loads the immutable audit history and snapshots for the selected promoter', async () => {
     renderDesk();
     fireEvent.click(await screen.findByRole('button', { name: /View audit history/ }));
@@ -149,7 +172,7 @@ describe('PromotersDesk', () => {
     expect(await screen.findByText('PROMO123')).toBeInTheDocument();
     expect(await screen.findByText('Risk flags')).toBeInTheDocument();
     expect(await screen.findByText(/Booking C1-M4-0001/)).toBeInTheDocument();
-    expect(screen.getAllByText('Active')).toHaveLength(2);
+    expect(screen.getAllByText('Active')).toHaveLength(1);
 
     fireEvent.click(screen.getByText('Before and after snapshots'));
     expect(screen.getByText(/"status": "active"/)).toBeInTheDocument();

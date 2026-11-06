@@ -13,7 +13,10 @@ import {
   rsvpResponseSchema,
 } from '@c1rcle/contracts';
 
-import { usePromoterReferralContext } from '@/features/event-detail/components/PromoterClickTracker';
+import {
+  usePromoterReferralContext,
+  usePromoterReferralContextTokens,
+} from '@/features/event-detail/components/PromoterClickTracker';
 import { getEventAccentClasses } from '@/features/event-detail/eventDetailPalette';
 import { EventArtworkFallback } from '@/features/explore/components/EventArtworkFallback';
 import { useTicketAccessGrantId } from '@/lib/access/use-ticket-access-grant-id';
@@ -106,7 +109,13 @@ function CheckoutFlowClientState({
     event.ticketAddons ?? [],
   );
   const queryReferralCode = searchParams.get('ref');
-  const storedReferralCode = usePromoterReferralContext(eventSlug);
+  const referralContextKey = eventSlug;
+  const storedReferralCode = usePromoterReferralContext(referralContextKey);
+  const referralContextTokenValue = usePromoterReferralContextTokens(referralContextKey);
+  const referralContextTokens = useMemo(
+    () => JSON.parse(referralContextTokenValue) as string[],
+    [referralContextTokenValue],
+  );
   const [payMessage, setPayMessage] = useState<string | null>(null);
   const requestedReferralCode = upgradeFromEntitlementId
     ? null
@@ -398,6 +407,7 @@ function CheckoutFlowClientState({
       ...(upgradeFromEntitlementId ? { upgradeFromEntitlementId } : {}),
       ...(appliedPromo ? { promoCode: appliedPromo } : {}),
       ...(referralCode ? { referralCode } : {}),
+      ...(referralContextTokens.length ? { referralContextTokens } : {}),
     })
       .then((result) => {
         if (!cancelled) {
@@ -417,6 +427,7 @@ function CheckoutFlowClientState({
     lines,
     appliedPromo,
     referralCode,
+    referralContextTokens,
     upgradeFromEntitlementId,
   ]);
 
@@ -438,6 +449,7 @@ function CheckoutFlowClientState({
       ...(prefill ? { prefill, attendee: prefill } : {}),
       promoCode: appliedPromo,
       ...(referralCode ? { referralCode } : {}),
+      ...(referralContextTokens.length ? { referralContextTokens } : {}),
       ...(upgradeFromEntitlementId ? { upgradeFromEntitlementId } : {}),
     });
 
@@ -505,6 +517,7 @@ function CheckoutFlowClientState({
           ...(eligibilityRequired && eligibilityAttested ? { eligibilityAttested: true } : {}),
           ...(accessGrantId ? { accessGrantId } : {}),
           ...(referralCode ? { referralCode } : {}),
+          ...(referralContextTokens.length ? { referralContextTokens } : {}),
         },
         headers: csrfHeaders(),
         schema: rsvpResponseSchema,

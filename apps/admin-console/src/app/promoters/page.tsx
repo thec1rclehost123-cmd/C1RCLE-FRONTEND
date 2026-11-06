@@ -30,6 +30,7 @@ import {
 
 interface PromoterAction {
   readonly promoterId: string;
+  readonly assignmentId: string;
   readonly action: 'suspend' | 'reinstate';
 }
 
@@ -213,9 +214,9 @@ export default function PromotersDesk() {
                     {formatDateTime(assignment.createdAt)}
                   </td>
                   <td className="px-4 py-3">
-                    {['active', 'suspended'].includes(assignment.status) ? (
+                    {['active', 'accepted', 'suspended'].includes(assignment.status) ? (
                       <div className="flex justify-end">
-                        {promoterAction?.promoterId === assignment.promoterId ? (
+                        {promoterAction?.assignmentId === assignment.id ? (
                           <div className="flex flex-col items-end gap-2">
                             <label className="grid gap-1 text-left text-xs">
                               {promoterAction.action === 'suspend'
@@ -281,11 +282,16 @@ export default function PromotersDesk() {
                               setReason('');
                               setPromoterAction({
                                 promoterId: assignment.promoterId,
-                                action: assignment.status === 'active' ? 'suspend' : 'reinstate',
+                                assignmentId: assignment.id,
+                                action: ['active', 'accepted'].includes(assignment.status)
+                                  ? 'suspend'
+                                  : 'reinstate',
                               });
                             }}
                           >
-                            {assignment.status === 'active' ? 'Suspend' : 'Reinstate'}
+                            {['active', 'accepted'].includes(assignment.status)
+                              ? 'Suspend'
+                              : 'Reinstate'}
                           </Button>
                         )}
                       </div>

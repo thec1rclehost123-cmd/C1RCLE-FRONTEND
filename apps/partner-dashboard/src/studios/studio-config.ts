@@ -65,15 +65,14 @@ export const STUDIO_CONFIG: Readonly<Record<StudioRole, StudioConfig>> = {
   promoter: {
     role: 'promoter',
     label: 'Promoter Studio',
-    description: 'Track opportunities, guests, links and commissions.',
+    description: 'Track event campaigns, attributed activity, links and commissions.',
     navigation: [
       { label: 'Overview', href: studioPath('promoter', 'overview'), icon: 'dashboard' },
       { label: 'Events', href: studioPath('promoter', 'events'), icon: 'events' },
-      { label: 'Guests', href: studioPath('promoter', 'guests'), icon: 'guests' },
+      { label: 'Activity', href: studioPath('promoter', 'guests'), icon: 'guests' },
       { label: 'Analytics', href: studioPath('promoter', 'analytics'), icon: 'analytics' },
       { label: 'Finance', href: studioPath('promoter', 'finance'), icon: 'finance' },
       { label: 'Partners', href: studioPath('promoter', 'partners'), icon: 'partners' },
-      { label: 'Leaderboard', href: studioPath('promoter', 'leaderboard'), icon: 'leaderboard' },
     ],
   },
 };

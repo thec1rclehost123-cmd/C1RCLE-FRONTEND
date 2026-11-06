@@ -14,8 +14,18 @@ describe('loadPromoterCampaignSummary', () => {
       linkCount: 4,
       clicks: 17,
       conversions: 3,
+      historicalRsvpConversions: 1,
+      activeRsvpCount: 1,
       grossAttributedTicketRevenuePaise: 86_000,
+      grossAttributedTicketSalesPaise: 86_000,
+      refundedAttributedTicketSalesPaise: 0,
+      netAttributedTicketSalesPaise: 86_000,
+      refundValueComplete: true,
+      recordedCommissionPaise: 8_600,
+      reversedCommissionPaise: null,
+      complete: true,
       hasMoreLinks: false,
+      hasMoreOrders: false,
     };
     const client = {
       get: (options: { path: string; headers?: Readonly<Record<string, string>> }) => {

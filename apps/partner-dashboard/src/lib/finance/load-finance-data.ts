@@ -3,10 +3,12 @@ import 'server-only';
 import { cookies } from 'next/headers';
 
 import { ApiClientError } from '@c1rcle/api-client';
+import { promoterAssignedEventDtoSchema } from '@c1rcle/contracts';
 
 import { createServerApiClient } from '@/lib/api/server-client';
 import {
   getFinanceBalance,
+  type FinanceOrderPage,
   listBankAccounts,
   listFinanceOrders,
   listLedgerEntries,
@@ -98,6 +100,8 @@ export interface FinanceLoaderOptions {
   /** Injected in tests; defaults to a client built from this request's cookies. */
   readonly client?: ServerApiClient;
   readonly organizationId?: string | null;
+  /** Promoter finance is limited to their own commission and payout workflow. */
+  readonly promoterScope?: boolean;
 }
 
 /**
@@ -119,18 +123,39 @@ export async function loadFinanceData(options: FinanceLoaderOptions): Promise<Pa
     );
   }
 
+  if (options.promoterScope) {
+    try {
+      // This endpoint is capability and membership scoped by the API. A client
+      // active-org cookie is only a hint and must never turn another org's
+      // generic finance screen into a Promoter screen.
+      await client.get({
+        path: `/api/v2/promoters/${encodeURIComponent(organizationId)}/events`,
+        schema: promoterAssignedEventDtoSchema.array(),
+        headers: { 'x-organization-id': organizationId },
+      });
+    } catch (cause) {
+      throw new FinanceLoadError(
+        classifyFinanceFailure(cause),
+        'The selected organization is not available as a Promoter finance workspace.',
+        { cause },
+      );
+    }
+  }
+
   let balance;
   let ledger;
   let payouts;
   let bankAccounts;
-  let orders;
+  let orders: FinanceOrderPage;
   try {
     [balance, ledger, payouts, bankAccounts, orders] = await Promise.all([
       getFinanceBalance(client, organizationId),
       listLedgerEntries(client, organizationId, { limit: PAGE_SIZE }),
       listPayouts(client, organizationId, { limit: PAGE_SIZE }),
       listBankAccounts(client, organizationId),
-      listFinanceOrders(client, organizationId, { limit: PAGE_SIZE }),
+      options.promoterScope
+        ? Promise.resolve({ items: [], total: 0, hasNextPage: false } satisfies FinanceOrderPage)
+        : listFinanceOrders(client, organizationId, { limit: PAGE_SIZE }),
     ]);
   } catch (cause) {
     // `Promise.all` rejects on the *first* failure, so which read failed is not

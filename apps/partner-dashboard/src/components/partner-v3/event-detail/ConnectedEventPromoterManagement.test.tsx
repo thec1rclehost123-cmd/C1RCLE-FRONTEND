@@ -39,10 +39,18 @@ const tier = {
 const performance: EventPromoterAnalyticsDto = {
   eventId: 'event_1',
   complete: true,
+  refundValueComplete: true,
+  historicalConversionCount: 1,
+  historicalRsvpConversionCount: 0,
+  activeRsvpCount: 0,
   capturedTicketCount: 4,
   attributedTicketCount: 2,
   attributedTicketValuePaise: 45_000,
+  grossAttributedTicketValuePaise: 45_000,
+  refundedAttributedTicketValuePaise: 0,
+  netAttributedTicketValuePaise: 45_000,
   recordedCommissionPaise: 4_500,
+  reversedCommissionPaise: null,
   netAttributedValuePaise: 40_500,
   commissionPayableBalancePaise: 4_000,
   liabilityComplete: true,
@@ -51,9 +59,15 @@ const performance: EventPromoterAnalyticsDto = {
     {
       promoterOrganizationId: connection.id,
       attributedOrderCount: 1,
+      historicalRsvpConversionCount: 0,
+      activeRsvpCount: 0,
       attributedTicketCount: 2,
       attributedTicketValuePaise: 45_000,
+      grossAttributedTicketValuePaise: 45_000,
+      refundedAttributedTicketValuePaise: 0,
+      netAttributedTicketValuePaise: 45_000,
       recordedCommissionPaise: 4_500,
+      reversedCommissionPaise: null,
       netAttributedValuePaise: 40_500,
       commissionPayableBalancePaise: 4_000,
       liabilityComplete: true,
@@ -259,7 +273,9 @@ describe('ConnectedEventPromoterManagement', () => {
     expect(screen.getByText('Tickets sold overall')).toBeTruthy();
     expect(screen.getByText('Promoter-attributed tickets')).toBeTruthy();
     expect(screen.getByText('Commission liability')).toBeTruthy();
-    expect(screen.getByText(/before refunds/i)).toBeTruthy();
+    expect(screen.getByText('Gross attributed sales')).toBeTruthy();
+    expect(screen.getByText('Net attributed sales')).toBeTruthy();
+    expect(screen.getByText('Refunded ticket value')).toBeTruthy();
     expect(screen.getByText(/not sales lift/i)).toBeTruthy();
   });
 });

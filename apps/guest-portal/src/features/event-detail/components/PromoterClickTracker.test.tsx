@@ -1,16 +1,20 @@
 import { render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { PromoterClickTracker, readPromoterReferralContext } from './PromoterClickTracker';
+import {
+  PromoterClickTracker,
+  readPromoterReferralContext,
+  readPromoterReferralContextTokens,
+} from './PromoterClickTracker';
 
 interface ClickRequestOptions {
   path: string;
-  body: { eventSlug: string; code: string; clickId: string };
+  body: { eventSlug: string; code: string; clickId: string; contextToken?: string };
   schema: unknown;
 }
 
 interface ClickApiClient {
-  post(options: ClickRequestOptions): Promise<{ accepted: true }>;
+  post(options: ClickRequestOptions): Promise<{ accepted: true; contextToken: string }>;
 }
 
 const clickApi = vi.hoisted(() => ({
@@ -26,7 +30,7 @@ describe('PromoterClickTracker', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.sessionStorage.clear();
-    clickApi.postMock.mockResolvedValue({ accepted: true });
+    clickApi.postMock.mockResolvedValue({ accepted: true, contextToken: 'signed-context-token-1' });
     clickApi.getApiClientMock.mockReturnValue({ post: clickApi.postMock });
   });
 
@@ -41,7 +45,7 @@ describe('PromoterClickTracker', () => {
     expect(clickApi.postMock).not.toHaveBeenCalled();
   });
 
-  it('stores the referral code and reports the click when a code is present', async () => {
+  it('stores the referral code and signed context when a code is present', async () => {
     render(<PromoterClickTracker eventSlug="summer-fest" code="SPR-123" />);
 
     await waitFor(() => {
@@ -71,6 +75,14 @@ describe('PromoterClickTracker', () => {
       expect(clickApi.postMock).toHaveBeenCalledTimes(2);
     });
     expect(readPromoterReferralContext('summer-fest')).toBe('B');
+    expect(clickApi.postMock.mock.calls[1]?.[0].body.contextToken).toBe('signed-context-token-1');
+    const stored = JSON.parse(
+      window.sessionStorage.getItem('c1rcle-promoter-referral-context') ?? '[]',
+    ) as { code: string; contextToken: string }[];
+    expect(stored.map((item) => item.code)).toEqual(['B']);
+    expect(stored.every((item) => item.contextToken.startsWith('signed-context-token-'))).toBe(
+      true,
+    );
   });
 
   it('suppresses duplicate effect delivery for the same event and code in one session', async () => {
@@ -99,10 +111,18 @@ describe('PromoterClickTracker', () => {
   it('only returns fresh context for the matching event', () => {
     window.sessionStorage.setItem(
       'c1rcle-promoter-referral-context',
-      JSON.stringify({ eventSlug: 'summer-fest', code: 'GOOD', capturedAt: Date.now() }),
+      JSON.stringify([
+        {
+          eventSlug: 'summer-fest',
+          code: 'GOOD',
+          contextToken: 'signed-context-token-good',
+          capturedAt: Date.now(),
+        },
+      ]),
     );
     expect(readPromoterReferralContext('other-event')).toBeNull();
-    expect(window.sessionStorage.getItem('c1rcle-promoter-referral-context')).toBeNull();
+    expect(readPromoterReferralContextTokens('other-event')).toEqual([]);
+    expect(window.sessionStorage.getItem('c1rcle-promoter-referral-context')).not.toBeNull();
   });
 
   it('swallows failed click requests so a dead endpoint cannot break browsing', async () => {

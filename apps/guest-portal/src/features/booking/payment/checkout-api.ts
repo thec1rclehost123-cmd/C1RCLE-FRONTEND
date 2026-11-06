@@ -34,6 +34,7 @@ export function fetchQuote(input: {
   }[];
   promoCode?: string | null;
   referralCode?: string | null;
+  referralContextTokens?: readonly string[];
   upgradeFromEntitlementId?: string;
 }): Promise<CheckoutQuoteResponse> {
   return bffClient.post({

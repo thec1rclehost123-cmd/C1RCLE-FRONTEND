@@ -51,6 +51,12 @@ const promoterRequest: PartnerRequest = {
   target: { graph: 'promoter-connection', id: 'conn_1' },
 };
 
+const outgoingPromoterRequest: PartnerRequest = {
+  ...promoterRequest,
+  id: 'conn_outgoing',
+  direction: 'outgoing',
+};
+
 describe('PartnerRequestCard', () => {
   it('accepts a partnership request through the mutation API and refreshes', async () => {
     const user = userEvent.setup();
@@ -109,5 +115,11 @@ describe('PartnerRequestCard', () => {
 
     expect(screen.getByRole('button', { name: 'Accept' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Decline' })).toBeDisabled();
+  });
+
+  it('does not present an unavailable reminder as an actionable control', () => {
+    render(<PartnerRequestCard request={outgoingPromoterRequest} />);
+
+    expect(screen.queryByRole('button', { name: 'Send reminder' })).not.toBeInTheDocument();
   });
 });
