@@ -229,11 +229,12 @@ jobs:
   # The backend CI runs it for backend PRs; this job covers the other direction
   # so a frontend-only schema change cannot drift silently.
   #
-  # Compares against the backend branch this PR targets (staging -> staging,
-  # main -> main). The backend repo is private: set the BACKEND_REPO_TOKEN
-  # secret (read access to C1RCLE-BACKEND). Without it the checkout fails and
-  # this job fails loudly rather than skipping. Deliberately not
-  # `continue-on-error`.
+  # A frontend PR may declare one private paired backend PR in its body using
+  # `<!-- backend-contract-pair: owner/repository#123 -->`. While open, parity
+  # uses that exact backend head; after merge, it uses the frontend target
+  # branch. Unpaired PRs keep the target-branch fallback. The backend repo is
+  # private: BACKEND_REPO_TOKEN must read both its contents and PR metadata.
+  # Without access, this job fails loudly rather than skipping.
   changes:
     name: Detect contract changes
     if: github.event_name == 'pull_request'
@@ -266,10 +267,20 @@ jobs:
         with:
           path: frontend
           persist-credentials: false
+      - name: Resolve paired backend contract ref
+        id: backend-ref
+        working-directory: frontend
+        env:
+          BACKEND_REPO: ${{ vars.BACKEND_REPO || 'thec1rclehost123-cmd/C1RCLE-BACKEND' }}
+          BACKEND_REF_INPUT: ${{ inputs.backend_ref || vars.BACKEND_REF || '' }}
+          BACKEND_REPO_TOKEN: ${{ secrets.BACKEND_REPO_TOKEN || github.token }}
+        run: |
+          node scripts/resolve-backend-ref.test.mjs
+          node scripts/resolve-backend-ref.mjs
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           repository: ${{ vars.BACKEND_REPO || 'thec1rclehost123-cmd/C1RCLE-BACKEND' }}
-          ref: ${{ inputs.backend_ref || vars.BACKEND_REF || github.base_ref }}
+          ref: ${{ steps.backend-ref.outputs.backend_ref }}
           token: ${{ secrets.BACKEND_REPO_TOKEN || github.token }}
           path: backend
           persist-credentials: false
@@ -300,8 +311,9 @@ jobs:
       # Exit 0 = agree, 1 = drift, 2 = cannot check (missing dists).
       - name: Record exact contract pair
         run: |
-          git -C frontend rev-parse HEAD
-          git -C backend rev-parse HEAD
+          echo "Frontend SHA: $(git -C frontend rev-parse HEAD)"
+          echo "Backend SHA:  $(git -C backend rev-parse HEAD)"
+          echo "Backend ref source: ${{ steps.backend-ref.outputs.source }}"
 
       - name: Compare contracts
         working-directory: backend
