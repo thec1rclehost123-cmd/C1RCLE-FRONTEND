@@ -43,11 +43,19 @@ test.describe('C1RCLE Guest Portal', () => {
     });
   }
 
-  test('serves a real email and password sign-in form anonymously', async ({ page }) => {
+  test('offers sign-in and account creation through the anonymous email entry flow', async ({
+    page,
+  }) => {
     await page.goto('/login');
 
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
     await expect(page.getByLabel('Email address')).toBeVisible();
+    await page.getByLabel('Email address').fill('guest@example.invalid');
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Create account' })).toBeVisible();
+    await page.getByRole('button', { name: 'Sign in' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
     await expect(page.getByLabel('Password')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Forgot your password?' })).toHaveAttribute(
       'href',
