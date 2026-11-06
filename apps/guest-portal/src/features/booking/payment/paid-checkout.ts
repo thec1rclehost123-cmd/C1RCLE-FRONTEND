@@ -29,6 +29,7 @@ export interface PaidCheckoutDeps {
     idempotencyKey: string;
     promoCode?: string | null;
     referralCode?: string | null;
+    referralContextTokens?: readonly string[];
     upgradeFromEntitlementId?: string;
     attendee?: { name: string; email: string; phone?: string };
   }): Promise<CheckoutHoldResponse>;
@@ -63,6 +64,7 @@ export interface PaidCheckoutInput {
   readonly idempotencyKey: string;
   readonly promoCode?: string | null;
   readonly referralCode?: string | null;
+  readonly referralContextTokens?: readonly string[];
   readonly upgradeFromEntitlementId?: string;
   readonly attendee?: { name: string; email: string; phone?: string };
   readonly prefill?: { name?: string; email?: string; contact?: string };
@@ -115,6 +117,9 @@ export async function runPaidCheckout(
         idempotencyKey: `${input.idempotencyKey}-hold`,
         ...(input.promoCode ? { promoCode: input.promoCode } : {}),
         ...(input.referralCode ? { referralCode: input.referralCode } : {}),
+        ...(input.referralContextTokens?.length
+          ? { referralContextTokens: input.referralContextTokens }
+          : {}),
         ...(input.upgradeFromEntitlementId
           ? { upgradeFromEntitlementId: input.upgradeFromEntitlementId }
           : {}),

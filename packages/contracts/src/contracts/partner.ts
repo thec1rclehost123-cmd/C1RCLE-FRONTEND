@@ -88,14 +88,23 @@ export type SetVenueShareRequest = z.infer<typeof setVenueShareRequestSchema>;
 
 export const partnerTypeSchema = z.enum(['venue', 'host', 'promoter']);
 
-/** Bounded, server-computed Promoter activity totals from referral-link read models. */
+/** Bounded Promoter acquisition totals and settled refund-aware ticket sales. */
 export const promoterCampaignSummaryDtoSchema = z.object({
   linkCount: z.number().int().nonnegative(),
   clicks: z.number().int().nonnegative(),
   conversions: z.number().int().nonnegative(),
-  /** Gross attributed ticket value from link counters, before refund adjustments. */
+  historicalRsvpConversions: z.number().int().nonnegative(),
+  activeRsvpCount: z.number().int().nonnegative(),
   grossAttributedTicketRevenuePaise: z.number().int().nonnegative(),
+  grossAttributedTicketSalesPaise: z.number().int().nonnegative(),
+  refundedAttributedTicketSalesPaise: z.number().int().nonnegative(),
+  netAttributedTicketSalesPaise: z.number().int().nonnegative(),
+  refundValueComplete: z.boolean(),
+  recordedCommissionPaise: z.number().int().nonnegative(),
+  reversedCommissionPaise: z.number().int().nonnegative().nullable(),
+  complete: z.boolean(),
   hasMoreLinks: z.boolean(),
+  hasMoreOrders: z.boolean(),
 });
 export type PromoterCampaignSummaryDto = z.infer<typeof promoterCampaignSummaryDtoSchema>;
 
@@ -333,16 +342,24 @@ export const eventAnalyticsDtoSchema = z.object({
 export type EventAnalyticsDto = z.infer<typeof eventAnalyticsDtoSchema>;
 
 /**
- * Event-level Promoter attribution analytics. Values are backend-derived from
- * captured order snapshots and are before refund adjustments.
+ * Event-level Promoter analytics keep historical acquisition separate from
+ * settled refund and active RSVP outcomes.
  */
 export const eventPromoterAnalyticsDtoSchema = z.object({
   eventId: opaqueIdSchema,
   complete: z.boolean(),
+  refundValueComplete: z.boolean(),
+  historicalConversionCount: z.number().int().nonnegative(),
+  historicalRsvpConversionCount: z.number().int().nonnegative(),
+  activeRsvpCount: z.number().int().nonnegative(),
   capturedTicketCount: z.number().int().nonnegative(),
   attributedTicketCount: z.number().int().nonnegative(),
   attributedTicketValuePaise: z.number().int().nonnegative(),
+  grossAttributedTicketValuePaise: z.number().int().nonnegative(),
+  refundedAttributedTicketValuePaise: z.number().int().nonnegative(),
+  netAttributedTicketValuePaise: z.number().int().nonnegative(),
   recordedCommissionPaise: z.number().int().nonnegative(),
+  reversedCommissionPaise: z.number().int().nonnegative().nullable(),
   netAttributedValuePaise: z.number().int(),
   commissionPayableBalancePaise: z.number().int(),
   liabilityComplete: z.boolean(),
@@ -351,9 +368,15 @@ export const eventPromoterAnalyticsDtoSchema = z.object({
     z.object({
       promoterOrganizationId: opaqueIdSchema,
       attributedOrderCount: z.number().int().nonnegative(),
+      historicalRsvpConversionCount: z.number().int().nonnegative(),
+      activeRsvpCount: z.number().int().nonnegative(),
       attributedTicketCount: z.number().int().nonnegative(),
       attributedTicketValuePaise: z.number().int().nonnegative(),
+      grossAttributedTicketValuePaise: z.number().int().nonnegative(),
+      refundedAttributedTicketValuePaise: z.number().int().nonnegative(),
+      netAttributedTicketValuePaise: z.number().int().nonnegative(),
       recordedCommissionPaise: z.number().int().nonnegative(),
+      reversedCommissionPaise: z.number().int().nonnegative().nullable(),
       netAttributedValuePaise: z.number().int(),
       commissionPayableBalancePaise: z.number().int(),
       liabilityComplete: z.boolean(),

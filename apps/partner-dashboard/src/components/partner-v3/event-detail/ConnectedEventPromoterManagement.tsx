@@ -128,20 +128,28 @@ export function ConnectedEventPromoterManagement({
     <section className="mx-auto max-w-5xl space-y-6 py-7 text-stone-100">
       <section className="rounded-2xl border border-white/15 bg-neutral-950 p-6">
         <h2 className="text-xl font-bold">Promoter performance</h2>
-        <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+        <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Metric label="Tickets sold overall" value={performance.capturedTicketCount} />
           <Metric label="Promoter-attributed tickets" value={performance.attributedTicketCount} />
           <Metric
-            label="Attributed ticket value"
-            value={money.format(performance.attributedTicketValuePaise / 100)}
+            label="Gross attributed sales"
+            value={money.format(performance.grossAttributedTicketValuePaise / 100)}
+          />
+          <Metric
+            label="Refunded ticket value"
+            value={money.format(performance.refundedAttributedTicketValuePaise / 100)}
+          />
+          <Metric
+            label="Net attributed sales"
+            value={money.format(performance.netAttributedTicketValuePaise / 100)}
+          />
+          <Metric
+            label="Historical RSVPs"
+            value={`${performance.activeRsvpCount} active of ${performance.historicalRsvpConversionCount}`}
           />
           <Metric
             label="Commission recorded"
             value={money.format(performance.recordedCommissionPaise / 100)}
-          />
-          <Metric
-            label="Value less commission"
-            value={money.format(performance.netAttributedValuePaise / 100)}
           />
           <Metric
             label="Commission liability"
@@ -149,9 +157,15 @@ export function ConnectedEventPromoterManagement({
           />
         </dl>
         <p className="mt-4 text-xs text-stone-400">
-          Captured orders before refunds · attributed value is not sales lift · liability:{' '}
-          {performance.liabilityReadModel}
+          Historical acquisition persists after refund · attributed sales is not sales lift ·
+          liability: {performance.liabilityReadModel}
         </p>
+        {!performance.refundValueComplete ? (
+          <p role="status" className="mt-2 text-sm text-amber-200">
+            Settled refund ticket value is incomplete because an authoritative refund journal is
+            missing for one or more orders.
+          </p>
+        ) : null}
         {!performance.complete || !performance.liabilityComplete ? (
           <p role="status" className="mt-2 text-sm text-amber-200">
             {!performance.complete

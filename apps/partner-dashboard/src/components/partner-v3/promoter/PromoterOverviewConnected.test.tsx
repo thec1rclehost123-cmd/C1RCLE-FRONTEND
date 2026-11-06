@@ -10,8 +10,18 @@ describe('PromoterOverviewConnected', () => {
         linkCount: 2,
         clicks: 12,
         conversions: 3,
+        historicalRsvpConversions: 1,
+        activeRsvpCount: 1,
         grossAttributedTicketRevenuePaise: 45_000,
+        grossAttributedTicketSalesPaise: 45_000,
+        refundedAttributedTicketSalesPaise: 0,
+        netAttributedTicketSalesPaise: 45_000,
+        refundValueComplete: true,
+        recordedCommissionPaise: 4_500,
+        reversedCommissionPaise: null,
+        complete: true,
         hasMoreLinks: true,
+        hasMoreOrders: false,
       },
       events: {
         linkedEvents: [],
@@ -67,7 +77,7 @@ describe('PromoterOverviewConnected', () => {
 
     expect(screen.getByText('12')).toBeTruthy();
     expect(screen.getByText('3')).toBeTruthy();
-    expect(screen.getByText('Gross attributed ticket revenue')).toBeTruthy();
+    expect(screen.getByText('Gross attributed sales')).toBeTruthy();
     expect(screen.getByText(/first 1,000 referral links/)).toBeTruthy();
     expect(screen.getByText('Pending')).toBeTruthy();
     expect(screen.getByText('Held')).toBeTruthy();

@@ -132,39 +132,28 @@ export function PartnerRequestCard({
         </div>
       </div>
       {displayError ? <p role="alert">{displayError}</p> : null}
-      <div className={styles['requestActions']}>
-        {request.direction === 'incoming' ? (
-          <>
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={live === null || isPending}
-              title={live === null ? 'Request actions are unavailable in fixture mode' : 'Decline'}
-              onClick={handleReject}
-            >
-              {isPending && currentAction === 'reject' ? 'Declining…' : 'Decline'}
-            </Button>
-            <Button
-              type="button"
-              variant="primary"
-              disabled={live === null || isPending}
-              title={live === null ? 'Request actions are unavailable in fixture mode' : 'Accept'}
-              onClick={handleApprove}
-            >
-              {isPending && currentAction === 'approve' ? 'Accepting…' : 'Accept'}
-            </Button>
-          </>
-        ) : (
+      {request.direction === 'incoming' ? (
+        <div className={styles['requestActions']}>
           <Button
             type="button"
-            variant="secondary"
-            disabled
-            title="Reminders are not available yet"
+            variant="ghost"
+            disabled={live === null || isPending}
+            title={live === null ? 'Request actions are unavailable in fixture mode' : 'Decline'}
+            onClick={handleReject}
           >
-            Send reminder
+            {isPending && currentAction === 'reject' ? 'Declining…' : 'Decline'}
           </Button>
-        )}
-      </div>
+          <Button
+            type="button"
+            variant="primary"
+            disabled={live === null || isPending}
+            title={live === null ? 'Request actions are unavailable in fixture mode' : 'Accept'}
+            onClick={handleApprove}
+          >
+            {isPending && currentAction === 'approve' ? 'Accepting…' : 'Accept'}
+          </Button>
+        </div>
+      ) : null}
     </article>
   );
 }

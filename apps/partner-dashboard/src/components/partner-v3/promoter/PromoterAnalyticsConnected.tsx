@@ -42,9 +42,11 @@ export function PromoterAnalyticsConnected({
           <Metric label="Clicks" value={number.format(summary.clicks)} />
           <Metric label="Conversions" value={number.format(summary.conversions)} />
           <Metric
-            label="Gross attributed value"
-            value={inr(summary.grossAttributedTicketRevenuePaise)}
+            label="Gross attributed sales"
+            value={inr(summary.grossAttributedTicketSalesPaise)}
           />
+          <Metric label="Refunded value" value={inr(summary.refundedAttributedTicketSalesPaise)} />
+          <Metric label="Net attributed sales" value={inr(summary.netAttributedTicketSalesPaise)} />
         </section>
 
         <section className={styles['promoterChart']} aria-labelledby="promoter-funnel-title">
@@ -94,13 +96,28 @@ export function PromoterAnalyticsConnected({
 
         <section className={styles['promoterValue']}>
           <div>
-            <h2>Attributed ticket value</h2>
-            <strong>{inr(summary.grossAttributedTicketRevenuePaise)}</strong>
+            <h2>Commission recorded</h2>
+            <strong>{inr(summary.recordedCommissionPaise)}</strong>
           </div>
-          <span>Gross · before refunds</span>
+          <span>
+            {summary.reversedCommissionPaise === null
+              ? 'Historical commission from order snapshots'
+              : `${inr(summary.reversedCommissionPaise)} reversed in the finance journal`}
+          </span>
         </section>
-        {summary.hasMoreLinks ? (
-          <p className={styles['limitNotice']}>Summary covers the first 1,000 referral links.</p>
+        <p className={styles['limitNotice']}>
+          RSVPs: {number.format(summary.activeRsvpCount)} active of{' '}
+          {number.format(summary.historicalRsvpConversions)} historical acquisitions.
+        </p>
+        {!summary.complete || !summary.refundValueComplete ? (
+          <p className={styles['limitNotice']} role="status">
+            {!summary.refundValueComplete
+              ? 'Settled refund value is incomplete because a refund journal is missing. '
+              : ''}
+            {summary.hasMoreLinks || summary.hasMoreOrders
+              ? 'Totals cover the first 1,000 links and attributed orders.'
+              : ''}
+          </p>
         ) : null}
       </main>
     </PageContainer>

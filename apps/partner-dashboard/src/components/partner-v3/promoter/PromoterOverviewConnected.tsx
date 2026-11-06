@@ -24,7 +24,7 @@ export function PromoterOverviewConnected({ data }: { data: Overview }) {
           <p className="text-xs uppercase tracking-[0.2em] text-white/50">Promoter workspace</p>
           <h1 className="mt-2 text-3xl font-semibold">Campaign performance</h1>
           <p className="mt-2 text-sm text-white/60">
-            Figures come from the current backend referral-link and finance read models.
+            Acquisition totals come from attributed orders; commission balances come from finance.
           </p>
         </div>
         <Link
@@ -39,21 +39,27 @@ export function PromoterOverviewConnected({ data }: { data: Overview }) {
         <h2 id="referral-metrics-title" className="text-lg font-medium">
           Referral activity
         </h2>
-        <dl className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <dl className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
           <Metric label="Clicks" value={String(activity.clicks)} />
           <Metric label="Conversions" value={String(activity.conversions)} />
           <Metric
-            label="Gross attributed ticket revenue"
-            value={inr(activity.grossAttributedTicketRevenuePaise)}
+            label="Gross attributed sales"
+            value={inr(activity.grossAttributedTicketSalesPaise)}
+          />
+          <Metric label="Refunded value" value={inr(activity.refundedAttributedTicketSalesPaise)} />
+          <Metric label="Net attributed sales" value={inr(activity.netAttributedTicketSalesPaise)} />
+          <Metric
+            label="RSVPs"
+            value={`${String(activity.activeRsvpCount)} active · ${String(activity.historicalRsvpConversions)} historical`}
           />
         </dl>
         {activity.hasMoreLinks ? (
           <p className="mt-3 text-xs text-white/55">
-            Activity totals cover the first 1,000 referral links. Additional links are not included.
+          Click totals cover the first 1,000 referral links. Additional links are not included.
           </p>
         ) : null}
         <p className="mt-2 text-xs text-white/55">
-          Revenue is the gross attributed ticket value from link counters before refund adjustments.
+          Conversions preserve historical acquisitions. Net sales subtract settled attributed refunds.
           Commission balances below come from the authoritative finance read model.
         </p>
       </section>
@@ -66,7 +72,7 @@ export function PromoterOverviewConnected({ data }: { data: Overview }) {
           <Metric label="Pending" value={inr(data.balance.pendingPaise)} />
           <Metric label="Held" value={inr(data.balance.heldPaise)} />
           <Metric label="Available" value={inr(data.balance.availablePaise)} />
-          <Metric label="Lifetime" value={inr(data.balance.lifetimePaise)} />
+          <Metric label="Paid" value={inr(data.balance.paidPaise)} />
         </dl>
         <p className="mt-3 text-xs text-white/55">
           Balance source: {data.balance.readModel}. M4 does not enable live payouts.

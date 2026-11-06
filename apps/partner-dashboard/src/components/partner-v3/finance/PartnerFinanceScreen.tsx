@@ -23,6 +23,7 @@ export interface PartnerFinanceScreenProps {
   readonly data: PartnerFinanceData;
   readonly baseHref: string;
   readonly hostSettlement?: boolean;
+  readonly promoterScope?: boolean;
   readonly view?: FinanceView;
   readonly search?: string;
   readonly status?: OrderStatusFilter;
@@ -34,6 +35,7 @@ export function PartnerFinanceScreen({
   data,
   baseHref,
   hostSettlement = false,
+  promoterScope = false,
   view = 'payouts',
   search = '',
   status = 'All',
@@ -58,7 +60,7 @@ export function PartnerFinanceScreen({
             </p>
           ) : null}
         </header>
-        <FinanceTabs baseHref={baseHref} activeView={view} />
+        <FinanceTabs baseHref={baseHref} activeView={view} promoterScope={promoterScope} />
         {view === 'orders' ? (
           <FinanceOrdersTable
             rows={data.orders}

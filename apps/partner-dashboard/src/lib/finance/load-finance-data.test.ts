@@ -53,6 +53,7 @@ beforeEach(() => {
   getMock.mockReset();
   postMock.mockReset();
   getMock.mockImplementation(({ path }) => {
+    if (path.startsWith('/api/v2/promoters/')) return Promise.resolve([]);
     if (path.endsWith('/finance/balance')) return Promise.resolve(BALANCE);
     if (path.endsWith('/bank-accounts')) return Promise.resolve({ items: [] });
     return Promise.resolve(PAGE);
@@ -86,6 +87,14 @@ describe('loadFinanceData', () => {
         '/api/v2/organizations/org_1/finance/orders?limit=50',
       ]),
     );
+  });
+
+  it('validates Promoter workspace access and never loads buyer order rows', async () => {
+    await loadFinanceData({ accent: 'orange', client, promoterScope: true });
+
+    const paths = getMock.mock.calls.map((call) => call[0].path);
+    expect(paths).toContain('/api/v2/promoters/org_1/events');
+    expect(paths).not.toContain('/api/v2/organizations/org_1/finance/orders?limit=50');
   });
 
   it('refuses to guess a tenant when no org is selected', async () => {

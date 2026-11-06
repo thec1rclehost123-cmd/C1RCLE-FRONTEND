@@ -13,13 +13,16 @@ const tabs: readonly { readonly value: FinanceView; readonly label: string }[] =
 export function FinanceTabs({
   baseHref,
   activeView,
+  promoterScope = false,
 }: {
   readonly baseHref: string;
   readonly activeView: FinanceView;
+  readonly promoterScope?: boolean;
 }) {
+  const visibleTabs = promoterScope ? tabs.filter((tab) => tab.value !== 'orders') : tabs;
   return (
     <nav className={styles['financeTabs']} aria-label="Finance views">
-      {tabs.map((tab) => (
+      {visibleTabs.map((tab) => (
         <Link
           className={styles['financeTab']}
           href={tab.value === 'payouts' ? baseHref : `${baseHref}?view=${tab.value}`}
