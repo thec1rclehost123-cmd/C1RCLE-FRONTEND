@@ -3,10 +3,7 @@ import 'server-only';
 import { cookies } from 'next/headers';
 
 import { paginatedSchema } from '@c1rcle/api-client';
-import {
-  eventDtoSchema,
-  promoterAttributedOrderListResponseSchema,
-} from '@c1rcle/contracts';
+import { eventDtoSchema, promoterAttributedOrderListResponseSchema } from '@c1rcle/contracts';
 
 import { createServerApiClient } from '@/lib/api/server-client';
 import { getActiveOrgIdFromCookieHeader } from '@/lib/org/active-org-cookie';

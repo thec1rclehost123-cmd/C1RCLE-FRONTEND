@@ -145,7 +145,7 @@ export function ConnectedEventPromoterManagement({
           />
           <Metric
             label="Historical RSVPs"
-            value={`${performance.activeRsvpCount} active of ${performance.historicalRsvpConversionCount}`}
+            value={`${String(performance.activeRsvpCount)} active of ${String(performance.historicalRsvpConversionCount)}`}
           />
           <Metric
             label="Commission recorded"

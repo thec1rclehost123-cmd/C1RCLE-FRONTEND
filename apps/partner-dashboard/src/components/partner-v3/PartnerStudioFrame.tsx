@@ -90,9 +90,7 @@ export function PartnerStudioFrame({
           />
         </PageContainer>
       ) : (
-        <>
-          {children}
-        </>
+        <>{children}</>
       )}
     </PartnerShell>
   );

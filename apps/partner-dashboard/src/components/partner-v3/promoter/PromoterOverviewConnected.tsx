@@ -47,7 +47,10 @@ export function PromoterOverviewConnected({ data }: { data: Overview }) {
             value={inr(activity.grossAttributedTicketSalesPaise)}
           />
           <Metric label="Refunded value" value={inr(activity.refundedAttributedTicketSalesPaise)} />
-          <Metric label="Net attributed sales" value={inr(activity.netAttributedTicketSalesPaise)} />
+          <Metric
+            label="Net attributed sales"
+            value={inr(activity.netAttributedTicketSalesPaise)}
+          />
           <Metric
             label="RSVPs"
             value={`${String(activity.activeRsvpCount)} active · ${String(activity.historicalRsvpConversions)} historical`}
@@ -55,12 +58,12 @@ export function PromoterOverviewConnected({ data }: { data: Overview }) {
         </dl>
         {activity.hasMoreLinks ? (
           <p className="mt-3 text-xs text-white/55">
-          Click totals cover the first 1,000 referral links. Additional links are not included.
+            Click totals cover the first 1,000 referral links. Additional links are not included.
           </p>
         ) : null}
         <p className="mt-2 text-xs text-white/55">
-          Conversions preserve historical acquisitions. Net sales subtract settled attributed refunds.
-          Commission balances below come from the authoritative finance read model.
+          Conversions preserve historical acquisitions. Net sales subtract settled attributed
+          refunds. Commission balances below come from the authoritative finance read model.
         </p>
       </section>
 

@@ -83,11 +83,7 @@ export default async function StudioFinancePage({
   return studio === 'host' ? (
     <HostFinanceScreen {...props} />
   ) : studio === 'promoter' ? (
-    <PartnerFinanceScreen
-      {...props}
-      baseHref="/partner/promoter/finance"
-      promoterScope
-    />
+    <PartnerFinanceScreen {...props} baseHref="/partner/promoter/finance" promoterScope />
   ) : (
     <VenueFinanceScreen {...props} />
   );
