@@ -9,7 +9,8 @@
   },
   "git": {
     "deploymentEnabled": {
-      "codex/m4-connected-payments-20261104": false
+      "codex/m4-connected-payments-20261104": false,
+      "codex/eod-consolidated-20261104": false
     }
   }
 }

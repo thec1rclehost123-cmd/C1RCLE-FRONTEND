@@ -24,7 +24,9 @@ describe('Guest Portal proxy', () => {
     configure('production');
     const response = proxy(new NextRequest('https://thec1rcle.com/profile?view=settings'));
     expect(response.status).toBe(307);
-    expect(response.headers.get('location')).toBe('https://thec1rcle.com/login?next=%2Fprofile');
+    expect(response.headers.get('location')).toBe(
+      'https://thec1rcle.com/login?next=%2Fprofile%3Fview%3Dsettings',
+    );
     expect(response.headers.get('cache-control')).toBe('private, no-store');
     expect(response.headers.get('x-robots-tag')).toBe('noindex, follow, noarchive');
   });
@@ -99,4 +101,26 @@ describe('Guest Portal proxy', () => {
     expect(response.status).toBe(308);
     expect(response.headers.get('location')).toBe('https://thec1rcle.com/explore');
   });
+  it.each([
+    '/',
+    '/explore',
+    '/search?genre=house',
+    '/event/public-event',
+    '/hosts',
+    '/venues/public-venue',
+  ])('keeps anonymous public discovery %s accessible', (path) => {
+    configure('production');
+    const response = proxy(new NextRequest(`https://thec1rcle.com${path}`));
+    expect(response.status).toBe(200);
+    expect(response.headers.get('location')).toBeNull();
+  });
+  it.each(['/profile', '/tickets', '/checkout?eventId=fixture-event&tierId=fixture-tier'])(
+    'protects anonymous private intent %s',
+    (path) => {
+      configure('production');
+      const response = proxy(new NextRequest(`https://thec1rcle.com${path}`));
+      expect(response.status).toBe(307);
+      expect(new URL(response.headers.get('location')!).searchParams.get('next')).toBe(path);
+    },
+  );
 });

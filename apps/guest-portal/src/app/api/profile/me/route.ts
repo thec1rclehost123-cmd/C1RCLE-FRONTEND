@@ -26,30 +26,34 @@ import type { NextRequest } from 'next/server';
  * the client can tell "no profile yet" (`not_found`) apart from a real failure
  * and fall back to the session identity rather than inventing one.
  */
-export async function GET(req: NextRequest): Promise<NextResponse> {
+async function readProfile(req: NextRequest): Promise<NextResponse> {
   const originError = assertSameOrigin(req);
   if (originError !== null) {
     return originError;
   }
 
-  const gatewayResponse = await forwardToGateway('/api/v2/profile/me', {
-    method: 'GET',
-    cookie: req.headers.get('cookie'),
-  });
-  const bodyText = await gatewayResponse.text();
-
-  if (!gatewayResponse.ok) {
-    if (gatewayResponse.status === 401) {
-      return errorEnvelope('unauthorized', 'Not authenticated.', 401);
+  try {
+    const gatewayResponse = await forwardToGateway('/api/v2/profile/me', {
+      method: 'GET',
+      cookie: req.headers.get('cookie'),
+    });
+    const bodyText = await gatewayResponse.text();
+    if (!gatewayResponse.ok) {
+      if (gatewayResponse.status === 401)
+        return errorEnvelope('unauthorized', 'Not authenticated.', 401);
+      return passThroughGatewayError(gatewayResponse.status, bodyText);
     }
-    return passThroughGatewayError(gatewayResponse.status, bodyText);
+    return NextResponse.json(parseJson(bodyText), {
+      status: 200,
+      headers: { 'cache-control': 'private, no-store' },
+    });
+  } catch {
+    return gatewayUnreachable();
   }
-
-  return NextResponse.json(parseJson(bodyText), { status: 200 });
 }
 
 /** Same-origin, session- and CSRF-protected full-replace Guest profile write. */
-export async function PUT(request: NextRequest): Promise<NextResponse> {
+async function writeProfile(request: NextRequest): Promise<NextResponse> {
   const originError = assertSameOrigin(request);
   if (originError !== null) return originError;
 
@@ -91,8 +95,24 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    return NextResponse.json(parseJson(bodyText), { status: gatewayResponse.status });
+    return NextResponse.json(parseJson(bodyText), {
+      status: gatewayResponse.status,
+      headers: { 'cache-control': 'private, no-store' },
+    });
   } catch {
     return gatewayUnreachable();
   }
+}
+
+function privateResponse(response: NextResponse): NextResponse {
+  response.headers.set('cache-control', 'private, no-store');
+  return response;
+}
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  return privateResponse(await readProfile(request));
+}
+
+export async function PUT(request: NextRequest): Promise<NextResponse> {
+  return privateResponse(await writeProfile(request));
 }

@@ -42,6 +42,7 @@ import {
 
 import { isApiClientError } from '@c1rcle/api-client';
 import { getClientEnv } from '@c1rcle/config';
+import { onboardingProfileSchema } from '@c1rcle/contracts';
 
 import { useDashboardAuth } from '@/components/providers/DashboardAuthProvider';
 import { confirmPhoneOtp, getTestingBypassEnabled, sendPhoneOtp } from '@/lib/firebase/phone-auth';
@@ -87,8 +88,12 @@ import {
 } from '@/lib/onboarding/validation';
 import { routeAfterAuth } from '@/lib/org/route-after-auth';
 
-import type { OnboardingDocumentLabel, OnboardingProfileDto } from '@c1rcle/contracts';
-import type { User as SessionUser } from '@c1rcle/types';
+import type {
+  OnboardingDocumentLabel,
+  OnboardingProfileDto,
+  OnboardingRequestDto,
+  User as SessionUser,
+} from '@c1rcle/contracts';
 import type { ConfirmationResult } from 'firebase/auth';
 
 type OnboardingPlan = 'basic' | 'silver' | 'diamond';
@@ -197,6 +202,7 @@ export function OnboardingPage() {
   const [entityType, setEntityType] = useState<EntityType>('individual');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [initialLoadFailed, setInitialLoadFailed] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   // Success screen status — driven by the real application status from getMine(),
@@ -204,7 +210,11 @@ export function OnboardingPage() {
   const [approvalStatus, setApprovalStatus] = useState<
     'pending' | 'approved' | 'changes_requested' | 'rejected'
   >('pending');
-  const [reviewNote] = useState('');
+  const [reviewNote, setReviewNote] = useState('');
+  const [applicationDocuments, setApplicationDocuments] = useState<
+    OnboardingRequestDto['documents']
+  >([]);
+  const [kycDetails, setKycDetails] = useState<OnboardingProfileDto['kyc']>({});
   const [submittedRequestId, setSubmittedRequestId] = useState<string | null>(null);
   // B2: one Idempotency-Key per user intent — minted on the first click and
   // reused across retries of that same click so a retry after a partial
@@ -215,7 +225,7 @@ export function OnboardingPage() {
 
   // KYC step state — documents are uploaded/confirmed server-side as each
   // KycFileZone completes; kycStepData is local UI bookkeeping only now.
-  const [, setKycSubmitting] = useState(false);
+  const [kycSubmitting, setKycSubmitting] = useState(false);
   const [kycError, setKycError] = useState('');
 
   // Existing user detection state
@@ -353,25 +363,6 @@ export function OnboardingPage() {
     };
   }, [entityType, formData, otpPhone]);
 
-  // ── Save onboarding progress so the user can resume mid-form ─────────
-  // `currentStep` is UI-only now — the real backend has no step field, it
-  // just stores profile fields; resume position is re-derived from those
-  // fields + document/status state via `getMine()`, not from a stored step.
-  // `plan`/`role`/`association`/`associatedHostId`/`upcomingEventsText`/
-  // `pastEventsText` have no home in `saveOnboardingProgressSchema` (it's
-  // `.strict()`) so they stay purely local UI state, never sent to the server.
-  const saveProgress = useCallback(
-    async (_currentStep: OnboardingStep) => {
-      if (!submittedRequestId) return;
-      try {
-        await saveOnboardingProgress(submittedRequestId, profilePayload());
-      } catch {
-        /* silent — non-critical, matches the prior best-effort autosave */
-      }
-    },
-    [submittedRequestId, profilePayload],
-  );
-
   // Dynamic sequence depends on entity type chosen at step 4
   const stepSequence = getStepSequence(entityType);
 
@@ -415,18 +406,6 @@ export function OnboardingPage() {
           if (application) {
             setSubmittedRequestId(application.id);
 
-            if (application.status !== 'draft') {
-              // submitted / changes_requested / approved / rejected — the
-              // success screen renders the real status, no further wizard
-              // steps to resume into.
-              setApprovalStatus(
-                application.status === 'submitted' ? 'pending' : application.status,
-              );
-              setStep('success');
-              initialised.current = true;
-              return;
-            }
-
             // Draft application — resume mid-wizard from its saved profile.
             // The backend has no stored "step"; missingDocuments tells us
             // whether they still owe KYC images or are ready to submit.
@@ -453,6 +432,23 @@ export function OnboardingPage() {
               setOtpPhone(p.phone);
             }
 
+            setPartnerType(application.requestedType);
+            setReviewNote(application.reviewNote ?? '');
+            setApplicationDocuments(application.documents);
+            setKycDetails(application.profile.kyc ?? {});
+
+            if (application.status !== 'draft') {
+              // submitted / changes_requested / approved / rejected — the
+              // success screen renders the real status, no further wizard
+              // steps to resume into.
+              setApprovalStatus(
+                application.status === 'submitted' ? 'pending' : application.status,
+              );
+              setStep('success');
+              initialised.current = true;
+              return;
+            }
+
             const seq = getStepSequence(isBusiness ? 'business' : 'individual');
             const resumeStep =
               application.missingDocuments.length > 0
@@ -470,10 +466,11 @@ export function OnboardingPage() {
           setFormData((prev) => ({ ...prev, email: authUser.email }));
           setOtpEmail(authUser.email);
           initialised.current = true;
-          setStep('phone_verify');
+          setStep(authUser.emailVerified === false ? 'email_verify' : 'phone_verify');
           return;
         } catch {
-          /* fall through — restart the wizard from `role` */
+          setInitialLoadFailed(true);
+          return;
         }
       }
       setStep('role');
@@ -489,6 +486,7 @@ export function OnboardingPage() {
       try {
         const application = await getMine();
         if (!application) return;
+        setReviewNote(application.reviewNote ?? '');
         setApprovalStatus(
           application.status === 'submitted' || application.status === 'draft'
             ? 'pending'
@@ -832,15 +830,18 @@ export function OnboardingPage() {
       // Open the application now that we have a real session — this is the
       // one call that persists the full profile server-side; the request id
       // it returns backs every subsequent saveProgress/upload/submit call.
-      const application = await startOnboarding(
-        {
-          requestedType: partnerType,
-          plan: DEFAULT_PLAN,
-          profile: profilePayload(),
-        },
-        (startOnboardingKeyRef.current ??= crypto.randomUUID()),
-      );
+      const application = submittedRequestId
+        ? await saveOnboardingProgress(submittedRequestId, profilePayload())
+        : await startOnboarding(
+            {
+              requestedType: partnerType,
+              plan: DEFAULT_PLAN,
+              profile: profilePayload(),
+            },
+            (startOnboardingKeyRef.current ??= crypto.randomUUID()),
+          );
       setSubmittedRequestId(application.id);
+      setApplicationDocuments(application.documents);
       setFieldErrors({});
 
       // Advance to the first KYC step in the sequence
@@ -906,26 +907,71 @@ export function OnboardingPage() {
   // Documents are already uploaded/confirmed server-side by KycFileZone as
   // each field is filled in — this only advances the wizard.
   const handleKycStep = useCallback(
-    (stepId: string, _data: Record<string, unknown>) => {
-      const idx = stepSequence.indexOf(stepId as OnboardingStep);
-      const isLastStep = idx === stepSequence.length - 2; // second-to-last (before "success")
-      if (isLastStep) {
-        void submitApplication(stepId, _data);
-      } else {
-        if (idx !== -1 && idx < stepSequence.length - 1) {
+    async (stepId: string, data: Record<string, unknown>) => {
+      if (kycSubmitting || !submittedRequestId) return;
+      setKycSubmitting(true);
+      setKycError('');
+      try {
+        const identity = { idType: data['idType'], idNumber: data['idNumber'] };
+        const kyc =
+          stepId === 'kyc_business'
+            ? { business: { pan: data['pan'], gst: data['gst'], address: data['address'] } }
+            : stepId === 'kyc_signatory'
+              ? {
+                  signatory: {
+                    ...identity,
+                    fullName: data['fullName'],
+                    designation: data['designation'],
+                    email: data['email'],
+                    phone: data['phone'],
+                    declared: data['declared'],
+                  },
+                }
+              : { identity };
+        const patch = onboardingProfileSchema.partial().parse({ kyc });
+        const saved = await saveOnboardingProgress(submittedRequestId, patch);
+        setKycDetails(saved.profile.kyc ?? {});
+        setApplicationDocuments(saved.documents);
+        const idx = stepSequence.indexOf(stepId as OnboardingStep);
+        if (idx === stepSequence.length - 2) await submitApplication(stepId, data);
+        else {
           const next = stepSequence[idx + 1];
-          if (next) {
-            setStep(next);
-            void saveProgress(next);
-          }
+          if (next) setStep(next);
         }
+      } catch {
+        setKycError('Your verification details could not be saved. Check them and try again.');
+      } finally {
+        setKycSubmitting(false);
       }
     },
-    [stepSequence, submitApplication, saveProgress],
+    [kycSubmitting, submittedRequestId, stepSequence, submitApplication],
   );
 
   const currentStepIndex = stepSequence.indexOf(step);
   const requestedType = partnerType;
+  const documentPath = (label: string) =>
+    applicationDocuments.find((doc) => doc.label === label && doc.status !== 'rejected')
+      ?.storagePath;
+
+  if (initialLoadFailed)
+    return (
+      <main className="mx-auto max-w-xl px-6 py-24 space-y-6">
+        <h1 className="text-display-sm text-[var(--text-primary)]">
+          Your application could not be loaded
+        </h1>
+        <p className="text-body text-[var(--text-secondary)]">
+          Your saved progress is unchanged. Try loading it again before continuing.
+        </p>
+        <button
+          className="rounded-xl bg-[var(--accent-primary)] px-6 py-3 text-white"
+          onClick={() => {
+            window.location.reload();
+          }}
+        >
+          Try again
+        </button>
+      </main>
+    );
 
   return (
     <div className="min-h-screen bg-[var(--surface-base)]">
@@ -1713,11 +1759,16 @@ export function OnboardingPage() {
               {kycError && <ErrorBanner error={kycError} />}
               <KycIdentityForm
                 requestId={submittedRequestId}
-                initialData={{}}
-                onSubmit={(data) => {
-                  handleKycStep('kyc_identity', data);
+                initialData={{
+                  ...kycDetails?.identity,
+                  docFrontUrl: documentPath('id_front'),
+                  docBackUrl: documentPath('id_back'),
+                  selfieUrl: documentPath('selfie'),
                 }}
-                submitting={false}
+                onSubmit={(data) => {
+                  void handleKycStep('kyc_identity', data);
+                }}
+                submitting={kycSubmitting}
                 submitLabel="Continue"
               />
             </motion.div>
@@ -1742,14 +1793,16 @@ export function OnboardingPage() {
               <KycBusinessForm
                 requestId={submittedRequestId}
                 initialData={{
+                  ...kycDetails?.business,
                   legalName: formData.name,
                   businessType: formData.businessType,
                   cin: formData.registrationNumber,
+                  regDocUrl: documentPath('registration_certificate'),
                 }}
                 onSubmit={(data) => {
-                  handleKycStep('kyc_business', data);
+                  void handleKycStep('kyc_business', data);
                 }}
-                submitting={false}
+                submitting={kycSubmitting}
                 submitLabel="Continue"
               />
             </motion.div>
@@ -1773,11 +1826,19 @@ export function OnboardingPage() {
               {kycError && <ErrorBanner error={kycError} />}
               <KycSignatoryForm
                 requestId={submittedRequestId}
-                initialData={{}}
-                onSubmit={(data) => {
-                  handleKycStep('kyc_signatory', data);
+                initialData={{
+                  fullName: formData.contactPerson,
+                  email: formData.email,
+                  phone: formData.phone,
+                  ...kycDetails?.signatory,
+                  docFrontUrl: documentPath('sig_id_front'),
+                  docBackUrl: documentPath('sig_id_back'),
+                  selfieUrl: documentPath('sig_selfie'),
                 }}
-                submitting={false}
+                onSubmit={(data) => {
+                  void handleKycStep('kyc_signatory', data);
+                }}
+                submitting={kycSubmitting}
                 submitLabel="Continue"
               />
             </motion.div>
@@ -3064,7 +3125,7 @@ function KycSignatoryForm({
     (initialData['docBackUrl'] as string) || null,
   );
   const [selfie, setSelfie] = useState<string | null>((initialData['selfieUrl'] as string) || null);
-  const [declared, setDeclared] = useState(false);
+  const [declared, setDeclared] = useState(Boolean(initialData['declared']));
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Business applicants must supply sig_id_front, sig_id_back and sig_selfie

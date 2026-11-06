@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { forwardToGateway } from '@/lib/bff/auth-proxy';
 
 import { POST as changePassword } from './change-password/route';
+import { POST as forgotPassword } from './forgot-password/route';
 import { POST as login } from './login/route';
 import { POST as logout } from './logout/route';
 import { POST as refresh } from './refresh/route';
@@ -368,5 +369,25 @@ describe('GET /api/auth/session', () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get('set-cookie')).toContain('partner.c1rcle.csrf=');
+  });
+});
+
+describe('Partner recovery destination', () => {
+  it('binds the callback origin to this BFF, ignoring caller body destinations', async () => {
+    mockForward.mockResolvedValueOnce(gatewayResponse({ status: true }));
+    const body = { email: 'synthetic@example.invalid', redirectTo: 'https://attacker.example' };
+    const response = await forgotPassword(
+      new NextRequest(`${APP_ORIGIN}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: { origin: APP_ORIGIN, 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(mockForward).toHaveBeenCalledWith('/api/v2/auth/forgot-password', {
+      method: 'POST',
+      body,
+      headers: { origin: APP_ORIGIN },
+    });
   });
 });

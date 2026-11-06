@@ -139,7 +139,7 @@ describe('Partner staff section', () => {
     expect(screen.getByText(/Jan 15, 2026/)).toBeInTheDocument();
   });
 
-  it('shows "Edit role" button only when isAdmin is true', () => {
+  it('shows "Manage access" button only when isAdmin is true', () => {
     const { rerender } = render(
       <VenuePartnersScreen
         data={makeData()}
@@ -151,7 +151,7 @@ describe('Partner staff section', () => {
       />,
     );
 
-    expect(screen.queryByRole('button', { name: 'Edit role' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Manage access' })).not.toBeInTheDocument();
 
     rerender(
       <VenuePartnersScreen
@@ -164,10 +164,10 @@ describe('Partner staff section', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: 'Edit role' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Manage access' })).toBeInTheDocument();
   });
 
-  it('shows "Owner (Primary)" badge instead of "Edit role" button for owner members', () => {
+  it('shows "Owner (Primary)" badge instead of "Manage access" button for owner members', () => {
     render(
       <VenuePartnersScreen
         data={makeData({
@@ -195,7 +195,7 @@ describe('Partner staff section', () => {
     );
 
     expect(screen.getByText('Owner (Primary)')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Edit role' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Manage access' })).not.toBeInTheDocument();
   });
 
   it('opens edit role dialog, changes role, and calls staffApi.updateMemberRole', async () => {
@@ -221,7 +221,7 @@ describe('Partner staff section', () => {
       />,
     );
 
-    const editRoleBtn = screen.getByRole('button', { name: 'Edit role' });
+    const editRoleBtn = screen.getByRole('button', { name: 'Manage access' });
     fireEvent.click(editRoleBtn);
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();

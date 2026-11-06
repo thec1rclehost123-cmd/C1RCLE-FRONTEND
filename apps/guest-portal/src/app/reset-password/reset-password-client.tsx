@@ -57,7 +57,7 @@ export function ResetPasswordClient() {
     } catch (caught) {
       if (isApiClientError(caught) && caught.status === 429) {
         setError('Too many attempts. Please wait a minute and try again.');
-      } else if (isApiClientError(caught) && caught.status !== undefined && caught.status >= 500) {
+      } else if (!isApiClientError(caught) || caught.status === undefined || caught.status >= 500) {
         setError('We could not reset your password right now. Please try again shortly.');
       } else {
         setError('This reset link is invalid or has expired. Request a new one.');

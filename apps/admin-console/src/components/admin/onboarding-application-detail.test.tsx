@@ -16,6 +16,17 @@ describe('OnboardingApplicationDetail promoter agreement evidence', () => {
         contactPerson: 'Test User',
         phone: '000',
         city: 'Pune',
+        kyc: {
+          business: { pan: 'ABCDE1234F', address: 'Synthetic acceptance address' },
+          signatory: {
+            fullName: 'Synthetic Representative',
+            designation: 'director',
+            email: 'synthetic@example.invalid',
+            idType: 'passport',
+            idNumber: 'P1234567',
+            declared: true,
+          },
+        },
       },
       status: 'submitted',
       plan: 'basic',
@@ -48,6 +59,10 @@ describe('OnboardingApplicationDetail promoter agreement evidence', () => {
       />,
     );
 
+    expect(screen.getByText('ABCDE1234F')).toBeInTheDocument();
+    expect(screen.getByText('Synthetic acceptance address')).toBeInTheDocument();
+    expect(screen.getByText('P1234567')).toBeInTheDocument();
+    expect(screen.getByText(/Format checks do not confirm identity/)).toBeInTheDocument();
     expect(screen.getByText(/m4-test-fixture-2026-10-28-v1 · test_fixture/)).toBeInTheDocument();
     expect(
       screen.getByText(/Test fixture only\. This is not approved legal wording/),

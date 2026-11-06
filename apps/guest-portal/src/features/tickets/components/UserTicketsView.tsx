@@ -46,7 +46,7 @@ export function UserTicketsView({ wallet, onRefresh }: UserTicketsViewProps) {
     ? bookings.find((booking) => booking.tickets.some((ticket) => ticket.id === selectedTicket.id))
     : undefined;
   return (
-    <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 pb-24 pt-32 text-white sm:px-8 sm:pt-36">
+    <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col overflow-x-clip px-4 pb-24 pt-32 text-white sm:px-8 sm:pt-36">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-[-20vw] top-[-8rem] z-0 h-[38rem] bg-[radial-gradient(ellipse_at_50%_0%,rgba(255,68,0,0.24)_0%,rgba(255,68,0,0.09)_42%,transparent_72%)] blur-2xl"

@@ -1,0 +1,8 @@
+
+ RUN  v4.1.11 /Users/aayushdivase/Desktop/C1RCLE-PRODUCT-COMPLETENESS-BACKEND/apps/api-gateway
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  22:17:56
+   Duration  5.08s (transform 1.80s, setup 0ms, import 822ms, tests 4.11s, environment 0ms)

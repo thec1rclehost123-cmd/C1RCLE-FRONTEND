@@ -34,7 +34,13 @@ function chartPaths(points: readonly number[]) {
     y: bottom - (point / max) * (bottom - top),
   }));
   const line = coordinates
-    .map(({ x, y }, index) => `${index === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`)
+    .map(({ x, y }, index) => {
+      const previous = coordinates[index - 1];
+      if (!previous) return `M ${x.toFixed(1)} ${y.toFixed(1)}`;
+      // Horizontal control handles stay within each observed interval: no overshoot.
+      const middle = (previous.x + x) / 2;
+      return `C ${middle.toFixed(1)} ${previous.y.toFixed(1)} ${middle.toFixed(1)} ${y.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)}`;
+    })
     .join(' ');
   const area = [line, 'L', String(width), String(height), 'L 0', String(height), 'Z'].join(' ');
   return { line, area, coordinates, max };
@@ -135,7 +141,7 @@ export function OverviewTrendCard({
             </button>
           ))}
         </div>
-        {rangePlacement === 'top' ? (
+        {rangePlacement === 'top' && rangeOptions.length > 0 ? (
           <div className={styles['segmentedControl']} aria-label="Performance range">
             {rangeOptions.map((option) => (
               <button
@@ -157,10 +163,12 @@ export function OverviewTrendCard({
         <>
           <div className={styles['trendMetric']}>
             <h2 id="overview-performance-title">{active.value}</h2>
-            <span>
-              <TrendUpIcon size={13} aria-hidden="true" />
-              {active.delta}
-            </span>
+            {active.delta ? (
+              <span>
+                <TrendUpIcon size={13} aria-hidden="true" />
+                {active.delta}
+              </span>
+            ) : null}
           </div>
           <p>{active.caption}</p>
         </>
@@ -218,11 +226,11 @@ export function OverviewTrendCard({
           >
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--overview-accent)" stopOpacity="0.5" />
+                <stop offset="0%" stopColor="var(--overview-accent)" stopOpacity="0.18" />
                 <stop offset="100%" stopColor="var(--overview-accent)" stopOpacity="0" />
               </linearGradient>
             </defs>
-            {[10, 95, 180].map((y) => (
+            {[180].map((y) => (
               <line
                 key={y}
                 x1="0"
@@ -300,7 +308,7 @@ export function OverviewTrendCard({
           </div>
         </div>
       </div>
-      {rangePlacement === 'bottom' ? (
+      {rangePlacement === 'bottom' && rangeOptions.length > 0 ? (
         <div className={[styles['trendRangeRow'], styles['trendRangeBottom']].join(' ')}>
           <div className={styles['segmentedControl']} aria-label="Performance range">
             {rangeOptions.map((option) => (

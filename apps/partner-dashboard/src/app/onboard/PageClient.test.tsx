@@ -115,6 +115,7 @@ async function upload(input: HTMLInputElement, label: string) {
 describe('Partner onboarding wizard', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mocks.saveProgress.mockImplementation((_id, patch) => Promise.resolve(dto({}, patch)));
     mocks.auth.user = { id: 'user_1', email: 'a@b.co' };
     mocks.auth.loading = false;
     mocks.auth.isApproved = false;
@@ -146,6 +147,30 @@ describe('Partner onboarding wizard', () => {
       expect(await screen.findByText('Business Documents', { selector: 'h1' })).toBeInTheDocument();
     });
 
+    it('restores the saved business signatory declaration on resume', async () => {
+      mocks.getMine.mockResolvedValue(
+        dto(
+          { missingDocuments: [] },
+          {
+            entityType: 'business',
+            kyc: {
+              signatory: {
+                fullName: 'Synthetic Signatory',
+                designation: 'director',
+                email: 'synthetic@example.invalid',
+                idType: 'passport',
+                idNumber: 'P1234567',
+                declared: true,
+              },
+            },
+          },
+        ),
+      );
+      render(<OnboardingPage />);
+      expect(await screen.findByDisplayValue('Synthetic Signatory')).toBeInTheDocument();
+      expect(screen.getByRole('checkbox')).toBeChecked();
+    });
+
     it('resumes at the last KYC step when no documents are missing', async () => {
       mocks.getMine.mockResolvedValue(dto({ missingDocuments: [] }));
       render(<OnboardingPage />);
@@ -159,6 +184,88 @@ describe('Partner onboarding wizard', () => {
       mocks.getMine.mockResolvedValue(dto({ status, missingDocuments: [] }));
       render(<OnboardingPage />);
       expect(await screen.findByText(text)).toBeInTheDocument();
+    });
+
+    it.each([
+      ['host', 'Brand / Collective Name'],
+      ['venue', 'Venue Name'],
+      ['promoter', 'Your Full Name'],
+    ])('restores %s changes and patches the existing application', async (requestedType, label) => {
+      mocks.getMine.mockResolvedValue(
+        dto(
+          {
+            requestedType,
+            status: 'changes_requested',
+            reviewNote: 'Please replace the blurred selfie.',
+          },
+          { contactPerson: 'Applicant Name' },
+        ),
+      );
+      mocks.saveProgress.mockResolvedValue(dto({ requestedType, status: 'changes_requested' }));
+      render(<OnboardingPage />);
+      expect(await screen.findByText('Please replace the blurred selfie.')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /Fix Profile/ }));
+      expect(screen.getByLabelText(label)).toHaveValue('Acme');
+      fireEvent.click(screen.getByRole('button', { name: /Continue to Documents/ }));
+      await waitFor(() => {
+        expect(mocks.saveProgress).toHaveBeenCalledWith(
+          'req_1',
+          expect.objectContaining({ legalName: 'Acme', contactPerson: 'Applicant Name' }),
+        );
+      });
+      expect(mocks.start).not.toHaveBeenCalled();
+    });
+
+    it('restores uploaded documents after refresh without re-uploading them', async () => {
+      mocks.getMine.mockResolvedValue(
+        dto({
+          documents: ['id_front', 'id_back', 'selfie'].map((label) => ({
+            label,
+            storagePath: `kyc/user_1/req_1/${label}`,
+            status: 'pending',
+          })),
+          missingDocuments: [],
+        }),
+      );
+      render(<OnboardingPage />);
+      await screen.findByText('Verify Your Identity');
+      expect(screen.getAllByText('Uploaded')).toHaveLength(3);
+      expect(mocks.uploadDocument).not.toHaveBeenCalled();
+    });
+
+    it('resumes privately persisted identity fields with the existing document slots', async () => {
+      mocks.getMine.mockResolvedValue(
+        dto(
+          {
+            documents: ['id_front', 'id_back', 'selfie'].map((label) => ({
+              label,
+              storagePath: `kyc/user_1/req_1/${label}`,
+              status: 'pending',
+            })),
+            missingDocuments: [],
+          },
+          { kyc: { identity: { idType: 'passport', idNumber: 'P1234567' } } },
+        ),
+      );
+      render(<OnboardingPage />);
+      expect(await screen.findByLabelText('ID Number')).toHaveValue('P1234567');
+      expect(screen.getByLabelText('ID Type')).toHaveValue('passport');
+      fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+      await waitFor(() => {
+        expect(mocks.saveProgress).toHaveBeenCalledWith('req_1', {
+          kyc: { identity: { idType: 'passport', idNumber: 'P1234567' } },
+        });
+      });
+    });
+
+    it('offers bounded retry instead of starting over when saved progress cannot be loaded', async () => {
+      mocks.getMine.mockRejectedValue(new Error('network unavailable'));
+      render(<OnboardingPage />);
+      expect(
+        await screen.findByRole('heading', { name: 'Your application could not be loaded' }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Join the Network' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
     });
 
     it('routes an approved user away from the wizard', async () => {
@@ -407,9 +514,13 @@ describe('Partner onboarding wizard', () => {
       }
       expect(sigNext).toBeDisabled(); // details + declaration missing
 
+      expect(screen.getByPlaceholderText('As on government ID')).toHaveValue('A');
+      await user.clear(screen.getByPlaceholderText('As on government ID'));
       await user.type(screen.getByPlaceholderText('As on government ID'), 'Jane Doe');
       const [designation, idType] = screen.getAllByRole('combobox');
       await user.selectOptions(designation as HTMLElement, 'director');
+      expect(screen.getByPlaceholderText('representative@company.com')).toHaveValue('a@b.co');
+      await user.clear(screen.getByPlaceholderText('representative@company.com'));
       await user.type(screen.getByPlaceholderText('representative@company.com'), 'j@d.co');
       await user.selectOptions(idType as HTMLElement, 'passport');
       await user.type(screen.getByPlaceholderText('Enter ID number'), 'P7654321');

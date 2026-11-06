@@ -5,8 +5,12 @@ import { useSearchParams } from 'next/navigation';
 import React, { useState } from 'react';
 
 import { isApiClientError } from '@c1rcle/api-client';
-import { login } from '@c1rcle/auth';
+import { login, useSessionStore } from '@c1rcle/auth';
 
+import { GoogleButton } from '@/features/auth/components/GoogleButton';
+import { guestContinuePath } from '@/lib/auth/continue-path';
+import { isGuestProtectedPath } from '@/lib/auth/protected-path';
+import { captureGuestReturnFragment } from '@/lib/auth/return-fragment';
 import { safeNextPath } from '@/lib/auth/safe-next-path';
 
 import {
@@ -28,15 +32,17 @@ function describeLoginError(error: unknown): string {
   return 'We could not sign you in. Check your details and try again.';
 }
 
-export function LoginPageClient() {
+export function LoginPageClient({
+  suggestedEmail = '',
+}: { readonly suggestedEmail?: string } = {}) {
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(suggestedEmail);
   const [password, setPassword] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const expired = searchParams.get('reason') === 'expired';
-  const nextPath = safeNextPath(searchParams.get('next'));
+  const nextPath = safeNextPath(searchParams.get('next'), '/explore');
 
   const handleSubmit = async (event: React.SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -45,9 +51,15 @@ export function LoginPageClient() {
     setPending(true);
     try {
       await login({ email: email.trim(), password });
-      // Read the newly issued session cookie in a fresh document, avoiding
-      // competing replace/refresh requests against the pre-login router cache.
-      globalThis.location.assign(nextPath);
+      captureGuestReturnFragment(nextPath);
+      const user = useSessionStore.getState().session?.user;
+      // Read the new session in a fresh document while preserving the trusted
+      // verification/onboarding continuation and any ticket return fragment.
+      globalThis.location.assign(
+        user?.emailVerified === false && isGuestProtectedPath(nextPath)
+          ? `/verify-email?next=${encodeURIComponent(nextPath)}`
+          : guestContinuePath(nextPath),
+      );
     } catch (caught) {
       setError(describeLoginError(caught));
       setPending(false);
@@ -59,6 +71,13 @@ export function LoginPageClient() {
       {expired && !error && (
         <p role="status" className="mb-5 text-sm text-white/60">
           Your session expired. Sign in again to continue.
+        </p>
+      )}
+      <GoogleButton next={nextPath} />
+      {searchParams.get('reason') === 'google' && (
+        <p role="alert" className="mb-4 text-sm text-red-300">
+          Google sign-in was not completed. Try again, or sign in with your email to connect your
+          account.
         </p>
       )}
       <form
@@ -126,9 +145,20 @@ export function LoginPageClient() {
         <Link href="/forgot-password" className="underline hover:text-white">
           Forgot your password?
         </Link>
+        <Link
+          href={`/verify-email?next=${encodeURIComponent(nextPath)}`}
+          className="underline hover:text-white"
+        >
+          Finish email verification
+        </Link>
         <p>
-          New to THE C1RCLE? Guest sign-up is not available on the web yet. Create your account in
-          the mobile app, then sign in here.
+          New to THE C1RCLE?{' '}
+          <Link
+            href={`/signup?next=${encodeURIComponent(nextPath)}`}
+            className="underline hover:text-white"
+          >
+            Create an account
+          </Link>
         </p>
       </div>
     </AuthShell>

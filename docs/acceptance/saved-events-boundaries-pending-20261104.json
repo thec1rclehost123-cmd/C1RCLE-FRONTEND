@@ -1,0 +1,64 @@
+{
+  "FRONTEND": {
+    "start": "4270b4c9b8baf3b86f567628921ea9c52b32e96b",
+    "head": "2f3919d4eb10def67120c63be5e30edb86a32fd0",
+    "passPaths": [
+      "apps/guest-portal/src/app/api/saved-events/[[...segments]]/route.test.ts",
+      "apps/guest-portal/src/app/api/saved-events/[[...segments]]/route.ts",
+      "apps/guest-portal/src/app/profile/saved/page.tsx",
+      "apps/guest-portal/src/features/profile/components/ProfileOverview.tsx",
+      "apps/guest-portal/src/features/saved-events/SaveEventControl.test.tsx",
+      "apps/guest-portal/src/features/saved-events/SaveEventControl.tsx",
+      "apps/guest-portal/src/features/saved-events/SavedEventsView.test.tsx",
+      "apps/guest-portal/src/features/saved-events/SavedEventsView.tsx",
+      "apps/guest-portal/src/features/saved-events/client.ts",
+      "docs/acceptance/saved-events-20261104.md",
+      "docs/acceptance/saved-events-boundaries-20261104.json",
+      "docs/acceptance/saved-events-m3-proposed.patch",
+      "docs/acceptance/screenshots/saved-events-20261104/empty-phone.png",
+      "docs/acceptance/screenshots/saved-events-20261104/view-desktop.png",
+      "docs/acceptance/screenshots/saved-events-20261104/view-phone.png",
+      "packages/contracts/package.json",
+      "packages/contracts/src/contracts/saved-events.ts"
+    ],
+    "milestones": {
+      "M3": {
+        "head": "283299f9b90d3d07753ced28855eae4162a4bb50",
+        "passOverlap": []
+      },
+      "M4": {
+        "head": "08c479ba0ed3c6ffcafae509f3703f59a58076d2",
+        "passOverlap": []
+      }
+    }
+  },
+  "BACKEND": {
+    "start": "a7ae1fcdb199feec473816d0cfe0e999e09cd17b",
+    "head": "cc8b943f5ae0c42a2ddc072b93933ef858aed025",
+    "passPaths": [
+      "apps/api-gateway/src/lib/saved-events.ts",
+      "apps/api-gateway/src/routes/v2/profile.ts",
+      "apps/api-gateway/src/routes/v2/saved-events.integration.test.ts",
+      "apps/api-gateway/src/routes/v2/saved-events.ts",
+      "packages/contracts/package.json",
+      "packages/contracts/src/contracts/saved-events.ts",
+      "packages/core/package.json",
+      "packages/core/src/application/saved-events/saved-event-service.test.ts",
+      "packages/core/src/application/saved-events/saved-event-service.ts",
+      "packages/core/src/domain/ports/saved-event-repository.ts",
+      "packages/core/src/infrastructure/firestore/firestore-saved-event-repository.ts",
+      "packages/core/src/infrastructure/memory/memory-saved-event-repository.ts",
+      "packages/core/src/saved-events.ts"
+    ],
+    "milestones": {
+      "M3": {
+        "head": "f01c3eb042436c539ab91982f066fffcdac65055",
+        "passOverlap": []
+      },
+      "M4": {
+        "head": "05a5855c0af8efe3fe3b13d41b929a19186c8f40",
+        "passOverlap": []
+      }
+    }
+  }
+}

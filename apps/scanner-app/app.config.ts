@@ -1,5 +1,11 @@
 import type { ExpoConfig } from 'expo/config';
 
+const appEnv = process.env['EXPO_PUBLIC_ENV'] ?? 'staging';
+const apiBaseUrl = process.env['EXPO_PUBLIC_API_BASE_URL'];
+if (appEnv === 'production' && !apiBaseUrl) {
+  throw new Error('EXPO_PUBLIC_API_BASE_URL is required for production Scanner builds');
+}
+
 const config: ExpoConfig = {
   name: 'C1RCLE Scanner',
   slug: 'c1rcle-scanner',
@@ -42,8 +48,8 @@ const config: ExpoConfig = {
     ],
   ],
   extra: {
-    apiBaseUrl: process.env['EXPO_PUBLIC_API_BASE_URL'] ?? 'http://localhost:8080',
-    appEnv: process.env['EXPO_PUBLIC_ENV'] ?? 'staging',
+    apiBaseUrl: apiBaseUrl ?? 'http://localhost:8080',
+    appEnv,
     organizationId: process.env['EXPO_PUBLIC_ORGANIZATION_ID'] ?? null,
   },
 };

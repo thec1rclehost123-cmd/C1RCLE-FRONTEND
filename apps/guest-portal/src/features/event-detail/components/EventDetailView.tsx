@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 import { CheckoutView } from '@/features/booking/components/CheckoutView';
@@ -54,12 +54,14 @@ export function EventDetailView({
   recommendations = [],
   referralCode,
   accessGrantId,
+  saveAction,
 }: {
   event: EventDetailFixture;
   checkoutEvent: BookingEventFixture;
   recommendations?: readonly ExploreEvent[];
   referralCode?: string;
   accessGrantId?: string;
+  saveAction?: ReactNode;
 }) {
   const grantFromUrl = useTicketAccessGrantId();
   const effectiveGrantId = accessGrantId ?? grantFromUrl;
@@ -207,6 +209,28 @@ export function EventDetailView({
                 <span className="font-bold text-white">{event.host}</span>
               </Link>
             ) : null}
+
+            <div className="mt-4 flex gap-2.5">
+              {saveAction ?? (
+                <button
+                  type="button"
+                  aria-label="Save event"
+                  className="min-h-9 rounded-full border border-white/15 bg-black/50 px-4 text-[11px] font-semibold"
+                >
+                  ♡ Save
+                </button>
+              )}
+              <button
+                type="button"
+                aria-label="Share event"
+                onClick={() => {
+                  void navigator.clipboard.writeText(window.location.href);
+                }}
+                className="min-h-9 rounded-full border border-white/15 bg-black/50 px-4 text-[11px] font-semibold"
+              >
+                Share ↗
+              </button>
+            </div>
 
             <section className="mt-6 border-t border-white/10 py-5">
               <h2 className="text-lg font-bold sm:text-xl">About the event</h2>
@@ -377,25 +401,6 @@ export function EventDetailView({
               accentTone={event.accentTone}
               {...(referralCode ? { referralCode } : {})}
             />
-            <div className="mt-3 flex justify-center gap-2.5 md:hidden">
-              <button
-                type="button"
-                aria-label="Save event"
-                className="min-h-9 rounded-full border border-white/15 bg-black/50 px-4 text-[11px] font-semibold"
-              >
-                ♡ Save
-              </button>
-              <button
-                type="button"
-                aria-label="Share event"
-                onClick={() => {
-                  void navigator.clipboard.writeText(window.location.href);
-                }}
-                className="min-h-9 rounded-full border border-white/15 bg-black/50 px-4 text-[11px] font-semibold"
-              >
-                Share ↗
-              </button>
-            </div>
           </div>
         </section>
       </div>

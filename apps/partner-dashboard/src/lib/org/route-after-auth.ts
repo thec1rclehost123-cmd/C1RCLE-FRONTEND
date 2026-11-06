@@ -1,7 +1,7 @@
 import { resolvePartnerV3Path } from '@/components/partner-shell/partner-role-routing';
 import { isTabVisibleForAccess } from '@/lib/access/studio-tab-access';
 import { staffApi } from '@/lib/api/staff-api';
-import { setActiveOrg } from '@/lib/org/active-org';
+import { activateOrganizationWorkspace } from '@/lib/org/active-org';
 import { getOrganizations, getPartnerAccess } from '@/lib/org/org-repository';
 import { STUDIO_CONFIG } from '@/studios/studio-config';
 
@@ -52,8 +52,7 @@ export async function routeAfterAuth(router: ReturnType<typeof useRouter>): Prom
       if (await redirectToFirstPendingInvite(router)) return;
       router.push('/onboard');
     } else if (orgs.length === 1 && orgs[0]) {
-      setActiveOrg(orgs[0].id);
-      router.push(await resolveLandingPath(orgs[0].id));
+      activateOrganizationWorkspace(orgs[0].id, await resolveLandingPath(orgs[0].id));
     } else {
       router.push('/partner/select-organization');
     }

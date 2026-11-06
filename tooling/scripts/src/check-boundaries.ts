@@ -431,11 +431,12 @@ function checkNoBackendDependencies(members: readonly WorkspaceMember[]): Violat
   ];
 
   /*
-   * One documented exception to the `firebase` ban: GCP Identity Platform
-   * (Firebase Auth) is used client-side for the partner onboarding wizard's
+   * A documented exception to the `firebase` ban: GCP Identity Platform
+   * (Firebase Auth) is used client-side for the Partner and Guest onboarding wizards'
    * phone-OTP step (`signInWithPhoneNumber` + `RecaptchaVerifier`). It is
    * deliberately confined to a single module
-   * (`apps/partner-dashboard/src/lib/firebase/client.ts`), reads env only via
+   * (`apps/partner-dashboard/src/lib/firebase/client.ts` or
+   * `apps/guest-portal/src/features/onboarding/phone.ts`), reads env only via
    * `@c1rcle/config`, and is enforced further by that app's eslint
    * `no-restricted-imports` rule. The backend independently verifies the
    * resulting ID token server-side with `firebase-admin` (see the backend
@@ -443,7 +444,10 @@ function checkNoBackendDependencies(members: readonly WorkspaceMember[]): Violat
    * here. All other entries — and any other member's `firebase` dep — stay
    * forbidden.
    */
-  const FIREBASE_CLIENT_SDK_EXCEPTION = `${WORKSPACE_SCOPE}/app-partner-dashboard`;
+  const FIREBASE_CLIENT_SDK_EXCEPTIONS = new Set([
+    `${WORKSPACE_SCOPE}/app-partner-dashboard`,
+    `${WORKSPACE_SCOPE}/app-guest-portal`,
+  ]);
 
   return members.flatMap((member) => {
     const manifest = JSON.parse(readFileSync(join(member.dir, 'package.json'), 'utf8')) as {
@@ -454,7 +458,7 @@ function checkNoBackendDependencies(members: readonly WorkspaceMember[]): Violat
       .filter(
         (d) =>
           FORBIDDEN.includes(d) &&
-          !(d === 'firebase' && member.name === FIREBASE_CLIENT_SDK_EXCEPTION),
+          !(d === 'firebase' && FIREBASE_CLIENT_SDK_EXCEPTIONS.has(member.name)),
       )
       .map((d) => ({
         rule: 'frontend-only',

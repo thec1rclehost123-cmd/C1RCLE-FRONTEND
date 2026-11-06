@@ -29,7 +29,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return passThroughGatewayError(gatewayResponse.status, bodyText);
   }
 
-  const res = NextResponse.json(parseJson(bodyText), { status: 200 });
+  const res = NextResponse.json(parseJson(bodyText), {
+    status: 200,
+    headers: { 'cache-control': 'private, no-store' },
+  });
   // The CSRF cookie is set by login/signup, so a returning (already-signed-in)
   // applicant has none. Mint one here so the wizard's state-changing steps pass
   // the double-submit check without forcing a fresh login.

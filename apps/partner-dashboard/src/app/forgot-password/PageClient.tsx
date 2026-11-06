@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
+import { ZodError } from 'zod';
 
 import { isApiClientError } from '@c1rcle/api-client';
 import { requestPasswordReset } from '@c1rcle/auth';
@@ -25,10 +26,13 @@ export function ForgotPasswordPageClient() {
     } catch (caught) {
       if (isApiClientError(caught) && caught.status === 429) {
         setError('Too many requests. Please wait a minute before trying again.');
-      } else if (isApiClientError(caught) && caught.status !== 400) {
-        setError('We could not send the email right now. Please try again shortly.');
-      } else {
+      } else if (
+        (isApiClientError(caught) && caught.status === 400) ||
+        caught instanceof ZodError
+      ) {
         setError('Enter a valid email address.');
+      } else {
+        setError('We could not send the email right now. Please try again shortly.');
       }
     } finally {
       setPending(false);

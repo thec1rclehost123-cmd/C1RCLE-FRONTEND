@@ -1,8 +1,7 @@
 import { Suspense } from 'react';
 
+import { AuthEntryClient } from '@/features/auth/components/AuthEntryClient';
 import { buildPrivateMetadata } from '@/lib/seo/metadata';
-
-import { LoginPageClient } from './login-page-client';
 
 import type { Metadata } from 'next';
 
@@ -14,7 +13,7 @@ export const metadata: Metadata = buildPrivateMetadata(
 export default function LoginPage() {
   return (
     <Suspense fallback={null}>
-      <LoginPageClient />
+      <AuthEntryClient />
     </Suspense>
   );
 }
