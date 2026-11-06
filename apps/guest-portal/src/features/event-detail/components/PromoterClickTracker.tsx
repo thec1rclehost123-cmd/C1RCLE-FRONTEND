@@ -15,12 +15,12 @@ function notifyContextChanged() {
   window.dispatchEvent(new Event(CONTEXT_CHANGE_EVENT));
 }
 
-type ReferralContext = {
+interface ReferralContext {
   readonly eventSlug: string;
   readonly code: string;
   readonly contextToken: string;
   readonly capturedAt: number;
-};
+}
 
 /** Counts the anonymous click; checkout independently verifies the signed context. */
 export function PromoterClickTracker({ eventSlug, code }: { eventSlug: string; code?: string }) {
@@ -136,9 +136,11 @@ export function readPromoterReferralContextTokens(eventSlug: string): readonly s
 /** Navigation convenience only; the backend validates every quote and hold. */
 export function readPromoterReferralContext(eventSlug: string): string | null {
   try {
-    return readStoredContexts()
-      .filter((item) => item.eventSlug === eventSlug)
-      .sort((left, right) => right.capturedAt - left.capturedAt)[0]?.code ?? null;
+    return (
+      readStoredContexts()
+        .filter((item) => item.eventSlug === eventSlug)
+        .sort((left, right) => right.capturedAt - left.capturedAt)[0]?.code ?? null
+    );
   } catch {
     return null;
   }

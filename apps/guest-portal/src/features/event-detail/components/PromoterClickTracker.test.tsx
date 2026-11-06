@@ -75,14 +75,14 @@ describe('PromoterClickTracker', () => {
       expect(clickApi.postMock).toHaveBeenCalledTimes(2);
     });
     expect(readPromoterReferralContext('summer-fest')).toBe('B');
-    expect(clickApi.postMock.mock.calls[1]?.[0].body.contextToken).toBe(
-      'signed-context-token-1',
-    );
+    expect(clickApi.postMock.mock.calls[1]?.[0].body.contextToken).toBe('signed-context-token-1');
     const stored = JSON.parse(
       window.sessionStorage.getItem('c1rcle-promoter-referral-context') ?? '[]',
     ) as { code: string; contextToken: string }[];
     expect(stored.map((item) => item.code)).toEqual(['B']);
-    expect(stored.every((item) => item.contextToken.startsWith('signed-context-token-'))).toBe(true);
+    expect(stored.every((item) => item.contextToken.startsWith('signed-context-token-'))).toBe(
+      true,
+    );
   });
 
   it('suppresses duplicate effect delivery for the same event and code in one session', async () => {

@@ -109,7 +109,7 @@ function CheckoutFlowClientState({
     event.ticketAddons ?? [],
   );
   const queryReferralCode = searchParams.get('ref');
-  const referralContextKey = eventSlug ?? event.eventId;
+  const referralContextKey = eventSlug;
   const storedReferralCode = usePromoterReferralContext(referralContextKey);
   const referralContextTokenValue = usePromoterReferralContextTokens(referralContextKey);
   const referralContextTokens = useMemo(
