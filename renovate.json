@@ -1,0 +1,105 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    ":dependencyDashboard",
+    ":label(dependencies)"
+  ],
+  "semanticCommits": "enabled",
+  "semanticCommitType": "chore",
+  "semanticCommitScope": "deps",
+  "baseBranchPatterns": ["staging"],
+  "timezone": "Asia/Kolkata",
+  "schedule": ["on monday at 06:00"],
+  "rangeStrategy": "pin",
+  "minimumReleaseAge": "14 days",
+  "internalChecksFilter": "strict",
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 6,
+  "rebaseWhen": "conflicted",
+  "automerge": false,
+  "ignorePaths": ["**/node_modules/**", "**/.next/**", "docs/**"],
+  "packageRules": [
+    {
+      "description": "Group production dependency patch and minor updates",
+      "matchDepTypes": ["dependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "groupName": "production-minor-patch"
+    },
+    {
+      "description": "Group dev dependency patch and minor updates",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "groupName": "development-minor-patch"
+    },
+    {
+      "description": "Major updates: one PR each, and only after approval on the Dependency Dashboard",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "TypeScript, ESLint and Prettier move together",
+      "matchPackageNames": [
+        "typescript",
+        "typescript-eslint",
+        "@typescript-eslint/*",
+        "eslint",
+        "@eslint/*",
+        "eslint-*",
+        "prettier"
+      ],
+      "groupName": "typescript-toolchain"
+    },
+    {
+      "description": "Vitest and its plugins share one version in ten packages",
+      "matchPackageNames": ["vitest", "@vitest/*"],
+      "groupName": "vitest"
+    },
+    {
+      "description": "React and its types move together",
+      "matchPackageNames": ["react", "react-dom", "@types/react", "@types/react-dom"],
+      "groupName": "react"
+    },
+    {
+      "description": "Playwright and its browsers",
+      "matchPackageNames": ["@playwright/test", "playwright"],
+      "groupName": "playwright"
+    },
+    {
+      "description": "Next.js and its ESLint plugin: always a reviewed PR. It deploys the three public apps, so check the Vercel preview deployments (guest, partner, admin) before merging",
+      "matchPackageNames": ["next", "@next/eslint-plugin-next"],
+      "groupName": "next",
+      "labels": ["dependencies", "deploys-to-production"]
+    },
+    {
+      "description": "pnpm and Node: need .nvmrc, engines and CI changes together, so never grouped with anything else",
+      "matchPackageNames": ["pnpm", "node"],
+      "groupName": "toolchain-runtime"
+    },
+    {
+      "description": "A Node major (and @types/node with it) changes .nvmrc, engines and CI together, so it is a deliberate decision, never a bot PR. Patch and minor updates of Node still come through",
+      "matchPackageNames": ["node", "@types/node"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": "GitHub Actions SHA pins: grouped, still reviewed",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions",
+      "labels": ["dependencies", "ci"]
+    },
+    {
+      "description": "The scanner app pins its native dependencies to the Expo SDK 55 tested set (CI runs `expo install --check`; react-native-screens must stay ~4.23.0). Update them only with `npx expo install <pkg>` from apps/scanner-app. Later rules override earlier ones, so the zod rule below re-enables the one non-native dependency",
+      "matchFileNames": ["apps/scanner-app/package.json"],
+      "enabled": false
+    },
+    {
+      "description": "zod must be the same release in every package, including the scanner app, AND in the backend repo, because the contract parity check builds both sides with one zod. Keep it in its own PR and bump the backend in the same week. Declared after the scanner rule so it stays enabled there",
+      "matchPackageNames": ["zod"],
+      "groupName": "zod",
+      "labels": ["dependencies", "contracts"],
+      "enabled": true
+    }
+  ]
+}
