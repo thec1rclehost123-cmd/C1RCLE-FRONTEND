@@ -55,7 +55,7 @@ describe('Venue Event Detail feature', () => {
       <VenueEventSalesScreen data={data} key="compare" view="compare" />,
     ];
     const { rerender } = render(views[0]);
-    expect(screen.getByRole('heading', { name: 'Sales summary' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Sales summary' })).toBeInTheDocument();
     rerender(views[1]);
     expect(screen.getByRole('heading', { name: 'Conversion Funnel' })).toBeInTheDocument();
     rerender(views[2]);
