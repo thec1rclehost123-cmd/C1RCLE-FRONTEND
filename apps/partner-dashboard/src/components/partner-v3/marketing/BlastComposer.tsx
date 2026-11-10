@@ -29,18 +29,23 @@ export function safePreviewLink(value: string) {
 export function BlastComposer({
   audience,
   audienceContext,
+  onRemoveRecipient,
   onClose,
 }: {
   readonly audience: MarketingAudience['rows'];
   readonly audienceContext?: string | undefined;
+  readonly onRemoveRecipient: (id: string) => void;
   readonly onClose: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [channel, setChannel] = useState<Channel>('WhatsApp');
   const [body, setBody] = useState('Hey [First name],');
   const [subject, setSubject] = useState('');
+  const [campaignName, setCampaignName] = useState('');
+  const [recipientsOpen, setRecipientsOpen] = useState(false);
   const [link, setLink] = useState('');
   const [action, setAction] = useState('View event');
+  const [mobileView, setMobileView] = useState<'edit' | 'preview'>('edit');
   useEffect(() => {
     const previousFocus = document.activeElement;
     const node = dialog.current;
@@ -65,15 +70,50 @@ export function BlastComposer({
     >
       <header className={styles['modalHeader']}>
         <div>
-          <span>COMPOSE · PREVIEW ONLY</span>
-          <h2 id="blast-title">Marketing blast</h2>
+          <span>MARKETING</span>
+          <h2 id="blast-title">New campaign</h2>
         </div>
         <button type="button" aria-label="Close composer" onClick={onClose}>
           ✕
         </button>
       </header>
+      <nav className={styles['mobileComposerNav']} aria-label="Composer view">
+        <button
+          type="button"
+          aria-pressed={mobileView === 'edit'}
+          onClick={() => {
+            setMobileView('edit');
+          }}
+        >
+          Message
+        </button>
+        <button
+          type="button"
+          aria-pressed={mobileView === 'preview'}
+          onClick={() => {
+            setMobileView('preview');
+          }}
+        >
+          Preview
+        </button>
+      </nav>
       <div className={styles['composerGrid']}>
-        <section className={styles['editor']} aria-label="Message composer">
+        <section
+          className={styles['editor']}
+          data-active={mobileView === 'edit'}
+          aria-label="Message composer"
+        >
+          <label>
+            Campaign name
+            <input
+              value={campaignName}
+              placeholder="e.g. Early access"
+              maxLength={80}
+              onChange={(event) => {
+                setCampaignName(event.target.value);
+              }}
+            />
+          </label>
           <div className={styles['channels']} aria-label="Channel">
             {channels.map((value) => (
               <button
@@ -88,21 +128,63 @@ export function BlastComposer({
               </button>
             ))}
           </div>
-          <label>
-            Blast name
-            <input placeholder="Early bird reminder" maxLength={100} />
-          </label>
           <div className={styles['audienceSummary']}>
-            <strong>{audience.length} selected event attendees</strong>
-            <span>
-              {eventNames.length <= 2
-                ? eventNames.join(' · ')
-                : `${String(eventNames.length)} events`}
-              {audienceContext ? ` · ${audienceContext}` : ''}
-            </span>
-            <button type="button" onClick={onClose}>
-              Edit audience
-            </button>
+            <div className={styles['recipientHeading']}>
+              <div>
+                <strong>Recipients</strong>
+                <span>
+                  {audience.length} selected{audienceContext ? ` · ${audienceContext}` : ''}
+                </span>
+              </div>
+              <button
+                type="button"
+                aria-expanded={recipientsOpen}
+                aria-controls="blast-recipients"
+                onClick={() => {
+                  setRecipientsOpen((open) => !open);
+                }}
+              >
+                {recipientsOpen ? 'Hide' : 'Review'}
+              </button>
+            </div>
+            {recipientsOpen ? (
+              <ul
+                className={styles['recipientList']}
+                id="blast-recipients"
+                aria-label="Selected recipients"
+              >
+                {audience.slice(0, 3).map((recipient) => (
+                  <li key={recipient.id}>
+                    <span>
+                      <strong>{recipient.name}</strong>
+                      <small>{recipient.eventName}</small>
+                    </span>
+                    <button
+                      type="button"
+                      aria-label={`Remove ${recipient.name}`}
+                      onClick={() => {
+                        onRemoveRecipient(recipient.id);
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+                {!audience.length ? <li>No recipients selected.</li> : null}
+              </ul>
+            ) : eventNames.length ? (
+              <span className={styles['recipientEvents']}>
+                {eventNames.length <= 2
+                  ? eventNames.join(' · ')
+                  : `${String(eventNames.length)} events`}
+              </span>
+            ) : null}
+            {recipientsOpen && audience.length > 3 ? (
+              <span className={styles['recipientEvents']}>
+                + {String(audience.length - 3)} more selected · manage the full selection in the
+                attendee list
+              </span>
+            ) : null}
           </div>
           {channel === 'Email' || channel === 'Notification' ? (
             <label>
@@ -119,7 +201,7 @@ export function BlastComposer({
           <label>
             Message
             <textarea
-              rows={6}
+              rows={3}
               maxLength={limits[channel]}
               value={body}
               onChange={(e) => {
@@ -169,15 +251,16 @@ export function BlastComposer({
           ) : null}
           <footer className={styles['delivery']}>
             <button type="button" disabled>
-              Delivery not connected
+              Sending unavailable
             </button>
-            <p>
-              Local preview only. Channel consent and delivery eligibility are not connected.
-              Closing discards this composition.
-            </p>
+            <p role="note">Preview only · sending is not connected</p>
           </footer>
         </section>
-        <section className={styles['previewColumn']} aria-label={`${channel} preview`}>
+        <section
+          className={styles['previewColumn']}
+          data-active={mobileView === 'preview'}
+          aria-label={`${channel} preview`}
+        >
           <div className={styles['phone']} data-channel={channel}>
             <div className={styles['phoneStatus']}>
               <span>9:41</span>
@@ -196,23 +279,46 @@ export function BlastComposer({
               </div>
             ) : (
               <>
-                <div className={styles['phoneHeader']}>
-                  <span aria-hidden="true">‹</span>
-                  <div className={styles['brandMark']}>C</div>
-                  <strong>{channel === 'Email' ? 'Inbox' : 'THE C1RCLE'}</strong>
-                </div>
+                {channel === 'Email' ? null : (
+                  <div className={styles['phoneHeader']}>
+                    <span aria-hidden="true">‹</span>
+                    <div className={styles['brandMark']}>C</div>
+                    <div className={styles['chatContact']}>
+                      <strong>{channel === 'WhatsApp' ? 'THE C1RCLE' : 'Messages'}</strong>
+                      {channel === 'WhatsApp' ? <small>business account</small> : null}
+                    </div>
+                    {channel === 'WhatsApp' ? (
+                      <span className={styles['chatCall']} aria-hidden="true">
+                        ⋮
+                      </span>
+                    ) : null}
+                  </div>
+                )}
                 {channel === 'Email' ? (
                   <article className={styles['email']}>
-                    <small>From THE C1RCLE / Event organizer</small>
-                    <h3>{subject || 'Subject'}</h3>
+                    <div className={styles['emailToolbar']}>
+                      <span>‹</span>
+                      <span>•••</span>
+                    </div>
+                    <h3>{subject || 'Your event update'}</h3>
+                    <div className={styles['emailSender']}>
+                      <div className={styles['brandMark']}>C</div>
+                      <p>
+                        <strong>THE C1RCLE</strong>
+                        <small>to selected attendees</small>
+                      </p>
+                    </div>
                     <p>{message || 'Your message'}</p>
                     {previewLink ? (
-                      <span className={styles['previewAction']}>{action || 'Open link'}</span>
+                      <>
+                        <span className={styles['emailButton']}>{action || 'Open link'}</span>
+                        <small className={styles['emailUrl']}>{previewLink}</small>
+                      </>
                     ) : null}
                   </article>
                 ) : (
                   <div className={styles['conversation']}>
-                    <small>Today · 9:41</small>
+                    <small className={styles['chatDate']}>Today 9:41 AM</small>
                     <article className={styles['bubble']}>
                       <p>{message || 'Your message'}</p>
                       {previewLink ? (
@@ -225,11 +331,18 @@ export function BlastComposer({
                     </article>
                   </div>
                 )}
+                {channel === 'WhatsApp' ? (
+                  <div className={styles['chatComposer']}>
+                    <span>＋</span>
+                    <span>Message</span>
+                    <span>◉</span>
+                  </div>
+                ) : null}
               </>
             )}
             <div className={styles['homeIndicator']} />
           </div>
-          <p className={styles['previewCaption']}>Sample preview · {channel}</p>
+          <p className={styles['previewCaption']}>{channel} preview</p>
         </section>
       </div>
     </dialog>

@@ -270,12 +270,15 @@ describe('ConnectedEventPromoterManagement', () => {
       />,
     );
 
-    expect(screen.getByText('Tickets sold overall')).toBeTruthy();
-    expect(screen.getByText('Promoter-attributed tickets')).toBeTruthy();
-    expect(screen.getByText('Commission liability')).toBeTruthy();
+    expect(screen.getByText('Promoter results')).toBeTruthy();
+    expect(screen.getAllByText('Attributed tickets')).toHaveLength(2);
+    expect(screen.getAllByText('Current payable balance')).toHaveLength(2);
     expect(screen.getByText('Gross attributed sales')).toBeTruthy();
     expect(screen.getByText('Net attributed sales')).toBeTruthy();
     expect(screen.getByText('Refunded ticket value')).toBeTruthy();
-    expect(screen.getByText(/not sales lift/i)).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Promoter breakdown' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Approved Promoter' })).toBeTruthy();
+    expect(screen.getByText('0 clicks · 0 link conversions')).toBeTruthy();
+    expect(screen.getByText(/does not measure sales lift/i)).toBeTruthy();
   });
 });

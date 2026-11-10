@@ -1,15 +1,8 @@
 .app {
-  --partner-v3-page-glow-x: calc(50% + 118px);
   height: 100dvh;
   display: grid;
   grid-template-columns: 256px minmax(0, 1fr);
-  background:
-    radial-gradient(
-      ellipse 100% 52rem at var(--partner-v3-page-glow-x) 0%,
-      rgb(var(--partner-v3-page-glow) / 26%),
-      transparent 62%
-    ),
-    var(--partner-v3-background);
+  background: var(--partner-v3-background);
   color: var(--partner-v3-ink);
   overflow: hidden;
   font-family: var(--font-partner-v3), sans-serif;
@@ -17,7 +10,6 @@
 
 .appTopNavigation {
   grid-template-columns: minmax(0, 1fr);
-  --partner-v3-page-glow-x: 50%;
 }
 
 .appEventEditor {
@@ -882,6 +874,23 @@
   line-height: 1.55;
 }
 
+/* Keep page titles consistent across the many role and event workspaces. */
+.app .content :global(h1) {
+  color: var(--partner-v3-ink);
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: 750;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+.app .content :global(h1 + p) {
+  margin-block-start: 8px;
+  color: var(--partner-v3-ink-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
 .eyebrow {
   color: #ff8a55;
   font-size: 11px;
@@ -1220,9 +1229,6 @@
 @media (max-width: 900px) {
   .app {
     display: block;
-  }
-  .app[data-navigation-layout='side'] {
-    --partner-v3-page-glow-x: 50%;
   }
   .main {
     height: 100dvh;

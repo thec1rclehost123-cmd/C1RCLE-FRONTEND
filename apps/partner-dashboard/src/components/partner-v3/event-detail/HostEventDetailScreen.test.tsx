@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
@@ -47,8 +47,10 @@ describe('HostEventDetailScreen', () => {
       'href',
       '/partner/host/events/neon-nights-afrobeats/sales?view=funnel',
     );
-    expect(screen.getByRole('heading', { name: 'Sales summary' })).toBeInTheDocument();
-    expect(screen.getByText('340 / 400')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Sales summary' })).toBeInTheDocument();
+    const summary = within(screen.getByRole('region', { name: 'Sales summary' }));
+    expect(summary.getByText('340')).toBeInTheDocument();
+    expect(summary.getByText('/ 400')).toBeInTheDocument();
     expect(screen.getByText('58.6%')).toBeInTheDocument();
     expect(
       [...document.querySelectorAll('a')].every(

@@ -39,6 +39,14 @@ const nextConfig: NextConfig = {
         hostname: 'c1-rcle-frontend-partner-dashboard.vercel.app',
         pathname: '/partner-v3/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'storage.googleapis.com',
+        // Event posters are stored as public objects under this bucket prefix.
+        // Keep the optimizer allowlist scoped to poster objects; do not allow
+        // arbitrary Google Storage buckets or private KYC uploads.
+        pathname: `/${process.env['FIREBASE_STORAGE_BUCKET'] ?? 'thec1rcle-india.firebasestorage.app'}/posters/**`,
+      },
     ],
   },
 

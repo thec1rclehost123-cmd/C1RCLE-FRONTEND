@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 
@@ -37,15 +38,16 @@ export function PartnerRequestCard({
   readonly onRejectRequest?: ((request: PartnerRequest) => void) | undefined;
 }) {
   const router = useRouter();
-  const [internalPendingAction, setInternalPendingAction] = useState<'approve' | 'reject' | null>(
-    null,
-  );
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const [internalPendingAction, setInternalPendingAction] = useState<
+    'approve' | 'reject' | 'withdraw' | null
+  >(null);
   const [internalError, setInternalError] = useState<string | null>(null);
   // B2: one Idempotency-Key per (request, decision) — a retry of the same
   // approval/rejection reuses it, so a partial write is never re-applied via
   // a freshly minted key.
   const decisionKeysRef = useRef(new Map<string, string>());
-  const decisionKey = (decision: 'approve' | 'reject'): string => {
+  const decisionKey = (decision: 'approve' | 'reject' | 'withdraw'): string => {
     const intent = `${request.id}:${decision}`;
     let key = decisionKeysRef.current.get(intent);
     if (!key) {
@@ -97,6 +99,25 @@ export function PartnerRequestCard({
     }
   };
 
+  const withdraw = async (): Promise<void> => {
+    const resolvedOrgId = organizationId ?? getActiveOrgId();
+    if (!live || !resolvedOrgId || !request.canWithdraw) return;
+    setInternalPendingAction('withdraw');
+    setInternalError(null);
+    try {
+      const key = decisionKey('withdraw');
+      if (live.graph === 'partnership')
+        await resolvePartnership(resolvedOrgId, live.id, 'end', { idempotencyKey: key });
+      else
+        await resolvePromoterConnection(resolvedOrgId, live.id, 'revoke', { idempotencyKey: key });
+      router.refresh();
+    } catch {
+      setInternalError('Could not withdraw this request. Check your access and try again.');
+    } finally {
+      setInternalPendingAction(null);
+    }
+  };
+
   const handleApprove = () => {
     if (onApproveRequest) {
       onApproveRequest(request);
@@ -119,7 +140,22 @@ export function PartnerRequestCard({
   return (
     <article className={styles['requestCard']}>
       <div className={styles['partnerIdentity']}>
-        <Avatar name={request.name} />
+        {request.avatarUrl && !avatarFailed ? (
+          <span className={styles['requestAvatar']}>
+            <Image
+              src={request.avatarUrl}
+              alt=""
+              fill
+              sizes="40px"
+              unoptimized
+              onError={() => {
+                setAvatarFailed(true);
+              }}
+            />
+          </span>
+        ) : (
+          <Avatar name={request.name} />
+        )}
         <div>
           <div className={styles['requestNameRow']}>
             <h3>{request.name}</h3>
@@ -129,6 +165,17 @@ export function PartnerRequestCard({
             />
           </div>
           <p>{request.note}</p>
+          {request.location && request.location !== '—' ? <small>{request.location}</small> : null}
+          {request.stats?.length ? (
+            <ul className={styles['partnerCardStats']}>
+              {request.stats.slice(0, 2).map((stat) => (
+                <li key={stat.label}>
+                  <strong>{stat.value}</strong>
+                  <span>{stat.label}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       </div>
       {displayError ? <p role="alert">{displayError}</p> : null}
@@ -151,6 +198,17 @@ export function PartnerRequestCard({
             onClick={handleApprove}
           >
             {isPending && currentAction === 'approve' ? 'Accepting…' : 'Accept'}
+          </Button>
+        </div>
+      ) : request.canWithdraw ? (
+        <div className={styles['requestActions']}>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={isPending || live === null}
+            onClick={() => void withdraw()}
+          >
+            {isPending ? 'Withdrawing…' : 'Withdraw'}
           </Button>
         </div>
       ) : null}

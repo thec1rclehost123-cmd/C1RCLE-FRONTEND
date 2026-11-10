@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
 
 import { PartnerStudioFrame } from '@/components/partner-v3/PartnerStudioFrame';
-import { unavailablePartnerShellInteractions } from '@/lib/partner/unavailable-shell-interactions';
 import { isStudioRole } from '@/studios/studio-config';
 
 import type { ReactNode } from 'react';
@@ -16,10 +15,5 @@ export default async function StudioLayout({
   const { studio } = await params;
   if (!isStudioRole(studio)) notFound();
 
-  const interactionData = unavailablePartnerShellInteractions();
-  return (
-    <PartnerStudioFrame studio={studio} interactionData={interactionData}>
-      {children}
-    </PartnerStudioFrame>
-  );
+  return <PartnerStudioFrame studio={studio}>{children}</PartnerStudioFrame>;
 }

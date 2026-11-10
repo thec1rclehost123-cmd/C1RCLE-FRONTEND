@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { ConnectedEventAnalyticsScreen } from '@/components/partner-v3/event-detail/ConnectedEventAnalyticsScreen';
 import { PromoterAssignmentDetailsScreen } from '@/components/promoter/PromoterAssignmentDetailsScreen';
 import { loadPartnerEventAnalytics } from '@/lib/events/load-partner-event-analytics';
+import { loadPartnerEventBookingHeatmap } from '@/lib/events/load-partner-event-booking-heatmap';
 import { loadPromoterEvents } from '@/lib/events/load-promoter-events';
 
 import { renderStudioSkeleton } from '../../../route-helpers';
@@ -33,6 +34,15 @@ export default async function StudioEventAnalyticsPage({
     );
   }
 
-  const analytics = await loadPartnerEventAnalytics(eventId);
-  return <ConnectedEventAnalyticsScreen analytics={analytics} studio={studio} />;
+  const [analytics, bookingHeatmap] = await Promise.all([
+    loadPartnerEventAnalytics(eventId),
+    loadPartnerEventBookingHeatmap(eventId),
+  ]);
+  return (
+    <ConnectedEventAnalyticsScreen
+      analytics={analytics}
+      bookingHeatmap={bookingHeatmap}
+      studio={studio}
+    />
+  );
 }

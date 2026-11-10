@@ -59,11 +59,10 @@ export interface OverviewActivity {
 export interface OverviewRecentOrder {
   readonly id: string;
   readonly buyerName: string;
-  readonly eventName: string;
-  readonly ticketCount: number;
   readonly amountLabel: string;
-  readonly statusLabel: string;
-  readonly placedAtLabel: string;
+  readonly amountTone: 'positive' | 'negative' | 'neutral';
+  readonly timeAgo: string;
+  readonly ticketSummary: string;
 }
 
 export interface OverviewCalendarDay {
@@ -171,6 +170,7 @@ export type PartnerEventStatus =
   | 'Paused'
   | 'Postponed'
   | 'Past'
+  | 'Completed'
   | 'Archived'
   | 'Cancelled';
 export type PartnerEventParty = 'venue' | 'hosts';
@@ -530,12 +530,14 @@ export interface PartnerProfile {
   readonly name: string;
   readonly initials: string;
   readonly avatarUrl?: string | null;
+  readonly coverUrl?: string | null;
   readonly kind: PartnerKind;
   readonly role: string;
   readonly location: string;
   readonly genres: readonly string[];
   readonly stats: readonly PartnerStat[];
   readonly upcomingEvents: readonly PartnerUpcomingEvent[];
+  readonly bio?: string;
   readonly verified: boolean;
   readonly cardTone: PartnerCardTone;
 
@@ -559,6 +561,11 @@ export interface PartnerRequest {
   readonly kind: PartnerKind;
   readonly direction: PartnerRequestDirection;
   readonly note: string;
+  readonly avatarUrl?: string | null;
+  readonly coverUrl?: string | null;
+  readonly location?: string;
+  readonly stats?: readonly PartnerStat[];
+  readonly canWithdraw?: boolean;
   /**
    * Present only for rows read from the backend. The request card answers the
    * request through this target; rows without one (fixtures, legacy callers)

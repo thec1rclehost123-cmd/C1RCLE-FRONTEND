@@ -18,14 +18,14 @@ export function EventFilterBar({
   onViewChange,
 }: {
   readonly query: string;
-  readonly status: 'all' | 'Live' | 'Draft';
+  readonly status: 'all' | 'Live' | 'Draft' | 'Completed';
   readonly party: PartnerEventParty;
   readonly partyLabel?: string;
   readonly showViewToggle?: boolean;
   readonly view: 'list' | 'grid';
-  readonly counts: Readonly<{ all: number; live: number; drafts: number }>;
+  readonly counts: Readonly<{ all: number; live: number; drafts: number; completed: number }>;
   readonly onQueryChange: (value: string) => void;
-  readonly onStatusChange: (value: 'all' | 'Live' | 'Draft') => void;
+  readonly onStatusChange: (value: 'all' | 'Live' | 'Draft' | 'Completed') => void;
   readonly onPartyChange: (value: PartnerEventParty) => void;
   readonly onViewChange: (value: 'list' | 'grid') => void;
 }) {
@@ -51,6 +51,7 @@ export function EventFilterBar({
               ['all', 'All', counts.all],
               ['Live', 'Live', counts.live],
               ['Draft', 'Drafts', counts.drafts],
+              ['Completed', 'Completed', counts.completed],
             ] as const
           ).map(([value, label]) => (
             <button
@@ -63,7 +64,13 @@ export function EventFilterBar({
             >
               {label}
               <span className={styles['filterCount']}>
-                {value === 'all' ? counts.all : value === 'Live' ? counts.live : counts.drafts}
+                {value === 'all'
+                  ? counts.all
+                  : value === 'Live'
+                    ? counts.live
+                    : value === 'Draft'
+                      ? counts.drafts
+                      : counts.completed}
               </span>
             </button>
           ))}

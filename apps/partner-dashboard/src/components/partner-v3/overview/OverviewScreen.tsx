@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import Link from 'next/link';
 
 import { AddIcon, ForwardIcon, TicketIcon, UsersIcon } from '@c1rcle/icons';
@@ -9,6 +8,7 @@ import { FixtureBadge } from '../FixtureBadge';
 
 import styles from './overview.module.css';
 import { OverviewCalendarCard } from './OverviewCalendarCard';
+import { OverviewEventPoster } from './OverviewEventPoster';
 import { OverviewTrendCard } from './OverviewTrendCard';
 
 import type { OverviewAccent, OverviewData, OverviewLinks } from '@/data/partner-data-source';
@@ -126,16 +126,13 @@ export function OverviewScreen({
       <div className={styles['primaryGrid']}>
         <div className={styles['primaryStack']}>
           <article className={styles['hero']} aria-labelledby="next-event-title">
-            {data.nextEvent.imageSrc ? (
-              <Image
-                src={data.nextEvent.imageSrc}
-                alt={data.nextEvent.imageAlt ?? ''}
-                fill
-                priority
-                className={styles['heroPoster']}
-                sizes="(max-width: 900px) 100vw, 52vw"
-              />
-            ) : null}
+            <OverviewEventPoster
+              src={data.nextEvent.imageSrc}
+              alt={data.nextEvent.imageAlt ?? ''}
+              className={styles['heroPoster'] ?? ''}
+              fallbackClassName={styles['heroPosterFallback'] ?? ''}
+              sizes="(max-width: 900px) 100vw, 52vw"
+            />
             <div className={styles['heroOverlay']} aria-hidden="true" />
             <div className={styles['heroContent']}>
               <div className={styles['heroTopline']}>
@@ -225,7 +222,7 @@ export function OverviewScreen({
             ) : null}
             {data.recentOrders?.map((order) => {
               return (
-                <div className={styles['activityRow']} key={order.id}>
+                <div className={styles['activityRow']} data-order-card="true" key={order.id}>
                   <span
                     className={classNames(styles['activityIcon'], styles['activityIcon-positive'])}
                   >
@@ -233,18 +230,13 @@ export function OverviewScreen({
                   </span>
                   <div>
                     <strong>{order.buyerName}</strong>
-                    <span className={styles['activityEvent']} title={order.eventName}>
-                      {order.eventName}
-                    </span>
                     <span className={styles['activityMeta']}>
-                      <span>
-                        {order.ticketCount} {order.ticketCount === 1 ? 'ticket' : 'tickets'} ·{' '}
-                        {order.statusLabel}
-                      </span>
-                      <time>{order.placedAtLabel} IST</time>
+                      {order.ticketSummary} · {order.timeAgo}
                     </span>
                   </div>
-                  <b>{order.amountLabel}</b>
+                  <b className={styles[`amount-${order.amountTone}`]} data-tone={order.amountTone}>
+                    {order.amountLabel}
+                  </b>
                 </div>
               );
             })}
@@ -279,6 +271,13 @@ export function OverviewScreen({
                   href={event.href}
                   key={event.id}
                 >
+                  <OverviewEventPoster
+                    src={event.imageSrc}
+                    alt=""
+                    className={styles['upcomingPoster'] ?? ''}
+                    fallbackClassName={styles['upcomingPosterFallback'] ?? ''}
+                    sizes="(max-width: 700px) 100vw, 360px"
+                  />
                   <div>
                     <strong>{event.name}</strong>
                     <span>

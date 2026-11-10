@@ -780,6 +780,7 @@ export function PartnerNetworkScreen({
                 connecting={connectingPartnerId === profile.id}
                 connectError={connectErrorId === profile.id ? (connectError ?? null) : null}
                 onConnect={onConnect}
+                {...(organizationId ? { organizationId } : {})}
               />
             ) : null}
           </div>

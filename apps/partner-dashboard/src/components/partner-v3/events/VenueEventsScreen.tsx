@@ -23,7 +23,7 @@ export function VenueEventsScreen({
 }: {
   readonly data: VenueEventsData;
   readonly initialSearch?: string;
-  readonly initialStatus?: 'all' | 'Live' | 'Draft';
+  readonly initialStatus?: 'all' | 'Live' | 'Draft' | 'Completed';
   readonly initialParty?: PartnerEventParty;
   readonly initialView?: 'list' | 'grid';
 }) {

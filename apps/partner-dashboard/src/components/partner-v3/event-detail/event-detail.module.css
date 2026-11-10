@@ -92,24 +92,6 @@
   margin-bottom: 20px;
 }
 
-.detailBackdrop {
-  position: absolute;
-  z-index: -1;
-  inset: -80px;
-  overflow: hidden;
-  pointer-events: none;
-}
-.detailBackdropArtwork {
-  position: absolute !important;
-  inset: 0;
-  filter: blur(60px) brightness(0.55);
-  transform: scale(1.15);
-}
-.detailBackdrop > span {
-  position: absolute;
-  inset: 0;
-  background: rgb(0 0 0 / 45%);
-}
 .detailPoster {
   height: 302px;
   min-height: 302px;
@@ -294,16 +276,27 @@
 .summaryGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: 20px;
+}
+.summaryOverview {
+  margin: 0 0 28px;
+}
+.summaryLabel {
+  margin-bottom: 14px;
+  color: #a2a19d;
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
 }
 .summaryCard {
   position: relative;
-  min-height: 118px;
+  min-height: 136px;
   overflow: hidden;
-  padding: 20px;
-  border: 1px solid rgb(255 255 255 / 6%);
-  border-radius: 16px;
-  background: #101010;
+  padding: 24px 26px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 20px;
+  background: #141414;
 }
 .summaryValueRow {
   display: flex;
@@ -313,9 +306,21 @@
 }
 .summaryValueRow strong {
   color: #f5f5f3;
-  font-size: 28px;
+  font-size: clamp(26px, 2.2vw, 34px);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+}
+.summaryValueSuffix {
+  color: #aaa9a5;
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.summaryValue-positive {
+  color: #62e394 !important;
+}
+.summaryValue-negative {
+  color: #ff727b !important;
 }
 .summaryDelta {
   display: inline-flex;
@@ -326,6 +331,18 @@
   color: #6ee79b;
   font-size: 11px;
   font-weight: 700;
+}
+.summaryDelta-positive {
+  background: rgb(70 212 131 / 16%);
+  color: #62e394;
+}
+.summaryDelta-negative {
+  background: rgb(255 92 103 / 16%);
+  color: #ff727b;
+}
+.summaryDelta-neutral {
+  background: rgb(255 255 255 / 8%);
+  color: #c2c2bd;
 }
 .summaryDetail {
   display: block;
@@ -343,13 +360,25 @@
   opacity: 0.5;
 }
 .summarySparkArea {
-  fill: rgb(255 90 31 / 18%);
+  fill: rgb(255 90 31 / 14%);
 }
 .summarySparkLine {
   fill: none;
   stroke: #ff8a55;
   stroke-width: 3;
   stroke-linecap: round;
+}
+.summarySparkArea-positive {
+  fill: rgb(70 212 131 / 16%);
+}
+.summarySparkLine-positive {
+  stroke: #62e394;
+}
+.summarySparkArea-negative {
+  fill: rgb(255 92 103 / 16%);
+}
+.summarySparkLine-negative {
+  stroke: #ff727b;
 }
 .summaryCardLavender .summaryIcon {
   color: #f5f5f3;
@@ -364,6 +393,13 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+.tierSection {
+  margin-bottom: 20px;
+  padding: 24px 28px 28px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 20px;
+  background: #141414;
 }
 .tierRowHeader {
   display: flex;
@@ -380,7 +416,7 @@
   font-weight: 700;
 }
 .tierTrack {
-  height: 9px;
+  height: 12px;
   overflow: hidden;
   border-radius: 999px;
   background: rgb(255 255 255 / 8%);
@@ -490,12 +526,40 @@
   }
   .detailMetrics,
   .summaryGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
   }
   .detailTabsCompact {
     width: 100%;
   }
   .summaryCard {
-    min-height: 106px;
+    min-height: 118px;
+    padding: 14px 12px;
+    border-radius: 15px;
+  }
+  .summaryLabel {
+    margin-bottom: 10px;
+    font-size: 10px;
+  }
+  .summaryValueRow {
+    gap: 5px;
+  }
+  .summaryValueRow strong {
+    font-size: 18px;
+  }
+  .summaryValueSuffix {
+    font-size: 11px;
+  }
+  .summaryDelta {
+    padding: 2px 5px;
+    font-size: 9px;
+  }
+  .tierSection {
+    padding: 18px 16px 20px;
+    border-radius: 16px;
+  }
+  .tierRowHeader,
+  .tierRowHeader strong {
+    font-size: 12px;
   }
 }

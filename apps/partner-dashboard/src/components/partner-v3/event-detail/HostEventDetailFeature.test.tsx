@@ -43,7 +43,7 @@ describe('Host Event Detail feature', () => {
     if (!data) throw new Error('Expected the primary Host event fixture');
 
     const { rerender } = render(<HostEventSalesScreen data={data} view="summary" />);
-    expect(screen.getByRole('heading', { name: 'Sales summary' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Sales summary' })).toBeInTheDocument();
     rerender(<HostEventSalesScreen data={data} view="funnel" />);
     expect(screen.getByRole('heading', { name: 'Conversion Funnel' })).toBeInTheDocument();
     rerender(<HostEventSalesScreen data={data} view="revenue" />);

@@ -1,8 +1,19 @@
-import { paginatedSchema, venueDtoSchema, venueProfileDtoSchema } from '@c1rcle/contracts';
+import {
+  paginatedSchema,
+  updateVenueMenuSchema,
+  venueDtoSchema,
+  venueMenuDtoSchema,
+  venueProfileDtoSchema,
+} from '@c1rcle/contracts/client';
 
 import { apiClient } from '@/lib/api/client';
 
-import type { VenueDto, VenueProfileDto } from '@c1rcle/contracts';
+import type {
+  UpdateVenueMenuRequest,
+  VenueDto,
+  VenueMenuDto,
+  VenueProfileDto,
+} from '@c1rcle/contracts/client';
 
 /**
  * Venue routes are org-scoped server-side and require `X-Organization-Id`
@@ -71,6 +82,32 @@ export async function updateVenueProfile(
     path: `/api/v2/venues/${venueId}/profile`,
     body: update,
     schema: venueProfileDtoSchema,
+    headers: {
+      ...orgHeaders(organizationId),
+      'If-Match': String(expectedVersion),
+      'Idempotency-Key': crypto.randomUUID(),
+    },
+  });
+}
+
+export async function getVenueMenu(venueId: string, organizationId: string): Promise<VenueMenuDto> {
+  return apiClient.get({
+    path: `/api/v2/venues/${encodeURIComponent(venueId)}/menu`,
+    headers: orgHeaders(organizationId),
+    schema: venueMenuDtoSchema,
+  });
+}
+
+export async function updateVenueMenu(
+  venueId: string,
+  organizationId: string,
+  expectedVersion: number,
+  menu: UpdateVenueMenuRequest,
+): Promise<VenueMenuDto> {
+  return apiClient.put({
+    path: `/api/v2/venues/${encodeURIComponent(venueId)}/menu`,
+    body: updateVenueMenuSchema.parse(menu),
+    schema: venueMenuDtoSchema,
     headers: {
       ...orgHeaders(organizationId),
       'If-Match': String(expectedVersion),

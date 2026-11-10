@@ -9,15 +9,14 @@ import { PartnerGlobalSearch } from './PartnerGlobalSearch';
 
 import { Avatar, IconButton } from './index';
 
-import type { PartnerSearchData } from '@/data/partner-data-source';
-import type { StudioConfig } from '@/studios/studio-config';
+import type { StudioConfig, StudioRole } from '@/studios/studio-config';
 
 export function PartnerTopbar({
   config,
   activeLabel,
   settingsHref,
   userName,
-  searchData,
+  studio,
   organizationId,
   navigationLayout,
   mobileOpen,
@@ -29,7 +28,7 @@ export function PartnerTopbar({
   readonly activeLabel: string;
   readonly settingsHref: string | undefined;
   readonly userName: string;
-  readonly searchData: PartnerSearchData;
+  readonly studio: StudioRole;
   readonly organizationId: string | null;
   readonly navigationLayout: 'side' | 'top';
   readonly mobileOpen: boolean;
@@ -120,18 +119,16 @@ export function PartnerTopbar({
               .filter(Boolean)
               .join(' ')}
           >
-            <span>{activeLabel}</span>
-            <small>{config.label}</small>
+            <span>{config.label}</span>
           </div>
         </>
       ) : (
         <div className={styles['topbarIdentity']}>
-          <span>{activeLabel}</span>
-          <small>{config.label}</small>
+          <span>{config.label}</span>
         </div>
       )}
       <div className={styles['topbarActions']}>
-        <PartnerGlobalSearch data={searchData} />
+        <PartnerGlobalSearch organizationId={organizationId} studio={studio} />
         <ConnectedPartnerNotifications organizationId={organizationId} studioRole={config.role} />
         {config.role !== 'promoter' ? (
           <Link

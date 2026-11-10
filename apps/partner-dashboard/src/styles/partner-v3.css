@@ -9,7 +9,6 @@
   --partner-v3-ink-subtle: #6a6a66;
   --partner-v3-supporting-text-size: 13px;
   --partner-v3-accent: #ff6842;
-  --partner-v3-page-glow: 255 68 0;
   --partner-v3-accent-ink: #0a0a0a;
   --partner-v3-danger: #f0857a;
   --partner-v3-sidebar: rgb(7 8 7 / 88%);
@@ -185,25 +184,11 @@
   margin: 5px 0 0;
 }
 
-/* Search-page visual language: quiet glass surfaces over a low-contrast
-   nightlife glow, with one shared Inter and C1RCLE orange system. */
+/* Shared dashboard canvas: neutral near-black so page-level color does not
+   compete with event artwork, charts, and focused accents. */
 .partner-v3-app {
-  background:
-    radial-gradient(
-      ellipse 100% 52rem at var(--partner-v3-page-glow-x, 50%) 0%,
-      rgb(var(--partner-v3-page-glow) / 26%),
-      transparent 62%
-    ),
-    var(--partner-v3-background);
+  background: var(--partner-v3-background);
   font-family: var(--font-inter), Inter, system-ui, sans-serif;
-}
-
-.partner-v3-app[data-studio-role='host'] {
-  --partner-v3-page-glow: 167 139 250;
-}
-
-.partner-v3-app[data-studio-role='promoter'] {
-  --partner-v3-page-glow: 255 90 31;
 }
 
 .partner-v3-app :is(button, input, select, textarea) {

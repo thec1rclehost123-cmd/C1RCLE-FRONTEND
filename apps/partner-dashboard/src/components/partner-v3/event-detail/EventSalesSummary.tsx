@@ -1,5 +1,3 @@
-import { RefundIcon, TicketIcon, TrendUpIcon } from '@c1rcle/icons';
-
 import styles from './event-detail.module.css';
 import { EventDetailSection } from './EventDetailSection';
 import { EventSummaryCard } from './EventSummaryCard';
@@ -13,9 +11,11 @@ export function EventSalesSummary({
   readonly summary: EventSalesSummaryData;
   readonly accent?: 'orange' | 'lavender';
 }) {
+  const [sold, capacity] = summary.ticketsSold.split('/').map((part) => part.trim());
+
   return (
     <>
-      <EventDetailSection title="Sales summary">
+      <section className={styles['summaryOverview']} aria-label="Sales summary">
         <div className={styles['summaryGrid']}>
           <EventSummaryCard
             accent={accent}
@@ -23,24 +23,23 @@ export function EventSalesSummary({
             value={summary.moneyMade}
             delta={summary.moneyDelta}
             trendPoints={summary.moneyTrend}
-            icon={<TrendUpIcon size={13} aria-hidden="true" />}
           />
           <EventSummaryCard
             accent={accent}
             label="Tickets sold"
-            value={summary.ticketsSold}
-            icon={<TicketIcon size={13} aria-hidden="true" />}
+            value={sold ?? summary.ticketsSold}
+            valueSuffix={capacity ? `/ ${capacity}` : undefined}
           />
           <EventSummaryCard
             accent={accent}
             label="Refunds"
             value={summary.refunds}
-            icon={<RefundIcon size={13} aria-hidden="true" />}
+            tone="negative"
           />
         </div>
-      </EventDetailSection>
+      </section>
 
-      <EventDetailSection title="Tickets by tier">
+      <EventDetailSection className={styles['tierSection'] ?? ''} title="Tickets by tier">
         <div className={styles['tierList']}>
           {summary.tiers.map((tier) => (
             <div className={styles['tierRow']} key={tier.name}>

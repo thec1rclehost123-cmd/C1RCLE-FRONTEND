@@ -67,6 +67,13 @@
 .stat strong {
   font-size: clamp(1.1rem, 2vw, 1.55rem);
 }
+.stat strong.valuePositive,
+.metricGrid dd.valuePositive {
+  color: #62e394;
+}
+.metricGrid dd.valueNegative {
+  color: #ff727b;
+}
 
 .gridTwo,
 .gridThree {
@@ -212,6 +219,89 @@
 }
 .metricsCard {
   margin-top: 1rem;
+}
+
+.heatmapWrap {
+  padding-top: 0.85rem;
+}
+.heatmapTotal {
+  margin: 0 0 1rem;
+  color: #f5f5f4;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+.heatmapTotal span {
+  color: #a8a29e;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.heatmap {
+  display: grid;
+  grid-template-columns: 2.2rem repeat(24, minmax(0, 1fr));
+  align-items: center;
+  gap: 0.28rem;
+}
+.heatmapHour {
+  grid-column: span 1;
+  height: 1rem;
+  overflow: visible;
+  color: #88837f;
+  font-size: 0.6rem;
+  white-space: nowrap;
+}
+.heatmapDay {
+  color: #c7c3c0;
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+.heatmapCell {
+  aspect-ratio: 1;
+  min-width: 0;
+  border: 1px solid rgb(255 255 255 / 5%);
+  border-radius: 3px;
+  background: #242424;
+}
+.heatmapCell[data-level='1'] {
+  background: rgb(255 91 31 / 25%);
+}
+.heatmapCell[data-level='2'] {
+  background: rgb(255 91 31 / 45%);
+}
+.heatmapCell[data-level='3'] {
+  background: rgb(255 91 31 / 70%);
+}
+.heatmapCell[data-level='4'] {
+  background: #ff5b1f;
+}
+.heatmapLegend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  margin-top: 0.9rem;
+  color: #918b87;
+  font-size: 0.68rem;
+}
+.heatmapLegend i {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 2px;
+  background: rgb(255 91 31 / 25%);
+}
+.heatmapLegend i:nth-of-type(2) {
+  background: rgb(255 91 31 / 45%);
+}
+.heatmapLegend i:nth-of-type(3) {
+  background: rgb(255 91 31 / 70%);
+}
+.heatmapLegend i:nth-of-type(4) {
+  background: #ff5b1f;
+}
+.heatmapNotice {
+  margin: 0.75rem 0 0;
+  color: #ffcf7a;
+  font-size: 0.78rem;
+  line-height: 1.45;
 }
 
 @media (max-width: 900px) {

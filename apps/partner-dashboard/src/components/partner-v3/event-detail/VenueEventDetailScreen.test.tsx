@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
@@ -33,7 +33,9 @@ describe('VenueEventDetailScreen', () => {
     );
     expect(screen.getByText('Skyline Rooftop · Thu, Jul 16 · 9:00 PM')).toBeInTheDocument();
     expect(screen.getByText('Live')).toBeInTheDocument();
-    expect(screen.getByText('340')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Sales summary' })).getByText('340'),
+    ).toBeInTheDocument();
     expect(screen.getByText('3,290')).toBeInTheDocument();
     expect(screen.getByText('58.6%')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Edit' })).toHaveAttribute(

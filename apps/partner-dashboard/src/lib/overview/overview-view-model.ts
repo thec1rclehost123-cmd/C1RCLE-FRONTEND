@@ -146,11 +146,15 @@ export function toOverviewData(input: OverviewViewModelInput): OverviewData {
         : input.recentOrders.map((order): OverviewRecentOrder => ({
             id: order.id,
             buyerName: order.buyerName,
-            eventName: order.eventName,
-            ticketCount: order.ticketCount,
             amountLabel: order.grandTotalPaise === 0 ? 'Free' : formatPaise(order.grandTotalPaise),
-            statusLabel: recentOrderStatusLabel(order.status, order.grandTotalPaise),
-            placedAtLabel: formatOrderDate(order.createdAt),
+            amountTone:
+              order.status === 'refunded'
+                ? 'negative'
+                : order.status === 'paid' && order.grandTotalPaise > 0
+                  ? 'positive'
+                  : 'neutral',
+            timeAgo: formatRelativeOrderTime(order.createdAt, now),
+            ticketSummary: formatTicketSummary(order.ticketLines ?? []),
           })),
     calendar: {
       // The label follows the **calendar's** month, not the render date. The
@@ -166,31 +170,22 @@ export function toOverviewData(input: OverviewViewModelInput): OverviewData {
   };
 }
 
-function recentOrderStatusLabel(
-  status: FinanceOrderDto['status'],
-  grandTotalPaise: number,
+export function formatTicketSummary(
+  lines: readonly { readonly tierName: string; readonly quantity: number }[],
 ): string {
-  if (status === 'paid') return grandTotalPaise === 0 ? 'Free RSVP' : 'Paid';
-  const labels: Record<Exclude<FinanceOrderDto['status'], 'paid'>, string> = {
-    pending: 'Pending',
-    awaiting_payment: 'Awaiting payment',
-    expired: 'Expired',
-    cancelled: 'Cancelled',
-    failed: 'Failed',
-    refund_requested: 'Refund requested',
-    refunded: 'Refunded',
-  };
-  return labels[status];
+  if (lines.length === 0) return 'Tickets';
+  return lines.map((line) => `${String(line.quantity)} × ${line.tierName}`).join(' + ');
 }
 
-function formatOrderDate(value: string): string {
+export function formatRelativeOrderTime(value: string, now: Date): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Time unavailable';
-  return new Intl.DateTimeFormat('en-IN', {
-    timeZone: PRODUCT_TIME_ZONE,
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date);
+  const minutes = Math.max(0, Math.floor((now.getTime() - date.getTime()) / 60_000));
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${String(minutes)}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${String(hours)}h ago`;
+  return `${String(Math.floor(hours / 24))}d ago`;
 }
 
 // ─── Events ──────────────────────────────────────────────────────────────────

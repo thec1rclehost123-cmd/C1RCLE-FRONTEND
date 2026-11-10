@@ -2,8 +2,6 @@
 
 import { useId, useMemo, useState } from 'react';
 
-import { TrendUpIcon } from '@c1rcle/icons';
-
 import styles from './overview.module.css';
 
 import type {
@@ -87,6 +85,19 @@ export function OverviewTrendCard({
 
   if (!active) return null;
   const points = active.points.length ? active.points : [0];
+  const deltaNumber = Number.parseFloat(active.delta.replace('%', '').replace('+', ''));
+  const trendTone =
+    active.delta === 'New' || deltaNumber > 0
+      ? 'positive'
+      : deltaNumber < 0
+        ? 'negative'
+        : 'neutral';
+  const trendColor =
+    trendTone === 'positive'
+      ? '#46d483'
+      : trendTone === 'negative'
+        ? '#ff5c67'
+        : 'var(--overview-accent)';
   const labels =
     active.pointLabels?.length === points.length
       ? active.pointLabels
@@ -164,8 +175,7 @@ export function OverviewTrendCard({
           <div className={styles['trendMetric']}>
             <h2 id="overview-performance-title">{active.value}</h2>
             {active.delta ? (
-              <span>
-                <TrendUpIcon size={13} aria-hidden="true" />
+              <span className={styles[`trendDelta-${trendTone}`]} data-trend={trendTone}>
                 {active.delta}
               </span>
             ) : null}
@@ -226,8 +236,8 @@ export function OverviewTrendCard({
           >
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--overview-accent)" stopOpacity="0.18" />
-                <stop offset="100%" stopColor="var(--overview-accent)" stopOpacity="0" />
+                <stop offset="0%" stopColor={trendColor} stopOpacity="0.18" />
+                <stop offset="100%" stopColor={trendColor} stopOpacity="0" />
               </linearGradient>
             </defs>
             {[180].map((y) => (
@@ -245,7 +255,7 @@ export function OverviewTrendCard({
             <path
               d={paths.line}
               fill="none"
-              stroke="var(--overview-accent)"
+              stroke={trendColor}
               strokeWidth="3"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -264,7 +274,7 @@ export function OverviewTrendCard({
                   cx={selected.x}
                   cy={selected.y}
                   r="4"
-                  fill="var(--overview-accent)"
+                  fill={trendColor}
                   stroke="#fff"
                   strokeWidth="1.5"
                 />

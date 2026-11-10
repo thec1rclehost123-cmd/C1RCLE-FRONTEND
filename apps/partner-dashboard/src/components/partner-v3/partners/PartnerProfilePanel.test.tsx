@@ -6,6 +6,8 @@ import { PartnerProfilePanel } from './PartnerProfilePanel';
 import type { PartnerRelationship } from '@/data/partner-data-source';
 import type { ComponentProps } from 'react';
 
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
 vi.mock('next/link', () => ({
   default: ({ href, children, ...props }: ComponentProps<'a'>) => (
     <a href={href} {...props}>
@@ -36,6 +38,7 @@ describe('PartnerProfilePanel', () => {
     render(<PartnerProfilePanel partner={venue} closeHref="/partner/host/partners" />);
 
     expect(screen.getByText('Venue · Pune')).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true');
     expect(screen.queryByText('Promoter · Pune')).not.toBeInTheDocument();
   });
 });

@@ -248,11 +248,10 @@ describe('loadOverviewData', () => {
     expect(recentOrdersCall?.headers).toEqual({ 'x-organization-id': 'org_1' });
     expect(data.recentOrders).toEqual([
       expect.objectContaining({
-        eventName: 'Neon Nights',
         buyerName: 'Maya Guest',
-        ticketCount: 1,
         amountLabel: '₹108.85',
-        statusLabel: 'Paid',
+        amountTone: 'positive',
+        timeAgo: '2h ago',
       }),
     ]);
     expect(JSON.stringify(data.recentOrders)).toContain('Maya Guest');

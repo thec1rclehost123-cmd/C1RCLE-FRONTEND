@@ -1,39 +1,25 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-import {
-  BankIcon,
-  CalendarIcon,
-  ExternalLinkIcon,
-  GuestIcon,
-  OrderIcon,
-  PartnerIcon,
-  PendingIcon,
-  SearchIcon,
-  SettingsIcon,
-} from '@c1rcle/icons';
+import { partnerGlobalSearchResponseSchema } from '@c1rcle/contracts';
+import { CalendarIcon, ExternalLinkIcon, PartnerIcon, SearchIcon } from '@c1rcle/icons';
+
+import { apiClient } from '@/lib/api/client';
 
 import styles from './partner-v3.module.css';
 
-import type {
-  PartnerSearchData,
-  PartnerSearchIcon,
-  PartnerSearchResult,
-} from '@/data/partner-data-source';
+import type { StudioRole } from '@/studios/studio-config';
+import type { PartnerGlobalSearchResponse } from '@c1rcle/contracts';
 
-const resultIcons: Record<PartnerSearchIcon, typeof CalendarIcon> = {
-  event: CalendarIcon,
-  partner: PartnerIcon,
-  guest: GuestIcon,
-  order: OrderIcon,
-  request: PendingIcon,
-  finance: BankIcon,
-  settings: SettingsIcon,
-};
-
-export function PartnerGlobalSearch({ data }: { readonly data: PartnerSearchData }) {
+export function PartnerGlobalSearch({
+  organizationId,
+  studio,
+}: {
+  readonly organizationId: string | null;
+  readonly studio: StudioRole;
+}) {
   const router = useRouter();
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -41,56 +27,79 @@ export function PartnerGlobalSearch({ data }: { readonly data: PartnerSearchData
   const [open, setOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [results, setResults] = useState<PartnerGlobalSearchResponse['results']>([]);
+  const [resultsKey, setResultsKey] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingKey, setLoadingKey] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const activeSearchKey = organizationId ? `${organizationId}\u0000${query.trim()}` : null;
+  const matchingResults = resultsKey === activeSearchKey ? results : [];
+  const loadingCurrentSearch = loading && loadingKey === activeSearchKey;
+  const failedCurrentSearch = failed && resultsKey === activeSearchKey;
 
-  const matchingResults = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase();
-    if (!normalizedQuery) return [];
-    return data.results
-      .filter((result) =>
-        [result.title, result.subtitle, ...result.keywords]
-          .join(' ')
-          .toLocaleLowerCase()
-          .includes(normalizedQuery),
-      )
-      .slice(0, 12);
-  }, [data.results, query]);
-
-  const groups = useMemo(() => {
-    const grouped = new Map<string, PartnerSearchResult[]>();
-    matchingResults.forEach((result) => {
-      const group = grouped.get(result.group) ?? [];
-      group.push(result);
-      grouped.set(result.group, group);
-    });
-    return Array.from(grouped.entries());
-  }, [matchingResults]);
+  useEffect(() => {
+    const term = query.trim();
+    if (!organizationId || term.length < 2) return;
+    const searchKey = `${organizationId}\u0000${term}`;
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      setLoading(true);
+      setLoadingKey(searchKey);
+      void apiClient
+        .get({
+          path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/search?q=${encodeURIComponent(term)}`,
+          schema: partnerGlobalSearchResponseSchema,
+          headers: { 'x-organization-id': organizationId },
+        })
+        .then(({ results: next }) => {
+          if (!cancelled) {
+            setResults(next);
+            setResultsKey(searchKey);
+            setFailed(false);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setResults([]);
+            setResultsKey(searchKey);
+            setFailed(true);
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    }, 180);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [organizationId, query]);
 
   const closeSearch = () => {
     setOpen(false);
     setMobileOpen(false);
     setActiveIndex(-1);
   };
-
   const focusSearch = () => {
     setMobileOpen(true);
     setOpen(true);
-    window.requestAnimationFrame(() => {
-      inputRef.current?.focus();
-    });
+    window.requestAnimationFrame(() => inputRef.current?.focus());
   };
-
-  const selectResult = (result: PartnerSearchResult) => {
+  const selectResult = (result: PartnerGlobalSearchResponse['results'][number]) => {
     closeSearch();
     setQuery('');
-    if (result.href) router.push(result.href);
+    router.push(
+      result.type === 'event'
+        ? `/partner/${studio}/events/${encodeURIComponent(result.id)}`
+        : `/partner/${studio}/partners?profile=${encodeURIComponent(result.id)}`,
+    );
   };
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase() === 'k') {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         focusSearch();
-        return;
       }
       if (event.key === 'Escape' && (open || mobileOpen)) {
         event.preventDefault();
@@ -107,35 +116,14 @@ export function PartnerGlobalSearch({ data }: { readonly data: PartnerSearchData
       window.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('pointerdown', onPointerDown);
     };
-  }, [mobileOpen, open]);
+  }, [open, mobileOpen]);
 
-  const searchFieldClass = [
+  const fieldClass = [
     styles['globalSearchField'],
     mobileOpen ? styles['globalSearchFieldMobileOpen'] : '',
   ]
     .filter(Boolean)
     .join(' ');
-
-  if (data.dataStatus === 'unavailable') {
-    return (
-      <div className={styles['globalSearchRoot']}>
-        <button
-          className={styles['mobileSearchTrigger']}
-          type="button"
-          aria-label="Global search unavailable"
-          title={data.unavailableReason}
-          disabled
-        >
-          <SearchIcon size={16} aria-hidden="true" />
-        </button>
-        <div className={searchFieldClass} title={data.unavailableReason}>
-          <SearchIcon size={15} aria-hidden="true" />
-          <span aria-live="polite">Search unavailable</span>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className={styles['globalSearchRoot']} ref={rootRef}>
       <button
@@ -146,15 +134,22 @@ export function PartnerGlobalSearch({ data }: { readonly data: PartnerSearchData
       >
         <SearchIcon size={16} aria-hidden="true" />
       </button>
-      <div className={searchFieldClass}>
+      <div className={fieldClass}>
         <SearchIcon size={15} aria-hidden="true" />
         <input
           ref={inputRef}
           value={query}
+          placeholder="Search events and partners"
+          aria-label="Search events and partners"
           onChange={(event) => {
             setQuery(event.target.value);
             setOpen(true);
             setActiveIndex(-1);
+            setResultsKey(null);
+            setLoading(false);
+            setFailed(false);
+            setResults([]);
+            setLoading(false);
           }}
           onFocus={() => {
             setOpen(true);
@@ -162,28 +157,25 @@ export function PartnerGlobalSearch({ data }: { readonly data: PartnerSearchData
           onKeyDown={(event) => {
             if (event.key === 'ArrowDown' && matchingResults.length) {
               event.preventDefault();
-              setActiveIndex((index) => Math.min(index + 1, matchingResults.length - 1));
+              setActiveIndex((i) => Math.min(i + 1, matchingResults.length - 1));
             }
             if (event.key === 'ArrowUp' && matchingResults.length) {
               event.preventDefault();
-              setActiveIndex((index) => Math.max(index - 1, 0));
+              setActiveIndex((i) => Math.max(i - 1, 0));
             }
-            if (event.key === 'Enter' && activeIndex >= 0) {
+            if (event.key === 'Enter' && activeIndex >= 0 && matchingResults[activeIndex]) {
               event.preventDefault();
-              const result = matchingResults[activeIndex];
-              if (result) selectResult(result);
+              selectResult(matchingResults[activeIndex]);
             }
           }}
-          placeholder="Search events, partners, orders"
-          aria-label="Search events, partners, orders"
+          role="combobox"
           aria-controls="partner-global-search-results"
+          aria-expanded={open && Boolean(query.trim())}
           aria-activedescendant={
             activeIndex >= 0
               ? `partner-search-result-${matchingResults[activeIndex]?.id ?? ''}`
               : undefined
           }
-          role="combobox"
-          aria-expanded={open && Boolean(query.trim())}
           aria-autocomplete="list"
         />
         <span className={styles['searchShortcut']}>⌘K</span>
@@ -194,66 +186,52 @@ export function PartnerGlobalSearch({ data }: { readonly data: PartnerSearchData
             role="listbox"
             aria-label="Search results"
           >
-            {groups.length ? (
-              groups.map(([group, results]) => (
-                <div key={group}>
-                  <div className={styles['searchGroupLabel']}>{group}</div>
-                  {results.map((result) => (
-                    <SearchResultButton
-                      key={result.id}
-                      result={result}
-                      active={matchingResults[activeIndex]?.id === result.id}
-                      onSelect={selectResult}
-                    />
-                  ))}
-                </div>
-              ))
-            ) : (
-              <div className={styles['searchNoResults']}>
-                No matches. Try an event, partner or guest name.
+            {loadingCurrentSearch ? (
+              <div className={styles['searchNoResults']} role="status">
+                Searching…
               </div>
+            ) : failedCurrentSearch ? (
+              <div className={styles['searchNoResults']} role="alert">
+                Search failed. Try again.
+              </div>
+            ) : matchingResults.length ? (
+              matchingResults.map((result, index) => {
+                const Icon = result.type === 'event' ? CalendarIcon : PartnerIcon;
+                const active = index === activeIndex;
+                return (
+                  <button
+                    key={`${result.type}:${result.id}`}
+                    className={[styles['searchResult'], active ? styles['searchResultActive'] : '']
+                      .filter(Boolean)
+                      .join(' ')}
+                    type="button"
+                    role="option"
+                    aria-selected={active}
+                    id={`partner-search-result-${result.id}`}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                    }}
+                    onClick={() => {
+                      selectResult(result);
+                    }}
+                  >
+                    <span className={styles['searchResultIcon']}>
+                      <Icon size={16} aria-hidden="true" />
+                    </span>
+                    <span className={styles['searchResultCopy']}>
+                      <strong>{result.title}</strong>
+                      <small>{result.subtitle}</small>
+                    </span>
+                    <ExternalLinkIcon size={15} aria-hidden="true" />
+                  </button>
+                );
+              })
+            ) : (
+              <div className={styles['searchNoResults']}>No matching events or partners.</div>
             )}
           </div>
         ) : null}
       </div>
     </div>
-  );
-}
-
-function SearchResultButton({
-  result,
-  active,
-  onSelect,
-}: {
-  readonly result: PartnerSearchResult;
-  readonly active: boolean;
-  readonly onSelect: (result: PartnerSearchResult) => void;
-}) {
-  const Icon = resultIcons[result.icon];
-  return (
-    <button
-      className={[styles['searchResult'], active ? styles['searchResultActive'] : '']
-        .filter(Boolean)
-        .join(' ')}
-      type="button"
-      role="option"
-      aria-selected={active}
-      id={`partner-search-result-${result.id}`}
-      onMouseDown={(event) => {
-        event.preventDefault();
-      }}
-      onClick={() => {
-        onSelect(result);
-      }}
-    >
-      <span className={styles['searchResultIcon']}>
-        <Icon size={16} aria-hidden="true" />
-      </span>
-      <span className={styles['searchResultCopy']}>
-        <strong>{result.title}</strong>
-        <small>{result.subtitle}</small>
-      </span>
-      <ExternalLinkIcon size={15} aria-hidden="true" />
-    </button>
   );
 }
