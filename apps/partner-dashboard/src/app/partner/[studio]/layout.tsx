@@ -15,9 +15,5 @@ export default async function StudioLayout({
   const { studio } = await params;
   if (!isStudioRole(studio)) notFound();
 
-  return (
-    <PartnerStudioFrame studio={studio}>
-      {children}
-    </PartnerStudioFrame>
-  );
+  return <PartnerStudioFrame studio={studio}>{children}</PartnerStudioFrame>;
 }

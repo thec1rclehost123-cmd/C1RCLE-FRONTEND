@@ -47,7 +47,11 @@ export function PromoterOverviewConnected({ data }: { data: Overview }) {
             value={inr(activity.grossAttributedTicketSalesPaise)}
             tone={activity.grossAttributedTicketSalesPaise > 0 ? 'positive' : 'neutral'}
           />
-          <Metric label="Refunded value" value={inr(activity.refundedAttributedTicketSalesPaise)} tone={activity.refundedAttributedTicketSalesPaise > 0 ? 'negative' : 'neutral'} />
+          <Metric
+            label="Refunded value"
+            value={inr(activity.refundedAttributedTicketSalesPaise)}
+            tone={activity.refundedAttributedTicketSalesPaise > 0 ? 'negative' : 'neutral'}
+          />
           <Metric
             label="Net attributed sales"
             value={inr(activity.netAttributedTicketSalesPaise)}
@@ -76,8 +80,16 @@ export function PromoterOverviewConnected({ data }: { data: Overview }) {
         <dl className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Metric label="Pending" value={inr(data.balance.pendingPaise)} />
           <Metric label="Held" value={inr(data.balance.heldPaise)} />
-          <Metric label="Available" value={inr(data.balance.availablePaise)} tone={data.balance.availablePaise > 0 ? 'positive' : 'neutral'} />
-          <Metric label="Paid" value={inr(data.balance.paidPaise)} tone={data.balance.paidPaise > 0 ? 'positive' : 'neutral'} />
+          <Metric
+            label="Available"
+            value={inr(data.balance.availablePaise)}
+            tone={data.balance.availablePaise > 0 ? 'positive' : 'neutral'}
+          />
+          <Metric
+            label="Paid"
+            value={inr(data.balance.paidPaise)}
+            tone={data.balance.paidPaise > 0 ? 'positive' : 'neutral'}
+          />
         </dl>
         <p className="mt-3 text-xs text-white/55">
           Balance source: {data.balance.readModel}. M4 does not enable live payouts.
@@ -151,7 +163,11 @@ export function PromoterOverviewConnected({ data }: { data: Overview }) {
                     {entry.status} · {dateTime(entry.createdAt)}
                   </p>
                 </div>
-                <p className={`font-semibold ${entry.entryType === 'refund' ? 'text-rose-400' : 'text-emerald-400'}`}>{inr(entry.amountPaise)}</p>
+                <p
+                  className={`font-semibold ${entry.entryType === 'refund' ? 'text-rose-400' : 'text-emerald-400'}`}
+                >
+                  {inr(entry.amountPaise)}
+                </p>
               </li>
             ))}
           </ul>
@@ -211,10 +227,16 @@ export function PromoterOverviewConnected({ data }: { data: Overview }) {
                     </td>
                     <td className="px-4 py-3">{order.status.replaceAll('_', ' ')}</td>
                     <td className="px-4 py-3 text-right">{order.ticketCount}</td>
-                    <td className={`px-4 py-3 text-right ${order.status === 'refunded' ? 'text-rose-400' : order.status === 'paid' ? 'text-emerald-400' : ''}`}>
+                    <td
+                      className={`px-4 py-3 text-right ${order.status === 'refunded' ? 'text-rose-400' : order.status === 'paid' ? 'text-emerald-400' : ''}`}
+                    >
                       {inr(order.attributedTicketValuePaise)}
                     </td>
-                    <td className={`px-4 py-3 text-right ${order.status === 'refunded' ? 'text-rose-400' : order.status === 'paid' ? 'text-emerald-400' : ''}`}>{inr(order.promoterCommissionPaise)}</td>
+                    <td
+                      className={`px-4 py-3 text-right ${order.status === 'refunded' ? 'text-rose-400' : order.status === 'paid' ? 'text-emerald-400' : ''}`}
+                    >
+                      {inr(order.promoterCommissionPaise)}
+                    </td>
                     <td className="px-4 py-3 text-xs text-white/55">
                       {dateTime(order.attributedAt)}
                     </td>
@@ -238,11 +260,23 @@ export function PromoterOverviewConnected({ data }: { data: Overview }) {
   );
 }
 
-function Metric({ label, value, tone = 'neutral' }: { label: string; value: string; tone?: 'positive' | 'negative' | 'neutral' }) {
+function Metric({
+  label,
+  value,
+  tone = 'neutral',
+}: {
+  label: string;
+  value: string;
+  tone?: 'positive' | 'negative' | 'neutral';
+}) {
   return (
     <div className="rounded-xl border border-white/10 p-4">
       <dt className="text-xs text-white/55">{label}</dt>
-      <dd className={`mt-2 text-lg font-semibold ${tone === 'positive' ? 'text-emerald-400' : tone === 'negative' ? 'text-rose-400' : 'text-white'}`}>{value}</dd>
+      <dd
+        className={`mt-2 text-lg font-semibold ${tone === 'positive' ? 'text-emerald-400' : tone === 'negative' ? 'text-rose-400' : 'text-white'}`}
+      >
+        {value}
+      </dd>
     </div>
   );
 }

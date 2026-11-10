@@ -69,7 +69,9 @@ it('updates all four previews without a delivery action or request', () => {
   expect(screen.getByRole('heading', { name: 'New campaign' })).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('Campaign name'), { target: { value: 'Opening night' } });
   fireEvent.click(screen.getByRole('button', { name: 'Review' }));
-  expect(screen.getByRole('list', { name: 'Selected recipients' })).toHaveTextContent('Aisha Menon');
+  expect(screen.getByRole('list', { name: 'Selected recipients' })).toHaveTextContent(
+    'Aisha Menon',
+  );
   fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Hello [First name]' } });
   expect(screen.getByLabelText('WhatsApp preview')).toHaveTextContent('Hello Aisha');
   for (const channel of ['SMS', 'Email', 'Notification']) {
@@ -77,7 +79,9 @@ it('updates all four previews without a delivery action or request', () => {
     expect(screen.getByLabelText(`${channel} preview`)).toHaveTextContent('Hello Aisha');
   }
   fireEvent.click(screen.getByRole('button', { name: 'Remove Aisha Menon' }));
-  expect(screen.getByRole('list', { name: 'Selected recipients' })).toHaveTextContent('No recipients selected.');
+  expect(screen.getByRole('list', { name: 'Selected recipients' })).toHaveTextContent(
+    'No recipients selected.',
+  );
   expect(screen.getByRole('button', { name: 'Sending unavailable' })).toBeDisabled();
   expect(screen.getByRole('note')).toHaveTextContent('Preview only · sending is not connected');
   fireEvent.click(screen.getByRole('button', { name: 'Close composer' }));

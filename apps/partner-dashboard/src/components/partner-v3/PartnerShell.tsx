@@ -12,7 +12,6 @@ import styles from './partner-v3.module.css';
 import { PartnerSidebar } from './PartnerSidebar';
 import { PartnerTopbar } from './PartnerTopbar';
 
-
 type PartnerNavigationLayout = 'side' | 'top';
 
 const NAVIGATION_LAYOUT_STORAGE_KEY = 'c1rcle.partner.navigation-layout';

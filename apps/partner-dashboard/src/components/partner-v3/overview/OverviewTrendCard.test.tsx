@@ -69,11 +69,7 @@ describe('Overview performance chart', () => {
   });
 
   it('marks negative changes in red and colors the chart with the same direction', () => {
-    render(
-      <OverviewTrendCard
-        series={[{ ...series[0]!, delta: '-100%', points: [8, 4, 0] }]}
-      />,
-    );
+    render(<OverviewTrendCard series={[{ ...series[0]!, delta: '-100%', points: [8, 4, 0] }]} />);
     expect(screen.getByText('-100%')).toHaveAttribute('data-trend', 'negative');
     expect(screen.getByRole('img').querySelector('path[stroke]')).toHaveAttribute(
       'stroke',

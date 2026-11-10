@@ -431,7 +431,9 @@
   color: #a7a39e;
   text-decoration: none;
   font-weight: 600;
-  transition: background 140ms ease, color 140ms ease;
+  transition:
+    background 140ms ease,
+    color 140ms ease;
 }
 .eventViews a[aria-current='page'] {
   background: #292929;

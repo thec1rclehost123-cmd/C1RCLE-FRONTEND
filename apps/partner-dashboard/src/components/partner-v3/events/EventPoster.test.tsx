@@ -4,7 +4,16 @@ import { describe, expect, it, vi } from 'vitest';
 import { EventPoster } from './EventPoster';
 
 vi.mock('next/image', () => ({
-  default: ({ alt, src, unoptimized }: { alt?: string; src: string; unoptimized?: boolean; onError?: () => void }) => (
+  default: ({
+    alt,
+    src,
+    unoptimized,
+  }: {
+    alt?: string;
+    src: string;
+    unoptimized?: boolean;
+    onError?: () => void;
+  }) => (
     <div
       role="img"
       aria-label={alt ?? ''}
@@ -58,9 +67,17 @@ describe('EventPoster', () => {
   });
 
   it('keeps the poster fallback visible underneath a loading or failed image', () => {
-    const { rerender } = render(<EventPoster artwork={{ type: 'image', value: 'https://storage.googleapis.com/c1rcle/posters/one.jpg' }} />);
+    const { rerender } = render(
+      <EventPoster
+        artwork={{ type: 'image', value: 'https://storage.googleapis.com/c1rcle/posters/one.jpg' }}
+      />,
+    );
     expect(screen.getByTestId('event-poster-fallback')).toBeInTheDocument();
-    rerender(<EventPoster artwork={{ type: 'image', value: 'https://storage.googleapis.com/c1rcle/posters/two.jpg' }} />);
+    rerender(
+      <EventPoster
+        artwork={{ type: 'image', value: 'https://storage.googleapis.com/c1rcle/posters/two.jpg' }}
+      />,
+    );
     expect(screen.getByTestId('event-poster-fallback')).toBeInTheDocument();
   });
 

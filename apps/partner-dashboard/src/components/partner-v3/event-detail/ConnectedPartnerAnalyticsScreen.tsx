@@ -107,8 +107,16 @@ export function ConnectedPartnerAnalyticsScreen({
           </Link>
         </nav>
         <section className={styles['stats']} aria-label="Analytics summary">
-          <Metric label="Gross revenue" value={formatMoney(totals.gross)} tone={totals.gross > 0 ? 'positive' : 'neutral'} />
-          <Metric label="Net revenue" value={formatMoney(totals.net)} tone={totals.net > 0 ? 'positive' : 'neutral'} />
+          <Metric
+            label="Gross revenue"
+            value={formatMoney(totals.gross)}
+            tone={totals.gross > 0 ? 'positive' : 'neutral'}
+          />
+          <Metric
+            label="Net revenue"
+            value={formatMoney(totals.net)}
+            tone={totals.net > 0 ? 'positive' : 'neutral'}
+          />
           <Metric label="Tickets issued" value={count.format(totals.tickets)} />
           <Metric label="Paid orders" value={count.format(totals.orders)} />
         </section>
@@ -185,15 +193,28 @@ export function ConnectedPartnerAnalyticsScreen({
         <section className={styles['splitGrid']} aria-label="Revenue and ticket breakdown">
           <div className={styles['panel']}>
             <h2>Revenue breakdown</h2>
-            <DataRow label="Guest payments" value={formatMoney(totals.gross)} tone={totals.gross > 0 ? 'positive' : 'neutral'} />
+            <DataRow
+              label="Guest payments"
+              value={formatMoney(totals.gross)}
+              tone={totals.gross > 0 ? 'positive' : 'neutral'}
+            />
             <DataRow
               label="Ticket revenue"
               value={formatMoney(
                 selectedTotals?.ticketRevenuePaise ?? analytics.salesBreakdown.ticketRevenuePaise,
               )}
-              tone={(selectedTotals?.ticketRevenuePaise ?? analytics.salesBreakdown.ticketRevenuePaise) > 0 ? 'positive' : 'neutral'}
+              tone={
+                (selectedTotals?.ticketRevenuePaise ??
+                  analytics.salesBreakdown.ticketRevenuePaise) > 0
+                  ? 'positive'
+                  : 'neutral'
+              }
             />
-            <DataRow label="Net captured after refunds" value={formatMoney(totals.net)} tone={totals.net > 0 ? 'positive' : 'neutral'} />
+            <DataRow
+              label="Net captured after refunds"
+              value={formatMoney(totals.net)}
+              tone={totals.net > 0 ? 'positive' : 'neutral'}
+            />
           </div>
           <div className={styles['panel']}>
             <h2>Ticket activity</h2>
@@ -273,7 +294,11 @@ export function ConnectedPartnerAnalyticsScreen({
                         <td>{event.title}</td>
                         <td>{formatBucket(event.date.slice(0, 10), 'day')}</td>
                         <td>{count.format(event.tickets)}</td>
-                        <td className={event.revenuePaise > 0 ? styles['valuePositive'] : undefined}>{formatMoney(event.revenuePaise)}</td>
+                        <td
+                          className={event.revenuePaise > 0 ? styles['valuePositive'] : undefined}
+                        >
+                          {formatMoney(event.revenuePaise)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -314,8 +339,16 @@ export function ConnectedPartnerAnalyticsScreen({
                         analytics.lastThirtyDays.granularity === 'month' ? 'month' : 'day',
                       )}
                     </td>
-                    <td className={bucket.guestGrossCollectedPaise > 0 ? styles['valuePositive'] : undefined}>{formatMoney(bucket.guestGrossCollectedPaise)}</td>
-                    <td className={bucket.revenuePaise > 0 ? styles['valuePositive'] : undefined}>{formatMoney(bucket.revenuePaise)}</td>
+                    <td
+                      className={
+                        bucket.guestGrossCollectedPaise > 0 ? styles['valuePositive'] : undefined
+                      }
+                    >
+                      {formatMoney(bucket.guestGrossCollectedPaise)}
+                    </td>
+                    <td className={bucket.revenuePaise > 0 ? styles['valuePositive'] : undefined}>
+                      {formatMoney(bucket.revenuePaise)}
+                    </td>
                     <td>{count.format(bucket.totalTicketsIssued)}</td>
                     <td>{count.format(bucket.paidOrderCount)}</td>
                   </tr>
@@ -329,20 +362,40 @@ export function ConnectedPartnerAnalyticsScreen({
   );
 }
 
-function Metric({ label, value, tone = 'neutral' }: { readonly label: string; readonly value: string; readonly tone?: 'positive' | 'negative' | 'neutral' }) {
+function Metric({
+  label,
+  value,
+  tone = 'neutral',
+}: {
+  readonly label: string;
+  readonly value: string;
+  readonly tone?: 'positive' | 'negative' | 'neutral';
+}) {
   return (
     <div className={styles['stat']}>
       <span>{label}</span>
-      <strong className={valueToneClasses[tone]} data-tone={tone}>{value}</strong>
+      <strong className={valueToneClasses[tone]} data-tone={tone}>
+        {value}
+      </strong>
     </div>
   );
 }
 
-function DataRow({ label, value, tone = 'neutral' }: { readonly label: string; readonly value: string; readonly tone?: 'positive' | 'negative' | 'neutral' }) {
+function DataRow({
+  label,
+  value,
+  tone = 'neutral',
+}: {
+  readonly label: string;
+  readonly value: string;
+  readonly tone?: 'positive' | 'negative' | 'neutral';
+}) {
   return (
     <div className={styles['dataRow']}>
       <span>{label}</span>
-      <strong className={valueToneClasses[tone]} data-tone={tone}>{value}</strong>
+      <strong className={valueToneClasses[tone]} data-tone={tone}>
+        {value}
+      </strong>
     </div>
   );
 }

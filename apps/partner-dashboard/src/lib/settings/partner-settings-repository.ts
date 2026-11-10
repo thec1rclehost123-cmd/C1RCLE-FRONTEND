@@ -1,9 +1,6 @@
 import { z } from 'zod';
 
-import {
-  partnerSettingsDtoSchema,
-  updatePartnerSettingsSchema,
-} from '@c1rcle/contracts/client';
+import { partnerSettingsDtoSchema, updatePartnerSettingsSchema } from '@c1rcle/contracts/client';
 
 import { apiClient } from '@/lib/api/client';
 import { uploadToSignedUrl } from '@/lib/onboarding/uploadToSignedUrl';

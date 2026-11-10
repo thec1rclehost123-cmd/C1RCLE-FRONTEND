@@ -11,7 +11,9 @@ import { getActiveOrgIdFromCookieHeader } from '@/lib/org/active-org-cookie';
 
 import type { EventComparisonResponse } from '@c1rcle/contracts';
 
-export async function loadPartnerEventComparison(eventId: string): Promise<EventComparisonResponse> {
+export async function loadPartnerEventComparison(
+  eventId: string,
+): Promise<EventComparisonResponse> {
   const cookieHeader = (await cookies()).toString();
   const organizationId = getActiveOrgIdFromCookieHeader(cookieHeader);
   if (!organizationId) redirect('/partner/select-organization');

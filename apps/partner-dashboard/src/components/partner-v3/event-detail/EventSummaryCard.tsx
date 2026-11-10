@@ -23,13 +23,11 @@ export function EventSummaryCard({
   readonly accent?: 'orange' | 'lavender';
   readonly tone?: 'positive' | 'negative' | 'neutral';
 }) {
-  const deltaValue = delta ? Number.parseFloat(delta.replace('%', '').replace('+', '')) : Number.NaN;
+  const deltaValue = delta
+    ? Number.parseFloat(delta.replace('%', '').replace('+', ''))
+    : Number.NaN;
   const trendTone =
-    delta === 'New' || deltaValue > 0
-      ? 'positive'
-      : deltaValue < 0
-        ? 'negative'
-        : 'neutral';
+    delta === 'New' || deltaValue > 0 ? 'positive' : deltaValue < 0 ? 'negative' : 'neutral';
   return (
     <article
       className={[styles['summaryCard'], accent === 'lavender' ? styles['summaryCardLavender'] : '']
@@ -43,7 +41,14 @@ export function EventSummaryCard({
       <div className={styles['summaryValueRow']}>
         <strong className={styles[`summaryValue-${tone}`]}>{value}</strong>
         {valueSuffix ? <span className={styles['summaryValueSuffix']}>{valueSuffix}</span> : null}
-        {delta ? <span className={[styles['summaryDelta'], styles[`summaryDelta-${trendTone}`]].join(' ')} data-trend={trendTone}>{delta}</span> : null}
+        {delta ? (
+          <span
+            className={[styles['summaryDelta'], styles[`summaryDelta-${trendTone}`]].join(' ')}
+            data-trend={trendTone}
+          >
+            {delta}
+          </span>
+        ) : null}
       </div>
       {detail ? <span className={styles['summaryDetail']}>{detail}</span> : null}
       {trendPoints ? <Sparkline points={trendPoints} tone={trendTone} /> : null}
@@ -51,7 +56,13 @@ export function EventSummaryCard({
   );
 }
 
-function Sparkline({ points, tone }: { readonly points: readonly number[]; readonly tone: 'positive' | 'negative' | 'neutral' }) {
+function Sparkline({
+  points,
+  tone,
+}: {
+  readonly points: readonly number[];
+  readonly tone: 'positive' | 'negative' | 'neutral';
+}) {
   const path = buildSparklinePath(points);
   return (
     <svg
@@ -60,8 +71,14 @@ function Sparkline({ points, tone }: { readonly points: readonly number[]; reado
       preserveAspectRatio="none"
       aria-hidden="true"
     >
-      <path d={`${path} L 600 190 L 0 190 Z`} className={[styles['summarySparkArea'], styles[`summarySparkArea-${tone}`]].join(' ')} />
-      <path d={path} className={[styles['summarySparkLine'], styles[`summarySparkLine-${tone}`]].join(' ')} />
+      <path
+        d={`${path} L 600 190 L 0 190 Z`}
+        className={[styles['summarySparkArea'], styles[`summarySparkArea-${tone}`]].join(' ')}
+      />
+      <path
+        d={path}
+        className={[styles['summarySparkLine'], styles[`summarySparkLine-${tone}`]].join(' ')}
+      />
     </svg>
   );
 }

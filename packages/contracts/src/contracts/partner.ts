@@ -349,16 +349,24 @@ export const eventAnalyticsDtoSchema = z.object({
 export type EventAnalyticsDto = z.infer<typeof eventAnalyticsDtoSchema>;
 
 /** Historical successful bookings by weekday/hour in product time. */
-export const eventBookingHeatmapDtoSchema = z.object({
-  eventId: opaqueIdSchema,
-  timeZone: z.literal('Asia/Kolkata'),
-  weekdays: z.array(z.object({
-    day: z.enum(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']),
-    hours: z.array(z.number().int().nonnegative()).length(24),
-  }).strict()).length(7),
-  totalBookings: z.number().int().nonnegative(),
-  complete: z.boolean(),
-}).strict();
+export const eventBookingHeatmapDtoSchema = z
+  .object({
+    eventId: opaqueIdSchema,
+    timeZone: z.literal('Asia/Kolkata'),
+    weekdays: z
+      .array(
+        z
+          .object({
+            day: z.enum(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']),
+            hours: z.array(z.number().int().nonnegative()).length(24),
+          })
+          .strict(),
+      )
+      .length(7),
+    totalBookings: z.number().int().nonnegative(),
+    complete: z.boolean(),
+  })
+  .strict();
 export type EventBookingHeatmapDto = z.infer<typeof eventBookingHeatmapDtoSchema>;
 
 /**
@@ -582,7 +590,10 @@ export const discoverPartnerDtoSchema = z.object({
   coverUrl: z.url().nullable().optional(),
   bio: z.string().max(2000).optional(),
   genres: z.array(z.string().max(60)).max(20).optional(),
-  stats: z.array(z.object({ label: z.string().max(80), value: z.string().max(40) })).max(4).optional(),
+  stats: z
+    .array(z.object({ label: z.string().max(80), value: z.string().max(40) }))
+    .max(4)
+    .optional(),
 });
 export type DiscoverPartnerDto = z.infer<typeof discoverPartnerDtoSchema>;
 

@@ -13,7 +13,6 @@ import { PageContainer } from './PagePrimitives';
 import { PartnerShell } from './PartnerShell';
 import { EmptyState, LoadingState } from './States';
 
-
 export function PartnerStudioFrame({
   studio,
   children,

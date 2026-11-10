@@ -7,22 +7,35 @@ import { PartnerRequestCard } from './PartnerRequestCard';
 import type { PartnerRequest } from '@/data/partner-data-source';
 
 const mocks = vi.hoisted(() => ({
-  resolvePartnership: vi.fn<(
-    organizationId: string,
-    partnershipId: string,
-    action: 'approve' | 'reject' | 'block' | 'end',
-    options?: { readonly reason?: string; readonly idempotencyKey?: string },
-  ) => Promise<unknown>>(),
+  resolvePartnership:
+    vi.fn<
+      (
+        organizationId: string,
+        partnershipId: string,
+        action: 'approve' | 'reject' | 'block' | 'end',
+        options?: { readonly reason?: string; readonly idempotencyKey?: string },
+      ) => Promise<unknown>
+    >(),
   resolvePromoterConnection: vi.fn(),
   refresh: vi.fn(),
 }));
-vi.mock('@/lib/partner/api-partnerships-repository', () => ({ resolvePartnership: mocks.resolvePartnership }));
-vi.mock('@/lib/partner/promoter-connection-repository', () => ({ resolvePromoterConnection: mocks.resolvePromoterConnection }));
+vi.mock('@/lib/partner/api-partnerships-repository', () => ({
+  resolvePartnership: mocks.resolvePartnership,
+}));
+vi.mock('@/lib/partner/promoter-connection-repository', () => ({
+  resolvePromoterConnection: mocks.resolvePromoterConnection,
+}));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: mocks.refresh }) }));
 
 const outgoing: PartnerRequest = {
-  id: 'partnership_1', name: 'Host One', initials: 'HO', kind: 'host', direction: 'outgoing',
-  note: 'Request', canWithdraw: true, target: { graph: 'partnership', id: 'partnership_1' },
+  id: 'partnership_1',
+  name: 'Host One',
+  initials: 'HO',
+  kind: 'host',
+  direction: 'outgoing',
+  note: 'Request',
+  canWithdraw: true,
+  target: { graph: 'partnership', id: 'partnership_1' },
 };
 
 describe('PartnerRequestCard', () => {

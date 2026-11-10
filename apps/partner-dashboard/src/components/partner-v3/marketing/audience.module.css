@@ -909,12 +909,24 @@
   font-size: 13px;
   font-weight: 800;
 }
-.avatar0 { background: #e95420; }
-.avatar1 { background: #4935d5; }
-.avatar2 { background: #078b79; }
-.avatar3 { background: #c51d78; }
-.avatar4 { background: #bb7b08; }
-.avatar5 { background: #7844cf; }
+.avatar0 {
+  background: #e95420;
+}
+.avatar1 {
+  background: #4935d5;
+}
+.avatar2 {
+  background: #078b79;
+}
+.avatar3 {
+  background: #c51d78;
+}
+.avatar4 {
+  background: #bb7b08;
+}
+.avatar5 {
+  background: #7844cf;
+}
 .attendeeName {
   min-width: 0;
   overflow: hidden;

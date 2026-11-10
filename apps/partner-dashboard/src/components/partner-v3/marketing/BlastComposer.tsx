@@ -98,7 +98,11 @@ export function BlastComposer({
         </button>
       </nav>
       <div className={styles['composerGrid']}>
-        <section className={styles['editor']} data-active={mobileView === 'edit'} aria-label="Message composer">
+        <section
+          className={styles['editor']}
+          data-active={mobileView === 'edit'}
+          aria-label="Message composer"
+        >
           <label>
             Campaign name
             <input
@@ -128,7 +132,9 @@ export function BlastComposer({
             <div className={styles['recipientHeading']}>
               <div>
                 <strong>Recipients</strong>
-                <span>{audience.length} selected{audienceContext ? ` · ${audienceContext}` : ''}</span>
+                <span>
+                  {audience.length} selected{audienceContext ? ` · ${audienceContext}` : ''}
+                </span>
               </div>
               <button
                 type="button"
@@ -142,24 +148,42 @@ export function BlastComposer({
               </button>
             </div>
             {recipientsOpen ? (
-              <ul className={styles['recipientList']} id="blast-recipients" aria-label="Selected recipients">
+              <ul
+                className={styles['recipientList']}
+                id="blast-recipients"
+                aria-label="Selected recipients"
+              >
                 {audience.slice(0, 3).map((recipient) => (
                   <li key={recipient.id}>
-                    <span><strong>{recipient.name}</strong><small>{recipient.eventName}</small></span>
-                    <button type="button" aria-label={`Remove ${recipient.name}`} onClick={() => {
-                      onRemoveRecipient(recipient.id);
-                    }}>Remove</button>
+                    <span>
+                      <strong>{recipient.name}</strong>
+                      <small>{recipient.eventName}</small>
+                    </span>
+                    <button
+                      type="button"
+                      aria-label={`Remove ${recipient.name}`}
+                      onClick={() => {
+                        onRemoveRecipient(recipient.id);
+                      }}
+                    >
+                      Remove
+                    </button>
                   </li>
                 ))}
                 {!audience.length ? <li>No recipients selected.</li> : null}
               </ul>
             ) : eventNames.length ? (
               <span className={styles['recipientEvents']}>
-                {eventNames.length <= 2 ? eventNames.join(' · ') : `${String(eventNames.length)} events`}
+                {eventNames.length <= 2
+                  ? eventNames.join(' · ')
+                  : `${String(eventNames.length)} events`}
               </span>
             ) : null}
             {recipientsOpen && audience.length > 3 ? (
-              <span className={styles['recipientEvents']}>+ {String(audience.length - 3)} more selected · manage the full selection in the attendee list</span>
+              <span className={styles['recipientEvents']}>
+                + {String(audience.length - 3)} more selected · manage the full selection in the
+                attendee list
+              </span>
             ) : null}
           </div>
           {channel === 'Email' || channel === 'Notification' ? (
@@ -232,7 +256,11 @@ export function BlastComposer({
             <p role="note">Preview only · sending is not connected</p>
           </footer>
         </section>
-        <section className={styles['previewColumn']} data-active={mobileView === 'preview'} aria-label={`${channel} preview`}>
+        <section
+          className={styles['previewColumn']}
+          data-active={mobileView === 'preview'}
+          aria-label={`${channel} preview`}
+        >
           <div className={styles['phone']} data-channel={channel}>
             <div className={styles['phoneStatus']}>
               <span>9:41</span>
@@ -259,14 +287,27 @@ export function BlastComposer({
                       <strong>{channel === 'WhatsApp' ? 'THE C1RCLE' : 'Messages'}</strong>
                       {channel === 'WhatsApp' ? <small>business account</small> : null}
                     </div>
-                    {channel === 'WhatsApp' ? <span className={styles['chatCall']} aria-hidden="true">⋮</span> : null}
+                    {channel === 'WhatsApp' ? (
+                      <span className={styles['chatCall']} aria-hidden="true">
+                        ⋮
+                      </span>
+                    ) : null}
                   </div>
                 )}
                 {channel === 'Email' ? (
                   <article className={styles['email']}>
-                    <div className={styles['emailToolbar']}><span>‹</span><span>•••</span></div>
+                    <div className={styles['emailToolbar']}>
+                      <span>‹</span>
+                      <span>•••</span>
+                    </div>
                     <h3>{subject || 'Your event update'}</h3>
-                    <div className={styles['emailSender']}><div className={styles['brandMark']}>C</div><p><strong>THE C1RCLE</strong><small>to selected attendees</small></p></div>
+                    <div className={styles['emailSender']}>
+                      <div className={styles['brandMark']}>C</div>
+                      <p>
+                        <strong>THE C1RCLE</strong>
+                        <small>to selected attendees</small>
+                      </p>
+                    </div>
                     <p>{message || 'Your message'}</p>
                     {previewLink ? (
                       <>
@@ -290,7 +331,13 @@ export function BlastComposer({
                     </article>
                   </div>
                 )}
-                {channel === 'WhatsApp' ? <div className={styles['chatComposer']}><span>＋</span><span>Message</span><span>◉</span></div> : null}
+                {channel === 'WhatsApp' ? (
+                  <div className={styles['chatComposer']}>
+                    <span>＋</span>
+                    <span>Message</span>
+                    <span>◉</span>
+                  </div>
+                ) : null}
               </>
             )}
             <div className={styles['homeIndicator']} />

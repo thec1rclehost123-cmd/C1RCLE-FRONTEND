@@ -38,5 +38,11 @@ export default async function StudioEventAnalyticsPage({
     loadPartnerEventAnalytics(eventId),
     loadPartnerEventBookingHeatmap(eventId),
   ]);
-  return <ConnectedEventAnalyticsScreen analytics={analytics} bookingHeatmap={bookingHeatmap} studio={studio} />;
+  return (
+    <ConnectedEventAnalyticsScreen
+      analytics={analytics}
+      bookingHeatmap={bookingHeatmap}
+      studio={studio}
+    />
+  );
 }

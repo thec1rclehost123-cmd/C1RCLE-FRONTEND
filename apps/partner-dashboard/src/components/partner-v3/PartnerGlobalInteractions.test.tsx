@@ -40,16 +40,20 @@ vi.mock('@c1rcle/icons', () => {
 describe('Partner V3 global interactions', () => {
   it('filters role-scoped search results and selects with the keyboard', async () => {
     const user = userEvent.setup();
-    api.get.mockResolvedValue({ results: [{ id: 'evt_1', type: 'event', title: 'Neon Guest Stream', subtitle: 'Event' }] });
+    api.get.mockResolvedValue({
+      results: [{ id: 'evt_1', type: 'event', title: 'Neon Guest Stream', subtitle: 'Event' }],
+    });
     render(<PartnerGlobalSearch organizationId="org_1" studio="promoter" />);
 
     const input = screen.getByRole('combobox', { name: 'Search events and partners' });
     await user.type(input, 'Neon');
     await screen.findByRole('option', { name: /Neon Guest Stream/ });
-    expect(api.get).toHaveBeenCalledWith(expect.objectContaining({
-      path: '/api/v2/organizations/org_1/search?q=Neon',
-      headers: { 'x-organization-id': 'org_1' },
-    }));
+    expect(api.get).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: '/api/v2/organizations/org_1/search?q=Neon',
+        headers: { 'x-organization-id': 'org_1' },
+      }),
+    );
 
     await user.keyboard('{ArrowDown}{Enter}');
     expect(navigation.push).toHaveBeenCalledWith('/partner/promoter/events/evt_1');
@@ -57,20 +61,27 @@ describe('Partner V3 global interactions', () => {
 
   it('clears prior-organization results as soon as the active organization changes', async () => {
     const user = userEvent.setup();
-    api.get.mockResolvedValueOnce({ results: [{ id: 'evt_private', type: 'event', title: 'Private event', subtitle: 'Event' }] });
+    api.get.mockResolvedValueOnce({
+      results: [{ id: 'evt_private', type: 'event', title: 'Private event', subtitle: 'Event' }],
+    });
     api.get.mockResolvedValueOnce({ results: [] });
     const { rerender } = render(<PartnerGlobalSearch organizationId="org_1" studio="venue" />);
 
-    await user.type(screen.getByRole('combobox', { name: 'Search events and partners' }), 'Private');
+    await user.type(
+      screen.getByRole('combobox', { name: 'Search events and partners' }),
+      'Private',
+    );
     await screen.findByRole('option', { name: /Private event/ });
 
     rerender(<PartnerGlobalSearch organizationId="org_2" studio="venue" />);
     expect(screen.queryByRole('option', { name: /Private event/ })).not.toBeInTheDocument();
     await waitFor(() => {
-      expect(api.get).toHaveBeenCalledWith(expect.objectContaining({
-        path: '/api/v2/organizations/org_2/search?q=Private',
-        headers: { 'x-organization-id': 'org_2' },
-      }));
+      expect(api.get).toHaveBeenCalledWith(
+        expect.objectContaining({
+          path: '/api/v2/organizations/org_2/search?q=Private',
+          headers: { 'x-organization-id': 'org_2' },
+        }),
+      );
     });
   });
 

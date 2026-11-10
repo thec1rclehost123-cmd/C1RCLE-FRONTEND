@@ -41,10 +41,12 @@ export function AudienceWorkspace({
         ? row.tickets === 1
         : row.tickets > 1,
   );
-  const allVisibleSelected = visibleRows.length > 0 && visibleRows.every((row) => selected.has(row.id));
+  const allVisibleSelected =
+    visibleRows.length > 0 && visibleRows.every((row) => selected.has(row.id));
   const someVisibleSelected = visibleRows.some((row) => selected.has(row.id));
   useEffect(() => {
-    if (selectVisible.current) selectVisible.current.indeterminate = someVisibleSelected && !allVisibleSelected;
+    if (selectVisible.current)
+      selectVisible.current.indeterminate = someVisibleSelected && !allVisibleSelected;
   }, [allVisibleSelected, someVisibleSelected]);
   const toggleVisible = () => {
     setSelected((current) => {
@@ -141,11 +143,13 @@ export function AudienceWorkspace({
         ) : null}
       </form>
       <nav className={styles['segments']} aria-label="Ticket count filter">
-        {([
-          ['all', 'All', data.rows.length],
-          ['single', '1 ticket', data.rows.filter((row) => row.tickets === 1).length],
-          ['group', 'Group bookings', data.rows.filter((row) => row.tickets > 1).length],
-        ] as const).map(([value, label, count]) => (
+        {(
+          [
+            ['all', 'All', data.rows.length],
+            ['single', '1 ticket', data.rows.filter((row) => row.tickets === 1).length],
+            ['group', 'Group bookings', data.rows.filter((row) => row.tickets > 1).length],
+          ] as const
+        ).map(([value, label, count]) => (
           <button
             key={value}
             type="button"
@@ -154,7 +158,8 @@ export function AudienceWorkspace({
               setTicketSegment(value);
             }}
           >
-            {label}<span>{count}</span>
+            {label}
+            <span>{count}</span>
           </button>
         ))}
       </nav>
@@ -180,8 +185,8 @@ export function AudienceWorkspace({
       <div className={styles['tableWrap']}>
         <table aria-label="Current event ticket holders">
           <caption>
-            Names and purchase totals only. This audience endpoint does not provide phone, email,
-            or demographic details. Selection applies to the visible page.
+            Names and purchase totals only. This audience endpoint does not provide phone, email, or
+            demographic details. Selection applies to the visible page.
           </caption>
           <thead>
             <tr>
@@ -217,7 +222,10 @@ export function AudienceWorkspace({
                 </td>
                 <th scope="row">
                   <span
-                    className={[styles['avatar'], styles[`avatar${String(index % 6)}`] ?? styles['avatar0']].join(' ')}
+                    className={[
+                      styles['avatar'],
+                      styles[`avatar${String(index % 6)}`] ?? styles['avatar0'],
+                    ].join(' ')}
                     aria-hidden="true"
                   >
                     {initials(row.name)}
@@ -227,7 +235,9 @@ export function AudienceWorkspace({
                 <td>{row.eventName}</td>
                 <td>{row.tickets}</td>
                 <td>{money.format(row.totalSpendPaise / 100)}</td>
-                <td><span className={styles['holderStatus']}>Current holder</span></td>
+                <td>
+                  <span className={styles['holderStatus']}>Current holder</span>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -242,7 +252,10 @@ export function AudienceWorkspace({
             {data.rows.length ? offset + 1 : 0}–{offset + data.rows.length} of {data.total}
           </span>
         ) : (
-          <span>{visibleRows.length} visible in this ticket-count segment · {data.total} total matching attendees</span>
+          <span>
+            {visibleRows.length} visible in this ticket-count segment · {data.total} total matching
+            attendees
+          </span>
         )}
         {offset > 0 ? (
           <a

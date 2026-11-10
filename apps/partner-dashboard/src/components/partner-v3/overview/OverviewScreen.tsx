@@ -230,9 +230,7 @@ export function OverviewScreen({
                   </span>
                   <div>
                     <strong>{order.buyerName}</strong>
-                    <span
-                      className={styles['activityMeta']}
-                    >
+                    <span className={styles['activityMeta']}>
                       {order.ticketSummary} · {order.timeAgo}
                     </span>
                   </div>

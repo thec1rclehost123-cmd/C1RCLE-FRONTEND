@@ -1,8 +1,19 @@
-import { paginatedSchema, updateVenueMenuSchema, venueDtoSchema, venueMenuDtoSchema, venueProfileDtoSchema } from '@c1rcle/contracts/client';
+import {
+  paginatedSchema,
+  updateVenueMenuSchema,
+  venueDtoSchema,
+  venueMenuDtoSchema,
+  venueProfileDtoSchema,
+} from '@c1rcle/contracts/client';
 
 import { apiClient } from '@/lib/api/client';
 
-import type { UpdateVenueMenuRequest, VenueDto, VenueMenuDto, VenueProfileDto } from '@c1rcle/contracts/client';
+import type {
+  UpdateVenueMenuRequest,
+  VenueDto,
+  VenueMenuDto,
+  VenueProfileDto,
+} from '@c1rcle/contracts/client';
 
 /**
  * Venue routes are org-scoped server-side and require `X-Organization-Id`

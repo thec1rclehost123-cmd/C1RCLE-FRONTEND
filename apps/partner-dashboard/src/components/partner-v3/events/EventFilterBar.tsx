@@ -64,7 +64,13 @@ export function EventFilterBar({
             >
               {label}
               <span className={styles['filterCount']}>
-                {value === 'all' ? counts.all : value === 'Live' ? counts.live : value === 'Draft' ? counts.drafts : counts.completed}
+                {value === 'all'
+                  ? counts.all
+                  : value === 'Live'
+                    ? counts.live
+                    : value === 'Draft'
+                      ? counts.drafts
+                      : counts.completed}
               </span>
             </button>
           ))}

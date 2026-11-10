@@ -42,11 +42,7 @@ describe('OverviewEventPoster', () => {
 
   it('keeps the existing fallback when no poster exists', () => {
     const { container } = render(
-      <OverviewEventPoster
-        className="poster"
-        fallbackClassName="fallback"
-        sizes="100vw"
-      />,
+      <OverviewEventPoster className="poster" fallbackClassName="fallback" sizes="100vw" />,
     );
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
     expect(container.querySelector('.fallback')).toBeInTheDocument();

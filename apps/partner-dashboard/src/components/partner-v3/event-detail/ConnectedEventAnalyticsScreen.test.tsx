@@ -4,8 +4,14 @@ import { describe, expect, it } from 'vitest';
 import { ConnectedEventAnalyticsScreen } from './ConnectedEventAnalyticsScreen';
 
 const heatmap = {
-  eventId: 'evt_123', timeZone: 'Asia/Kolkata' as const, totalBookings: 0, complete: true,
-  weekdays: (['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const).map((day) => ({ day, hours: Array(24).fill(0) as number[] })),
+  eventId: 'evt_123',
+  timeZone: 'Asia/Kolkata' as const,
+  totalBookings: 0,
+  complete: true,
+  weekdays: (['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const).map((day) => ({
+    day,
+    hours: Array(24).fill(0) as number[],
+  })),
 };
 
 describe('ConnectedEventAnalyticsScreen', () => {
@@ -45,7 +51,9 @@ describe('ConnectedEventAnalyticsScreen', () => {
     expect(screen.queryByRole('link', { name: /Event details/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/demographics/i)).toBeNull();
     expect(screen.getByRole('heading', { name: 'Bookings by day and time' })).toBeInTheDocument();
-    expect(screen.getByRole('gridcell', { name: 'Tue, 23:00 to 24:00: 0 bookings' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('gridcell', { name: 'Tue, 23:00 to 24:00: 0 bookings' }),
+    ).toBeInTheDocument();
   });
 
   it('warns when the bounded booking scan is incomplete', () => {
@@ -54,10 +62,22 @@ describe('ConnectedEventAnalyticsScreen', () => {
         studio="venue"
         bookingHeatmap={{ ...heatmap, totalBookings: 1000, complete: false }}
         analytics={{
-          eventId: 'evt_123', totalRevenuePaise: 0, ticketsSold: 0, totalCheckIns: 0,
-          totalTicketInventory: 0, capacity: null, views: 0, guestlistSignups: 0,
-          avgTicketPricePaise: 0, occupancyRate: null, sellThroughRate: null,
-          refundAmountPaise: 0, refundRate: 0, noShowRate: null, repeatGuests: 0, conversionRate: 0,
+          eventId: 'evt_123',
+          totalRevenuePaise: 0,
+          ticketsSold: 0,
+          totalCheckIns: 0,
+          totalTicketInventory: 0,
+          capacity: null,
+          views: 0,
+          guestlistSignups: 0,
+          avgTicketPricePaise: 0,
+          occupancyRate: null,
+          sellThroughRate: null,
+          refundAmountPaise: 0,
+          refundRate: 0,
+          noShowRate: null,
+          repeatGuests: 0,
+          conversionRate: 0,
         }}
       />,
     );

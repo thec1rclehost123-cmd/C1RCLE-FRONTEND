@@ -256,7 +256,11 @@ export type {
   EventComparisonResponse,
 } from './contracts/partner.js';
 
-export type { PartnerPublicProfileDto, PartnerSettingsDto, UpdatePartnerSettingsInput } from './contracts/partner-profile.js';
+export type {
+  PartnerPublicProfileDto,
+  PartnerSettingsDto,
+  UpdatePartnerSettingsInput,
+} from './contracts/partner-profile.js';
 export {
   partnerProfileFieldsSchema,
   partnerPrivacySchema,

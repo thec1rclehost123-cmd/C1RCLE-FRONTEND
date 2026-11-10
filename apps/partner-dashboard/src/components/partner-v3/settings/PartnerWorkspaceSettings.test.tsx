@@ -9,29 +9,72 @@ import { PartnerWorkspaceSettings } from './PartnerWorkspaceSettings';
 import type { PartnerSettingsDto, UpdatePartnerSettingsInput } from '@c1rcle/contracts/client';
 
 const mocks = vi.hoisted(() => ({
-  auth: { profile: { email: 'owner@example.test', displayName: 'Owner', activeMembership: { partnerId: 'org_1', role: 'owner' } }, signOut: vi.fn() },
+  auth: {
+    profile: {
+      email: 'owner@example.test',
+      displayName: 'Owner',
+      activeMembership: { partnerId: 'org_1', role: 'owner' },
+    },
+    signOut: vi.fn(),
+  },
   getSettings: vi.fn<() => Promise<PartnerSettingsDto>>(),
-  updateSettings: vi.fn<(id: string, update: UpdatePartnerSettingsInput) => Promise<PartnerSettingsDto>>(),
+  updateSettings:
+    vi.fn<(id: string, update: UpdatePartnerSettingsInput) => Promise<PartnerSettingsDto>>(),
   upload: vi.fn(),
-  getVenue: vi.fn(), getVenueProfile: vi.fn(), updateVenueProfile: vi.fn(), getMenu: vi.fn(), updateMenu: vi.fn(),
+  getVenue: vi.fn(),
+  getVenueProfile: vi.fn(),
+  updateVenueProfile: vi.fn(),
+  getMenu: vi.fn(),
+  updateMenu: vi.fn(),
 }));
 
-vi.mock('@/components/providers/DashboardAuthProvider', () => ({ useDashboardAuth: () => mocks.auth }));
-vi.mock('@/components/promoter/PromoterAgreementPanel', () => ({ PromoterAgreementPanel: () => <div>Agreement panel</div> }));
+vi.mock('@/components/providers/DashboardAuthProvider', () => ({
+  useDashboardAuth: () => mocks.auth,
+}));
+vi.mock('@/components/promoter/PromoterAgreementPanel', () => ({
+  PromoterAgreementPanel: () => <div>Agreement panel</div>,
+}));
 vi.mock('@/lib/settings/partner-settings-repository', () => ({
-  getPartnerSettings: mocks.getSettings, updatePartnerSettings: mocks.updateSettings, uploadPartnerProfileImage: mocks.upload,
+  getPartnerSettings: mocks.getSettings,
+  updatePartnerSettings: mocks.updateSettings,
+  uploadPartnerProfileImage: mocks.upload,
 }));
 vi.mock('@/lib/venue/venue-repository', () => ({
-  getMyVenue: mocks.getVenue, getVenueProfile: mocks.getVenueProfile, updateVenueProfile: mocks.updateVenueProfile,
-  getVenueMenu: mocks.getMenu, updateVenueMenu: mocks.updateMenu,
+  getMyVenue: mocks.getVenue,
+  getVenueProfile: mocks.getVenueProfile,
+  updateVenueProfile: mocks.updateVenueProfile,
+  getVenueMenu: mocks.getMenu,
+  updateVenueMenu: mocks.updateMenu,
 }));
-vi.mock('next/link', () => ({ default: ({ href, children, ...props }: React.ComponentProps<'a'>) => <a href={href} {...props}>{children}</a> }));
+vi.mock('next/link', () => ({
+  default: ({ href, children, ...props }: React.ComponentProps<'a'>) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
+}));
 
 const settings: PartnerSettingsDto = {
-  organizationId: 'org_1', displayName: 'Workspace', handle: 'workspace',
-  profile: { bio: '', photoUrl: null, coverUrl: null, city: '', genres: [], instagram: '', website: '' },
+  organizationId: 'org_1',
+  displayName: 'Workspace',
+  handle: 'workspace',
+  profile: {
+    bio: '',
+    photoUrl: null,
+    coverUrl: null,
+    city: '',
+    genres: [],
+    instagram: '',
+    website: '',
+  },
   privacy: { profileVisible: true, showGuestList: false },
-  inAppNotifications: { eventUpdates: true, orderUpdates: true, requests: true, partnerships: true, payouts: true },
+  inAppNotifications: {
+    eventUpdates: true,
+    orderUpdates: true,
+    requests: true,
+    partnerships: true,
+    payouts: true,
+  },
   memberSince: '2025-01-01T00:00:00.000Z',
   stats: { events: 0, ticketsSold: 0, checkIns: 0, connections: 0 },
 };
@@ -41,23 +84,28 @@ describe('PartnerWorkspaceSettings', () => {
     vi.clearAllMocks();
     mocks.auth.profile.activeMembership.role = 'owner';
     mocks.getSettings.mockResolvedValue(settings);
-    mocks.updateSettings.mockImplementation((_id, update) => Promise.resolve({
-      ...settings,
-      displayName: update.displayName ?? settings.displayName,
-      handle: update.handle ?? settings.handle,
-      profile: { ...settings.profile, ...update.profile },
-      inAppNotifications: {
-        eventUpdates: update.inAppNotifications?.eventUpdates ?? settings.inAppNotifications.eventUpdates,
-        orderUpdates: update.inAppNotifications?.orderUpdates ?? settings.inAppNotifications.orderUpdates,
-        requests: update.inAppNotifications?.requests ?? settings.inAppNotifications.requests,
-        partnerships: update.inAppNotifications?.partnerships ?? settings.inAppNotifications.partnerships,
-        payouts: update.inAppNotifications?.payouts ?? settings.inAppNotifications.payouts,
-      },
-      privacy: {
-        profileVisible: update.privacy?.profileVisible ?? settings.privacy.profileVisible,
-        showGuestList: update.privacy?.showGuestList ?? settings.privacy.showGuestList,
-      },
-    }));
+    mocks.updateSettings.mockImplementation((_id, update) =>
+      Promise.resolve({
+        ...settings,
+        displayName: update.displayName ?? settings.displayName,
+        handle: update.handle ?? settings.handle,
+        profile: { ...settings.profile, ...update.profile },
+        inAppNotifications: {
+          eventUpdates:
+            update.inAppNotifications?.eventUpdates ?? settings.inAppNotifications.eventUpdates,
+          orderUpdates:
+            update.inAppNotifications?.orderUpdates ?? settings.inAppNotifications.orderUpdates,
+          requests: update.inAppNotifications?.requests ?? settings.inAppNotifications.requests,
+          partnerships:
+            update.inAppNotifications?.partnerships ?? settings.inAppNotifications.partnerships,
+          payouts: update.inAppNotifications?.payouts ?? settings.inAppNotifications.payouts,
+        },
+        privacy: {
+          profileVisible: update.privacy?.profileVisible ?? settings.privacy.profileVisible,
+          showGuestList: update.privacy?.showGuestList ?? settings.privacy.showGuestList,
+        },
+      }),
+    );
     mocks.getVenue.mockResolvedValue(null);
   });
 
@@ -69,7 +117,11 @@ describe('PartnerWorkspaceSettings', () => {
     expect(screen.queryByRole('button', { name: 'Agreement & handle' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Notifications' }));
     await user.click(screen.getByRole('checkbox', { name: /Event updates/ }));
-    await waitFor(() => { expect(mocks.updateSettings).toHaveBeenCalledWith('org_1', { inAppNotifications: { eventUpdates: false } }); });
+    await waitFor(() => {
+      expect(mocks.updateSettings).toHaveBeenCalledWith('org_1', {
+        inAppNotifications: { eventUpdates: false },
+      });
+    });
   });
 
   it('shows a save failure and leaves the persisted checkbox state intact', async () => {
@@ -85,13 +137,15 @@ describe('PartnerWorkspaceSettings', () => {
   });
 
   it('identifies the failed settings request and displays safe validation details', async () => {
-    mocks.getSettings.mockRejectedValue(new ApiClientError({
-      code: 'validation',
-      message: 'Validation failed',
-      status: 422,
-      requestId: undefined,
-      fieldErrors: { organizationId: ['Invalid opaque id format'] },
-    }));
+    mocks.getSettings.mockRejectedValue(
+      new ApiClientError({
+        code: 'validation',
+        message: 'Validation failed',
+        status: 422,
+        requestId: undefined,
+        fieldErrors: { organizationId: ['Invalid opaque id format'] },
+      }),
+    );
 
     render(<PartnerWorkspaceSettings studio="venue" />);
 

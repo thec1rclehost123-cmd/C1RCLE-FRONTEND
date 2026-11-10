@@ -23,18 +23,18 @@ export function EventWorkspaceTabs({
   return (
     <>
       {level !== 'secondary' ? (
-      <nav className={styles['tabs']} aria-label="Event workspace">
-        {tabs.map((tab) => (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            aria-current={active === tab ? 'page' : undefined}
-            className={styles['tab']}
-          >
-            {tab.label}
-          </Link>
-        ))}
-      </nav>
+        <nav className={styles['tabs']} aria-label="Event workspace">
+          {tabs.map((tab) => (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              aria-current={active === tab ? 'page' : undefined}
+              className={styles['tab']}
+            >
+              {tab.label}
+            </Link>
+          ))}
+        </nav>
       ) : null}
       {level !== 'primary' && active?.children ? (
         <nav className={styles['contextTabs']} aria-label={`${active.label} sections`}>

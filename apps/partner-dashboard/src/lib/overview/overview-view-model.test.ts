@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatRelativeOrderTime, formatTicketSummary, toOverviewData } from './overview-view-model';
+import {
+  formatRelativeOrderTime,
+  formatTicketSummary,
+  toOverviewData,
+} from './overview-view-model';
 
 import type {
   FinanceOrderDto,
@@ -136,13 +140,25 @@ describe('toOverviewData', () => {
   });
 
   it('formats ticket tiers before relative time in recent orders', () => {
-    expect(formatTicketSummary([{ tierName: 'General Admission', quantity: 2 }])).toBe('2 × General Admission');
-    expect(formatTicketSummary([{ tierName: 'VIP', quantity: 1 }, { tierName: 'GA', quantity: 2 }])).toBe('1 × VIP + 2 × GA');
+    expect(formatTicketSummary([{ tierName: 'General Admission', quantity: 2 }])).toBe(
+      '2 × General Admission',
+    );
+    expect(
+      formatTicketSummary([
+        { tierName: 'VIP', quantity: 1 },
+        { tierName: 'GA', quantity: 2 },
+      ]),
+    ).toBe('1 × VIP + 2 × GA');
     expect(formatTicketSummary([])).toBe('Tickets');
   });
 
   it('colors only settled paid orders positively and completed refunds negatively', () => {
-    const order = (id: string, status: FinanceOrderDto['status'], total: number, refunded: number): FinanceOrderDto => ({
+    const order = (
+      id: string,
+      status: FinanceOrderDto['status'],
+      total: number,
+      refunded: number,
+    ): FinanceOrderDto => ({
       id,
       eventId: 'evt_1',
       eventName: 'Neon Nights',

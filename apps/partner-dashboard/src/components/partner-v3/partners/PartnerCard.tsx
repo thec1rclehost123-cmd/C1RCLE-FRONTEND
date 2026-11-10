@@ -31,7 +31,9 @@ export function PartnerCard({
             fill
             sizes="320px"
             unoptimized
-            onError={() => { setCoverFailed(true); }}
+            onError={() => {
+              setCoverFailed(true);
+            }}
           />
         ) : null}
       </div>
@@ -64,7 +66,10 @@ export function PartnerCard({
           {partner.stats.length ? (
             <ul className={styles['partnerCardStats']} aria-label={`${partner.name} summary`}>
               {partner.stats.slice(0, 2).map((stat) => (
-                <li key={stat.label}><strong>{stat.value}</strong><span>{stat.label}</span></li>
+                <li key={stat.label}>
+                  <strong>{stat.value}</strong>
+                  <span>{stat.label}</span>
+                </li>
               ))}
             </ul>
           ) : null}

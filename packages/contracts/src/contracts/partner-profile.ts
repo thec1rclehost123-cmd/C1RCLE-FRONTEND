@@ -22,17 +22,19 @@ export const partnerPublicProfileDtoSchema = z.object({
   genres: z.array(z.string().min(1).max(60)).max(20),
   stats: z.array(z.object({ label: z.string().max(80), value: z.string().max(40) })).max(8),
   upcomingEvents: z.array(partnerPublicProfileEventSchema).max(6),
-  venue: z.object({
-    capacity: z.number().int().nonnegative().nullable(),
-    facilities: z.array(z.string().max(60)).max(50),
-    address: z.object({
-      street: z.string().max(200).optional(),
-      city: z.string().max(100).optional(),
-      state: z.string().max(100).optional(),
-      zip: z.string().max(20).optional(),
-      country: z.string().max(100).optional(),
-    }),
-  }).nullable(),
+  venue: z
+    .object({
+      capacity: z.number().int().nonnegative().nullable(),
+      facilities: z.array(z.string().max(60)).max(50),
+      address: z.object({
+        street: z.string().max(200).optional(),
+        city: z.string().max(100).optional(),
+        state: z.string().max(100).optional(),
+        zip: z.string().max(20).optional(),
+        country: z.string().max(100).optional(),
+      }),
+    })
+    .nullable(),
 });
 
 export const partnerProfileFieldsSchema = z.object({
@@ -78,7 +80,12 @@ export const partnerSettingsDtoSchema = z.object({
 export const updatePartnerSettingsSchema = z
   .object({
     displayName: z.string().min(1).max(200).optional(),
-    handle: z.string().min(1).max(60).regex(/^[a-z0-9][a-z0-9-]*$/).optional(),
+    handle: z
+      .string()
+      .min(1)
+      .max(60)
+      .regex(/^[a-z0-9][a-z0-9-]*$/)
+      .optional(),
     profile: partnerProfileFieldsSchema.partial().optional(),
     privacy: partnerPrivacySchema.partial().optional(),
     inAppNotifications: partnerInAppNotificationsSchema.partial().optional(),

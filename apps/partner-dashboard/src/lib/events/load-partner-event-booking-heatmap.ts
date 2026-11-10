@@ -11,7 +11,9 @@ import { getActiveOrgIdFromCookieHeader } from '@/lib/org/active-org-cookie';
 
 import type { EventBookingHeatmapDto } from '@c1rcle/contracts';
 
-export async function loadPartnerEventBookingHeatmap(eventId: string): Promise<EventBookingHeatmapDto> {
+export async function loadPartnerEventBookingHeatmap(
+  eventId: string,
+): Promise<EventBookingHeatmapDto> {
   const cookieHeader = (await cookies()).toString();
   const organizationId = getActiveOrgIdFromCookieHeader(cookieHeader);
   if (!organizationId) redirect('/partner/select-organization');

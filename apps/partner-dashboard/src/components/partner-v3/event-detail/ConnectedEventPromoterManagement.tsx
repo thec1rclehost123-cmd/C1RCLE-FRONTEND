@@ -162,22 +162,32 @@ export function ConnectedEventPromoterManagement({
         </div>
         <div className={styles['financeMetrics']}>
           <span>
-            Commission recorded <strong>{money.format(performance.recordedCommissionPaise / 100)}</strong>
+            Commission recorded{' '}
+            <strong>{money.format(performance.recordedCommissionPaise / 100)}</strong>
           </span>
           <span>
-            Reversed <strong>{performance.reversedCommissionPaise === null
-              ? 'Unavailable'
-              : money.format(performance.reversedCommissionPaise / 100)}</strong>
+            Reversed{' '}
+            <strong>
+              {performance.reversedCommissionPaise === null
+                ? 'Unavailable'
+                : money.format(performance.reversedCommissionPaise / 100)}
+            </strong>
           </span>
           <span>
-            Current payable balance <strong>{money.format(performance.commissionPayableBalancePaise / 100)}</strong>
+            Current payable balance{' '}
+            <strong>{money.format(performance.commissionPayableBalancePaise / 100)}</strong>
           </span>
           <span>
-            RSVPs <strong>{performance.activeRsvpCount.toLocaleString('en-IN')} active · {performance.historicalRsvpConversionCount.toLocaleString('en-IN')} historical</strong>
+            RSVPs{' '}
+            <strong>
+              {performance.activeRsvpCount.toLocaleString('en-IN')} active ·{' '}
+              {performance.historicalRsvpConversionCount.toLocaleString('en-IN')} historical
+            </strong>
           </span>
         </div>
         <p className={styles['definitionNote']}>
-          Historical acquisition remains after refunds. Attributed sales records referral credit; it does not measure sales lift.
+          Historical acquisition remains after refunds. Attributed sales records referral credit; it
+          does not measure sales lift.
         </p>
         {!performance.refundValueComplete ? (
           <p role="status" className={styles['warning']}>
@@ -203,7 +213,9 @@ export function ConnectedEventPromoterManagement({
             <h2 id="promoter-breakdown-title">Promoter breakdown</h2>
             <p>Attributed ticket and RSVP outcomes by Promoter.</p>
           </div>
-          <span>{promoterBreakdown.length} {promoterBreakdown.length === 1 ? 'Promoter' : 'Promoters'}</span>
+          <span>
+            {promoterBreakdown.length} {promoterBreakdown.length === 1 ? 'Promoter' : 'Promoters'}
+          </span>
         </header>
         {promoterBreakdown.length === 0 ? (
           <p className={styles['emptyBreakdown']}>
@@ -216,18 +228,47 @@ export function ConnectedEventPromoterManagement({
                 <header>
                   <div>
                     <h3>{name}</h3>
-                    <p>{clicks.toLocaleString('en-IN')} clicks · {linkConversions.toLocaleString('en-IN')} link conversions</p>
+                    <p>
+                      {clicks.toLocaleString('en-IN')} clicks ·{' '}
+                      {linkConversions.toLocaleString('en-IN')} link conversions
+                    </p>
                   </div>
                   <span className={styles['status']}>{status}</span>
                 </header>
                 <dl>
-                  <div><dt>Attributed tickets</dt><dd>{item.attributedTicketCount.toLocaleString('en-IN')}</dd></div>
-                  <div><dt>RSVPs</dt><dd>{item.activeRsvpCount.toLocaleString('en-IN')} active · {item.historicalRsvpConversionCount.toLocaleString('en-IN')} historical</dd></div>
-                  <div><dt>Gross sales</dt><dd>{money.format(item.grossAttributedTicketValuePaise / 100)}</dd></div>
-                  <div><dt>Refunded</dt><dd className={styles['negative']}>{money.format(item.refundedAttributedTicketValuePaise / 100)}</dd></div>
-                  <div><dt>Net sales</dt><dd>{money.format(item.netAttributedTicketValuePaise / 100)}</dd></div>
-                  <div><dt>Commission recorded</dt><dd>{money.format(item.recordedCommissionPaise / 100)}</dd></div>
-                  <div><dt>Current payable balance</dt><dd>{money.format(item.commissionPayableBalancePaise / 100)}</dd></div>
+                  <div>
+                    <dt>Attributed tickets</dt>
+                    <dd>{item.attributedTicketCount.toLocaleString('en-IN')}</dd>
+                  </div>
+                  <div>
+                    <dt>RSVPs</dt>
+                    <dd>
+                      {item.activeRsvpCount.toLocaleString('en-IN')} active ·{' '}
+                      {item.historicalRsvpConversionCount.toLocaleString('en-IN')} historical
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Gross sales</dt>
+                    <dd>{money.format(item.grossAttributedTicketValuePaise / 100)}</dd>
+                  </div>
+                  <div>
+                    <dt>Refunded</dt>
+                    <dd className={styles['negative']}>
+                      {money.format(item.refundedAttributedTicketValuePaise / 100)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Net sales</dt>
+                    <dd>{money.format(item.netAttributedTicketValuePaise / 100)}</dd>
+                  </div>
+                  <div>
+                    <dt>Commission recorded</dt>
+                    <dd>{money.format(item.recordedCommissionPaise / 100)}</dd>
+                  </div>
+                  <div>
+                    <dt>Current payable balance</dt>
+                    <dd>{money.format(item.commissionPayableBalancePaise / 100)}</dd>
+                  </div>
                 </dl>
               </article>
             ))}

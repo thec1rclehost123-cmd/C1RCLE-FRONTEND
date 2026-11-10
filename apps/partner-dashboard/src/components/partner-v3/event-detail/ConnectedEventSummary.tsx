@@ -33,7 +33,9 @@ export function ConnectedEventSummary({
         </article>
         <article className={styles['metric']}>
           <span>Refunds</span>
-          <strong className={styles['refund']}>{money.format(analytics.refundAmountPaise / 100)}</strong>
+          <strong className={styles['refund']}>
+            {money.format(analytics.refundAmountPaise / 100)}
+          </strong>
         </article>
       </section>
 
@@ -62,10 +64,12 @@ export function ConnectedEventSummary({
                   <progress
                     className={[
                       styles['track'] ?? '',
-                      tone === 0 ? styles['fill0'] ?? '' : '',
-                      tone === 1 ? styles['fill1'] ?? '' : '',
-                      tone === 2 ? styles['fill2'] ?? '' : '',
-                    ].filter(Boolean).join(' ')}
+                      tone === 0 ? (styles['fill0'] ?? '') : '',
+                      tone === 1 ? (styles['fill1'] ?? '') : '',
+                      tone === 2 ? (styles['fill2'] ?? '') : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
                     aria-label={`${tier.name} tickets sold`}
                     max={maxSold || 1}
                     value={sold}

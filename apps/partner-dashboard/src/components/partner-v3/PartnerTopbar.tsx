@@ -9,7 +9,7 @@ import { PartnerGlobalSearch } from './PartnerGlobalSearch';
 
 import { Avatar, IconButton } from './index';
 
-import type { StudioConfig, StudioRole  } from '@/studios/studio-config';
+import type { StudioConfig, StudioRole } from '@/studios/studio-config';
 
 export function PartnerTopbar({
   config,

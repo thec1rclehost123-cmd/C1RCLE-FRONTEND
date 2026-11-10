@@ -32,7 +32,9 @@ export function OverviewEventPoster({
           // Local fixture URLs point back to this dashboard and must bypass
           // the remote image optimizer; production remote hosts stay allowlisted.
           unoptimized={/^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?(?:\/|$)/i.test(src ?? '')}
-          onError={() => { setFailedSrc(src ?? null); }}
+          onError={() => {
+            setFailedSrc(src ?? null);
+          }}
         />
       ) : null}
     </>

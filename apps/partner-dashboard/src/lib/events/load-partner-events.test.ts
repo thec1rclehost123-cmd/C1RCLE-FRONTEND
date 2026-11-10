@@ -40,8 +40,22 @@ describe('loadPartnerEvents', () => {
     const { mapStatus } = await import('./load-partner-events');
     const now = new Date('2026-11-09T12:00:00.000Z');
     expect(mapStatus('draft', new Date('2026-11-08T12:00:00Z'), null, now)).toBe('Draft');
-    expect(mapStatus('published', new Date('2026-11-09T11:00:00Z'), new Date('2026-11-10T12:00:00Z'), now)).toBe('Live');
-    expect(mapStatus('published', new Date('2026-11-08T12:00:00Z'), new Date('2026-11-09T11:00:00Z'), now)).toBe('Completed');
+    expect(
+      mapStatus(
+        'published',
+        new Date('2026-11-09T11:00:00Z'),
+        new Date('2026-11-10T12:00:00Z'),
+        now,
+      ),
+    ).toBe('Live');
+    expect(
+      mapStatus(
+        'published',
+        new Date('2026-11-08T12:00:00Z'),
+        new Date('2026-11-09T11:00:00Z'),
+        now,
+      ),
+    ).toBe('Completed');
     expect(mapStatus('published', new Date('2026-11-09T11:00:00Z'), null, now)).toBe('Completed');
     expect(mapStatus('postponed', new Date('2026-11-08T12:00:00Z'), null, now)).toBe('Postponed');
     expect(mapStatus('cancelled', new Date('2026-11-08T12:00:00Z'), null, now)).toBe('Cancelled');
