@@ -340,23 +340,30 @@ export class ApiClient {
     let response: Response;
 
     try {
+      const headers = new Headers({
+        accept: 'application/json',
+        'x-request-id': requestId,
+        ...(hasBody
+          ? {
+              'content-type': isRaw
+                ? (options.contentType ?? 'application/octet-stream')
+                : 'application/json',
+            }
+          : {}),
+        ...(token !== null && token !== undefined ? { authorization: `Bearer ${token}` } : {}),
+        ...(orgMatch?.[1] ? { 'x-organization-id': orgMatch[1] } : {}),
+      });
+      for (const [name, value] of Object.entries(options.headers ?? {})) {
+        // Headers.set is case-insensitive. This lets explicit request headers
+        // replace path-derived defaults instead of becoming duplicate,
+        // comma-joined HTTP headers when casing differs.
+        headers.set(name, value);
+      }
+
       response = await this.#fetch(buildUrl(this.#baseUrl, options.path, options.query), {
         method: options.method ?? 'GET',
         signal,
-        headers: {
-          accept: 'application/json',
-          'x-request-id': requestId,
-          ...(hasBody
-            ? {
-                'content-type': isRaw
-                  ? (options.contentType ?? 'application/octet-stream')
-                  : 'application/json',
-              }
-            : {}),
-          ...(token !== null && token !== undefined ? { authorization: `Bearer ${token}` } : {}),
-          ...(orgMatch?.[1] ? { 'x-organization-id': orgMatch[1] } : {}),
-          ...options.headers,
-        } as Record<string, string>,
+        headers,
         ...(requestBody !== undefined ? { body: requestBody } : {}),
       });
     } catch (cause) {

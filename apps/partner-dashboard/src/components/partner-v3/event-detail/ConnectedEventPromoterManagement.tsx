@@ -10,6 +10,8 @@ import {
   revokeEventPromoterAssignment,
 } from '@/lib/partner/promoter-assignment-repository';
 
+import styles from './connected-event-promoters.module.css';
+
 import type {
   PromoterAssignmentDto,
   PromoterAssignmentCandidateDto,
@@ -19,15 +21,6 @@ import type {
 } from '@c1rcle/contracts';
 
 const money = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
-
-function Metric({ label, value }: { readonly label: string; readonly value: string | number }) {
-  return (
-    <div>
-      <dt className="text-xs text-stone-400">{label}</dt>
-      <dd className="mt-1 text-lg font-semibold">{value}</dd>
-    </div>
-  );
-}
 
 export function ConnectedEventPromoterManagement({
   eventId,
@@ -76,6 +69,20 @@ export function ConnectedEventPromoterManagement({
     grouped.push(link);
     linksByAssignment.set(link.assignmentId, grouped);
   }
+  const promoterBreakdown = performance.items.map((item) => {
+    const promoterLinks = links.filter((link) => link.promoterId === item.promoterOrganizationId);
+    const assignment = assignments.find(
+      (candidate) => candidate.promoterId === item.promoterOrganizationId,
+    );
+    return {
+      id: item.promoterOrganizationId,
+      name: promoterNames.get(item.promoterOrganizationId) ?? 'Promoter',
+      status: assignment?.status ?? 'historical',
+      clicks: promoterLinks.reduce((total, link) => total + link.clicks, 0),
+      linkConversions: promoterLinks.reduce((total, link) => total + link.conversions, 0),
+      item,
+    };
+  });
 
   async function invite(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -126,48 +133,60 @@ export function ConnectedEventPromoterManagement({
 
   return (
     <section className="mx-auto max-w-5xl space-y-6 py-7 text-stone-100">
-      <section className="rounded-2xl border border-white/15 bg-neutral-950 p-6">
-        <h2 className="text-xl font-bold">Promoter performance</h2>
-        <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Metric label="Tickets sold overall" value={performance.capturedTicketCount} />
-          <Metric label="Promoter-attributed tickets" value={performance.attributedTicketCount} />
-          <Metric
-            label="Gross attributed sales"
-            value={money.format(performance.grossAttributedTicketValuePaise / 100)}
-          />
-          <Metric
-            label="Refunded ticket value"
-            value={money.format(performance.refundedAttributedTicketValuePaise / 100)}
-          />
-          <Metric
-            label="Net attributed sales"
-            value={money.format(performance.netAttributedTicketValuePaise / 100)}
-          />
-          <Metric
-            label="Historical RSVPs"
-            value={`${String(performance.activeRsvpCount)} active of ${String(performance.historicalRsvpConversionCount)}`}
-          />
-          <Metric
-            label="Commission recorded"
-            value={money.format(performance.recordedCommissionPaise / 100)}
-          />
-          <Metric
-            label="Commission liability"
-            value={money.format(performance.commissionPayableBalancePaise / 100)}
-          />
-        </dl>
-        <p className="mt-4 text-xs text-stone-400">
-          Historical acquisition persists after refund · attributed sales is not sales lift ·
-          liability: {performance.liabilityReadModel}
+      <section className={styles['performance']}>
+        <header className={styles['performanceHeader']}>
+          <div>
+            <p className={styles['eyebrow']}>Event performance</p>
+            <h2>Promoter results</h2>
+          </div>
+        </header>
+        <div className={styles['headlineMetrics']}>
+          <article>
+            <span>Attributed tickets</span>
+            <strong>{performance.attributedTicketCount.toLocaleString('en-IN')}</strong>
+          </article>
+          <article>
+            <span>Gross attributed sales</span>
+            <strong>{money.format(performance.grossAttributedTicketValuePaise / 100)}</strong>
+          </article>
+          <article>
+            <span>Refunded ticket value</span>
+            <strong className={styles['negative']}>
+              {money.format(performance.refundedAttributedTicketValuePaise / 100)}
+            </strong>
+          </article>
+          <article>
+            <span>Net attributed sales</span>
+            <strong>{money.format(performance.netAttributedTicketValuePaise / 100)}</strong>
+          </article>
+        </div>
+        <div className={styles['financeMetrics']}>
+          <span>
+            Commission recorded <strong>{money.format(performance.recordedCommissionPaise / 100)}</strong>
+          </span>
+          <span>
+            Reversed <strong>{performance.reversedCommissionPaise === null
+              ? 'Unavailable'
+              : money.format(performance.reversedCommissionPaise / 100)}</strong>
+          </span>
+          <span>
+            Current payable balance <strong>{money.format(performance.commissionPayableBalancePaise / 100)}</strong>
+          </span>
+          <span>
+            RSVPs <strong>{performance.activeRsvpCount.toLocaleString('en-IN')} active · {performance.historicalRsvpConversionCount.toLocaleString('en-IN')} historical</strong>
+          </span>
+        </div>
+        <p className={styles['definitionNote']}>
+          Historical acquisition remains after refunds. Attributed sales records referral credit; it does not measure sales lift.
         </p>
         {!performance.refundValueComplete ? (
-          <p role="status" className="mt-2 text-sm text-amber-200">
+          <p role="status" className={styles['warning']}>
             Settled refund ticket value is incomplete because an authoritative refund journal is
             missing for one or more orders.
           </p>
         ) : null}
         {!performance.complete || !performance.liabilityComplete ? (
-          <p role="status" className="mt-2 text-sm text-amber-200">
+          <p role="status" className={styles['warning']}>
             {!performance.complete
               ? 'Sales totals cover the first 1,000 event orders; additional orders remain outside this bounded view. '
               : ''}
@@ -176,6 +195,44 @@ export function ConnectedEventPromoterManagement({
               : ''}
           </p>
         ) : null}
+      </section>
+
+      <section className={styles['breakdown']} aria-labelledby="promoter-breakdown-title">
+        <header className={styles['breakdownHeader']}>
+          <div>
+            <h2 id="promoter-breakdown-title">Promoter breakdown</h2>
+            <p>Attributed ticket and RSVP outcomes by Promoter.</p>
+          </div>
+          <span>{promoterBreakdown.length} {promoterBreakdown.length === 1 ? 'Promoter' : 'Promoters'}</span>
+        </header>
+        {promoterBreakdown.length === 0 ? (
+          <p className={styles['emptyBreakdown']}>
+            No Promoter-attributed ticket or RSVP activity has been recorded for this event yet.
+          </p>
+        ) : (
+          <div className={styles['promoterList']}>
+            {promoterBreakdown.map(({ id, name, status, clicks, linkConversions, item }) => (
+              <article className={styles['promoterCard']} key={id}>
+                <header>
+                  <div>
+                    <h3>{name}</h3>
+                    <p>{clicks.toLocaleString('en-IN')} clicks · {linkConversions.toLocaleString('en-IN')} link conversions</p>
+                  </div>
+                  <span className={styles['status']}>{status}</span>
+                </header>
+                <dl>
+                  <div><dt>Attributed tickets</dt><dd>{item.attributedTicketCount.toLocaleString('en-IN')}</dd></div>
+                  <div><dt>RSVPs</dt><dd>{item.activeRsvpCount.toLocaleString('en-IN')} active · {item.historicalRsvpConversionCount.toLocaleString('en-IN')} historical</dd></div>
+                  <div><dt>Gross sales</dt><dd>{money.format(item.grossAttributedTicketValuePaise / 100)}</dd></div>
+                  <div><dt>Refunded</dt><dd className={styles['negative']}>{money.format(item.refundedAttributedTicketValuePaise / 100)}</dd></div>
+                  <div><dt>Net sales</dt><dd>{money.format(item.netAttributedTicketValuePaise / 100)}</dd></div>
+                  <div><dt>Commission recorded</dt><dd>{money.format(item.recordedCommissionPaise / 100)}</dd></div>
+                  <div><dt>Current payable balance</dt><dd>{money.format(item.commissionPayableBalancePaise / 100)}</dd></div>
+                </dl>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
       <section className="rounded-2xl border border-white/15 bg-neutral-950 p-6">
         <h1 className="text-2xl font-bold">Promoter assignments</h1>

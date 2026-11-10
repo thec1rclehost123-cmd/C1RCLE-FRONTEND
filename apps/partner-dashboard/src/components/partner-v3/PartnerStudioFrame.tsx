@@ -13,15 +13,12 @@ import { PageContainer } from './PagePrimitives';
 import { PartnerShell } from './PartnerShell';
 import { EmptyState, LoadingState } from './States';
 
-import type { PartnerShellInteractionData } from '@/data/partner-data-source';
 
 export function PartnerStudioFrame({
   studio,
-  interactionData,
   children,
 }: {
   readonly studio: StudioRole;
-  readonly interactionData: PartnerShellInteractionData;
   readonly children: ReactNode;
 }) {
   const auth = useDashboardAuth();
@@ -74,7 +71,7 @@ export function PartnerStudioFrame({
   }
 
   return (
-    <PartnerShell studio={studio} interactionData={interactionData}>
+    <PartnerShell studio={studio}>
       {activeRole !== null && activeRole !== studio && !serverAuthorizedEventRoute ? (
         <PageContainer>
           <EmptyState

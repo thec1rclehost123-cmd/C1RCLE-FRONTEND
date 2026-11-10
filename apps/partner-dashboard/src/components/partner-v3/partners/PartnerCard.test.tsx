@@ -7,6 +7,8 @@ import { PartnerProfilePanel } from './PartnerProfilePanel';
 
 import type { PartnerRelationship } from '@/data/partner-data-source';
 
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
 const discoverHost: PartnerRelationship = {
   id: 'org_host_9',
   name: 'Discovered Host',
@@ -123,10 +125,10 @@ describe('PartnerCard', () => {
     expect(link).not.toHaveTextContent('\\u2197');
   });
 
-  it('keeps unimplemented partnered actions disabled inside the profile', () => {
+  it('hides unsupported partnered actions inside the profile', () => {
     render(
       <PartnerProfilePanel partner={{ ...discoverHost, status: 'Partnered' }} closeHref="#" />,
     );
-    expect(screen.getByRole('button', { name: 'Request a date' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Request a date' })).not.toBeInTheDocument();
   });
 });

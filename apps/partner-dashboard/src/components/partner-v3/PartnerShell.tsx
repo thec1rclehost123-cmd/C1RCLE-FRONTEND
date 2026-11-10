@@ -12,7 +12,6 @@ import styles from './partner-v3.module.css';
 import { PartnerSidebar } from './PartnerSidebar';
 import { PartnerTopbar } from './PartnerTopbar';
 
-import type { PartnerShellInteractionData } from '@/data/partner-data-source';
 
 type PartnerNavigationLayout = 'side' | 'top';
 
@@ -41,11 +40,9 @@ const getServerNavigationLayout = (): PartnerNavigationLayout => 'side';
 
 export function PartnerShell({
   studio,
-  interactionData,
   children,
 }: {
   readonly studio: StudioRole;
-  readonly interactionData: PartnerShellInteractionData;
   readonly children: ReactNode;
 }) {
   const config = getStudioConfig(studio);
@@ -134,7 +131,7 @@ export function PartnerShell({
             }
             activeLabel={activeLabel}
             userName={userName}
-            searchData={interactionData.search}
+            studio={studio}
             organizationId={auth.profile?.activeMembership?.partnerId ?? null}
             navigationLayout={navigationLayout}
             mobileOpen={mobileOpen}

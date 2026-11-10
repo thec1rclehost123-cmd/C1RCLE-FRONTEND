@@ -8,9 +8,10 @@ import { useOverlayFocus } from '@/components/venue/useOverlayFocus';
 import { describeApiError } from '@/lib/api/describe-error';
 import { cancelPartnerEvent } from '@/lib/events/venue-event-repository';
 
+import { ConnectedEventSummary } from './ConnectedEventSummary';
 import { EventLifecycleActions } from './EventLifecycleActions';
 
-import type { EventOperationsDto } from '@c1rcle/contracts';
+import type { EventAnalyticsDto, EventOperationsDto, TicketTierDto } from '@c1rcle/contracts';
 import type { SyntheticEvent } from 'react';
 
 const cancellableStatuses = new Set<EventOperationsDto['status']>([
@@ -25,11 +26,15 @@ const cancellableStatuses = new Set<EventOperationsDto['status']>([
 
 export function ConnectedPartnerEventScreen({
   event,
+  analytics,
+  tiers,
   organizationId,
   showEventHeader = true,
   studio = 'host',
 }: {
   readonly event: EventOperationsDto;
+  readonly analytics?: EventAnalyticsDto;
+  readonly tiers?: readonly TicketTierDto[];
   readonly organizationId: string;
   readonly studio?: string;
   readonly showEventHeader?: boolean;
@@ -83,6 +88,7 @@ export function ConnectedPartnerEventScreen({
   return (
     <PageContainer>
       <main className="mx-auto max-w-6xl py-7 text-stone-100">
+        {analytics && tiers ? <ConnectedEventSummary analytics={analytics} tiers={tiers} /> : null}
         <section className="mt-2 rounded-2xl border border-white/15 bg-neutral-950 p-7">
           {showEventHeader ? <h1 className="text-2xl font-bold">{event.title}</h1> : null}
           {showEventHeader ? (

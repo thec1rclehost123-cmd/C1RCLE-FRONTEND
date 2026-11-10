@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { parseEventStatus } from '@/components/partner-v3/events/PartnerEventsScreen';
+
 const mocks = vi.hoisted(() => ({
   cookieHeader: vi.fn(() => 'session=local-test'),
   get: vi.fn(),
@@ -32,5 +34,22 @@ describe('loadPartnerEvents', () => {
 
     expect(mocks.redirect).toHaveBeenCalledWith('/partner/select-organization');
     expect(mocks.get).not.toHaveBeenCalled();
+  });
+
+  it('keeps incomplete drafts distinct and completes published events at their effective end', async () => {
+    const { mapStatus } = await import('./load-partner-events');
+    const now = new Date('2026-11-09T12:00:00.000Z');
+    expect(mapStatus('draft', new Date('2026-11-08T12:00:00Z'), null, now)).toBe('Draft');
+    expect(mapStatus('published', new Date('2026-11-09T11:00:00Z'), new Date('2026-11-10T12:00:00Z'), now)).toBe('Live');
+    expect(mapStatus('published', new Date('2026-11-08T12:00:00Z'), new Date('2026-11-09T11:00:00Z'), now)).toBe('Completed');
+    expect(mapStatus('published', new Date('2026-11-09T11:00:00Z'), null, now)).toBe('Completed');
+    expect(mapStatus('postponed', new Date('2026-11-08T12:00:00Z'), null, now)).toBe('Postponed');
+    expect(mapStatus('cancelled', new Date('2026-11-08T12:00:00Z'), null, now)).toBe('Cancelled');
+    expect(mapStatus('archived', new Date('2026-11-08T12:00:00Z'), null, now)).toBe('Archived');
+  });
+
+  it('parses the Completed status filter', () => {
+    expect(parseEventStatus('completed')).toBe('Completed');
+    expect(parseEventStatus('draft')).toBe('Draft');
   });
 });

@@ -4,47 +4,32 @@ export function eventTabs(studio: 'venue' | 'host', eventId: string): EventWorks
   const base = `/partner/${studio}/events/${encodeURIComponent(eventId)}`;
   return [
     {
-      label: 'Summary',
+      label: 'Sales',
       href: base,
       children: [
-        { label: 'Overview', href: base },
+        { label: 'Summary', href: base },
         { label: 'Analytics', href: `${base}/analytics` },
+        { label: 'Revenue', href: `${base}/revenue` },
+        { label: 'Crowd', href: `${base}/guests` },
+        { label: 'Live compare', href: `${base}/compare` },
       ],
     },
     {
-      label: 'Tickets & sales',
-      href: `${base}/tickets`,
-      children: [
-        { label: 'Tickets', href: `${base}/tickets` },
-        { label: 'Orders', href: `${base}/sales` },
-        { label: 'Extras', href: `${base}/addons` },
-      ],
-    },
-    {
-      label: 'Guests',
+      label: "Who's coming",
       href: `${base}/guests`,
       children: [
         { label: 'Attendees', href: `${base}/guests` },
         { label: 'Waitlist', href: `${base}/waitlist` },
       ],
     },
-    { label: 'Promoters', href: `${base}/promoters` },
     {
-      label: 'Door & cover',
+      label: 'Tonight',
       href: `${base}/door`,
       children: [
-        { label: 'Door', href: `${base}/door` },
-        { label: 'Tonight', href: `${base}/tonight` },
+        { label: 'Door mode', href: `${base}/door` },
         { label: 'Cover', href: `${base}/cover` },
       ],
     },
-    {
-      label: 'Settings',
-      href: `${base}/access`,
-      children: [
-        { label: 'Access', href: `${base}/access` },
-        { label: 'Edit event', href: `${base}/edit` },
-      ],
-    },
+    { label: 'Promoters', href: `${base}/promoters` },
   ];
 }

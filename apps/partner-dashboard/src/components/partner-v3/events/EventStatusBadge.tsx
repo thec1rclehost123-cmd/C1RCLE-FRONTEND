@@ -10,6 +10,7 @@ const toneClasses: Readonly<Record<PartnerEventStatus, string>> = {
   Paused: styles['statusDraft'] ?? '',
   Postponed: styles['statusDraft'] ?? '',
   Past: styles['statusPast'] ?? '',
+  Completed: styles['statusPast'] ?? '',
   Archived: styles['statusPast'] ?? '',
   Cancelled: styles['statusCancelled'] ?? '',
 };

@@ -109,11 +109,10 @@ describe('OverviewScreen', () => {
             {
               id: 'order-1',
               buyerName: 'Maya Guest',
-              eventName: 'M3 paid test event',
-              ticketCount: 2,
               amountLabel: '₹217.70',
-              statusLabel: 'Paid',
-              placedAtLabel: '26 Oct 2026, 8:00 pm',
+              amountTone: 'positive',
+              timeAgo: '2h ago',
+              ticketSummary: '2 × General Admission',
             },
           ],
         }}
@@ -122,10 +121,9 @@ describe('OverviewScreen', () => {
     );
 
     expect(screen.getByText('Maya Guest')).toBeInTheDocument();
-    expect(screen.getByText('M3 paid test event')).toBeInTheDocument();
-    expect(screen.getByText('2 tickets · Paid')).toBeInTheDocument();
-    expect(screen.getByText('26 Oct 2026, 8:00 pm IST')).toBeInTheDocument();
-    expect(screen.getByText('₹217.70')).toBeInTheDocument();
+    expect(screen.getByText('Maya Guest').closest('[data-order-card="true"]')).toBeInTheDocument();
+    expect(screen.getByText('2 × General Admission · 2h ago')).toBeInTheDocument();
+    expect(screen.getByText('₹217.70')).toHaveAttribute('data-tone', 'positive');
     expect(
       screen.queryByText(/Guest totals can include platform fees and GST/),
     ).not.toBeInTheDocument();

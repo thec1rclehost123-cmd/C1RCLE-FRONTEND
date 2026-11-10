@@ -239,6 +239,7 @@ export type {
   OrganizationEventCardDto,
   OrganizationEventCardListResponse,
   EventAnalyticsDto,
+  EventBookingHeatmapDto,
   EventPromoterAnalyticsDto,
   PromoterCampaignSummaryDto,
   PromoterAttributedOrderDto,
@@ -250,7 +251,21 @@ export type {
   DiscoverPartnerDto,
   DiscoverPartnerKind,
   DiscoverPartnersQuery,
+  PartnerGlobalSearchQuery,
+  PartnerGlobalSearchResponse,
+  EventComparisonResponse,
 } from './contracts/partner.js';
+
+export type { PartnerPublicProfileDto, PartnerSettingsDto, UpdatePartnerSettingsInput } from './contracts/partner-profile.js';
+export {
+  partnerProfileFieldsSchema,
+  partnerPrivacySchema,
+  partnerInAppNotificationsSchema,
+  partnerSettingsDtoSchema,
+  updatePartnerSettingsSchema,
+  partnerPublicProfileEventSchema,
+  partnerPublicProfileDtoSchema,
+} from './contracts/partner-profile.js';
 
 export {
   partnershipStatusSchema,
@@ -269,6 +284,7 @@ export {
   organizationEventCardDtoSchema,
   organizationEventCardListResponseSchema,
   eventAnalyticsDtoSchema,
+  eventBookingHeatmapDtoSchema,
   eventPromoterAnalyticsDtoSchema,
   promoterCampaignSummaryDtoSchema,
   promoterAttributedOrderDtoSchema,
@@ -281,6 +297,11 @@ export {
   discoverPartnerKindSchema,
   discoverPartnerDtoSchema,
   discoverPartnersQuerySchema,
+  partnerGlobalSearchQuerySchema,
+  partnerGlobalSearchResultSchema,
+  partnerGlobalSearchResponseSchema,
+  eventComparisonItemSchema,
+  eventComparisonResponseSchema,
 } from './contracts/partner.js';
 
 // Onboarding / KYC / Admin Authority

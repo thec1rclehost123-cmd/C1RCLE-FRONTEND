@@ -54,7 +54,7 @@ describe('PartnerStudioFrame server-authorized event routes', () => {
 
   it('renders server-authorized event content while client auth is still hydrating', () => {
     render(
-      <PartnerStudioFrame studio="venue" interactionData={{} as never}>
+      <PartnerStudioFrame studio="venue">
         <div>Server-authorized event content</div>
       </PartnerStudioFrame>,
     );
@@ -74,7 +74,7 @@ describe('PartnerStudioFrame server-authorized event routes', () => {
       tabVisibility: null,
     } as never;
     render(
-      <PartnerStudioFrame studio="host" interactionData={{} as never}>
+      <PartnerStudioFrame studio="host">
         <div>Authorized Host event promoters</div>
       </PartnerStudioFrame>,
     );
@@ -89,7 +89,7 @@ describe('PartnerStudioFrame server-authorized event routes', () => {
     mocks.pathname = '/partner/venue/finance';
 
     render(
-      <PartnerStudioFrame studio="venue" interactionData={{} as never}>
+      <PartnerStudioFrame studio="venue">
         <div>Protected finance content</div>
       </PartnerStudioFrame>,
     );

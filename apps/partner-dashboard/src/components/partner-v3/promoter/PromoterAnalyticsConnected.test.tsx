@@ -28,6 +28,8 @@ describe('PromoterAnalyticsConnected', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Analytics' })).toBeInTheDocument();
+    expect(screen.getByText('Gross attributed sales').parentElement?.querySelector('strong')).toHaveAttribute('data-tone', 'positive');
+    expect(screen.getByText('Refunded value').parentElement?.querySelector('strong')).toHaveAttribute('data-tone', 'negative');
     expect(screen.getAllByText('27')[0]).toBeInTheDocument();
     expect(screen.getAllByText('4')[0]).toBeInTheDocument();
     expect(screen.getByText('₹1,135')).toBeInTheDocument();

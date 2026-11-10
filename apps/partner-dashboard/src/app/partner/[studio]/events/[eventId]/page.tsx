@@ -4,6 +4,8 @@ import { ConnectedPartnerEventScreen } from '@/components/partner-v3/event-detai
 import { PromoterAssignmentDetailsScreen } from '@/components/promoter/PromoterAssignmentDetailsScreen';
 import { PromoterPublicEventDetailsScreen } from '@/components/promoter/PromoterPublicEventDetailsScreen';
 import { loadPartnerEvent } from '@/lib/events/load-partner-event';
+import { loadPartnerEventAnalytics } from '@/lib/events/load-partner-event-analytics';
+import { loadPartnerEventTiers } from '@/lib/events/load-partner-event-tiers';
 import { loadPromoterEvents } from '@/lib/events/load-promoter-events';
 
 import { renderStudioSkeleton } from '../../route-helpers';
@@ -34,10 +36,16 @@ export default async function StudioEventDetailPage({
       'Event detail routes are reserved for a later screen implementation.',
     );
 
-  const event = await loadPartnerEvent(eventId);
+  const [event, analytics, tiers] = await Promise.all([
+    loadPartnerEvent(eventId),
+    loadPartnerEventAnalytics(eventId),
+    loadPartnerEventTiers(eventId),
+  ]);
   return (
     <ConnectedPartnerEventScreen
       event={event}
+      analytics={analytics}
+      tiers={tiers}
       organizationId={event.organizationId}
       studio={studio}
       showEventHeader={false}

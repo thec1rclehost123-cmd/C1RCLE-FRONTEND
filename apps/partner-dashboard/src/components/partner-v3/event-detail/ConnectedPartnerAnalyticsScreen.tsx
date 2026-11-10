@@ -26,6 +26,11 @@ const ranges: readonly { value: PartnerAnalyticsRange; label: string }[] = [
   { value: '90d', label: 'Last 90 days' },
   { value: '12m', label: 'Last 12 months' },
 ];
+const valueToneClasses = {
+  positive: styles['valuePositive'] ?? '',
+  negative: styles['valueNegative'] ?? '',
+  neutral: styles['valueNeutral'] ?? '',
+} as const;
 
 function formatMoney(paise: number): string {
   return money.format(paise / 100);
@@ -102,8 +107,8 @@ export function ConnectedPartnerAnalyticsScreen({
           </Link>
         </nav>
         <section className={styles['stats']} aria-label="Analytics summary">
-          <Metric label="Gross revenue" value={formatMoney(totals.gross)} />
-          <Metric label="Net revenue" value={formatMoney(totals.net)} />
+          <Metric label="Gross revenue" value={formatMoney(totals.gross)} tone={totals.gross > 0 ? 'positive' : 'neutral'} />
+          <Metric label="Net revenue" value={formatMoney(totals.net)} tone={totals.net > 0 ? 'positive' : 'neutral'} />
           <Metric label="Tickets issued" value={count.format(totals.tickets)} />
           <Metric label="Paid orders" value={count.format(totals.orders)} />
         </section>
@@ -114,43 +119,81 @@ export function ConnectedPartnerAnalyticsScreen({
             stated dates.
           </p>
         ) : null}
-        <OverviewTrendCard
-          title="Sales over time"
-          series={(['tickets', 'revenue'] as const).map((metric) => ({
-            metric,
-            range: 'All' as const,
-            value:
-              metric === 'tickets'
-                ? count.format(buckets.reduce((sum, b) => sum + b.totalTicketsIssued, 0))
-                : formatMoney(buckets.reduce((sum, b) => sum + b.guestGrossCollectedPaise, 0)),
-            delta: '',
-            points: buckets.map((bucket) =>
-              metric === 'tickets'
-                ? bucket.totalTicketsIssued
-                : bucket.guestGrossCollectedPaise / 100,
-            ),
-            caption: `${analytics.lastThirtyDays.from} – ${analytics.lastThirtyDays.to}`,
-            pointLabels: buckets.map((bucket) =>
-              formatBucket(
-                bucket.key,
-                analytics.lastThirtyDays.granularity === 'month' ? 'month' : 'day',
+        <section className={styles['insightGrid']} aria-label="Sales trend and ticket tiers">
+          <OverviewTrendCard
+            title="Sales over time"
+            className={styles['chartPanel']}
+            series={(['tickets', 'revenue'] as const).map((metric) => ({
+              metric,
+              range: 'All' as const,
+              value:
+                metric === 'tickets'
+                  ? count.format(buckets.reduce((sum, b) => sum + b.totalTicketsIssued, 0))
+                  : formatMoney(buckets.reduce((sum, b) => sum + b.guestGrossCollectedPaise, 0)),
+              delta: '',
+              points: buckets.map((bucket) =>
+                metric === 'tickets'
+                  ? bucket.totalTicketsIssued
+                  : bucket.guestGrossCollectedPaise / 100,
               ),
-            ),
-          }))}
-          rangeOptions={[]}
-          initialRange="All"
-        />
+              caption: `${analytics.lastThirtyDays.from} – ${analytics.lastThirtyDays.to}`,
+              pointLabels: buckets.map((bucket) =>
+                formatBucket(
+                  bucket.key,
+                  analytics.lastThirtyDays.granularity === 'month' ? 'month' : 'day',
+                ),
+              ),
+            }))}
+            rangeOptions={[]}
+            initialRange="All"
+          />
+          <section
+            className={[styles['panel'], styles['tierPanel']].filter(Boolean).join(' ')}
+            aria-label="Tickets by tier"
+          >
+            <div className={styles['panelHeading']}>
+              <h2>Tickets by tier</h2>
+              <span>
+                {analytics.lastThirtyDays.from} – {analytics.lastThirtyDays.to}
+              </span>
+            </div>
+            <p className={styles['empty']}>Issued ticket units · before refunds.</p>
+            {insights === null || insights === undefined ? (
+              <p className={styles['empty']}>Tier performance unavailable.</p>
+            ) : insights.rows.length === 0 ? (
+              <p className={styles['empty']}>No ticket issuance in this period.</p>
+            ) : (
+              insights.rows.map((row) => (
+                <div className={styles['tierRow']} key={`${row.eventId}:${row.tierId}`}>
+                  <div>
+                    <span>
+                      {row.name} · {row.eventName}
+                    </span>
+                    <strong>{count.format(row.tickets)}</strong>
+                  </div>
+                  <progress
+                    aria-label={`${row.name} issued units`}
+                    value={row.tickets}
+                    max={Math.max(...insights.rows.map((r) => r.tickets), 1)}
+                  />
+                </div>
+              ))
+            )}
+          </section>
+        </section>
+
         <section className={styles['splitGrid']} aria-label="Revenue and ticket breakdown">
           <div className={styles['panel']}>
             <h2>Revenue breakdown</h2>
-            <DataRow label="Guest payments" value={formatMoney(totals.gross)} />
+            <DataRow label="Guest payments" value={formatMoney(totals.gross)} tone={totals.gross > 0 ? 'positive' : 'neutral'} />
             <DataRow
               label="Ticket revenue"
               value={formatMoney(
                 selectedTotals?.ticketRevenuePaise ?? analytics.salesBreakdown.ticketRevenuePaise,
               )}
+              tone={(selectedTotals?.ticketRevenuePaise ?? analytics.salesBreakdown.ticketRevenuePaise) > 0 ? 'positive' : 'neutral'}
             />
-            <DataRow label="Net captured after refunds" value={formatMoney(totals.net)} />
+            <DataRow label="Net captured after refunds" value={formatMoney(totals.net)} tone={totals.net > 0 ? 'positive' : 'neutral'} />
           </div>
           <div className={styles['panel']}>
             <h2>Ticket activity</h2>
@@ -173,36 +216,6 @@ export function ConnectedPartnerAnalyticsScreen({
           </div>
         </section>
 
-        <section className={styles['panel']} aria-label="Tickets by tier">
-          <div className={styles['panelHeading']}>
-            <h2>Tickets by tier</h2>
-            <span>
-              {analytics.lastThirtyDays.from} – {analytics.lastThirtyDays.to}
-            </span>
-          </div>
-          <p className={styles['empty']}>Issued ticket units · before refunds.</p>
-          {insights === null || insights === undefined ? (
-            <p>Tier performance unavailable.</p>
-          ) : insights.rows.length === 0 ? (
-            <p>No ticket issuance in this period.</p>
-          ) : (
-            insights.rows.map((row) => (
-              <div className={styles['tierRow']} key={`${row.eventId}:${row.tierId}`}>
-                <div>
-                  <span>
-                    {row.name} · {row.eventName}
-                  </span>
-                  <strong>{count.format(row.tickets)}</strong>
-                </div>
-                <progress
-                  aria-label={`${row.name} issued units`}
-                  value={row.tickets}
-                  max={Math.max(...insights.rows.map((r) => r.tickets), 1)}
-                />
-              </div>
-            ))
-          )}
-        </section>
         {insights ? (
           <section className={styles['splitGrid']} aria-label="Sales insights">
             <div className={styles['panel']}>
@@ -260,7 +273,7 @@ export function ConnectedPartnerAnalyticsScreen({
                         <td>{event.title}</td>
                         <td>{formatBucket(event.date.slice(0, 10), 'day')}</td>
                         <td>{count.format(event.tickets)}</td>
-                        <td>{formatMoney(event.revenuePaise)}</td>
+                        <td className={event.revenuePaise > 0 ? styles['valuePositive'] : undefined}>{formatMoney(event.revenuePaise)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -301,8 +314,8 @@ export function ConnectedPartnerAnalyticsScreen({
                         analytics.lastThirtyDays.granularity === 'month' ? 'month' : 'day',
                       )}
                     </td>
-                    <td>{formatMoney(bucket.guestGrossCollectedPaise)}</td>
-                    <td>{formatMoney(bucket.revenuePaise)}</td>
+                    <td className={bucket.guestGrossCollectedPaise > 0 ? styles['valuePositive'] : undefined}>{formatMoney(bucket.guestGrossCollectedPaise)}</td>
+                    <td className={bucket.revenuePaise > 0 ? styles['valuePositive'] : undefined}>{formatMoney(bucket.revenuePaise)}</td>
                     <td>{count.format(bucket.totalTicketsIssued)}</td>
                     <td>{count.format(bucket.paidOrderCount)}</td>
                   </tr>
@@ -316,20 +329,20 @@ export function ConnectedPartnerAnalyticsScreen({
   );
 }
 
-function Metric({ label, value }: { readonly label: string; readonly value: string }) {
+function Metric({ label, value, tone = 'neutral' }: { readonly label: string; readonly value: string; readonly tone?: 'positive' | 'negative' | 'neutral' }) {
   return (
     <div className={styles['stat']}>
       <span>{label}</span>
-      <strong>{value}</strong>
+      <strong className={valueToneClasses[tone]} data-tone={tone}>{value}</strong>
     </div>
   );
 }
 
-function DataRow({ label, value }: { readonly label: string; readonly value: string }) {
+function DataRow({ label, value, tone = 'neutral' }: { readonly label: string; readonly value: string; readonly tone?: 'positive' | 'negative' | 'neutral' }) {
   return (
     <div className={styles['dataRow']}>
       <span>{label}</span>
-      <strong>{value}</strong>
+      <strong className={valueToneClasses[tone]} data-tone={tone}>{value}</strong>
     </div>
   );
 }

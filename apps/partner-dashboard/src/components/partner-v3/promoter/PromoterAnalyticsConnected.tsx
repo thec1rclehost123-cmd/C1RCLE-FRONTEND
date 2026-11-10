@@ -6,6 +6,12 @@ import styles from '../event-detail/partner-analytics.module.css';
 
 import type { PromoterCampaignSummaryDto } from '@c1rcle/contracts';
 
+const valueToneClasses = {
+  positive: styles['valuePositive'] ?? '',
+  negative: styles['valueNegative'] ?? '',
+  neutral: styles['valueNeutral'] ?? '',
+} as const;
+
 const money = new Intl.NumberFormat('en-IN', {
   style: 'currency',
   currency: 'INR',
@@ -44,15 +50,16 @@ export function PromoterAnalyticsConnected({
           <Metric
             label="Gross attributed sales"
             value={inr(summary.grossAttributedTicketSalesPaise)}
+            tone={summary.grossAttributedTicketSalesPaise > 0 ? 'positive' : 'neutral'}
           />
-          <Metric label="Refunded value" value={inr(summary.refundedAttributedTicketSalesPaise)} />
-          <Metric label="Net attributed sales" value={inr(summary.netAttributedTicketSalesPaise)} />
+          <Metric label="Refunded value" value={inr(summary.refundedAttributedTicketSalesPaise)} tone={summary.refundedAttributedTicketSalesPaise > 0 ? 'negative' : 'neutral'} />
+          <Metric label="Net attributed sales" value={inr(summary.netAttributedTicketSalesPaise)} tone={summary.netAttributedTicketSalesPaise > 0 ? 'positive' : 'neutral'} />
         </section>
 
         <section className={styles['promoterChart']} aria-labelledby="promoter-funnel-title">
           <div className={styles['panelHeading']}>
             <h2 id="promoter-funnel-title">Link performance</h2>
-            <strong>{conversionRate.toFixed(1)}% conversion</strong>
+            <strong className={conversionRate > 0 ? styles['valuePositive'] : styles['valueNeutral']}>{conversionRate.toFixed(1)}% conversion</strong>
           </div>
           <div className={styles['funnelRow']}>
             <div>
@@ -97,9 +104,9 @@ export function PromoterAnalyticsConnected({
         <section className={styles['promoterValue']}>
           <div>
             <h2>Commission recorded</h2>
-            <strong>{inr(summary.recordedCommissionPaise)}</strong>
+            <strong className={summary.recordedCommissionPaise > 0 ? styles['valuePositive'] : undefined}>{inr(summary.recordedCommissionPaise)}</strong>
           </div>
-          <span>
+          <span className={summary.reversedCommissionPaise && summary.reversedCommissionPaise > 0 ? styles['valueNegative'] : undefined}>
             {summary.reversedCommissionPaise === null
               ? 'Historical commission from order snapshots'
               : `${inr(summary.reversedCommissionPaise)} reversed in the finance journal`}
@@ -124,11 +131,11 @@ export function PromoterAnalyticsConnected({
   );
 }
 
-function Metric({ label, value }: { readonly label: string; readonly value: string }) {
+function Metric({ label, value, tone = 'neutral' }: { readonly label: string; readonly value: string; readonly tone?: 'positive' | 'negative' | 'neutral' }) {
   return (
     <div className={styles['stat']}>
       <span>{label}</span>
-      <strong>{value}</strong>
+      <strong className={valueToneClasses[tone]} data-tone={tone}>{value}</strong>
     </div>
   );
 }

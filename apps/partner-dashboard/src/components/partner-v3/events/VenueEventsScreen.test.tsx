@@ -51,6 +51,17 @@ describe('VenueEventsScreen', () => {
     expect(screen.getByText('Neon Nights: Afrobeats')).toBeInTheDocument();
   });
 
+  it('opens with the Completed filter selected when requested', async () => {
+    const data = await fixturePartnerDataSource.getVenueEvents();
+    render(<VenueEventsScreen data={data} initialStatus="Completed" />);
+
+    expect(screen.getByRole('button', { name: /^Completed/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByText(/events shown\..*completed\./)).toBeInTheDocument();
+  });
+
   it('filters by search and switches between status and list view locally', async () => {
     const user = userEvent.setup();
     const data = await fixturePartnerDataSource.getVenueEvents();

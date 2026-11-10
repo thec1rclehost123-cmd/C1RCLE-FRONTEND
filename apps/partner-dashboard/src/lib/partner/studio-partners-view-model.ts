@@ -93,6 +93,10 @@ function partnershipRequestRow(
       kind,
       direction: outgoing ? 'outgoing' : 'incoming',
       note: item.message ?? '',
+      avatarUrl: kind === 'host' ? item.hostPhotoUrl ?? null : item.venuePhotoUrl ?? null,
+      coverUrl: kind === 'host' ? item.hostCoverUrl ?? null : item.venueCoverUrl ?? null,
+      location: kind === 'host' ? '—' : item.venueCity ?? '—',
+      canWithdraw: item.initiatedBy === viewer,
       target: { graph: 'partnership', id: item.id },
     },
   };
@@ -117,6 +121,10 @@ function promoterRequestRow(
       kind,
       direction: outgoing ? 'outgoing' : 'incoming',
       note: item.message ?? '',
+      avatarUrl: viewer === 'promoter' ? item.targetPhotoUrl ?? null : item.promoterPhotoUrl ?? null,
+      coverUrl: viewer === 'promoter' ? item.targetCoverUrl ?? null : item.promoterCoverUrl ?? null,
+      location: viewer === 'promoter' ? item.targetCity ?? '—' : '—',
+      canWithdraw: viewer === 'promoter' && item.initiatedBy === 'promoter',
       target: { graph: 'promoter-connection', id: item.id },
     },
   };
@@ -164,11 +172,19 @@ export function toVenuePartnersData(input: {
         const name = item.hostName ?? PARTNER_NAME_UNAVAILABLE;
         return {
           ...relationshipBase(item.id, 'host', name, null, false),
+          avatarUrl: item.hostPhotoUrl ?? null,
+          coverUrl: item.hostCoverUrl ?? null,
+          bio: item.hostBio ?? '',
           status: 'Partnered',
         };
       }),
     discover: input.discoveredHosts.map((item): PartnerRelationship => ({
       ...relationshipBase(item.id, 'host', item.name, item.city, item.verified),
+      ...(item.photoUrl ? { avatarUrl: item.photoUrl } : {}),
+      ...(item.coverUrl ? { coverUrl: item.coverUrl } : {}),
+      ...(item.bio ? { bio: item.bio } : {}),
+      ...(item.genres ? { genres: item.genres } : {}),
+      ...(item.stats ? { stats: item.stats } : {}),
     })),
     requests: splitPending(
       partnerships.map((item) =>
@@ -187,11 +203,19 @@ export function toVenuePartnersData(input: {
         const name = item.promoterName ?? PARTNER_NAME_UNAVAILABLE;
         return {
           ...relationshipBase(item.id, 'promoter', name, item.targetCity, false),
+          avatarUrl: item.promoterPhotoUrl ?? null,
+          coverUrl: item.promoterCoverUrl ?? null,
+          bio: item.promoterBio ?? '',
           status: 'Partnered',
         };
       }),
     discover: input.discoveredPromoters.map((item): PartnerRelationship => ({
       ...relationshipBase(item.id, 'promoter', item.name, item.city, item.verified),
+      ...(item.photoUrl ? { avatarUrl: item.photoUrl } : {}),
+      ...(item.coverUrl ? { coverUrl: item.coverUrl } : {}),
+      ...(item.bio ? { bio: item.bio } : {}),
+      ...(item.genres ? { genres: item.genres } : {}),
+      ...(item.stats ? { stats: item.stats } : {}),
     })),
     requests: splitPending(
       promoterConnections.map((item) =>
@@ -223,12 +247,21 @@ export function toHostPartnersData(input: {
       .map((item): PartnerRelationship => {
         const name = item.venueName ?? PARTNER_NAME_UNAVAILABLE;
         return {
-          ...relationshipBase(item.id, 'venue', name, null, false),
+          ...relationshipBase(item.id, 'venue', name, item.venueCity, false),
+          avatarUrl: item.venuePhotoUrl ?? null,
+          coverUrl: item.venueCoverUrl ?? null,
+          bio: item.venueBio ?? '',
+          genres: item.venueGenres ?? [],
           status: 'Partnered',
         };
       }),
     discover: input.discoveredVenues.map((item): PartnerRelationship => ({
       ...relationshipBase(item.id, 'venue', item.name, item.city, item.verified),
+      ...(item.photoUrl ? { avatarUrl: item.photoUrl } : {}),
+      ...(item.coverUrl ? { coverUrl: item.coverUrl } : {}),
+      ...(item.bio ? { bio: item.bio } : {}),
+      ...(item.genres ? { genres: item.genres } : {}),
+      ...(item.stats ? { stats: item.stats } : {}),
     })),
     requests: splitPending(
       partnerships.map((item) =>
@@ -244,11 +277,19 @@ export function toHostPartnersData(input: {
         const name = item.promoterName ?? PARTNER_NAME_UNAVAILABLE;
         return {
           ...relationshipBase(item.id, 'promoter', name, item.targetCity, false),
+          avatarUrl: item.promoterPhotoUrl ?? null,
+          coverUrl: item.promoterCoverUrl ?? null,
+          bio: item.promoterBio ?? '',
           status: 'Partnered',
         };
       }),
     discover: input.discoveredPromoters.map((item): PartnerRelationship => ({
       ...relationshipBase(item.id, 'promoter', item.name, item.city, item.verified),
+      ...(item.photoUrl ? { avatarUrl: item.photoUrl } : {}),
+      ...(item.coverUrl ? { coverUrl: item.coverUrl } : {}),
+      ...(item.bio ? { bio: item.bio } : {}),
+      ...(item.genres ? { genres: item.genres } : {}),
+      ...(item.stats ? { stats: item.stats } : {}),
     })),
     requests: splitPending(
       promoterConnections.map((item) =>
@@ -287,11 +328,14 @@ export function toPromoterPartnersData(input: {
       kind,
       role: ROLE_LABEL[kind],
       location: item.targetCity ?? '—',
-      genres: [],
       stats: [],
       upcomingEvents: [],
       verified: false,
       cardTone: toneOf(item.id),
+      avatarUrl: item.targetPhotoUrl ?? null,
+      coverUrl: item.targetCoverUrl ?? null,
+      bio: item.targetBio ?? '',
+      genres: item.targetGenres ?? [],
       state,
       actionLabel: state === 'active' ? 'Connected' : 'Send Request',
     };
@@ -307,8 +351,10 @@ export function toPromoterPartnersData(input: {
     kind: item.kind === 'host' ? 'host' : 'venue',
     role: ROLE_LABEL[item.kind === 'host' ? 'host' : 'venue'],
     location: item.city ?? '—',
-    genres: [],
-    stats: [],
+    ...(item.photoUrl ? { avatarUrl: item.photoUrl } : {}),
+    ...(item.coverUrl ? { coverUrl: item.coverUrl } : {}),
+    genres: item.genres ?? [],
+    stats: item.stats ?? [],
     upcomingEvents: [],
     verified: item.verified,
     cardTone: toneOf(item.id),

@@ -21,9 +21,7 @@
 .partner-dashboard {
   min-height: 100vh;
   color: var(--partner-text);
-  background:
-    radial-gradient(circle at 72% -12%, rgb(255 90 31 / 10%), transparent 31rem),
-    linear-gradient(180deg, #070707 0%, #020202 100%);
+  background: linear-gradient(180deg, #070707 0%, #020202 100%);
   font-family: var(--font-archivo), Archivo, Inter, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }

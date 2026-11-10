@@ -43,14 +43,6 @@ export function EventDetailHeader({
         .join(' ')}
       aria-labelledby="event-detail-title"
     >
-      <div className={styles['detailBackdrop']} aria-hidden="true">
-        <EventPoster
-          className={styles['detailBackdropArtwork']}
-          artwork={data.event.artwork}
-          sizes="100vw"
-        />
-        <span />
-      </div>
       <div className={styles['detailPoster']}>
         <EventPoster
           className={styles['detailPosterArtwork']}

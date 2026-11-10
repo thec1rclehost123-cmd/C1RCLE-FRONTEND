@@ -176,6 +176,7 @@ export type {
   OrganizationEventCardDto,
   OrganizationEventCardListResponse,
   EventAnalyticsDto,
+  EventBookingHeatmapDto,
   EventPromoterAnalyticsDto,
   PromoterCampaignSummaryDto,
   ReferralLinkDto,
@@ -185,6 +186,9 @@ export type {
   DiscoverPartnerDto,
   DiscoverPartnerKind,
   DiscoverPartnersQuery,
+  PartnerGlobalSearchQuery,
+  PartnerGlobalSearchResponse,
+  EventComparisonResponse,
 } from './contracts/partner.js';
 
 export {
@@ -204,6 +208,7 @@ export {
   organizationEventCardDtoSchema,
   organizationEventCardListResponseSchema,
   eventAnalyticsDtoSchema,
+  eventBookingHeatmapDtoSchema,
   eventPromoterAnalyticsDtoSchema,
   promoterCampaignSummaryDtoSchema,
   referralLinkDtoSchema,
@@ -213,6 +218,11 @@ export {
   discoverPartnerKindSchema,
   discoverPartnerDtoSchema,
   discoverPartnersQuerySchema,
+  partnerGlobalSearchQuerySchema,
+  partnerGlobalSearchResultSchema,
+  partnerGlobalSearchResponseSchema,
+  eventComparisonItemSchema,
+  eventComparisonResponseSchema,
 } from './contracts/partner.js';
 
 // Onboarding / KYC / Admin Authority

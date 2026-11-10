@@ -44,7 +44,9 @@ export default async function StudioEventsPage({
           ? ('Live' as const)
           : status === 'draft'
             ? ('Draft' as const)
-            : ('all' as const),
+            : status === 'completed'
+              ? ('Completed' as const)
+              : ('all' as const),
       initialParty:
         party === 'hosts'
           ? ('hosts' as const)

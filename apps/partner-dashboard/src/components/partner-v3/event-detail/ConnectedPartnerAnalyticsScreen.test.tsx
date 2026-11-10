@@ -86,6 +86,7 @@ describe('ConnectedPartnerAnalyticsScreen', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Analytics' })).toBeInTheDocument();
+    expect(screen.getAllByText('Gross revenue')[0]?.parentElement?.querySelector('strong')).toHaveAttribute('data-tone', 'positive');
     expect(screen.getByText('Tickets issued')).toBeInTheDocument();
     expect(screen.getByText('Free RSVP tickets')).toBeInTheDocument();
     expect(screen.getByText('Revenue breakdown')).toBeInTheDocument();

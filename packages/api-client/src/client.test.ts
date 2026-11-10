@@ -38,8 +38,21 @@ describe('ApiClient', () => {
 
     await clientWith(fetchImpl).get({ path: '/users', schema });
 
-    const headers = fetchImpl.mock.calls[0]?.[1]?.headers as Record<string, string>;
-    expect(headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
+    const headers = new Headers(fetchImpl.mock.calls[0]?.[1]?.headers);
+    expect(headers.get('x-request-id')).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it('merges explicit organization headers case-insensitively with path-derived headers', async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ id: 'a' }));
+
+    await clientWith(fetchImpl).get({
+      path: '/organizations/org_1/partner-settings',
+      headers: { 'X-Organization-Id': 'org_1' },
+      schema,
+    });
+
+    const headers = new Headers(fetchImpl.mock.calls[0]?.[1]?.headers);
+    expect(headers.get('x-organization-id')).toBe('org_1');
   });
 
   it('attaches a bearer token when one is available', async () => {
@@ -47,8 +60,8 @@ describe('ApiClient', () => {
 
     await clientWith(fetchImpl, { getToken: () => 'tok_123' }).get({ path: '/me', schema });
 
-    const headers = fetchImpl.mock.calls[0]?.[1]?.headers as Record<string, string>;
-    expect(headers['authorization']).toBe('Bearer tok_123');
+    const headers = new Headers(fetchImpl.mock.calls[0]?.[1]?.headers);
+    expect(headers.get('authorization')).toBe('Bearer tok_123');
   });
 
   it('maps status codes to typed error codes', async () => {

@@ -482,12 +482,12 @@
 }
 .cardPoster .eventPoster > img {
   transform: scale(1.2);
-  filter: blur(30px);
+  filter: blur(9px);
   opacity: 0.72;
 }
 .cardPoster .eventPosterGradient {
   transform: scale(1.2);
-  filter: blur(24px);
+  filter: blur(12px);
 }
 .posterShade {
   position: absolute;

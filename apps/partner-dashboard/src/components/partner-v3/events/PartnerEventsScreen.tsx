@@ -17,7 +17,7 @@ import { EventListRow } from './EventListRow';
 
 import type { PartnerEventParty, PartnerEventsData } from '@/data/partner-data-source';
 
-export type PartnerEventStatusFilter = 'all' | 'Live' | 'Draft';
+export type PartnerEventStatusFilter = 'all' | 'Live' | 'Draft' | 'Completed';
 export type PartnerEventView = 'list' | 'grid';
 
 export interface PartnerEventsScreenConfig {
@@ -36,6 +36,7 @@ export interface PartnerEventsScreenConfig {
 export function parseEventStatus(value: string | undefined): PartnerEventStatusFilter {
   if (value === 'live') return 'Live';
   if (value === 'draft') return 'Draft';
+  if (value === 'completed') return 'Completed';
   return 'all';
 }
 
@@ -119,6 +120,7 @@ export function PartnerEventsScreen({
 
   const liveCount = data.events.filter((event) => event.status === 'Live').length;
   const draftCount = data.events.filter((event) => event.status === 'Draft').length;
+  const completedCount = data.events.filter((event) => event.status === 'Completed').length;
   const themeClass = config.accent === 'lavender' ? styles['hostTheme'] : '';
 
   return (
@@ -167,7 +169,12 @@ export function PartnerEventsScreen({
           partyLabel={config.partyFilterLabel}
           showViewToggle={config.showViewToggle}
           view={view}
-          counts={{ all: data.events.length, live: liveCount, drafts: draftCount }}
+          counts={{
+            all: data.events.length,
+            live: liveCount,
+            drafts: draftCount,
+            completed: completedCount,
+          }}
           onQueryChange={onQueryChange}
           onStatusChange={onStatusChange}
           onPartyChange={onPartyChange}
@@ -219,7 +226,8 @@ export function PartnerEventsScreen({
         )}
 
         <div className={styles['srOnly']} aria-live="polite">
-          {visibleEvents.length} events shown. {liveCount} live, {draftCount} drafts.
+          {visibleEvents.length} events shown. {liveCount} live, {draftCount} drafts,{' '}
+          {completedCount} completed.
         </div>
         {data.dataStatus === 'api' &&
         data.total !== undefined &&

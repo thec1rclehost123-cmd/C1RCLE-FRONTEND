@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { toOverviewData } from './overview-view-model';
+import { formatRelativeOrderTime, formatTicketSummary, toOverviewData } from './overview-view-model';
 
 import type {
+  FinanceOrderDto,
   OrganizationCalendarDto,
   OrganizationEventCardDto,
   OrganizationEventCardListResponse,
@@ -126,6 +127,52 @@ function build(
 }
 
 describe('toOverviewData', () => {
+  it('formats recent order age without exposing event or ticket details', () => {
+    const now = new Date('2026-09-16T12:00:00.000Z');
+    expect(formatRelativeOrderTime('2026-09-16T11:58:00.000Z', now)).toBe('2m ago');
+    expect(formatRelativeOrderTime('2026-09-16T10:00:00.000Z', now)).toBe('2h ago');
+    expect(formatRelativeOrderTime('2026-09-13T12:00:00.000Z', now)).toBe('3d ago');
+    expect(formatRelativeOrderTime('invalid', now)).toBe('Time unavailable');
+  });
+
+  it('formats ticket tiers before relative time in recent orders', () => {
+    expect(formatTicketSummary([{ tierName: 'General Admission', quantity: 2 }])).toBe('2 × General Admission');
+    expect(formatTicketSummary([{ tierName: 'VIP', quantity: 1 }, { tierName: 'GA', quantity: 2 }])).toBe('1 × VIP + 2 × GA');
+    expect(formatTicketSummary([])).toBe('Tickets');
+  });
+
+  it('colors only settled paid orders positively and completed refunds negatively', () => {
+    const order = (id: string, status: FinanceOrderDto['status'], total: number, refunded: number): FinanceOrderDto => ({
+      id,
+      eventId: 'evt_1',
+      eventName: 'Neon Nights',
+      buyerName: 'Guest',
+      ticketCount: 1,
+      currency: 'INR',
+      grandTotalPaise: total,
+      gstPaise: 0,
+      refundedPaise: refunded,
+      status,
+      paidAt: '2026-09-15T12:00:00.000Z',
+      createdAt: '2026-09-15T12:00:00.000Z',
+    });
+    const data = build({
+      recentOrders: [
+        order('paid', 'paid', 10_000, 0),
+        order('refunded', 'refunded', 10_000, 10_000),
+        order('pending', 'pending', 10_000, 0),
+        order('free', 'paid', 0, 0),
+      ],
+    });
+
+    expect(data.recentOrders?.map((item) => item.amountTone)).toEqual([
+      'positive',
+      'negative',
+      'neutral',
+      'neutral',
+    ]);
+  });
+
   it('formats Host event date and time in India Standard Time', () => {
     const data = build({
       cards: cards([card({ startAt: '2026-11-16T13:30:00.000Z' })]),

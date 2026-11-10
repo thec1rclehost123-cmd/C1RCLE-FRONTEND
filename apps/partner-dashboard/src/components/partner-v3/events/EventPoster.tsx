@@ -36,6 +36,11 @@ export function EventPoster({
 
   return (
     <div className={[styles['eventPoster'], className].filter(Boolean).join(' ')}>
+      <div
+        data-testid="event-poster-fallback"
+        className={[styles['eventPosterGradient'], gradient].join(' ')}
+        aria-hidden="true"
+      />
       {showImage ? (
         <Image
           src={artwork.value}
@@ -50,9 +55,7 @@ export function EventPoster({
             artwork.value,
           )}
         />
-      ) : (
-        <div className={[styles['eventPosterGradient'], gradient].join(' ')} aria-hidden="true" />
-      )}
+      ) : null}
     </div>
   );
 }

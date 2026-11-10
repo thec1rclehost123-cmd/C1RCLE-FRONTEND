@@ -1,8 +1,10 @@
+import { Fragment } from 'react';
+
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 
 import styles from './event-analytics.module.css';
 
-import type { EventAnalyticsDto } from '@c1rcle/contracts';
+import type { EventAnalyticsDto, EventBookingHeatmapDto } from '@c1rcle/contracts';
 import type { ReactNode } from 'react';
 
 const rupees = new Intl.NumberFormat('en-IN', {
@@ -75,12 +77,70 @@ function Unavailable({ children = 'No data' }: { readonly children?: string }) {
   return <p className={styles['unavailable']}>{children}</p>;
 }
 
+function BookingHeatmap({ data }: { readonly data: EventBookingHeatmapDto }) {
+  const maximum = Math.max(1, ...data.weekdays.flatMap((day) => day.hours));
+  const hourLabels = [0, 6, 12, 18].map((hour) => `${String(hour).padStart(2, '0')}:00`);
+  return (
+    <div className={styles['heatmapWrap']}>
+      <p className={styles['heatmapTotal']}>
+        {data.totalBookings.toLocaleString('en-IN')} bookings <span>· India time</span>
+      </p>
+      <div
+        className={styles['heatmap']}
+        role="grid"
+        aria-label="Bookings by weekday and hour, India time"
+      >
+        <span className={styles['heatmapCorner']} aria-hidden="true" />
+        {Array.from({ length: 24 }, (_, hour) => (
+          <span className={styles['heatmapHour']} key={hour}>
+            {hour % 6 === 0 ? hourLabels[hour / 6] : ''}
+          </span>
+        ))}
+        {data.weekdays.map((day) => (
+          <Fragment key={day.day}>
+            <span className={styles['heatmapDay']}>{day.day}</span>
+            {day.hours.map((count, hour) => {
+              const level = count === 0 ? 0 : Math.min(4, Math.ceil((count / maximum) * 4));
+              return (
+                <span
+                  className={styles['heatmapCell']}
+                  key={`${day.day}-${String(hour)}`}
+                  role="gridcell"
+                  aria-label={`${day.day}, ${String(hour).padStart(2, '0')}:00 to ${String(hour + 1).padStart(2, '0')}:00: ${String(count)} bookings`}
+                  title={`${day.day} ${String(hour).padStart(2, '0')}:00 · ${String(count)} bookings`}
+                  data-level={String(level)}
+                />
+              );
+            })}
+          </Fragment>
+        ))}
+      </div>
+      <div className={styles['heatmapLegend']}>
+        <span>Fewer</span>
+        <i />
+        <i />
+        <i />
+        <i />
+        <span>More</span>
+      </div>
+      {!data.complete ? (
+        <p className={styles['heatmapNotice']} role="status">
+          Showing a partial result. Older bookings were not included because the read limit was
+          reached.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 /** Event totals are API-backed. Unavailable breakdowns stay explicit rather than fabricated. */
 export function ConnectedEventAnalyticsScreen({
   analytics,
+  bookingHeatmap,
   studio: _studio,
 }: {
   readonly analytics: EventAnalyticsDto;
+  readonly bookingHeatmap: EventBookingHeatmapDto;
   readonly studio: 'host' | 'venue';
 }) {
   const unscanned = Math.max(0, analytics.ticketsSold - analytics.totalCheckIns);
@@ -88,9 +148,17 @@ export function ConnectedEventAnalyticsScreen({
   const inventoryKnown = analytics.totalTicketInventory >= analytics.ticketsSold;
   const stats = [
     { label: 'Page visits', value: analytics.views.toLocaleString('en-IN') },
-    { label: 'Conversion rate', value: percentage(analytics.conversionRate) },
+    {
+      label: 'Conversion rate',
+      value: percentage(analytics.conversionRate),
+      tone: analytics.conversionRate > 0 ? ('positive' as const) : ('neutral' as const),
+    },
     { label: 'Tickets sold', value: analytics.ticketsSold.toLocaleString('en-IN') },
-    { label: 'Gross amount paid', value: money(analytics.totalRevenuePaise) },
+    {
+      label: 'Gross amount paid',
+      value: money(analytics.totalRevenuePaise),
+      tone: analytics.totalRevenuePaise > 0 ? ('positive' as const) : ('neutral' as const),
+    },
   ];
 
   return (
@@ -107,7 +175,12 @@ export function ConnectedEventAnalyticsScreen({
           {stats.map((stat) => (
             <section className={styles['stat']} key={stat.label}>
               <span>{stat.label}</span>
-              <strong>{stat.value}</strong>
+              <strong
+                className={stat.tone === 'positive' ? styles['valuePositive'] : undefined}
+                data-tone={stat.tone ?? 'neutral'}
+              >
+                {stat.value}
+              </strong>
             </section>
           ))}
         </div>
@@ -200,8 +273,8 @@ export function ConnectedEventAnalyticsScreen({
           <ChartCard title="Gross ticket sales over time">
             <Unavailable>Time series unavailable</Unavailable>
           </ChartCard>
-          <ChartCard title="Orders over time">
-            <Unavailable>Time series unavailable</Unavailable>
+          <ChartCard title="Bookings by day and time">
+            <BookingHeatmap data={bookingHeatmap} />
           </ChartCard>
         </div>
 
@@ -224,18 +297,65 @@ export function ConnectedEventAnalyticsScreen({
         <ChartCard title="Additional event metrics" className={styles['metricsCard']}>
           <dl className={styles['metricGrid']}>
             {[
-              ['Ticket inventory', analytics.totalTicketInventory.toLocaleString('en-IN')],
-              ['Room capacity', analytics.capacity?.toLocaleString('en-IN') ?? 'Not configured'],
-              ['Average amount paid per ticket', money(analytics.avgTicketPricePaise)],
-              ['Occupancy', percentage(analytics.occupancyRate)],
-              ['Sell-through', percentage(analytics.sellThroughRate)],
-              ['Refunded', money(analytics.refundAmountPaise)],
-              ['Refund rate', percentage(analytics.refundRate)],
-              ['No-show rate', percentage(analytics.noShowRate)],
-            ].map(([label, value]) => (
+              [
+                'Ticket inventory',
+                analytics.totalTicketInventory.toLocaleString('en-IN'),
+                'neutral',
+              ],
+              [
+                'Room capacity',
+                analytics.capacity?.toLocaleString('en-IN') ?? 'Not configured',
+                'neutral',
+              ],
+              [
+                'Average amount paid per ticket',
+                money(analytics.avgTicketPricePaise),
+                analytics.avgTicketPricePaise > 0 ? 'positive' : 'neutral',
+              ],
+              [
+                'Occupancy',
+                percentage(analytics.occupancyRate),
+                analytics.occupancyRate !== null && analytics.occupancyRate > 0
+                  ? 'positive'
+                  : 'neutral',
+              ],
+              [
+                'Sell-through',
+                percentage(analytics.sellThroughRate),
+                analytics.sellThroughRate !== null && analytics.sellThroughRate > 0
+                  ? 'positive'
+                  : 'neutral',
+              ],
+              [
+                'Refunded',
+                money(analytics.refundAmountPaise),
+                analytics.refundAmountPaise > 0 ? 'negative' : 'neutral',
+              ],
+              [
+                'Refund rate',
+                percentage(analytics.refundRate),
+                analytics.refundRate > 0 ? 'negative' : 'neutral',
+              ],
+              [
+                'No-show rate',
+                percentage(analytics.noShowRate),
+                analytics.noShowRate !== null && analytics.noShowRate > 0 ? 'negative' : 'neutral',
+              ],
+            ].map(([label, value, tone]) => (
               <div key={label}>
                 <dt>{label}</dt>
-                <dd>{value}</dd>
+                <dd
+                  className={
+                    tone === 'positive'
+                      ? styles['valuePositive']
+                      : tone === 'negative'
+                        ? styles['valueNegative']
+                        : undefined
+                  }
+                  data-tone={tone}
+                >
+                  {value}
+                </dd>
               </div>
             ))}
           </dl>

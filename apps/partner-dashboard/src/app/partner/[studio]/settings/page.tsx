@@ -1,5 +1,4 @@
-import { PartnerSettingsUnavailable } from '@/components/partner-v3/settings/PartnerSettingsUnavailable';
-import { PromoterAgreementPanel } from '@/components/promoter/PromoterAgreementPanel';
+import { PartnerWorkspaceSettings } from '@/components/partner-v3/settings/PartnerWorkspaceSettings';
 
 import { renderStudioSkeleton } from '../route-helpers';
 
@@ -9,15 +8,13 @@ export default async function StudioSettingsPage({
   readonly params: Promise<{ studio: string }>;
 }) {
   const { studio } = await params;
-  if (studio === 'promoter') {
-    return <PromoterAgreementPanel />;
-  }
   if (studio !== 'venue' && studio !== 'host') {
+    if (studio === 'promoter') return <PartnerWorkspaceSettings studio="promoter" />;
     return renderStudioSkeleton(
       Promise.resolve({ studio }),
       'Settings',
       'Settings are not available for this workspace.',
     );
   }
-  return <PartnerSettingsUnavailable studio={studio} />;
+  return <PartnerWorkspaceSettings studio={studio} />;
 }

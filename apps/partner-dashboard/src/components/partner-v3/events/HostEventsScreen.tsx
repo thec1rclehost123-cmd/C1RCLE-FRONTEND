@@ -24,7 +24,7 @@ export function HostEventsScreen({
 }: {
   readonly data: HostEventsData;
   readonly initialSearch?: string;
-  readonly initialStatus?: 'all' | 'Live' | 'Draft';
+  readonly initialStatus?: 'all' | 'Live' | 'Draft' | 'Completed';
   readonly initialParty?: PartnerEventParty;
   readonly initialView?: 'list' | 'grid';
 }) {

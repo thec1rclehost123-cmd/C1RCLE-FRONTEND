@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { EditIcon, ForwardIcon } from '@c1rcle/icons';
+import { DoorModeIcon, EditIcon } from '@c1rcle/icons';
 
 import { EventPoster } from '@/components/partner-v3/events/EventPoster';
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
@@ -49,9 +49,11 @@ export function EventWorkspaceChrome({
   return (
     <div className={styles['workspacePage']}>
       <div className={styles['pageBackdrop']} aria-hidden="true">
-        <div className={styles['pageBackdropArtwork']}>
-          <EventPoster artwork={event.artwork} sizes="100vw" />
-        </div>
+        <EventPoster
+          className={styles['pageBackdropArtwork']}
+          artwork={event.artwork}
+          sizes="100vw"
+        />
         <span />
       </div>
       <PageContainer>
@@ -60,26 +62,30 @@ export function EventWorkspaceChrome({
             .filter(Boolean)
             .join(' ')}
         >
-          <header className={styles['hero']}>
+          <EventWorkspaceTabs tabs={tabs} baseHref={baseHref} level="primary" />
+          <header className={styles['hero']} data-testid="event-workspace-event-info">
             <div className={styles['poster']}>
               <EventPoster artwork={event.artwork} sizes="(max-width: 700px) 100vw, 210px" />
             </div>
             <div className={styles['identity']}>
               <div className={styles['identityTop']}>
                 <div className={styles['eventDetails']}>
-                  <span className={styles['statusBadge']}>{event.statusLabel}</span>
+                  <div className={styles['eventMetaLine']}>
+                    <span>{event.venue}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{event.dateTime}</span>
+                    <span className={styles['statusBadge']}>{event.statusLabel}</span>
+                  </div>
                   <h1>{event.title}</h1>
-                  <p>{event.venue}</p>
-                  <p>{event.dateTime}</p>
                   {event.contextLabel ? <p>{event.contextLabel}</p> : null}
                 </div>
                 {studio !== 'promoter' ? (
                   <div className={styles['actions']}>
                     <Link href={`${baseHref}/edit`}>
-                      <EditIcon size={14} aria-hidden="true" /> Edit event
+                      <EditIcon size={14} aria-hidden="true" /> Edit
                     </Link>
                     <Link className={styles['primaryAction']} href={`${baseHref}/door`}>
-                      Open door mode <ForwardIcon size={14} aria-hidden="true" />
+                      <DoorModeIcon size={14} aria-hidden="true" /> Door Mode
                     </Link>
                   </div>
                 ) : null}
@@ -94,7 +100,7 @@ export function EventWorkspaceChrome({
               </dl>
             </div>
           </header>
-          <EventWorkspaceTabs tabs={tabs} baseHref={baseHref} />
+          <EventWorkspaceTabs tabs={tabs} baseHref={baseHref} level="secondary" />
           <div className={styles['workspaceContent']}>{children}</div>
         </div>
       </PageContainer>

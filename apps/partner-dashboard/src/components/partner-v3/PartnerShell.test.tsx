@@ -4,8 +4,6 @@ import { hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
-
 import { PartnerShell } from './PartnerShell';
 
 const navigation = vi.hoisted(() => ({ pathname: '/partner/venue/overview' }));
@@ -53,14 +51,16 @@ describe('PartnerShell navigation layouts', () => {
 
   it('switches between side and top navigation and saves the preference', async () => {
     const user = userEvent.setup();
-    const interactionData = await fixturePartnerDataSource.getPartnerShellInteractions('venue');
 
     render(
-      <PartnerShell studio="venue" interactionData={interactionData}>
+      <PartnerShell studio="venue">
         <div>Overview content</div>
       </PartnerShell>,
     );
 
+    const topbar = screen.getByRole('banner');
+    expect(within(topbar).getByText('Venue Studio')).toBeInTheDocument();
+    expect(within(topbar).queryByText('Overview')).not.toBeInTheDocument();
     expect(
       screen.getByRole('complementary', { name: 'Venue Studio navigation' }),
     ).toBeInTheDocument();
@@ -89,22 +89,21 @@ describe('PartnerShell navigation layouts', () => {
   });
 
   it.each(['venue', 'host', 'promoter'] as const)(
-    'keeps %s Settings in the account menu only',
+    'keeps %s Settings available in navigation and the account menu',
     async (studio) => {
       const user = userEvent.setup();
       navigation.pathname = `/partner/${studio}/overview`;
-      const interactionData = await fixturePartnerDataSource.getPartnerShellInteractions(studio);
       render(
-        <PartnerShell studio={studio} interactionData={interactionData}>
+        <PartnerShell studio={studio}>
           <div>Content</div>
         </PartnerShell>,
       );
-      expect(screen.queryByRole('link', { name: 'Settings' })).not.toBeInTheDocument();
+      const settingsHref = `/partner/${studio}/settings`;
+      expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', settingsHref);
       await user.click(screen.getByRole('button', { name: 'Account options for Rhea Kapoor' }));
-      expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute(
-        'href',
-        `/partner/${studio}/settings`,
-      );
+      const settingsLinks = screen.getAllByRole('link', { name: 'Settings' });
+      expect(settingsLinks).toHaveLength(2);
+      expect(settingsLinks.every((link) => link.getAttribute('href') === settingsHref)).toBe(true);
       expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
     },
   );
@@ -112,10 +111,9 @@ describe('PartnerShell navigation layouts', () => {
   it('restores a saved top-navigation preference', async () => {
     navigation.pathname = '/partner/host/overview';
     window.localStorage.setItem('c1rcle.partner.navigation-layout', 'top');
-    const interactionData = await fixturePartnerDataSource.getPartnerShellInteractions('host');
 
     render(
-      <PartnerShell studio="host" interactionData={interactionData}>
+      <PartnerShell studio="host">
         <div>Host content</div>
       </PartnerShell>,
     );
@@ -130,10 +128,9 @@ describe('PartnerShell navigation layouts', () => {
 
   it('hides navigation tabs the role matrix withholds', async () => {
     authAccess.tabVisibility = { overview: false, finance: false, settings: false };
-    const interactionData = await fixturePartnerDataSource.getPartnerShellInteractions('venue');
 
     render(
-      <PartnerShell studio="venue" interactionData={interactionData}>
+      <PartnerShell studio="venue">
         <div>Overview content</div>
       </PartnerShell>,
     );
@@ -148,10 +145,9 @@ describe('PartnerShell navigation layouts', () => {
     expect(screen.getByRole('link', { name: 'Marketing' })).toBeInTheDocument();
   });
 
-  it('keeps the authenticated header name stable through server hydration', async () => {
-    const interactionData = await fixturePartnerDataSource.getPartnerShellInteractions('venue');
+  it('keeps the authenticated header name stable through server hydration', () => {
     const tree = (
-      <PartnerShell studio="venue" interactionData={interactionData}>
+      <PartnerShell studio="venue">
         <div>Overview content</div>
       </PartnerShell>
     );

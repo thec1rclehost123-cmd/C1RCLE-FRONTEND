@@ -19,9 +19,22 @@ export function PartnerCard({
   readonly onConnect?: ((partner: PartnerRelationship) => void) | undefined;
 }) {
   const [avatarFailed, setAvatarFailed] = useState(false);
+  const [coverFailed, setCoverFailed] = useState(false);
   const avatarSrc = partner.avatarUrl && !avatarFailed ? partner.avatarUrl : null;
   return (
     <article className={styles['partnerCard']}>
+      <div className={styles['partnerCardCover']}>
+        {partner.coverUrl && !coverFailed ? (
+          <Image
+            src={partner.coverUrl}
+            alt=""
+            fill
+            sizes="320px"
+            unoptimized
+            onError={() => { setCoverFailed(true); }}
+          />
+        ) : null}
+      </div>
       <div className={styles['partnerCardArtwork']}>
         {avatarSrc ? (
           <Image
@@ -48,6 +61,13 @@ export function PartnerCard({
               .filter(Boolean)
               .join(' · ')}
           </p>
+          {partner.stats.length ? (
+            <ul className={styles['partnerCardStats']} aria-label={`${partner.name} summary`}>
+              {partner.stats.slice(0, 2).map((stat) => (
+                <li key={stat.label}><strong>{stat.value}</strong><span>{stat.label}</span></li>
+              ))}
+            </ul>
+          ) : null}
         </div>
         <Link className={styles['profileLink']} href={href}>
           View profile <span aria-hidden="true">↗</span>

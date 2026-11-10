@@ -52,7 +52,7 @@ function mapEvent(
   const parts = formatter.formatToParts(date);
   const value = (type: Intl.DateTimeFormatPartTypes) =>
     parts.find((part) => part.type === type)?.value ?? '';
-  const status = mapStatus(item.status, date);
+  const status = mapStatus(item.status, date, item.endAt ? new Date(item.endAt) : null);
   const artwork = item.imageUrl
     ? { type: 'image' as const, value: item.imageUrl, alt: item.title }
     : { type: 'gradient' as const, value: 'placeholder' };
@@ -91,7 +91,13 @@ function mapEvent(
   };
 }
 
-function mapStatus(status: string, startAt: Date): PartnerEventRecord['status'] {
+export function mapStatus(
+  status: string,
+  startAt: Date,
+  endAt: Date | null,
+  now = new Date(),
+): PartnerEventRecord['status'] {
+  const completed = (endAt ?? startAt).getTime() <= now.getTime();
   switch (status) {
     case 'draft':
       return 'Draft';
@@ -101,18 +107,18 @@ function mapStatus(status: string, startAt: Date): PartnerEventRecord['status'] 
       return 'Scheduled';
     case 'published':
     case 'started':
-      return 'Live';
+      return completed ? 'Completed' : 'Live';
     case 'postponed':
       return 'Postponed';
     case 'sales_paused':
       return 'Paused';
     case 'ended':
-      return 'Past';
+      return 'Completed';
     case 'archived':
       return 'Archived';
     case 'cancelled':
       return 'Cancelled';
     default:
-      return startAt.getTime() < Date.now() ? 'Past' : 'Draft';
+      return completed ? 'Completed' : 'Draft';
   }
 }
