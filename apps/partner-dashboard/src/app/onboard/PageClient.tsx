@@ -41,6 +41,7 @@ import {
 } from 'react';
 
 import { isApiClientError } from '@c1rcle/api-client';
+import { refresh as refreshAuthSession, useSessionStore } from '@c1rcle/auth';
 import { getClientEnv } from '@c1rcle/config';
 import { onboardingProfileSchema } from '@c1rcle/contracts';
 
@@ -113,6 +114,15 @@ function toE164(phone: string): string {
 /** A thrown value's message, or `fallback` when it has none. */
 function errorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback;
+}
+
+/** The onboarding API intentionally gates reads until phone verification is complete. */
+function isPhoneVerificationRequired(err: unknown): boolean {
+  return (
+    isApiClientError(err) &&
+    err.status === 403 &&
+    err.message === 'Verify your phone before using Partner onboarding.'
+  );
 }
 
 // ── Step type ─────────────────────────────────────────────────────────────────
@@ -399,6 +409,13 @@ export function OnboardingPage() {
     const checkInitialState = async () => {
       initialChecked.current = true;
       if (authUser) {
+        if (authUser.emailVerified !== true) {
+          setFormData((prev) => ({ ...prev, email: authUser.email }));
+          setOtpEmail(authUser.email);
+          initialised.current = true;
+          setStep('email_verify');
+          return;
+        }
         if (isApproved) {
           void routeAfterAuth(router);
           return;
@@ -468,9 +485,17 @@ export function OnboardingPage() {
           setFormData((prev) => ({ ...prev, email: authUser.email }));
           setOtpEmail(authUser.email);
           initialised.current = true;
-          setStep(authUser.emailVerified === false ? 'email_verify' : 'phone_verify');
+          setStep('phone_verify');
           return;
-        } catch {
+        } catch (err) {
+          if (isPhoneVerificationRequired(err)) {
+            setFormData((prev) => ({ ...prev, email: authUser.email }));
+            setOtpEmail(authUser.email);
+            setError('Verify your phone number to continue.');
+            initialised.current = true;
+            setStep('phone_verify');
+            return;
+          }
           setInitialLoadFailed(true);
           return;
         }
@@ -742,6 +767,10 @@ export function OnboardingPage() {
     setLoading(true);
     try {
       await verifyOtp(otpEmail, otpEmailCode);
+      const refreshed = await refreshAuthSession();
+      if (!refreshed || useSessionStore.getState().session?.user.emailVerified !== true) {
+        throw new Error('Email verification could not be confirmed. Please sign in again.');
+      }
       setStep('phone_verify');
     } catch (err) {
       setError(errorMessage(err, 'Invalid or expired code.'));
