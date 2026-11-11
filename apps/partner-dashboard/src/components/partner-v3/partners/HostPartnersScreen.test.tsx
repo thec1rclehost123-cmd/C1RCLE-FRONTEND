@@ -38,6 +38,11 @@ describe('HostPartnersScreen', () => {
       'href',
       '/partner/host/partners',
     );
+    expect(screen.getByRole('link', { name: 'My Promoters' })).toHaveAttribute(
+      'href',
+      '/partner/host/partners?tab=promoters',
+    );
+    expect(screen.queryByRole('link', { name: 'My Venues' })).not.toBeInTheDocument();
 
     rerender(
       <HostPartnersScreen data={data} segment="staff" organizationId="org-test" staffCanManage />,

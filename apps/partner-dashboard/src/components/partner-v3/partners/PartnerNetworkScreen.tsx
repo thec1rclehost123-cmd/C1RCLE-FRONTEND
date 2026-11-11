@@ -52,7 +52,7 @@ export interface PartnerNetworkScreenProps {
   readonly baseHref: string;
   readonly primarySegment: 'hosts' | 'venues';
   readonly primaryLabel: 'Hosts' | 'Venues';
-  readonly primarySubLabel: 'My partners' | 'My Venues';
+  readonly primarySubLabel: 'My partners' | 'My Venues' | 'My Promoters';
   readonly segment?: PartnerSegment;
   readonly subView?: PartnerSubView;
   readonly search?: string;

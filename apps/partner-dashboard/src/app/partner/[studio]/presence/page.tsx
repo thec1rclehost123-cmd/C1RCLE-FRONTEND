@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 
 export default async function StudioPresencePage({
   params,
@@ -6,5 +6,6 @@ export default async function StudioPresencePage({
   readonly params: Promise<{ studio: string }>;
 }) {
   const { studio } = await params;
-  redirect(`/partner/${studio}/door`);
+  if (studio !== 'host' && studio !== 'venue') notFound();
+  redirect(`/partner/${studio}/settings`);
 }
