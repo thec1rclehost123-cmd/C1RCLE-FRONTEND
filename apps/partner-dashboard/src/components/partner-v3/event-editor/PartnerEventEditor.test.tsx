@@ -119,10 +119,28 @@ describe('PartnerEventEditor sequential workflow', () => {
     expect(screen.getByRole('button', { name: 'Mobile preview' })).toBeDisabled();
   });
 
-  it('requires a partnered venue and time before Host details and hides unsupported external approval', async () => {
+  it('lets Hosts choose an external venue while keeping the existing venue flow intact', async () => {
     const { user, onSubmit } = await setup('review', true);
     expect(screen.getByText('Choose a venue')).toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: 'Not a partnered venue' })).not.toBeInTheDocument();
+    const venue = screen.getByLabelText('Venue');
+    expect(screen.getByRole('option', { name: 'Venue not on C1RCLE' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Venue name')).not.toBeInTheDocument();
+    await user.selectOptions(venue, 'external');
+    expect(screen.getByLabelText('Venue name')).toBeInTheDocument();
+    expect(screen.getByLabelText('Full venue address')).toBeInTheDocument();
+    expect(screen.getByLabelText('Manager name')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Publish event' })).not.toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('does not expose external venue selection in the Venue editor', async () => {
+    await setup();
+    expect(screen.queryByRole('option', { name: 'Venue not on C1RCLE' })).not.toBeInTheDocument();
+  });
+
+  it('requires a partnered venue and time before Host details', async () => {
+    const { user, onSubmit } = await setup('review', true);
+    await user.selectOptions(screen.getByLabelText('Venue'), '');
     await continueStep(user);
     expect(screen.getByRole('alert')).toHaveTextContent('Choose an available');
     expect(onSubmit).not.toHaveBeenCalled();
