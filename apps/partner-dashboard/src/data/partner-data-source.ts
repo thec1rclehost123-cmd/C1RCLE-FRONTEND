@@ -1144,10 +1144,16 @@ export interface EventEditorDraft {
   readonly externalVenue?: {
     readonly name: string;
     readonly address: string;
+    readonly city?: string;
+    readonly region?: string;
+    readonly postalCode?: string;
+    readonly country?: string;
+    readonly mapUrl?: string;
     readonly managerName: string;
     readonly managerPhone: string;
     readonly managerEmail: string;
   };
+  readonly externalWorkflowKey?: string;
   readonly name: string;
   readonly description: string;
   readonly venueId: string;

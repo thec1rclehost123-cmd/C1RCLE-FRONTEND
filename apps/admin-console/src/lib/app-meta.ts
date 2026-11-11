@@ -35,6 +35,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
       { label: 'Proposals', href: '/proposals', icon: 'approved' },
       { label: 'Onboarding', href: '/onboarding', icon: 'invite' },
       { label: 'KYC review', href: '/kyc-review', icon: 'compliance' },
+      { label: 'External venues', href: '/external-venues', icon: 'location' },
     ],
   },
   {

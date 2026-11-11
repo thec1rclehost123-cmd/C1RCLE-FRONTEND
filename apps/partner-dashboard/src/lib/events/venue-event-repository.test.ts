@@ -87,6 +87,38 @@ beforeEach(() => {
 });
 
 describe('publishVenueEvent', () => {
+  it('creates an external-location event without a Venue slot or ordinary publication review', async () => {
+    mocks.post
+      .mockResolvedValueOnce({ id: 'evt_external', status: 'draft', version: 1 })
+      .mockResolvedValueOnce({ id: 'tier_external' });
+    const externalDraft = {
+      ...draft,
+      externalWorkflowKey: 'stable-external-workflow',
+      externalVenue: {
+        name: 'Independent Hall',
+        address: '12 Example Road',
+        city: 'Pune',
+        managerName: 'Venue Manager',
+        managerPhone: '+91 98765 43210',
+        managerEmail: 'manager@example.test',
+      },
+    };
+    await expect(publishVenueEvent('org_host', externalDraft, externalDraft.externalWorkflowKey))
+      .resolves.toMatchObject({ id: 'evt_external', status: 'draft' });
+    expect(mocks.post.mock.calls[0]?.[0].body).toMatchObject({
+      externalLocation: {
+        name: 'Independent Hall',
+        address: '12 Example Road',
+        contact: { managerName: 'Venue Manager', phone: '+91 98765 43210', email: 'manager@example.test' },
+      },
+    });
+    const paths = mocks.post.mock.calls.map(([options]) => options.path);
+    expect(paths[0]).toBe('/api/v2/organizations/org_host/events');
+    expect(paths).not.toContain('/api/v2/events/evt_external/review');
+    expect(paths).not.toContain('/api/v2/events/evt_external/publish');
+    expect(mocks.post.mock.calls[0]?.[0].headers?.['Idempotency-Key']).toBe('stable-external-workflow-event');
+  });
+
   it('persists gallery, video and spotlight media in event creation', async () => {
     mocks.post.mockResolvedValue({ id: 'evt_media', status: 'published' });
     await publishVenueEvent(

@@ -40,6 +40,8 @@ import {
   checkoutQuoteResponseSchema,
   adminVenueDtoSchema,
   adminVenueListResponseSchema,
+  externalVenueReviewQueueItemSchema,
+  externalVenueReviewDecisionSchema,
   approveOnboardingResultSchema,
   completeManualPayoutSchema,
   adminResolveDisputeSchema,
@@ -119,6 +121,8 @@ export type AdminPage = z.infer<typeof adminPageSchema>;
 const adminAuditPageSchema = z.object({
   items: z.array(adminAuditRecordDtoSchema),
 });
+const externalVenueReviewQueueSchema = z.object({ items: z.array(externalVenueReviewQueueItemSchema) }).strict();
+export type ExternalVenueReviewQueue = z.infer<typeof externalVenueReviewQueueSchema>;
 export type AdminAuditPage = z.infer<typeof adminAuditPageSchema>;
 export type AdminPromoterReferralLinkPage = z.infer<
   typeof adminPromoterReferralLinkListResponseSchema
@@ -128,6 +132,24 @@ export type AdminRefundRequestPage = z.infer<typeof adminRefundRequestListRespon
 export type RefundOutcome = z.infer<typeof refundOutcomeSchema>;
 
 const AUTHORIZED_ACTION: AdminAction = 'ADMIN_PROVISION';
+
+export function listExternalVenueRequests(): Promise<ExternalVenueReviewQueue> {
+  return getAdminApiClient().get({ path: '/api/v2/admin/external-venue-requests', schema: externalVenueReviewQueueSchema });
+}
+
+export function decideExternalVenueRequest(
+  eventId: string,
+  decision: 'approve' | 'reject',
+  reason?: string,
+): Promise<unknown> {
+  const body = externalVenueReviewDecisionSchema.parse({ decision, ...(reason ? { reason } : {}) });
+  return getAdminApiClient().post({
+    path: `/api/v2/admin/events/${encodeURIComponent(eventId)}/external-venue-review`,
+    body,
+    schema: adminEventDtoSchema,
+    headers: { 'Idempotency-Key': newIdempotencyKey() },
+  });
+}
 
 /* ─── Proposals (dual-control desk) ────────────────────────────────────────── */
 

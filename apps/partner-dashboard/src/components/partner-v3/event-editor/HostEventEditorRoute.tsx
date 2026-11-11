@@ -9,6 +9,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/partner-v3/St
 import { requestHostAvailabilitySlot } from '@/lib/calendar/host-availability-repository';
 import { useHostAvailability } from '@/lib/calendar/use-host-availability';
 import { currentMonthKey } from '@/lib/calendar/venue-calendar-repository';
+import { discardHostEventDraft } from '@/lib/events/event-draft-repository';
 import { formatEventDateLabel } from '@/lib/events/event-time';
 import {
   eventStartAtFromDraft,
@@ -122,14 +123,7 @@ export function HostEventEditorRoute({
       />
     );
   }
-  if (!state.data?.venues.length) {
-    return (
-      <EmptyState
-        title="No active venue partnerships"
-        description="Connect with a venue before creating a host event."
-      />
-    );
-  }
+  if (!state.data) return <LoadingState label="Loading venue options" />;
 
   const acceptedSlot =
     acceptedRequest?.slotStartTime && acceptedRequest.slotEndTime
@@ -146,7 +140,7 @@ export function HostEventEditorRoute({
   const selectedVenue =
     state.data.venues.find((item) => item.venue.id === requestedVenueId) ??
     (acceptedSlot ? undefined : state.data.venues[0]);
-  if (!selectedVenue) {
+  if (!selectedVenue && acceptedSlot) {
     return (
       <ErrorState
         title="Accepted slot unavailable"
@@ -154,7 +148,7 @@ export function HostEventEditorRoute({
       />
     );
   }
-  const requestedDay = selectedVenue.months
+  const requestedDay = selectedVenue?.months
     .flatMap((month) => month.days)
     .find((day) => day.date === initialDate);
   const requestedSlot = requestedDay?.slots.find((slot) => slot.id === initialSlotId);
@@ -189,7 +183,7 @@ export function HostEventEditorRoute({
     })),
     defaultDraft: {
       ...data.defaultDraft,
-      venueId: selectedVenue.venue.id,
+      venueId: selectedVenue?.venue.id ?? '',
       date: acceptedDate ?? data.defaultDraft.date,
       dateLabel: acceptedDate ? formatEventDateLabel(acceptedDate) : data.defaultDraft.dateLabel,
       time:
@@ -219,14 +213,20 @@ export function HostEventEditorRoute({
   };
 
   const submitHostEvent = async (draft: EventEditorDraft, selectedSlotId: string) => {
-    if (draft.externalVenue)
-      throw new Error('Admin approval submission for non-partnered venues is not connected yet.');
+    if (draft.externalVenue) {
+      const key = draft.externalWorkflowKey ?? crypto.randomUUID();
+      await publishVenueEvent(organizationId, draft, key);
+      await discardHostEventDraft(organizationId);
+      router.push('/partner/host/events');
+      return;
+    }
     if (acceptedSlot) {
       await publishVenueEvent(organizationId, draft, {
         slotRequestId: acceptedSlot.requestId,
         startAt: acceptedSlot.startAt,
         endAt: acceptedSlot.endAt,
       });
+      await discardHostEventDraft(organizationId);
       router.push('/partner/host/events');
       return;
     }
@@ -265,6 +265,7 @@ export function HostEventEditorRoute({
         : {}),
       idempotencyKey,
     });
+    await discardHostEventDraft(organizationId);
     const params = new URLSearchParams({ requested: 'true' });
     router.push(`/partner/host/slot-requests?${params.toString()}`);
   };
@@ -291,7 +292,8 @@ export function HostEventEditorRoute({
         data={liveData}
         availability={state.data}
         mode="create"
-        initialVenueId={selectedVenue.venue.id}
+        organizationId={organizationId}
+        {...(selectedVenue ? { initialVenueId: selectedVenue.venue.id } : {})}
         onSubmit={submitHostEvent}
         {...(initialStep ? { initialStep } : {})}
         {...(requestedDay?.state === 'available' ? { initialDate: requestedDay.date } : {})}

@@ -40,7 +40,7 @@ export function toBookingEventFixture(
   tiers: readonly PublicTicketTierDto[],
   addons: readonly PublicTicketAddonDto[] = [],
 ): BookingEventFixture {
-  const city = venue?.city ?? FALLBACK_CITY;
+  const city = event.externalLocation?.city ?? venue?.city ?? FALLBACK_CITY;
   return {
     id: event.slug,
     eventId: event.id,
@@ -50,8 +50,8 @@ export function toBookingEventFixture(
     image: event.imageUrl ?? '',
     accentTone: ACCENT_TONES[event.title.length % ACCENT_TONES.length] ?? 'purple',
     startsAt: event.startAt,
-    venue: venue?.name ?? FALLBACK_VENUE,
-    address: city,
+    venue: event.externalLocation?.name ?? venue?.name ?? FALLBACK_VENUE,
+    address: event.externalLocation?.address ?? city,
     city,
     doorNote: 'Entry rules are set by the host and shown at checkout.',
     ticketTiers: toRealTiers(tiers),
@@ -65,7 +65,7 @@ export function toBookingEventFromPublicDetail(
   event: EventPublicDetailDto,
   tiers: readonly PublicTicketTierDto[],
 ): BookingEventFixture {
-  const city = event.venue?.address.city ?? FALLBACK_CITY;
+  const city = event.externalLocation?.city ?? event.venue?.address.city ?? FALLBACK_CITY;
   return {
     id: event.slug,
     eventId: event.id,
@@ -74,8 +74,8 @@ export function toBookingEventFromPublicDetail(
     image: event.imageUrl ?? '',
     accentTone: ACCENT_TONES[event.title.length % ACCENT_TONES.length] ?? 'purple',
     startsAt: event.startAt,
-    venue: event.venue?.name ?? FALLBACK_VENUE,
-    address: city,
+    venue: event.externalLocation?.name ?? event.venue?.name ?? FALLBACK_VENUE,
+    address: event.externalLocation?.address ?? city,
     city,
     doorNote: 'Entry rules are set by the host and shown at checkout.',
     ticketTiers: toRealTiers(tiers),

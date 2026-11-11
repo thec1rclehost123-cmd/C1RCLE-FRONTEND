@@ -4,6 +4,8 @@ import {
   createEventSchema,
   createTicketTierSchema,
   eventDtoSchema,
+  externalEventLocationInputSchema,
+  externalVenueContactSchema,
   eventMediaSchema,
   posterUploadUrlDtoSchema,
   promoterAssignmentDtoSchema,
@@ -78,7 +80,24 @@ export async function publishVenueEvent(
   const event = await apiClient.post({
     path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/events`,
     body: createEventSchema.parse({
-      venueId: draft.venueId,
+      ...(draft.externalVenue
+        ? {
+            externalLocation: {
+              name: draft.externalVenue.name,
+              address: draft.externalVenue.address,
+              ...(draft.externalVenue.city ? { city: draft.externalVenue.city } : {}),
+              ...(draft.externalVenue.region ? { region: draft.externalVenue.region } : {}),
+              ...(draft.externalVenue.postalCode ? { postalCode: draft.externalVenue.postalCode } : {}),
+              ...(draft.externalVenue.country ? { country: draft.externalVenue.country } : {}),
+              ...(draft.externalVenue.mapUrl ? { mapUrl: draft.externalVenue.mapUrl } : {}),
+              contact: {
+                managerName: draft.externalVenue.managerName,
+                phone: draft.externalVenue.managerPhone,
+                ...(draft.externalVenue.managerEmail ? { email: draft.externalVenue.managerEmail } : {}),
+              },
+            },
+          }
+        : { venueId: draft.venueId }),
       ...(slotReservation ? { slotRequestId: slotReservation.slotRequestId } : {}),
       title: draft.name.trim(),
       summary: draft.description.trim().slice(0, 1000),
@@ -231,6 +250,10 @@ export async function publishVenueEvent(
     });
   }
 
+  // External locations enter the Admin review queue. They remain non-public;
+  // only the Host may publish after an Admin approves the location.
+  if (draft.externalVenue) return event;
+
   await apiClient.post({
     path: `/api/v2/events/${encodeURIComponent(event.id)}/review`,
     schema: eventDtoSchema,
@@ -258,6 +281,50 @@ export async function updatePartnerEventDetails(
       'x-organization-id': organizationId,
       'If-Match': String(version),
       'Idempotency-Key': crypto.randomUUID(),
+    },
+  });
+}
+
+export async function resubmitExternalVenue(
+  organizationId: string,
+  eventId: string,
+  submission: unknown,
+): Promise<EventDto> {
+  return apiClient.post({
+    path: `/api/v2/events/${encodeURIComponent(eventId)}/external-location/resubmit`,
+    body: externalEventLocationInputSchema.parse(submission),
+    schema: eventDtoSchema,
+    headers: { 'x-organization-id': organizationId, 'Idempotency-Key': crypto.randomUUID() },
+  });
+}
+
+export async function loadExternalVenueContact(organizationId: string, eventId: string) {
+  return apiClient.get({
+    path: `/api/v2/events/${encodeURIComponent(eventId)}/external-location/contact`,
+    schema: externalVenueContactSchema,
+    headers: { 'x-organization-id': organizationId },
+  });
+}
+
+export async function continueApprovedExternalEvent(
+  organizationId: string,
+  eventId: string,
+  intentKey: string,
+): Promise<EventDto> {
+  await apiClient.post({
+    path: `/api/v2/events/${encodeURIComponent(eventId)}/review`,
+    schema: eventDtoSchema,
+    headers: {
+      'x-organization-id': organizationId,
+      'Idempotency-Key': `${intentKey}-review`,
+    },
+  });
+  return apiClient.post({
+    path: `/api/v2/events/${encodeURIComponent(eventId)}/publish`,
+    schema: eventDtoSchema,
+    headers: {
+      'x-organization-id': organizationId,
+      'Idempotency-Key': `${intentKey}-publish`,
     },
   });
 }

@@ -27,6 +27,7 @@ function nonEmptyString(value: string | null | undefined, fallback: string): str
 }
 
 function formatAddress(event: EventPublicDetailDto): string {
+  if (event.externalLocation) return event.externalLocation.address ?? FALLBACK_CITY;
   if (!event.venue) return FALLBACK_CITY;
   return (
     [
@@ -58,10 +59,11 @@ export function toEventDetailFixture(
     accentTone: 'orange',
     startsAt: event.startAt,
     endsAt: event.endAt ?? event.startAt,
-    venue: event.venue?.name ?? FALLBACK_VENUE,
+    venue: event.externalLocation?.name ?? event.venue?.name ?? FALLBACK_VENUE,
     venueId: event.venue?.slug ?? null,
     address: formatAddress(event),
-    city: nonEmptyString(event.venue?.address.city, FALLBACK_CITY),
+    city: nonEmptyString(event.externalLocation?.city ?? event.venue?.address.city, FALLBACK_CITY),
+    ...(event.externalLocation?.mapUrl ? { mapUrl: event.externalLocation.mapUrl } : {}),
     hostId: event.organizer?.slug ?? null,
     host: event.organizer ? event.organizer.name.trim() : '',
     summary: summary || 'Event details not provided.',

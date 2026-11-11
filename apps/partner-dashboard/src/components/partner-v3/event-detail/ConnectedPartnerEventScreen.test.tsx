@@ -7,12 +7,14 @@ import type { EventOperationsDto } from '@c1rcle/contracts';
 
 const mocks = vi.hoisted(() => ({
   cancelPartnerEvent: vi.fn(),
+  continueApprovedExternalEvent: vi.fn(),
   refresh: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: mocks.refresh }) }));
 vi.mock('@/lib/events/venue-event-repository', () => ({
   cancelPartnerEvent: mocks.cancelPartnerEvent,
+  continueApprovedExternalEvent: mocks.continueApprovedExternalEvent,
 }));
 
 const event: EventOperationsDto = {
@@ -138,5 +140,32 @@ describe('ConnectedPartnerEventScreen', () => {
     );
 
     expect(screen.queryByRole('button', { name: 'Cancel event' })).not.toBeInTheDocument();
+  });
+
+  it('lets the Host continue an approved external-location draft through review and publish', async () => {
+    mocks.continueApprovedExternalEvent.mockResolvedValueOnce({ ...event, status: 'published' });
+    render(
+      <ConnectedPartnerEventScreen
+        event={{
+          ...event,
+          venueId: null,
+          venueName: 'Independent Hall',
+          status: 'draft',
+          isPublic: false,
+          externalVenueReviewStatus: 'approved',
+          externalLocation: { name: 'Independent Hall', address: '12 Example Road' },
+        }}
+        organizationId="org_m3"
+        studio="host"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Submit approved event' }));
+    await waitFor(() => { expect(mocks.continueApprovedExternalEvent).toHaveBeenCalledOnce(); });
+    expect(mocks.continueApprovedExternalEvent).toHaveBeenCalledWith(
+      'org_m3',
+      event.id,
+      expect.stringMatching(/^[0-9a-f-]{36}$/),
+    );
+    expect(mocks.refresh).toHaveBeenCalledOnce();
   });
 });

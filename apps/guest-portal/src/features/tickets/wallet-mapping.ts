@@ -202,8 +202,8 @@ export async function toTicketWalletData(
         event.status === 'postponed' || Number.isNaN(startsAt.getTime())
           ? ''
           : `${timeFormatter.format(startsAt)} IST`,
-      venueName: venue?.name ?? 'Venue TBA',
-      city: venue?.city ?? '',
+      venueName: event.externalLocation?.name ?? venue?.name ?? 'Venue TBA',
+      city: event.externalLocation?.city ?? venue?.city ?? '',
       posterUrl: event.imageUrl ?? FALLBACK_POSTER,
       tierName: first.tierName,
       tierId: first.tierId,

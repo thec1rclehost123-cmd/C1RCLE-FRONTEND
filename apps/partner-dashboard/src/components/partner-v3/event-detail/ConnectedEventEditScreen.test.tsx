@@ -20,10 +20,14 @@ const updateEvent = vi.hoisted(() =>
 );
 const loadSlotRequests = vi.hoisted(() => vi.fn());
 const updateTierLimit = vi.hoisted(() => vi.fn());
+const resubmitExternalVenue = vi.hoisted(() => vi.fn());
+const loadExternalVenueContact = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/events/venue-event-repository', () => ({
   updatePartnerEventDetails: updateEvent,
   updatePartnerEventTicketLimit: updateTierLimit,
+  resubmitExternalVenue,
+  loadExternalVenueContact,
 }));
 
 vi.mock('@/lib/slot-requests/slot-request-repository', () => ({
@@ -75,6 +79,8 @@ beforeEach(() => {
   updateEvent.mockReset();
   loadSlotRequests.mockReset();
   updateTierLimit.mockReset();
+  resubmitExternalVenue.mockReset();
+  loadExternalVenueContact.mockReset();
   loadSlotRequests.mockResolvedValue({ requests: [] });
 });
 
@@ -179,6 +185,44 @@ describe('ConnectedEventEditScreen', () => {
     );
     expect(await screen.findByRole('status')).toHaveTextContent(
       'General Entry ticket settings saved.',
+    );
+  });
+
+  it('lets a Host resubmit a rejected external venue with protected contact details', async () => {
+    loadExternalVenueContact.mockResolvedValue({
+      managerName: 'Private Manager',
+      phone: '+91 98765 43210',
+      email: 'private@example.test',
+    });
+    resubmitExternalVenue.mockResolvedValue({ ...event, externalVenueReviewStatus: 'pending' });
+    render(
+      <ConnectedEventEditScreen
+        event={{
+          ...event,
+          venueId: null,
+          venueName: 'Independent Hall',
+          externalVenueReviewStatus: 'rejected',
+          externalLocation: {
+            name: 'Independent Hall',
+            address: '12 Example Road',
+            city: 'Pune',
+          },
+        }}
+        organizationId={event.organizationId}
+        studio="host"
+      />,
+    );
+    expect(await screen.findByDisplayValue('Private Manager')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Resubmit for review' }));
+    await waitFor(() => { expect(resubmitExternalVenue).toHaveBeenCalledOnce(); });
+    expect(resubmitExternalVenue).toHaveBeenCalledWith(
+      event.organizationId,
+      event.id,
+      expect.objectContaining({
+        name: 'Independent Hall',
+        address: '12 Example Road',
+        contact: { managerName: 'Private Manager', phone: '+91 98765 43210', email: 'private@example.test' },
+      }),
     );
   });
 

@@ -116,6 +116,21 @@ export const eventDtoSchema = z.object({
   id: opaqueIdSchema,
   organizationId: opaqueIdSchema,
   venueId: opaqueIdSchema.nullable(),
+  /** Public location fields only; private manager contact is never part of this DTO. */
+  externalLocation: z
+    .object({
+      name: z.string().min(1).max(200),
+      address: z.string().min(1).max(500).nullable(),
+      city: z.string().max(120).optional(),
+      region: z.string().max(120).optional(),
+      postalCode: z.string().max(30).optional(),
+      country: z.string().max(120).optional(),
+      mapUrl: z.url().nullable().optional(),
+    })
+    .strict()
+    .nullable()
+    .optional(),
+  externalVenueReviewStatus: z.enum(['pending', 'approved', 'rejected']).optional(),
   slug: z
     .string()
     .min(1)
@@ -175,8 +190,50 @@ export const eventPreviewDtoSchema = z.object({
 });
 export type EventPreviewDto = z.infer<typeof eventPreviewDtoSchema>;
 
+export const externalEventLocationInputSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  address: z.string().trim().min(1).max(500),
+  city: z.string().trim().max(120).optional(),
+  region: z.string().trim().max(120).optional(),
+  postalCode: z.string().trim().max(30).optional(),
+  country: z.string().trim().max(120).optional(),
+  mapUrl: z.url({ protocol: /^https$/, error: 'Use an HTTPS map link' }).nullable().optional(),
+  contact: z.object({
+    managerName: z.string().trim().min(1).max(160),
+    phone: z.string().trim().min(10).max(30),
+    email: z.email().nullable().optional(),
+  }).strict(),
+}).strict();
+export type ExternalEventLocationInput = z.infer<typeof externalEventLocationInputSchema>;
+
+export const externalVenueContactSchema = z.object({
+  managerName: z.string().min(1).max(160),
+  phone: z.string().min(10).max(30),
+  email: z.email().nullable(),
+}).strict();
+export type ExternalVenueContact = z.infer<typeof externalVenueContactSchema>;
+
+export const externalVenueReviewDecisionSchema = z.object({
+  decision: z.enum(['approve', 'reject']),
+  reason: z.string().trim().max(1000).optional(),
+}).strict().superRefine((value, ctx) => {
+  if (value.decision === 'reject' && !value.reason?.trim())
+    ctx.addIssue({ code: 'custom', path: ['reason'], message: 'A rejection reason is required.' });
+});
+
+export const externalVenueReviewQueueItemSchema = z.object({
+  eventId: opaqueIdSchema,
+  organizationId: opaqueIdSchema,
+  title: z.string(),
+  location: externalEventLocationInputSchema,
+  status: z.enum(['pending', 'approved', 'rejected']),
+  submittedAt: z.iso.datetime(),
+  rejectionReason: z.string().nullable(),
+}).strict();
+
 export const createEventSchema = z.object({
-  venueId: opaqueIdSchema,
+  venueId: opaqueIdSchema.optional(),
+  externalLocation: externalEventLocationInputSchema.optional(),
   slotRequestId: opaqueIdSchema.optional(),
   title: z.string().min(1).max(200),
   summary: z.string().max(1000).optional(),
@@ -191,6 +248,13 @@ export const createEventSchema = z.object({
   addressDisclosure: eventAddressDisclosureSchema.optional(),
   entryRules: eventEntryRulesSchema.optional(),
   media: eventMediaSchema.optional(),
+}).superRefine((event, ctx) => {
+  if (Boolean(event.venueId) === Boolean(event.externalLocation)) {
+    ctx.addIssue({ code: 'custom', path: ['venueId'], message: 'Choose a C1RCLE Venue or enter an external location.' });
+  }
+  if (event.externalLocation && event.slotRequestId) {
+    ctx.addIssue({ code: 'custom', path: ['slotRequestId'], message: 'External locations cannot use Venue slot requests.' });
+  }
 });
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 
