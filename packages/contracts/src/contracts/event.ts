@@ -231,7 +231,7 @@ export const externalVenueReviewQueueItemSchema = z.object({
   rejectionReason: z.string().nullable(),
 }).strict();
 
-export const createEventSchema = z.object({
+export const createEventBaseSchema = z.object({
   venueId: opaqueIdSchema.optional(),
   externalLocation: externalEventLocationInputSchema.optional(),
   slotRequestId: opaqueIdSchema.optional(),
@@ -248,7 +248,9 @@ export const createEventSchema = z.object({
   addressDisclosure: eventAddressDisclosureSchema.optional(),
   entryRules: eventEntryRulesSchema.optional(),
   media: eventMediaSchema.optional(),
-}).superRefine((event, ctx) => {
+});
+
+export const createEventSchema = createEventBaseSchema.superRefine((event, ctx) => {
   if (Boolean(event.venueId) === Boolean(event.externalLocation)) {
     ctx.addIssue({ code: 'custom', path: ['venueId'], message: 'Choose a C1RCLE Venue or enter an external location.' });
   }
