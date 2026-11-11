@@ -565,14 +565,12 @@ function CheckoutFlowClientState({
         </div>
       ) : null}
 
-      <div
-        className={`grid overflow-hidden rounded-[1.35rem] border border-white/10 bg-[#0b0a0d]/95 shadow-[0_28px_100px_rgba(0,0,0,0.6)] backdrop-blur-md lg:grid-cols-[minmax(240px,0.78fr)_minmax(0,1.22fr)] ${accent.panelShadow}`}
-      >
+      <div className="grid lg:grid-cols-[minmax(220px,0.7fr)_minmax(0,1.3fr)]">
         <aside
           aria-label="Event information"
           className="border-b border-white/10 px-5 py-6 sm:px-8 sm:py-8 lg:border-b-0 lg:border-r lg:border-white/10"
         >
-          <h1 className="mb-5 line-clamp-3 text-lg font-extrabold uppercase leading-tight tracking-[-0.03em] text-white sm:text-xl lg:border-t lg:border-white/15 lg:pt-5 lg:text-2xl">
+          <h1 className="mb-5 line-clamp-3 text-lg font-extrabold uppercase leading-tight tracking-[-0.03em] text-white sm:text-xl lg:text-2xl">
             {event.title}
           </h1>
           <div className="flex items-start gap-4 lg:block">
@@ -616,7 +614,7 @@ function CheckoutFlowClientState({
           <div className="mb-5 border-b border-white/10 pb-4 sm:mb-6 sm:pb-5">
             <h2
               id="checkout-heading"
-              className="text-xl font-extrabold uppercase leading-tight tracking-[-0.035em] text-white sm:text-2xl"
+              className="text-xl font-bold leading-tight tracking-tight text-white sm:text-2xl"
             >
               {step === 1 ? 'Select tickets' : isFreeBooking ? 'Confirm your RSVP' : 'Your order'}
             </h2>
@@ -744,7 +742,7 @@ function CheckoutFlowClientState({
                                 return (
                                   <div
                                     key={addon.id}
-                                    className="flex items-center justify-between gap-3 rounded-md bg-black/25 px-2.5 py-2"
+                                    className="flex items-center justify-between gap-3 py-2"
                                   >
                                     <span className="min-w-0">
                                       <span className="block text-xs font-bold text-white/80">
@@ -838,7 +836,7 @@ function CheckoutFlowClientState({
 
           {step === 2 && (
             <div className="space-y-4">
-              <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3.5 sm:p-4">
+              <div className="py-2">
                 <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/45">
                   Your order
                 </p>
@@ -882,7 +880,7 @@ function CheckoutFlowClientState({
                   })}
                 </div>
                 {eligibilityRequired && (
-                  <div className="mt-4 rounded-lg border border-white/10 bg-black/30 p-3 text-xs leading-5 text-white/70">
+                  <div className="mt-4 border-t border-white/10 pt-4 text-xs leading-5 text-white/70">
                     <p className="mb-2">Eligibility for selected tickets:</p>
                     <ul className="mb-3 list-inside list-disc text-white/55">
                       {restrictedTickets.map((ticket) => (
@@ -1007,7 +1005,7 @@ function CheckoutFlowClientState({
 
               {isFreeBooking ? (
                 <div className="space-y-4">
-                  <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
+                  <div className="border-t border-white/10 py-4">
                     <p className="text-xs font-black uppercase tracking-[0.14em] text-white">
                       Free RSVP · no payment needed
                     </p>
@@ -1059,7 +1057,7 @@ function CheckoutFlowClientState({
               ) : (
                 <>
                   {canPay && !upgradeFromEntitlementId ? (
-                    <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3.5 sm:p-4">
+                    <div className="py-2">
                       <label className="block text-[9px] font-black uppercase tracking-[0.18em] text-white/55">
                         Promo code
                         <span className="mt-2 flex gap-2">
@@ -1094,7 +1092,7 @@ function CheckoutFlowClientState({
                       ) : null}
                     </div>
                   ) : upgradeFromEntitlementId && canPay ? null : (
-                    <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
+                    <div className="border-t border-white/10 py-4">
                       <p className="text-xs font-black uppercase tracking-[0.14em] text-white">
                         Tickets unavailable
                       </p>
@@ -1104,11 +1102,11 @@ function CheckoutFlowClientState({
                     </div>
                   )}
                   {canPay && (
-                    <div className="rounded-xl border border-white/10 bg-black/25 p-3.5 sm:p-4">
+                    <div className="border-t border-white/10 py-4">
                       <div className="flex items-center gap-3">
                         <span
                           aria-hidden="true"
-                          className="flex size-8 items-center justify-center rounded-full border border-white/10 text-sm text-white/70"
+                          className="flex size-8 items-center justify-center text-sm text-white/70"
                         >
                           <svg
                             viewBox="0 0 24 24"
@@ -1178,7 +1176,7 @@ function CheckoutFlowClientState({
                         onClick={() => {
                           void pay();
                         }}
-                        className={`min-h-11 w-full rounded-full px-6 text-[10px] font-black uppercase tracking-[0.15em] transition-all shadow-xl sm:w-auto sm:text-xs ${quoteState === 'ready' && payState === 'idle' ? 'bg-white text-black hover:bg-white/90' : 'cursor-not-allowed bg-white/30 text-black/50'}`}
+                        className={`min-h-11 w-full rounded-full px-6 text-[10px] font-black uppercase tracking-[0.15em] transition-all sm:w-auto sm:text-xs ${quoteState === 'ready' && payState === 'idle' ? 'bg-white text-black hover:bg-white/90' : 'cursor-not-allowed bg-white/30 text-black/50'}`}
                       >
                         {payState === 'paying'
                           ? 'Opening payment…'

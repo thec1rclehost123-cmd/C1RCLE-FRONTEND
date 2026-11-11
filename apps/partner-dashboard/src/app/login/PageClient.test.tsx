@@ -55,7 +55,15 @@ describe('Partner login', () => {
 
   it('rehydrates an approved workspace after login rather than keeping stale provider state', async () => {
     const user = userEvent.setup();
-    vi.mocked(login).mockResolvedValue(undefined);
+    vi.mocked(login).mockResolvedValue({
+      id: 'synthetic-user',
+      email: 'synthetic@example.invalid',
+      displayName: 'Synthetic User',
+      role: 'partner',
+      avatarUrl: null,
+      mustChangePassword: false,
+      emailVerified: true,
+    });
     const org = { id: 'approved-venue' } as Awaited<ReturnType<typeof getOrganizations>>[number];
     vi.mocked(getOrganizations).mockResolvedValue([org]);
     vi.mocked(filterOrgsByPartnerType).mockResolvedValue([org]);

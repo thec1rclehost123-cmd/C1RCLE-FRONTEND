@@ -12,6 +12,7 @@ import {
   productLocalInputToIsoInstant,
 } from './event-time';
 import {
+  buildSlotRequestEventDraft,
   eventEndAtFromDraft,
   eventStartAtFromDraft,
   cancelPartnerEvent,
@@ -84,6 +85,27 @@ const draft: EventEditorDraft = {
 beforeEach(() => {
   mocks.post.mockReset();
   mocks.patch.mockReset();
+});
+
+describe('buildSlotRequestEventDraft', () => {
+  it('produces a contract-valid event and catalog snapshot for Venue review', async () => {
+    const proposal = await buildSlotRequestEventDraft(
+      'org_host',
+      draft,
+      '2026-09-18T04:00:00.000Z',
+      '2026-09-18T09:30:00.000Z',
+    );
+
+    expect(createEventSchema.safeParse(proposal.event).success).toBe(true);
+    expect(createTicketTierSchema.safeParse(proposal.tiers[0]?.command).success).toBe(true);
+    expect(proposal).toMatchObject({
+      event: { venueId: 'venue_1', title: 'September Night' },
+      tiers: [{ localId: 'ga', command: { name: 'General Admission', quantity: 250 } }],
+      promotions: [],
+      promoters: [],
+    });
+    expect(mocks.post).not.toHaveBeenCalled();
+  });
 });
 
 describe('publishVenueEvent', () => {

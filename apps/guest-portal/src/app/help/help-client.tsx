@@ -91,9 +91,9 @@ const helpDataSource = {
 };
 
 const inputClass =
-  'w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:border-[#FF6842] focus:outline-none';
+  'min-h-11 w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:border-[#FF6842] focus:outline-none';
 
-const labelClass = 'text-xs font-bold uppercase tracking-widest text-white/60';
+const labelClass = 'text-sm font-medium text-white/60';
 
 export function HelpClient() {
   const [tickets, setTickets] = useState<SupportTicketDto[]>([]);
@@ -182,17 +182,17 @@ export function HelpClient() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-10">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 pb-28 pt-28 sm:pt-32">
       <div>
-        <h1 className="text-3xl font-black uppercase tracking-tight text-white">Help desk</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-white">Help desk</h1>
         <p className="mt-2 text-sm text-white/60">
           Raise a support ticket and track it to resolution. Replies land here and on the admin
           desk.
         </p>
       </div>
 
-      <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-6 backdrop-blur-xl">
-        <h2 className="text-sm font-black uppercase tracking-widest text-white">New request</h2>
+      <section className="border-t border-white/10 pt-6">
+        <h2 className="text-lg font-semibold text-white">New request</h2>
         <div className="mt-4 grid gap-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-1.5">
@@ -278,9 +278,9 @@ export function HelpClient() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-white/15 bg-white/[0.04] p-6 backdrop-blur-xl">
+      <section className="border-t border-white/10 pt-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-black uppercase tracking-widest text-white">My tickets</h2>
+          <h2 className="text-lg font-semibold text-white">My tickets</h2>
           <Button type="button" variant="outline" size="sm" onClick={() => void loadMyTickets()}>
             Refresh
           </Button>
@@ -361,7 +361,7 @@ function TicketThread({
   readonly detailError: string | null;
 }) {
   return (
-    <div className="rounded-xl border border-white/15 bg-black/40 p-4">
+    <div className="border-t border-white/10 py-4">
       {detailError !== null ? (
         <p role="alert" className="text-sm text-red-300">
           {detailError}

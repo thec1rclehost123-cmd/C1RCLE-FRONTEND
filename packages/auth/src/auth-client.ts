@@ -20,6 +20,8 @@ import {
   useSessionStore,
 } from './session-store.js';
 
+import type { User } from '@c1rcle/contracts';
+
 interface SignupInput {
   readonly email: string;
   readonly password: string;
@@ -123,7 +125,7 @@ export async function signup(input: SignupInput): Promise<void> {
  * single generic message so the UI cannot be used as an account-existence
  * oracle; other failures (network, 5xx) propagate unchanged.
  */
-export async function login(input: LoginInput): Promise<void> {
+export async function login(input: LoginInput): Promise<User> {
   const body = loginRequestSchema.parse({
     email: input.email,
     password: input.password,
@@ -138,6 +140,7 @@ export async function login(input: LoginInput): Promise<void> {
 
     clearActiveOrgHint();
     setSession({ user: response.user }, response.accessToken, response.expiresAt);
+    return response.user;
   } catch (error) {
     if (isApiClientError(error) && (error.status === 400 || error.status === 401)) {
       throw new Error(GENERIC_AUTH_FAILURE);
