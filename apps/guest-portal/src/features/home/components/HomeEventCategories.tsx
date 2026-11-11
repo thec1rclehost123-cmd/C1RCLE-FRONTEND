@@ -8,14 +8,14 @@ import { ExploreEventCard } from '@/features/explore/components/ExploreEventCard
 import type { ExploreEvent } from '@/features/explore/types/explore.types';
 
 const GENRE_TEMPLATES = [
-  'House Parties',
-  'Raves',
-  'Clubs',
-  'Bollywood',
-  'EDM',
-  'Techno',
-  'Live Music',
-  'Comedy',
+  { label: 'House Parties', category: 'House' },
+  { label: 'Raves', category: 'Raves' },
+  { label: 'Clubs', category: 'Clubs' },
+  { label: 'Bollywood', category: 'Bollywood' },
+  { label: 'EDM', category: 'EDM' },
+  { label: 'Techno', category: 'Techno' },
+  { label: 'Live Music', category: 'Live Music' },
+  { label: 'Comedy', category: 'Comedy' },
 ] as const;
 
 function EventRail({
@@ -106,21 +106,21 @@ export function HomeEventCategories({ events }: { readonly events: readonly Expl
         </div>
 
         <div className="mx-auto flex max-w-[1280px] snap-x gap-5 overflow-x-auto px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-7 sm:px-6 lg:px-8">
-          {GENRE_TEMPLATES.map((genre) => (
+          {GENRE_TEMPLATES.map(({ label, category }) => (
             <Link
-              key={genre}
-              href={`/explore?category=${encodeURIComponent(genre)}`}
+              key={label}
+              href={`/explore?category=${encodeURIComponent(category)}`}
               className="group w-24 shrink-0 snap-start text-center focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white sm:w-28"
-              aria-label={`Explore ${genre} events`}
+              aria-label={`Explore ${label} events`}
             >
               <span
                 aria-hidden="true"
                 className="flex aspect-square items-center justify-center rounded-[1.2rem] border border-white/12 bg-[#111111] px-2 text-center text-sm font-black uppercase tracking-[-0.04em] text-white shadow-[0_8px_24px_rgba(0,0,0,0.28)] transition-[transform,border-color,box-shadow] duration-200 group-hover:scale-[1.035] group-hover:border-[#ff6b4a]/45 group-hover:shadow-[0_16px_32px_rgba(0,0,0,0.38)] motion-reduce:transition-none sm:text-base"
               >
-                {genre}
+                {label}
               </span>
               <span className="mt-2 block line-clamp-2 text-[11px] font-semibold leading-4 text-white/75 group-hover:text-white">
-                {genre}
+                {label}
               </span>
             </Link>
           ))}
