@@ -55,6 +55,7 @@ import {
   submit as submitOnboardingApplication,
   uploadDocument,
   verifyDocument,
+  verifyPhone,
 } from '@/lib/onboarding/onboarding-repository';
 import { sendOtp, verifyOtp } from '@/lib/onboarding/otp';
 import {
@@ -590,11 +591,21 @@ export function OnboardingPage() {
     setLoading(true);
     try {
       await authSignUp(otpEmail, formData.password, formData.name.trim());
-      await sendOtp(otpEmail);
-      setOtpEmailSent(true);
+      // Account creation is durable and cannot be rolled back when email
+      // delivery fails. Move to the verification step first so retrying the
+      // action sends another code instead of attempting a duplicate signup.
+      setOtpEmailSent(false);
       setFormData((prev) => ({ ...prev, email: otpEmail }));
-      startCooldown(setEmailCooldown, emailCooldownRef);
       setStep('email_verify');
+      try {
+        await sendOtp(otpEmail);
+        setOtpEmailSent(true);
+        startCooldown(setEmailCooldown, emailCooldownRef);
+      } catch {
+        setError(
+          'Your account was created, but we could not send the email code. Try Send Code again.',
+        );
+      }
     } catch (err) {
       if (isApiClientError(err) && err.status === 409) {
         setEmailExists(true);
@@ -616,9 +627,33 @@ export function OnboardingPage() {
     }
     setLoading(true);
     try {
-      await authSignIn(otpEmail, loginPassword);
+      const signedInUser = await authSignIn(otpEmail, loginPassword);
+      if (signedInUser.emailVerified !== true) {
+        setOtpEmail(signedInUser.email);
+        setFormData((prev) => ({ ...prev, email: signedInUser.email }));
+        setOtpEmailSent(false);
+        setOtpEmailCode('');
+        initialised.current = true;
+        setStep('email_verify');
+        return;
+      }
 
-      const application = await getMine();
+      let application: OnboardingRequestDto | null;
+      try {
+        application = await getMine();
+      } catch (err) {
+        // The onboarding route intentionally blocks an account whose phone
+        // proof is incomplete. Email is already verified above, so recover at
+        // the phone step instead of showing a generic route error.
+        if (isApiClientError(err) && err.status === 403 && /verify your phone/i.test(err.message)) {
+          setOtpEmail(signedInUser.email);
+          setFormData((prev) => ({ ...prev, email: signedInUser.email }));
+          initialised.current = true;
+          setStep('phone_verify');
+          return;
+        }
+        throw err;
+      }
 
       if (application && application.status !== 'draft') {
         setSubmittedRequestId(application.id);
@@ -795,11 +830,7 @@ export function OnboardingPage() {
       // it returns still has to be checked server-side against the applicant's
       // own entered number via the real onboarding verification endpoint.
       const idToken = await confirmPhoneOtp(phoneConfirmation, otpPhoneCode);
-      const result = await verifyDocument({
-        documentType: 'phone',
-        documentNumber: dialablePhone,
-        proofToken: idToken,
-      });
+      const result = await verifyPhone({ phoneNumber: dialablePhone, idToken });
       if (!result.passed) {
         throw new Error(result.reason ?? 'Phone verification failed.');
       }

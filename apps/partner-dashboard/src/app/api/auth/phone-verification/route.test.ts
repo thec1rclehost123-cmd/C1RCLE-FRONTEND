@@ -69,7 +69,7 @@ describe('POST /api/auth/phone-verification', () => {
     expect(mockForward).not.toHaveBeenCalled();
   });
 
-  it('forwards documentType/documentNumber/proofToken to verify-document, with the session cookie', async () => {
+  it('forwards phoneNumber/idToken to the dedicated phone verifier, with the session cookie', async () => {
     mockForward.mockResolvedValue(
       gatewayResponse({
         passed: true,
@@ -91,12 +91,8 @@ describe('POST /api/auth/phone-verification', () => {
       string,
       { body?: unknown; cookie?: string | null },
     ];
-    expect(calledPath).toBe('/api/v2/onboarding/verify-document');
-    expect(calledInit.body).toEqual({
-      documentType: 'phone',
-      documentNumber: '+919876543210',
-      proofToken: 'firebase-id-token',
-    });
+    expect(calledPath).toBe('/api/v2/onboarding/verify-phone');
+    expect(calledInit.body).toEqual({ phoneNumber: '+919876543210', idToken: 'firebase-id-token' });
     expect(calledInit.cookie).toContain('better-auth.session_token=sess_abc');
   });
 

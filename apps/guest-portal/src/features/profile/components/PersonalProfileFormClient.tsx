@@ -27,7 +27,7 @@ const profileClient = createApiClient({
 });
 
 const inputClass =
-  'mt-2 min-h-14 w-full rounded-2xl border border-white/10 bg-black/50 px-5 text-sm font-bold text-white outline-none transition-colors focus:border-[#FF4400]';
+  'mt-2 min-h-12 w-full rounded-lg border border-white/10 bg-black/50 px-4 text-sm font-bold text-white outline-none transition-colors focus:border-[#FF4400]';
 
 export function PersonalProfileFormClient({
   identity,
@@ -135,10 +135,7 @@ export function PersonalProfileFormClient({
   }
 
   return (
-    <section
-      aria-label="Personal profile"
-      className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-5 sm:p-7"
-    >
+    <section aria-label="Personal profile" className="border-t border-white/10 py-5 sm:py-7">
       <div className="flex items-center gap-5 border-b border-white/10 pb-7">
         <div className="relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#FF4400]/40 bg-[#FF4400] text-2xl font-black text-white">
           {identity.avatarUrl ? (

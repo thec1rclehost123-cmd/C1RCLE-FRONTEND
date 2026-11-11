@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   submit: vi.fn(),
   uploadDocument: vi.fn(),
   verifyDocument: vi.fn(),
+  verifyPhone: vi.fn(),
   sendPhoneOtp: vi.fn(),
   confirmPhoneOtp: vi.fn(),
   sendOtp: vi.fn(),
@@ -73,6 +74,7 @@ vi.mock('@/lib/onboarding/onboarding-repository', () => ({
   submit: mocks.submit,
   uploadDocument: mocks.uploadDocument,
   verifyDocument: mocks.verifyDocument,
+  verifyPhone: mocks.verifyPhone,
 }));
 vi.mock('@/lib/onboarding/otp', () => ({ sendOtp: mocks.sendOtp, verifyOtp: mocks.verifyOtp }));
 vi.mock('@/lib/org/route-after-auth', () => ({ routeAfterAuth: mocks.routeAfterAuth }));
@@ -328,7 +330,7 @@ describe('Partner onboarding wizard', () => {
       expect(mocks.confirmPhoneOtp).not.toHaveBeenCalled();
 
       mocks.confirmPhoneOtp.mockResolvedValue('id-token');
-      mocks.verifyDocument.mockResolvedValue({ passed: false, reason: 'Number mismatch' });
+      mocks.verifyPhone.mockResolvedValue({ passed: false, reason: 'Number mismatch' });
       fireEvent.change(await screen.findByPlaceholderText('000000'), {
         target: { value: '123456' },
       });
@@ -336,7 +338,7 @@ describe('Partner onboarding wizard', () => {
       expect(await screen.findByText('Number mismatch')).toBeInTheDocument();
       expect(screen.queryByText('Individual or Business?')).not.toBeInTheDocument();
 
-      mocks.verifyDocument.mockResolvedValue({ passed: true });
+      mocks.verifyPhone.mockResolvedValue({ passed: true });
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /verify phone/i })).toBeEnabled();
       });
@@ -344,10 +346,9 @@ describe('Partner onboarding wizard', () => {
       expect(
         await screen.findByText('Individual or Business?', {}, { timeout: 15_000 }),
       ).toBeInTheDocument();
-      expect(mocks.verifyDocument).toHaveBeenLastCalledWith({
-        documentType: 'phone',
-        documentNumber: '+919876543210',
-        proofToken: 'id-token',
+      expect(mocks.verifyPhone).toHaveBeenLastCalledWith({
+        phoneNumber: '+919876543210',
+        idToken: 'id-token',
       });
     });
   });

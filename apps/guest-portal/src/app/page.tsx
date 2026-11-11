@@ -1,10 +1,10 @@
-import Image from 'next/image';
 import Link from 'next/link';
 
 import { loadExploreEvents } from '@/features/explore/explore-data';
 import { HomeBrowseByVenue } from '@/features/home/components/HomeBrowseByVenue';
 import { HomeEventCategories } from '@/features/home/components/HomeEventCategories';
 import { HomeFeaturedEvents } from '@/features/home/components/HomeFeaturedEvents';
+import { HomeGetApp } from '@/features/home/components/HomeGetApp';
 import { HomeHero } from '@/features/home/components/HomeHero';
 import { PhotoStringGallery } from '@/features/home/components/PhotoStringGallery';
 import { homeFixture } from '@/features/home/fixtures/home.fixture';
@@ -48,21 +48,6 @@ export default async function HomePage() {
 
   return (
     <div className="relative isolate overflow-x-clip bg-black text-white">
-      <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-        <div className="absolute -inset-[6%]">
-          <Image
-            src={homeFixture.hero.desktopPosterSrc}
-            alt=""
-            fill
-            unoptimized
-            sizes="100vw"
-            className="size-full scale-[1.08] object-cover blur-[20px] brightness-[0.42] saturate-[1.12] sm:blur-[36px]"
-          />
-        </div>
-        <div className="absolute inset-0 bg-black/35" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_18%,transparent_0%,rgba(0,0,0,0.18)_72%,rgba(0,0,0,0.38)_100%)]" />
-      </div>
-
       <div className="relative z-10">
         <JsonLd data={[organization, website]} />
         <HomeHero hero={homeFixture.hero} />
@@ -86,6 +71,7 @@ export default async function HomePage() {
           <HomeEventCategories events={discovery.events} />
         ) : null}
         <PhotoStringGallery />
+        <HomeGetApp />
       </div>
     </div>
   );
@@ -95,12 +81,12 @@ function HomeDiscoveryState({ title, description }: { title: string; description
   return (
     <section
       aria-labelledby="home-discovery-state-heading"
-      className="relative mx-auto max-w-[1280px] px-4 py-20 sm:px-6 lg:px-8"
+      className="relative mx-auto max-w-[1280px] px-4 py-12 sm:px-6 sm:py-16 lg:px-8"
     >
-      <div className="rounded-[2rem] border border-white/10 bg-white/[0.04] px-6 py-16 text-center">
+      <div className="border-t border-white/10 py-10 text-center">
         <h2
           id="home-discovery-state-heading"
-          className="text-3xl font-black uppercase tracking-[-0.04em] sm:text-5xl"
+          className="text-2xl font-bold tracking-tight sm:text-3xl"
         >
           {title}
         </h2>

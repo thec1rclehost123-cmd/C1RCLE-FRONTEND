@@ -120,6 +120,15 @@ describe('auth-client', () => {
       expect(useSessionStore.getState().status).toBe('authenticated');
     });
 
+    it('returns the server verification state to onboarding recovery flows', async () => {
+      const userWithPendingEmail = { ...user, emailVerified: false };
+      stubFetch().mockResolvedValue(jsonResponse(authBody({ user: userWithPendingEmail })));
+
+      const result = await login({ email: 'a@b.com', password: 'password123' });
+
+      expect(result.emailVerified).toBe(false);
+    });
+
     it('preserves the Guest role returned by the backend in the frontend session', async () => {
       stubFetch().mockResolvedValue(jsonResponse(authBody({ user: { ...user, role: 'guest' } })));
 

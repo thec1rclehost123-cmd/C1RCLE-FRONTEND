@@ -13,7 +13,7 @@ import { getActiveOrgId, setActiveOrg } from '@/lib/org/active-org';
 import { getOrganizations } from '@/lib/org/org-repository';
 
 import type { DashboardProfile, PartnerMembership, PartnerType, StaffRole } from '@/lib/rbac/types';
-import type { OnboardingRequestDto } from '@c1rcle/contracts';
+import type { OnboardingRequestDto, User } from '@c1rcle/contracts';
 import type { ReactNode } from 'react';
 
 /**
@@ -96,7 +96,7 @@ interface AuthContextValue {
   canDo: (action: string) => boolean;
   /** Returns the current access token, or empty string if not signed in */
   getIdToken: () => Promise<string>;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<User>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -150,7 +150,10 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
 
       setDataLoading(true);
       try {
-        const [orgs, request] = await Promise.all([getOrganizations(), getMyOnboardingRequest()]);
+        const [orgs, request] = await Promise.all([
+          getOrganizations(),
+          currentUser.emailVerified === true ? getMyOnboardingRequest() : Promise.resolve(null),
+        ]);
         if (lifecycle.cancelled) return;
 
         const resolved = await Promise.all(
@@ -231,7 +234,7 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   const subscriptionPlan = onboardingRequest?.plan ?? null;
 
   const signIn = useCallback(async (email: string, password: string) => {
-    await login({ email, password });
+    return login({ email, password });
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, displayName: string) => {

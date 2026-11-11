@@ -10,15 +10,23 @@ export function EventCardArtwork({
   title,
   startsAt,
   category,
+  detailsOverlay = false,
 }: {
   src: string;
   title: string;
   startsAt: string;
   category: string;
+  detailsOverlay?: boolean;
 }) {
   const [failedSource, setFailedSource] = useState<string | null>(null);
   if (src === '/c1rcle-logo.webp' || failedSource === src) {
-    return <EventArtworkFallback startsAt={startsAt} category={category} />;
+    return (
+      <EventArtworkFallback
+        startsAt={startsAt}
+        category={category}
+        detailsOverlay={detailsOverlay}
+      />
+    );
   }
   return (
     <Image

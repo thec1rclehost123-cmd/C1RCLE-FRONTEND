@@ -46,6 +46,11 @@ export function SlotRequestReview({
 }: SlotRequestReviewProps) {
   const isIncoming = request.direction === 'incoming';
   const canDecide = isIncoming && request.status === 'pending';
+  const canRetryPublish =
+    isIncoming &&
+    request.status === 'approved' &&
+    request.hasEventDraft === true &&
+    request.linkedEventStatus !== 'published';
   const canCancel = !isIncoming && request.status === 'approved';
   return (
     <div className={styles['reviewRoot']} role="presentation">
@@ -134,23 +139,25 @@ export function SlotRequestReview({
           <Button type="button" variant="secondary" onClick={onClose}>
             Close
           </Button>
-          {canDecide ? (
+          {canDecide || canRetryPublish ? (
             <>
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={busy}
-                onClick={() => onAction?.(request.id, 'reject')}
-              >
-                Decline
-              </Button>
+              {canDecide ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() => onAction?.(request.id, 'reject')}
+                >
+                  Decline
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 variant="primary"
                 disabled={busy}
                 onClick={() => onAction?.(request.id, 'accept')}
               >
-                Accept
+                {canRetryPublish ? 'Retry publish' : 'Accept'}
               </Button>
             </>
           ) : null}
