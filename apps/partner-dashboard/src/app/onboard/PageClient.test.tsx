@@ -17,6 +17,8 @@ const apiError = (init: {
 
 const mocks = vi.hoisted(() => ({
   auth: { user: null as any, loading: false, isApproved: false },
+  sessionUser: { emailVerified: true } as any,
+  refreshSession: vi.fn(),
   getMine: vi.fn(),
   getPromoterAgreement: vi.fn(),
   acceptPromoterAgreement: vi.fn(),
@@ -49,6 +51,12 @@ vi.mock('framer-motion', () => ({
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: mocks.replace, push: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
+}));
+vi.mock('@c1rcle/auth', () => ({
+  refresh: mocks.refreshSession,
+  useSessionStore: Object.assign(vi.fn(), {
+    getState: () => ({ session: { user: mocks.sessionUser } }),
+  }),
 }));
 vi.mock('@/components/providers/DashboardAuthProvider', () => ({
   useDashboardAuth: () => ({
@@ -123,7 +131,9 @@ describe('Partner onboarding wizard', () => {
     vi.resetAllMocks();
     mocks.getPromoterAgreement.mockResolvedValue({ agreement: null, activationAvailable: false });
     mocks.saveProgress.mockImplementation((_id, patch) => Promise.resolve(dto({}, patch)));
-    mocks.auth.user = { id: 'user_1', email: 'a@b.co' };
+    mocks.auth.user = { id: 'user_1', email: 'a@b.co', emailVerified: true };
+    mocks.sessionUser = { id: 'user_1', email: 'a@b.co', emailVerified: true };
+    mocks.refreshSession.mockResolvedValue(true);
     mocks.auth.loading = false;
     mocks.auth.isApproved = false;
   });
@@ -140,6 +150,34 @@ describe('Partner onboarding wizard', () => {
       mocks.getMine.mockResolvedValue(null);
       render(<OnboardingPage />);
       expect(await screen.findByText('Confirm Your Number')).toBeInTheDocument();
+    });
+
+    it('keeps a signed-in account with unverified email at email verification without reading onboarding', async () => {
+      mocks.auth.user = { id: 'user_1', email: 'a@b.co', emailVerified: false };
+      render(<OnboardingPage />);
+      expect(await screen.findByText('Confirm Your Email')).toBeInTheDocument();
+      expect(mocks.getMine).not.toHaveBeenCalled();
+    });
+
+    it('routes the expected phone-verification gate to phone verification', async () => {
+      mocks.getMine.mockRejectedValue(
+        apiError({
+          code: 'forbidden',
+          message: 'Verify your phone before using Partner onboarding.',
+          status: 403,
+        }),
+      );
+      render(<OnboardingPage />);
+      expect(await screen.findByText('Confirm Your Number')).toBeInTheDocument();
+      expect(screen.queryByText('Your application could not be loaded')).not.toBeInTheDocument();
+    });
+
+    it('keeps unrelated onboarding 403 errors visible as load failures', async () => {
+      mocks.getMine.mockRejectedValue(
+        apiError({ code: 'forbidden', message: 'Account access is restricted.', status: 403 }),
+      );
+      render(<OnboardingPage />);
+      expect(await screen.findByText('Your application could not be loaded')).toBeInTheDocument();
     });
 
     it('resumes an individual draft with missing docs at the identity KYC step', async () => {
