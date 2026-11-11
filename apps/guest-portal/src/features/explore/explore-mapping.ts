@@ -26,8 +26,8 @@ export function toExploreEvent(
   venue: VenueDto | null,
   tiers: readonly PublicTicketTierDto[] | null,
 ): ExploreEvent {
-  const venueName = venue?.name ?? FALLBACK_VENUE;
-  const city = venue?.city ?? FALLBACK_CITY;
+  const venueName = event.externalLocation?.name ?? venue?.name ?? FALLBACK_VENUE;
+  const city = event.externalLocation?.city ?? venue?.city ?? FALLBACK_CITY;
   const availableQuantity = tiers?.reduce((sum, tier) => sum + tier.availableQuantity, 0) ?? null;
   const availability =
     tiers === null || tiers.length === 0
@@ -50,7 +50,7 @@ export function toExploreEvent(
     venueSlug: venue?.slug ?? null,
     venue: venueName,
     city,
-    cityKey: venue ? toCityKey(city) : '',
+    cityKey: venue || event.externalLocation?.city ? toCityKey(city) : '',
     price:
       minimumPrice === null || minimumPrice === 0
         ? null

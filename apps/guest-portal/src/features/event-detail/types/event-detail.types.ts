@@ -39,6 +39,7 @@ export interface EventDetailFixture {
   venue: string;
   address: string;
   city: string;
+  mapUrl?: string;
   hostId: string | null;
   host: string;
   venueId: string | null;

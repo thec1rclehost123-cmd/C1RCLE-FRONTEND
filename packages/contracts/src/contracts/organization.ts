@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import {
   assignPromoterSchema,
-  createEventSchema,
+  createEventBaseSchema,
   createPromoCodeSchema,
   createTicketTierSchema,
   eventDtoSchema,
@@ -206,7 +206,9 @@ export type PublishVenueAvailabilityInput = z.infer<typeof publishVenueAvailabil
 
 export const slotRequestEventDraftSchema = z
   .object({
-    event: createEventSchema.omit({ slotRequestId: true }),
+    event: createEventBaseSchema
+      .extend({ venueId: opaqueIdSchema })
+      .omit({ slotRequestId: true, externalLocation: true }),
     tiers: z
       .array(z.object({ localId: opaqueIdSchema, command: createTicketTierSchema }).strict())
       .max(100),

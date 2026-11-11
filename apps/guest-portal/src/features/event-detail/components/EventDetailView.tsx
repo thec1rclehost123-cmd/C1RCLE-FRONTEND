@@ -119,9 +119,11 @@ export function EventDetailView({
       document.body.style.overflow = previousOverflow;
     };
   }, [checkoutOpen, closeCheckout]);
-  const mapHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    `${event.venue}, ${event.address}`,
-  )}`;
+  const mapHref =
+    event.mapUrl ??
+    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+      `${event.venue}, ${event.address}`,
+    )}`;
 
   if (lifecycle) {
     return (

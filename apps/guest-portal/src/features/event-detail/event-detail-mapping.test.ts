@@ -111,6 +111,30 @@ describe('toEventDetailFixture', () => {
     );
   });
 
+  it('maps a public external location without inventing a Venue profile', () => {
+    const mapped = toEventDetailFixture(
+      {
+        ...EVENT,
+        venueId: null,
+        venue: null,
+        externalLocation: {
+          name: 'Independent Hall',
+          address: '12 Example Road',
+          city: 'Pune',
+          mapUrl: 'https://maps.example.test/hall',
+        },
+      },
+      TIERS,
+    );
+    expect(mapped).toMatchObject({
+      venue: 'Independent Hall',
+      venueId: null,
+      address: '12 Example Road',
+      city: 'Pune',
+      mapUrl: 'https://maps.example.test/hall',
+    });
+  });
+
   it('keeps missing relationships and content visibly unavailable', () => {
     const mapped = toEventDetailFixture(
       {

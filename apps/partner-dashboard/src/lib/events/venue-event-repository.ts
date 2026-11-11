@@ -4,6 +4,8 @@ import {
   createEventSchema,
   createTicketTierSchema,
   eventDtoSchema,
+  externalEventLocationInputSchema,
+  externalVenueContactSchema,
   eventMediaSchema,
   posterUploadUrlDtoSchema,
   promoterAssignmentDtoSchema,
@@ -22,6 +24,7 @@ import { uploadToSignedUrl } from '@/lib/onboarding/uploadToSignedUrl';
 import type { EventEditorDraft } from '@/data/partner-data-source';
 import type {
   EventDto,
+  SlotRequestEventDraft,
   TicketTierDto,
   UpdateEventInput,
   UpdateTicketTierLimitsRequest,
@@ -35,7 +38,10 @@ export async function buildSlotRequestEventDraft(
   draft: EventEditorDraft,
   startAt: string,
   endAt: string,
-) {
+): Promise<SlotRequestEventDraft> {
+  const venueId = draft.venueId.trim();
+  if (!venueId) throw new Error('Choose a C1RCLE Venue before requesting a slot.');
+
   const mediaErrors = validateEventMedia(draft);
   if (mediaErrors.length) throw new Error(mediaErrors.join(' '));
   const promoRequests = promoRequestsFromDraft(draft);
@@ -45,46 +51,43 @@ export async function buildSlotRequestEventDraft(
     draft.ticketTiers.filter((tier) => tier.accessType !== 'RSVP').map((tier) => tier.id),
   );
   const hasPaidTiers = paidTierIds.size > 0;
+  const event = createEventSchema.parse({
+    venueId,
+    title: draft.name.trim(),
+    summary: draft.description.trim().slice(0, 1000),
+    description: draft.description.trim(),
+    imageUrl,
+    ...(media ? { media } : {}),
+    startAt,
+    endAt,
+    visibilityMode: draft.visibilityMode ?? 'public',
+    addressDisclosure:
+      draft.addressDisclosure ??
+      (draft.visibilityMode === 'code' || draft.visibilityMode === 'invited' ? 'hidden' : 'public'),
+    tags: [...new Set([...draft.genres, ...draft.artists])].slice(0, 50),
+    compensation:
+      hasPaidTiers && draft.selectedPromoterIds.length
+        ? {
+            model: draft.compensation,
+            globalRatePercent:
+              draft.compensation === 'standard' ? Math.round(draft.commissionRate) : null,
+            tierRates:
+              draft.compensation === 'custom'
+                ? Object.fromEntries(
+                    Object.entries(draft.tierCommissions ?? {}).filter(([id]) =>
+                      paidTierIds.has(id),
+                    ),
+                  )
+                : {},
+            salaryAmountPaise:
+              draft.compensation === 'salary' ? Math.round((draft.salaryAmount ?? 0) * 100) : null,
+            salaryPeriod: draft.compensation === 'salary' ? draft.salaryPeriod : null,
+            salaryNotes: draft.compensation === 'salary' ? draft.salaryNotes || null : null,
+          }
+        : null,
+  });
   return {
-    event: createEventSchema.parse({
-      venueId: draft.venueId,
-      title: draft.name.trim(),
-      summary: draft.description.trim().slice(0, 1000),
-      description: draft.description.trim(),
-      imageUrl,
-      ...(media ? { media } : {}),
-      startAt,
-      endAt,
-      visibilityMode: draft.visibilityMode ?? 'public',
-      addressDisclosure:
-        draft.addressDisclosure ??
-        (draft.visibilityMode === 'code' || draft.visibilityMode === 'invited'
-          ? 'hidden'
-          : 'public'),
-      tags: [...new Set([...draft.genres, ...draft.artists])].slice(0, 50),
-      compensation:
-        hasPaidTiers && draft.selectedPromoterIds.length
-          ? {
-              model: draft.compensation,
-              globalRatePercent:
-                draft.compensation === 'standard' ? Math.round(draft.commissionRate) : null,
-              tierRates:
-                draft.compensation === 'custom'
-                  ? Object.fromEntries(
-                      Object.entries(draft.tierCommissions ?? {}).filter(([id]) =>
-                        paidTierIds.has(id),
-                      ),
-                    )
-                  : {},
-              salaryAmountPaise:
-                draft.compensation === 'salary'
-                  ? Math.round((draft.salaryAmount ?? 0) * 100)
-                  : null,
-              salaryPeriod: draft.compensation === 'salary' ? draft.salaryPeriod : null,
-              salaryNotes: draft.compensation === 'salary' ? draft.salaryNotes || null : null,
-            }
-          : null,
-    }),
+    event: { ...event, venueId },
     tiers: draft.ticketTiers.map((tier) => {
       const isRsvp = tier.accessType === 'RSVP';
       return {
@@ -197,7 +200,28 @@ export async function publishVenueEvent(
   const event = await apiClient.post({
     path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/events`,
     body: createEventSchema.parse({
-      venueId: draft.venueId,
+      ...(draft.externalVenue
+        ? {
+            externalLocation: {
+              name: draft.externalVenue.name,
+              address: draft.externalVenue.address,
+              ...(draft.externalVenue.city ? { city: draft.externalVenue.city } : {}),
+              ...(draft.externalVenue.region ? { region: draft.externalVenue.region } : {}),
+              ...(draft.externalVenue.postalCode
+                ? { postalCode: draft.externalVenue.postalCode }
+                : {}),
+              ...(draft.externalVenue.country ? { country: draft.externalVenue.country } : {}),
+              ...(draft.externalVenue.mapUrl ? { mapUrl: draft.externalVenue.mapUrl } : {}),
+              contact: {
+                managerName: draft.externalVenue.managerName,
+                phone: draft.externalVenue.managerPhone,
+                ...(draft.externalVenue.managerEmail
+                  ? { email: draft.externalVenue.managerEmail }
+                  : {}),
+              },
+            },
+          }
+        : { venueId: draft.venueId }),
       ...(slotReservation ? { slotRequestId: slotReservation.slotRequestId } : {}),
       title: draft.name.trim(),
       summary: draft.description.trim().slice(0, 1000),
@@ -350,6 +374,10 @@ export async function publishVenueEvent(
     });
   }
 
+  // External locations enter the Admin review queue. They remain non-public;
+  // only the Host may publish after an Admin approves the location.
+  if (draft.externalVenue) return event;
+
   await apiClient.post({
     path: `/api/v2/events/${encodeURIComponent(event.id)}/review`,
     schema: eventDtoSchema,
@@ -377,6 +405,50 @@ export async function updatePartnerEventDetails(
       'x-organization-id': organizationId,
       'If-Match': String(version),
       'Idempotency-Key': crypto.randomUUID(),
+    },
+  });
+}
+
+export async function resubmitExternalVenue(
+  organizationId: string,
+  eventId: string,
+  submission: unknown,
+): Promise<EventDto> {
+  return apiClient.post({
+    path: `/api/v2/events/${encodeURIComponent(eventId)}/external-location/resubmit`,
+    body: externalEventLocationInputSchema.parse(submission),
+    schema: eventDtoSchema,
+    headers: { 'x-organization-id': organizationId, 'Idempotency-Key': crypto.randomUUID() },
+  });
+}
+
+export async function loadExternalVenueContact(organizationId: string, eventId: string) {
+  return apiClient.get({
+    path: `/api/v2/events/${encodeURIComponent(eventId)}/external-location/contact`,
+    schema: externalVenueContactSchema,
+    headers: { 'x-organization-id': organizationId },
+  });
+}
+
+export async function continueApprovedExternalEvent(
+  organizationId: string,
+  eventId: string,
+  intentKey: string,
+): Promise<EventDto> {
+  await apiClient.post({
+    path: `/api/v2/events/${encodeURIComponent(eventId)}/review`,
+    schema: eventDtoSchema,
+    headers: {
+      'x-organization-id': organizationId,
+      'Idempotency-Key': `${intentKey}-review`,
+    },
+  });
+  return apiClient.post({
+    path: `/api/v2/events/${encodeURIComponent(eventId)}/publish`,
+    schema: eventDtoSchema,
+    headers: {
+      'x-organization-id': organizationId,
+      'Idempotency-Key': `${intentKey}-publish`,
     },
   });
 }
