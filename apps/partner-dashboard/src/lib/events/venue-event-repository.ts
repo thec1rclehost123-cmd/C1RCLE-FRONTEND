@@ -24,6 +24,7 @@ import { uploadToSignedUrl } from '@/lib/onboarding/uploadToSignedUrl';
 import type { EventEditorDraft } from '@/data/partner-data-source';
 import type {
   EventDto,
+  SlotRequestEventDraft,
   TicketTierDto,
   UpdateEventInput,
   UpdateTicketTierLimitsRequest,
@@ -37,7 +38,10 @@ export async function buildSlotRequestEventDraft(
   draft: EventEditorDraft,
   startAt: string,
   endAt: string,
-) {
+): Promise<SlotRequestEventDraft> {
+  const venueId = draft.venueId.trim();
+  if (!venueId) throw new Error('Choose a C1RCLE Venue before requesting a slot.');
+
   const mediaErrors = validateEventMedia(draft);
   if (mediaErrors.length) throw new Error(mediaErrors.join(' '));
   const promoRequests = promoRequestsFromDraft(draft);
@@ -47,46 +51,43 @@ export async function buildSlotRequestEventDraft(
     draft.ticketTiers.filter((tier) => tier.accessType !== 'RSVP').map((tier) => tier.id),
   );
   const hasPaidTiers = paidTierIds.size > 0;
+  const event = createEventSchema.parse({
+    venueId,
+    title: draft.name.trim(),
+    summary: draft.description.trim().slice(0, 1000),
+    description: draft.description.trim(),
+    imageUrl,
+    ...(media ? { media } : {}),
+    startAt,
+    endAt,
+    visibilityMode: draft.visibilityMode ?? 'public',
+    addressDisclosure:
+      draft.addressDisclosure ??
+      (draft.visibilityMode === 'code' || draft.visibilityMode === 'invited' ? 'hidden' : 'public'),
+    tags: [...new Set([...draft.genres, ...draft.artists])].slice(0, 50),
+    compensation:
+      hasPaidTiers && draft.selectedPromoterIds.length
+        ? {
+            model: draft.compensation,
+            globalRatePercent:
+              draft.compensation === 'standard' ? Math.round(draft.commissionRate) : null,
+            tierRates:
+              draft.compensation === 'custom'
+                ? Object.fromEntries(
+                    Object.entries(draft.tierCommissions ?? {}).filter(([id]) =>
+                      paidTierIds.has(id),
+                    ),
+                  )
+                : {},
+            salaryAmountPaise:
+              draft.compensation === 'salary' ? Math.round((draft.salaryAmount ?? 0) * 100) : null,
+            salaryPeriod: draft.compensation === 'salary' ? draft.salaryPeriod : null,
+            salaryNotes: draft.compensation === 'salary' ? draft.salaryNotes || null : null,
+          }
+        : null,
+  });
   return {
-    event: createEventSchema.parse({
-      venueId: draft.venueId,
-      title: draft.name.trim(),
-      summary: draft.description.trim().slice(0, 1000),
-      description: draft.description.trim(),
-      imageUrl,
-      ...(media ? { media } : {}),
-      startAt,
-      endAt,
-      visibilityMode: draft.visibilityMode ?? 'public',
-      addressDisclosure:
-        draft.addressDisclosure ??
-        (draft.visibilityMode === 'code' || draft.visibilityMode === 'invited'
-          ? 'hidden'
-          : 'public'),
-      tags: [...new Set([...draft.genres, ...draft.artists])].slice(0, 50),
-      compensation:
-        hasPaidTiers && draft.selectedPromoterIds.length
-          ? {
-              model: draft.compensation,
-              globalRatePercent:
-                draft.compensation === 'standard' ? Math.round(draft.commissionRate) : null,
-              tierRates:
-                draft.compensation === 'custom'
-                  ? Object.fromEntries(
-                      Object.entries(draft.tierCommissions ?? {}).filter(([id]) =>
-                        paidTierIds.has(id),
-                      ),
-                    )
-                  : {},
-              salaryAmountPaise:
-                draft.compensation === 'salary'
-                  ? Math.round((draft.salaryAmount ?? 0) * 100)
-                  : null,
-              salaryPeriod: draft.compensation === 'salary' ? draft.salaryPeriod : null,
-              salaryNotes: draft.compensation === 'salary' ? draft.salaryNotes || null : null,
-            }
-          : null,
-    }),
+    event: { ...event, venueId },
     tiers: draft.ticketTiers.map((tier) => {
       const isRsvp = tier.accessType === 'RSVP';
       return {

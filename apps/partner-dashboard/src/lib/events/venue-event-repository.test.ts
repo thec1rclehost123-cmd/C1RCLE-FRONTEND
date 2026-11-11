@@ -88,6 +88,17 @@ beforeEach(() => {
 });
 
 describe('buildSlotRequestEventDraft', () => {
+  it('rejects slot requests without a registered C1RCLE Venue', async () => {
+    await expect(
+      buildSlotRequestEventDraft(
+        'org_host',
+        { ...draft, venueId: '' },
+        '2026-09-18T04:00:00.000Z',
+        '2026-09-18T09:30:00.000Z',
+      ),
+    ).rejects.toThrow('Choose a C1RCLE Venue before requesting a slot.');
+  });
+
   it('produces a contract-valid event and catalog snapshot for Venue review', async () => {
     const proposal = await buildSlotRequestEventDraft(
       'org_host',
