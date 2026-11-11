@@ -81,12 +81,22 @@ export function EventDetailView({
         ? null
         : `Get tickets · From ${moneyFormatter.format(startingPricePaise / 100)}`;
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [shareMessage, setShareMessage] = useState('');
   const ticketCtaRef = useRef<HTMLButtonElement>(null);
   const checkoutDialogRef = useRef<HTMLDialogElement>(null);
   const closeCheckout = useCallback(() => {
     setCheckoutOpen(false);
     window.requestAnimationFrame(() => ticketCtaRef.current?.focus());
   }, []);
+  const shareEvent = async () => {
+    setShareMessage('');
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setShareMessage('Event link copied to clipboard.');
+    } catch {
+      setShareMessage('Could not copy the event link. Try again.');
+    }
+  };
   useEffect(() => {
     if (!checkoutOpen) return;
     const previousOverflow = document.body.style.overflow;
@@ -225,14 +235,17 @@ export function EventDetailView({
               <button
                 type="button"
                 aria-label="Share event"
-                onClick={() => {
-                  void navigator.clipboard.writeText(window.location.href);
-                }}
+                onClick={() => void shareEvent()}
                 className="min-h-9 rounded-full border border-white/15 bg-black/50 px-4 text-[11px] font-semibold"
               >
                 Share ↗
               </button>
             </div>
+            {shareMessage ? (
+              <p role="status" className="mt-2 text-xs text-white/65">
+                {shareMessage}
+              </p>
+            ) : null}
 
             <section className="mt-6 border-t border-white/10 py-5">
               <h2 className="text-lg font-bold sm:text-xl">About the event</h2>

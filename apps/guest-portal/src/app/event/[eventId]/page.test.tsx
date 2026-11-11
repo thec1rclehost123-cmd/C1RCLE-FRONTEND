@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { EventDetailView } from '@/features/event-detail/components/EventDetailView';
@@ -134,6 +134,44 @@ describe('EventDetailView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Get tickets · From ₹800' }));
     expect(screen.getByRole('dialog', { name: 'Checkout for Techno Bunker' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Select tickets' })).toBeInTheDocument();
+  });
+
+  it('confirms event link copy success and failure', async () => {
+    const event = eventDetailFixtures[0];
+    expect(event).toBeDefined();
+    if (!event) return;
+
+    const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const writeText = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('Clipboard unavailable'));
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+
+    try {
+      render(<EventDetailView event={event} checkoutEvent={bookingEventFor(event)} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Share event' }));
+      expect(await screen.findByRole('status')).toHaveTextContent(
+        'Event link copied to clipboard.',
+      );
+      expect(writeText).toHaveBeenNthCalledWith(1, window.location.href);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Share event' }));
+      await waitFor(() =>
+        expect(screen.getByRole('status')).toHaveTextContent(
+          'Could not copy the event link. Try again.',
+        ),
+      );
+    } finally {
+      if (clipboardDescriptor) {
+        Object.defineProperty(navigator, 'clipboard', clipboardDescriptor);
+      } else {
+        Reflect.deleteProperty(navigator, 'clipboard');
+      }
+    }
   });
 
   it('opens checkout over the event and returns to the same event when closed', () => {
