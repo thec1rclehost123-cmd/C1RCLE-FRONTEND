@@ -103,20 +103,27 @@ describe('publishVenueEvent', () => {
         managerEmail: 'manager@example.test',
       },
     };
-    await expect(publishVenueEvent('org_host', externalDraft, externalDraft.externalWorkflowKey))
-      .resolves.toMatchObject({ id: 'evt_external', status: 'draft' });
+    await expect(
+      publishVenueEvent('org_host', externalDraft, externalDraft.externalWorkflowKey),
+    ).resolves.toMatchObject({ id: 'evt_external', status: 'draft' });
     expect(mocks.post.mock.calls[0]?.[0].body).toMatchObject({
       externalLocation: {
         name: 'Independent Hall',
         address: '12 Example Road',
-        contact: { managerName: 'Venue Manager', phone: '+91 98765 43210', email: 'manager@example.test' },
+        contact: {
+          managerName: 'Venue Manager',
+          phone: '+91 98765 43210',
+          email: 'manager@example.test',
+        },
       },
     });
     const paths = mocks.post.mock.calls.map(([options]) => options.path);
     expect(paths[0]).toBe('/api/v2/organizations/org_host/events');
     expect(paths).not.toContain('/api/v2/events/evt_external/review');
     expect(paths).not.toContain('/api/v2/events/evt_external/publish');
-    expect(mocks.post.mock.calls[0]?.[0].headers?.['Idempotency-Key']).toBe('stable-external-workflow-event');
+    expect(mocks.post.mock.calls[0]?.[0].headers?.['Idempotency-Key']).toBe(
+      'stable-external-workflow-event',
+    );
   });
 
   it('persists gallery, video and spotlight media in event creation', async () => {

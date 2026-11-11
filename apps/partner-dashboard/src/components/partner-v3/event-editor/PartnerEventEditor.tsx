@@ -7,7 +7,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
 
 import { describeApiError } from '@/lib/api/describe-error';
-import { discardHostEventDraft, getHostEventDraft, saveHostEventDraft } from '@/lib/events/event-draft-repository';
+import {
+  discardHostEventDraft,
+  getHostEventDraft,
+  saveHostEventDraft,
+} from '@/lib/events/event-draft-repository';
 import { validateEventMedia } from '@/lib/events/event-media';
 import { validatePromoDraft } from '@/lib/events/event-promo-codes';
 import { eventEndAtFromDraft, eventStartAtFromDraft } from '@/lib/events/venue-event-repository';
@@ -134,15 +138,37 @@ export function PartnerEventEditor({
           return;
         }
         const safeData = sanitizeEventDraft(saved.data);
-        setDraft({ ...initialDraft, ...(safeData as Partial<EventEditorDraft>), ...(initialVenueId ? { venueId: initialVenueId } : {}), ...(initialDate ? { date: initialDate, dateLabel: formatDateLabel(initialDate) } : {}) });
-        setSelectedSlotId(initialSlotId ?? (typeof saved.data['selectedSlotId'] === 'string' ? saved.data['selectedSlotId'] : ''));
+        setDraft({
+          ...initialDraft,
+          ...(safeData as Partial<EventEditorDraft>),
+          ...(initialVenueId ? { venueId: initialVenueId } : {}),
+          ...(initialDate ? { date: initialDate, dateLabel: formatDateLabel(initialDate) } : {}),
+        });
+        setSelectedSlotId(
+          initialSlotId ??
+            (typeof saved.data['selectedSlotId'] === 'string' ? saved.data['selectedSlotId'] : ''),
+        );
         const savedStep = typeof saved.data['step'] === 'string' ? saved.data['step'] : initialStep;
         setLocalStep(normaliseStep(savedStep, steps));
       })
       .catch(() => undefined)
-      .finally(() => { if (active) setDraftReady(true); });
-    return () => { active = false; };
-  }, [initialDate, initialDraft, initialSlotId, initialStep, initialVenueId, isHost, mode, organizationId, steps]);
+      .finally(() => {
+        if (active) setDraftReady(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [
+    initialDate,
+    initialDraft,
+    initialSlotId,
+    initialStep,
+    initialVenueId,
+    isHost,
+    mode,
+    organizationId,
+    steps,
+  ]);
 
   const queryStep = searchParams.get('step') ?? undefined;
   const requestedStep = queryStep ? normaliseStep(queryStep, steps) : localStep;
@@ -227,17 +253,43 @@ export function PartnerEventEditor({
   }, [currentStep, pathname, requestedStep, router, searchParams]);
 
   useEffect(() => {
-    if (!draftReady || draftDiscarded || submitting || !draftTouched || mode !== 'create' || !isHost || !organizationId) return;
+    if (
+      !draftReady ||
+      draftDiscarded ||
+      submitting ||
+      !draftTouched ||
+      mode !== 'create' ||
+      !isHost ||
+      !organizationId
+    )
+      return;
     const timer = window.setTimeout(() => {
       const data = sanitizeEventDraft({ ...draft, selectedSlotId, step: localStep });
       draftSaveQueue.current = draftSaveQueue.current
         .catch(() => undefined)
         .then(() => saveHostEventDraft(organizationId, data))
-        .then(() => { setDraftSaveError(false); })
-        .catch(() => { setDraftSaveError(true); });
+        .then(() => {
+          setDraftSaveError(false);
+        })
+        .catch(() => {
+          setDraftSaveError(true);
+        });
     }, 250);
-    return () => { window.clearTimeout(timer); };
-  }, [draft, draftDiscarded, draftReady, draftTouched, isHost, localStep, mode, organizationId, selectedSlotId, submitting]);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [
+    draft,
+    draftDiscarded,
+    draftReady,
+    draftTouched,
+    isHost,
+    localStep,
+    mode,
+    organizationId,
+    selectedSlotId,
+    submitting,
+  ]);
 
   const validationErrors = useMemo(
     () => [
@@ -392,10 +444,12 @@ export function PartnerEventEditor({
           setDraftTouched(true);
           draftSaveQueue.current = draftSaveQueue.current
             .catch(() => undefined)
-            .then(() => saveHostEventDraft(
-              organizationId,
-              sanitizeEventDraft({ ...submissionDraft, selectedSlotId, step: localStep }),
-            ));
+            .then(() =>
+              saveHostEventDraft(
+                organizationId,
+                sanitizeEventDraft({ ...submissionDraft, selectedSlotId, step: localStep }),
+              ),
+            );
           await draftSaveQueue.current;
         }
         await onSubmit(submissionDraft, selectedSlotId);
@@ -458,13 +512,21 @@ export function PartnerEventEditor({
             <h1>{pageTitle}</h1>
           </div>
           {isHost && mode === 'create' ? (
-            <button className={styles['actionButton']} type="button" onClick={() => void discardDraft()}>
+            <button
+              className={styles['actionButton']}
+              type="button"
+              onClick={() => void discardDraft()}
+            >
               Discard draft
             </button>
           ) : null}
         </div>
       </header>
-      {draftSaveError ? <p role="status">Your latest changes could not be saved. Keep this tab open and try again.</p> : null}
+      {draftSaveError ? (
+        <p role="status">
+          Your latest changes could not be saved. Keep this tab open and try again.
+        </p>
+      ) : null}
       <div className={styles['layout']}>
         <nav className={styles['sectionNav']} aria-label="Event setup sections">
           <span className={styles['sectionNavLabel']}>Event setup</span>
@@ -609,7 +671,9 @@ export function PartnerEventEditor({
             </button>
           </div>
           {currentStep === 'review' && externalVenue ? (
-            <p className={styles['muted']} role="status">C1RCLE review is required before this event can be published.</p>
+            <p className={styles['muted']} role="status">
+              C1RCLE review is required before this event can be published.
+            </p>
           ) : null}
           {currentStep === 'review' && !onSubmit ? (
             <div className={styles['unavailable']}>
@@ -726,13 +790,20 @@ function VenueStep({
             <div className={styles['twoColumns']}>
               {(['city', 'region', 'postalCode', 'country', 'mapUrl'] as const).map((key) => (
                 <div className={styles['field']} key={key}>
-                  <label htmlFor={`external-${key}`}>{key === 'mapUrl' ? 'Map link (optional)' : `${key === 'postalCode' ? 'Postal code' : key.slice(0, 1).toUpperCase() + key.slice(1)} (optional)`}</label>
+                  <label htmlFor={`external-${key}`}>
+                    {key === 'mapUrl'
+                      ? 'Map link (optional)'
+                      : `${key === 'postalCode' ? 'Postal code' : key.slice(0, 1).toUpperCase() + key.slice(1)} (optional)`}
+                  </label>
                   <input
                     id={`external-${key}`}
                     type={key === 'mapUrl' ? 'url' : 'text'}
                     value={draft.externalVenue?.[key] ?? ''}
                     onChange={(event) => {
-                      if (draft.externalVenue) update({ externalVenue: { ...draft.externalVenue, [key]: event.target.value } });
+                      if (draft.externalVenue)
+                        update({
+                          externalVenue: { ...draft.externalVenue, [key]: event.target.value },
+                        });
                     }}
                   />
                 </div>
@@ -1111,7 +1182,9 @@ function validateExternalVenue(draft: EventEditorDraft): string[] {
   if (venue.mapUrl) {
     try {
       if (new URL(venue.mapUrl).protocol !== 'https:') errors.push('Map links must use HTTPS.');
-    } catch { errors.push('Enter a valid map link.'); }
+    } catch {
+      errors.push('Enter a valid map link.');
+    }
   }
   return errors;
 }
@@ -1119,13 +1192,20 @@ function validateExternalVenue(draft: EventEditorDraft): string[] {
 function isRestorableDraft(data: Record<string, unknown>): boolean {
   if (typeof data['name'] !== 'string' || typeof data['description'] !== 'string') return false;
   if (data['ticketTiers'] !== undefined && !Array.isArray(data['ticketTiers'])) return false;
-  if (data['selectedPromoterIds'] !== undefined && !Array.isArray(data['selectedPromoterIds'])) return false;
-  if (data['externalWorkflowKey'] !== undefined && typeof data['externalWorkflowKey'] !== 'string') return false;
+  if (data['selectedPromoterIds'] !== undefined && !Array.isArray(data['selectedPromoterIds']))
+    return false;
+  if (data['externalWorkflowKey'] !== undefined && typeof data['externalWorkflowKey'] !== 'string')
+    return false;
   const external = data['externalVenue'];
   if (external !== undefined) {
     if (!external || typeof external !== 'object') return false;
     const venue = external as Record<string, unknown>;
-    if (['name', 'address', 'managerName', 'managerPhone', 'managerEmail'].some((key) => typeof venue[key] !== 'string')) return false;
+    if (
+      ['name', 'address', 'managerName', 'managerPhone', 'managerEmail'].some(
+        (key) => typeof venue[key] !== 'string',
+      )
+    )
+      return false;
   }
   return true;
 }
@@ -1137,11 +1217,19 @@ function sanitizeEventDraft(value: unknown): Record<string, unknown> {
       if (/^(blob:|data:)/i.test(input)) return undefined;
       try {
         const url = new URL(input);
-        if (url.searchParams.has('X-Goog-Signature') || url.searchParams.has('X-Amz-Signature') || url.searchParams.has('token')) return undefined;
-      } catch { /* Non-URL editor values are safe to persist. */ }
+        if (
+          url.searchParams.has('X-Goog-Signature') ||
+          url.searchParams.has('X-Amz-Signature') ||
+          url.searchParams.has('token')
+        )
+          return undefined;
+      } catch {
+        /* Non-URL editor values are safe to persist. */
+      }
       return input;
     }
-    if (Array.isArray(input)) return input.map((entry) => visit(entry)).filter((entry) => entry !== undefined);
+    if (Array.isArray(input))
+      return input.map((entry) => visit(entry)).filter((entry) => entry !== undefined);
     if (input && typeof input === 'object') {
       if (key === 'artwork') {
         const value = (input as Record<string, unknown>)['value'];
@@ -1159,11 +1247,38 @@ function sanitizeEventDraft(value: unknown): Record<string, unknown> {
   };
   const safe = visit(value);
   const allowed = new Set([
-    'media', 'externalVenue', 'name', 'description', 'venueId', 'visibilityMode', 'addressDisclosure',
-    'date', 'dateLabel', 'time', 'endTime', 'genres', 'artists', 'artwork', 'ticketTiers',
-    'selectedPromoterIds', 'tableType', 'promoCodes', 'promoCodeSettings', 'pricingRule', 'compensation',
-    'commissionRate', 'salaryNotes', 'tierCommissions', 'salaryAmount', 'salaryPeriod', 'promoterOverrides',
-    'earlyBirdDiscountPercent', 'lateArrivalChargePercent', 'selectedSlotId', 'step', 'externalWorkflowKey',
+    'media',
+    'externalVenue',
+    'name',
+    'description',
+    'venueId',
+    'visibilityMode',
+    'addressDisclosure',
+    'date',
+    'dateLabel',
+    'time',
+    'endTime',
+    'genres',
+    'artists',
+    'artwork',
+    'ticketTiers',
+    'selectedPromoterIds',
+    'tableType',
+    'promoCodes',
+    'promoCodeSettings',
+    'pricingRule',
+    'compensation',
+    'commissionRate',
+    'salaryNotes',
+    'tierCommissions',
+    'salaryAmount',
+    'salaryPeriod',
+    'promoterOverrides',
+    'earlyBirdDiscountPercent',
+    'lateArrivalChargePercent',
+    'selectedSlotId',
+    'step',
+    'externalWorkflowKey',
   ]);
   return safe && typeof safe === 'object' && !Array.isArray(safe)
     ? Object.fromEntries(Object.entries(safe).filter(([key]) => allowed.has(key)))

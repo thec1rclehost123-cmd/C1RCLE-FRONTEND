@@ -6,7 +6,10 @@ import { useCallback, useRef, useState } from 'react';
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 import { useOverlayFocus } from '@/components/venue/useOverlayFocus';
 import { describeApiError } from '@/lib/api/describe-error';
-import { cancelPartnerEvent, continueApprovedExternalEvent } from '@/lib/events/venue-event-repository';
+import {
+  cancelPartnerEvent,
+  continueApprovedExternalEvent,
+} from '@/lib/events/venue-event-repository';
 
 import { ConnectedEventSummary } from './ConnectedEventSummary';
 import { EventLifecycleActions } from './EventLifecycleActions';
@@ -101,16 +104,26 @@ export function ConnectedPartnerEventScreen({
           ) : null}
           <h2 className="mt-5 text-xl font-bold">Event overview</h2>
           {studio === 'host' && event.externalLocation ? (
-            <section aria-label="External venue approval" className="mt-4 rounded-xl border border-white/10 p-4">
+            <section
+              aria-label="External venue approval"
+              className="mt-4 rounded-xl border border-white/10 p-4"
+            >
               {event.externalVenueReviewStatus === 'pending' ? (
-                <p role="status" className="text-sm text-amber-200">External venue awaiting C1RCLE review. The event cannot be published until the location is approved.</p>
+                <p role="status" className="text-sm text-amber-200">
+                  External venue awaiting C1RCLE review. The event cannot be published until the
+                  location is approved.
+                </p>
               ) : null}
               {event.externalVenueReviewStatus === 'rejected' ? (
-                <p role="status" className="text-sm text-amber-200">External venue changes are required. Open event details to resubmit the location.</p>
+                <p role="status" className="text-sm text-amber-200">
+                  External venue changes are required. Open event details to resubmit the location.
+                </p>
               ) : null}
               {event.externalVenueReviewStatus === 'approved' && event.status === 'draft' ? (
                 <>
-                  <p className="text-sm text-emerald-200">External venue approved. Submit the event to publish it.</p>
+                  <p className="text-sm text-emerald-200">
+                    External venue approved. Submit the event to publish it.
+                  </p>
                   <button
                     type="button"
                     className="mt-3 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
@@ -119,15 +132,34 @@ export function ConnectedPartnerEventScreen({
                       setExternalSubmissionBusy(true);
                       setExternalSubmissionError(null);
                       externalSubmissionKey.current ??= crypto.randomUUID();
-                      void continueApprovedExternalEvent(organizationId, event.id, externalSubmissionKey.current)
-                        .then(() => { externalSubmissionKey.current = null; router.refresh(); })
-                        .catch((cause: unknown) => { setExternalSubmissionError(describeApiError(cause, 'The event could not be submitted.')); })
-                        .finally(() => { setExternalSubmissionBusy(false); });
+                      void continueApprovedExternalEvent(
+                        organizationId,
+                        event.id,
+                        externalSubmissionKey.current,
+                      )
+                        .then(() => {
+                          externalSubmissionKey.current = null;
+                          router.refresh();
+                        })
+                        .catch((cause: unknown) => {
+                          setExternalSubmissionError(
+                            describeApiError(cause, 'The event could not be submitted.'),
+                          );
+                        })
+                        .finally(() => {
+                          setExternalSubmissionBusy(false);
+                        });
                     }}
-                  >{externalSubmissionBusy ? 'Submitting…' : 'Submit approved event'}</button>
+                  >
+                    {externalSubmissionBusy ? 'Submitting…' : 'Submit approved event'}
+                  </button>
                 </>
               ) : null}
-              {externalSubmissionError ? <p role="alert" className="mt-3 text-sm text-red-300">{externalSubmissionError}</p> : null}
+              {externalSubmissionError ? (
+                <p role="alert" className="mt-3 text-sm text-red-300">
+                  {externalSubmissionError}
+                </p>
+              ) : null}
             </section>
           ) : null}
           {event.summary ? <p className="mt-3 leading-7">{event.summary}</p> : null}

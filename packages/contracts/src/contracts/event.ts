@@ -190,46 +190,64 @@ export const eventPreviewDtoSchema = z.object({
 });
 export type EventPreviewDto = z.infer<typeof eventPreviewDtoSchema>;
 
-export const externalEventLocationInputSchema = z.object({
-  name: z.string().trim().min(1).max(200),
-  address: z.string().trim().min(1).max(500),
-  city: z.string().trim().max(120).optional(),
-  region: z.string().trim().max(120).optional(),
-  postalCode: z.string().trim().max(30).optional(),
-  country: z.string().trim().max(120).optional(),
-  mapUrl: z.url({ protocol: /^https$/, error: 'Use an HTTPS map link' }).nullable().optional(),
-  contact: z.object({
-    managerName: z.string().trim().min(1).max(160),
-    phone: z.string().trim().min(10).max(30),
-    email: z.email().nullable().optional(),
-  }).strict(),
-}).strict();
+export const externalEventLocationInputSchema = z
+  .object({
+    name: z.string().trim().min(1).max(200),
+    address: z.string().trim().min(1).max(500),
+    city: z.string().trim().max(120).optional(),
+    region: z.string().trim().max(120).optional(),
+    postalCode: z.string().trim().max(30).optional(),
+    country: z.string().trim().max(120).optional(),
+    mapUrl: z
+      .url({ protocol: /^https$/, error: 'Use an HTTPS map link' })
+      .nullable()
+      .optional(),
+    contact: z
+      .object({
+        managerName: z.string().trim().min(1).max(160),
+        phone: z.string().trim().min(10).max(30),
+        email: z.email().nullable().optional(),
+      })
+      .strict(),
+  })
+  .strict();
 export type ExternalEventLocationInput = z.infer<typeof externalEventLocationInputSchema>;
 
-export const externalVenueContactSchema = z.object({
-  managerName: z.string().min(1).max(160),
-  phone: z.string().min(10).max(30),
-  email: z.email().nullable(),
-}).strict();
+export const externalVenueContactSchema = z
+  .object({
+    managerName: z.string().min(1).max(160),
+    phone: z.string().min(10).max(30),
+    email: z.email().nullable(),
+  })
+  .strict();
 export type ExternalVenueContact = z.infer<typeof externalVenueContactSchema>;
 
-export const externalVenueReviewDecisionSchema = z.object({
-  decision: z.enum(['approve', 'reject']),
-  reason: z.string().trim().max(1000).optional(),
-}).strict().superRefine((value, ctx) => {
-  if (value.decision === 'reject' && !value.reason?.trim())
-    ctx.addIssue({ code: 'custom', path: ['reason'], message: 'A rejection reason is required.' });
-});
+export const externalVenueReviewDecisionSchema = z
+  .object({
+    decision: z.enum(['approve', 'reject']),
+    reason: z.string().trim().max(1000).optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.decision === 'reject' && !value.reason?.trim())
+      ctx.addIssue({
+        code: 'custom',
+        path: ['reason'],
+        message: 'A rejection reason is required.',
+      });
+  });
 
-export const externalVenueReviewQueueItemSchema = z.object({
-  eventId: opaqueIdSchema,
-  organizationId: opaqueIdSchema,
-  title: z.string(),
-  location: externalEventLocationInputSchema,
-  status: z.enum(['pending', 'approved', 'rejected']),
-  submittedAt: z.iso.datetime(),
-  rejectionReason: z.string().nullable(),
-}).strict();
+export const externalVenueReviewQueueItemSchema = z
+  .object({
+    eventId: opaqueIdSchema,
+    organizationId: opaqueIdSchema,
+    title: z.string(),
+    location: externalEventLocationInputSchema,
+    status: z.enum(['pending', 'approved', 'rejected']),
+    submittedAt: z.iso.datetime(),
+    rejectionReason: z.string().nullable(),
+  })
+  .strict();
 
 export const createEventBaseSchema = z.object({
   venueId: opaqueIdSchema.optional(),
@@ -252,10 +270,18 @@ export const createEventBaseSchema = z.object({
 
 export const createEventSchema = createEventBaseSchema.superRefine((event, ctx) => {
   if (Boolean(event.venueId) === Boolean(event.externalLocation)) {
-    ctx.addIssue({ code: 'custom', path: ['venueId'], message: 'Choose a C1RCLE Venue or enter an external location.' });
+    ctx.addIssue({
+      code: 'custom',
+      path: ['venueId'],
+      message: 'Choose a C1RCLE Venue or enter an external location.',
+    });
   }
   if (event.externalLocation && event.slotRequestId) {
-    ctx.addIssue({ code: 'custom', path: ['slotRequestId'], message: 'External locations cannot use Venue slot requests.' });
+    ctx.addIssue({
+      code: 'custom',
+      path: ['slotRequestId'],
+      message: 'External locations cannot use Venue slot requests.',
+    });
   }
 });
 export type CreateEventInput = z.infer<typeof createEventSchema>;

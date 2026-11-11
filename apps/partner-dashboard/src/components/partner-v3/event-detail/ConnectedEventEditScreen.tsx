@@ -145,11 +145,15 @@ export function ConnectedEventEditScreen({
     if (studio !== 'host' || event.externalVenueReviewStatus !== 'rejected') return;
     let active = true;
     loadExternalVenueContact(organizationId, event.id)
-      .then((contact) => { if (active) setExternalContact({ ...contact, email: contact.email ?? '' }); })
+      .then((contact) => {
+        if (active) setExternalContact({ ...contact, email: contact.email ?? '' });
+      })
       .catch((caught: unknown) => {
         if (active) setError(describeApiError(caught, 'External venue contact is unavailable.'));
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [event.externalVenueReviewStatus, event.id, organizationId, studio]);
 
   const hasChanges =
@@ -360,16 +364,65 @@ export function ConnectedEventEditScreen({
           <h1 id="event-edit-title" className="mb-3 text-2xl font-bold tracking-tight">
             Edit event details
           </h1>
-          {studio === 'host' && event.externalVenueReviewStatus === 'rejected' && event.externalLocation ? (
-            <section aria-labelledby="external-location-resubmit" className="mb-5 rounded-xl border border-amber-500/30 p-4">
-              <h2 id="external-location-resubmit" className="font-semibold">Resubmit external venue</h2>
-              <p className="mt-1 text-sm text-stone-400">C1RCLE requested changes to {event.externalLocation.name}. Confirm the public location and re-enter the private manager contact to request another review.</p>
+          {studio === 'host' &&
+          event.externalVenueReviewStatus === 'rejected' &&
+          event.externalLocation ? (
+            <section
+              aria-labelledby="external-location-resubmit"
+              className="mb-5 rounded-xl border border-amber-500/30 p-4"
+            >
+              <h2 id="external-location-resubmit" className="font-semibold">
+                Resubmit external venue
+              </h2>
+              <p className="mt-1 text-sm text-stone-400">
+                C1RCLE requested changes to {event.externalLocation.name}. Confirm the public
+                location and re-enter the private manager contact to request another review.
+              </p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <label className="grid gap-1 text-sm">Manager name<input className="rounded-lg border border-white/20 bg-black px-3 py-2" value={externalContact.managerName} onChange={(e) => { setExternalContact((v) => ({ ...v, managerName: e.target.value })); }} /></label>
-                <label className="grid gap-1 text-sm">Manager phone<input className="rounded-lg border border-white/20 bg-black px-3 py-2" value={externalContact.phone} onChange={(e) => { setExternalContact((v) => ({ ...v, phone: e.target.value })); }} /></label>
-                <label className="grid gap-1 text-sm sm:col-span-2">Manager email (optional)<input type="email" className="rounded-lg border border-white/20 bg-black px-3 py-2" value={externalContact.email} onChange={(e) => { setExternalContact((v) => ({ ...v, email: e.target.value })); }} /></label>
+                <label className="grid gap-1 text-sm">
+                  Manager name
+                  <input
+                    className="rounded-lg border border-white/20 bg-black px-3 py-2"
+                    value={externalContact.managerName}
+                    onChange={(e) => {
+                      setExternalContact((v) => ({ ...v, managerName: e.target.value }));
+                    }}
+                  />
+                </label>
+                <label className="grid gap-1 text-sm">
+                  Manager phone
+                  <input
+                    className="rounded-lg border border-white/20 bg-black px-3 py-2"
+                    value={externalContact.phone}
+                    onChange={(e) => {
+                      setExternalContact((v) => ({ ...v, phone: e.target.value }));
+                    }}
+                  />
+                </label>
+                <label className="grid gap-1 text-sm sm:col-span-2">
+                  Manager email (optional)
+                  <input
+                    type="email"
+                    className="rounded-lg border border-white/20 bg-black px-3 py-2"
+                    value={externalContact.email}
+                    onChange={(e) => {
+                      setExternalContact((v) => ({ ...v, email: e.target.value }));
+                    }}
+                  />
+                </label>
               </div>
-              <button className="mt-3 rounded-lg border border-white/20 px-4 py-2 text-sm disabled:opacity-50" type="button" disabled={resubmittingLocation || !externalContact.managerName.trim() || !externalContact.phone.trim()} onClick={() => void resubmitLocation()}>{resubmittingLocation ? 'Submitting…' : 'Resubmit for review'}</button>
+              <button
+                className="mt-3 rounded-lg border border-white/20 px-4 py-2 text-sm disabled:opacity-50"
+                type="button"
+                disabled={
+                  resubmittingLocation ||
+                  !externalContact.managerName.trim() ||
+                  !externalContact.phone.trim()
+                }
+                onClick={() => void resubmitLocation()}
+              >
+                {resubmittingLocation ? 'Submitting…' : 'Resubmit for review'}
+              </button>
             </section>
           ) : null}
           {studio === 'host' ? (

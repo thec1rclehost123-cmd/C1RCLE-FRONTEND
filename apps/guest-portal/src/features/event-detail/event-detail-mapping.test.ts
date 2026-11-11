@@ -112,17 +112,20 @@ describe('toEventDetailFixture', () => {
   });
 
   it('maps a public external location without inventing a Venue profile', () => {
-    const mapped = toEventDetailFixture({
-      ...EVENT,
-      venueId: null,
-      venue: null,
-      externalLocation: {
-        name: 'Independent Hall',
-        address: '12 Example Road',
-        city: 'Pune',
-        mapUrl: 'https://maps.example.test/hall',
+    const mapped = toEventDetailFixture(
+      {
+        ...EVENT,
+        venueId: null,
+        venue: null,
+        externalLocation: {
+          name: 'Independent Hall',
+          address: '12 Example Road',
+          city: 'Pune',
+          mapUrl: 'https://maps.example.test/hall',
+        },
       },
-    }, TIERS);
+      TIERS,
+    );
     expect(mapped).toMatchObject({
       venue: 'Independent Hall',
       venueId: null,

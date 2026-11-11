@@ -121,7 +121,9 @@ export type AdminPage = z.infer<typeof adminPageSchema>;
 const adminAuditPageSchema = z.object({
   items: z.array(adminAuditRecordDtoSchema),
 });
-const externalVenueReviewQueueSchema = z.object({ items: z.array(externalVenueReviewQueueItemSchema) }).strict();
+const externalVenueReviewQueueSchema = z
+  .object({ items: z.array(externalVenueReviewQueueItemSchema) })
+  .strict();
 export type ExternalVenueReviewQueue = z.infer<typeof externalVenueReviewQueueSchema>;
 export type AdminAuditPage = z.infer<typeof adminAuditPageSchema>;
 export type AdminPromoterReferralLinkPage = z.infer<
@@ -134,7 +136,10 @@ export type RefundOutcome = z.infer<typeof refundOutcomeSchema>;
 const AUTHORIZED_ACTION: AdminAction = 'ADMIN_PROVISION';
 
 export function listExternalVenueRequests(): Promise<ExternalVenueReviewQueue> {
-  return getAdminApiClient().get({ path: '/api/v2/admin/external-venue-requests', schema: externalVenueReviewQueueSchema });
+  return getAdminApiClient().get({
+    path: '/api/v2/admin/external-venue-requests',
+    schema: externalVenueReviewQueueSchema,
+  });
 }
 
 export function decideExternalVenueRequest(

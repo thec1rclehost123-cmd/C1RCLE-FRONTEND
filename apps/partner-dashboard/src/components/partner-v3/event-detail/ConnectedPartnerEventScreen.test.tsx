@@ -160,7 +160,9 @@ describe('ConnectedPartnerEventScreen', () => {
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Submit approved event' }));
-    await waitFor(() => { expect(mocks.continueApprovedExternalEvent).toHaveBeenCalledOnce(); });
+    await waitFor(() => {
+      expect(mocks.continueApprovedExternalEvent).toHaveBeenCalledOnce();
+    });
     expect(mocks.continueApprovedExternalEvent).toHaveBeenCalledWith(
       'org_m3',
       event.id,

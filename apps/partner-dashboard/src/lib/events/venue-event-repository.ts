@@ -87,13 +87,17 @@ export async function publishVenueEvent(
               address: draft.externalVenue.address,
               ...(draft.externalVenue.city ? { city: draft.externalVenue.city } : {}),
               ...(draft.externalVenue.region ? { region: draft.externalVenue.region } : {}),
-              ...(draft.externalVenue.postalCode ? { postalCode: draft.externalVenue.postalCode } : {}),
+              ...(draft.externalVenue.postalCode
+                ? { postalCode: draft.externalVenue.postalCode }
+                : {}),
               ...(draft.externalVenue.country ? { country: draft.externalVenue.country } : {}),
               ...(draft.externalVenue.mapUrl ? { mapUrl: draft.externalVenue.mapUrl } : {}),
               contact: {
                 managerName: draft.externalVenue.managerName,
                 phone: draft.externalVenue.managerPhone,
-                ...(draft.externalVenue.managerEmail ? { email: draft.externalVenue.managerEmail } : {}),
+                ...(draft.externalVenue.managerEmail
+                  ? { email: draft.externalVenue.managerEmail }
+                  : {}),
               },
             },
           }

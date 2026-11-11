@@ -214,14 +214,20 @@ describe('ConnectedEventEditScreen', () => {
     );
     expect(await screen.findByDisplayValue('Private Manager')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Resubmit for review' }));
-    await waitFor(() => { expect(resubmitExternalVenue).toHaveBeenCalledOnce(); });
+    await waitFor(() => {
+      expect(resubmitExternalVenue).toHaveBeenCalledOnce();
+    });
     expect(resubmitExternalVenue).toHaveBeenCalledWith(
       event.organizationId,
       event.id,
       expect.objectContaining({
         name: 'Independent Hall',
         address: '12 Example Road',
-        contact: { managerName: 'Private Manager', phone: '+91 98765 43210', email: 'private@example.test' },
+        contact: {
+          managerName: 'Private Manager',
+          phone: '+91 98765 43210',
+          email: 'private@example.test',
+        },
       }),
     );
   });

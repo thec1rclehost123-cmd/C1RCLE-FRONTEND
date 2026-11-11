@@ -96,9 +96,18 @@ export type {
   PromoterAssignmentCandidateDto,
   AssignPromoterRequest,
 } from './contracts/event.js';
-export { eventDraftRequestSchema, eventDraftDtoSchema, eventDraftResponseSchema } from './contracts/event-draft.js';
+export {
+  eventDraftRequestSchema,
+  eventDraftDtoSchema,
+  eventDraftResponseSchema,
+} from './contracts/event-draft.js';
 export type { EventDraftRequest, EventDraftDto } from './contracts/event-draft.js';
-export { externalEventLocationInputSchema, externalVenueContactSchema, externalVenueReviewDecisionSchema, externalVenueReviewQueueItemSchema } from './contracts/event.js';
+export {
+  externalEventLocationInputSchema,
+  externalVenueContactSchema,
+  externalVenueReviewDecisionSchema,
+  externalVenueReviewQueueItemSchema,
+} from './contracts/event.js';
 export type { ExternalEventLocationInput, ExternalVenueContact } from './contracts/event.js';
 
 export {
@@ -245,6 +254,7 @@ export type {
   DocumentUploadUrlDto,
   DocumentReadUrlDto,
   VerifyDocumentRequest,
+  VerifyPhoneRequest,
   VerificationResultDto,
   ReviewOnboardingRequest,
   RejectKycDocumentRequest,
@@ -276,6 +286,7 @@ export {
   documentUploadUrlDtoSchema,
   documentReadUrlDtoSchema,
   verifyDocumentSchema,
+  verifyPhoneSchema,
   verificationResultDtoSchema,
   reviewOnboardingSchema,
   rejectKycDocumentSchema,
