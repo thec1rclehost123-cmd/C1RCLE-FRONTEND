@@ -111,7 +111,7 @@ describe('Home Page', () => {
     ).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Explore House Parties events' })).toHaveAttribute(
       'href',
-      '/explore?category=House%20Parties',
+      '/explore?category=House',
     );
     expect(
       screen
