@@ -19,7 +19,7 @@ describe('unfinished Partner prototypes', () => {
       );
     },
   );
-  it('keeps external Venue approval off until the server workflow exists', () => {
-    expect(partnerPreviewFeatures.externalVenueApproval).toBe(false);
+  it('exposes the completed external Venue review workflow', () => {
+    expect(partnerPreviewFeatures.externalVenueApproval).toBe(true);
   });
 });

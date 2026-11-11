@@ -749,7 +749,7 @@ function VenueStep({
             }}
           >
             <option value="">Select a venue</option>
-            {partnerPreviewFeatures.externalVenueApproval ? (
+            {data.role === 'host' && partnerPreviewFeatures.externalVenueApproval ? (
               <option value="external">Venue not on C1RCLE</option>
             ) : null}
             {data.venues.map((venue) => (

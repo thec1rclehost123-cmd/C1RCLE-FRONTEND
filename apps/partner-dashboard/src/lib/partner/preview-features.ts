@@ -1,8 +1,8 @@
-/** Unfinished prototypes stay unavailable in deployed dashboards. */
+/** Fixture routes stay unavailable; completed product workflows remain enabled. */
 export const partnerPreviewFeatures: Readonly<{
   studioDoor: boolean;
   externalVenueApproval: boolean;
 }> = {
   studioDoor: false,
-  externalVenueApproval: false,
+  externalVenueApproval: true,
 };
