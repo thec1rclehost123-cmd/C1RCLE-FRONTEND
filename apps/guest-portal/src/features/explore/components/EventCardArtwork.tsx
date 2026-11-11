@@ -20,7 +20,13 @@ export function EventCardArtwork({
 }) {
   const [failedSource, setFailedSource] = useState<string | null>(null);
   if (src === '/c1rcle-logo.webp' || failedSource === src) {
-    return <EventArtworkFallback startsAt={startsAt} category={category} detailsOverlay={detailsOverlay} />;
+    return (
+      <EventArtworkFallback
+        startsAt={startsAt}
+        category={category}
+        detailsOverlay={detailsOverlay}
+      />
+    );
   }
   return (
     <Image

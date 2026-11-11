@@ -7,12 +7,12 @@
  *
  * Phone OTP: Firebase Identity Platform is bypassed by mocking
  * identitytoolkit.googleapis.com at the network level. We return a synthetic
- * verificationId so the SDK constructs a ConfirmationResult, then mock
- * /api/v2/onboarding/verify-document to approve the resulting ID token.
+ * verificationId so the SDK constructs a ConfirmationResult. The resulting ID
+ * token is then posted through the same-origin /api/auth/phone-verification BFF.
  *
  * Playwright config (playwright.config.ts):
  *   - baseURL: http://127.0.0.1:3211
- *   - webServer: pnpm exec next start --port 3211
+ *   - webServer: standalone Next server with local static assets copied beside it
  *   - retries: 2 in CI
  *
  * Application lifecycle requests must remain same-origin through the BFF.
@@ -209,6 +209,19 @@ async function mockOnboardingNetwork(
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({ message: 'Verified.' }),
+    });
+  });
+
+  await page.route('**/api/auth/phone-verification', async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        passed: true,
+        provider: 'firebase-phone',
+        reason: null,
+        referenceId: null,
+      }),
     });
   });
 
@@ -554,8 +567,8 @@ test.describe('Onboarding wizard — /onboard', () => {
 
 // ── URL contract assertions ──────────────────────────────────────────────────
 // These tests verify which HTTP path each wizard step calls. They serve as a
-// regression net: start/saveProgress/submit must go through the same-origin BFF
-// (only verify-document may call the gateway directly).
+// regression net: onboarding and both verification paths must go through the
+// same-origin BFF.
 // Specific routes are registered AFTER mockOnboardingNetwork: Playwright gives
 // the most recently registered matching route priority.
 
@@ -626,38 +639,32 @@ test.describe('Onboarding wizard — URL contract', () => {
     expect(startHits.filter((h) => h.startsWith('GATEWAY:'))).toHaveLength(0);
   });
 
-  test('phone verification posts the Firebase ID token to /api/v2/onboarding/verify-document', async ({
+  test('phone verification posts the Firebase ID token through the session-scoped BFF', async ({
     page,
   }) => {
     await mockOnboardingNetwork(page);
-    const directGatewayHits: string[] = [];
     const bffHits: string[] = [];
     let proofToken: unknown;
 
-    await page.route('**/api/v2/onboarding/verify-document', async (route) => {
-      directGatewayHits.push(new URL(route.request().url()).pathname);
-      proofToken = (route.request().postDataJSON() as { proofToken?: unknown }).proofToken;
+    await page.route('**/api/auth/phone-verification', async (route) => {
+      bffHits.push(new URL(route.request().url()).pathname);
+      proofToken = (route.request().postDataJSON() as { idToken?: unknown }).idToken;
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ passed: true, provider: 'format', reason: null, referenceId: null }),
-      });
-    });
-    await page.route('**/api/bff/onboarding/verify-document', async (route) => {
-      bffHits.push(new URL(route.request().url()).pathname);
-      await route.fulfill({
-        status: 404,
-        contentType: 'application/json',
-        body: JSON.stringify({ code: 'not_found', status: 404 }),
+        body: JSON.stringify({
+          passed: true,
+          provider: 'firebase-phone',
+          reason: null,
+          referenceId: null,
+        }),
       });
     });
 
     await reachEntityStep(page);
     await expect(page.getByRole('heading', { name: /Individual or Business/i })).toBeVisible();
 
-    // verify-document must go direct to gateway (no BFF wrapper exists — by design)
-    expect(directGatewayHits).toContain('/api/v2/onboarding/verify-document');
+    expect(bffHits).toContain('/api/auth/phone-verification');
     expect(typeof proofToken).toBe('string');
-    expect(bffHits).toHaveLength(0);
   });
 });

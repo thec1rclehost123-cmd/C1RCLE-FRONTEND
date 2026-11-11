@@ -14,9 +14,16 @@ export function HomeFeaturedEvents({
   if (events.length === 0) return null;
 
   return (
-    <section id="featured-events" aria-labelledby="featured-events-heading" className={styles['section']}>
+    <section
+      id="featured-events"
+      aria-labelledby="featured-events-heading"
+      className={styles['section']}
+    >
       <div className={styles['header']}>
-        <p className={styles['eyebrow']}><span aria-hidden="true" />{content.eyebrow}</p>
+        <p className={styles['eyebrow']}>
+          <span aria-hidden="true" />
+          {content.eyebrow}
+        </p>
         <h2 id="featured-events-heading" className={styles['heading']}>
           {content.title} <span>{content.highlightedWord}</span>
         </h2>

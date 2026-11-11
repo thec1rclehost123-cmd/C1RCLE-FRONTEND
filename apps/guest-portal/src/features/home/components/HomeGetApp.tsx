@@ -4,8 +4,15 @@ import Link from 'next/link';
 import styles from './HomeGetApp.module.css';
 
 const posters = [
-  'afterhours', 'house-of-afro', 'midnight-club', 'aqua-sundays', 'red-room',
-  'eclipse', 'velvet-nights', 'no-signal', 'neon-district',
+  'afterhours',
+  'house-of-afro',
+  'midnight-club',
+  'aqua-sundays',
+  'red-room',
+  'eclipse',
+  'velvet-nights',
+  'no-signal',
+  'neon-district',
 ];
 const posterCount = 100;
 
@@ -29,9 +36,15 @@ export function HomeGetApp() {
       </div>
       <div className={styles['content']}>
         <h2 id="home-get-app-heading" className={styles['heading']}>
-          <Link href="/app" className={styles['button']}>Get the app</Link>
+          <Link href="/app" className={styles['button']}>
+            Get the app
+          </Link>
         </h2>
-        <p className={styles['caption']}>Your next great night<br />starts with THE C1RCLE.</p>
+        <p className={styles['caption']}>
+          Your next great night
+          <br />
+          starts with THE C1RCLE.
+        </p>
       </div>
     </section>
   );

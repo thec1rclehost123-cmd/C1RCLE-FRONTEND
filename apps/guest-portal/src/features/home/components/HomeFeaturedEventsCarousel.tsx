@@ -10,7 +10,10 @@ import styles from './HomeFeaturedEvents.module.css';
 import type { ExploreEvent } from '@/features/explore/types/explore.types';
 
 const dateFormatter = new Intl.DateTimeFormat('en-IN', {
-  day: 'numeric', month: 'short', weekday: 'short', timeZone: 'Asia/Kolkata',
+  day: 'numeric',
+  month: 'short',
+  weekday: 'short',
+  timeZone: 'Asia/Kolkata',
 });
 
 export function HomeFeaturedEventsCarousel({ events }: { events: readonly ExploreEvent[] }) {
@@ -24,6 +27,18 @@ export function HomeFeaturedEventsCarousel({ events }: { events: readonly Explor
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage || !canAnimate) return;
+    if (typeof window.matchMedia !== 'function') {
+      delete stage.dataset['animated'];
+      stage.style.removeProperty('height');
+      cardRefs.current.forEach((card) => {
+        if (!card) return;
+        card.removeAttribute('style');
+        const duplicate = card.dataset['duplicate'] === 'true';
+        card.inert = duplicate;
+        card.setAttribute('aria-hidden', String(duplicate));
+      });
+      return;
+    }
     const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let visible = false;
     let interacting = false;
@@ -37,9 +52,14 @@ export function HomeFeaturedEventsCarousel({ events }: { events: readonly Explor
       const cardHeight = Math.round(cardWidth * 1.42);
       const radius = Math.max(width * (mobile ? 0.54 : 0.48), cardWidth * (mobile ? 1.7 : 1.95));
       const stageHeight = Math.round(cardHeight * (mobile ? 1.48 : 1.6));
-      const requiredCopies = Math.max(3, Math.ceil((Math.ceil((width + 2 * cardWidth) / cardWidth) + 2 * events.length) / events.length));
+      const requiredCopies = Math.max(
+        3,
+        Math.ceil(
+          (Math.ceil((width + 2 * cardWidth) / cardWidth) + 2 * events.length) / events.length,
+        ),
+      );
       if (requiredCopies !== copyCount) setCopyCount(requiredCopies);
-      const centerIndex = Math.floor(events.length * copyCount / 2);
+      const centerIndex = Math.floor((events.length * copyCount) / 2);
       const maxAngle = Math.PI * 0.58;
       stage.style.height = `${String(stageHeight)}px`;
       // Progress is measured in card widths, preserving position across resize.
@@ -48,7 +68,9 @@ export function HomeFeaturedEventsCarousel({ events }: { events: readonly Explor
         const rawAngle = ((index - centerIndex - progressRef.current) * cardWidth) / radius;
         const angle = Math.max(-maxAngle, Math.min(maxAngle, rawAngle));
         const prominence = Math.max(0, Math.min(1, 1 - Math.abs(angle) / (maxAngle * 0.96)));
-        const hidden = Math.abs(rawAngle) > maxAngle || Math.abs(index - centerIndex - progressRef.current) > events.length / 2;
+        const hidden =
+          Math.abs(rawAngle) > maxAngle ||
+          Math.abs(index - centerIndex - progressRef.current) > events.length / 2;
         card.inert = hidden;
         card.setAttribute('aria-hidden', String(hidden));
         card.style.width = `${String(cardWidth)}px`;
@@ -60,7 +82,7 @@ export function HomeFeaturedEventsCarousel({ events }: { events: readonly Explor
         card.style.zIndex = String(Math.round(120 + prominence * 180));
         card.style.boxShadow = `0 30px 80px rgba(0, 0, 0, ${String(0.1 + prominence * 0.24)})`;
         card.style.setProperty('--poster-scale', String(1.08 - prominence * 0.06));
-        card.style.transform = `translateX(${String(Math.sin(angle) * radius)}px) translateY(${String((1 - Math.cos(angle)) * cardHeight * 0.32)}px) translateZ(${String((Math.cos(angle) - 1) * radius * 1.25)}px) rotateY(${String(-angle * 180 / Math.PI)}deg) rotateZ(${String(Math.max(-4.5, Math.min(4.5, angle * 180 / Math.PI * 0.08)))}deg)`;
+        card.style.transform = `translateX(${String(Math.sin(angle) * radius)}px) translateY(${String((1 - Math.cos(angle)) * cardHeight * 0.32)}px) translateZ(${String((Math.cos(angle) - 1) * radius * 1.25)}px) rotateY(${String((-angle * 180) / Math.PI)}deg) rotateZ(${String(Math.max(-4.5, Math.min(4.5, ((angle * 180) / Math.PI) * 0.08)))}deg)`;
       });
     };
 
@@ -74,7 +96,8 @@ export function HomeFeaturedEventsCarousel({ events }: { events: readonly Explor
         // Match the deployed carousel's constant 42 CSS pixels per second.
         const width = stage.clientWidth;
         const cardWidth = Math.min(Math.max(width * (width < 768 ? 0.44 : 0.24), 130), 330);
-        progressRef.current = (progressRef.current + (time - previousTime) * 42 / 1000 / cardWidth) % events.length;
+        progressRef.current =
+          (progressRef.current + ((time - previousTime) * 42) / 1000 / cardWidth) % events.length;
       }
       previousTime = time;
       positionCards();
@@ -85,7 +108,7 @@ export function HomeFeaturedEventsCarousel({ events }: { events: readonly Explor
       if (motion.matches) {
         delete stage.dataset['animated'];
         stage.style.removeProperty('height');
-        cardRefs.current.forEach(card => {
+        cardRefs.current.forEach((card) => {
           if (!card) return;
           card.removeAttribute('style');
           const duplicate = card.dataset['duplicate'] === 'true';
@@ -98,8 +121,14 @@ export function HomeFeaturedEventsCarousel({ events }: { events: readonly Explor
       positionCards();
       if (visible && !interacting && !document.hidden) frame = requestAnimationFrame(tick);
     };
-    const enter = () => { interacting = true; sync(); };
-    const leave = () => { interacting = stage.matches(':focus-within'); sync(); };
+    const enter = () => {
+      interacting = true;
+      sync();
+    };
+    const leave = () => {
+      interacting = stage.matches(':focus-within');
+      sync();
+    };
     const focusOut = (event: FocusEvent) => {
       if (event.relatedTarget instanceof Node && stage.contains(event.relatedTarget)) return;
       interacting = stage.matches(':hover');
@@ -136,26 +165,46 @@ export function HomeFeaturedEventsCarousel({ events }: { events: readonly Explor
 
   return (
     <>
-      <div ref={stageRef} className={styles['stage']} role="region" aria-label="Featured events carousel">
-        {copies.flatMap(copy => events.map((event, index) => (
-          <Link
-            key={`${String(copy)}-${event.id}`}
-            data-duplicate={canAnimate && copy !== Math.floor(copyCount / 2)}
-            ref={node => { cardRefs.current[(canAnimate ? copy * events.length : 0) + index] = node; }}
-            href={`/event/${event.slug}`}
-            className={styles['card']}
-            aria-label={`View ${event.title}. ${dateFormatter.format(new Date(event.startsAt))}. ${event.venue}, ${event.city}.`}
-          >
-            <EventCardArtwork src={event.image} title={event.title} startsAt={event.startsAt} category={event.category} detailsOverlay />
-            <div className={styles['shade']} aria-hidden="true" />
-            <span className={styles['date']}>{dateFormatter.format(new Date(event.startsAt))}</span>
-            <div className={styles['details']}>
-              <p className={styles['venue']}>{event.venue || event.city}</p>
-              <h3>{event.title}</h3>
-              <div className={styles['cardFooter']}><span>Featured event</span><span>Enter ↗</span></div>
-            </div>
-          </Link>
-        )))}
+      <div
+        ref={stageRef}
+        className={styles['stage']}
+        role="region"
+        aria-label="Featured events carousel"
+      >
+        {copies.flatMap((copy) =>
+          events.map((event, index) => (
+            <Link
+              key={`${String(copy)}-${event.id}`}
+              data-duplicate={canAnimate && copy !== Math.floor(copyCount / 2)}
+              ref={(node) => {
+                cardRefs.current[(canAnimate ? copy * events.length : 0) + index] = node;
+              }}
+              href={`/event/${event.slug}`}
+              className={styles['card']}
+              aria-label={`View ${event.title}. ${dateFormatter.format(new Date(event.startsAt))}. ${event.venue}, ${event.city}.`}
+            >
+              <EventCardArtwork
+                src={event.image}
+                title={event.title}
+                startsAt={event.startsAt}
+                category={event.category}
+                detailsOverlay
+              />
+              <div className={styles['shade']} aria-hidden="true" />
+              <span className={styles['date']}>
+                {dateFormatter.format(new Date(event.startsAt))}
+              </span>
+              <div className={styles['details']}>
+                <p className={styles['venue']}>{event.venue || event.city}</p>
+                <h3>{event.title}</h3>
+                <div className={styles['cardFooter']}>
+                  <span>Featured event</span>
+                  <span>Enter ↗</span>
+                </div>
+              </div>
+            </Link>
+          )),
+        )}
       </div>
     </>
   );

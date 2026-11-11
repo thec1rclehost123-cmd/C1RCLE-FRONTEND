@@ -55,6 +55,7 @@ import {
   submit as submitOnboardingApplication,
   uploadDocument,
   verifyDocument,
+  verifyPhone,
 } from '@/lib/onboarding/onboarding-repository';
 import { sendOtp, verifyOtp } from '@/lib/onboarding/otp';
 import {
@@ -829,11 +830,7 @@ export function OnboardingPage() {
       // it returns still has to be checked server-side against the applicant's
       // own entered number via the real onboarding verification endpoint.
       const idToken = await confirmPhoneOtp(phoneConfirmation, otpPhoneCode);
-      const result = await verifyDocument({
-        documentType: 'phone',
-        documentNumber: dialablePhone,
-        proofToken: idToken,
-      });
+      const result = await verifyPhone({ phoneNumber: dialablePhone, idToken });
       if (!result.passed) {
         throw new Error(result.reason ?? 'Phone verification failed.');
       }
