@@ -75,7 +75,7 @@ export function HostPartnersScreen({
       baseHref="/partner/host/partners"
       primarySegment="venues"
       primaryLabel="Venues"
-      primarySubLabel="My Venues"
+      primarySubLabel={segment === 'promoters' ? 'My Promoters' : 'My Venues'}
       segment={segment}
       subView={subView}
       search={search}
