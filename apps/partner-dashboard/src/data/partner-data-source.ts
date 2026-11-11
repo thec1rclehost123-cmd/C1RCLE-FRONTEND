@@ -972,6 +972,7 @@ export interface SlotRequestEvent {
 export interface SlotRequest {
   readonly id: string;
   readonly eventId?: string | undefined;
+  readonly hasEventDraft?: boolean | undefined;
   readonly linkedEventStatus?: string | undefined;
   readonly status: SlotRequestStatus;
   readonly direction: SlotRequestDirection;

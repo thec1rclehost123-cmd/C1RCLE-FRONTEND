@@ -11,6 +11,7 @@ import {
   promoterAgreementStatusDtoSchema,
   startOnboardingSchema,
   verificationResultDtoSchema,
+  verifyPhoneSchema,
 } from '@c1rcle/contracts/client';
 
 import { apiClient } from '@/lib/api/client';
@@ -184,6 +185,18 @@ export async function verifyDocument(input: VerifyDocumentRequest): Promise<Veri
     path: '/api/v2/onboarding/verify-document',
     body: input,
     schema: verificationResultDtoSchema,
+  });
+}
+
+export async function verifyPhone(input: {
+  phoneNumber: string;
+  idToken: string;
+}): Promise<VerificationResultDto> {
+  return bffClient.post({
+    path: '/api/auth/phone-verification',
+    body: verifyPhoneSchema.parse(input),
+    schema: verificationResultDtoSchema,
+    headers: csrfHeaders(),
   });
 }
 

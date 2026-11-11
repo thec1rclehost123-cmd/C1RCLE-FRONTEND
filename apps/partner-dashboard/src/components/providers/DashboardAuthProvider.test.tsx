@@ -9,7 +9,7 @@ interface FakeSession {
   isAuthenticated: boolean;
   isLoading: boolean;
   isHydrated: boolean;
-  user: { id: string; email: string; displayName: string } | null;
+  user: { id: string; email: string; displayName: string; emailVerified?: boolean } | null;
 }
 
 const mockUseSession = vi.fn<() => FakeSession>();
@@ -168,7 +168,7 @@ describe('DashboardAuthProvider', () => {
       isAuthenticated: true,
       isLoading: false,
       isHydrated: true,
-      user: { id: 'usr_1', email: 'a@b.com', displayName: 'A' },
+      user: { id: 'usr_1', email: 'a@b.com', displayName: 'A', emailVerified: true },
     });
     mockGetOrganizations.mockResolvedValue([
       {
@@ -227,12 +227,32 @@ describe('DashboardAuthProvider', () => {
     expect(mockSetActiveOrg).toHaveBeenCalledWith('org_1');
   });
 
+  it('does not read onboarding data until the server reports a verified email', async () => {
+    mockUseSession.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      isHydrated: true,
+      user: { id: 'usr_pending', email: 'pending@example.invalid', displayName: 'Pending' },
+    });
+    mockGetOrganizations.mockResolvedValue([]);
+
+    render(
+      <DashboardAuthProvider>
+        <Probe />
+      </DashboardAuthProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    expect(mockGetOrganizations).toHaveBeenCalledOnce();
+    expect(mockGetMyOnboardingRequest).not.toHaveBeenCalled();
+  });
+
   it('waits for token hydration before starting protected account reads', async () => {
     mockUseSession.mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
       isHydrated: false,
-      user: { id: 'usr_1', email: 'a@b.com', displayName: 'A' },
+      user: { id: 'usr_1', email: 'a@b.com', displayName: 'A', emailVerified: true },
     });
     mockGetOrganizations.mockResolvedValue([]);
     mockGetMyOnboardingRequest.mockResolvedValue(null);
@@ -251,7 +271,7 @@ describe('DashboardAuthProvider', () => {
       isAuthenticated: true,
       isLoading: false,
       isHydrated: true,
-      user: { id: 'usr_1', email: 'a@b.com', displayName: 'A' },
+      user: { id: 'usr_1', email: 'a@b.com', displayName: 'A', emailVerified: true },
     });
     rerender(
       <DashboardAuthProvider>

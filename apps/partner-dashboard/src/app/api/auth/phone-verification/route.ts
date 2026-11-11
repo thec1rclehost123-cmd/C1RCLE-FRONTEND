@@ -14,14 +14,13 @@ import type { NextRequest } from 'next/server';
 
 /**
  * Proxies `{ phoneNumber, idToken }` to the V2 gateway's
- * `POST /api/v2/onboarding/verify-document` (`documentType: 'phone'`,
- * `documentNumber: phoneNumber`, `proofToken: idToken` — the ID token from
+ * `POST /api/v2/onboarding/verify-phone` (`phoneNumber`, `idToken` — the ID token from
  * the client's Firebase JS SDK `signInWithPhoneNumber` flow, GCP Identity
  * Platform-backed; see `C1RCLE-BACKEND`'s `firebase-phone-verifier.ts`).
  *
  * **Session-scoped, like `otp/send`/`otp/verify`.** This route requires an
  * existing account (it forwards the session cookie and checks CSRF, same as
- * `refresh`) — the gateway's `verify-document` route resolves the applicant
+ * `refresh`) — the gateway's `verify-phone` route resolves the applicant
  * from the session, it does not accept an anonymous caller. If the signup
  * wizard's step order calls this *before* the account-creation step (the
  * `codex` UI's current step sequence has `phone_verify` ahead of `details`,
@@ -57,9 +56,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
   const { phoneNumber, idToken } = parsedBody as { phoneNumber: string; idToken: string };
 
-  const gatewayResponse = await forwardToGateway('/api/v2/onboarding/verify-document', {
+  const gatewayResponse = await forwardToGateway('/api/v2/onboarding/verify-phone', {
     method: 'POST',
-    body: { documentType: 'phone', documentNumber: phoneNumber, proofToken: idToken },
+    body: { phoneNumber, idToken },
     cookie: req.headers.get('cookie'),
   });
   const bodyText = await gatewayResponse.text();

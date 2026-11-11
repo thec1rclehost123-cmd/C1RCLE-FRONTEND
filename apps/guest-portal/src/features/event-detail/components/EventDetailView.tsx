@@ -471,7 +471,7 @@ export function EventDetailView({
                 onClick={closeCheckout}
                 className="absolute inset-0 z-0 cursor-default bg-black/45 backdrop-blur-[4px]"
               />
-              <div className="relative z-10 h-[calc(100dvh-1rem)] w-full overflow-hidden rounded-[1.35rem] border border-white/15 bg-[linear-gradient(135deg,rgba(255,255,255,.16),rgba(255,255,255,.035)_38%,rgba(20,14,13,.88)_100%)] shadow-[0_30px_110px_rgba(0,0,0,.72),inset_0_1px_0_rgba(255,255,255,.2)] backdrop-blur-2xl sm:h-auto sm:max-h-[min(90dvh,760px)] sm:max-w-[1120px] sm:rounded-[1.6rem]">
+              <div className="relative z-10 h-[calc(100dvh-1rem)] w-full overflow-hidden rounded-[1.35rem] border border-white/15 bg-[#0b0b0b] shadow-2xl sm:h-auto sm:max-h-[min(90dvh,760px)] sm:max-w-[1120px] sm:rounded-[1.6rem]">
                 <div className="relative z-10 h-full overflow-hidden">
                   <CheckoutView
                     event={checkoutEvent}

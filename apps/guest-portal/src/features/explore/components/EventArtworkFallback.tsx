@@ -18,10 +18,12 @@ export function EventArtworkFallback({
   startsAt,
   category,
   hero = false,
+  detailsOverlay = false,
 }: {
   startsAt: string;
   category: string;
   hero?: boolean;
+  detailsOverlay?: boolean;
 }) {
   const date = new Date(startsAt);
 
@@ -53,18 +55,26 @@ export function EventArtworkFallback({
       <div className="absolute inset-0 bg-gradient-to-br from-black/20 via-[#140b08]/25 to-black/75" />
       <div className="absolute -right-[35%] top-[10%] aspect-square w-[105%] rounded-full border border-[#ff6b4a]/30 shadow-[inset_0_0_65px_rgba(255,90,43,0.12),0_0_65px_rgba(255,90,43,0.1)]" />
       <div className="absolute inset-0 flex flex-col justify-between p-4 sm:p-5">
-        <span className="text-[9px] font-black uppercase tracking-[0.25em] text-white/75">
+        <span
+          className={`${detailsOverlay ? 'invisible' : ''} text-[9px] font-black uppercase tracking-[0.25em] text-white/75`}
+        >
           THE C1RCLE
         </span>
-        <div>
-          <span className="block text-[clamp(5rem,12vw,9rem)] font-black leading-none tracking-[-0.09em] text-white/90">
+        <div className={detailsOverlay ? 'absolute inset-x-4 top-[20%] sm:inset-x-5' : undefined}>
+          <span
+            className={`block ${detailsOverlay ? 'text-[clamp(2.5rem,7vw,7rem)]' : 'text-[clamp(5rem,12vw,9rem)]'} font-black leading-none tracking-[-0.09em] text-white/90`}
+          >
             {dayFormatter.format(date)}
           </span>
-          <span className="block text-xs font-bold uppercase tracking-[0.2em] text-[#ff9c7c]">
+          <span
+            className={`${detailsOverlay ? 'hidden' : 'block'} text-xs font-bold uppercase tracking-[0.2em] text-[#ff9c7c]`}
+          >
             {monthFormatter.format(date)} {yearFormatter.format(date)} · {category}
           </span>
         </div>
-        <span className="text-[8px] font-semibold uppercase tracking-[0.22em] text-white/55">
+        <span
+          className={`${detailsOverlay ? 'invisible' : ''} text-[8px] font-semibold uppercase tracking-[0.22em] text-white/55`}
+        >
           Event artwork unavailable
         </span>
       </div>

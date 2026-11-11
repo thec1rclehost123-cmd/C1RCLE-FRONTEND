@@ -7,7 +7,7 @@ export function HomeHero({ hero }: { hero: HomeHeroContent }) {
     <section
       id="tonight"
       aria-labelledby="home-hero-heading"
-      className="relative isolate flex h-[102svh] min-h-[520px] items-center justify-center overflow-hidden px-4 pt-16 text-center md:h-[112svh] md:pt-24"
+      className="relative isolate flex min-h-[min(760px,90svh)] items-center justify-center overflow-hidden px-4 pt-16 text-center pb-24 md:pt-24"
     >
       <div
         aria-hidden="true"
@@ -29,8 +29,6 @@ export function HomeHero({ hero }: { hero: HomeHeroContent }) {
         <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/25 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-transparent to-black/40" />
         <div className="nightlife-grain absolute inset-0 opacity-10 mix-blend-overlay" />
-        <div className="absolute left-1/4 top-1/4 size-64 rounded-full bg-[#f44a22]/15 blur-[100px] md:size-96 md:blur-[120px]" />
-        <div className="absolute bottom-1/4 right-1/4 size-64 rounded-full bg-[#9b3cff]/10 blur-[100px] md:size-96 md:blur-[120px]" />
         <div className="absolute inset-x-0 bottom-0 h-[38vh] bg-gradient-to-t from-black/10 via-black/20 to-transparent md:h-[44vh]" />
       </div>
 
@@ -41,14 +39,14 @@ export function HomeHero({ hero }: { hero: HomeHeroContent }) {
         >
           {hero.title}
         </h1>
-        <div className="animate-home-line-reveal mx-auto h-1 w-24 bg-gradient-to-r from-transparent via-[#f44a22] to-transparent shadow-[0_0_20px_rgba(244,74,34,0.8)] md:w-36" />
+        <div className="mx-auto h-px w-16 bg-white/30" />
         <p className="animate-home-fade-in mx-auto max-w-[320px] px-2 text-sm font-medium leading-relaxed text-white/75 md:max-w-2xl md:text-base">
           {hero.description}
         </p>
         <div className="animate-home-fade-up flex flex-col items-center justify-center gap-4 pt-3 sm:flex-row">
           <Link
             href={hero.ctaHref}
-            className="group relative w-full overflow-hidden rounded-full bg-white px-8 py-4 text-center text-xs font-black uppercase tracking-[0.2em] text-black transition-all duration-300 hover:scale-105 hover:shadow-[0_0_40px_rgba(255,255,255,0.45)] sm:w-auto md:px-10 md:py-5 md:text-sm motion-reduce:transition-none"
+            className="group relative w-full overflow-hidden rounded-full bg-white px-8 py-4 text-center text-xs font-black uppercase tracking-[0.2em] text-black transition-all duration-300 hover:bg-white/90 sm:w-auto md:px-10 md:py-5 md:text-sm motion-reduce:transition-none"
           >
             <span className="relative z-10">{hero.ctaLabel}</span>
           </Link>

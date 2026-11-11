@@ -7,6 +7,7 @@ import {
   venueAvailabilityDtoSchema,
   venueDtoSchema,
   type EventDto,
+  type SlotRequestEventDraft,
   type VenueAvailabilityDto,
   type VenueDto,
 } from '@c1rcle/contracts';
@@ -266,6 +267,7 @@ export async function requestHostAvailabilitySlot({
   eventId,
   startTime,
   endTime,
+  eventDraft,
 }: {
   readonly organizationId: string;
   readonly venueId: string;
@@ -274,12 +276,14 @@ export async function requestHostAvailabilitySlot({
   readonly eventId?: string;
   readonly startTime?: string;
   readonly endTime?: string;
+  readonly eventDraft?: SlotRequestEventDraft;
 }) {
   return apiClient.post({
     path: `/api/v2/venues/${encodeURIComponent(venueId)}/slot-requests`,
     body: {
       ...(slotId.startsWith('free-') ? { startTime, endTime } : { slotId }),
       ...(eventId ? { eventId } : {}),
+      ...(eventDraft ? { eventDraft } : {}),
       message: eventId
         ? `Requesting a new Venue slot for event ${eventId}.`
         : 'Requesting the selected Venue time.',

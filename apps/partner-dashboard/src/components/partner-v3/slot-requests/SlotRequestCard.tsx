@@ -27,6 +27,11 @@ export function SlotRequestCard({
 }: SlotRequestCardProps) {
   const isIncoming = request.direction === 'incoming';
   const canDecide = isIncoming && request.status === 'pending';
+  const canRetryPublish =
+    isIncoming &&
+    request.status === 'approved' &&
+    request.hasEventDraft === true &&
+    request.linkedEventStatus !== 'published';
   const isLinkedEventLive =
     request.linkedEventStatus === 'published' ||
     request.linkedEventStatus === 'sales_paused' ||
@@ -89,7 +94,7 @@ export function SlotRequestCard({
           <p className={styles['requestNote']}>{request.event.note}</p>
         </div>
       </button>
-      {canDecide || canCancel ? (
+      {canDecide || canRetryPublish || canCancel ? (
         <div className={styles['requestCardActions']}>
           {canDecide ? (
             <>
@@ -110,6 +115,16 @@ export function SlotRequestCard({
                 Accept
               </Button>
             </>
+          ) : null}
+          {canRetryPublish ? (
+            <Button
+              type="button"
+              variant="primary"
+              disabled={busy}
+              onClick={() => onAction?.(request.id, 'accept')}
+            >
+              Retry publish
+            </Button>
           ) : null}
           {canCancel ? (
             <Button

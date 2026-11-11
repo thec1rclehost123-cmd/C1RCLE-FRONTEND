@@ -31,6 +31,125 @@ import type {
 
 export { eventEndAtFromDraft, eventStartAtFromDraft } from '@/lib/events/event-time';
 
+/** Builds the validated snapshot the Venue sees and the server publishes on approval. */
+export async function buildSlotRequestEventDraft(
+  organizationId: string,
+  draft: EventEditorDraft,
+  startAt: string,
+  endAt: string,
+) {
+  const mediaErrors = validateEventMedia(draft);
+  if (mediaErrors.length) throw new Error(mediaErrors.join(' '));
+  const promoRequests = promoRequestsFromDraft(draft);
+  const imageUrl = await resolvePosterImageUrl(organizationId, draft);
+  const media = await resolveEventMedia(organizationId, draft);
+  const paidTierIds = new Set(
+    draft.ticketTiers.filter((tier) => tier.accessType !== 'RSVP').map((tier) => tier.id),
+  );
+  const hasPaidTiers = paidTierIds.size > 0;
+  return {
+    event: createEventSchema.parse({
+      venueId: draft.venueId,
+      title: draft.name.trim(),
+      summary: draft.description.trim().slice(0, 1000),
+      description: draft.description.trim(),
+      imageUrl,
+      ...(media ? { media } : {}),
+      startAt,
+      endAt,
+      visibilityMode: draft.visibilityMode ?? 'public',
+      addressDisclosure:
+        draft.addressDisclosure ??
+        (draft.visibilityMode === 'code' || draft.visibilityMode === 'invited'
+          ? 'hidden'
+          : 'public'),
+      tags: [...new Set([...draft.genres, ...draft.artists])].slice(0, 50),
+      compensation:
+        hasPaidTiers && draft.selectedPromoterIds.length
+          ? {
+              model: draft.compensation,
+              globalRatePercent:
+                draft.compensation === 'standard' ? Math.round(draft.commissionRate) : null,
+              tierRates:
+                draft.compensation === 'custom'
+                  ? Object.fromEntries(
+                      Object.entries(draft.tierCommissions ?? {}).filter(([id]) =>
+                        paidTierIds.has(id),
+                      ),
+                    )
+                  : {},
+              salaryAmountPaise:
+                draft.compensation === 'salary'
+                  ? Math.round((draft.salaryAmount ?? 0) * 100)
+                  : null,
+              salaryPeriod: draft.compensation === 'salary' ? draft.salaryPeriod : null,
+              salaryNotes: draft.compensation === 'salary' ? draft.salaryNotes || null : null,
+            }
+          : null,
+    }),
+    tiers: draft.ticketTiers.map((tier) => {
+      const isRsvp = tier.accessType === 'RSVP';
+      return {
+        localId: tier.id,
+        command: createTicketTierSchema.parse({
+          name: tier.name.trim(),
+          ...(!isRsvp ? { priceInPaise: Math.round(tier.price * 100) } : {}),
+          ...(!isRsvp && (tier.coverAmountPaise ?? 0) > 0
+            ? { coverAmountPaise: tier.coverAmountPaise }
+            : {}),
+          quantity: tier.quantity,
+          ...(!isRsvp && tier.accessMode ? { accessMode: tier.accessMode } : {}),
+          ...(tier.accessType ? { accessType: tier.accessType } : {}),
+          ...(tier.audienceType ? { audienceType: tier.audienceType } : {}),
+          ...(tier.guestCount ? { guestCount: tier.guestCount } : {}),
+          ...(!isRsvp && tier.admissionMode ? { admissionMode: tier.admissionMode } : {}),
+          ...(!isRsvp && tier.doorPrice != null
+            ? { doorPriceInPaise: Math.round(tier.doorPrice * 100) }
+            : {}),
+          ...(!isRsvp
+            ? {
+                pricingPhases: (tier.pricingPhases ?? []).map((phase) => ({
+                  id: phase.id,
+                  name: phase.name.trim() || `Phase ${phase.id}`,
+                  priceInPaise: Math.round(phase.priceInPaise),
+                  ...pricingPhaseWindowFromDraft(draft, phase),
+                  quantity: phase.quantity ?? null,
+                })),
+              }
+            : {}),
+          ...(tier.benefits ? { benefits: [...tier.benefits] } : {}),
+          ...(tier.minAge != null ? { minAge: tier.minAge } : {}),
+          ...(tier.maxAge != null ? { maxAge: tier.maxAge } : {}),
+          ...(tier.minPerOrder != null ? { minPerOrder: tier.minPerOrder } : {}),
+          ...(tier.maxPerUser != null ? { maxPerUser: tier.maxPerUser } : {}),
+          ...(tier.tableConfig ? { tableConfig: tier.tableConfig } : {}),
+          ...(!isRsvp && tier.commissionEligible != null
+            ? { commissionEligible: tier.commissionEligible }
+            : {}),
+          maxPerOrder: tier.maxPerOrder ?? (isRsvp ? 1 : 10),
+        }),
+      };
+    }),
+    promotions: promoRequests,
+    promoters: draft.selectedPromoterIds.map((promoterId) =>
+      assignPromoterSchema.parse({
+        promoterId,
+        ratePercent:
+          hasPaidTiers && draft.compensation === 'standard' ? Math.round(draft.commissionRate) : 0,
+        ...(draft.compensation === 'custom'
+          ? {
+              tierRates: Object.fromEntries(
+                Object.entries(draft.promoterOverrides?.[promoterId] ?? draft.tierCommissions ?? {})
+                  .filter(([localTierId]) => paidTierIds.has(localTierId))
+                  .map(([localTierId, rate]) => [localTierId, { ratePercent: rate, flatPaise: 0 }]),
+              ),
+            }
+          : {}),
+      }),
+    ),
+  };
+}
+
 /**
  * Publishes a venue event end-to-end (create event → tiers → review → publish).
  *

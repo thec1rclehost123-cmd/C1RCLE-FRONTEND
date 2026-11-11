@@ -241,6 +241,7 @@ function toUiRequest(
   return {
     id: dto.id,
     ...(dto.eventId ? { eventId: dto.eventId } : {}),
+    ...(dto.eventDraft ? { hasEventDraft: true } : {}),
     ...(event ? { linkedEventStatus: event.status } : {}),
     status: mapStatus(dto.status),
     direction,
@@ -254,21 +255,67 @@ function toUiRequest(
     timezone: PRODUCT_TIME_ZONE,
     event: event
       ? toUiEvent(event, dto.message, venueName, titleFallback)
-      : dto.slotStartTime
+      : dto.eventDraft
         ? {
-            name: 'Venue slot request',
-            description: 'Request for a published Venue availability slot.',
+            name: dto.eventDraft.event.title,
+            description: (
+              dto.eventDraft.event.description ??
+              dto.eventDraft.event.summary ??
+              ''
+            ).trim(),
             date: new Intl.DateTimeFormat('en-IN', {
               weekday: 'short',
               month: 'short',
               day: 'numeric',
+              year: 'numeric',
               timeZone: PRODUCT_TIME_ZONE,
-            }).format(new Date(dto.slotStartTime)),
-            time: `${formatSlotTime(dto.slotStartTime, dto.slotEndTime ?? null, dto.timezone)} IST`,
+            }).format(new Date(dto.eventDraft.event.startAt)),
+            time: `${formatSlotTime(dto.eventDraft.event.startAt, dto.eventDraft.event.endAt ?? null, PRODUCT_TIME_ZONE)} IST`,
             venue: venueName,
+            ticketTier: `${String(dto.eventDraft.tiers.length)} ticket tiers`,
             ...(dto.message ? { note: dto.message } : {}),
+            artists: dto.eventDraft.event.tags,
+            promoters: dto.eventDraft.promoters.length
+              ? [
+                  `${String(dto.eventDraft.promoters.length)} Promoter${dto.eventDraft.promoters.length === 1 ? '' : 's'} selected`,
+                ]
+              : [],
+            tiers: dto.eventDraft.tiers.map(({ command }) => ({
+              name: command.name,
+              price:
+                command.accessType === 'RSVP' || command.priceInPaise === undefined
+                  ? 'Free RSVP'
+                  : new Intl.NumberFormat('en-IN', {
+                      style: 'currency',
+                      currency: 'INR',
+                      maximumFractionDigits: 2,
+                    }).format(command.priceInPaise / 100),
+              quantity: String(command.quantity),
+            })),
+            pricing: dto.eventDraft.tiers.flatMap(({ command }) =>
+              (command.pricingPhases ?? []).map(
+                (phase) =>
+                  `${command.name}: ${phase.name} · ${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(phase.priceInPaise / 100)}`,
+              ),
+            ),
+            tables: `${String(dto.eventDraft.tiers.filter(({ command }) => command.accessType === 'TABLE').length)} table tiers`,
+            codes: `${String(dto.eventDraft.promotions.length)} promo codes`,
           }
-        : toUiEvent(null, dto.message, venueName, titleFallback),
+        : dto.slotStartTime
+          ? {
+              name: 'Venue slot request',
+              description: 'Request for a published Venue availability slot.',
+              date: new Intl.DateTimeFormat('en-IN', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                timeZone: PRODUCT_TIME_ZONE,
+              }).format(new Date(dto.slotStartTime)),
+              time: `${formatSlotTime(dto.slotStartTime, dto.slotEndTime ?? null, dto.timezone)} IST`,
+              venue: venueName,
+              ...(dto.message ? { note: dto.message } : {}),
+            }
+          : toUiEvent(null, dto.message, venueName, titleFallback),
   };
 }
 

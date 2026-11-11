@@ -12,6 +12,7 @@ import { currentMonthKey } from '@/lib/calendar/venue-calendar-repository';
 import { discardHostEventDraft } from '@/lib/events/event-draft-repository';
 import { formatEventDateLabel } from '@/lib/events/event-time';
 import {
+  buildSlotRequestEventDraft,
   eventStartAtFromDraft,
   eventEndAtFromDraft,
   publishVenueEvent,
@@ -77,6 +78,10 @@ export function HostEventEditorRoute({
           );
           return;
         }
+        if (request.linkedEventStatus === 'published' && request.eventId) {
+          router.replace(`/partner/host/events/${encodeURIComponent(request.eventId)}`);
+          return;
+        }
         setAcceptedRequest(request);
       })
       .catch((error: unknown) => {
@@ -91,7 +96,7 @@ export function HostEventEditorRoute({
     return () => {
       active = false;
     };
-  }, [acceptedRequestId]);
+  }, [acceptedRequestId, router]);
 
   if (!organizationId) {
     return (
@@ -221,6 +226,14 @@ export function HostEventEditorRoute({
       return;
     }
     if (acceptedSlot) {
+      if (acceptedRequest?.eventId && acceptedRequest.linkedEventStatus === 'published') {
+        router.push(`/partner/host/events/${encodeURIComponent(acceptedRequest.eventId)}`);
+        return;
+      }
+      if (acceptedRequest?.hasEventDraft)
+        throw new Error(
+          'The Venue approved this slot, but event publication is still processing. Ask the Venue to retry approval if it does not appear shortly.',
+        );
       await publishVenueEvent(organizationId, draft, {
         slotRequestId: acceptedSlot.requestId,
         startAt: acceptedSlot.startAt,
@@ -231,15 +244,21 @@ export function HostEventEditorRoute({
       return;
     }
     if (!selectedSlotId) throw new Error('Choose an open Venue slot before requesting it.');
-    let idempotencyKey = requestKeys.current.get(
-      JSON.stringify([selectedSlotId, draft.date, draft.time, draft.endTime]),
-    );
+    const requestFingerprint = JSON.stringify([
+      selectedSlotId,
+      draft.date,
+      draft.time,
+      draft.endTime,
+      draft.name,
+      draft.description,
+      draft.ticketTiers,
+      draft.selectedPromoterIds,
+      draft.promoCodeSettings,
+    ]);
+    let idempotencyKey = requestKeys.current.get(requestFingerprint);
     if (!idempotencyKey) {
       idempotencyKey = crypto.randomUUID();
-      requestKeys.current.set(
-        JSON.stringify([selectedSlotId, draft.date, draft.time, draft.endTime]),
-        idempotencyKey,
-      );
+      requestKeys.current.set(requestFingerprint, idempotencyKey);
     }
     const windowEnd = state.data?.venues
       .find((item) => item.venue.id === draft.venueId)
@@ -253,6 +272,10 @@ export function HostEventEditorRoute({
             Math.min(Date.parse(windowEnd), Date.parse(startTime) + 24 * 60 * 60 * 1000),
           ).toISOString()
         : '';
+    const startAt = eventStartAtFromDraft(draft);
+    const endAt = eventEndAtFromDraft(draft) ?? fallbackEnd;
+    if (!startAt || !endAt) throw new Error('Enter a valid event start and end time.');
+    const eventDraft = await buildSlotRequestEventDraft(organizationId, draft, startAt, endAt);
     await requestHostAvailabilitySlot({
       organizationId,
       venueId: draft.venueId,
@@ -263,6 +286,7 @@ export function HostEventEditorRoute({
             endTime: draft.endTime?.trim() ? (eventEndAtFromDraft(draft) ?? '') : fallbackEnd,
           }
         : {}),
+      eventDraft,
       idempotencyKey,
     });
     await discardHostEventDraft(organizationId);
