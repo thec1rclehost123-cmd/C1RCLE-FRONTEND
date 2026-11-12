@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ApiClientError } from '@c1rcle/api-client';
+
 import { readOnboarding } from '@/features/onboarding/client';
 import { bffClient } from '@/lib/bff/bff-client';
 
@@ -97,6 +99,19 @@ const LIVE_EVENT: BookingEventFixture = {
   ],
 };
 
+const RSVP_EVENT: BookingEventFixture = {
+  ...LIVE_EVENT,
+  ticketTiers: [
+    {
+      id: 'tier_rsvp_1',
+      name: 'RSVP Entry',
+      description: 'Free entry',
+      price: { amountPaise: 0, currency: 'INR' },
+      maximumQuantity: 1,
+    },
+  ],
+};
+
 function deps(overrides: Partial<PaidCheckoutDeps> = {}): PaidCheckoutDeps {
   return {
     createHold: vi.fn().mockResolvedValue({
@@ -188,6 +203,68 @@ describe('checkout authentication entry', () => {
       expect(mocks.push).toHaveBeenCalledWith('/onboarding?next=%2Fcheckout%2Fsky-night');
     });
     expect(mocks.fetchQuote).not.toHaveBeenCalled();
+  });
+});
+
+describe('authenticated RSVP submission', () => {
+  beforeEach(() => {
+    vi.mocked(bffClient.post).mockReset();
+  });
+
+  it('posts a verified Guest RSVP and opens the confirmation', async () => {
+    vi.mocked(bffClient.post).mockResolvedValue({ order: { id: 'RSVP-abc123' } });
+    render(<CheckoutView event={RSVP_EVENT} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review order →' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm RSVP' }));
+
+    await waitFor(() => {
+      expect(bffClient.post).toHaveBeenCalledWith(
+        expect.objectContaining({
+          path: '/api/rsvp',
+          body: { eventId: 'evt_1', tierId: 'tier_rsvp_1' },
+        }),
+      );
+      expect(mocks.push).toHaveBeenCalledWith('/confirmation/RSVP-abc123');
+    });
+  });
+
+  it('forwards the CSRF cookie when confirming an RSVP', async () => {
+    document.cookie = 'guest.c1rcle.csrf=test-csrf-token-123; path=/';
+    vi.mocked(bffClient.post).mockResolvedValue({ order: { id: 'RSVP-csrf-test' } });
+    render(<CheckoutView event={RSVP_EVENT} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review order →' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm RSVP' }));
+
+    await waitFor(() => {
+      expect(bffClient.post).toHaveBeenCalledWith(
+        expect.objectContaining({
+          path: '/api/rsvp',
+          headers: { 'x-csrf-token': 'test-csrf-token-123' },
+        }),
+      );
+    });
+    document.cookie = 'guest.c1rcle.csrf=; path=/; max-age=0';
+  });
+
+  it('shows an already-on-the-list state for duplicate RSVPs', async () => {
+    vi.mocked(bffClient.post).mockRejectedValue(
+      new ApiClientError({
+        code: 'conflict',
+        message: 'duplicate RSVP',
+        status: 409,
+        requestId: 'test-request' as never,
+        fieldErrors: {},
+      }),
+    );
+    render(<CheckoutView event={RSVP_EVENT} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review order →' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm RSVP' }));
+
+    expect(await screen.findByText(/already on the list/)).toBeInTheDocument();
+    expect(mocks.push).not.toHaveBeenCalled();
   });
 });
 
