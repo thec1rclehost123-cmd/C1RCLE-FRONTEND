@@ -85,6 +85,7 @@ describe('ConnectedScannerScreen', () => {
         eventId="evt_1"
         organizationId="org_1"
         eventTitle="Night Out"
+        eventEndAt={null}
       />,
     );
 
@@ -170,6 +171,7 @@ describe('ConnectedScannerScreen', () => {
         eventId="evt_1"
         organizationId="org_1"
         eventTitle="Night Out"
+        eventEndAt={null}
       />,
     );
 
@@ -200,5 +202,57 @@ describe('ConnectedScannerScreen', () => {
       },
     });
     expect(redemption.body['idempotencyKey']).toBeTruthy();
+  });
+
+  it('lets an organizer create an event-scoped scanner code before starting a shift', async () => {
+    mockBffPost.mockResolvedValueOnce({ items: [] }).mockResolvedValueOnce({
+      id: 'code_1',
+      code: 'C1R-ABCDEFGH',
+      eventId: 'evt_1',
+      organizationId: 'org_1',
+      venueId: 'venue_1',
+      type: 'scan_only',
+      gate: null,
+      status: 'active',
+      maxDevices: 5,
+      allowReuse: false,
+      expiresAt: null,
+      revokedAt: null,
+      revokedReason: null,
+      stats: {
+        scansCount: 0,
+        doorEntriesCount: 0,
+        doorRevenue: 0,
+        lastUsedAt: null,
+        activeSessions: 0,
+      },
+      createdAt: '2026-11-12T00:00:00.000Z',
+    });
+
+    render(
+      <ConnectedScannerScreen
+        studio="host"
+        eventId="evt_1"
+        organizationId="org_1"
+        eventTitle="Night Out"
+        eventEndAt={null}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Manage scanner codes' }));
+    await screen.findByText('No active scanner codes for this event.');
+    fireEvent.click(screen.getByRole('button', { name: 'Create scanner code' }));
+    await screen.findByText('C1R-ABCDEFGH');
+
+    const create = mockBffPost.mock.calls[1]?.[0] as { body: Record<string, unknown> };
+    expect(create.body).toMatchObject({
+      operation: 'codesCreate',
+      organizationId: 'org_1',
+      eventId: 'evt_1',
+      type: 'scan_only',
+      maxDevices: 5,
+      allowReuse: false,
+      expiresAt: null,
+    });
+    expect(create.body['idempotencyKey']).toBeTruthy();
   });
 });

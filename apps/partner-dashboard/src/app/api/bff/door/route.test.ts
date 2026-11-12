@@ -31,6 +31,85 @@ beforeEach(() => mockForward.mockReset());
 afterEach(() => vi.restoreAllMocks());
 
 describe('/api/bff/door', () => {
+  it('lists event scanner codes only through the manager-scoped gateway route', async () => {
+    mockForward.mockResolvedValue(
+      new Response(JSON.stringify({ items: [] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    const response = await POST(
+      request({ operation: 'codesList', organizationId: 'org_1', eventId: 'evt_1' }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+    expect(mockForward.mock.calls[0]?.[0]).toBe('/api/v2/door/events/evt_1/door-codes');
+    expect(mockForward.mock.calls[0]?.[1]).toMatchObject({
+      method: 'GET',
+      headers: { 'x-organization-id': 'org_1' },
+    });
+  });
+
+  it('creates scoped scanner codes with an idempotency key and validates the credential response', async () => {
+    mockForward.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: 'code_1',
+          code: 'C1R-ABCDEFGH',
+          eventId: 'evt_1',
+          organizationId: 'org_1',
+          venueId: 'venue_1',
+          type: 'scan_only',
+          gate: null,
+          status: 'active',
+          maxDevices: 5,
+          allowReuse: false,
+          expiresAt: null,
+          revokedAt: null,
+          revokedReason: null,
+          stats: {
+            scansCount: 0,
+            doorEntriesCount: 0,
+            doorRevenue: 0,
+            lastUsedAt: null,
+            activeSessions: 0,
+          },
+          createdAt: '2026-11-12T00:00:00.000Z',
+        }),
+        { status: 201, headers: { 'content-type': 'application/json' } },
+      ),
+    );
+
+    const response = await POST(
+      request({
+        operation: 'codesCreate',
+        organizationId: 'org_1',
+        eventId: 'evt_1',
+        idempotencyKey: 'door-code-create-1',
+        type: 'scan_only',
+        gate: null,
+        maxDevices: 5,
+        allowReuse: false,
+        expiresAt: null,
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(mockForward.mock.calls[0]?.[0]).toBe('/api/v2/door/events/evt_1/door-codes');
+    expect(mockForward.mock.calls[0]?.[1]).toMatchObject({
+      method: 'POST',
+      headers: {
+        'x-organization-id': 'org_1',
+        'idempotency-key': 'door-code-create-1',
+      },
+      body: { type: 'scan_only', gate: null, maxDevices: 5, allowReuse: false },
+    });
+    expect(mockForward.mock.calls[0]?.[1].body).not.toHaveProperty('organizationId');
+    expect(mockForward.mock.calls[0]?.[1].body).not.toHaveProperty('eventId');
+  });
+
   it('keeps organization and scanner credentials in authorized headers when opening a shift', async () => {
     mockForward.mockResolvedValue(
       new Response(

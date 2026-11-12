@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 
 import {
+  eventCodeCreateBodySchema,
+  eventCodeDtoSchema,
+  eventCodeListResponseSchema,
   scanResponseSchema,
   startShiftResponseSchema,
   ticketAddonRedemptionResponseSchema,
@@ -12,7 +15,12 @@ import {
 import { bffClient } from '@/lib/bff/bff-client';
 import { csrfHeaders } from '@/lib/onboarding/csrf';
 
-import type { ScanResponse, StartShiftResponse, TicketLookupResponse } from '@c1rcle/contracts';
+import type {
+  EventCodeDto,
+  ScanResponse,
+  StartShiftResponse,
+  TicketLookupResponse,
+} from '@c1rcle/contracts';
 import type { ZodType } from 'zod';
 
 interface BarcodeDetectorLike {
@@ -23,13 +31,17 @@ type BarcodeDetectorConstructor = new (options: {
 }) => BarcodeDetectorLike;
 
 export function ConnectedScannerScreen({
+  studio,
   eventId,
   organizationId,
+  eventTitle,
+  eventEndAt,
 }: {
-  readonly studio?: 'host' | 'venue';
+  readonly studio: 'host' | 'venue';
   readonly eventId: string;
   readonly organizationId: string;
-  readonly eventTitle?: string;
+  readonly eventTitle: string;
+  readonly eventEndAt: string | null;
 }) {
   const [code, setCode] = useState('');
   const [deviceId] = useState(() => crypto.randomUUID());
@@ -40,6 +52,13 @@ export function ConnectedScannerScreen({
   const [eligibilityVerified, setEligibilityVerified] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [codesOpen, setCodesOpen] = useState(false);
+  const [codes, setCodes] = useState<EventCodeDto[]>([]);
+  const [codesLoading, setCodesLoading] = useState(false);
+  const [codesError, setCodesError] = useState<string | null>(null);
+  const [codeNotice, setCodeNotice] = useState<string | null>(null);
+  const [creatingCode, setCreatingCode] = useState(false);
+  const codeIntentKey = useRef<string | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const stopCameraRef = useRef<((updateState?: boolean) => void) | null>(null);
@@ -139,6 +158,79 @@ export function ConnectedScannerScreen({
     });
   }
 
+  async function loadDoorCodes() {
+    setCodesLoading(true);
+    setCodesError(null);
+    try {
+      const result = await post(
+        { operation: 'codesList', organizationId, eventId },
+        eventCodeListResponseSchema,
+      );
+      setCodes(result.items);
+    } catch {
+      setCodesError('Organizer access is required to view scanner codes.');
+    } finally {
+      setCodesLoading(false);
+    }
+  }
+
+  async function createDoorCode() {
+    setCreatingCode(true);
+    setCodesError(null);
+    setCodeNotice(null);
+    try {
+      codeIntentKey.current ??= crypto.randomUUID();
+      const created = await post(
+        {
+          operation: 'codesCreate',
+          organizationId,
+          eventId,
+          idempotencyKey: codeIntentKey.current,
+          ...eventCodeCreateBodySchema.parse({
+            type: 'scan_only',
+            gate: null,
+            maxDevices: 5,
+            allowReuse: false,
+            expiresAt: eventEndAt,
+          }),
+        },
+        eventCodeDtoSchema,
+      );
+      setCodes((current) => [created, ...current.filter((item) => item.id !== created.id)]);
+      setCodeNotice('Scanner code created. Share it only with staff assigned to this event.');
+      codeIntentKey.current = null;
+    } catch {
+      setCodesError(
+        'The scanner code could not be created. Check your organizer access and try again.',
+      );
+    } finally {
+      setCreatingCode(false);
+    }
+  }
+
+  async function revokeDoorCode(codeId: string) {
+    if (!window.confirm('Revoke this code? Any scanner shifts using it will be closed.')) return;
+    setCodesError(null);
+    setCodeNotice(null);
+    try {
+      await post(
+        {
+          operation: 'codeRevoke',
+          organizationId,
+          codeId,
+          reason: 'Revoked by the event organizer in Partner Dashboard.',
+        },
+        eventCodeDtoSchema,
+      );
+      setCodes((current) => current.filter((item) => item.id !== codeId));
+      setCodeNotice('Scanner code revoked and active shifts closed.');
+    } catch {
+      setCodesError(
+        'The scanner code could not be revoked. Check your organizer access and try again.',
+      );
+    }
+  }
+
   async function run(action: () => Promise<void>) {
     setBusy(true);
     setError(null);
@@ -165,7 +257,117 @@ export function ConnectedScannerScreen({
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 text-stone-100 sm:px-6">
       <section className="rounded-2xl border border-white/15 bg-neutral-950 p-5">
-        <h1 className="text-2xl font-bold">Door scanner</h1>
+        <h1 className="text-2xl font-bold">Door Mode · {eventTitle}</h1>
+
+        {studio === 'host' ? (
+          <section className="mt-5 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="font-semibold">Organizer scanner access</h2>
+                <p className="mt-1 text-sm text-stone-400">
+                  Create an event-only scanner code, share it with assigned door staff, or revoke
+                  it.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="rounded-lg border border-white/20 px-3 py-2 text-sm"
+                aria-expanded={codesOpen}
+                onClick={() => {
+                  const next = !codesOpen;
+                  setCodesOpen(next);
+                  if (next) void loadDoorCodes();
+                }}
+              >
+                {codesOpen ? 'Hide organizer controls' : 'Manage scanner codes'}
+              </button>
+            </div>
+            {codesOpen ? (
+              <div className="mt-4 border-t border-white/10 pt-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm text-stone-300">
+                    Codes grant ticket scanning and walk-in access for this event and expire
+                    {eventEndAt
+                      ? ` at ${new Date(eventEndAt).toLocaleString()}`
+                      : ' only when revoked'}
+                    .
+                  </p>
+                  <button
+                    type="button"
+                    className="rounded-lg bg-orange-500 px-3 py-2 text-sm font-semibold text-black disabled:opacity-50"
+                    disabled={creatingCode}
+                    onClick={() => void createDoorCode()}
+                  >
+                    {creatingCode ? 'Creating…' : 'Create scanner code'}
+                  </button>
+                </div>
+                {codesLoading ? (
+                  <p role="status" className="mt-3 text-sm">
+                    Loading codes…
+                  </p>
+                ) : null}
+                {codesError ? (
+                  <p role="alert" className="mt-3 text-sm text-red-300">
+                    {codesError}
+                  </p>
+                ) : null}
+                {codeNotice ? (
+                  <p role="status" className="mt-3 text-sm text-emerald-300">
+                    {codeNotice}
+                  </p>
+                ) : null}
+                {!codesLoading && codes.length === 0 && !codesError ? (
+                  <p className="mt-3 text-sm text-stone-400">
+                    No active scanner codes for this event.
+                  </p>
+                ) : null}
+                <ul className="mt-3 grid gap-3">
+                  {codes.map((item) => (
+                    <li
+                      key={item.id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/10 p-3"
+                    >
+                      <div>
+                        <code className="text-lg font-semibold tracking-wider">{item.code}</code>
+                        <p className="text-xs text-stone-400">
+                          {item.type === 'scan_only'
+                            ? 'Ticket scanning + walk-in access'
+                            : item.type}{' '}
+                          · {item.gate ?? 'All gates'} · {item.stats.activeSessions}/
+                          {item.maxDevices} devices
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          className="rounded-lg border border-white/20 px-3 py-2 text-sm"
+                          onClick={() => {
+                            void navigator.clipboard.writeText(item.code).then(
+                              () => setCodeNotice('Scanner code copied.'),
+                              () =>
+                                setCodesError(
+                                  'Copy is unavailable. Select and copy the code manually.',
+                                ),
+                            );
+                          }}
+                        >
+                          Copy
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-lg border border-red-400/40 px-3 py-2 text-sm text-red-200"
+                          onClick={() => void revokeDoorCode(item.id)}
+                        >
+                          Revoke
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
 
         {!shift ? (
           <form
