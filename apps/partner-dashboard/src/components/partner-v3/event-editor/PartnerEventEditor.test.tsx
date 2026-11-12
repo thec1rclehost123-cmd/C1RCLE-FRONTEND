@@ -270,6 +270,8 @@ describe('PartnerEventEditor sequential workflow', () => {
     await waitFor(() => {
       expect(screen.getByLabelText('Upload event poster')).toBeInTheDocument();
     });
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:replace-me');
+    const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
     const file = new File(['poster'], 'replace-me.png', { type: 'image/png' });
     fireEvent.change(screen.getByLabelText('Upload event poster'), { target: { files: [file] } });
     await waitFor(() => {
@@ -281,6 +283,7 @@ describe('PartnerEventEditor sequential workflow', () => {
     await waitFor(() => {
       expect(posterStoreMocks.clear).toHaveBeenCalledWith('host-test-org');
     });
+    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:replace-me');
   });
 
   it('does not restore a stale Host draft over edits when the selected slot query changes', async () => {
