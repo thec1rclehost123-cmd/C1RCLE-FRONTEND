@@ -97,6 +97,21 @@ describe('loadPromoterEvents', () => {
             pageInfo: { page: 1, pageSize: 100, total: 0, hasNextPage: false },
           });
         }
+        if (path === '/api/v2/public/venues/by-id/venue_1') {
+          return Promise.resolve({
+            id: 'venue_1',
+            organizationId: 'org_venue',
+            name: 'The Hall',
+            slug: 'the-hall',
+            status: 'active',
+            description: '',
+            capacity: 100,
+            city: 'Pune',
+            version: 1,
+            createdAt: '2026-09-01T00:00:00.000Z',
+            updatedAt: '2026-09-01T00:00:00.000Z',
+          });
+        }
         return Promise.reject(new Error(`Unexpected API path: ${path}`));
       },
     } as unknown as ServerApiClient;
@@ -107,6 +122,8 @@ describe('loadPromoterEvents', () => {
     expect(result.linkedEvents[0]).toMatchObject({
       id: 'evt_assigned',
       name: 'Assigned event',
+      venue: 'The Hall',
+      city: 'Pune',
       clicks: 0,
       sales: 0,
       commissionLabel: '15% commission',
@@ -122,6 +139,7 @@ describe('loadPromoterEvents', () => {
       '/api/v2/public/events?limit=100',
       '/api/v2/promoters/org_1/assignment-invitations',
       '/api/v2/promoters/org_1/referral-links?limit=100',
+      '/api/v2/public/venues/by-id/venue_1',
     ]);
     expect(apiCalls[0]?.headers).toEqual({ 'x-organization-id': 'org_1' });
   });
