@@ -163,6 +163,17 @@ describe('PartnerWorkspaceSettings', () => {
     expect(screen.getByRole('textbox', { name: 'Public handle' })).toHaveValue('workspace');
   });
 
+  it('routes the Host team settings shortcut to the Host staff list', async () => {
+    const user = userEvent.setup();
+    render(<PartnerWorkspaceSettings studio="host" />);
+    await screen.findByRole('heading', { name: 'Settings' });
+    await user.click(screen.getByRole('button', { name: 'Team' }));
+    expect(screen.getByRole('link', { name: 'Manage team' })).toHaveAttribute(
+      'href',
+      '/partner/host/partners?tab=staff',
+    );
+  });
+
   it('disables profile writes for a read-only organization member', async () => {
     mocks.auth.profile.activeMembership.role = 'member';
     render(<PartnerWorkspaceSettings studio="host" />);
