@@ -22,6 +22,10 @@ vi.mock('./phone', () => ({
   clearPhoneChallenge: vi.fn(),
   requestPhoneCode: vi.fn(),
   confirmPhoneCode: vi.fn(),
+  phoneAuthErrorMessage: (_error: unknown, phase: 'send' | 'verify') =>
+    phase === 'send'
+      ? 'A code could not be sent. Please try again later.'
+      : 'Verification failed. Check the code, or request a new one.',
 }));
 const saved = {
   displayName: 'Google Name',

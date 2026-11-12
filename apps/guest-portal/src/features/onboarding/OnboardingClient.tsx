@@ -9,7 +9,12 @@ import { restoreGuestReturnFragment } from '@/lib/auth/return-fragment';
 import { AuthShell, authButtonClass, authInputClass } from '../auth/components/AuthShell';
 
 import { readOnboarding, saveOnboarding, verifyOnboardingPhone } from './client';
-import { clearPhoneChallenge, confirmPhoneCode, requestPhoneCode } from './phone';
+import {
+  clearPhoneChallenge,
+  confirmPhoneCode,
+  phoneAuthErrorMessage,
+  requestPhoneCode,
+} from './phone';
 
 import type { PhoneConfirmation } from './phone';
 import type { GuestOnboardingState } from '@c1rcle/contracts/guest-onboarding';
@@ -87,8 +92,8 @@ export function OnboardingClient({ initialName }: { readonly initialName: string
       sentPhone.current = phone;
       setCode('');
       setCooldown(60);
-    } catch {
-      setError('A code could not be sent. Check the country code, wait a moment and try again.');
+    } catch (error) {
+      setError(phoneAuthErrorMessage(error, 'send'));
     } finally {
       setPending(false);
     }
@@ -120,10 +125,10 @@ export function OnboardingClient({ initialName }: { readonly initialName: string
       const saved = await readOnboarding();
       setState(saved);
       setStep((value) => value + 1);
-    } catch {
+    } catch (error) {
       setError(
         step === 2
-          ? 'Verification failed. Check the code, or request a new one.'
+          ? phoneAuthErrorMessage(error, 'verify')
           : 'Your details could not be saved. Check them and try again.',
       );
     } finally {

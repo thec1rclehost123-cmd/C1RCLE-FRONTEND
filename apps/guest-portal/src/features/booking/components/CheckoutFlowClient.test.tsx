@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { readOnboarding } from '@/features/onboarding/client';
 import { bffClient } from '@/lib/bff/bff-client';
 
 import { CheckoutView } from './CheckoutView';
@@ -12,6 +13,7 @@ const mocks = vi.hoisted(() => {
   const push = vi.fn();
   return {
     push,
+    user: { displayName: 'A Buyer', email: 'b@example.com' },
     router: { push },
     fetchQuote: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
     pollPaymentRecovery: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
@@ -22,11 +24,16 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock('@c1rcle/auth', () => ({
-  useSession: () => ({ user: { displayName: 'A Buyer', email: 'b@example.com' } }),
+  useSession: () => ({ user: mocks.user }),
+}));
+
+vi.mock('@/features/onboarding/client', () => ({
+  readOnboarding: vi.fn().mockResolvedValue({ phoneVerified: true }),
 }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => mocks.router,
+  usePathname: () => '/checkout/sky-night',
   useSearchParams: () => new URLSearchParams(mocks.searchParams),
 }));
 
@@ -111,13 +118,24 @@ function deps(overrides: Partial<PaidCheckoutDeps> = {}): PaidCheckoutDeps {
   };
 }
 
-function toPaymentStep(event: BookingEventFixture = LIVE_EVENT) {
+async function toPaymentStep(event: BookingEventFixture = LIVE_EVENT) {
   render(<CheckoutView event={event} initialTierId="tier_1" />);
   fireEvent.click(screen.getByRole('button', { name: 'Review order →' }));
+  await screen.findByRole('heading', { name: 'Your order' });
   expect(screen.queryByLabelText('Full Name')).not.toBeInTheDocument();
 }
 
 beforeEach(() => {
+  mocks.user = { displayName: 'A Buyer', email: 'b@example.com' };
+  vi.mocked(readOnboarding).mockResolvedValue({
+    displayName: 'A Buyer',
+    dateOfBirth: '',
+    tastes: [],
+    phoneNumber: '+919876543210',
+    phoneVerified: true,
+    complete: true,
+    interestOptions: [],
+  });
   mocks.push.mockReset();
   mocks.fetchQuote.mockReset().mockResolvedValue(quote());
   mocks.pollPaymentRecovery.mockReset().mockResolvedValue(null);
@@ -126,6 +144,51 @@ beforeEach(() => {
   window.location.hash = '';
   window.sessionStorage.clear();
   mocks.deps = deps();
+});
+
+describe('checkout authentication entry', () => {
+  it('shows Google and email authentication before advancing when logged out', async () => {
+    mocks.user = null;
+    render(<CheckoutView event={LIVE_EVENT} initialTierId="tier_1" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review order →' }));
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continue with Email' })).toBeInTheDocument();
+    expect(screen.getByText(/selection will be saved/i)).toBeInTheDocument();
+  });
+
+  it('restores the saved ticket quantity from the current event selection', async () => {
+    window.sessionStorage.setItem(
+      'guest.checkout.intent',
+      JSON.stringify({ eventId: 'evt_1', quantities: { tier_1: 2 }, addonQuantities: {} }),
+    );
+    render(<CheckoutView event={LIVE_EVENT} initialTierId="tier_1" />);
+
+    expect(await screen.findByText(/2 tickets/)).toBeInTheDocument();
+    expect(window.sessionStorage.getItem('guest.checkout.intent')).toBeNull();
+  });
+
+  it('requires phone verification before opening the order review', async () => {
+    vi.mocked(readOnboarding).mockResolvedValue({
+      displayName: 'A Buyer',
+      dateOfBirth: '',
+      tastes: [],
+      phoneNumber: null,
+      phoneVerified: false,
+      complete: false,
+      interestOptions: [],
+    });
+    render(<CheckoutView event={LIVE_EVENT} initialTierId="tier_1" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review order →' }));
+
+    await waitFor(() => {
+      expect(mocks.push).toHaveBeenCalledWith('/onboarding?next=%2Fcheckout%2Fsky-night');
+    });
+    expect(mocks.fetchQuote).not.toHaveBeenCalled();
+  });
 });
 
 describe('paid checkout step', () => {
@@ -264,7 +327,7 @@ describe('paid checkout step', () => {
 
   it('keeps referral submission opaque while checkout continues', async () => {
     mocks.searchParams = 'ref=REVOKED-CODE';
-    toPaymentStep();
+    await toPaymentStep();
 
     await waitFor(() => {
       expect(mocks.fetchQuote).toHaveBeenCalledTimes(1);
@@ -312,7 +375,7 @@ describe('paid checkout step', () => {
       (onStatus as (value: typeof status) => void)(status);
       return Promise.resolve(status);
     });
-    toPaymentStep();
+    await toPaymentStep();
     const pay = await screen.findByRole('button', { name: 'Pay ₹1,180' });
     await screen.findByText(/Contact support before trying again/);
     expect(pay).toBeDisabled();
@@ -331,7 +394,7 @@ describe('paid checkout step', () => {
         message: 'Payment creation requires_support; provider identity is unresolved',
       }),
     });
-    toPaymentStep();
+    await toPaymentStep();
     fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180' }));
     await screen.findByText(/Contact support before trying again/);
     const pay = screen.getByRole('button', { name: 'Pay ₹1,180' });
@@ -357,7 +420,7 @@ describe('paid checkout step', () => {
       return Promise.resolve(status);
     });
 
-    toPaymentStep();
+    await toPaymentStep();
 
     expect(await screen.findByText(/safely refresh and check again/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Pay/ })).toBeDisabled();
@@ -366,7 +429,7 @@ describe('paid checkout step', () => {
   });
 
   it('prices the selection on the server and shows its fees and GST, not an estimate', async () => {
-    toPaymentStep();
+    await toPaymentStep();
 
     expect(await screen.findByRole('button', { name: 'Pay ₹1,180' })).toBeEnabled();
     expect(mocks.fetchQuote).toHaveBeenCalledWith({
@@ -380,7 +443,7 @@ describe('paid checkout step', () => {
 
   it('quotes and holds one target admission against the wallet source entitlement', async () => {
     mocks.searchParams = '?upgradeFromEntitlementId=ent_source&ref=IGNORED-UPGRADE-REFERRAL';
-    toPaymentStep();
+    await toPaymentStep();
 
     expect(await screen.findByRole('button', { name: 'Pay ₹1,180' })).toBeEnabled();
     expect(mocks.fetchQuote).toHaveBeenCalledWith({
@@ -407,7 +470,7 @@ describe('paid checkout step', () => {
       discountPaise: 18_000,
       appliedPromoCode: 'NIGHT',
     });
-    toPaymentStep();
+    await toPaymentStep();
 
     await screen.findByRole('button', { name: 'Pay ₹1,180' });
     fireEvent.change(screen.getByPlaceholderText('Enter code'), { target: { value: 'NIGHT' } });
@@ -425,7 +488,7 @@ describe('paid checkout step', () => {
     mocks.fetchQuote
       .mockResolvedValueOnce(quote())
       .mockRejectedValueOnce(new Error('invalid promo'));
-    toPaymentStep();
+    await toPaymentStep();
 
     await screen.findByRole('button', { name: 'Pay ₹1,180' });
     fireEvent.change(screen.getByPlaceholderText('Enter code'), { target: { value: 'NOT-VALID' } });
@@ -439,9 +502,9 @@ describe('paid checkout step', () => {
     expect(mocks.deps.createAttempt).not.toHaveBeenCalled();
   });
 
-  it('keeps Pay disabled until the quote arrives', () => {
+  it('keeps Pay disabled until the quote arrives', async () => {
     mocks.fetchQuote.mockReturnValue(new Promise(() => undefined));
-    toPaymentStep();
+    await toPaymentStep();
 
     expect(screen.getByRole('button', { name: 'Pay securely' })).toBeDisabled();
     expect(screen.getByText('Calculating your total…')).toBeInTheDocument();
@@ -450,7 +513,7 @@ describe('paid checkout step', () => {
   });
 
   it('pays through the widget and goes to the real confirmation for the verified order', async () => {
-    toPaymentStep();
+    await toPaymentStep();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180' }));
 
@@ -479,7 +542,7 @@ describe('paid checkout step', () => {
       JSON.stringify({ eventSlug: LIVE_EVENT.eventId, code: 'EARLIER', capturedAt: Date.now() }),
     );
 
-    toPaymentStep();
+    await toPaymentStep();
 
     await screen.findByRole('button', { name: 'Pay ₹1,180' });
     expect(mocks.fetchQuote).toHaveBeenCalledWith(
@@ -495,7 +558,7 @@ describe('paid checkout step', () => {
 
   it('uses one idempotency key per attempt, so retrying replays the same hold', async () => {
     mocks.deps = deps({ openCheckout: vi.fn().mockResolvedValue({ kind: 'dismissed' }) });
-    toPaymentStep();
+    await toPaymentStep();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180' }));
     await screen.findByText(/Payment cancelled/);
@@ -512,7 +575,7 @@ describe('paid checkout step', () => {
     mocks.deps = deps({
       openCheckout: vi.fn().mockResolvedValue({ kind: 'dismissed', lastFailure: 'Card declined' }),
     });
-    toPaymentStep();
+    await toPaymentStep();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180' }));
 
@@ -529,7 +592,7 @@ describe('paid checkout step', () => {
       gstPaise: 6_001,
       feePolicy: TEST_FEE_POLICY,
     });
-    toPaymentStep();
+    await toPaymentStep();
     await screen.findByRole('button', { name: 'Pay ₹1,180.03' });
     const policy = screen.getByRole('region', { name: 'Booking fee and refund policy' });
     expect(policy).toHaveTextContent('Test pricing policy: Synthetic quote policy');
@@ -559,7 +622,7 @@ describe('paid checkout step', () => {
         pricing: { ...quote(), feePolicy: changedPolicy },
       }),
     });
-    toPaymentStep();
+    await toPaymentStep();
     fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('The fee policy changed');
     await waitFor(() => {
@@ -583,7 +646,7 @@ describe('paid checkout step', () => {
       }),
     });
     mocks.fetchQuote.mockResolvedValueOnce(quote(118_000)).mockResolvedValueOnce(quote(130_000));
-    toPaymentStep();
+    await toPaymentStep();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180' }));
 
@@ -594,7 +657,7 @@ describe('paid checkout step', () => {
 
   it('tells a buyer who paid but is not yet confirmed that they have not been charged twice', async () => {
     mocks.deps = deps({ verify: vi.fn().mockRejectedValue(new Error('timeout')) });
-    toPaymentStep();
+    await toPaymentStep();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180' }));
 
@@ -615,7 +678,7 @@ describe('paid checkout step', () => {
           entitlements: [],
         }),
       });
-      toPaymentStep();
+      await toPaymentStep();
       fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180' }));
       await waitFor(() => {
         expect(mocks.push).toHaveBeenCalledWith(`/confirmation/${id}`);
@@ -632,7 +695,7 @@ describe('paid checkout step', () => {
     mocks.deps = deps({
       verify: vi.fn().mockRejectedValue(Object.assign(new Error(message), { status: 409 })),
     });
-    toPaymentStep();
+    await toPaymentStep();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180' }));
 
@@ -647,7 +710,7 @@ describe('paid checkout step', () => {
       verify: vi.fn().mockRejectedValue(new Error('timeout')),
       waitForTickets: vi.fn().mockResolvedValue(true),
     });
-    toPaymentStep();
+    await toPaymentStep();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Pay ₹1,180' }));
 
@@ -658,14 +721,14 @@ describe('paid checkout step', () => {
 
   it('says so, and offers no payment, when the quote cannot be fetched', async () => {
     mocks.fetchQuote.mockRejectedValue(new Error('401'));
-    toPaymentStep();
+    await toPaymentStep();
 
     expect(await screen.findByText(/could not price your order/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Pay securely' })).toBeDisabled();
   });
 
-  it('never offers payment or a synthetic confirmation for an unavailable event', () => {
-    toPaymentStep({ ...LIVE_EVENT, purchasable: false });
+  it('never offers payment or a synthetic confirmation for an unavailable event', async () => {
+    await toPaymentStep({ ...LIVE_EVENT, purchasable: false });
 
     expect(screen.getByText('Tickets unavailable')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Pay/ })).not.toBeInTheDocument();
