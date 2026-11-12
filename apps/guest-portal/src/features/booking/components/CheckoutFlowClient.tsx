@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { isApiClientError } from '@c1rcle/api-client';
@@ -13,13 +13,17 @@ import {
   rsvpResponseSchema,
 } from '@c1rcle/contracts';
 
+import { GoogleButton } from '@/features/auth/components/GoogleButton';
 import {
   usePromoterReferralContext,
   usePromoterReferralContextTokens,
 } from '@/features/event-detail/components/PromoterClickTracker';
 import { getEventAccentClasses } from '@/features/event-detail/eventDetailPalette';
 import { EventArtworkFallback } from '@/features/explore/components/EventArtworkFallback';
+import { readOnboarding } from '@/features/onboarding/client';
 import { useTicketAccessGrantId } from '@/lib/access/use-ticket-access-grant-id';
+import { guestDestination } from '@/lib/auth/continue-path';
+import { captureGuestReturnFragment } from '@/lib/auth/return-fragment';
 import { bffClient } from '@/lib/bff/bff-client';
 import { csrfHeaders } from '@/lib/bff/csrf';
 
@@ -95,6 +99,7 @@ function CheckoutFlowClientState({
   accessGrantId?: string;
 }) {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const router = useRouter();
   const { user } = useSession();
   const [failedPosterSource, setFailedPosterSource] = useState<string | null>(null);
@@ -121,12 +126,26 @@ function CheckoutFlowClientState({
     ? null
     : (queryReferralCode ?? storedReferralCode);
   const referralCode = requestedReferralCode;
+  const checkoutReturnPath = useMemo(() => {
+    const path = pathname.startsWith('/checkout/')
+      ? pathname
+      : `/checkout/${encodeURIComponent(eventSlug)}`;
+    const params = new URLSearchParams();
+    for (const key of ['ref', 'upgradeFromEntitlementId']) {
+      const value = searchParams.get(key);
+      if (value) params.set(key, value);
+    }
+    const query = params.toString();
+    return guestDestination(query ? `${path}?${query}` : path);
+  }, [eventSlug, pathname, searchParams]);
   const initialTier = ticketTiers.some((tier) => tier.id === requestedTier)
     ? requestedTier
     : accessGrantId && requestedTier
       ? undefined
       : ticketTiers[0]?.id;
   const [step, setStep] = useState<CheckoutStep>(1);
+  const [authPromptOpen, setAuthPromptOpen] = useState(false);
+  const [intentRestored, setIntentRestored] = useState(false);
   const [expandedTierId, setExpandedTierId] = useState<string | undefined>(initialTier);
   const [quantities, setQuantities] = useState<Record<string, number>>(() => {
     if (!initialTier) return {};
@@ -137,6 +156,62 @@ function CheckoutFlowClientState({
   const [addonQuantities, setAddonQuantities] = useState<Record<string, Record<string, number>>>(
     {},
   );
+  useEffect(() => {
+    if (!user || intentRestored) return;
+    try {
+      const raw = sessionStorage.getItem('guest.checkout.intent');
+      if (raw) {
+        const intent = JSON.parse(raw) as {
+          eventId?: unknown;
+          quantities?: unknown;
+          addonQuantities?: unknown;
+        };
+        if (
+          intent.eventId === event.eventId &&
+          intent.quantities &&
+          typeof intent.quantities === 'object'
+        ) {
+          const safeQuantities: Record<string, number> = {};
+          for (const tier of ticketTiers) {
+            const quantity = (intent.quantities as Record<string, unknown>)[tier.id];
+            if (typeof quantity === 'number' && Number.isInteger(quantity) && quantity > 0) {
+              safeQuantities[tier.id] = Math.min(quantity, tier.maximumQuantity);
+            }
+          }
+          const safeAddons: Record<string, Record<string, number>> = {};
+          if (intent.addonQuantities && typeof intent.addonQuantities === 'object') {
+            const rawAddons = intent.addonQuantities as Record<string, unknown>;
+            for (const tier of ticketTiers) {
+              const selected = rawAddons[tier.id];
+              if (!selected || typeof selected !== 'object') continue;
+              for (const addon of ticketAddons ?? []) {
+                const quantity = (selected as Record<string, unknown>)[addon.id];
+                if (typeof quantity !== 'number' || !Number.isInteger(quantity) || quantity <= 0)
+                  continue;
+                const safeQuantity = Math.min(
+                  quantity,
+                  addon.maxPerEntitlement,
+                  addon.availableQuantity,
+                );
+                if (safeQuantity > 0)
+                  safeAddons[tier.id] = { ...safeAddons[tier.id], [addon.id]: safeQuantity };
+              }
+            }
+          }
+          window.setTimeout(() => {
+            setQuantities(safeQuantities);
+            setAddonQuantities(safeAddons);
+          }, 0);
+        }
+        sessionStorage.removeItem('guest.checkout.intent');
+      }
+    } catch {
+      sessionStorage.removeItem('guest.checkout.intent');
+    }
+    window.setTimeout(() => {
+      setIntentRestored(true);
+    }, 0);
+  }, [user, intentRestored, event.eventId, ticketTiers, ticketAddons]);
   // The server's price for ONE selection. It is keyed by that selection, so a
   // result for different tickets can never be shown or paid against.
   const [quoteResult, setQuoteResult] = useState<{
@@ -547,6 +622,32 @@ function CheckoutFlowClientState({
     });
   }
 
+  async function continueToReview() {
+    if (!user) {
+      try {
+        sessionStorage.setItem(
+          'guest.checkout.intent',
+          JSON.stringify({ eventId: event.eventId, quantities, addonQuantities }),
+        );
+      } catch {
+        // The auth return still works if browser storage is unavailable.
+      }
+      setAuthPromptOpen(true);
+      return;
+    }
+    try {
+      const onboarding = await readOnboarding();
+      if (!onboarding.phoneVerified) {
+        router.push(`/onboarding?next=${encodeURIComponent(checkoutReturnPath)}`);
+        return;
+      }
+    } catch {
+      setPayMessage('We could not confirm your phone verification. Please try again.');
+      return;
+    }
+    setStep(2);
+  }
+
   return (
     <div className="mx-auto max-w-[1020px]">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 sm:mb-6">
@@ -824,7 +925,7 @@ function CheckoutFlowClientState({
                   type="button"
                   disabled={selectedTickets.length === 0}
                   onClick={() => {
-                    setStep(2);
+                    void continueToReview();
                   }}
                   className={`min-h-11 rounded-full px-5 text-[10px] font-black uppercase tracking-[0.14em] transition-all sm:px-6 sm:text-xs ${selectedTickets.length > 0 ? 'bg-white text-black hover:bg-white/90' : 'cursor-not-allowed bg-white/10 text-white/30'}`}
                 >
@@ -1196,7 +1297,76 @@ function CheckoutFlowClientState({
           )}
         </section>
       </div>
+      <CheckoutAuthDialog
+        open={authPromptOpen}
+        onClose={() => {
+          setAuthPromptOpen(false);
+        }}
+        next={checkoutReturnPath}
+      />
     </div>
+  );
+}
+
+function CheckoutAuthDialog({
+  open,
+  onClose,
+  next,
+}: {
+  open: boolean;
+  onClose: () => void;
+  next: string;
+}) {
+  const router = useRouter();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open && !dialog.open) {
+      if (typeof dialog.showModal === 'function') dialog.showModal();
+      else dialog.setAttribute('open', '');
+    }
+    if (!open && dialog.open) {
+      if (typeof dialog.close === 'function') dialog.close();
+      else dialog.removeAttribute('open');
+    }
+  }, [open]);
+  return (
+    <dialog
+      ref={dialogRef}
+      aria-labelledby="checkout-auth-title"
+      onCancel={onClose}
+      onClose={onClose}
+      className="m-auto w-[min(92vw,440px)] rounded-2xl border border-white/15 bg-[#111] p-6 text-white shadow-2xl backdrop:bg-black/75"
+    >
+      <h2 id="checkout-auth-title" className="text-xl font-bold">
+        Sign in to continue
+      </h2>
+      <p className="mt-2 text-sm leading-6 text-white/65">
+        Your ticket selection will be saved. We’ll check current availability and pricing when you
+        return.
+      </p>
+      <div className="mt-6">
+        <GoogleButton next={next} />
+        <button
+          type="button"
+          onClick={() => {
+            captureGuestReturnFragment(next);
+            router.push(`/login?next=${encodeURIComponent(next)}`);
+          }}
+          className="min-h-12 w-full rounded-full bg-white px-5 text-sm font-semibold text-black hover:bg-white/90"
+        >
+          Continue with Email
+        </button>
+      </div>
+      <button
+        type="button"
+        onClick={onClose}
+        className="mt-4 min-h-10 w-full text-sm text-white/55"
+      >
+        Cancel
+      </button>
+    </dialog>
   );
 }
 

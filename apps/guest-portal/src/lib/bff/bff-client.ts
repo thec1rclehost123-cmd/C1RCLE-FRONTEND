@@ -1,6 +1,8 @@
 import { createApiClient } from '@c1rcle/api-client';
 import { clearSession } from '@c1rcle/auth';
 
+import { captureGuestReturnFragment } from '@/lib/auth/return-fragment';
+
 /**
  * Same-origin client for the app's own BFF routes (`/api/**`). The BFF owns
  * gateway cookie forwarding and the CSRF check, so no bearer token or reauth
@@ -19,7 +21,11 @@ export const bffClient = createApiClient({
     if (!redirecting) {
       redirecting = true;
       clearSession();
-      window.location.assign(new URL('/login', window.location.origin).toString());
+      const next = `${window.location.pathname}${window.location.search}`;
+      captureGuestReturnFragment(next);
+      const login = new URL('/login', window.location.origin);
+      login.searchParams.set('next', next);
+      window.location.assign(login.toString());
     }
   },
 });
