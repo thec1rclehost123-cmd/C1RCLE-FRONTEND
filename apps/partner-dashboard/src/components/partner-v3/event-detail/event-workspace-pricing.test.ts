@@ -31,19 +31,13 @@ function ticketTier(accessType: 'ENTRY' | 'RSVP' | 'VIP', priceInPaise: number):
 describe('formatEventStartingPrice', () => {
   it('uses paid ticket tiers for a draft whose event summary still has the free default', () => {
     expect(
-      formatEventStartingPrice(event, [
-        ticketTier('VIP', 100_000),
-        ticketTier('ENTRY', 50_000),
-      ]),
+      formatEventStartingPrice(event, [ticketTier('VIP', 100_000), ticketTier('ENTRY', 50_000)]),
     ).toBe('₹500.00');
   });
 
   it('does not treat a free RSVP tier as the starting price of paid entry', () => {
     expect(
-      formatEventStartingPrice(event, [
-        ticketTier('RSVP', 0),
-        ticketTier('ENTRY', 50_000),
-      ]),
+      formatEventStartingPrice(event, [ticketTier('RSVP', 0), ticketTier('ENTRY', 50_000)]),
     ).toBe('₹500.00');
   });
 
