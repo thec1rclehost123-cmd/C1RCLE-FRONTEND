@@ -58,6 +58,8 @@ export function ConnectedScannerScreen({
   const [codesError, setCodesError] = useState<string | null>(null);
   const [codeNotice, setCodeNotice] = useState<string | null>(null);
   const [creatingCode, setCreatingCode] = useState(false);
+  const [revokeCodeId, setRevokeCodeId] = useState<string | null>(null);
+  const [revokingCode, setRevokingCode] = useState(false);
   const codeIntentKey = useRef<string | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -209,9 +211,9 @@ export function ConnectedScannerScreen({
   }
 
   async function revokeDoorCode(codeId: string) {
-    if (!window.confirm('Revoke this code? Any scanner shifts using it will be closed.')) return;
     setCodesError(null);
     setCodeNotice(null);
+    setRevokingCode(true);
     try {
       await post(
         {
@@ -228,6 +230,9 @@ export function ConnectedScannerScreen({
       setCodesError(
         'The scanner code could not be revoked. Check your organizer access and try again.',
       );
+    } finally {
+      setRevokingCode(false);
+      setRevokeCodeId(null);
     }
   }
 
@@ -344,10 +349,11 @@ export function ConnectedScannerScreen({
                           onClick={() => {
                             void navigator.clipboard.writeText(item.code).then(
                               () => setCodeNotice('Scanner code copied.'),
-                              () =>
+                              () => {
                                 setCodesError(
                                   'Copy is unavailable. Select and copy the code manually.',
-                                ),
+                                );
+                              },
                             );
                           }}
                         >
@@ -356,7 +362,9 @@ export function ConnectedScannerScreen({
                         <button
                           type="button"
                           className="rounded-lg border border-red-400/40 px-3 py-2 text-sm text-red-200"
-                          onClick={() => void revokeDoorCode(item.id)}
+                          onClick={() => {
+                            setRevokeCodeId(item.id);
+                          }}
                         >
                           Revoke
                         </button>
@@ -695,6 +703,46 @@ export function ConnectedScannerScreen({
           </p>
         ) : null}
       </section>
+      {revokeCodeId ? (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-4"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="revoke-door-code-title"
+          aria-describedby="revoke-door-code-description"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-white/15 bg-neutral-950 p-6 text-white shadow-2xl">
+            <h2 id="revoke-door-code-title" className="text-xl font-semibold">
+              Revoke scanner code?
+            </h2>
+            <p id="revoke-door-code-description" className="mt-3 text-sm text-stone-300">
+              Any scanner shifts using this code will be closed.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                className="rounded-lg border border-white/20 px-4 py-2"
+                disabled={revokingCode}
+                onClick={() => {
+                  setRevokeCodeId(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="rounded-lg bg-red-500 px-4 py-2 font-semibold text-black disabled:opacity-50"
+                disabled={revokingCode}
+                onClick={() => {
+                  void revokeDoorCode(revokeCodeId);
+                }}
+              >
+                {revokingCode ? 'Revoking…' : 'Revoke code'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
