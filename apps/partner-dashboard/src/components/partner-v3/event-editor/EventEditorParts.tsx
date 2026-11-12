@@ -1552,6 +1552,9 @@ export function EventPromoterSelector({
   const [editingPromoterId, setEditingPromoterId] = useState<string | null>(null);
   const [pendingOverride, setPendingOverride] = useState<Record<string, number>>({});
   const selected = new Set(draft.selectedPromoterIds);
+  const unavailableSelectedCount = draft.selectedPromoterIds.filter(
+    (id) => !data.promoters.some((promoter) => promoter.id === id),
+  ).length;
   const paidTiers = draft.ticketTiers.filter((tier) => tier.accessType !== 'RSVP');
   const hasPaidTiers = paidTiers.length > 0;
   const tierCommissions = draft.tierCommissions ?? {};
@@ -1637,12 +1640,24 @@ export function EventPromoterSelector({
           className={styles['outlineButton']}
           onClick={() => {
             setCustomPicker(false);
-            setPickerIds([...draft.selectedPromoterIds]);
+            setPickerIds(
+              draft.selectedPromoterIds.filter((id) =>
+                data.promoters.some((promoter) => promoter.id === id),
+              ),
+            );
           }}
         >
           + Add promoter
         </button>
         <p className={styles['selectionCount']}>{draft.selectedPromoterIds.length} selected</p>
+        {unavailableSelectedCount ? (
+          <p role="alert" className={styles['muted']}>
+            {unavailableSelectedCount === 1
+              ? 'A selected Promoter is'
+              : 'Some selected Promoters are'}{' '}
+            no longer eligible for this Host. Open the picker and apply an updated selection.
+          </p>
+        ) : null}
         {pickerIds ? (
           <dialog
             className={styles['tierDialog']}

@@ -218,6 +218,21 @@ describe('EventPromoterSelector compensation models and promoter overrides', () 
     await user.click(screen.getByRole('button', { name: 'Apply selection' }));
     expect(getDraft().selectedPromoterIds).toEqual(['promoter-2']);
   });
+  it('identifies a saved Promoter that is no longer eligible and removes it on apply', async () => {
+    const user = userEvent.setup();
+    const { getDraft } = renderPromoterSelector({
+      selectedPromoterIds: ['retired-promoter'],
+      promoterOverrides: { 'retired-promoter': { default: 10 } },
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('no longer eligible for this Host');
+    await user.click(screen.getByRole('button', { name: '+ Add promoter' }));
+    await user.click(screen.getByRole('button', { name: 'Apply selection' }));
+
+    expect(getDraft().selectedPromoterIds).toEqual([]);
+    expect(getDraft().promoterOverrides).toEqual({});
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
   it('cancels custom commission changes from the promoter picker', async () => {
     const user = userEvent.setup();
     const { getDraft } = renderPromoterSelector();

@@ -337,6 +337,7 @@ export function PartnerEventEditor({
         selectedSlot: acceptedSlotMode || Boolean(initialEvent) || Boolean(selectedSlotId),
         steps,
         requireCopy: mode === 'create',
+        assignablePromoterIds: new Set(data.promoters.map((promoter) => promoter.id)),
       }).length > 0 ||
       (step === 'venue' && timeErrors.length > 0),
   );
@@ -393,9 +394,12 @@ export function PartnerEventEditor({
     () => [
       ...validateDraft(draft, isHost && mode === 'create', mode === 'create'),
       ...validateCompensation(draft),
+      ...(isHost && mode === 'create'
+        ? validateSelectedPromoters(draft, new Set(data.promoters.map((promoter) => promoter.id)))
+        : []),
       ...timeErrors,
     ],
-    [draft, isHost, mode, timeErrors],
+    [data.promoters, draft, isHost, mode, timeErrors],
   );
   const stepErrors = useMemo(
     () =>
@@ -404,8 +408,19 @@ export function PartnerEventEditor({
         selectedSlot: acceptedSlotMode || Boolean(initialEvent) ? true : Boolean(selectedSlotId),
         steps,
         requireCopy: mode === 'create',
+        assignablePromoterIds: new Set(data.promoters.map((promoter) => promoter.id)),
       }),
-    [acceptedSlotMode, currentStep, draft, initialEvent, isHost, mode, selectedSlotId, steps],
+    [
+      acceptedSlotMode,
+      currentStep,
+      data.promoters,
+      draft,
+      initialEvent,
+      isHost,
+      mode,
+      selectedSlotId,
+      steps,
+    ],
   );
 
   const updateQuery = (
@@ -530,6 +545,7 @@ export function PartnerEventEditor({
       selectedSlot: acceptedSlotMode || Boolean(initialEvent) ? true : Boolean(selectedSlotId),
       steps,
       requireCopy: mode === 'create',
+      assignablePromoterIds: new Set(data.promoters.map((promoter) => promoter.id)),
     });
     if ((currentStep === 'venue' || currentStep === 'review') && timeErrors.length) {
       setSubmitError(timeErrors[0] ?? null);
@@ -1144,6 +1160,7 @@ function validateStep(
     readonly selectedSlot: boolean;
     readonly steps: readonly EventEditorStep[];
     readonly requireCopy: boolean;
+    readonly assignablePromoterIds: ReadonlySet<string>;
   },
 ): string[] {
   if (step === 'venue') {
@@ -1169,10 +1186,15 @@ function validateStep(
   if (step === 'tickets') return validateTicketDraft(draft);
   if (step === 'media') return validateEventMedia(draft);
   if (step === 'advanced') return validatePromoDraft(draft);
-  if (step === 'promoters') return [...validateCompensation(draft)];
+  if (step === 'promoters')
+    return [
+      ...validateCompensation(draft),
+      ...(context.host ? validateSelectedPromoters(draft, context.assignablePromoterIds) : []),
+    ];
   return [
     ...validateDraft(draft, context.host, context.requireCopy),
     ...validateCompensation(draft),
+    ...(context.host ? validateSelectedPromoters(draft, context.assignablePromoterIds) : []),
     ...(context.host &&
     !draft.externalVenue &&
     context.steps.includes('venue') &&
@@ -1180,6 +1202,15 @@ function validateStep(
       ? ['Choose an available venue time.']
       : []),
   ];
+}
+
+function validateSelectedPromoters(
+  draft: EventEditorDraft,
+  assignablePromoterIds: ReadonlySet<string>,
+): string[] {
+  return draft.selectedPromoterIds.some((id) => !assignablePromoterIds.has(id))
+    ? ['A selected Promoter is no longer eligible for this Host. Update the Promoter selection.']
+    : [];
 }
 
 function validateTicketDraft(draft: EventEditorDraft): string[] {

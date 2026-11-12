@@ -33,7 +33,7 @@ vi.mock('@/lib/calendar/use-host-availability', () => ({
   }),
 }));
 vi.mock('@/lib/partner/use-connected-promoters', () => ({
-  useConnectedPromoters: () => ({ data: [], error: null, loading: false, retry: vi.fn() }),
+  useAssignablePromoters: () => ({ data: [], error: null, loading: false, retry: vi.fn() }),
 }));
 vi.mock('@/lib/slot-requests/slot-request-repository', () => ({
   loadSlotRequestsData: () =>
