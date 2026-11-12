@@ -458,7 +458,7 @@ export function PartnerWorkspaceSettings({ studio }: { readonly studio: StudioRo
             <ReadOnlyPanel
               title="Team access"
               description="Manage team members, roles, and invitations using the existing team access controls."
-              href={`/partner/${studio}/partners?segment=staff`}
+              href={`/partner/${studio}/partners?tab=staff`}
               action="Manage team"
             />
           ) : null}
