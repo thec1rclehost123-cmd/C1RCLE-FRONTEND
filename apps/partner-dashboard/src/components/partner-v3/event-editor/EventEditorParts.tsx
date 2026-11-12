@@ -1696,7 +1696,13 @@ export function EventPromoterSelector({
                   Select all
                 </label>
               ) : (
-                <p>No partnered promoters available.</p>
+                <div>
+                  <p>No eligible Promoters are available for event assignment.</p>
+                  <p>
+                    Promoters must have approved onboarding, accept the current agreement, and be
+                    actively connected.
+                  </p>
+                </div>
               )}
               {data.promoters.map((promoter) => (
                 <label key={promoter.id}>

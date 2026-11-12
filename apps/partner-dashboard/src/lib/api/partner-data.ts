@@ -7,6 +7,7 @@ import {
 
 import { getStaffFromApi } from '@/data/api-partner-data-source';
 import { apiClient } from '@/lib/api/client';
+import { loadAssignablePromoterCandidates } from '@/lib/partner/promoter-connection-repository';
 import {
   toHostPartnersData,
   toPromoterPartnersData,
@@ -160,23 +161,31 @@ export async function getVenuePartnersData(search = ''): Promise<VenuePartnersDa
 /** Host studio: venues + promoters from partnerships/promoter-connections + discover + staff. */
 export async function getHostPartnersData(search = ''): Promise<HostPartnersData> {
   const organizationId = await getOrgId();
-  const [partnerships, promoterConnections, discoveredVenues, discoveredPromoters, staffSlice] =
-    await Promise.all([
-      getPartnerships(),
-      getPromoterConnections(),
-      getDiscoverablePartners(buildDiscoverQuery('venue', search)),
-      getDiscoverablePartners(buildDiscoverQuery('promoter', search)),
-      getStaffFromApi(organizationId).catch(() => ({
-        staff: [],
-        staffInvites: [],
-        staffAccess: { canManage: true },
-      })),
-    ]);
+  const [
+    partnerships,
+    promoterConnections,
+    discoveredVenues,
+    discoveredPromoters,
+    staffSlice,
+    candidates,
+  ] = await Promise.all([
+    getPartnerships(),
+    getPromoterConnections(),
+    getDiscoverablePartners(buildDiscoverQuery('venue', search)),
+    getDiscoverablePartners(buildDiscoverQuery('promoter', search)),
+    getStaffFromApi(organizationId).catch(() => ({
+      staff: [],
+      staffInvites: [],
+      staffAccess: { canManage: true },
+    })),
+    loadAssignablePromoterCandidates({ organizationId }).catch(() => null),
+  ]);
   const base = toHostPartnersData({
     partnerships,
     promoterConnections,
     discoveredVenues,
     discoveredPromoters,
+    assignablePromoterIds: candidates ? new Set(candidates.map((item) => item.id)) : null,
   });
   return {
     ...base,

@@ -240,6 +240,7 @@ export function toHostPartnersData(input: {
   readonly promoterConnections: readonly PromoterConnectionDto[];
   readonly discoveredVenues: readonly DiscoverPartnerDto[];
   readonly discoveredPromoters: readonly DiscoverPartnerDto[];
+  readonly assignablePromoterIds?: ReadonlySet<string> | null;
 }): HostPartnersData {
   const { partnerships, promoterConnections } = input;
 
@@ -283,6 +284,13 @@ export function toHostPartnersData(input: {
           coverUrl: item.promoterCoverUrl ?? null,
           bio: item.promoterBio ?? '',
           status: 'Partnered',
+          ...(input.assignablePromoterIds
+            ? {
+                eventAssignmentAvailability: input.assignablePromoterIds.has(item.promoterId)
+                  ? 'available'
+                  : 'unavailable',
+              }
+            : {}),
         };
       }),
     discover: input.discoveredPromoters.map((item): PartnerRelationship => ({

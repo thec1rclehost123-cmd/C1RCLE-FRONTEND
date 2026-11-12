@@ -186,6 +186,14 @@ export function PartnerProfilePanel({
             <PartnerStatusBadge status={partner.status} hostAccent={hostAccent} />
           ) : null}
         </div>
+        {partner.kind === 'promoter' &&
+        partner.status === 'Partnered' &&
+        partner.eventAssignmentAvailability ? (
+          <p role="status" className={styles['profileLoadError']}>
+            Event assignment:{' '}
+            {partner.eventAssignmentAvailability === 'available' ? 'Available' : 'Unavailable'}
+          </p>
+        ) : null}
         {profileError ? (
           <p role="status" className={styles['profileLoadError']}>
             {profileError}

@@ -132,6 +132,33 @@ describe('toHostPartnersData', () => {
     expect(data.venues.requests.outgoing.map((item) => item.id)).toEqual(['part_out']);
     expect(data.staff).toEqual([]);
   });
+
+  it('distinguishes active Promoter connections from canonical event assignability', () => {
+    const data = toHostPartnersData({
+      partnerships: [],
+      promoterConnections: [
+        { ...connection, targetId: 'org_host', targetType: 'host', status: 'active' },
+        {
+          ...connection,
+          id: 'conn_other',
+          promoterId: 'org_other',
+          targetId: 'org_host',
+          targetType: 'host',
+          status: 'active',
+        },
+      ],
+      discoveredVenues: [],
+      discoveredPromoters: [],
+      assignablePromoterIds: new Set(['org_promoter']),
+    });
+
+    expect(
+      data.promoters.connected.map((item) => [item.id, item.eventAssignmentAvailability]),
+    ).toEqual([
+      ['conn_1', 'available'],
+      ['conn_other', 'unavailable'],
+    ]);
+  });
 });
 
 describe('toPromoterPartnersData', () => {
