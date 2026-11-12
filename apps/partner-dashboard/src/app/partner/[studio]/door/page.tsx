@@ -1,23 +1,28 @@
 import { notFound } from 'next/navigation';
 
-import { PartnerDoorModeScreen } from '@/components/partner-v3/door/PartnerDoorModeScreen';
-import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
-import { partnerPreviewFeatures } from '@/lib/partner/preview-features';
+import { PartnerDoorSelectionScreen } from '@/components/partner-v3/door/PartnerDoorSelectionScreen';
+import { loadPartnerEvents } from '@/lib/events/load-partner-events';
+
+async function loadVenueEvents(cursor?: string) {
+  try {
+    return await loadPartnerEvents({ studio: 'venue', cursor });
+  } catch (cause) {
+    if (typeof cause === 'object' && cause !== null && 'digest' in cause) throw cause;
+    return null;
+  }
+}
 
 export default async function StudioDoorPage({
   params,
+  searchParams,
 }: {
   readonly params: Promise<{ studio: string }>;
+  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  if (!partnerPreviewFeatures.studioDoor) notFound();
   const { studio } = await params;
-  if (studio === 'venue') {
-    const data = await fixturePartnerDataSource.getVenueDoorMode();
-    return <PartnerDoorModeScreen data={data} />;
-  }
-  if (studio === 'host') {
-    const data = await fixturePartnerDataSource.getHostDoorMode();
-    return <PartnerDoorModeScreen data={data} />;
-  }
-  notFound();
+  if (studio !== 'venue') notFound();
+  const query = await searchParams;
+  const cursor = Array.isArray(query['cursor']) ? query['cursor'][0] : query['cursor'];
+  const data = await loadVenueEvents(cursor);
+  return <PartnerDoorSelectionScreen data={data} />;
 }
