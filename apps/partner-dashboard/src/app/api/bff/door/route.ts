@@ -3,7 +3,11 @@ import { z } from 'zod';
 
 import {
   confirmCoupleBodySchema,
+  eventCodeCreateBodySchema,
+  eventCodeDtoSchema,
+  eventCodeListResponseSchema,
   opaqueIdSchema,
+  revokeReasonBodySchema,
   scanRequestSchema,
   scanResponseSchema,
   scannerSessionCreateBodySchema,
@@ -26,6 +30,24 @@ import {
 import type { NextRequest } from 'next/server';
 
 const requestSchema = z.discriminatedUnion('operation', [
+  z.object({
+    operation: z.literal('codesList'),
+    organizationId: opaqueIdSchema,
+    eventId: opaqueIdSchema,
+  }),
+  z.object({
+    operation: z.literal('codesCreate'),
+    organizationId: opaqueIdSchema,
+    eventId: opaqueIdSchema,
+    idempotencyKey: z.string().regex(/^[A-Za-z0-9_-]{8,128}$/),
+    ...eventCodeCreateBodySchema.shape,
+  }),
+  z.object({
+    operation: z.literal('codeRevoke'),
+    organizationId: opaqueIdSchema,
+    codeId: opaqueIdSchema,
+    ...revokeReasonBodySchema.shape,
+  }),
   z.object({
     operation: z.literal('start'),
     organizationId: opaqueIdSchema,
@@ -80,28 +102,36 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const body = parsed.data;
   const { cookie, headers } = gatewayAuthInit(req);
   const route =
-    body.operation === 'start'
-      ? '/api/v2/door/sessions'
-      : body.operation === 'lookup'
-        ? '/api/v2/door/lookup'
-        : body.operation === 'scan'
-          ? '/api/v2/door/check-ins'
-          : body.operation === 'confirm'
-            ? '/api/v2/door/check-ins/confirm'
-            : '/api/v2/door/ticket-addons/redeem';
+    body.operation === 'codesList'
+      ? `/api/v2/door/events/${encodeURIComponent(body.eventId)}/door-codes`
+      : body.operation === 'codesCreate'
+        ? `/api/v2/door/events/${encodeURIComponent(body.eventId)}/door-codes`
+        : body.operation === 'codeRevoke'
+          ? `/api/v2/door/door-codes/${encodeURIComponent(body.codeId)}/revoke`
+          : body.operation === 'start'
+            ? '/api/v2/door/sessions'
+            : body.operation === 'lookup'
+              ? '/api/v2/door/lookup'
+              : body.operation === 'scan'
+                ? '/api/v2/door/check-ins'
+                : body.operation === 'confirm'
+                  ? '/api/v2/door/check-ins/confirm'
+                  : '/api/v2/door/ticket-addons/redeem';
   const payload = { ...body } as Record<string, unknown>;
   delete payload['operation'];
   delete payload['organizationId'];
   delete payload['sessionToken'];
   delete payload['idempotencyKey'];
+  if (body.operation === 'codesList' || body.operation === 'codesCreate') delete payload['eventId'];
+  if (body.operation === 'codeRevoke') delete payload['codeId'];
   const response = await forwardToGateway(route, {
-    method: 'POST',
-    body: payload,
+    method: body.operation === 'codesList' ? 'GET' : 'POST',
+    ...(body.operation === 'codesList' ? {} : { body: payload }),
     cookie,
     headers: {
       ...headers,
       'x-organization-id': body.organizationId,
-      ...(body.operation === 'start' ? {} : { 'x-scanner-session-token': body.sessionToken }),
+      ...('sessionToken' in body ? { 'x-scanner-session-token': body.sessionToken } : {}),
       ...('idempotencyKey' in body ? { 'idempotency-key': body.idempotencyKey } : {}),
     },
   }).catch(() => null);
@@ -116,13 +146,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
 
   const schema =
-    body.operation === 'start'
-      ? startShiftResponseSchema
-      : body.operation === 'lookup'
-        ? ticketLookupResponseSchema
-        : body.operation === 'redeemAddon'
-          ? ticketAddonRedemptionResponseSchema
-          : scanResponseSchema;
+    body.operation === 'codesList'
+      ? eventCodeListResponseSchema
+      : body.operation === 'codesCreate'
+        ? eventCodeDtoSchema
+        : body.operation === 'codeRevoke'
+          ? eventCodeDtoSchema
+          : body.operation === 'start'
+            ? startShiftResponseSchema
+            : body.operation === 'lookup'
+              ? ticketLookupResponseSchema
+              : body.operation === 'redeemAddon'
+                ? ticketAddonRedemptionResponseSchema
+                : scanResponseSchema;
   try {
     const result = schema.safeParse(parseJson(responseText));
     if (!result.success) return errorEnvelope('server', 'The scanner response was invalid.', 502);

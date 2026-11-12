@@ -1258,6 +1258,15 @@ function validateCompensation(draft: EventEditorDraft): readonly string[] {
   )
     return [];
   const errors: string[] = [];
+  const eligibleTiers = draft.ticketTiers.filter(
+    (tier) => tier.accessType !== 'RSVP' && tier.price > 0 && tier.commissionEligible !== false,
+  );
+  if (!eligibleTiers.length) {
+    errors.push(
+      'Promoters need at least one paid ticket tier eligible for commission. Add or enable a paid tier, or remove the Promoter assignment.',
+    );
+    return errors;
+  }
   const tierCommissions = draft.tierCommissions ?? {};
   if (
     draft.compensation === 'standard' &&
@@ -1267,14 +1276,12 @@ function validateCompensation(draft: EventEditorDraft): readonly string[] {
   )
     errors.push('Global commission must be a whole number between 0% and 100%.');
   if (draft.compensation === 'custom')
-    draft.ticketTiers
-      .filter((tier) => tier.accessType !== 'RSVP')
-      .forEach((tier) => {
-        const rate = tierCommissions[tier.id];
-        if (rate === undefined) errors.push(`${tier.name} needs a commission.`);
-        else if (!Number.isInteger(rate) || rate < 0 || rate > 100)
-          errors.push(`${tier.name} commission must be between 0% and 100%.`);
-      });
+    eligibleTiers.forEach((tier) => {
+      const rate = tierCommissions[tier.id];
+      if (rate === undefined) errors.push(`${tier.name} needs a commission.`);
+      else if (!Number.isInteger(rate) || rate < 0 || rate > 100)
+        errors.push(`${tier.name} commission must be between 0% and 100%.`);
+    });
   if (draft.compensation === 'salary') {
     if (
       draft.salaryAmount === undefined ||
