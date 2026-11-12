@@ -117,6 +117,37 @@ describe('buildSlotRequestEventDraft', () => {
     });
     expect(mocks.post).not.toHaveBeenCalled();
   });
+
+  it('submits only paid commission-eligible tiers with each Promoter assignment', async () => {
+    const proposal = await buildSlotRequestEventDraft(
+      'org_host',
+      {
+        ...draft,
+        selectedPromoterIds: ['promoter_1'],
+        ticketTiers: [
+          ...draft.ticketTiers,
+          { id: 'rsvp', name: 'Free RSVP', price: 0, quantity: 20, accessType: 'RSVP' },
+          {
+            id: 'excluded',
+            name: 'No commission',
+            price: 500,
+            quantity: 20,
+            commissionEligible: false,
+          },
+        ],
+      },
+      '2026-09-18T04:00:00.000Z',
+      '2026-09-18T09:30:00.000Z',
+    );
+
+    expect(proposal.promoters).toEqual([
+      expect.objectContaining({
+        promoterId: 'promoter_1',
+        eligibleTierIds: ['ga'],
+        ratePercent: 15,
+      }),
+    ]);
+  });
 });
 
 describe('publishVenueEvent', () => {

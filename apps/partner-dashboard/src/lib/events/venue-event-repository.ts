@@ -135,6 +135,12 @@ export async function buildSlotRequestEventDraft(
     promoters: draft.selectedPromoterIds.map((promoterId) =>
       assignPromoterSchema.parse({
         promoterId,
+        eligibleTierIds: draft.ticketTiers
+          .filter(
+            (tier) =>
+              tier.accessType !== 'RSVP' && tier.price > 0 && tier.commissionEligible !== false,
+          )
+          .map((tier) => tier.id),
         ratePercent:
           hasPaidTiers && draft.compensation === 'standard' ? Math.round(draft.commissionRate) : 0,
         ...(draft.compensation === 'custom'
