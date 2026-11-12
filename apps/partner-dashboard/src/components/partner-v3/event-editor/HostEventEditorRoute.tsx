@@ -222,6 +222,7 @@ export function HostEventEditorRoute({
     if (draft.externalVenue) {
       const key = draft.externalWorkflowKey ?? crypto.randomUUID();
       await publishVenueEvent(organizationId, draft, key);
+      await clearDraftPoster(organizationId);
       await discardHostEventDraft(organizationId);
       router.push('/partner/host/events');
       return;
@@ -240,6 +241,7 @@ export function HostEventEditorRoute({
         startAt: acceptedSlot.startAt,
         endAt: acceptedSlot.endAt,
       });
+      await clearDraftPoster(organizationId);
       await discardHostEventDraft(organizationId);
       router.push('/partner/host/events');
       return;

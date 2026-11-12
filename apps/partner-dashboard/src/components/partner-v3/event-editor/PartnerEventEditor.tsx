@@ -127,8 +127,35 @@ export function PartnerEventEditor({
   const [draftTouched, setDraftTouched] = useState(false);
   const [draftSaveError, setDraftSaveError] = useState(false);
   const draftSaveQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const posterSaveQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const localPosterObjectUrl = useRef<string | null>(null);
   const restoredHostDraftOrganization = useRef<string | null>(null);
   const hostDraftRestoreGeneration = useRef(0);
+
+  const clearLocalPosterPreview = () => {
+    if (localPosterObjectUrl.current) URL.revokeObjectURL(localPosterObjectUrl.current);
+    localPosterObjectUrl.current = null;
+  };
+  const queuePosterStorage = (operation: () => Promise<void>): Promise<void> => {
+    const pending = posterSaveQueue.current
+      .catch(() => undefined)
+      .then(operation)
+      .then(() => {
+        setDraftSaveError(false);
+      })
+      .catch(() => {
+        setDraftSaveError(true);
+      });
+    posterSaveQueue.current = pending;
+    return pending;
+  };
+
+  useEffect(
+    () => () => {
+      if (localPosterObjectUrl.current) URL.revokeObjectURL(localPosterObjectUrl.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (mode !== 'create' || !isHost || !organizationId) return;
@@ -145,12 +172,22 @@ export function PartnerEventEditor({
         }
         const safeData = saved ? sanitizeEventDraft(saved.data) : {};
         let restoredPoster: File | null = null;
-        try {
-          restoredPoster = await getDraftPoster(organizationId);
-        } catch {
-          if (generation === hostDraftRestoreGeneration.current) setDraftSaveError(true);
+        if (saved) {
+          try {
+            restoredPoster = await getDraftPoster(organizationId);
+          } catch {
+            if (generation === hostDraftRestoreGeneration.current) setDraftSaveError(true);
+          }
+        } else {
+          // A local file without its server draft is orphaned; never attach it
+          // to a fresh event after the server draft has been submitted/removed.
+          await clearDraftPoster(organizationId).catch(() => {
+            if (generation === hostDraftRestoreGeneration.current) setDraftSaveError(true);
+          });
         }
         if (generation !== hostDraftRestoreGeneration.current) return;
+        const restoredPosterUrl = restoredPoster ? URL.createObjectURL(restoredPoster) : null;
+        if (restoredPosterUrl) localPosterObjectUrl.current = restoredPosterUrl;
         const restoredDraft: EventEditorDraft = {
           ...initialDraft,
           ...(safeData as Partial<EventEditorDraft>),
@@ -160,7 +197,7 @@ export function PartnerEventEditor({
             ? {
                 artwork: {
                   type: 'image' as const,
-                  value: URL.createObjectURL(restoredPoster),
+                  value: restoredPosterUrl ?? '',
                   alt: restoredPoster.name,
                   file: restoredPoster,
                 },
@@ -172,9 +209,7 @@ export function PartnerEventEditor({
         });
         setSelectedSlotId(
           initialSlotId ??
-            (typeof saved?.data['selectedSlotId'] === 'string'
-              ? saved.data['selectedSlotId']
-              : ''),
+            (typeof saved?.data['selectedSlotId'] === 'string' ? saved.data['selectedSlotId'] : ''),
         );
         const savedStep =
           typeof saved?.data['step'] === 'string' ? saved.data['step'] : initialStep;
@@ -388,6 +423,19 @@ export function PartnerEventEditor({
   };
 
   const update = (values: Partial<EventEditorDraft>) => {
+    if (values.artwork) {
+      const nextObjectUrl = values.artwork.value.startsWith('blob:') ? values.artwork.value : null;
+      if (localPosterObjectUrl.current !== nextObjectUrl) clearLocalPosterPreview();
+      localPosterObjectUrl.current = nextObjectUrl;
+      if (isHost && mode === 'create' && organizationId) {
+        if (values.artwork.file) {
+          const file = values.artwork.file;
+          void queuePosterStorage(() => saveDraftPoster(organizationId, file));
+        } else {
+          void queuePosterStorage(() => clearDraftPoster(organizationId));
+        }
+      }
+    }
     setDraftDiscarded(false);
     setDraftTouched(true);
     setDraft((current) => ({ ...current, ...values }));
@@ -461,6 +509,10 @@ export function PartnerEventEditor({
         ...(venue ? { artwork: venue.artwork } : {}),
       };
     });
+    clearLocalPosterPreview();
+    if (isHost && mode === 'create' && organizationId) {
+      void queuePosterStorage(() => clearDraftPoster(organizationId));
+    }
     setCompletedSteps(new Set());
     setShowErrors(false);
     updateQuery({ venue: external ? undefined : venueId, date: undefined, slot: undefined });
@@ -515,6 +567,7 @@ export function PartnerEventEditor({
             );
           await draftSaveQueue.current;
         }
+        if (isHost && organizationId) await posterSaveQueue.current;
         await onSubmit(submissionDraft, selectedSlotId);
       } catch (error) {
         setSubmitError(describeApiError(error, 'The event could not be submitted.'));
@@ -541,15 +594,6 @@ export function PartnerEventEditor({
     }
     setSubmitError(null);
     update({ artwork: { type: 'image', value: URL.createObjectURL(file), alt: file.name, file } });
-    if (isHost && mode === 'create' && organizationId) {
-      void saveDraftPoster(organizationId, file)
-        .then(() => {
-          setDraftSaveError(false);
-        })
-        .catch(() => {
-          setDraftSaveError(true);
-        });
-    }
   };
   const addArtist = (artist: string) => {
     const name = artist.trim();
@@ -570,7 +614,7 @@ export function PartnerEventEditor({
     setDraftDiscarded(true);
     if (organizationId) {
       await discardHostEventDraft(organizationId);
-      await clearDraftPoster(organizationId);
+      await queuePosterStorage(() => clearDraftPoster(organizationId));
     }
     setDraft(initialDraft);
     setSelectedSlotId(initialSlotId ?? '');

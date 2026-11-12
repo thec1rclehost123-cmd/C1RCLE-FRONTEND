@@ -8,11 +8,7 @@ import { PartnerEventEditor } from './PartnerEventEditor';
 
 import type { EventEditorDraft, HostAvailabilityData } from '@/data/partner-data-source';
 
-function withTimedHostSlot(
-  availability: HostAvailabilityData,
-  venueId: string,
-  date: string,
-) {
+function withTimedHostSlot(availability: HostAvailabilityData, venueId: string, date: string) {
   const venue = availability.venues.find((item) => item.venue.id === venueId);
   const day = venue?.months.flatMap((month) => month.days).find((item) => item.date === date);
   const originalSlot = day?.slots[0];
@@ -129,6 +125,9 @@ describe('PartnerEventEditor sequential workflow', () => {
   beforeEach(() => {
     push.mockReset();
     replace.mockReset();
+    posterStoreMocks.save.mockReset().mockResolvedValue(undefined);
+    posterStoreMocks.get.mockReset().mockResolvedValue(null);
+    posterStoreMocks.clear.mockReset().mockResolvedValue(undefined);
     hostDraftMocks.get.mockReset().mockResolvedValue({ draft: null });
     hostDraftMocks.save.mockReset().mockResolvedValue(undefined);
     hostDraftMocks.discard.mockReset().mockResolvedValue(undefined);
@@ -214,8 +213,16 @@ describe('PartnerEventEditor sequential workflow', () => {
 
   it('restores a selected Host poster file from local draft storage', async () => {
     const file = new File(['poster'], 'restored-poster.png', { type: 'image/png' });
+    hostDraftMocks.get.mockResolvedValue({
+      draft: {
+        schemaVersion: 1,
+        data: { name: 'Restored event', description: 'A valid server-backed event draft.' },
+      },
+    });
     posterStoreMocks.get.mockResolvedValue(file);
-    const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:restored-poster');
+    const createObjectUrl = vi
+      .spyOn(URL, 'createObjectURL')
+      .mockReturnValue('blob:restored-poster');
 
     await setup(undefined, true, false, true);
 
@@ -229,13 +236,58 @@ describe('PartnerEventEditor sequential workflow', () => {
     });
   });
 
+  it('clears an orphaned local poster when there is no server draft to restore', async () => {
+    posterStoreMocks.get.mockResolvedValue(
+      new File(['stale'], 'stale-poster.png', { type: 'image/png' }),
+    );
+
+    const data = await fixturePartnerDataSource.getHostEventEditor();
+    render(
+      <PartnerEventEditor
+        data={{
+          ...data,
+          defaultDraft: {
+            ...data.defaultDraft,
+            promoCodes: [],
+            artwork: { type: 'gradient', value: 'test-gradient' },
+          },
+        }}
+        availability={await fixturePartnerDataSource.getHostAvailability()}
+        mode="create"
+        organizationId="host-test-org"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(posterStoreMocks.clear).toHaveBeenCalledWith('host-test-org');
+    });
+    expect(posterStoreMocks.get).not.toHaveBeenCalled();
+    expect(screen.queryByText('Change poster')).not.toBeInTheDocument();
+  });
+
+  it('clears a persisted local poster when the Host selects replacement artwork', async () => {
+    const { user } = await setup(undefined, true, false, true);
+    await waitFor(() => {
+      expect(screen.getByLabelText('Upload event poster')).toBeInTheDocument();
+    });
+    const file = new File(['poster'], 'replace-me.png', { type: 'image/png' });
+    fireEvent.change(screen.getByLabelText('Upload event poster'), { target: { files: [file] } });
+    await waitFor(() => {
+      expect(posterStoreMocks.save).toHaveBeenCalledWith('host-test-org', file);
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Use artwork 1' }));
+
+    await waitFor(() => {
+      expect(posterStoreMocks.clear).toHaveBeenCalledWith('host-test-org');
+    });
+  });
+
   it('does not restore a stale Host draft over edits when the selected slot query changes', async () => {
     const data = await fixturePartnerDataSource.getHostEventEditor();
     const availability = await fixturePartnerDataSource.getHostAvailability();
     const venue = availability.venues[0];
-    const day = venue?.months
-      .flatMap((month) => month.days)
-      .find((item) => item.slots.length > 0);
+    const day = venue?.months.flatMap((month) => month.days).find((item) => item.slots.length > 0);
     if (!venue || !day) throw new Error('Expected a Host time slot fixture.');
     const timed = withTimedHostSlot(availability, venue.venue.id, day.date);
     const slot = timed.slot;
