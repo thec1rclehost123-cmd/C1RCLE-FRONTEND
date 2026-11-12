@@ -2,6 +2,7 @@ import Image from 'next/image';
 import { useRef, useState } from 'react';
 
 import { EVENT_GENRE_OPTIONS } from '@/lib/events/event-editor-data';
+import { shouldBypassEventImageOptimizer } from '@/lib/events/image-optimization';
 
 import { canSelectEventDate } from './event-date-selection';
 import styles from './event-editor.module.css';
@@ -39,7 +40,13 @@ export function EventPosterUploader({
       <div className={styles['posterEditor']}>
         <div className={styles['posterUpload']}>
           {isImage ? (
-            <Image fill sizes="132px" src={artwork.value} alt={artwork.alt ?? 'Event artwork'} />
+            <Image
+              fill
+              sizes="132px"
+              src={artwork.value}
+              alt={artwork.alt ?? 'Event artwork'}
+              unoptimized={shouldBypassEventImageOptimizer(artwork.value)}
+            />
           ) : (
             <div
               className={[styles['posterGradient'], gradientClass(artwork.value)].join(' ')}
@@ -56,7 +63,7 @@ export function EventPosterUploader({
           </span>
           <label className={styles['uploadButton']}>
             Replace poster
-            <input type="file" accept="image/*" onChange={onUpload} />
+            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={onUpload} />
           </label>
           <div className={styles['artworkChoices']} aria-label="Artwork choices">
             {artworkOptions.map((option, index) => (
@@ -70,7 +77,13 @@ export function EventPosterUploader({
                 }}
               >
                 {option.type === 'image' ? (
-                  <Image fill sizes="34px" src={option.value} alt="" />
+                  <Image
+                    fill
+                    sizes="34px"
+                    src={option.value}
+                    alt=""
+                    unoptimized={shouldBypassEventImageOptimizer(option.value)}
+                  />
                 ) : (
                   <span className={gradientClass(option.value)} />
                 )}
@@ -1256,6 +1269,20 @@ export function TicketTierEditor({
                                     }}
                                   />
                                 </div>
+                                <button
+                                  type="button"
+                                  className={styles['ticketRemove']}
+                                  aria-label={`Remove ${phase.name || 'pricing'} phase`}
+                                  onClick={() => {
+                                    updateTier(tier.id, {
+                                      pricingPhases: (tier.pricingPhases ?? []).filter(
+                                        (item) => item.id !== phase.id,
+                                      ),
+                                    });
+                                  }}
+                                >
+                                  ×
+                                </button>
                               </div>
                             ))}
                           </div>
@@ -1264,10 +1291,15 @@ export function TicketTierEditor({
                           className={styles['outlineButton']}
                           type="button"
                           onClick={() => {
-                            const index = (tier.pricingPhases ?? []).length + 1;
+                            const phases = tier.pricingPhases ?? [];
+                            const highestPhaseIndex = phases.reduce((highest, phase) => {
+                              const match = /^phase-(\d+)$/.exec(phase.id);
+                              return Math.max(highest, match ? Number(match[1]) : 0);
+                            }, 0);
+                            const index = Math.max(phases.length, highestPhaseIndex) + 1;
                             updateTier(tier.id, {
                               pricingPhases: [
-                                ...(tier.pricingPhases ?? []),
+                                ...phases,
                                 {
                                   id: `phase-${String(index)}`,
                                   name: `Phase ${String(index)}`,
@@ -2214,6 +2246,7 @@ export function EventPreview({
               sizes="(max-width: 1050px) 100vw, 380px"
               src={draft.artwork.value}
               alt={`${draft.name || 'Event'} poster`}
+              unoptimized={shouldBypassEventImageOptimizer(draft.artwork.value)}
             />
           ) : (
             <div className={styles['posterPlaceholder']} aria-hidden="true" />
@@ -2226,7 +2259,7 @@ export function EventPreview({
               <input
                 aria-label="Upload event poster"
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 onChange={onUpload}
               />
             </label>
@@ -2243,7 +2276,13 @@ export function EventPreview({
                   }}
                 >
                   {option.type === 'image' ? (
-                    <Image fill sizes="34px" src={option.value} alt="" />
+                    <Image
+                      fill
+                      sizes="34px"
+                      src={option.value}
+                      alt=""
+                      unoptimized={shouldBypassEventImageOptimizer(option.value)}
+                    />
                   ) : (
                     <span className={gradientClass(option.value)} />
                   )}
@@ -2288,7 +2327,13 @@ export function EventPreviewOverlay({
     >
       <div aria-hidden="true" className={styles['guestEventBackdrop']}>
         {draft.artwork.type === 'image' ? (
-          <Image fill sizes="100vw" src={draft.artwork.value} alt="" />
+          <Image
+            fill
+            sizes="100vw"
+            src={draft.artwork.value}
+            alt=""
+            unoptimized={shouldBypassEventImageOptimizer(draft.artwork.value)}
+          />
         ) : null}
       </div>
       <div className={styles['guestEventContent']}>
@@ -2366,6 +2411,7 @@ export function EventPreviewOverlay({
                 sizes="(max-width: 760px) 82vw, 360px"
                 src={draft.artwork.value}
                 alt={`${draft.name || 'Event'} poster`}
+                unoptimized={shouldBypassEventImageOptimizer(draft.artwork.value)}
               />
             ) : (
               <div className={gradientClass(draft.artwork.value)} />
@@ -2435,7 +2481,15 @@ export function EventEditorShell({
       ].join(' ')}
     >
       <div className={styles['editorBackdrop']} aria-hidden="true">
-        {artwork.type === 'image' ? <Image fill sizes="100vw" src={artwork.value} alt="" /> : null}
+        {artwork.type === 'image' ? (
+          <Image
+            fill
+            sizes="100vw"
+            src={artwork.value}
+            alt=""
+            unoptimized={shouldBypassEventImageOptimizer(artwork.value)}
+          />
+        ) : null}
       </div>
       {children}
     </div>

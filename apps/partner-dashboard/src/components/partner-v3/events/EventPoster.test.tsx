@@ -45,12 +45,12 @@ describe('EventPoster', () => {
     );
   });
 
-  it('does not classify public storage images as loopback assets', () => {
+  it('loads public GCS event posters without the Next image optimizer', () => {
     render(
       <EventPoster
         artwork={{
           type: 'image',
-          value: 'https://cdn.example.com/poster.jpg',
+          value: 'https://storage.googleapis.com/c1rcle/posters/org_1/poster.jpg',
           alt: 'Public poster',
         }}
       />,
@@ -58,9 +58,22 @@ describe('EventPoster', () => {
 
     expect(screen.getByRole('img', { name: 'Public poster' })).toHaveAttribute(
       'data-src',
-      'https://cdn.example.com/poster.jpg',
+      'https://storage.googleapis.com/c1rcle/posters/org_1/poster.jpg',
     );
     expect(screen.getByRole('img', { name: 'Public poster' })).toHaveAttribute(
+      'data-unoptimized',
+      'true',
+    );
+  });
+
+  it('keeps unrelated remote images on the optimizer', () => {
+    render(
+      <EventPoster
+        artwork={{ type: 'image', value: 'https://cdn.example.com/poster.jpg', alt: 'CDN poster' }}
+      />,
+    );
+
+    expect(screen.getByRole('img', { name: 'CDN poster' })).toHaveAttribute(
       'data-unoptimized',
       'false',
     );

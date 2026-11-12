@@ -9,6 +9,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/partner-v3/St
 import { requestHostAvailabilitySlot } from '@/lib/calendar/host-availability-repository';
 import { useHostAvailability } from '@/lib/calendar/use-host-availability';
 import { currentMonthKey } from '@/lib/calendar/venue-calendar-repository';
+import { clearDraftPoster } from '@/lib/events/draft-poster-store';
 import { discardHostEventDraft } from '@/lib/events/event-draft-repository';
 import { formatEventDateLabel } from '@/lib/events/event-time';
 import {
@@ -290,6 +291,7 @@ export function HostEventEditorRoute({
       idempotencyKey,
     });
     await discardHostEventDraft(organizationId);
+    await clearDraftPoster(organizationId);
     const params = new URLSearchParams({ requested: 'true' });
     router.push(`/partner/host/slot-requests?${params.toString()}`);
   };

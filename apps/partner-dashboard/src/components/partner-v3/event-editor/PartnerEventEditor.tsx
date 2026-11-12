@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
 
 import { describeApiError } from '@/lib/api/describe-error';
+import { clearDraftPoster, getDraftPoster, saveDraftPoster } from '@/lib/events/draft-poster-store';
 import {
   discardHostEventDraft,
   getHostEventDraft,
@@ -126,23 +127,47 @@ export function PartnerEventEditor({
   const [draftTouched, setDraftTouched] = useState(false);
   const [draftSaveError, setDraftSaveError] = useState(false);
   const draftSaveQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const restoredHostDraftOrganization = useRef<string | null>(null);
+  const hostDraftRestoreGeneration = useRef(0);
 
   useEffect(() => {
     if (mode !== 'create' || !isHost || !organizationId) return;
-    let active = true;
+    if (restoredHostDraftOrganization.current === organizationId) return;
+    restoredHostDraftOrganization.current = organizationId;
+    const generation = ++hostDraftRestoreGeneration.current;
     getHostEventDraft(organizationId)
       .then(async ({ draft: saved }) => {
-        if (!active || !saved) return;
+        if (generation !== hostDraftRestoreGeneration.current || !saved) return;
         if (saved.schemaVersion !== 1 || !isRestorableDraft(saved.data)) {
           await discardHostEventDraft(organizationId);
           return;
         }
         const safeData = sanitizeEventDraft(saved.data);
-        setDraft({
+        let restoredPoster: File | null = null;
+        try {
+          restoredPoster = await getDraftPoster(organizationId);
+        } catch {
+          if (generation === hostDraftRestoreGeneration.current) setDraftSaveError(true);
+        }
+        if (generation !== hostDraftRestoreGeneration.current) return;
+        const restoredDraft: EventEditorDraft = {
           ...initialDraft,
           ...(safeData as Partial<EventEditorDraft>),
           ...(initialVenueId ? { venueId: initialVenueId } : {}),
           ...(initialDate ? { date: initialDate, dateLabel: formatDateLabel(initialDate) } : {}),
+          ...(restoredPoster
+            ? {
+                artwork: {
+                  type: 'image' as const,
+                  value: URL.createObjectURL(restoredPoster),
+                  alt: restoredPoster.name,
+                  file: restoredPoster,
+                },
+              }
+            : {}),
+        };
+        setDraft({
+          ...restoredDraft,
         });
         setSelectedSlotId(
           initialSlotId ??
@@ -153,11 +178,8 @@ export function PartnerEventEditor({
       })
       .catch(() => undefined)
       .finally(() => {
-        if (active) setDraftReady(true);
+        if (generation === hostDraftRestoreGeneration.current) setDraftReady(true);
       });
-    return () => {
-      active = false;
-    };
   }, [
     initialDate,
     initialDraft,
@@ -207,6 +229,43 @@ export function PartnerEventEditor({
     .flatMap((month) => month.days)
     .flatMap((day) => day.slots)
     .find((slot) => slot.id === selectedSlotId);
+  useEffect(() => {
+    if (
+      !isHost ||
+      mode !== 'create' ||
+      !selectedSlotId ||
+      draft.time.trim() ||
+      !selectedWindow?.startTime ||
+      !selectedWindow.endTime
+    )
+      return;
+    const start = new Intl.DateTimeFormat('en-GB', {
+      timeZone: PRODUCT_TIME_ZONE,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(new Date(selectedWindow.startTime));
+    const end = new Intl.DateTimeFormat('en-GB', {
+      timeZone: PRODUCT_TIME_ZONE,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(
+      new Date(
+        Math.min(
+          Date.parse(selectedWindow.startTime) + 4 * 60 * 60 * 1000,
+          Date.parse(selectedWindow.endTime),
+        ),
+      ),
+    );
+    // A direct link can restore the slot ID without the corresponding local
+    // times. Seed a valid range from that slot instead of showing a bogus
+    // 6–10 PM selection over a booked interval.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDraft((current) =>
+      current.time.trim() ? current : { ...current, time: start, endTime: end },
+    );
+  }, [draft.time, isHost, mode, selectedSlotId, selectedWindow]);
   const timeErrors = useMemo(() => {
     if (
       !selectedSlotId.startsWith('free-') ||
@@ -468,7 +527,25 @@ export function PartnerEventEditor({
   const uploadArtwork = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    event.target.value = '';
+    if (
+      !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) ||
+      file.size > 5 * 1024 * 1024
+    ) {
+      setSubmitError('Use a JPG, PNG or WebP poster up to 5 MB.');
+      return;
+    }
+    setSubmitError(null);
     update({ artwork: { type: 'image', value: URL.createObjectURL(file), alt: file.name, file } });
+    if (isHost && mode === 'create' && organizationId) {
+      void saveDraftPoster(organizationId, file)
+        .then(() => {
+          setDraftSaveError(false);
+        })
+        .catch(() => {
+          setDraftSaveError(true);
+        });
+    }
   };
   const addArtist = (artist: string) => {
     const name = artist.trim();
@@ -487,7 +564,10 @@ export function PartnerEventEditor({
 
   const discardDraft = async () => {
     setDraftDiscarded(true);
-    if (organizationId) await discardHostEventDraft(organizationId);
+    if (organizationId) {
+      await discardHostEventDraft(organizationId);
+      await clearDraftPoster(organizationId);
+    }
     setDraft(initialDraft);
     setSelectedSlotId(initialSlotId ?? '');
     setLocalStep(steps[0] ?? 'basics');

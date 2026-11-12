@@ -21,7 +21,7 @@ describe('OverviewEventPoster', () => {
   it('renders artwork with a fallback layer and removes a failed image', () => {
     const { container } = render(
       <OverviewEventPoster
-        src="https://storage.googleapis.com/test-bucket/posters/event.webp"
+        src="https://storage.googleapis.com/test-bucket/posters/org_1/event.webp"
         alt="Event artwork"
         className="poster"
         fallbackClassName="fallback"
@@ -31,7 +31,11 @@ describe('OverviewEventPoster', () => {
 
     expect(screen.getByRole('img', { name: 'Event artwork' })).toHaveAttribute(
       'src',
-      'https://storage.googleapis.com/test-bucket/posters/event.webp',
+      'https://storage.googleapis.com/test-bucket/posters/org_1/event.webp',
+    );
+    expect(screen.getByRole('img', { name: 'Event artwork' })).toHaveAttribute(
+      'data-unoptimized',
+      'true',
     );
     expect(container.querySelector('.fallback')).toBeInTheDocument();
 
