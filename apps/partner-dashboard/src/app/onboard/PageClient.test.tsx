@@ -151,7 +151,9 @@ describe('Partner onboarding wizard', () => {
     it('requires an explicit role when signed in with no application yet', async () => {
       mocks.getMine.mockResolvedValue(null);
       render(<OnboardingPage />);
-      await waitFor(() => expect(document.body.textContent).toContain('Join the Network'));
+      await waitFor(() => {
+        expect(document.body.textContent).toContain('Join the Network');
+      });
       expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
     });
 

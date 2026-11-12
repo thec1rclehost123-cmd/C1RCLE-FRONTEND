@@ -281,7 +281,7 @@ export function OnboardingPage() {
     businessType: string;
     registrationNumber: string;
   }>({
-    email: '',
+    email: searchParams.get('email') ?? '',
     password: '',
     name: '',
     contactPerson: '',
@@ -385,24 +385,6 @@ export function OnboardingPage() {
   const stepSequence = getStepSequence(entityType);
 
   const initialised = useRef(false);
-
-  // Pre-fill from URL params (existing behaviour kept)
-  useEffect(() => {
-    const typeParam = searchParams.get('type');
-    const type = isPartnerType(typeParam) ? typeParam : null;
-    const email = searchParams.get('email');
-    const hostId = searchParams.get('hostId');
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, react-hooks/set-state-in-effect
-    if (type) {
-      setPartnerType(type);
-      setRoleChosen(true);
-    }
-    if (email) {
-      setOtpEmail(email);
-      setFormData((prev) => ({ ...prev, email }));
-    }
-    if (hostId) setFormData((prev) => ({ ...prev, associatedHostId: hostId }));
-  }, [searchParams]);
 
   // ── Resume onboarding state from the real backend on load ────────────────
   // There is no server-side `onboardingStep` field — the step to resume at is
