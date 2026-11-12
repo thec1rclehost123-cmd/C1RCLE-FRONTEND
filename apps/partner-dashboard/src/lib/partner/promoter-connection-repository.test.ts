@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  loadAssignablePromoterCandidates,
   listPromoterConnections,
   resolvePromoterConnection,
 } from './promoter-connection-repository';
@@ -59,6 +60,23 @@ describe('listPromoterConnections', () => {
       expect.objectContaining({
         path: '/api/v2/organizations/org_venue/promoter-connections',
         headers: { 'X-Organization-Id': 'org_venue' },
+      }),
+    );
+  });
+});
+
+describe('loadAssignablePromoterCandidates', () => {
+  it('loads the canonical Host event candidate list for the active organization', async () => {
+    const candidates = [{ id: 'org_promoter', name: 'AnilPromoter', slug: 'anil-promoter' }];
+    getMock.mockResolvedValue(candidates);
+
+    await expect(loadAssignablePromoterCandidates({ organizationId: 'org_host' })).resolves.toEqual(
+      candidates,
+    );
+    expect(getMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: '/api/v2/promoter-candidates',
+        headers: { 'X-Organization-Id': 'org_host' },
       }),
     );
   });

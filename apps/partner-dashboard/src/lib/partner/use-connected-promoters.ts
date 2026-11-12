@@ -4,7 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { useSessionStore } from '@c1rcle/auth';
 
-import { loadConnectedPromoterConnections } from './promoter-connection-repository';
+import {
+  loadAssignablePromoterCandidates,
+  loadConnectedPromoterConnections,
+} from './promoter-connection-repository';
 
 import type { EventEditorPromoterOption } from '@/data/partner-data-source';
 
@@ -23,19 +26,24 @@ interface Result {
 
 const IDLE_RESULT: Result = { requestKey: null, data: [], error: null };
 
-function promoterOption(promoterId: string): EventEditorPromoterOption {
-  const label = promoterId.length > 2 ? promoterId.slice(-8) : promoterId;
+function promoterOption(id: string, name: string, role: string): EventEditorPromoterOption {
   return {
-    id: promoterId,
-    name: `Promoter ${label}`,
-    initials: promoterId.slice(0, 2).toUpperCase(),
-    role: 'Connected promoter',
+    id,
+    name,
+    initials: name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join(''),
+    role,
   };
 }
 
-export function useConnectedPromoters(
+function usePromoterOptions(
   organizationId: string | null,
-  enabled = true,
+  enabled: boolean,
+  eligibility: 'connected' | 'assignable',
 ): ConnectedPromotersState {
   const hydrated = useSessionStore().hydrated;
   const [attempt, setAttempt] = useState(0);
@@ -49,12 +57,27 @@ export function useConnectedPromoters(
     if (!requestKey || !organizationId || !hydrated) return;
     const controller = new AbortController();
 
-    void loadConnectedPromoterConnections({ organizationId, signal: controller.signal })
-      .then((connections) => {
+    const load =
+      eligibility === 'assignable'
+        ? loadAssignablePromoterCandidates({ organizationId, signal: controller.signal }).then(
+            (rows) => rows.map((row) => promoterOption(row.id, row.name, 'Eligible promoter')),
+          )
+        : loadConnectedPromoterConnections({ organizationId, signal: controller.signal }).then(
+            (rows) =>
+              rows.map((row) =>
+                promoterOption(
+                  row.promoterId,
+                  `Promoter ${row.promoterId.slice(-8)}`,
+                  'Connected promoter',
+                ),
+              ),
+          );
+    void load
+      .then((data) => {
         if (!controller.signal.aborted) {
           setResult({
             requestKey,
-            data: connections.map((connection) => promoterOption(connection.promoterId)),
+            data,
             error: null,
           });
         }
@@ -72,7 +95,7 @@ export function useConnectedPromoters(
     return () => {
       controller.abort();
     };
-  }, [hydrated, organizationId, requestKey]);
+  }, [eligibility, hydrated, organizationId, requestKey]);
 
   const currentResult = requestKey && result.requestKey === requestKey ? result : IDLE_RESULT;
 
@@ -84,4 +107,19 @@ export function useConnectedPromoters(
       setAttempt((value) => value + 1);
     },
   };
+}
+
+export function useConnectedPromoters(
+  organizationId: string | null,
+  enabled = true,
+): ConnectedPromotersState {
+  return usePromoterOptions(organizationId, enabled, 'connected');
+}
+
+/** Host event editor picker; options come from the canonical backend rule. */
+export function useAssignablePromoters(
+  organizationId: string | null,
+  enabled = true,
+): ConnectedPromotersState {
+  return usePromoterOptions(organizationId, enabled, 'assignable');
 }

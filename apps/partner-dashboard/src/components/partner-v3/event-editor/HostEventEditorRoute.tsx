@@ -18,7 +18,7 @@ import {
   eventEndAtFromDraft,
   publishVenueEvent,
 } from '@/lib/events/venue-event-repository';
-import { useConnectedPromoters } from '@/lib/partner/use-connected-promoters';
+import { useAssignablePromoters } from '@/lib/partner/use-connected-promoters';
 import { loadSlotRequestsData } from '@/lib/slot-requests/slot-request-repository';
 
 import { PartnerEventEditor } from './PartnerEventEditor';
@@ -58,7 +58,7 @@ export function HostEventEditorRoute({
       : currentMonthKey(),
   );
   const state = useHostAvailability({ organizationId, anchorMonth, monthsAfter: 12 });
-  const promoters = useConnectedPromoters(organizationId);
+  const promoters = useAssignablePromoters(organizationId);
 
   useEffect(() => {
     if (!acceptedRequestId) return;

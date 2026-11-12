@@ -1,5 +1,10 @@
 import { paginatedSchema } from '@c1rcle/api-client';
-import { promoterConnectionDtoSchema, type PromoterConnectionDto } from '@c1rcle/contracts';
+import {
+  promoterAssignmentCandidateDtoSchema,
+  promoterConnectionDtoSchema,
+  type PromoterAssignmentCandidateDto,
+  type PromoterConnectionDto,
+} from '@c1rcle/contracts';
 
 import { apiClient } from '@/lib/api/client';
 
@@ -32,6 +37,22 @@ export async function loadConnectedPromoterConnections({
   });
 
   return response.items.filter((connection) => connection.status === 'active');
+}
+
+/** Candidates already checked by the backend's canonical Host event rule. */
+export async function loadAssignablePromoterCandidates({
+  organizationId,
+  signal,
+}: {
+  readonly organizationId: string;
+  readonly signal?: AbortSignal;
+}): Promise<readonly PromoterAssignmentCandidateDto[]> {
+  return apiClient.get({
+    path: '/api/v2/promoter-candidates',
+    headers: orgHeaders(organizationId),
+    schema: promoterAssignmentCandidateDtoSchema.array(),
+    ...(signal ? { signal } : {}),
+  });
 }
 
 /**
