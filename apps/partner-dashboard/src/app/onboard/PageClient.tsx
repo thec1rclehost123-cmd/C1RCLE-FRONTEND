@@ -140,6 +140,8 @@ type OnboardingStep =
 
 type PartnerType = 'venue' | 'host' | 'promoter';
 type EntityType = 'individual' | 'business';
+const isPartnerType = (value: string | null): value is PartnerType =>
+  value === 'venue' || value === 'host' || value === 'promoter';
 
 // Dynamic sequence based on entity type (KYC steps vary). `signup` runs
 // before `email_verify` — the real `/onboarding/otp/send` route requires an
@@ -208,9 +210,10 @@ export function OnboardingPage() {
   const testPhone = testingBypass ? (clientEnv.NEXT_PUBLIC_FIREBASE_TEST_PHONE ?? '') : '';
 
   const [step, setStep] = useState<OnboardingStep>('role');
-  const [partnerType, setPartnerType] = useState<PartnerType>(
-    (searchParams.get('type') as PartnerType | null) ?? 'venue',
-  );
+  const routeTypeParam = searchParams.get('type');
+  const routeType = isPartnerType(routeTypeParam) ? routeTypeParam : null;
+  const [partnerType, setPartnerType] = useState<PartnerType>(routeType ?? 'venue');
+  const [roleChosen, setRoleChosen] = useState(routeType !== null);
   const [entityType, setEntityType] = useState<EntityType>('individual');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -228,6 +231,9 @@ export function OnboardingPage() {
   >([]);
   const [kycDetails, setKycDetails] = useState<OnboardingProfileDto['kyc']>({});
   const [submittedRequestId, setSubmittedRequestId] = useState<string | null>(null);
+  const [savedApplicationStatus, setSavedApplicationStatus] = useState<
+    OnboardingRequestDto['status'] | null
+  >(null);
   // B2: one Idempotency-Key per user intent — minted on the first click and
   // reused across retries of that same click so a retry after a partial
   // server-side write can never mint a fresh key and double-create (or
@@ -382,11 +388,15 @@ export function OnboardingPage() {
 
   // Pre-fill from URL params (existing behaviour kept)
   useEffect(() => {
-    const type = searchParams.get('type') as PartnerType;
+    const typeParam = searchParams.get('type');
+    const type = isPartnerType(typeParam) ? typeParam : null;
     const email = searchParams.get('email');
     const hostId = searchParams.get('hostId');
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, react-hooks/set-state-in-effect
-    if (type) setPartnerType(type);
+    if (type) {
+      setPartnerType(type);
+      setRoleChosen(true);
+    }
     if (email) {
       setOtpEmail(email);
       setFormData((prev) => ({ ...prev, email }));
@@ -421,9 +431,10 @@ export function OnboardingPage() {
           return;
         }
         try {
-          const application = await getMine();
+          const application = await getMine(routeType ?? undefined);
           if (application) {
             setSubmittedRequestId(application.id);
+            setSavedApplicationStatus(application.status);
 
             // Draft application — resume mid-wizard from its saved profile.
             // The backend has no stored "step"; missingDocuments tells us
@@ -452,6 +463,7 @@ export function OnboardingPage() {
             }
 
             setPartnerType(application.requestedType);
+            setRoleChosen(true);
             setReviewNote(application.reviewNote ?? '');
             setApplicationDocuments(application.documents);
             setKycDetails(application.profile.kyc ?? {});
@@ -478,14 +490,12 @@ export function OnboardingPage() {
             return;
           }
 
-          // Authenticated but no application on record yet — this account is
-          // already good (they have a live session), so continue the wizard
-          // from the first authed step instead of discarding it. Mirrors the
-          // equivalent branch in `handleExistingUserLogin`.
+          // No saved application: preserve an explicit role link, otherwise
+          // require the applicant to choose a role before continuing.
           setFormData((prev) => ({ ...prev, email: authUser.email }));
           setOtpEmail(authUser.email);
           initialised.current = true;
-          setStep('phone_verify');
+          setStep(routeType ? 'entity_type' : 'role');
           return;
         } catch (err) {
           if (isPhoneVerificationRequired(err)) {
@@ -504,15 +514,16 @@ export function OnboardingPage() {
     };
 
     void checkInitialState();
-  }, [authLoading, authUser, signOut, isApproved, router]);
+  }, [authLoading, authUser, signOut, isApproved, router, routeType]);
 
   // Approval polling — real application status via getMine()
   useEffect(() => {
     if (step !== 'success' || !submittedRequestId) return;
     const checkApproval = async () => {
       try {
-        const application = await getMine();
+        const application = await getMine(partnerType);
         if (!application) return;
+        setSavedApplicationStatus(application.status);
         setReviewNote(application.reviewNote ?? '');
         setApprovalStatus(
           application.status === 'submitted' || application.status === 'draft'
@@ -528,7 +539,7 @@ export function OnboardingPage() {
     return () => {
       clearInterval(interval);
     };
-  }, [step, submittedRequestId]);
+  }, [step, submittedRequestId, partnerType]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
@@ -665,7 +676,7 @@ export function OnboardingPage() {
 
       let application: OnboardingRequestDto | null;
       try {
-        application = await getMine();
+        application = await getMine(partnerType);
       } catch (err) {
         // The onboarding route intentionally blocks an account whose phone
         // proof is incomplete. Email is already verified above, so recover at
@@ -682,6 +693,7 @@ export function OnboardingPage() {
 
       if (application && application.status !== 'draft') {
         setSubmittedRequestId(application.id);
+        setSavedApplicationStatus(application.status);
         setApprovalStatus(application.status === 'submitted' ? 'pending' : application.status);
         initialised.current = true;
         setStep('success');
@@ -691,6 +703,7 @@ export function OnboardingPage() {
 
       if (application) {
         setSubmittedRequestId(application.id);
+        setSavedApplicationStatus(application.status);
         const p = application.profile;
         const isBusiness = p.entityType === 'business';
         setEntityType(isBusiness ? 'business' : 'individual');
@@ -863,7 +876,7 @@ export function OnboardingPage() {
       if (!result.passed) {
         throw new Error(result.reason ?? 'Phone verification failed.');
       }
-      setStep('entity_type');
+      setStep(roleChosen ? 'entity_type' : 'role');
     } catch (err) {
       setError(errorMessage(err, 'Invalid or expired code.'));
     } finally {
@@ -902,6 +915,7 @@ export function OnboardingPage() {
             (startOnboardingKeyRef.current ??= crypto.randomUUID()),
           );
       setSubmittedRequestId(application.id);
+      setSavedApplicationStatus(application.status);
       setApplicationDocuments(application.documents);
       setFieldErrors({});
 
@@ -945,6 +959,7 @@ export function OnboardingPage() {
           (submitOnboardingKeyRef.current ??= crypto.randomUUID()),
         );
         setSubmittedRequestId(application.id);
+        setSavedApplicationStatus(application.status);
         setApprovalStatus('pending');
         setStep('success');
       } catch (err) {
@@ -1010,6 +1025,15 @@ export function OnboardingPage() {
 
   const currentStepIndex = stepSequence.indexOf(step);
   const requestedType = partnerType;
+  const savedStatusLabel = savedApplicationStatus
+    ? {
+        draft: 'Draft',
+        submitted: 'Submitted',
+        changes_requested: 'Changes requested',
+        approved: 'Approved',
+        rejected: 'Rejected',
+      }[savedApplicationStatus]
+    : null;
   const documentPath = (label: string) =>
     applicationDocuments.find((doc) => doc.label === label && doc.status !== 'rejected')
       ?.storagePath;
@@ -1105,6 +1129,11 @@ export function OnboardingPage() {
       )}
 
       <main className="max-w-xl mx-auto px-6 pb-24">
+        {savedStatusLabel && (
+          <p role="status" className="mb-6 text-label text-[var(--text-tertiary)]">
+            Saved {partnerType} application · {savedStatusLabel}
+          </p>
+        )}
         {partnerType === 'promoter' && submittedRequestId && <PromoterAgreementPanel />}
         <AnimatePresence mode="wait">
           {/* ── Sign Up ── */}
@@ -1458,34 +1487,38 @@ export function OnboardingPage() {
                   icon={Building2}
                   title="Venue Partner"
                   description="Direct management for nightlife venues, clubs, and lounge spaces."
-                  active={partnerType === 'venue'}
+                  active={roleChosen && partnerType === 'venue'}
                   onClick={() => {
                     setPartnerType('venue');
+                    setRoleChosen(true);
                   }}
                 />
                 <RoleCard
                   icon={Users}
                   title="Event Host"
                   description="For organizers, DJs, and collectives hosting independent events."
-                  active={partnerType === 'host'}
+                  active={roleChosen && partnerType === 'host'}
                   onClick={() => {
                     setPartnerType('host');
+                    setRoleChosen(true);
                   }}
                 />
                 <RoleCard
                   icon={Zap}
                   title="Promoter"
                   description="Access tools for ticket distribution and guestlist management."
-                  active={partnerType === 'promoter'}
+                  active={roleChosen && partnerType === 'promoter'}
                   onClick={() => {
                     setPartnerType('promoter');
+                    setRoleChosen(true);
                   }}
                 />
               </div>
               <ActionButton
+                disabled={!roleChosen}
                 onClick={() => {
                   setError('');
-                  setStep('signup');
+                  setStep(authUser?.emailVerified === true ? 'entity_type' : 'signup');
                 }}
               >
                 Continue <ChevronRight className="h-5 w-5" />
