@@ -3,6 +3,8 @@
 import Image from 'next/image';
 import { useState } from 'react';
 
+import { shouldBypassEventImageOptimizer } from '@/lib/events/image-optimization';
+
 import styles from './events.module.css';
 
 import type { PartnerEventArtwork } from '@/data/partner-data-source';
@@ -51,9 +53,7 @@ export function EventPoster({
           onError={() => {
             setUnavailableImage(artwork.value);
           }}
-          unoptimized={/^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?(?:\/|$)/i.test(
-            artwork.value,
-          )}
+          unoptimized={shouldBypassEventImageOptimizer(artwork.value)}
         />
       ) : null}
     </div>

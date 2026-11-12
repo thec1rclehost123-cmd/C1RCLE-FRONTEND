@@ -80,4 +80,44 @@ describe('TicketTierEditor ticket dimensions', () => {
     expect(screen.getByLabelText('Phase 1 phase start date')).toBeInTheDocument();
     expect(screen.getByLabelText('Phase 1 phase end date')).toBeInTheDocument();
   });
+
+  it('removes one pricing phase and keeps the remaining phase editable', async () => {
+    const user = userEvent.setup();
+    renderEditor({
+      id: 'tier-1',
+      name: 'General',
+      price: 1000,
+      quantity: 100,
+      pricingPhases: [
+        {
+          id: 'phase-1',
+          name: 'Early Bird',
+          priceInPaise: 80000,
+          startDate: '12-11',
+          endDate: '17-11',
+          quantity: null,
+        },
+        {
+          id: 'phase-2',
+          name: 'Final Release',
+          priceInPaise: 120000,
+          startDate: '18-11',
+          endDate: '23-11',
+          quantity: null,
+        },
+      ],
+    });
+    await openTicketOptions(user);
+
+    await user.click(screen.getByRole('button', { name: 'Remove Early Bird phase' }));
+
+    expect(screen.queryByLabelText('Early Bird phase name')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Final Release phase name')).toHaveValue('Final Release');
+    expect(screen.getByLabelText('Final Release phase price')).toHaveValue(1200);
+
+    await user.click(screen.getByRole('button', { name: '+ Add pricing phase' }));
+
+    expect(screen.getByLabelText('Phase 3 phase name')).toHaveValue('Phase 3');
+    expect(screen.getByLabelText('Phase 3 phase price')).toHaveValue(1000);
+  });
 });

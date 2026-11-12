@@ -60,6 +60,30 @@ export function EventTimeTimeline({
     setError('');
     onSelect(range.slot, clock(from), clock(to));
   };
+  const changeTime = (from: number, to: number) => {
+    if (from >= 1440 || to <= from || to - from > 1440) {
+      setError('Choose up to 24 hours within an available interval. Red periods are unavailable.');
+      return;
+    }
+    const available = ranges.find((range) => from >= range.start && to <= range.end);
+    const current = selectedSlotId
+      ? ranges.find((range) => range.slot.id === selectedSlotId)
+      : undefined;
+    const range = available ?? current;
+    if (!range) {
+      setError('Choose up to 24 hours within an available interval. Red periods are unavailable.');
+      return;
+    }
+    setError(
+      available
+        ? ''
+        : 'Choose up to 24 hours within an available interval. Red periods are unavailable.',
+    );
+    // Keep intermediate edits in state even if one endpoint temporarily
+    // crosses a booked interval. The editor blocks Continue until both ends
+    // are back inside one open interval.
+    onSelect(range.slot, clock(from), clock(to));
+  };
   const shown: [number, number] | null = drag ?? (selectedSlotId ? [start, end] : null);
   const position = (event: React.PointerEvent<SVGSVGElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -176,7 +200,7 @@ export function EventTimeTimeline({
               if (!event.target.value) return;
               const [h = 0, m = 0] = event.target.value.split(':').map(Number);
               const from = h * 60 + m;
-              commit(from, from + Math.max(15, end - start));
+              changeTime(from, from + Math.max(15, end - start));
             }}
           />
         </label>
@@ -188,13 +212,13 @@ export function EventTimeTimeline({
             value={selectedSlotId ? clock(end) : ''}
             onChange={(event) => {
               if (!event.target.value) {
-                commit(start, start + 240);
+                changeTime(start, start + 240);
                 return;
               }
               const [h = 0, m = 0] = event.target.value.split(':').map(Number);
               let to = h * 60 + m;
               if (to <= start) to += 1440;
-              commit(start, to);
+              changeTime(start, to);
             }}
           />
         </label>

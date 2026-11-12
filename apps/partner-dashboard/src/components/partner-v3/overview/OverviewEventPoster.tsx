@@ -3,6 +3,8 @@
 import Image from 'next/image';
 import { useState } from 'react';
 
+import { shouldBypassEventImageOptimizer } from '@/lib/events/image-optimization';
+
 export function OverviewEventPoster({
   src,
   alt = '',
@@ -29,9 +31,9 @@ export function OverviewEventPoster({
           fill
           sizes={sizes}
           className={className}
-          // Local fixture URLs point back to this dashboard and must bypass
-          // the remote image optimizer; production remote hosts stay allowlisted.
-          unoptimized={/^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?(?:\/|$)/i.test(src ?? '')}
+          // Browser-local previews and public GCS posters must bypass the
+          // Next optimizer, which cannot fetch blob URLs or every staging bucket.
+          unoptimized={shouldBypassEventImageOptimizer(src ?? '')}
           onError={() => {
             setFailedSrc(src ?? null);
           }}

@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
 
 import { describeApiError } from '@/lib/api/describe-error';
+import { clearDraftPoster, getDraftPoster, saveDraftPoster } from '@/lib/events/draft-poster-store';
 import {
   discardHostEventDraft,
   getHostEventDraft,
@@ -126,38 +127,98 @@ export function PartnerEventEditor({
   const [draftTouched, setDraftTouched] = useState(false);
   const [draftSaveError, setDraftSaveError] = useState(false);
   const draftSaveQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const posterSaveQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const localPosterObjectUrl = useRef<string | null>(null);
+  const restoredHostDraftOrganization = useRef<string | null>(null);
+  const hostDraftRestoreGeneration = useRef(0);
+
+  const clearLocalPosterPreview = () => {
+    if (localPosterObjectUrl.current) URL.revokeObjectURL(localPosterObjectUrl.current);
+    localPosterObjectUrl.current = null;
+  };
+  const queuePosterStorage = (operation: () => Promise<void>): Promise<void> => {
+    const pending = posterSaveQueue.current
+      .catch(() => undefined)
+      .then(operation)
+      .then(() => {
+        setDraftSaveError(false);
+      })
+      .catch(() => {
+        setDraftSaveError(true);
+      });
+    posterSaveQueue.current = pending;
+    return pending;
+  };
+
+  useEffect(
+    () => () => {
+      if (localPosterObjectUrl.current) URL.revokeObjectURL(localPosterObjectUrl.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (mode !== 'create' || !isHost || !organizationId) return;
-    let active = true;
+    if (restoredHostDraftOrganization.current === organizationId) return;
+    restoredHostDraftOrganization.current = organizationId;
+    const generation = ++hostDraftRestoreGeneration.current;
     getHostEventDraft(organizationId)
       .then(async ({ draft: saved }) => {
-        if (!active || !saved) return;
-        if (saved.schemaVersion !== 1 || !isRestorableDraft(saved.data)) {
+        if (generation !== hostDraftRestoreGeneration.current) return;
+        if (saved && (saved.schemaVersion !== 1 || !isRestorableDraft(saved.data))) {
           await discardHostEventDraft(organizationId);
+          await clearDraftPoster(organizationId);
           return;
         }
-        const safeData = sanitizeEventDraft(saved.data);
-        setDraft({
+        const safeData = saved ? sanitizeEventDraft(saved.data) : {};
+        let restoredPoster: File | null = null;
+        if (saved) {
+          try {
+            restoredPoster = await getDraftPoster(organizationId);
+          } catch {
+            if (generation === hostDraftRestoreGeneration.current) setDraftSaveError(true);
+          }
+        } else {
+          // A local file without its server draft is orphaned; never attach it
+          // to a fresh event after the server draft has been submitted/removed.
+          await clearDraftPoster(organizationId).catch(() => {
+            if (generation === hostDraftRestoreGeneration.current) setDraftSaveError(true);
+          });
+        }
+        if (generation !== hostDraftRestoreGeneration.current) return;
+        const restoredPosterUrl = restoredPoster ? URL.createObjectURL(restoredPoster) : null;
+        if (restoredPosterUrl) localPosterObjectUrl.current = restoredPosterUrl;
+        const restoredDraft: EventEditorDraft = {
           ...initialDraft,
           ...(safeData as Partial<EventEditorDraft>),
           ...(initialVenueId ? { venueId: initialVenueId } : {}),
           ...(initialDate ? { date: initialDate, dateLabel: formatDateLabel(initialDate) } : {}),
+          ...(restoredPoster
+            ? {
+                artwork: {
+                  type: 'image' as const,
+                  value: restoredPosterUrl ?? '',
+                  alt: restoredPoster.name,
+                  file: restoredPoster,
+                },
+              }
+            : {}),
+        };
+        setDraft({
+          ...restoredDraft,
         });
         setSelectedSlotId(
           initialSlotId ??
-            (typeof saved.data['selectedSlotId'] === 'string' ? saved.data['selectedSlotId'] : ''),
+            (typeof saved?.data['selectedSlotId'] === 'string' ? saved.data['selectedSlotId'] : ''),
         );
-        const savedStep = typeof saved.data['step'] === 'string' ? saved.data['step'] : initialStep;
+        const savedStep =
+          typeof saved?.data['step'] === 'string' ? saved.data['step'] : initialStep;
         setLocalStep(normaliseStep(savedStep, steps));
       })
       .catch(() => undefined)
       .finally(() => {
-        if (active) setDraftReady(true);
+        if (generation === hostDraftRestoreGeneration.current) setDraftReady(true);
       });
-    return () => {
-      active = false;
-    };
   }, [
     initialDate,
     initialDraft,
@@ -207,6 +268,43 @@ export function PartnerEventEditor({
     .flatMap((month) => month.days)
     .flatMap((day) => day.slots)
     .find((slot) => slot.id === selectedSlotId);
+  useEffect(() => {
+    if (
+      !isHost ||
+      mode !== 'create' ||
+      !selectedSlotId ||
+      draft.time.trim() ||
+      !selectedWindow?.startTime ||
+      !selectedWindow.endTime
+    )
+      return;
+    const start = new Intl.DateTimeFormat('en-GB', {
+      timeZone: PRODUCT_TIME_ZONE,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(new Date(selectedWindow.startTime));
+    const end = new Intl.DateTimeFormat('en-GB', {
+      timeZone: PRODUCT_TIME_ZONE,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(
+      new Date(
+        Math.min(
+          Date.parse(selectedWindow.startTime) + 4 * 60 * 60 * 1000,
+          Date.parse(selectedWindow.endTime),
+        ),
+      ),
+    );
+    // A direct link can restore the slot ID without the corresponding local
+    // times. Seed a valid range from that slot instead of showing a bogus
+    // 6–10 PM selection over a booked interval.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDraft((current) =>
+      current.time.trim() ? current : { ...current, time: start, endTime: end },
+    );
+  }, [draft.time, isHost, mode, selectedSlotId, selectedWindow]);
   const timeErrors = useMemo(() => {
     if (
       !selectedSlotId.startsWith('free-') ||
@@ -325,6 +423,19 @@ export function PartnerEventEditor({
   };
 
   const update = (values: Partial<EventEditorDraft>) => {
+    if (values.artwork) {
+      const nextObjectUrl = values.artwork.value.startsWith('blob:') ? values.artwork.value : null;
+      if (localPosterObjectUrl.current !== nextObjectUrl) clearLocalPosterPreview();
+      localPosterObjectUrl.current = nextObjectUrl;
+      if (isHost && mode === 'create' && organizationId) {
+        if (values.artwork.file) {
+          const file = values.artwork.file;
+          void queuePosterStorage(() => saveDraftPoster(organizationId, file));
+        } else {
+          void queuePosterStorage(() => clearDraftPoster(organizationId));
+        }
+      }
+    }
     setDraftDiscarded(false);
     setDraftTouched(true);
     setDraft((current) => ({ ...current, ...values }));
@@ -398,6 +509,10 @@ export function PartnerEventEditor({
         ...(venue ? { artwork: venue.artwork } : {}),
       };
     });
+    clearLocalPosterPreview();
+    if (isHost && mode === 'create' && organizationId) {
+      void queuePosterStorage(() => clearDraftPoster(organizationId));
+    }
     setCompletedSteps(new Set());
     setShowErrors(false);
     updateQuery({ venue: external ? undefined : venueId, date: undefined, slot: undefined });
@@ -452,6 +567,7 @@ export function PartnerEventEditor({
             );
           await draftSaveQueue.current;
         }
+        if (isHost && organizationId) await posterSaveQueue.current;
         await onSubmit(submissionDraft, selectedSlotId);
       } catch (error) {
         setSubmitError(describeApiError(error, 'The event could not be submitted.'));
@@ -468,6 +584,15 @@ export function PartnerEventEditor({
   const uploadArtwork = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    event.target.value = '';
+    if (
+      !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) ||
+      file.size > 5 * 1024 * 1024
+    ) {
+      setSubmitError('Use a JPG, PNG or WebP poster up to 5 MB.');
+      return;
+    }
+    setSubmitError(null);
     update({ artwork: { type: 'image', value: URL.createObjectURL(file), alt: file.name, file } });
   };
   const addArtist = (artist: string) => {
@@ -487,7 +612,10 @@ export function PartnerEventEditor({
 
   const discardDraft = async () => {
     setDraftDiscarded(true);
-    if (organizationId) await discardHostEventDraft(organizationId);
+    if (organizationId) {
+      await discardHostEventDraft(organizationId);
+      await queuePosterStorage(() => clearDraftPoster(organizationId));
+    }
     setDraft(initialDraft);
     setSelectedSlotId(initialSlotId ?? '');
     setLocalStep(steps[0] ?? 'basics');
