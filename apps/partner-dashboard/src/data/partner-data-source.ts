@@ -548,6 +548,8 @@ export interface PartnerProfile {
 
 export interface PartnerRelationship extends PartnerProfile {
   readonly status?: PartnerRelationshipStatus | undefined;
+  /** Present when the Host's canonical event-candidate check was available. */
+  readonly eventAssignmentAvailability?: 'available' | 'unavailable' | undefined;
 
   // Required by discovery/connect flows
   readonly organizationId?: string | undefined;

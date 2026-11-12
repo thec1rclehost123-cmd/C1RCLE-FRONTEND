@@ -41,4 +41,22 @@ describe('PartnerProfilePanel', () => {
     expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true');
     expect(screen.queryByText('Promoter · Pune')).not.toBeInTheDocument();
   });
+
+  it('explains when a connected Promoter cannot be assigned to events', () => {
+    render(
+      <PartnerProfilePanel
+        partner={{
+          ...venue,
+          id: 'promoter-1',
+          name: 'AnilPromoter',
+          kind: 'promoter',
+          role: 'Promoter',
+          eventAssignmentAvailability: 'unavailable',
+        }}
+        closeHref="/partner/host/partners"
+      />,
+    );
+
+    expect(screen.getByText('Event assignment: Unavailable')).toBeInTheDocument();
+  });
 });
