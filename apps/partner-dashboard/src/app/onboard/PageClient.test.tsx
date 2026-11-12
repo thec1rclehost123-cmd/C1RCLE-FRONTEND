@@ -34,6 +34,7 @@ const mocks = vi.hoisted(() => ({
   verifyOtp: vi.fn(),
   routeAfterAuth: vi.fn(),
   replace: vi.fn(),
+  searchParams: '',
 }));
 
 vi.mock('framer-motion', () => ({
@@ -50,7 +51,7 @@ vi.mock('framer-motion', () => ({
 }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: mocks.replace, push: vi.fn() }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(mocks.searchParams),
 }));
 vi.mock('@c1rcle/auth', () => ({
   refresh: mocks.refreshSession,
@@ -129,6 +130,7 @@ async function upload(input: HTMLInputElement, label: string) {
 describe('Partner onboarding wizard', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mocks.searchParams = '';
     mocks.getPromoterAgreement.mockResolvedValue({ agreement: null, activationAvailable: false });
     mocks.saveProgress.mockImplementation((_id, patch) => Promise.resolve(dto({}, patch)));
     mocks.auth.user = { id: 'user_1', email: 'a@b.co', emailVerified: true };
@@ -146,10 +148,21 @@ describe('Partner onboarding wizard', () => {
       expect(mocks.getMine).not.toHaveBeenCalled();
     });
 
-    it('goes to phone verification when signed in with no application yet', async () => {
+    it('requires an explicit role when signed in with no application yet', async () => {
       mocks.getMine.mockResolvedValue(null);
       render(<OnboardingPage />);
-      expect(await screen.findByText('Confirm Your Number')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(document.body.textContent).toContain('Join the Network');
+      });
+      expect(screen.getByRole('button', { name: /continue/i })).toBeDisabled();
+    });
+
+    it('preserves an explicit role route for an authenticated applicant without an application', async () => {
+      mocks.searchParams = 'type=promoter';
+      mocks.getMine.mockResolvedValue(null);
+      render(<OnboardingPage />);
+      expect(await screen.findByText('Individual or Business?')).toBeInTheDocument();
+      expect(mocks.getMine).toHaveBeenCalledWith('promoter');
     });
 
     it('keeps a signed-in account with unverified email at email verification without reading onboarding', async () => {
@@ -184,6 +197,7 @@ describe('Partner onboarding wizard', () => {
       mocks.getMine.mockResolvedValue(dto());
       render(<OnboardingPage />);
       expect(await screen.findByText('Verify Your Identity')).toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent('Saved venue application · Draft');
     });
 
     it('resumes a business draft at the business documents step', async () => {
@@ -229,6 +243,9 @@ describe('Partner onboarding wizard', () => {
       mocks.getMine.mockResolvedValue(dto({ status, missingDocuments: [] }));
       render(<OnboardingPage />);
       expect(await screen.findByText(text)).toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent(
+        `Saved venue application · ${status === 'submitted' ? 'Submitted' : 'Rejected'}`,
+      );
     });
 
     it.each([
@@ -324,7 +341,13 @@ describe('Partner onboarding wizard', () => {
 
   describe('phone verification gating', () => {
     async function openPhoneStep() {
-      mocks.getMine.mockResolvedValue(null);
+      mocks.getMine.mockRejectedValue(
+        apiError({
+          code: 'forbidden',
+          message: 'Verify your phone before using Partner onboarding.',
+          status: 403,
+        }),
+      );
       const user = userEvent.setup();
       const view = render(<OnboardingPage />);
       await screen.findByText('Confirm Your Number');
@@ -382,7 +405,7 @@ describe('Partner onboarding wizard', () => {
       });
       await user.click(screen.getByRole('button', { name: /verify phone/i }));
       expect(
-        await screen.findByText('Individual or Business?', {}, { timeout: 15_000 }),
+        await screen.findByRole('heading', { name: 'Join the Network' }, { timeout: 15_000 }),
       ).toBeInTheDocument();
       expect(mocks.verifyPhone).toHaveBeenLastCalledWith({
         phoneNumber: '+919876543210',

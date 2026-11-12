@@ -44,6 +44,7 @@ describe('Promoter agreement review', () => {
     });
     const user = userEvent.setup();
     render(<PromoterAgreementPanel />);
+    expect(mocks.getMine).toHaveBeenCalledWith('promoter');
     const button = await screen.findByRole('button', { name: 'Accept agreement' });
     expect(button).toBeDisabled();
     expect(mocks.acceptPromoterAgreement).not.toHaveBeenCalled();

@@ -19,7 +19,17 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return originError;
   }
 
-  const gatewayResponse = await forwardToGateway('/api/v2/onboarding/me', {
+  const requestedType = req.nextUrl.searchParams.get('requestedType');
+  if (requestedType !== null && !['venue', 'host', 'promoter'].includes(requestedType)) {
+    return NextResponse.json(
+      { code: 'validation', message: 'Invalid onboarding role.' },
+      { status: 400 },
+    );
+  }
+  const path = requestedType
+    ? `/api/v2/onboarding/me?requestedType=${encodeURIComponent(requestedType)}`
+    : '/api/v2/onboarding/me';
+  const gatewayResponse = await forwardToGateway(path, {
     method: 'GET',
     ...gatewayAuthInit(req),
   });

@@ -23,7 +23,7 @@ export function PromoterAgreementPanel() {
   const [reload, setReload] = useState(0);
   useEffect(() => {
     let active = true;
-    void Promise.all([getMine(), getPromoterAgreement()])
+    void Promise.all([getMine('promoter'), getPromoterAgreement()])
       .then(([application, status]) => {
         if (active) {
           setData({ application, status });

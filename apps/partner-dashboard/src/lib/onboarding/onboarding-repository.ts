@@ -83,14 +83,18 @@ async function withVersionRecovery(
 }
 
 /** The applicant's own application, if any. `null` before they have started. */
-export async function getMine(): Promise<OnboardingRequestDto | null> {
+export async function getMine(
+  requestedType?: 'venue' | 'host' | 'promoter',
+): Promise<OnboardingRequestDto | null> {
   // Read through the same-origin BFF (`/api/bff/onboarding/me`), which
   // forwards the browser's httpOnly session cookie to the gateway. Every
   // onboarding call below (start/autosave/submit/upload) goes through the BFF
   // the same way — cookie-authenticated, CSRF-checked — so no bearer token is
   // involved and the client never holds a cross-origin gateway URL.
   const response = await bffClient.get({
-    path: '/api/bff/onboarding/me',
+    path: requestedType
+      ? `/api/bff/onboarding/me?requestedType=${requestedType}`
+      : '/api/bff/onboarding/me',
     schema: onboardingMeResponseSchema,
   });
   if (response.request !== null) {

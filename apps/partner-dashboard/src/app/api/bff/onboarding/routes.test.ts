@@ -76,6 +76,30 @@ afterEach(() => {
 });
 
 describe('GET /api/bff/onboarding/me', () => {
+  it('forwards a validated role lookup', async () => {
+    mockForward.mockResolvedValue(gatewayResponse({ request: null }));
+    const res = await me(
+      new NextRequest(`${APP_ORIGIN}/api/bff/onboarding/me?requestedType=promoter`, {
+        headers: { origin: APP_ORIGIN },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(mockForward).toHaveBeenCalledWith('/api/v2/onboarding/me?requestedType=promoter', {
+      method: 'GET',
+      cookie: null,
+    });
+  });
+
+  it('rejects an unsupported role lookup', async () => {
+    const res = await me(
+      new NextRequest(`${APP_ORIGIN}/api/bff/onboarding/me?requestedType=admin`, {
+        headers: { origin: APP_ORIGIN },
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect(mockForward).not.toHaveBeenCalled();
+  });
+
   it('forwards the session cookie and mints a CSRF cookie when absent', async () => {
     mockForward.mockResolvedValue(gatewayResponse({ request: null }));
 
