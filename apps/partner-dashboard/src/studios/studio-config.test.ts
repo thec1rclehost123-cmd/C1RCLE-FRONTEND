@@ -11,3 +11,12 @@ describe('Promoter navigation scope', () => {
     expect(labels).not.toContain('Marketing');
   });
 });
+
+describe('Venue operational navigation', () => {
+  it('routes the Venue Door menu to the event selector', () => {
+    const door = STUDIO_CONFIG.venue.navigation.find((item) => item.label === 'Door');
+
+    expect(door?.href).toBe('/partner/venue/door');
+    expect(STUDIO_CONFIG.venue.navigation.some((item) => item.label === 'Presence')).toBe(false);
+  });
+});
