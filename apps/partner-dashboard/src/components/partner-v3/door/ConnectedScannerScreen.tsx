@@ -348,7 +348,9 @@ export function ConnectedScannerScreen({
                           className="rounded-lg border border-white/20 px-3 py-2 text-sm"
                           onClick={() => {
                             void navigator.clipboard.writeText(item.code).then(
-                              () => setCodeNotice('Scanner code copied.'),
+                              () => {
+                                setCodeNotice('Scanner code copied.');
+                              },
                               () => {
                                 setCodesError(
                                   'Copy is unavailable. Select and copy the code manually.',
