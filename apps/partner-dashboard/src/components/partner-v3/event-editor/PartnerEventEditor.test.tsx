@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
 
@@ -122,6 +122,10 @@ async function continueStep(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('PartnerEventEditor sequential workflow', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   beforeEach(() => {
     push.mockReset();
     replace.mockReset();
@@ -206,6 +210,23 @@ describe('PartnerEventEditor sequential workflow', () => {
     });
     expect(input).toHaveValue('');
     expect(data.role).toBe('host');
+  });
+
+  it('restores a selected Host poster file from local draft storage', async () => {
+    const file = new File(['poster'], 'restored-poster.png', { type: 'image/png' });
+    posterStoreMocks.get.mockResolvedValue(file);
+    const createObjectUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:restored-poster');
+
+    await setup(undefined, true, false, true);
+
+    await waitFor(() => {
+      expect(posterStoreMocks.get).toHaveBeenCalledWith('host-test-org');
+    });
+    expect(createObjectUrl).toHaveBeenCalledWith(file);
+
+    await waitFor(() => {
+      expect(screen.getByText('Change poster')).toBeInTheDocument();
+    });
   });
 
   it('does not restore a stale Host draft over edits when the selected slot query changes', async () => {

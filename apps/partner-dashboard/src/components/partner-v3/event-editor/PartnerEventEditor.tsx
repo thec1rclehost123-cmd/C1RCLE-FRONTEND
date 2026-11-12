@@ -137,12 +137,13 @@ export function PartnerEventEditor({
     const generation = ++hostDraftRestoreGeneration.current;
     getHostEventDraft(organizationId)
       .then(async ({ draft: saved }) => {
-        if (generation !== hostDraftRestoreGeneration.current || !saved) return;
-        if (saved.schemaVersion !== 1 || !isRestorableDraft(saved.data)) {
+        if (generation !== hostDraftRestoreGeneration.current) return;
+        if (saved && (saved.schemaVersion !== 1 || !isRestorableDraft(saved.data))) {
           await discardHostEventDraft(organizationId);
+          await clearDraftPoster(organizationId);
           return;
         }
-        const safeData = sanitizeEventDraft(saved.data);
+        const safeData = saved ? sanitizeEventDraft(saved.data) : {};
         let restoredPoster: File | null = null;
         try {
           restoredPoster = await getDraftPoster(organizationId);
@@ -171,9 +172,12 @@ export function PartnerEventEditor({
         });
         setSelectedSlotId(
           initialSlotId ??
-            (typeof saved.data['selectedSlotId'] === 'string' ? saved.data['selectedSlotId'] : ''),
+            (typeof saved?.data['selectedSlotId'] === 'string'
+              ? saved.data['selectedSlotId']
+              : ''),
         );
-        const savedStep = typeof saved.data['step'] === 'string' ? saved.data['step'] : initialStep;
+        const savedStep =
+          typeof saved?.data['step'] === 'string' ? saved.data['step'] : initialStep;
         setLocalStep(normaliseStep(savedStep, steps));
       })
       .catch(() => undefined)
