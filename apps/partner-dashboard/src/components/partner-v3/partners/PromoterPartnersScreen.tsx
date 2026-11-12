@@ -26,7 +26,7 @@ interface PromoterPartnersQuery {
 
 const tabs: readonly { readonly value: PromoterPartnerTab; readonly label: string }[] = [
   { value: 'discover', label: 'Discover' },
-  { value: 'active', label: 'Active 3' },
+  { value: 'active', label: 'Active' },
   { value: 'incoming', label: 'Incoming' },
   { value: 'pending', label: 'Pending' },
   { value: 'declined', label: 'Declined' },
@@ -158,7 +158,9 @@ export function PromoterPartnersScreen({
                 className={tab === item.value ? styles['promoterPartnerTabActive'] : ''}
                 aria-current={tab === item.value ? 'page' : undefined}
               >
-                {item.label}
+                {item.value === 'active'
+                  ? `${item.label} ${String(data.activePartnersCount)}`
+                  : item.label}
               </Link>
             ))}
           </nav>

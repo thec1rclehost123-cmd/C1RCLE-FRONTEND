@@ -28,6 +28,21 @@ describe('PromoterPartnersScreen', () => {
     expect(screen.getByPlaceholderText('Search venues & hosts...')).toBeInTheDocument();
   });
 
+  it('shows the active partner count from the same records as the Active tab', async () => {
+    const data = await fixturePartnerDataSource.getPromoterPartners();
+    const singleActivePartner = {
+      ...data,
+      activePartnersCount: 1,
+      active: data.active.slice(0, 1),
+    };
+    render(<PromoterPartnersScreen data={singleActivePartner} />);
+
+    expect(screen.getByRole('link', { name: 'Active 1' })).toHaveAttribute(
+      'href',
+      '/partner/promoter/partners?tab=active',
+    );
+  });
+
   it('renders active filtering and intentionally empty request states', async () => {
     const data = await fixturePartnerDataSource.getPromoterPartners();
     const { rerender } = render(
