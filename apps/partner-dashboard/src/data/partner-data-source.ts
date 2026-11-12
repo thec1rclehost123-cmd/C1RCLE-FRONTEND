@@ -456,6 +456,7 @@ export type PromoterEventAccessState = 'pending' | 'required';
 
 export interface PromoterDiscoverEvent {
   readonly id: string;
+  readonly venueId?: string | null;
   readonly name: string;
   readonly venue: string;
   readonly city: string;
@@ -470,6 +471,7 @@ export interface PromoterDiscoverEvent {
 
 export interface PromoterLinkedEvent {
   readonly id: string;
+  readonly venueId?: string | null;
   readonly assignmentId?: string;
   readonly assignmentVersion?: number;
   readonly assignmentStatus?:

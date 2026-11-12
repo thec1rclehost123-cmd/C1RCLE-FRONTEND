@@ -6,7 +6,7 @@ import { PromoterPublicEventDetailsScreen } from '@/components/promoter/Promoter
 import { loadPartnerEvent } from '@/lib/events/load-partner-event';
 import { loadPartnerEventAnalytics } from '@/lib/events/load-partner-event-analytics';
 import { loadPartnerEventTiers } from '@/lib/events/load-partner-event-tiers';
-import { loadPromoterEvents } from '@/lib/events/load-promoter-events';
+import { loadPromoterEventVenue, loadPromoterEvents } from '@/lib/events/load-promoter-events';
 
 import { renderStudioSkeleton } from '../../route-helpers';
 
@@ -26,7 +26,18 @@ export default async function StudioEventDetailPage({
     }
     const publicEvent = data.discoverEvents.find((item) => item.id === eventId);
     if (!publicEvent) notFound();
-    return <PromoterPublicEventDetailsScreen event={publicEvent} />;
+    const venue = publicEvent.venueId
+      ? await loadPromoterEventVenue(publicEvent.venueId).catch(() => null)
+      : null;
+    return (
+      <PromoterPublicEventDetailsScreen
+        event={{
+          ...publicEvent,
+          venue: venue?.name ?? publicEvent.venue,
+          city: venue?.city ?? publicEvent.city,
+        }}
+      />
+    );
   }
 
   if (studio !== 'venue' && studio !== 'host')
