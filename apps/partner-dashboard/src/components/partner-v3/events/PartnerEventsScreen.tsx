@@ -69,7 +69,9 @@ export function PartnerEventsScreen({
   const [query, setQuery] = useState(initialSearch);
   const [party, setParty] = useState<PartnerEventParty>(initialParty ?? config.defaultParty);
   const [status, setStatus] = useState<PartnerEventStatusFilter>(() =>
-    config.hideDraftsForHostParty && (initialParty ?? config.defaultParty) === 'hosts' && initialStatus === 'Draft'
+    config.hideDraftsForHostParty &&
+    (initialParty ?? config.defaultParty) === 'hosts' &&
+    initialStatus === 'Draft'
       ? 'all'
       : initialStatus,
   );
@@ -78,7 +80,8 @@ export function PartnerEventsScreen({
   const visibleEvents = useMemo(() => {
     const search = query.trim().toLowerCase();
     return data.events.filter((event) => {
-      if (config.hideDraftsForHostParty && party === 'hosts' && event.status === 'Draft') return false;
+      if (config.hideDraftsForHostParty && party === 'hosts' && event.status === 'Draft')
+        return false;
       if (status !== 'all' && event.status !== status) return false;
       if (party !== event.party) return false;
       if (!search) return true;
@@ -117,7 +120,8 @@ export function PartnerEventsScreen({
   };
   const onPartyChange = (value: PartnerEventParty) => {
     setParty(value);
-    const nextStatus = config.hideDraftsForHostParty && value === 'hosts' && status === 'Draft' ? 'all' : status;
+    const nextStatus =
+      config.hideDraftsForHostParty && value === 'hosts' && status === 'Draft' ? 'all' : status;
     setStatus(nextStatus);
     updateUrl({ party: value, status: nextStatus });
   };
@@ -126,7 +130,11 @@ export function PartnerEventsScreen({
     updateUrl({ view: value });
   };
 
-  const partyEvents = data.events.filter((event) => event.party === party && !(config.hideDraftsForHostParty && party === 'hosts' && event.status === 'Draft'));
+  const partyEvents = data.events.filter(
+    (event) =>
+      event.party === party &&
+      !(config.hideDraftsForHostParty && party === 'hosts' && event.status === 'Draft'),
+  );
   const liveCount = partyEvents.filter((event) => event.status === 'Live').length;
   const draftCount = partyEvents.filter((event) => event.status === 'Draft').length;
   const completedCount = partyEvents.filter((event) => event.status === 'Completed').length;

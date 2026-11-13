@@ -347,7 +347,10 @@ export function SlotRequestScreen({
                   ) : null}
                 </>
               ) : (
-                <p>Your public Venue profile link will appear here after your Venue profile is set up.</p>
+                <p>
+                  Your public Venue profile link will appear here after your Venue profile is set
+                  up.
+                </p>
               )
             ) : (
               <Link

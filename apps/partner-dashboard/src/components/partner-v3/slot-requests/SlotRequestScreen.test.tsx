@@ -91,7 +91,11 @@ describe('SlotRequestScreen', () => {
   it('copies the connected Venue public profile link from the empty state', async () => {
     const user = userEvent.setup();
     const data = await fixturePartnerDataSource.getVenueSlotRequests();
-    loadSlotRequestsData.mockResolvedValue({ ...data, requests: [], venueShareUrl: 'http://localhost:3000/venue/test-venue' });
+    loadSlotRequestsData.mockResolvedValue({
+      ...data,
+      requests: [],
+      venueShareUrl: 'http://localhost:3000/venue/test-venue',
+    });
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: { writeText: vi.fn().mockResolvedValue(undefined) },
@@ -100,7 +104,9 @@ describe('SlotRequestScreen', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Share your venue link' }));
 
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('http://localhost:3000/venue/test-venue');
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      'http://localhost:3000/venue/test-venue',
+    );
     expect(await screen.findByRole('status')).toHaveTextContent('Venue link copied.');
   });
 
