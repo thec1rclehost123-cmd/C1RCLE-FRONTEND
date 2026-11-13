@@ -9,6 +9,7 @@ export function EventFilterBar({
   status,
   party,
   partyLabel = 'Event ownership',
+  showDrafts = true,
   showViewToggle = true,
   view,
   counts,
@@ -21,6 +22,7 @@ export function EventFilterBar({
   readonly status: 'all' | 'Live' | 'Draft' | 'Completed';
   readonly party: PartnerEventParty;
   readonly partyLabel?: string;
+  readonly showDrafts?: boolean;
   readonly showViewToggle?: boolean;
   readonly view: 'list' | 'grid';
   readonly counts: Readonly<{ all: number; live: number; drafts: number; completed: number }>;
@@ -53,7 +55,7 @@ export function EventFilterBar({
               ['Draft', 'Drafts', counts.drafts],
               ['Completed', 'Completed', counts.completed],
             ] as const
-          ).map(([value, label]) => (
+          ).filter(([value]) => value !== 'Draft' || showDrafts).map(([value, label]) => (
             <button
               key={value}
               type="button"

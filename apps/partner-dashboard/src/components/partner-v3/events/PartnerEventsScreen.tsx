@@ -31,6 +31,7 @@ export interface PartnerEventsScreenConfig {
   readonly partyFilterLabel: string;
   readonly showViewToggle: boolean;
   readonly slotRequestsHref: string;
+  readonly hideDraftsForHostParty?: boolean;
 }
 
 export function parseEventStatus(value: string | undefined): PartnerEventStatusFilter {
@@ -66,13 +67,18 @@ export function PartnerEventsScreen({
   const router = useRouter();
   const pathname = usePathname();
   const [query, setQuery] = useState(initialSearch);
-  const [status, setStatus] = useState<PartnerEventStatusFilter>(initialStatus);
   const [party, setParty] = useState<PartnerEventParty>(initialParty ?? config.defaultParty);
+  const [status, setStatus] = useState<PartnerEventStatusFilter>(() =>
+    config.hideDraftsForHostParty && (initialParty ?? config.defaultParty) === 'hosts' && initialStatus === 'Draft'
+      ? 'all'
+      : initialStatus,
+  );
   const [view, setView] = useState<PartnerEventView>(initialView);
 
   const visibleEvents = useMemo(() => {
     const search = query.trim().toLowerCase();
     return data.events.filter((event) => {
+      if (config.hideDraftsForHostParty && party === 'hosts' && event.status === 'Draft') return false;
       if (status !== 'all' && event.status !== status) return false;
       if (party !== event.party) return false;
       if (!search) return true;
@@ -80,7 +86,7 @@ export function PartnerEventsScreen({
         .toLowerCase()
         .includes(search);
     });
-  }, [data.events, party, query, status]);
+  }, [config.hideDraftsForHostParty, data.events, party, query, status]);
 
   const updateUrl = (next: {
     readonly query?: string;
@@ -111,16 +117,19 @@ export function PartnerEventsScreen({
   };
   const onPartyChange = (value: PartnerEventParty) => {
     setParty(value);
-    updateUrl({ party: value });
+    const nextStatus = config.hideDraftsForHostParty && value === 'hosts' && status === 'Draft' ? 'all' : status;
+    setStatus(nextStatus);
+    updateUrl({ party: value, status: nextStatus });
   };
   const onViewChange = (value: PartnerEventView) => {
     setView(value);
     updateUrl({ view: value });
   };
 
-  const liveCount = data.events.filter((event) => event.status === 'Live').length;
-  const draftCount = data.events.filter((event) => event.status === 'Draft').length;
-  const completedCount = data.events.filter((event) => event.status === 'Completed').length;
+  const partyEvents = data.events.filter((event) => event.party === party && !(config.hideDraftsForHostParty && party === 'hosts' && event.status === 'Draft'));
+  const liveCount = partyEvents.filter((event) => event.status === 'Live').length;
+  const draftCount = partyEvents.filter((event) => event.status === 'Draft').length;
+  const completedCount = partyEvents.filter((event) => event.status === 'Completed').length;
   const themeClass = config.accent === 'lavender' ? styles['hostTheme'] : '';
 
   return (
@@ -167,10 +176,11 @@ export function PartnerEventsScreen({
           status={status}
           party={party}
           partyLabel={config.partyFilterLabel}
+          showDrafts={!(config.hideDraftsForHostParty && party === 'hosts')}
           showViewToggle={config.showViewToggle}
           view={view}
           counts={{
-            all: data.events.length,
+            all: partyEvents.length,
             live: liveCount,
             drafts: draftCount,
             completed: completedCount,

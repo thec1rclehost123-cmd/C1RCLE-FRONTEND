@@ -4,7 +4,7 @@ import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 
 import styles from './event-analytics.module.css';
 
-import type { EventAnalyticsDto, EventBookingHeatmapDto } from '@c1rcle/contracts';
+import type { EventAnalyticsDto, EventBookingHeatmapDto, PromoCodeDto } from '@c1rcle/contracts';
 import type { ReactNode } from 'react';
 
 const rupees = new Intl.NumberFormat('en-IN', {
@@ -20,6 +20,11 @@ function money(paise: number): string {
 
 function percentage(ratio: number | null): string {
   return ratio === null ? '—' : `${String(Math.round(ratio * 100))}%`;
+}
+
+function promoDiscount(promo: PromoCodeDto): string {
+  if (promo.discountType === 'percent') return `${String(promo.discountValue)}% off`;
+  return `${money(promo.discountValue)} off`;
 }
 
 function Donut({
@@ -137,10 +142,12 @@ function BookingHeatmap({ data }: { readonly data: EventBookingHeatmapDto }) {
 export function ConnectedEventAnalyticsScreen({
   analytics,
   bookingHeatmap,
+  promoCodes = [],
   studio: _studio,
 }: {
   readonly analytics: EventAnalyticsDto;
   readonly bookingHeatmap: EventBookingHeatmapDto;
+  readonly promoCodes?: readonly PromoCodeDto[];
   readonly studio: 'host' | 'venue';
 }) {
   const unscanned = Math.max(0, analytics.ticketsSold - analytics.totalCheckIns);
@@ -184,6 +191,41 @@ export function ConnectedEventAnalyticsScreen({
             </section>
           ))}
         </div>
+
+        <ChartCard title="Promo code usage">
+          {promoCodes.length ? (
+            <>
+              <p className={styles['promoUsageTotal']}>
+                {promoCodes
+                  .reduce((total, promo) => total + promo.redemptionCount, 0)
+                  .toLocaleString('en-IN')}{' '}
+                total redemptions
+              </p>
+              <div className={styles['promoUsageList']}>
+                {promoCodes.map((promo) => (
+                  <div className={styles['promoUsageRow']} key={promo.id}>
+                    <div className={styles['promoUsageCode']}>
+                      <strong>{promo.code}</strong>
+                      <span>{promoDiscount(promo)}</span>
+                    </div>
+                    <span className={styles['promoUsageCount']}>
+                      {promo.redemptionCount.toLocaleString('en-IN')}
+                      {promo.maxRedemptions !== null
+                        ? ` / ${promo.maxRedemptions.toLocaleString('en-IN')}`
+                        : ''}{' '}
+                      used
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className={styles['promoUsageNote']}>
+                Redemptions count completed checkouts. Revenue by code isn’t available here yet.
+              </p>
+            </>
+          ) : (
+            <Unavailable>No promo codes have been added to this event.</Unavailable>
+          )}
+        </ChartCard>
 
         <div className={styles['gridTwo']}>
           <ChartCard title="Conversion funnel">

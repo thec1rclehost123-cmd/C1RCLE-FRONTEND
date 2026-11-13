@@ -82,4 +82,35 @@ describe('VenueEventsScreen', () => {
       { scroll: false },
     );
   });
+
+  it('keeps venue drafts in Venue view but never exposes Host drafts or a Host Drafts filter', async () => {
+    const data = await fixturePartnerDataSource.getVenueEvents();
+    const venueDraft = { ...data.events[0]!, id: 'venue-draft', name: 'Venue draft', party: 'venue' as const, status: 'Draft' as const };
+    const hostDraft = { ...data.events[0]!, id: 'host-draft', name: 'Host draft', party: 'hosts' as const, status: 'Draft' as const };
+    const hostLive = { ...data.events[0]!, id: 'host-live', name: 'Host live', party: 'hosts' as const, status: 'Live' as const };
+    render(<VenueEventsScreen data={{ ...data, events: [venueDraft, hostDraft, hostLive] }} initialStatus="Draft" />);
+
+    expect(screen.getByText('Venue draft')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Drafts/ })).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Hosts' }));
+
+    expect(screen.queryByText('Host draft')).not.toBeInTheDocument();
+    expect(screen.getByText('Host live')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^All1/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Live1/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Drafts/ })).not.toBeInTheDocument();
+    expect(replace).toHaveBeenLastCalledWith('/partner/venue/events?party=hosts', { scroll: false });
+  });
+
+  it('normalizes a stale Host Drafts URL to All and excludes Host drafts', async () => {
+    const data = await fixturePartnerDataSource.getVenueEvents();
+    const hostDraft = { ...data.events[0]!, id: 'host-draft', name: 'Host draft', party: 'hosts' as const, status: 'Draft' as const };
+    const hostLive = { ...data.events[0]!, id: 'host-live', name: 'Host live', party: 'hosts' as const, status: 'Live' as const };
+    render(<VenueEventsScreen data={{ ...data, events: [hostDraft, hostLive] }} initialParty="hosts" initialStatus="Draft" />);
+
+    expect(screen.getByText('Host live')).toBeInTheDocument();
+    expect(screen.queryByText('Host draft')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^All1/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByRole('button', { name: /^Drafts/ })).not.toBeInTheDocument();
+  });
 });

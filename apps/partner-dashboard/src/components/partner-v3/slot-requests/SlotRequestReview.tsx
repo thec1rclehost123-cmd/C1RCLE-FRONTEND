@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/partner-v3/Button';
 import { EventPoster } from '@/components/partner-v3/events/EventPoster';
 
+import { slotRequestArtwork } from './slot-request-artwork';
 import styles from './slot-requests.module.css';
 import { SlotRequestStatusBadge } from './SlotRequestStatusBadge';
 import { VenueBookingCancellation } from './VenueBookingCancellation';
@@ -68,17 +69,7 @@ export function SlotRequestReview({
       >
         <header className={styles['reviewHeader']}>
           <div className={styles['reviewArtwork']}>
-            <EventPoster
-              artwork={{
-                type: 'gradient',
-                value: request.id.includes('retro')
-                  ? 'mystery'
-                  : request.id.includes('sunday')
-                    ? 'sunset'
-                    : 'eclipse',
-              }}
-              sizes="88px"
-            />
+            <EventPoster artwork={slotRequestArtwork(request)} sizes="88px" />
           </div>
           <div className={styles['reviewIdentity']}>
             <SlotRequestStatusBadge status={request.status} />
@@ -307,14 +298,7 @@ function LivePreview({
         </div>
         <EventPoster
           className={styles['previewPoster']}
-          artwork={{
-            type: 'gradient',
-            value: request.id.includes('retro')
-              ? 'mystery'
-              : request.id.includes('sunday')
-                ? 'sunset'
-                : 'eclipse',
-          }}
+          artwork={slotRequestArtwork(request)}
           sizes="400px"
         />
         <div className={styles['previewCopy']}>
