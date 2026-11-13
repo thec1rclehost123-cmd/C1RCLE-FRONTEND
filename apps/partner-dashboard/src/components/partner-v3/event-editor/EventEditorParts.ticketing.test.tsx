@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { TicketTierEditor } from './EventEditorParts';
+import { validateTicketNumbers } from './PartnerEventEditor';
 
 import type { EventEditorTicketTier } from '@/data/partner-data-source';
 
@@ -79,6 +80,29 @@ describe('TicketTierEditor ticket dimensions', () => {
     expect(screen.getByLabelText('Phase 1 phase price')).toHaveValue(1000);
     expect(screen.getByLabelText('Phase 1 phase start date')).toBeInTheDocument();
     expect(screen.getByLabelText('Phase 1 phase end date')).toBeInTheDocument();
+  });
+
+  it('explains that Couple capacity counts tickets while each ticket admits two', async () => {
+    const user = userEvent.setup();
+    renderEditor();
+    await user.click(screen.getByRole('button', { name: 'Edit General' }));
+    await user.selectOptions(screen.getByLabelText('Ticket template'), 'Couple');
+
+    expect(
+      screen.getByText(
+        'Each Couple ticket admits 2 guests. Capacity counts Couple tickets, not individual attendees.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('rejects negative ticket prices and non-positive or fractional capacity', () => {
+    expect(validateTicketNumbers(-50, 10, 'General')).toEqual(['Set a valid price for General.']);
+    expect(validateTicketNumbers(500, -10, 'General')).toEqual([
+      'Set a valid quantity for General.',
+    ]);
+    expect(validateTicketNumbers(500, 1.5, 'General')).toEqual([
+      'Set a valid quantity for General.',
+    ]);
   });
 
   it('removes one pricing phase and keeps the remaining phase editable', async () => {

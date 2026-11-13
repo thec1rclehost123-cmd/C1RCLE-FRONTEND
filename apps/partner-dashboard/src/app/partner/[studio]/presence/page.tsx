@@ -7,5 +7,5 @@ export default async function StudioPresencePage({
 }) {
   const { studio } = await params;
   if (studio !== 'host' && studio !== 'venue') notFound();
-  redirect(`/partner/${studio}/settings`);
+  redirect(studio === 'host' ? '/partner/host/guests' : '/partner/venue/settings');
 }

@@ -36,6 +36,41 @@ describe('loadPartnerEvents', () => {
     expect(mocks.get).not.toHaveBeenCalled();
   });
 
+  it('uses the Venue event read model and preserves Host ownership for the Hosts filter', async () => {
+    mocks.cookieHeader.mockReturnValue('c1rcle.active-org=venue-org');
+    mocks.get.mockResolvedValue({
+      items: [
+        {
+          id: 'host-event',
+          organizationId: 'host-org',
+          title: 'Host event',
+          status: 'published',
+          startAt: '2026-11-20T20:00:00.000Z',
+          endAt: '2026-11-21T02:00:00.000Z',
+          tags: [],
+          imageUrl: null,
+          isFree: false,
+          startingPricePaise: 50000,
+          venueName: 'Test Venue',
+          ticketsSold: 0,
+          capacity: 100,
+          salesCountComplete: true,
+        },
+      ],
+      pageInfo: { page: 1, pageSize: 50, total: 1, hasNextPage: false, nextCursor: null },
+    });
+    const { loadPartnerEvents } = await import('./load-partner-events');
+
+    const result = await loadPartnerEvents({ studio: 'venue' });
+
+    expect(mocks.get).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: '/api/v2/organizations/venue-org/venue-events?limit=50',
+      }),
+    );
+    expect(result.events[0]?.party).toBe('hosts');
+  });
+
   it('keeps incomplete drafts distinct and completes published events at their effective end', async () => {
     const { mapStatus } = await import('./load-partner-events');
     const now = new Date('2026-11-09T12:00:00.000Z');

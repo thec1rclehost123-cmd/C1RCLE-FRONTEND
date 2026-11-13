@@ -128,7 +128,8 @@ export function toOverviewData(input: OverviewViewModelInput): OverviewData {
   const { now } = input;
   const today = toDayKey(now);
 
-  const events = input.cards.items.map((card) => toEvent(card));
+  const eligibleCards = input.cards.items.filter((card) => isUpcomingEvent(card, now));
+  const events = eligibleCards.map((card) => toEvent(card));
   const [nextEvent, ...rest] = events;
 
   return {
@@ -137,7 +138,9 @@ export function toOverviewData(input: OverviewViewModelInput): OverviewData {
     greeting: formatGreeting(input.displayName, now),
     // A partner with nothing scheduled gets an honest placeholder rather than a
     // fabricated next event. The card renders its own empty state.
-    nextEvent: nextEvent ?? placeholderEvent(),
+    nextEvent:
+      nextEvent ??
+      placeholderEvent(input.cards.items.some((card) => toEventStatus(card.status) === 'draft')),
     trends: buildTrends(input),
     recentActivity: buildActivity(input.activity),
     recentOrders:
@@ -212,11 +215,11 @@ function toEvent(card: OrganizationEventCardDto): OverviewEvent {
   };
 }
 
-function placeholderEvent(): OverviewEvent {
+function placeholderEvent(hasDrafts: boolean): OverviewEvent {
   return {
     id: '',
     name: 'No upcoming events',
-    venue: 'Create your first event to see it here',
+    venue: hasDrafts ? 'Draft events are in Events' : 'Create your first event to see it here',
     dateLabel: '',
     timeLabel: '',
     href: '/partner/venue/events/create',
@@ -224,6 +227,12 @@ function placeholderEvent(): OverviewEvent {
     sold: 0,
     capacity: null,
   };
+}
+
+function isUpcomingEvent(card: OrganizationEventCardDto, now: Date): boolean {
+  if (!['published', 'sales_paused', 'started'].includes(card.status)) return false;
+  const startAt = Date.parse(card.startAt);
+  return Number.isFinite(startAt) && startAt > now.getTime();
 }
 
 /**

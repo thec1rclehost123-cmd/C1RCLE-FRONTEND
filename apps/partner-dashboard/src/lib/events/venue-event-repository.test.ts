@@ -118,6 +118,37 @@ describe('buildSlotRequestEventDraft', () => {
     expect(mocks.post).not.toHaveBeenCalled();
   });
 
+  it('includes the selected promo expiry in the Host slot request snapshot', async () => {
+    const proposal = await buildSlotRequestEventDraft(
+      'org_host',
+      {
+        ...draft,
+        promoCodes: ['EARLY10'],
+        promoCodeSettings: [
+          {
+            id: 'promo-local',
+            code: 'EARLY10',
+            discountType: 'percent',
+            discountValue: 10,
+            quantity: 25,
+            endsAt: '2099-11-16T19:00',
+            fundingOwner: 'host',
+          },
+        ],
+      },
+      '2026-09-18T04:00:00.000Z',
+      '2026-09-18T09:30:00.000Z',
+    );
+
+    expect(proposal.promotions).toMatchObject([
+      {
+        code: 'EARLY10',
+        maxRedemptions: 25,
+        endsAt: '2099-11-16T13:30:00.000Z',
+      },
+    ]);
+  });
+
   it('submits only paid commission-eligible tiers with each Promoter assignment', async () => {
     const proposal = await buildSlotRequestEventDraft(
       'org_host',

@@ -13,6 +13,7 @@
  *  - `accepted` (wire) is mapped to `approved` (UI) so the surface keeps its
  *    established status vocabulary.
  */
+import { getClientEnv } from '@c1rcle/config';
 import { PRODUCT_TIME_ZONE } from '@c1rcle/contracts';
 
 import { forwardToGateway, mintIdempotencyKey, parseJson } from './auth-proxy';
@@ -77,6 +78,9 @@ function withIdempotency(ctx: GatewayContext): GatewayContext {
 /** Gateway calls must resolve quickly — a fossilised gateway is surfaced as a
  * fast `GatewayError` instead of hanging the BFF until the browser aborts. */
 const GATEWAY_TIMEOUT_MS = 10_000;
+// Accepting an event request can publish its event, tiers, promotions, and
+// assignments. Give writes the same response window as the browser API client.
+const GATEWAY_ACTION_TIMEOUT_MS = 60_000;
 
 async function gatewayGet<T>(
   path: string,
@@ -119,7 +123,7 @@ async function gatewayPost<T>(
       body,
       cookie: ctx.cookie,
       headers: gatewayHeaders(organizationId, ctx),
-      signal: AbortSignal.timeout(GATEWAY_TIMEOUT_MS),
+      signal: AbortSignal.timeout(GATEWAY_ACTION_TIMEOUT_MS),
     });
   } catch {
     throw new GatewayError(504, {
@@ -219,6 +223,7 @@ function toUiEvent(
     name: event.title,
     description:
       (event.summary || event.description || '').trim() || 'No description provided yet.',
+    imageUrl: event.imageUrl,
     date: formatDate(event.startAt),
     time: formatTime(event.startAt, event.endAt ?? null),
     venue: venueName,
@@ -263,6 +268,7 @@ function toUiRequest(
               dto.eventDraft.event.summary ??
               ''
             ).trim(),
+            imageUrl: dto.eventDraft.event.imageUrl,
             date: new Intl.DateTimeFormat('en-IN', {
               weekday: 'short',
               month: 'short',
@@ -330,12 +336,17 @@ async function loadIncoming(
   organizationId: string,
   ctx: GatewayContext,
 ): Promise<SlotRequestsData> {
-  const entries = await fetchIncomingEntries(organizationId, ctx);
+  const { entries, venues } = await fetchIncomingEntries(organizationId, ctx);
+  const venue = venues.find((item) => item.status === 'active') ?? venues[0];
+  const venueShareUrl = venue
+    ? `${getClientEnv().NEXT_PUBLIC_GUEST_PORTAL_URL.replace(/\/$/, '')}/venue/${encodeURIComponent(venue.slug)}`
+    : undefined;
   return {
     dataStatus: 'live',
     accent: 'orange',
     direction: 'incoming',
     requests: entries.map((entry) => entry.request),
+    ...(venueShareUrl ? { venueShareUrl } : {}),
   };
 }
 
@@ -385,7 +396,7 @@ async function mapWithConcurrency<T, R>(
 async function fetchIncomingEntries(
   organizationId: string,
   ctx: GatewayContext,
-): Promise<SlotRequestEntry[]> {
+): Promise<{ readonly entries: SlotRequestEntry[]; readonly venues: readonly VenueDto[] }> {
   const venues = await gatewayGet<Paginated<VenueDto>>(
     `/api/v2/organizations/${encodeURIComponent(organizationId)}/venues?limit=100`,
     organizationId,
@@ -440,7 +451,7 @@ async function fetchIncomingEntries(
   });
 
   entries.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
-  return entries;
+  return { entries, venues: venues.items };
 }
 
 async function fetchOutgoingEntries(
@@ -597,7 +608,7 @@ export async function loadSlotRequestNotifications(
 ): Promise<PartnerNotificationDto[]> {
   const entries =
     direction === 'incoming'
-      ? await fetchIncomingEntries(organizationId, ctx)
+      ? (await fetchIncomingEntries(organizationId, ctx)).entries
       : await fetchOutgoingEntries(organizationId, ctx);
   return entries
     .map(toNotification)
