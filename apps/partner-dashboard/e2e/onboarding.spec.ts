@@ -126,6 +126,7 @@ async function mockOnboardingNetwork(
     displayName: 'John Doe',
     role: 'partner',
     avatarUrl: null,
+    emailVerified: true,
   };
   await page.route('**/api/auth/session', async (route: Route) => {
     if (options.anonymousSession) {
@@ -226,7 +227,7 @@ async function mockOnboardingNetwork(
   });
 
   // ── /api/bff/onboarding/me ───────────────────────────────────────────────
-  await page.route('**/api/bff/onboarding/me', async (route: Route) => {
+  await page.route(/\/api\/bff\/onboarding\/me(?:\?.*)?$/, async (route: Route) => {
     onboardingReads += 1;
     await route.fulfill({
       status: 200,

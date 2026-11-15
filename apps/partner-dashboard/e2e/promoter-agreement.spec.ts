@@ -52,7 +52,7 @@ test('reviews and explicitly accepts a staging-only agreement on desktop and pho
     route.fulfill({ json: { user, accessToken: 'synthetic-local-only', expiresAt: 4102444800 } }),
   );
   await page.route('**/api/bff/organizations', (route) => route.fulfill({ json: [] }));
-  await page.route('**/api/bff/onboarding/me', (route) =>
+  await page.route(/\/api\/bff\/onboarding\/me(?:\?.*)?$/, (route) =>
     route.fulfill({ json: { request: application } }),
   );
   await page.route('**/api/bff/onboarding/promoter-agreement', (route) =>
