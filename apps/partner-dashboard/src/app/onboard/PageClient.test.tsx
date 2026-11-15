@@ -480,6 +480,7 @@ describe('Partner onboarding wizard', () => {
 
       mocks.submit.mockResolvedValue(dto({ status: 'submitted', missingDocuments: [] }));
       await user.click(next);
+      // Query and assert together so a React step transition cannot detach a stale node.
       await waitFor(() =>
         expect(screen.getByRole('heading', { name: 'Application Submitted' })).toBeInTheDocument(),
       );
@@ -599,6 +600,7 @@ describe('Partner onboarding wizard', () => {
 
       mocks.submit.mockResolvedValue(dto({ status: 'submitted', missingDocuments: [] }));
       await user.click(sigNext);
+      // Query and assert together so a React step transition cannot detach a stale node.
       await waitFor(() =>
         expect(screen.getByRole('heading', { name: 'Application Submitted' })).toBeInTheDocument(),
       );
