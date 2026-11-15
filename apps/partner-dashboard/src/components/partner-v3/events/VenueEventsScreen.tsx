@@ -12,6 +12,7 @@ const venueEventsConfig = {
   partyFilterLabel: 'Event ownership',
   showViewToggle: true,
   slotRequestsHref: '/partner/venue/slot-requests',
+  hideDraftsForHostParty: true,
 } as const;
 
 export function VenueEventsScreen({

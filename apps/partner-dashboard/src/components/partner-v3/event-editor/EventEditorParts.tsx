@@ -821,6 +821,12 @@ export function TicketTierEditor({
                         </option>
                       ))}
                     </select>
+                    {tier.name === 'Couple' ? (
+                      <span className={styles['muted']}>
+                        Each Couple ticket admits 2 guests. Capacity counts Couple tickets, not
+                        individual attendees.
+                      </span>
+                    ) : null}
                   </label>
 
                   <label className={styles['tierFieldLabel']}>
@@ -839,7 +845,9 @@ export function TicketTierEditor({
                       <span>Price (₹)</span>
                       <input
                         aria-label={`${tier.name} price`}
-                        inputMode="numeric"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
                         value={String(tier.price)}
                         onChange={(event) => {
                           updateTier(tier.id, { price: numberValue(event.target.value) });
@@ -856,7 +864,9 @@ export function TicketTierEditor({
                     </span>
                     <input
                       aria-label={`${tier.name} capacity`}
-                      inputMode="numeric"
+                      type="number"
+                      min="1"
+                      step="1"
                       value={String(tier.quantity)}
                       onChange={(event) => {
                         updateTier(tier.id, { quantity: numberValue(event.target.value) });
@@ -1521,14 +1531,34 @@ export function EventAdvancedSettings({
               </label>
               <label>
                 Promo ends (IST)
-                <input
-                  type="datetime-local"
-                  aria-label={`Promo ${String(index + 1)} ends`}
-                  value={promo.endsAt}
-                  onChange={(event) => {
-                    change({ endsAt: event.target.value });
-                  }}
-                />
+                <span className={styles['promoDateTimeControl']}>
+                  <input
+                    type="datetime-local"
+                    aria-label={`Promo ${String(index + 1)} ends`}
+                    value={promo.endsAt}
+                    onChange={(event) => {
+                      change({ endsAt: event.target.value });
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className={styles['promoDateTimePickerButton']}
+                    aria-label={`Choose end date and time for promo ${String(index + 1)}`}
+                    onClick={(event) => {
+                      const input = event.currentTarget.parentElement?.querySelector('input');
+                      if (input && typeof input.showPicker === 'function') {
+                        input.showPicker();
+                      } else {
+                        input?.focus();
+                      }
+                    }}
+                  >
+                    <svg aria-hidden="true" viewBox="0 0 20 20" fill="none">
+                      <rect x="3" y="4.5" width="14" height="13" rx="2" />
+                      <path d="M6.5 2.5v4M13.5 2.5v4M3 8h14" />
+                    </svg>
+                  </button>
+                </span>
               </label>
             </div>
           </div>
@@ -2538,7 +2568,7 @@ function initialsFor(value: string) {
     .toUpperCase();
 }
 function numberValue(value: string) {
-  const parsed = Number(value.replace(/[^0-9.]/g, ''));
+  const parsed = Number(value.replace(/,/g, ''));
   return Number.isFinite(parsed) ? parsed : 0;
 }
 function formatMoney(value: number) {

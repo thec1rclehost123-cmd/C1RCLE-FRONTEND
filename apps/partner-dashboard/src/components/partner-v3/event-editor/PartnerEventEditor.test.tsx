@@ -373,6 +373,40 @@ describe('PartnerEventEditor sequential workflow', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
+  it('clears the old Host slot times when the selected date changes', async () => {
+    const [data, availability] = await Promise.all([
+      fixturePartnerDataSource.getHostEventEditor(),
+      fixturePartnerDataSource.getHostAvailability(),
+    ]);
+    const venueAvailability = availability.venues[0];
+    const days = venueAvailability?.months.flatMap((month) => month.days) ?? [];
+    const selectedDay = days.find((day) => day.slots.length > 0);
+    const nextDay = days.find((day) => day.date !== selectedDay?.date && day.slots.length > 0);
+    const slot = selectedDay?.slots[0];
+    if (!venueAvailability || !selectedDay || !nextDay || !slot)
+      throw new Error('Expected two Host dates with open slots.');
+    const timed = withTimedHostSlot(availability, venueAvailability.venue.id, selectedDay.date);
+
+    render(
+      <PartnerEventEditor
+        data={{ ...data, defaultDraft: { ...data.defaultDraft, promoCodes: [] } }}
+        availability={timed.availability}
+        mode="create"
+        initialVenueId={venueAvailability.venue.id}
+        initialDate={selectedDay.date}
+        initialSlotId={timed.slot.id}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Event start time')).not.toHaveValue('');
+    });
+    await userEvent.setup().click(screen.getByRole('button', { name: String(nextDay.day) }));
+
+    expect(screen.getByLabelText('Event start time')).toHaveValue('');
+    expect(screen.getByLabelText('Event end time')).toHaveValue('');
+  });
+
   it('lets Hosts choose an external venue while keeping the existing venue flow intact', async () => {
     const { user, onSubmit } = await setup('review', true);
     expect(screen.getByText('Choose a venue')).toBeInTheDocument();

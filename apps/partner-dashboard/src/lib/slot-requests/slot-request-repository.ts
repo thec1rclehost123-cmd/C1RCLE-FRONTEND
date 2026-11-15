@@ -28,6 +28,7 @@ export const slotRequestsDataSchema = z.object({
   dataStatus: z.enum(['fixture', 'live']),
   accent: z.enum(['orange', 'lavender']),
   direction: z.enum(['incoming', 'outgoing']),
+  venueShareUrl: z.url().optional(),
   requests: z.array(
     z.object({
       id: z.string(),
@@ -46,6 +47,7 @@ export const slotRequestsDataSchema = z.object({
       event: z.object({
         name: z.string(),
         description: z.string(),
+        imageUrl: z.url().nullable().optional(),
         date: z.string(),
         time: z.string(),
         venue: z.string(),

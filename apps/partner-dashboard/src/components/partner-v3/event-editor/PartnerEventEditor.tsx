@@ -465,7 +465,11 @@ export function PartnerEventEditor({
   };
   const chooseDate = (day: { readonly date: string; readonly day: number }) => {
     setSelectedSlotId('');
-    update({ date: day.date, dateLabel: formatDateLabel(day.date) });
+    update({
+      date: day.date,
+      dateLabel: formatDateLabel(day.date),
+      ...(draft.date !== day.date ? { time: '', endTime: '' } : {}),
+    });
     updateQuery({ date: day.date, slot: undefined });
   };
   const chooseSlot = (slotId: string, label: string) => {
@@ -1114,10 +1118,14 @@ function validateDraft(draft: EventEditorDraft, host: boolean, requireCopy = fal
     errors.push('Late arrival surcharge must be between 0% and 100%.');
   draft.ticketTiers.forEach((tier, index) => {
     if (!tier.name.trim()) errors.push(`Name ticket tier ${String(index + 1)}.`);
-    if ((tier.accessType ?? 'ENTRY') !== 'RSVP' && tier.price <= 0)
-      errors.push(`Set a valid price for ${tier.name || `tier ${String(index + 1)}`}.`);
-    if (tier.quantity <= 0)
-      errors.push(`Set a valid quantity for ${tier.name || `tier ${String(index + 1)}`}.`);
+    errors.push(
+      ...validateTicketNumbers(
+        tier.price,
+        tier.quantity,
+        tier.name || `tier ${String(index + 1)}`,
+        (tier.accessType ?? 'ENTRY') !== 'RSVP',
+      ),
+    );
     const maxPerOrder = tier.maxPerOrder ?? (tier.accessType === 'RSVP' ? 1 : 10);
     if (!Number.isInteger(maxPerOrder) || maxPerOrder < 1 || maxPerOrder > 10)
       errors.push(
@@ -1219,9 +1227,14 @@ function validateTicketDraft(draft: EventEditorDraft): string[] {
   draft.ticketTiers.forEach((tier, index) => {
     const tierLabel = tier.name || `tier ${String(index + 1)}`;
     if (!tier.name.trim()) errors.push(`Name ticket tier ${String(index + 1)}.`);
-    if ((tier.accessType ?? 'ENTRY') !== 'RSVP' && tier.price <= 0)
-      errors.push(`Set a valid price for ${tierLabel}.`);
-    if (tier.quantity <= 0) errors.push(`Set a valid quantity for ${tierLabel}.`);
+    errors.push(
+      ...validateTicketNumbers(
+        tier.price,
+        tier.quantity,
+        tierLabel,
+        (tier.accessType ?? 'ENTRY') !== 'RSVP',
+      ),
+    );
     const maxPerOrder = tier.maxPerOrder ?? (tier.accessType === 'RSVP' ? 1 : 10);
     if (!Number.isInteger(maxPerOrder) || maxPerOrder < 1 || maxPerOrder > 10)
       errors.push(`Max tickets for ${tierLabel} must be between 1 and 10.`);
@@ -1251,6 +1264,21 @@ function validateTicketDraft(draft: EventEditorDraft): string[] {
     errors.push('Late arrival surcharge must be between 0% and 100%.');
   return errors;
 }
+
+export function validateTicketNumbers(
+  price: number,
+  quantity: number,
+  label: string,
+  requiresPaidPrice = true,
+): string[] {
+  const errors: string[] = [];
+  if (requiresPaidPrice && (!Number.isFinite(price) || price <= 0))
+    errors.push(`Set a valid price for ${label}.`);
+  if (!Number.isInteger(quantity) || quantity <= 0)
+    errors.push(`Set a valid quantity for ${label}.`);
+  return errors;
+}
+
 function validateCompensation(draft: EventEditorDraft): readonly string[] {
   if (
     !draft.selectedPromoterIds.length ||

@@ -65,23 +65,25 @@ export function PartnerSidebar({
         </IconButton>
       </div>
       <nav className={styles['sidebarNav']}>
-        {config.navigation.map((item) => {
-          const Icon = ICONS[item.icon];
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={[styles['navItem'], active ? styles['navItemActive'] : '']
-                .filter(Boolean)
-                .join(' ')}
-              aria-current={active ? 'page' : undefined}
-            >
-              <Icon size={20} aria-hidden="true" />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+        {config.navigation
+          .filter((item) => item.icon !== 'settings')
+          .map((item) => {
+            const Icon = ICONS[item.icon];
+            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={[styles['navItem'], active ? styles['navItemActive'] : '']
+                  .filter(Boolean)
+                  .join(' ')}
+                aria-current={active ? 'page' : undefined}
+              >
+                <Icon size={20} aria-hidden="true" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
       </nav>
     </aside>
   );

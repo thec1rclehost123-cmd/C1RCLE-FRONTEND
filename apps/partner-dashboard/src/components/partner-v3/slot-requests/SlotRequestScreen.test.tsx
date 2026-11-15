@@ -88,6 +88,28 @@ describe('SlotRequestScreen', () => {
     expect(push).toHaveBeenCalledWith('/partner/venue/slot-requests?request=venue-slot-bassline');
   });
 
+  it('copies the connected Venue public profile link from the empty state', async () => {
+    const user = userEvent.setup();
+    const data = await fixturePartnerDataSource.getVenueSlotRequests();
+    loadSlotRequestsData.mockResolvedValue({
+      ...data,
+      requests: [],
+      venueShareUrl: 'http://localhost:3000/venue/test-venue',
+    });
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+    });
+    render(<SlotRequestScreen direction="incoming" />);
+
+    await user.click(await screen.findByRole('button', { name: 'Share your venue link' }));
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      'http://localhost:3000/venue/test-venue',
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent('Venue link copied.');
+  });
+
   it('renders Host outgoing language and exposes cancellation only on approved requests', async () => {
     render(<SlotRequestScreen direction="outgoing" initialView="all" />);
 

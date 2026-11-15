@@ -94,24 +94,26 @@ export function PartnerTopbar({
           </div>
           <nav className={styles['topNavigation']} aria-label={`${config.label} navigation`}>
             <div className={styles['topNavigationList']}>
-              {config.navigation.map((item) => {
-                const active = item.label === activeLabel;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={[
-                      styles['topNavigationItem'],
-                      active ? styles['topNavigationItemActive'] : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                    aria-current={active ? 'page' : undefined}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
+              {config.navigation
+                .filter((item) => item.icon !== 'settings')
+                .map((item) => {
+                  const active = item.label === activeLabel;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={[
+                        styles['topNavigationItem'],
+                        active ? styles['topNavigationItemActive'] : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      aria-current={active ? 'page' : undefined}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
             </div>
           </nav>
           <div

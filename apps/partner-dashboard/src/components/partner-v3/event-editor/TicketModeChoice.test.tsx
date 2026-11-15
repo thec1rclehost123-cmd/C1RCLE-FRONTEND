@@ -56,7 +56,7 @@ describe('Ticket entry mode', () => {
     await user.click(screen.getByRole('radio', { name: 'RSVP' }));
     await user.click(screen.getByRole('radio', { name: 'Sell tickets' }));
     await user.click(screen.getByRole('button', { name: 'Edit General Entry' }));
-    expect(screen.getByLabelText('General Entry price')).toHaveValue('500');
+    expect(screen.getByLabelText('General Entry price')).toHaveValue(500);
   });
   it('creates a couple preset and saves its description without losing guest semantics', async () => {
     const user = userEvent.setup();
@@ -88,7 +88,7 @@ describe('Ticket entry mode', () => {
     await user.type(screen.getByLabelText('General Entry price'), '500');
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     await user.click(screen.getByRole('button', { name: 'Edit General Entry' }));
-    expect(screen.getByLabelText('General Entry price')).toHaveValue('0');
+    expect(screen.getByLabelText('General Entry price')).toHaveValue(0);
   });
   it('removes a tier directly from its row', async () => {
     const user = userEvent.setup();

@@ -78,6 +78,7 @@ export function SlotRequestScreen({
     readonly id: string;
     readonly message: string;
   } | null>(null);
+  const [venueLinkState, setVenueLinkState] = useState<'idle' | 'copied' | 'unavailable'>('idle');
 
   // The initial read runs directly inside the effect with `.then`/`.finally`
   // callbacks — no synchronous setState in the effect body.
@@ -161,12 +162,40 @@ export function SlotRequestScreen({
         await applySlotRequestAction(slotRequestId, kind);
         refresh();
       } catch (error) {
-        setActionError({ id: slotRequestId, message: errorMessage(error) });
+        const message = errorMessage(error);
+        if (message === 'The venue service did not respond in time.') {
+          try {
+            const latest = await loadSlotRequestsData(direction);
+            setData(latest);
+            const request = latest.requests.find((item) => item.id === slotRequestId);
+            if (request?.status === 'approved' && request.hasEventDraft) {
+              setActionError({
+                id: slotRequestId,
+                message:
+                  'The request was accepted, but event publishing is incomplete. Use Retry publish to continue.',
+              });
+            } else {
+              setActionError({
+                id: slotRequestId,
+                message:
+                  'The Venue service took longer than expected. The request status has been refreshed; retry only if it is still pending.',
+              });
+            }
+          } catch {
+            setActionError({
+              id: slotRequestId,
+              message:
+                'The Venue service took longer than expected, and the latest request status could not be checked. Refresh before retrying.',
+            });
+          }
+        } else {
+          setActionError({ id: slotRequestId, message });
+        }
       } finally {
         setBusyRequestId(null);
       }
     },
-    [refresh],
+    [direction, refresh],
   );
 
   const handleAction = useCallback(
@@ -177,6 +206,7 @@ export function SlotRequestScreen({
   );
 
   const accent = data?.accent ?? (isIncoming ? 'orange' : 'lavender');
+  const venueShareUrl = data?.venueShareUrl;
 
   return (
     <PageContainer>
@@ -291,14 +321,37 @@ export function SlotRequestScreen({
                 : 'Slot requests you send to venues will show up here.'}
             </p>
             {isIncoming ? (
-              <Button
-                type="button"
-                variant="secondary"
-                disabled
-                title="Sharing a venue link requires a connected venue profile"
-              >
-                Share your venue link
-              </Button>
+              venueShareUrl ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      void (async () => {
+                        try {
+                          await navigator.clipboard.writeText(venueShareUrl);
+                          setVenueLinkState('copied');
+                        } catch {
+                          setVenueLinkState('unavailable');
+                        }
+                      })();
+                    }}
+                  >
+                    Share your venue link
+                  </Button>
+                  {venueLinkState === 'copied' ? <p role="status">Venue link copied.</p> : null}
+                  {venueLinkState === 'unavailable' ? (
+                    <p role="status">
+                      Copy unavailable. Use this link: <a href={venueShareUrl}>{venueShareUrl}</a>
+                    </p>
+                  ) : null}
+                </>
+              ) : (
+                <p>
+                  Your public Venue profile link will appear here after your Venue profile is set
+                  up.
+                </p>
+              )
             ) : (
               <Link
                 className={styles['emptyLink']}

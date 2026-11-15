@@ -99,6 +99,52 @@
   font-weight: 650;
 }
 
+.promoUsageTotal {
+  margin: 1rem 0 0.65rem;
+  color: #f5f5f4;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.promoUsageList {
+  display: grid;
+}
+.promoUsageRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid #252525;
+}
+.promoUsageRow:last-child {
+  border-bottom: 0;
+}
+.promoUsageCode {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.promoUsageCode strong {
+  overflow-wrap: anywhere;
+  color: #f5f5f4;
+  font-size: 0.9rem;
+}
+.promoUsageCode span,
+.promoUsageNote {
+  color: #a8a29e;
+  font-size: 0.78rem;
+}
+.promoUsageCount {
+  flex: 0 0 auto;
+  color: #e7e5e4;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+.promoUsageNote {
+  margin: 0.75rem 0 0;
+  line-height: 1.45;
+}
+
 .funnel {
   display: grid;
 }

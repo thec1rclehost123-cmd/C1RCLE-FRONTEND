@@ -956,6 +956,7 @@ export interface SlotRequestTier {
 export interface SlotRequestEvent {
   readonly name: string;
   readonly description: string;
+  readonly imageUrl?: string | null | undefined;
   readonly date: string;
   readonly time: string;
   readonly venue: string;
@@ -996,6 +997,7 @@ export interface SlotRequestsData {
   readonly accent: SlotRequestAccent;
   readonly direction: SlotRequestDirection;
   readonly requests: readonly SlotRequest[];
+  readonly venueShareUrl?: string | undefined;
 }
 
 export type VenueSlotRequestsData = SlotRequestsData;

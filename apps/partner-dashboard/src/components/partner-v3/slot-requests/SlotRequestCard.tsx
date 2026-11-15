@@ -5,6 +5,7 @@ import { CalendarIcon, LocationIcon, TimeIcon, TicketIcon } from '@c1rcle/icons'
 import { Button } from '@/components/partner-v3/Button';
 import { EventPoster } from '@/components/partner-v3/events/EventPoster';
 
+import { slotRequestArtwork } from './slot-request-artwork';
 import styles from './slot-requests.module.css';
 import { SlotRequestStatusBadge } from './SlotRequestStatusBadge';
 
@@ -42,14 +43,7 @@ export function SlotRequestCard({
       <button type="button" className={styles['requestCardMain']} onClick={onOpen}>
         <div className={styles['requestArtwork']}>
           <EventPoster
-            artwork={{
-              type: 'gradient',
-              value: request.id.includes('retro')
-                ? 'mystery'
-                : request.id.includes('sunday')
-                  ? 'sunset'
-                  : 'eclipse',
-            }}
+            artwork={slotRequestArtwork(request)}
             sizes="(max-width: 700px) 100vw, 420px"
           />
           <span className={styles['artworkShade']} />

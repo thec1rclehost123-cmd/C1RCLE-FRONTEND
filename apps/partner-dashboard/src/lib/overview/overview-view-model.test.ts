@@ -239,6 +239,34 @@ describe('toOverviewData', () => {
     expect(data.upcomingEvents).toEqual([]);
   });
 
+  it('keeps future drafts out of the hero and upcoming events', () => {
+    const data = build({
+      cards: cards([
+        card({ eventId: 'draft', title: 'Draft party', status: 'draft' }),
+        card({ eventId: 'published', title: 'Published party' }),
+      ]),
+    });
+
+    expect(data.nextEvent.name).toBe('Published party');
+    expect(data.upcomingEvents).toEqual([]);
+  });
+
+  it('shows a draft-specific empty state when no eligible event exists', () => {
+    const data = build({ cards: cards([card({ status: 'draft' })]) });
+
+    expect(data.nextEvent.name).toBe('No upcoming events');
+    expect(data.nextEvent.venue).toBe('Draft events are in Events');
+    expect(data.upcomingEvents).toEqual([]);
+  });
+
+  it('does not keep published events in upcoming after their start time', () => {
+    const data = build({
+      cards: cards([card({ startAt: '2026-09-16T11:00:00.000Z' })]),
+    });
+
+    expect(data.nextEvent.name).toBe('No upcoming events');
+  });
+
   it('treats an unrecognised status as a draft rather than live', () => {
     const data = build({ cards: cards([card({ status: 'some_new_status' })]) });
 

@@ -480,7 +480,10 @@ describe('Partner onboarding wizard', () => {
 
       mocks.submit.mockResolvedValue(dto({ status: 'submitted', missingDocuments: [] }));
       await user.click(next);
-      expect(await screen.findByText('Application Submitted')).toBeInTheDocument();
+      // Query and assert together so a React step transition cannot detach a stale node.
+      await waitFor(() =>
+        expect(screen.getByRole('heading', { name: 'Application Submitted' })).toBeInTheDocument(),
+      );
       expect(mocks.submit).toHaveBeenCalledTimes(1);
       expect(mocks.submit).toHaveBeenCalledWith('req_1', expect.any(String));
     });
@@ -597,7 +600,10 @@ describe('Partner onboarding wizard', () => {
 
       mocks.submit.mockResolvedValue(dto({ status: 'submitted', missingDocuments: [] }));
       await user.click(sigNext);
-      expect(await screen.findByText('Application Submitted')).toBeInTheDocument();
+      // Query and assert together so a React step transition cannot detach a stale node.
+      await waitFor(() =>
+        expect(screen.getByRole('heading', { name: 'Application Submitted' })).toBeInTheDocument(),
+      );
       expect(mocks.uploadDocument.mock.calls.map((c) => c[1])).toEqual([
         'registration_certificate',
         'sig_id_front',

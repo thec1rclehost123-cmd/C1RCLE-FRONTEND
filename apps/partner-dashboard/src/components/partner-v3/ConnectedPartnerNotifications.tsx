@@ -152,6 +152,31 @@ function NotificationContent({ notification }: { readonly notification: Notifica
   );
 }
 
+export function notificationActionHref(
+  notification: NotificationDto,
+  studioRole: StudioRole,
+): string | null {
+  const action = notification.action;
+  if (!action) {
+    // Older persisted partnership notifications can predate resource actions.
+    // Their canonical type still identifies the correct review surface.
+    return notification.type === 'partnership.requested' &&
+      (studioRole === 'host' || studioRole === 'venue')
+      ? `/partner/${studioRole}/partners?view=requests`
+      : null;
+  }
+  const resourceId = encodeURIComponent(action.resourceId);
+  if (action.resourceType === 'slot_request' && (studioRole === 'host' || studioRole === 'venue'))
+    return `/partner/${studioRole}/slot-requests?request=${resourceId}`;
+  if (action.resourceType === 'partnership' && (studioRole === 'host' || studioRole === 'venue'))
+    return `/partner/${studioRole}/partners?view=requests`;
+  if (action.resourceType === 'promoter_connection') {
+    if (studioRole === 'promoter') return '/partner/promoter/partners?tab=incoming';
+    return `/partner/${studioRole}/partners?tab=promoters&view=requests`;
+  }
+  return null;
+}
+
 export function ConnectedPartnerNotifications({
   organizationId,
   studioRole,
@@ -284,26 +309,35 @@ export function ConnectedPartnerNotifications({
             </button>
           ) : inbox.data?.items.length ? (
             <div className={styles['notificationList']}>
-              {inbox.data.items.map((notification) => (
-                <div className={styles['notificationItem']} key={notification.id}>
-                  <div className={styles['notificationRow']}>
-                    <NotificationContent notification={notification} />
-                    {!notification.read ? (
-                      <button
-                        className={styles['notificationMarkRead']}
-                        type="button"
-                        disabled={inbox.busyId !== null}
-                        onClick={() => {
-                          void inbox.markRead(notification.id);
-                        }}
-                        aria-label={`Mark ${notification.title} as read`}
-                      >
-                        Mark read
-                      </button>
-                    ) : null}
+              {inbox.data.items.map((notification) => {
+                const actionHref = notificationActionHref(notification, studioRole);
+                return (
+                  <div className={styles['notificationItem']} key={notification.id}>
+                    <div className={styles['notificationRow']}>
+                      {actionHref ? (
+                        <Link className={styles['notificationRow']} href={actionHref}>
+                          <NotificationContent notification={notification} />
+                        </Link>
+                      ) : (
+                        <NotificationContent notification={notification} />
+                      )}
+                      {!notification.read ? (
+                        <button
+                          className={styles['notificationMarkRead']}
+                          type="button"
+                          disabled={inbox.busyId !== null}
+                          onClick={() => {
+                            void inbox.markRead(notification.id);
+                          }}
+                          aria-label={`Mark ${notification.title} as read`}
+                        >
+                          Mark read
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <p className={styles['notificationEmpty']} role="status">

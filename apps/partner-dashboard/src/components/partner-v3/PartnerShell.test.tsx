@@ -89,7 +89,7 @@ describe('PartnerShell navigation layouts', () => {
   });
 
   it.each(['venue', 'host', 'promoter'] as const)(
-    'keeps %s Settings available in navigation and the account menu',
+    'keeps %s Settings in the account menu and out of primary navigation',
     async (studio) => {
       const user = userEvent.setup();
       navigation.pathname = `/partner/${studio}/overview`;
@@ -99,14 +99,35 @@ describe('PartnerShell navigation layouts', () => {
         </PartnerShell>,
       );
       const settingsHref = `/partner/${studio}/settings`;
-      expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', settingsHref);
+      expect(screen.queryByRole('link', { name: 'Settings' })).not.toBeInTheDocument();
       await user.click(screen.getByRole('button', { name: 'Account options for Rhea Kapoor' }));
       const settingsLinks = screen.getAllByRole('link', { name: 'Settings' });
-      expect(settingsLinks).toHaveLength(2);
+      expect(settingsLinks).toHaveLength(1);
       expect(settingsLinks.every((link) => link.getAttribute('href') === settingsHref)).toBe(true);
       expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
     },
   );
+
+  it('keeps Settings in the account menu when top navigation is selected', async () => {
+    navigation.pathname = '/partner/host/overview';
+    window.localStorage.setItem('c1rcle.partner.navigation-layout', 'top');
+
+    render(
+      <PartnerShell studio="host">
+        <div>Host content</div>
+      </PartnerShell>,
+    );
+
+    const primaryNavigation = screen.getByRole('navigation', { name: 'Host Studio navigation' });
+    expect(
+      within(primaryNavigation).queryByRole('link', { name: 'Settings' }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Account options for Rhea Kapoor' }));
+    expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute(
+      'href',
+      '/partner/host/settings',
+    );
+  });
 
   it('restores a saved top-navigation preference', async () => {
     navigation.pathname = '/partner/host/overview';

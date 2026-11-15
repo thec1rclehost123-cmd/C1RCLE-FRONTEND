@@ -21,12 +21,13 @@ export async function loadPartnerEvents(input: {
   if (!organizationId) redirect('/partner/select-organization');
   const search = new URLSearchParams({ limit: String(PAGE_SIZE) });
   if (input.cursor) search.set('cursor', input.cursor);
+  const collection = input.studio === 'venue' ? 'venue-events' : 'events';
   const response = await createServerApiClient(cookieHeader).get({
-    path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/events?${search.toString()}`,
+    path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/${collection}?${search.toString()}`,
     schema: organizationEventListResponseSchema,
     headers: { 'x-organization-id': organizationId },
   });
-  const events = response.items.map((item) => mapEvent(item, input.studio));
+  const events = response.items.map((item) => mapEvent(item, input.studio, organizationId));
   return {
     dataStatus: 'api',
     pendingRequestCount: null,
@@ -39,6 +40,7 @@ export async function loadPartnerEvents(input: {
 function mapEvent(
   item: ReturnType<typeof organizationEventListResponseSchema.parse>['items'][number],
   studio: 'host' | 'venue',
+  activeOrganizationId: string,
 ): PartnerEventRecord {
   const date = new Date(item.startAt);
   const formatter = new Intl.DateTimeFormat('en-IN', {
@@ -71,7 +73,9 @@ function mapEvent(
     name: item.title,
     tag: item.tags[0] ?? 'Event',
     status,
-    party: studio === 'host' ? 'hosts' : 'venue',
+    // Venue Studio can now see both Venue-owned and Host-owned events linked
+    // to its Venue. Keep the Hosts/Venue filter tied to actual event ownership.
+    party: studio === 'host' || item.organizationId !== activeOrganizationId ? 'hosts' : 'venue',
     venue: item.venueName ?? 'Venue not specified',
     host: 'Host details unavailable',
     hostInitials: '—',

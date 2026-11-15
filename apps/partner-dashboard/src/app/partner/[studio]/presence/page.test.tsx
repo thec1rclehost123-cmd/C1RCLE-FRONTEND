@@ -12,15 +12,19 @@ describe('Partner presence route', () => {
     redirect.mockClear();
   });
 
-  it.each(['host', 'venue'])(
-    'routes the %s Presence entry to public profile settings',
-    async (studio) => {
-      await StudioPresencePage({ params: Promise.resolve({ studio }) });
+  it('routes Host Presence to the organization guest and attendee index', async () => {
+    await StudioPresencePage({ params: Promise.resolve({ studio: 'host' }) });
 
-      expect(redirect).toHaveBeenCalledWith(`/partner/${studio}/settings`);
-      expect(notFound).not.toHaveBeenCalled();
-    },
-  );
+    expect(redirect).toHaveBeenCalledWith('/partner/host/guests');
+    expect(notFound).not.toHaveBeenCalled();
+  });
+
+  it('keeps Venue Presence routed to public profile settings', async () => {
+    await StudioPresencePage({ params: Promise.resolve({ studio: 'venue' }) });
+
+    expect(redirect).toHaveBeenCalledWith('/partner/venue/settings');
+    expect(notFound).not.toHaveBeenCalled();
+  });
 
   it('does not expose the route to unsupported workspaces', async () => {
     const notFoundError = new Error('not found');

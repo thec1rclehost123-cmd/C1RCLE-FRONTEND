@@ -4,6 +4,7 @@ import { ConnectedEventAnalyticsScreen } from '@/components/partner-v3/event-det
 import { PromoterAssignmentDetailsScreen } from '@/components/promoter/PromoterAssignmentDetailsScreen';
 import { loadPartnerEventAnalytics } from '@/lib/events/load-partner-event-analytics';
 import { loadPartnerEventBookingHeatmap } from '@/lib/events/load-partner-event-booking-heatmap';
+import { loadPartnerEventPromos } from '@/lib/events/load-partner-event-promos';
 import { loadPromoterEvents } from '@/lib/events/load-promoter-events';
 
 import { renderStudioSkeleton } from '../../../route-helpers';
@@ -34,14 +35,16 @@ export default async function StudioEventAnalyticsPage({
     );
   }
 
-  const [analytics, bookingHeatmap] = await Promise.all([
+  const [analytics, bookingHeatmap, promoCodes] = await Promise.all([
     loadPartnerEventAnalytics(eventId),
     loadPartnerEventBookingHeatmap(eventId),
+    loadPartnerEventPromos(eventId),
   ]);
   return (
     <ConnectedEventAnalyticsScreen
       analytics={analytics}
       bookingHeatmap={bookingHeatmap}
+      promoCodes={promoCodes}
       studio={studio}
     />
   );

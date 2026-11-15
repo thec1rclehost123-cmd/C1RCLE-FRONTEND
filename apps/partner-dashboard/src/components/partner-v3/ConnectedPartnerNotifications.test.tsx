@@ -10,6 +10,7 @@ import {
 
 import {
   ConnectedPartnerNotifications,
+  notificationActionHref,
   PartnerNotificationsInboxPage,
 } from './ConnectedPartnerNotifications';
 
@@ -55,6 +56,60 @@ beforeEach(() => {
 });
 
 describe('ConnectedPartnerNotifications', () => {
+  it('routes actionable Host and Venue notifications to their current request views', () => {
+    const slotRequest = {
+      ...item,
+      action: { resourceType: 'slot_request' as const, resourceId: 'request / 1' },
+    };
+    const partnership = {
+      ...item,
+      action: { resourceType: 'partnership' as const, resourceId: 'partnership_1' },
+    };
+
+    expect(notificationActionHref(slotRequest, 'host')).toBe(
+      '/partner/host/slot-requests?request=request%20%2F%201',
+    );
+    expect(notificationActionHref(slotRequest, 'venue')).toBe(
+      '/partner/venue/slot-requests?request=request%20%2F%201',
+    );
+    expect(notificationActionHref(partnership, 'host')).toBe(
+      '/partner/host/partners?view=requests',
+    );
+  });
+
+  it('routes older partnership notifications without an action to the request inbox', () => {
+    const oldPartnershipNotification = {
+      ...item,
+      recipientType: 'host' as const,
+      type: 'partnership.requested',
+      action: null,
+    };
+
+    expect(notificationActionHref(oldPartnershipNotification, 'host')).toBe(
+      '/partner/host/partners?view=requests',
+    );
+    expect(notificationActionHref(oldPartnershipNotification, 'venue')).toBe(
+      '/partner/venue/partners?view=requests',
+    );
+    expect(notificationActionHref(oldPartnershipNotification, 'promoter')).toBeNull();
+    expect(notificationActionHref(item, 'host')).toBeNull();
+  });
+
+  it('routes promoter connection actions to the role-appropriate partner view', () => {
+    const notification = {
+      ...item,
+      action: { resourceType: 'promoter_connection' as const, resourceId: 'connection_1' },
+    };
+
+    expect(notificationActionHref(notification, 'promoter')).toBe(
+      '/partner/promoter/partners?tab=incoming',
+    );
+    expect(notificationActionHref(notification, 'host')).toBe(
+      '/partner/host/partners?tab=promoters&view=requests',
+    );
+    expect(notificationActionHref({ ...item, action: null }, 'host')).toBeNull();
+  });
+
   it('loads the organization inbox, marks an item read, and links to the full page', async () => {
     const user = userEvent.setup();
     mockLoad.mockResolvedValue(page());
