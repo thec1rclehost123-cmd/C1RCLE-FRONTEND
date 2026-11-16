@@ -13,6 +13,7 @@ export interface BookingTicketTier {
   price: BookingMoney;
   coverAmountPaise?: number;
   maximumQuantity: number;
+  maxPerOrder?: number | null;
   guestCount?: number;
   admissionMode?: 'bundle' | 'per_person';
   audienceType?: 'GENERAL' | 'MALE' | 'FEMALE' | 'COUPLE' | 'GROUP' | 'STUDENT' | 'MEMBER';

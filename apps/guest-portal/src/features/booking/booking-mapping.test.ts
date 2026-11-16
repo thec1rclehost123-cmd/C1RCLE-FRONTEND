@@ -171,6 +171,22 @@ describe('toBookingEventFixture', () => {
     ]);
     expect(mapped.ticketTiers[0]?.maximumQuantity).toBe(0);
   });
+
+  it('respects the tier per-order limit below the display safety cap', () => {
+    const mapped = toBookingEventFixture(EVENT, VENUE, [
+      {
+        id: 'tier_limited',
+        eventId: 'evt_1',
+        name: 'General',
+        description: '',
+        priceInPaise: 80_000,
+        currency: 'INR',
+        availableQuantity: 80,
+        maxPerOrder: 4,
+      },
+    ]);
+    expect(mapped.ticketTiers[0]).toMatchObject({ maximumQuantity: 4, maxPerOrder: 4 });
+  });
 });
 
 describe('toBookingEventFromPublicDetail', () => {

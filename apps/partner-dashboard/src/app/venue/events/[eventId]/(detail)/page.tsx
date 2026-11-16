@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 
-import { getVenueEventDetailRecord } from '@/components/venue/event-detail-model';
-import { VenueEventSummaryScreen } from '@/components/venue/screens/VenueEventSummaryScreen';
+import { VenueLiveEventSummaryScreen } from '@/components/venue/screens/VenueLiveEventSummaryScreen';
+import { loadVenueEventDetail } from '@/lib/events/load-venue-event-detail';
 
 export default async function VenueEventSummaryPage({
   params,
@@ -9,8 +9,8 @@ export default async function VenueEventSummaryPage({
   readonly params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = await params;
-  const model = getVenueEventDetailRecord(eventId)?.summary;
-  if (model === undefined) notFound();
+  const record = await loadVenueEventDetail(eventId).catch(() => null);
+  if (!record) notFound();
 
-  return <VenueEventSummaryScreen eventId={eventId} model={model} />;
+  return <VenueLiveEventSummaryScreen record={record} />;
 }
