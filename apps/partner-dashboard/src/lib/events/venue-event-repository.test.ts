@@ -118,6 +118,25 @@ describe('buildSlotRequestEventDraft', () => {
     expect(mocks.post).not.toHaveBeenCalled();
   });
 
+  it('rejects a local development poster before Host slot submission', async () => {
+    await expect(
+      buildSlotRequestEventDraft(
+        'org_host',
+        {
+          ...draft,
+          artwork: {
+            type: 'image',
+            value: '/partner-v3/venue/neon-nights-poster.jpg',
+            alt: 'Local development event poster',
+          },
+        },
+        '2026-09-18T04:00:00.000Z',
+        '2026-09-18T09:30:00.000Z',
+      ),
+    ).rejects.toThrow('localhost links are not allowed');
+    expect(mocks.post).not.toHaveBeenCalled();
+  });
+
   it('includes the selected promo expiry in the Host slot request snapshot', async () => {
     const proposal = await buildSlotRequestEventDraft(
       'org_host',
@@ -520,26 +539,32 @@ describe('publishVenueEvent', () => {
     });
   });
 
-  it('persists relative poster image paths as valid absolute URLs', async () => {
-    mocks.post
-      .mockResolvedValueOnce({ id: 'evt_3' })
-      .mockResolvedValueOnce({ id: 'tier_1' })
-      .mockResolvedValueOnce({ id: 'evt_3', status: 'review' })
-      .mockResolvedValueOnce({ id: 'evt_3', status: 'published' });
-
+  it('does not persist relative development poster paths from localhost', async () => {
     const relativeDraft: EventEditorDraft = {
       ...draft,
       artwork: { type: 'image', value: '/partner-v3/venue/neon-nights-poster.jpg', alt: 'Neon' },
     };
 
-    await expect(publishVenueEvent('org_1', relativeDraft)).resolves.toMatchObject({
-      id: 'evt_3',
-      status: 'published',
-    });
+    await expect(publishVenueEvent('org_1', relativeDraft)).rejects.toThrow(
+      'localhost links are not allowed',
+    );
+    expect(mocks.post).not.toHaveBeenCalled();
+  });
 
-    expect(mocks.post.mock.calls[0]?.[0].body).toMatchObject({
-      imageUrl: expect.stringMatching(/^http:\/\/.+\/partner-v3\/venue\/neon-nights-poster\.jpg$/),
-    });
+  it('rejects an explicitly supplied localhost poster URL before creating an event', async () => {
+    const localDraft: EventEditorDraft = {
+      ...draft,
+      artwork: {
+        type: 'image',
+        value: 'http://localhost:3001/partner-v3/venue/neon-nights-poster.jpg',
+        alt: 'Local poster',
+      },
+    };
+
+    await expect(publishVenueEvent('org_1', localDraft)).rejects.toThrow(
+      'localhost links are not allowed',
+    );
+    expect(mocks.post).not.toHaveBeenCalled();
   });
 });
 
