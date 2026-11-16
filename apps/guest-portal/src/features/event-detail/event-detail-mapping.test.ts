@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { toEventDetailFixture } from './event-detail-mapping';
+import { formatEventDateTimeRange, toEventDetailFixture } from './event-detail-mapping';
 
 import type { EventPublicDetailDto, PublicTicketTierDto } from '@c1rcle/contracts';
 
@@ -49,6 +49,12 @@ const TIERS: PublicTicketTierDto[] = [
 ];
 
 describe('toEventDetailFixture', () => {
+  it('formats both event start and end times in India time', () => {
+    expect(formatEventDateTimeRange('2026-11-29T12:30:00.000Z', '2026-11-29T16:30:00.000Z')).toBe(
+      '29 Nov 2026, 6:00 pm – 29 Nov 2026, 10:00 pm',
+    );
+  });
+
   it('preserves saved event media for the guest event page', () => {
     const media = {
       youtubeUrl: 'https://youtu.be/abc123',

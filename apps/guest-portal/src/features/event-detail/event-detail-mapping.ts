@@ -21,6 +21,19 @@ const STATUS_LIFECYCLE: Record<string, EventLifecycle> = {
   archived: 'completed',
 };
 
+const eventDateFormatter = new Intl.DateTimeFormat('en-IN', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+  timeZone: 'Asia/Kolkata',
+});
+
+export function formatEventDateTimeRange(startsAt: string, endsAt: string): string {
+  const start = eventDateFormatter.format(new Date(startsAt));
+  return Date.parse(endsAt) > Date.parse(startsAt)
+    ? `${start} – ${eventDateFormatter.format(new Date(endsAt))}`
+    : start;
+}
+
 function nonEmptyString(value: string | null | undefined, fallback: string): string {
   const normalized = value?.trim();
   return normalized && normalized.length > 0 ? normalized : fallback;

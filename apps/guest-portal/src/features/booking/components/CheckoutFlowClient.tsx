@@ -255,7 +255,11 @@ function CheckoutFlowClientState({
           ...(tier.coverAmountPaise === undefined
             ? {}
             : { coverAmountPaise: tier.coverAmountPaise }),
-          maximumQuantity: Math.min(tier.priceInPaise === 0 ? 1 : 10, tier.availableQuantity),
+          maximumQuantity:
+            tier.priceInPaise === 0
+              ? Math.min(1, tier.availableQuantity)
+              : Math.min(tier.maxPerOrder ?? 10, 10, tier.availableQuantity),
+          ...(tier.maxPerOrder === undefined ? {} : { maxPerOrder: tier.maxPerOrder }),
           ...(tier.guestCount === undefined ? {} : { guestCount: tier.guestCount }),
           ...(tier.admissionMode === undefined ? {} : { admissionMode: tier.admissionMode }),
           ...(tier.audienceType === undefined ? {} : { audienceType: tier.audienceType }),
@@ -798,7 +802,9 @@ function CheckoutFlowClientState({
                           <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">
                             {soldOut
                               ? 'This ticket tier is sold out'
-                              : `Up to ${String(tier.maximumQuantity)} available`}
+                              : tier.maxPerOrder !== undefined && tier.maxPerOrder !== null
+                                ? `Limit ${String(tier.maxPerOrder)} per order`
+                                : `Select up to ${String(tier.maximumQuantity)}`}
                           </span>
                           {!soldOut && (
                             <div className="flex shrink-0 items-center gap-2 rounded-full border border-white/10 bg-black/45 p-1">

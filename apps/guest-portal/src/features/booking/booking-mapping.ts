@@ -109,7 +109,12 @@ function toRealTiers(tiers: readonly PublicTicketTierDto[]): BookingTicketTier[]
     maximumQuantity:
       tier.priceInPaise === 0
         ? Math.min(1, tier.availableQuantity)
-        : Math.min(tier.availableQuantity, PREVIEW_MAX_QUANTITY),
+        : Math.min(
+            tier.availableQuantity,
+            tier.maxPerOrder ?? PREVIEW_MAX_QUANTITY,
+            PREVIEW_MAX_QUANTITY,
+          ),
+    ...(tier.maxPerOrder === undefined ? {} : { maxPerOrder: tier.maxPerOrder }),
     ...(tier.guestCount === undefined ? {} : { guestCount: tier.guestCount }),
     ...(tier.admissionMode === undefined ? {} : { admissionMode: tier.admissionMode }),
     ...(tier.audienceType === undefined ? {} : { audienceType: tier.audienceType }),

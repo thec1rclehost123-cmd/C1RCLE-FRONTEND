@@ -792,6 +792,7 @@ export const publicTicketTierDtoSchema = z.object({
   coverAmountPaise: z.number().int().nonnegative().optional(),
   currency: z.string().length(3),
   availableQuantity: z.number().int().nonnegative(),
+  maxPerOrder: z.number().int().positive().nullable().optional(),
   guestCount: z.number().int().positive().optional(),
   admissionMode: z.enum(['bundle', 'per_person']).optional(),
   audienceType: ticketAudienceTypeSchema.optional(),
@@ -805,6 +806,12 @@ export const publicTicketTierListResponseSchema = z.object({
   items: z.array(publicTicketTierDtoSchema),
 });
 export type PublicTicketTierListResponse = z.infer<typeof publicTicketTierListResponseSchema>;
+
+/** Authorized Venue read model for one Host-owned event at its Venue. */
+export const venueEventDetailResponseSchema = z
+  .object({ event: eventDtoSchema, tiers: z.array(ticketTierDtoSchema) })
+  .strict();
+export type VenueEventDetailResponse = z.infer<typeof venueEventDetailResponseSchema>;
 
 export const publicTicketAddonDtoSchema = z.object({
   id: opaqueIdSchema,

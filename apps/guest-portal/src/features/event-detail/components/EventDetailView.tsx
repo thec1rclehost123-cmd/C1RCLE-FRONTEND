@@ -9,6 +9,7 @@ import { CheckoutView } from '@/features/booking/components/CheckoutView';
 import { ExploreEventCard } from '@/features/explore/components/ExploreEventCard';
 import { useTicketAccessGrantId } from '@/lib/access/use-ticket-access-grant-id';
 
+import { formatEventDateTimeRange } from '../event-detail-mapping';
 import { getEventAccentClasses } from '../eventDetailPalette';
 
 import { EventPosterPanel } from './EventPosterPanel';
@@ -25,12 +26,6 @@ const moneyFormatter = new Intl.NumberFormat('en-IN', {
   currency: 'INR',
   maximumFractionDigits: 0,
   style: 'currency',
-});
-
-const eventDateFormatter = new Intl.DateTimeFormat('en-IN', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-  timeZone: 'Asia/Kolkata',
 });
 
 const lifecycleCopy: Partial<Record<EventLifecycle, { title: string; detail: string }>> = {
@@ -193,7 +188,7 @@ export function EventDetailView({
                   Date & time
                 </p>
                 <p className="mt-1 text-[13px] font-semibold sm:text-sm">
-                  {eventDateFormatter.format(new Date(event.startsAt))}
+                  {formatEventDateTimeRange(event.startsAt, event.endsAt)}
                 </p>
               </div>
             </div>
