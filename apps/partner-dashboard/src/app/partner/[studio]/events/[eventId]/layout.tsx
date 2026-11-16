@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { eventTabs } from '@/components/partner-v3/event-detail/event-workspace-navigation';
 import { formatEventStartingPrice } from '@/components/partner-v3/event-detail/event-workspace-pricing';
 import { EventWorkspaceChrome } from '@/components/partner-v3/event-detail/EventWorkspaceChrome';
+import { VenueEventDetailLayout } from '@/components/venue/event-detail/VenueAssociatedEventLayout';
 import { formatProductDateTime } from '@/lib/events/event-time';
 import { loadPartnerEvent } from '@/lib/events/load-partner-event';
 import { loadPartnerEventTiers } from '@/lib/events/load-partner-event-tiers';
@@ -50,6 +51,9 @@ export default async function EventWorkspaceLayout({
   readonly params: Promise<{ studio: string; eventId: string }>;
 }) {
   const { studio, eventId } = await params;
+
+  if (studio === 'venue')
+    return VenueEventDetailLayout({ children, params: Promise.resolve({ eventId }) });
 
   if (studio === 'promoter') {
     const data = await loadPromoterEvents();

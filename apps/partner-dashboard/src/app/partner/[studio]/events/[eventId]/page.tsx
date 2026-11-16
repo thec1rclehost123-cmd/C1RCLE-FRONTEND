@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { ConnectedPartnerEventScreen } from '@/components/partner-v3/event-detail/ConnectedPartnerEventScreen';
 import { PromoterAssignmentDetailsScreen } from '@/components/promoter/PromoterAssignmentDetailsScreen';
 import { PromoterPublicEventDetailsScreen } from '@/components/promoter/PromoterPublicEventDetailsScreen';
+import { VenueEventSummaryPage } from '@/components/venue/event-detail/VenueAssociatedEventPage';
 import { loadPartnerEvent } from '@/lib/events/load-partner-event';
 import { loadPartnerEventAnalytics } from '@/lib/events/load-partner-event-analytics';
 import { loadPartnerEventTiers } from '@/lib/events/load-partner-event-tiers';
@@ -16,6 +17,8 @@ export default async function StudioEventDetailPage({
   readonly params: Promise<{ studio: string; eventId: string }>;
 }) {
   const { studio, eventId } = await params;
+  if (studio === 'venue') return VenueEventSummaryPage({ params: Promise.resolve({ eventId }) });
+
   if (studio === 'promoter') {
     const data = await loadPromoterEvents();
     const assignment = [...data.linkedEvents, ...data.invitations].find(
