@@ -4,6 +4,7 @@ import {
   createEventSchema,
   createTicketTierSchema,
   eventDtoSchema,
+  eventPosterUrlSchema,
   externalEventLocationInputSchema,
   externalVenueContactSchema,
   eventMediaSchema,
@@ -540,6 +541,16 @@ type PosterContentType = 'image/jpeg' | 'image/png' | 'image/webp';
 
 const POSTER_MAX_BYTES = 5 * 1024 * 1024;
 
+function requireGuestReachablePosterUrl(value: string): string {
+  const parsed = eventPosterUrlSchema.safeParse(value);
+  if (!parsed.success) {
+    throw new Error(
+      'Upload the poster image or use a public HTTPS URL; localhost links are not allowed.',
+    );
+  }
+  return parsed.data;
+}
+
 function posterExtension(draft: Pick<EventEditorDraft, 'artwork'>): string {
   return draft.artwork.alt?.toLowerCase().split('.').pop() ?? '';
 }
@@ -596,14 +607,14 @@ async function resolvePosterImageUrl(
   if (draft.artwork.type !== 'image' || !draft.artwork.value) return null;
 
   if (/^https?:\/\//i.test(draft.artwork.value)) {
-    return draft.artwork.value;
+    return requireGuestReachablePosterUrl(draft.artwork.value);
   }
 
   if (!draft.artwork.value.startsWith('blob:')) {
     if (draft.artwork.value.startsWith('/')) {
       const origin =
         typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001';
-      return `${origin}${draft.artwork.value}`;
+      return requireGuestReachablePosterUrl(`${origin}${draft.artwork.value}`);
     }
     return null;
   }
@@ -642,8 +653,9 @@ async function resolvePosterImageUrl(
   const fileName = draft.artwork.alt?.includes('.') ? draft.artwork.alt : `poster.${ext}`;
 
   const file = new File([blob], fileName, { type: contentType });
+  const publicUrl = requireGuestReachablePosterUrl(grant.publicUrl);
   await uploadToSignedUrl(grant.uploadUrl, grant.headers, file);
-  return grant.publicUrl;
+  return publicUrl;
 }
 
 /** Explicit lifecycle commands retain event history and the server's accepted-slot validation. */
