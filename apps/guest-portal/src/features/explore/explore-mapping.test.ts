@@ -64,6 +64,7 @@ describe('toExploreEvent', () => {
       category: 'Music',
       image: 'https://example.com/poster.jpg',
       startsAt: '2026-09-18T19:30:00.000Z',
+      eventStatus: 'published',
       venueId: 'ven_1',
       venueSlug: 'skyline-social',
       venue: 'Skyline Social',
@@ -93,8 +94,16 @@ describe('toExploreEvent', () => {
   it('maps free events to a null price', () => {
     expect(
       toExploreEvent({ ...EVENT, isFree: true }, VENUE, [{ ...TIERS[0]!, priceInPaise: 0 }]).price,
-    ).toBeNull();
+    ).toEqual({ amountPaise: 0, currency: 'INR' });
     expect(toExploreEvent({ ...EVENT, isFree: true }, VENUE, TIERS).isFree).toBe(true);
+  });
+
+  it('uses free as the lowest currently purchasable option in a mixed catalog', () => {
+    const mapped = toExploreEvent(EVENT, VENUE, [
+      { ...TIERS[0]!, id: 'free', priceInPaise: 0 },
+      { ...TIERS[0]!, id: 'paid', priceInPaise: 80_000 },
+    ]);
+    expect(mapped.price).toEqual({ amountPaise: 0, currency: 'INR' });
   });
 
   it('keeps a missing price distinct from an explicitly free event', () => {
@@ -140,6 +149,15 @@ describe('toExploreEvent', () => {
     expect(
       toExploreEvent({ ...EVENT, currentStartingPricePaise: null }, VENUE, null).price,
     ).toBeNull();
+  });
+
+  it('does not use the base price when the current price fields are omitted', () => {
+    const {
+      activeStartingPricePaise: _active,
+      currentStartingPricePaise: _current,
+      ...event
+    } = EVENT;
+    expect(toExploreEvent(event, VENUE, null).price).toBeNull();
   });
 
   it('distinguishes sold out from unavailable inventory', () => {

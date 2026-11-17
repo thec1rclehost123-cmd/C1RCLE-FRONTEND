@@ -64,13 +64,18 @@ describe('toEventDetailFixture', () => {
     expect(toEventDetailFixture({ ...EVENT, media }, TIERS).media).toEqual(media);
   });
 
-  it('uses authoritative sales state for finished and sold-out event presentation', () => {
-    expect(toEventDetailFixture({ ...EVENT, salesStatus: 'ended' }, []).lifecycle).toBe(
-      'completed',
-    );
-    expect(toEventDetailFixture({ ...EVENT, salesStatus: 'sold_out' }, []).lifecycle).toBe(
-      'sold_out',
-    );
+  it('keeps sales-ended separate from the event lifecycle and preserves actual ended status', () => {
+    expect(toEventDetailFixture({ ...EVENT, salesStatus: 'ended' }, [])).toMatchObject({
+      lifecycle: 'scheduled',
+      salesStatus: 'ended',
+    });
+    expect(
+      toEventDetailFixture({ ...EVENT, status: 'ended', salesStatus: 'ended' }, []).lifecycle,
+    ).toBe('completed');
+    expect(toEventDetailFixture({ ...EVENT, salesStatus: 'sold_out' }, [])).toMatchObject({
+      lifecycle: 'scheduled',
+      salesStatus: 'sold_out',
+    });
   });
 
   it('maps the public relationship projection and exact tier identity', () => {

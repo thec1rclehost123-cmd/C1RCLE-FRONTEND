@@ -10,7 +10,7 @@ import type { VenueDto } from '@c1rcle/contracts';
 
 /** The discovery endpoint is intentionally bounded by the backend aggregate. */
 export async function loadExploreEvents(): Promise<ExploreEvent[]> {
-  const client = createApiClient({ maxRetries: 0, timeoutMs: 4_000 });
+  const client = createApiClient({ maxRetries: 0, timeoutMs: 10_000 });
   const feed = await client.get({
     path: '/api/v2/public/discovery',
     schema: discoveryFeedDtoSchema,

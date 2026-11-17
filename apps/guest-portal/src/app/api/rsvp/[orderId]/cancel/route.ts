@@ -8,7 +8,7 @@ export async function POST(
   context: { params: Promise<{ orderId: string }> },
 ): Promise<NextResponse> {
   const { orderId } = await context.params;
-  if (!/^RSVP-[a-f0-9]{32}$/.test(orderId))
+  if (!/^RSVP-[a-f0-9]{32}(?:-[1-9]\d*)?$/.test(orderId))
     return errorEnvelope('not_found', 'RSVP unavailable.', 404);
   return proxyGatewayWrite(req, {
     gatewayPath: `/api/v2/rsvp/${encodeURIComponent(orderId)}/cancel`,

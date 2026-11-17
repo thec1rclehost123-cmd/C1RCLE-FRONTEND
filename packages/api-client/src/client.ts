@@ -80,6 +80,7 @@ function delay(ms: number, signal: AbortSignal | undefined): Promise<void> {
 }
 
 interface ErrorEnvelope {
+  readonly code?: unknown;
   readonly message?: unknown;
   readonly fieldErrors?: unknown;
 }
@@ -435,9 +436,9 @@ export class ApiClient {
   }
 
   async #toHttpError(response: Response, requestId: RequestId): Promise<ApiClientError> {
-    const code = statusToErrorCode(response.status);
+    const statusCode = statusToErrorCode(response.status);
 
-    if (code === 'unauthorized') {
+    if (statusCode === 'unauthorized') {
       await this.#config.onUnauthorized?.();
     }
 
@@ -451,6 +452,13 @@ export class ApiClient {
     } catch {
       /* A non-JSON error body is expected from proxies and gateways. */
     }
+
+    // Preserve the contracted public lifecycle error so historical event
+    // pages can distinguish a closed sale from an unavailable event.
+    const code =
+      response.status === 409 && envelope.code === 'event_not_on_sale'
+        ? 'event_not_on_sale'
+        : statusCode;
 
     return new ApiClientError({
       code,

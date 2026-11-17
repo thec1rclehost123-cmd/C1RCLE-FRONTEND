@@ -63,10 +63,8 @@ export function toExploreEvent(
     purchasableTiers && purchasableTiers.length > 0
       ? Math.min(...purchasableTiers.map((tier) => tier.priceInPaise))
       : tiers !== null
-        ? (discoveryPrice ?? null)
-        : discoveryPrice !== undefined
-          ? discoveryPrice
-          : event.startingPricePaise;
+        ? null
+        : (discoveryPrice ?? null);
   return {
     id: event.id,
     slug: event.slug,
@@ -74,15 +72,13 @@ export function toExploreEvent(
     category: event.tags[0] ?? FALLBACK_CATEGORY,
     image: event.imageUrl ?? FALLBACK_IMAGE,
     startsAt: event.startAt,
+    eventStatus: event.status,
     venueId: event.venueId,
     venueSlug: venue?.slug ?? null,
     venue: venueName,
     city,
     cityKey: venue || event.externalLocation?.city ? toCityKey(city) : '',
-    price:
-      minimumPrice === null || minimumPrice === 0
-        ? null
-        : { amountPaise: minimumPrice, currency: 'INR' },
+    price: minimumPrice === null ? null : { amountPaise: minimumPrice, currency: 'INR' },
     isFree: event.isFree,
     summary: event.summary,
     availability,

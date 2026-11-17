@@ -76,6 +76,33 @@ describe('ApiClient', () => {
     });
   });
 
+  it('preserves the contracted event sale cutoff code but keeps other conflicts generic', async () => {
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        jsonResponse(
+          { code: 'event_not_on_sale', message: 'Online sales have ended.' },
+          { status: 409 },
+        ),
+      );
+
+    await expect(
+      clientWith(fetchImpl).get({ path: '/events/e1/tiers', schema }),
+    ).rejects.toMatchObject({
+      code: 'event_not_on_sale',
+      status: 409,
+      message: 'Online sales have ended.',
+    });
+
+    fetchImpl.mockResolvedValueOnce(
+      jsonResponse({ code: 'some_unrecognized_code', message: 'Conflict.' }, { status: 409 }),
+    );
+    await expect(clientWith(fetchImpl).get({ path: '/orders/o1', schema })).rejects.toMatchObject({
+      code: 'conflict',
+      status: 409,
+    });
+  });
+
   it('surfaces field errors from a validation failure', async () => {
     const fetchImpl = vi
       .fn<typeof fetch>()

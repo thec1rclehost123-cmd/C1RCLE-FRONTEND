@@ -1,3 +1,5 @@
+import type { EventDto } from '@c1rcle/contracts';
+
 export interface ExploreMoney {
   amountPaise: number;
   currency: 'INR';
@@ -10,6 +12,7 @@ export interface ExploreEvent {
   category: string;
   image: string;
   startsAt: string;
+  eventStatus?: EventDto['status'];
   venueId: string | null;
   venueSlug: string | null;
   venue: string;
