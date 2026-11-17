@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 
 import { VenueLiveEventSummaryScreen } from './VenueLiveEventSummaryScreen';
 
-import type { VenueEventDetailResponse } from '@c1rcle/contracts';
+import type { VenueEventDetailViewModel } from '@/lib/events/load-venue-event-detail';
 
-const record: VenueEventDetailResponse = {
+const record: VenueEventDetailViewModel = {
   event: {
     id: 'event-1',
     organizationId: 'host-org-1',
@@ -29,6 +29,8 @@ const record: VenueEventDetailResponse = {
     createdAt: '2026-11-10T00:00:00.000Z',
     updatedAt: '2026-11-10T00:00:00.000Z',
   },
+  hostName: 'Test Host',
+  venueName: 'Test Venue',
   tiers: [
     {
       id: 'tier-general',
@@ -66,7 +68,9 @@ describe('VenueLiveEventSummaryScreen', () => {
     render(<VenueLiveEventSummaryScreen record={record} />);
 
     expect(screen.getByRole('heading', { name: 'Overview' })).toBeInTheDocument();
-    expect(screen.getByText('Host organization · host-org-1')).toBeInTheDocument();
+    expect(screen.getByText('Host organization · Test Host')).toBeInTheDocument();
+    expect(screen.getByText('Test Venue')).toBeInTheDocument();
+    expect(screen.queryByText(/host-org-1|venue-1/)).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'General Entry' })).toBeInTheDocument();
     expect(screen.getByText('₹800.00')).toBeInTheDocument();
     expect(screen.getByText('80')).toBeInTheDocument();

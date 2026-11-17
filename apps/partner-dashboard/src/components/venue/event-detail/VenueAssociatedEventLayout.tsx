@@ -17,7 +17,7 @@ export async function VenueEventDetailLayout({
   const { eventId } = await params;
   const record = await loadVenueEventDetail(eventId).catch(() => null);
   if (!record) notFound();
-  const { event, tiers } = record;
+  const { event, tiers, hostName, venueName } = record;
   const dateTime = new Intl.DateTimeFormat('en-IN', {
     dateStyle: 'medium',
     timeStyle: 'short',
@@ -33,15 +33,15 @@ export async function VenueEventDetailLayout({
   const workspaceEvent: EventWorkspaceModel = {
     id: event.id,
     title: event.title,
-    venue: event.venueId ?? event.externalLocation?.name ?? 'Venue not specified',
+    venue: venueName ?? event.externalLocation?.name ?? 'Venue name unavailable',
     dateTime: `${dateTime.format(new Date(event.startAt))}${event.endAt ? ` – ${dateTime.format(new Date(event.endAt))}` : ''} IST`,
     statusLabel: event.status.replaceAll('_', ' '),
-    contextLabel: `Hosted by ${event.organizationId}`,
+    contextLabel: `Hosted by ${hostName ?? 'Host name unavailable'}`,
     artwork: event.imageUrl
       ? { type: 'image', value: event.imageUrl, alt: `${event.title} poster` }
       : { type: 'gradient', value: 'placeholder' },
     metrics: [
-      { label: 'Host', value: event.organizationId },
+      { label: 'Host', value: hostName ?? 'Host name unavailable' },
       { label: 'Ticket tiers', value: String(tiers.length) },
       { label: 'Starting price', value: startingPrice },
     ],
