@@ -1,136 +1,170 @@
-# C1RCLE Host + Venue — Launch Remediation Plan
+# C1RCLE Host + Venue — Launch Remediation Plan (rev 2, Model A)
 
-- **Date:** 2026-11-17 · **Type:** planning document only. No code, config or data was changed to produce it.
-- **Built from:** `PARTNER_DASHBOARD_LAUNCH_AUDIT_20261117.md`, `HOST_VENUE_EXTREME_ACCEPTANCE_20261117.md`, `FINANCIAL_ENGINE_FORENSIC_AUDIT_20261117.md`, and the email/Resend investigation inside the second report.
-- **Scope:** Host Studio + Venue Studio, the backend they depend on, and the Guest-side items that block Host/Venue revenue. **Excluded by instruction:** Promoter Studio (PARTNER-014 carried forward untouched).
-- **Lifecycle assumed:** this plan → Codex implementation per milestone → Claude independent re-acceptance per milestone → (after M5) the separate Partner Experience Quality Pass → final experience acceptance.
-- **Sizing:** one *work unit* ≈ one engineer-focused-week including tests. Five milestones of **20 units each (100 total)**, sequenced so each ends in something that can be re-accepted on staging.
+- **Date:** 2026-11-17 · **Type:** planning document only. No code, config or data was changed to produce or revise it.
+- **Built from:** `PARTNER_DASHBOARD_LAUNCH_AUDIT_20261117.md`, `HOST_VENUE_EXTREME_ACCEPTANCE_20261117.md`, `FINANCIAL_ENGINE_FORENSIC_AUDIT_20261117.md` (incl. the Resend investigation), revised by the **owner decisions R1–R10** below, which are authoritative over earlier text.
+- **Scope:** Host Studio + Venue Studio, the backend they depend on, and Guest-side items that block Host/Venue revenue. **Excluded:** Promoter Studio redesign (only shared financial-engine compatibility is kept).
+- **Lifecycle:** this plan → Codex implementation per milestone (bounded packets) → Claude independent hosted re-acceptance per milestone → after M5 the separate Partner Experience Quality Pass → final experience acceptance.
+- **Sizing:** one work unit ≈ one engineer-focused-week including focused tests. Five milestones of **20 units each (100 total)**.
 
----
+## 0. What changed in this revision
 
-## 1. What "launch ready" means here (the exit bar)
+| Area | Change |
+|---|---|
+| Commercial model | **Model A locked:** no Host-side C1RCLE fee. M4 is rewritten around one buyer-side policy and retirement of legacy Host-fee machinery (no "better configurable Host-fee system"). |
+| Venue visibility | Venue gets **operational** visibility of Host events at its venue, **never** Host revenue, payable, fees, commission, settlement or profit. M2 W2.4/W2.5 and M4 W4.4 revised. |
+| Event changes | New **material-change request lifecycle** (pending/approved/rejected, Venue reapproval, public event unchanged until approved, ticket validity + refund right, Postpone flow when no replacement). Moved into M3 as the largest item (W3.2). |
+| Communications | Resend must reliably carry material-change/postponement/cancellation ticket-holder emails; Host/Venue operational notices; no plaintext temporary-credential invitations (M3). |
+| Settlement | Staged 0 % / 75 % / 100 % retained and kept **separate from fees**; the delayed 25 % is Host reserve, not C1RCLE revenue (M4 W4.3). |
+| Engineering process | **No one-PR-per-item rule.** Bounded implementation packets, coherent PR boundaries, batched fixes, focused tests while building, full CI-equivalent validation only at the milestone packaging gate (§11). |
+| Decision register | Split into **Resolved / Open / Made irrelevant by Model A** (§2). D2/D3/D7/D12 no longer imply a Host platform fee. |
+| Preserved | Audit-to-finding coverage (§9), milestone count, 20-unit balance, deferred items (§10). |
 
-A real Host and a real Venue operator can, on staging and then production, without engineering help:
+## 1. What "launch ready" means here
 
-1. Publish availability, request a night, have it reviewed and accepted, and see the event published — **every time**, with no wedged or orphaned records.
-2. Run the Venue's night from the Venue Studio (see Host events at its venue, sales/attendance it is entitled to, calendar identity, notifications, door).
-3. Trust every money number they see, with definitions, and understand what they will be paid and when.
-4. Be told (in-app and by email) when something that affects them happens.
-5. Operate on a phone, with truthful error states and no internal jargon.
-6. Have refunds, cancellations, disputes and payouts handled by a safe, reconciled financial engine under a **written, approved commercial policy**.
+A real Host and a real Venue operator can, without engineering help:
 
-Anything not on that list (guestlists, curated approval, code-gated tiers, polished Edit/Door UI, Promoter redesign, animations) is **post-launch** (§8).
+1. Publish availability, request a night, have it reviewed and accepted, and see the event published — every time, with no wedged or orphaned records.
+2. Change an accepted event **only through Venue approval**, with ticket holders protected and informed.
+3. Run the Venue's night from the Venue Studio using **operational** information (event, Host, schedule, capacity, ticket/RSVP counts, expected attendance, check-ins/crowd, door) — without seeing the Host's money.
+4. Trust every money number they are entitled to see: a Host sees proceeds starting at 100 % of ticket face value less only agreed Venue share / Promoter commission; a Venue sees only money attributable to the Venue.
+5. Be told in-app and by reliable email when something that affects them happens, and have ticket holders told reliably about material change, postponement and cancellation.
+6. Operate on a phone with truthful states and no internal jargon.
+7. Have refunds, cancellations, disputes and payouts handled by a safe, reconciled engine under a written, approved **buyer-side** commercial policy.
 
-## 2. Decisions the business owner must make first (they block engineering)
+Post-launch (see §10): guestlists, profiling/nominations, controlled inventory, code-gated tiers/events, redesigned Promoter Studio, UX polish.
 
-Engineering must not choose these. Most can be answered in one working session; **M4 and parts of M5 cannot start until D1–D14 are answered.** Product decisions P1–P6 block M2/M3 items.
+## 2. Owner-decision register
 
-| # | Decision | Blocks |
+### 2.1 RESOLVED by the owner (authoritative)
+
+| ID | Decision | Effect on plan |
 |---|---|---|
-| D1 | Do Guests pay platform + payment fees? (currently 5 % + 2.5 % + GST on fees, test policy) | W4.1, W4.2, W4.5 |
-| D2 | Does the Host also pay a plan fee, and do they stack? (currently 15 % Basic) | W4.1, W4.2 |
-| D3 | Is a Basic/Silver/Diamond plan system in V1, or one flat rate / per-Host override? | W4.2 |
-| D4 | Who absorbs payment-processing cost? | W4.5 |
-| D5 | What do "Money made", "Gross", "Net revenue", "Proceeds" mean for a Host? | W4.4 |
-| D6 | Venue share: optional, mandatory, or none in V1? | W2.4, W4.4 |
-| D7 | Order of Promoter commission vs Host fee | W4.2 |
-| D8 | Settlement timing (currently 75 % at 24 h, 100 % at 72 h after event end) | W4.3 |
-| D9 | Reserve policy (currently a delay, not a deduction) | W4.3, W5.1 |
-| D10 | Refund economics (guest: admission only; organizer-caused: full incl. fees) | W5.1 |
-| D11 | Host-caused cancellation liability and clawback | W5.1 |
-| D12 | Tax treatment of the Host plan fee and who remits what | W4.5 |
-| D13 | Chargeback policy (automatic hold? reserve?) | W5.2 |
-| D14 | Payout mode (manual operator transfer vs automated provider) | W5.1, W5.2 |
-| P1 | Exactly which Host-owned metrics a Venue may see (sold count, revenue, attendee names, audience) — read-only | W2.4 |
-| P2 | Is Venue-published availability a **hard constraint**, a hint, or optional? | W1.1 |
-| P3 | May a Venue mint scanner codes for Host events at its venue? | W2.6, W5.3 |
-| P4 | Which notifications are mandatory vs optional, and which also go to email? | W3.1 |
-| P5 | Waitlist: remove from V1 UI or implement? (backend already returns 410) | W3.5 |
-| P6 | Marketing composer: hide until channels exist, or build one channel for launch? | W3.6 |
+| **R1** | **Commercial Model A:** no Host-side C1RCLE platform fee. The Basic/Silver/Diamond 15 %/12 %/10 % Host fee is removed from the intended production model **for new orders**. Historical order snapshots remain immutable. | M4 rewritten; supersedes D2, D3, D7, D12 |
+| **R2** | **Host economics:** Host proceeds start at 100 % of ticket face value; only separately authorised allocations (Venue share, Promoter commission) reduce them. C1RCLE monetises on the buyer side. | Allocation math, Host finance labels (M4) |
+| **R3** | **Venue operational visibility ≠ Host financial visibility.** Venue sees Host-owned events at its venue and operational data (identity, Host, schedule, capacity, ticket/RSVP counts, expected attendance, check-ins/crowd, other authorised operational metrics). Venue must **not** automatically see Host revenue, Host payable, C1RCLE fees, Promoter commission, Host settlement balances or Host profit/net revenue. Venue financial surfaces show **only money attributable/payable to the Venue**. | M2 W2.1/2.4/2.5, M4 W4.4; resolves old P1 (metrics) |
+| **R4** | **Material changes after Venue acceptance need Venue reapproval.** Model as a change-request lifecycle (pending/approved/rejected). Until approved, the existing authoritative public event is unchanged. A Host cannot unilaterally change an accepted event's material schedule/Venue. | M3 W3.2 |
+| **R5** | **Sold-ticket material change:** an approved change keeps existing tickets valid for the approved replacement event, notifies affected Guests, and creates/exposes the applicable refund-request right. With no known replacement schedule, use **Postpone**, not ordinary Edit. | M3 W3.2 |
+| **R6** | **Resend** must reliably deliver material-change, postponement and cancellation ticket-holder communications and appropriate Host/Venue operational notifications, using idempotency, retry/outbox, delivery evidence and safe environment configuration. **No plaintext temporary-credential staff invitations.** | M3 W3.1–W3.4 |
+| **R7** | **Settlement stays separate from fees:** 0 % eligible before 24 h after effective event end, 75 % from 24 h to 72 h, 100 % at 72 h+. The delayed 25 % is Host money/reserve, **not C1RCLE revenue**. | M4 W4.3 (verify, don't redesign) |
+| **R8** | **Promoter Studio redesign out of scope**; keep only shared financial-engine compatibility (Promoter commission as an allocation). Guestlists, nominations, controlled inventory, code-gated tiers/events remain a later project. | §10 |
+| **R9** | **Bounded implementation packets / coherent PR boundaries**, not one PR per work item. | §11 |
+| **R10** | **Testing cadence:** focused checks while implementing; batch related fixes; full CI-equivalent validation only at the milestone packaging gate on the final diff, then GitHub CI and independent hosted re-acceptance. | §11 |
+
+### 2.2 STILL OPEN (genuinely need the owner)
+
+| ID | Decision | Current behaviour | Blocks |
+|---|---|---|---|
+| **O1** | **Guest-side production fee model:** which fees (platform fee, payment/convenience fee), and their **percentages**. *Not chosen here.* | 5 % + 2.5 % + GST on fees, labelled non-production test policy | M4 W4.1/W4.2 (production policy) |
+| **O2** | Who absorbs payment-processing cost; is the payment fee a C1RCLE-priced fee or a pass-through? | C1RCLE-priced fee booked as revenue; provider cost recorded separately only when reported | M4 W4.5 |
+| **O3** | **Tax treatment of buyer-side fees:** rate/basis, who remits, whether any other component is taxable. (Host-fee tax is moot under Model A.) | 18 % GST on fees only, journaled as a liability | M4 W4.5 |
+| **O4** | **Refund economics for fees:** guest-requested refunds (currently admission only) vs organiser/C1RCLE-caused (currently full incl. fees); who bears provider cost on refunds | as stated | M5 W5.1 |
+| **O5** | **Host-caused cancellation liability and clawback** (post-payout recovery, receivable) | not enforced | M5 W5.1 |
+| **O6** | **Chargeback policy** (automatic hold, reserve size) | recorded as facts; manual Admin action | M5 W5.2 |
+| **O7** | **Payout mode** (manual operator transfer vs automated provider) and when payouts open | manual, gated off | M5 W5.1/W5.2 |
+| **O8** | **Venue share mechanics:** how it is agreed/configured (per partnership, mandatory or optional in V1) and its basis | optional per partnership, default 0 % | M2 W2.4, M4 W4.4 |
+| **O9** | **Additional refund/dispute reserve** beyond the staged 25 % delay (rolling reserve?) | none beyond staging | M5 W5.2 |
+| **O10** | **Venue availability model (old P2):** are published windows a hard constraint, a hint, or optional? | optional/unenforced, but an open window blocks requests inside it | **M1 W1.1** |
+| **O11** | **Definition thresholds for change handling:** engineering default proposed — *any* change to start/end/Venue of an accepted event needs Venue reapproval; the **refund right** applies only where the existing materiality rule triggers (Venue change, or start moved > 12 h). Confirm or amend. | in-slot time changes are currently allowed unilaterally | M3 W3.2 |
+| **O12** | **Venue attendee-level identity:** may a Venue see names of ticket holders (R3 permits counts/check-ins; names are not stated)? | Venue currently sees none | M2 W2.4 |
+| **O13** | Scanner codes: may a Venue mint door codes for Host events at its venue? (old P3) | Venue gets 404; its Door CTA is broken | M2 W2.6, M5 W5.3 |
+| **O14** | Waitlist: remove from V1 UI or implement? (backend returns 410) | UI calls disabled endpoint | M3 W3.5 |
+| **O15** | Marketing composer: hide until channels exist, or ship one channel? | "Preview only, sending not connected" | M3 W3.6 |
+| **O16** | Notification preferences: which Host/Venue notices are mandatory, which optional, which also email (R6 fixes only the ticket-holder lifecycle emails and "appropriate" Host/Venue notices) | none produced | M3 W3.1 |
+
+### 2.3 MADE IRRELEVANT by Model A (retired from the register)
+
+| Old ID | Old question | Why retired |
+|---|---|---|
+| D2 | Does the Host also pay a plan fee; do fees stack? | No Host fee (R1). |
+| D3 | Is a Basic/Silver/Diamond plan system in V1? | The plan's only economic effect was the Host fee; it is retired for new orders. Any non-fee plan concept is not required for launch. |
+| D7 | Order of Promoter commission vs Host fee | No Host fee; Venue share and Promoter commission both reduce the Host's proceeds from face value (engineering note: apply on the same face-value base; exact base/rounding rules documented in W4.1). |
+| D12 | Tax treatment of the Host plan fee | No Host fee, so no such tax. (Buyer-fee tax remains open as O3.) |
+| D1 (old form) | "Do Guests pay fees?" | Answered by R2 (monetisation is buyer-side). Only the **percentages/structure** remain open (O1). |
+| D5 | Meaning of Host "Money made / Net revenue" | Answered by R2/R3: Host proceeds begin at 100 % of face; labels derive from that (W4.4). |
+| D8 | Settlement timing | Answered by R7. |
+| D9 (partial) | Reserve policy | The staged 25 % delay is resolved (R7); any extra rolling reserve is O9. |
+| P1 (old) | Which Host metrics a Venue may see | Answered by R3 (operational yes; financial no); attendee-level identity left as O12. |
+| P4 (partial) | Which notices are mandatory/email | Ticket-holder lifecycle emails and "appropriate" Host/Venue notices fixed by R6; preference detail is O16. |
 
 ## 3. Milestone overview
 
-| M | Name | Units | Primary layers | Exit gate |
+| M | Name (final) | Units | Primary layers | Exit gate |
 |---|---|---:|---|---|
-| **M1** | Host↔Venue request/publish loop integrity | 20 | backend + Partner FE | 20 consecutive loops incl. failure injection leave zero orphans |
-| **M2** | Venue-centric Studio | 20 | backend read models + Partner FE | Venue sees and can operate every Host event at its venue, read-only |
-| **M3** | Notifications, email, lifecycle and honest error states | 20 | backend + email + Partner FE | every state change notifies; no dead-end or jargon states |
-| **M4** | Financial truth and Host transparency | 20 | backend finance + Partner FE | one definition per number; journal v2 verified on staging; approved policy |
-| **M5** | Operational safety, Door, performance, launch | 20 | backend + FE + ops | independent re-acceptance passes; go/no-go |
+| **M1** | Host↔Venue request/publish loop integrity | 20 | backend + Partner FE | loop matrix with failure injection leaves zero orphans |
+| **M2** | Venue-centric Studio (operational visibility) | 20 | backend read models + Partner FE | Venue operates every Host event at its venue, with no Host financial data |
+| **M3** | Change management, communications and honest states | 20 | backend + outbox/Resend + Partner FE | material change/postpone/cancel lifecycle and notifications proven end-to-end |
+| **M4** | Financial truth under Model A | 20 | backend finance + Partner FE | one buyer-side policy; legacy Host fee retired for new orders; journal v2 verified |
+| **M5** | Operational safety, Door Mode, performance and launch | 20 | backend + FE + ops | independent re-acceptance passes; go/no-go |
 
-**Sequencing:** M1 and M2 can start together (different files; M2's calendar work depends on M1's slot model after W1.1). M3 starts after M1's request model is stable. **M4's decisions (D1–D14) should be collected during M1–M2** so M4 can start immediately after M2. M5 is last and contains the final re-acceptance.
+**Sequencing:** M1 and M2 start together (M2 calendar work follows M1 W1.1). M3's change-request lifecycle needs M1's request/slot model stable. Collect open decisions **O1–O9** during M1–M3 so M4 can start right after M2/M3; **O10 must be answered before M1 W1.1**, **O11 before M3 W3.2**, **O12/O13 before M2 W2.4/W2.6**.
 
 ---
 
 ## 4. Milestone 1 — Host↔Venue request/publish loop integrity (20 units)
 
-**Why first:** this is the operating loop. Today a wizard-created request inside a Venue's published window cannot be accepted and ends wedged; failed accepts leave orphans; Hosts cannot withdraw; hosts cannot see why a request was rejected.
-
 | WU | Work item | Pts | Findings | Layer / where to look | Acceptance |
 |---|---|---:|---|---|---|
-| W1.1 | **One availability model** (decide P2). Wizard must bind a request to a real slot when one is open, or create an interval that cannot collide with the Venue's own open window; Venue must be able to edit/unpublish an open window; availability endpoint and calendar must agree | 4 | PARTNER-031, 045, 054 | `venue-service` request/accept overlap logic; `/venues/{id}/availability` vs `/calendar`; wizard date/time step (`free-…` slot synthesis) | A request made in the browser inside an open window is accepted first time; unpublishing works; availability and calendar return identical sets |
-| W1.2 | **Atomic accept + repair.** Accept must create the event, tiers and slot booking as one unit (or compensate fully); idempotent replay must recover; one-off data repair tool for the wedged request and the orphan draft | 4 | PARTNER-032, 031 (data) | `acceptRequest` (event create → tier create → slot transition); idempotency store | Injected failure at each step leaves either full success or full rollback; replay converges; zero orphan drafts; wedged request `728f365e` repaired or archived |
-| W1.3 | **Withdraw/cancel a pending request** with an embedded draft; window state on cancel is correct (does not destroy the Venue's window); same for Venue decline | 3 | PARTNER-033, 034 | `venue-service.cancel` (`eventId` pre-allocation vs event existence); slot transitions | Host can withdraw any pending request; Venue window survives; no phantom "booked" slots |
-| W1.4 | **Reject with reason, Venue request detail, resubmit.** Reason stored and returned; Venue sees price, capacity, poster, summary and any collision before deciding; resubmit-after-reject path is explicit | 3 | PARTNER-035 (reason), Phase 8/9/10 gaps | request DTO + Slot Requests screens (`slot-requests/*`) | Host sees reason; Venue can judge a night from its detail screen; resubmit keeps edits |
-| W1.5 | **Decision UX:** Accept/Decline shows progress, success and failure immediately, list refreshes, buttons disable; reduce the ~7 s accept latency (parallelise tier creation / measure) | 2 | PARTNER-036 | slot-request action hook + BFF route | Click → visible acknowledgement < 300 ms; final state < 3 s p95 on staging |
-| W1.6 | **Wizard hygiene:** clear the draft after successful submit; require/decide poster policy; surface field-specific validation messages (venue change, localhost poster, capacity); populate event capacity; stop globally-unique client tier ids from colliding | 3 | PARTNER-046, 053, 050, 020, 051 | wizard draft persistence (delete-then-put sequence), event contract capacity, tier id generation | "Create event" opens blank after submit; submit without poster follows policy; errors name the field |
-| W1.7 | **Loop test harness:** automated E2E for request → accept/reject/withdraw → publish, with failure injection and a **second Host account fixture** (enables cross-Host collision proof) | 1 | Phase 11 gap, regression for all of M1 | `apps/api-gateway/scenarios`, Partner e2e | CI runs the matrix; second-Host collision case proven |
+| W1.1 | **One availability model** (needs **O10**). A wizard request binds to a real slot when one is open, or creates an interval that cannot collide with the Venue's own open window; the Venue can edit/unpublish an open window; availability and calendar endpoints agree | 4 | PARTNER-031, 045, 054 | `venue-service` request/accept overlap logic; `/venues/{id}/availability` vs `/calendar`; wizard time step (`free-…` slot synthesis) | A browser-created request inside an open window is accepted first time; unpublish works; availability == calendar |
+| W1.2 | **Atomic accept + repair.** Event creation, tier creation and slot booking succeed or compensate as one unit; idempotent replay converges; repair tool for the wedged request and the orphan draft | 4 | PARTNER-032, 031 (data) | accept path (event → tiers → slot), idempotency store | Injected failure at every step leaves full success or full rollback; zero orphans; wedged records repaired/archived |
+| W1.3 | **Withdraw a pending request** that carries a draft; Host cancel does not destroy the Venue's window; Venue decline likewise | 3 | PARTNER-033, 034 | `venue-service.cancel` (pre-allocated `eventId` vs non-existent event); slot transitions | Host can withdraw any pending request; windows survive; no phantom "booked" |
+| W1.4 | **Reject with reason; Venue request detail; resubmit.** Reason stored/returned; Venue sees price, capacity, poster, summary and collisions before deciding | 3 | PARTNER-035 (reason), Phases 8–10 | request DTO + Slot Requests screens | Host sees reason; Venue can judge a night from detail; resubmit keeps edits |
+| W1.5 | **Decision UX:** Accept/Decline shows progress/success/failure, list refreshes, buttons disable; reduce ~7 s accept latency | 2 | PARTNER-036 | slot-request action hook + BFF | Acknowledgement < 300 ms; settled state < 3 s p95 |
+| W1.6 | **Wizard hygiene:** clear draft after submit; poster policy; field-specific validation messages; populate event capacity; avoid colliding client tier ids | 3 | PARTNER-046, 053, 050, 020, 051 | wizard draft persistence, event contract, tier id generation | Create opens blank after submit; errors name the field |
+| W1.7 | **Loop test harness** incl. a **second Host account** fixture for cross-Host collision proof and failure-injection matrix | 1 | Phase 11 gap | gateway scenarios + Partner e2e | CI runs the matrix; cross-Host collision proven |
 
-**M1 exit:** Claude re-runs Phases 6–11 of the acceptance audit hosted, including: UI-created request inside an open window, forced accept failure, Host withdraw, reject-with-reason, resubmit, cross-Host collision.
+**M1 exit:** Claude re-runs Phases 6–11 hosted (browser-created request in an open window, forced accept failure, Host withdraw, reject-with-reason, resubmit, cross-Host collision).
 
 ---
 
-## 5. Milestone 2 — Venue-centric Studio (20 units)
+## 5. Milestone 2 — Venue-centric Studio, operational visibility (20 units)
 
-**Why second:** the audit's central product requirement. The Venue must see *what is happening at its venue* without owning the events, with **visibility ≠ ownership** preserved.
+**Rule for every item (R3):** the Venue sees *operations*, never the Host's money.
 
 | WU | Work item | Pts | Findings | Layer / where to look | Acceptance |
 |---|---|---:|---|---|---|
-| W2.1 | **Venue read model** for events at the venue (upcoming/live/past, status, Host name, poster, sold count per P1), excluding Host **drafts** and unaccepted drafts from list responses; consistent list/detail eligibility | 3 | PARTNER-007, 001 (data) | `listForVenueOrganization` / `getForVenueOrganization`; 1,000-order scan | Drafts never appear for Venue; list and detail agree; payload includes what the UI needs |
-| W2.2 | **Venue Overview + Events rewiring:** overview cards, upcoming list and performance use the venue read model; Events default shows all events at the venue with Host/Venue/All filter (no hidden "Hosts" toggle); cards show Hosted by, poster, date, sold; status vocabulary ("On sale" vs "Live now") | 4 | PARTNER-001, 002, 019 | `lib/overview/*`, `lib/events/load-partner-events.ts`, Venue screens | With 10+ Host events the Overview/Events show them with no extra clicks; empty state only when truly empty |
-| W2.3 | **Calendar identity and slot lifecycle:** day detail shows event title, Host, status, link to workspace; default selected date = today; cancelled/postponed events release (or visibly reassign) the slot and no longer block re-request | 3 | PARTNER-002 (calendar), 039, 034 (calendar) | calendar API block labels, `venues/{id}/calendar`, venue calendar UI, overlap guard | Clicking a booked day opens the right event; cancelling an event frees its night; re-request succeeds |
-| W2.4 | **Venue analytics, marketing/audience and attendee awareness** for Host events at the venue, within P1/D6: org-level and event-level aggregates, tickets/RSVPs/check-ins, read-only | 4 | PARTNER-003 | analytics service (`ownerOnly` filters), `marketing/audience`, venue analytics screens | Venue analytics equal the sum of the venue's events' authorised metrics; test order and RSVPs appear; no Host-only controls or PII beyond policy |
-| W2.5 | **Venue event workspace:** tabs for summary/sales/crowd/door with truthful denial states; Host-only controls absent, not hidden; Edit URL shows a correct "view only" state instead of "Event unavailable" | 2 | PARTNER-018, 003 (workspace) | `components/venue/event-detail/*`, shared workspace permissions | Venue never sees Host actions; no contradictory "loaded header + unavailable" state |
-| W2.6 | **Venue global search and Door entry:** search finds events at the venue; Door "Open Door Mode" works for Host events per P3 (or is removed) | 2 | PARTNER-038, 037 | partner search service, venue door screens, door-code authorization | Search returns venue events; Door CTA leads to a working screen or is absent |
-| W2.7 | **Price truth everywhere:** one definition of "starting/current price" (active phase) in Host list, Host/Venue workspace, public summary, discovery; base price shown only as base | 2 | PARTNER-012 | `startingPricePaise` computation (event summary), public discovery DTO, workspace headers | Early Bird event shows the active price on every surface; transitions at phase boundaries |
+| W2.1 | **Venue operational read model** for events at the venue: identity, Host, status, schedule, capacity, ticket/RSVP counts, expected attendance, check-ins; **excludes Host drafts** and unaccepted drafts; list and detail eligibility agree; **no revenue/payable/fee fields in the DTO** | 3 | PARTNER-007, 001 (data) | `listForVenueOrganization`/`getForVenueOrganization`; avoid per-request 1,000-order scans | Drafts never appear; DTO has no financial fields (contract test); list == detail |
+| W2.2 | **Venue Overview + Events rewiring:** overview cards/upcoming/crowd use the read model; Events default shows all events at the venue (Host/Venue/All filter, no hidden toggle); cards show Hosted by, poster, date, counts; status vocabulary | 4 | PARTNER-001, 002, 019 | `lib/overview/*`, `load-partner-events`, Venue screens | With 10+ Host events they appear with zero extra clicks; empty only when truly empty |
+| W2.3 | **Calendar identity and slot lifecycle:** day detail shows event title, Host, status, link; default date today; cancelled/postponed events release (or visibly reassign) the slot | 3 | PARTNER-002 (calendar), 039, 034 (calendar) | calendar API labels, venue calendar UI, overlap guard | Booked day opens the event; cancelling frees the night |
+| W2.4 | **Venue operational analytics and awareness:** counts, capacity use, expected attendance, check-ins/crowd, aggregated by day/event/venue; attendee-level identity only if **O12** allows; **no Host revenue/net/payable/fees/commission anywhere**; Venue's own attributable money handled in M4 | 4 | PARTNER-003 (operational part) | analytics service (owner-only filters), venue analytics/audience screens | Venue analytics equal the sum of operational counts of its venue's events; test order and RSVPs counted; contract/tenant tests prove no financial leakage |
+| W2.5 | **Venue event workspace (operational):** summary, crowd, door, schedule; Host-only controls absent; Edit/Host URLs show a truthful "view only / not yours" state; shows pending change requests (read-only until M3) | 2 | PARTNER-018, 003 (workspace) | `components/venue/event-detail/*` | No Host actions or financial tiles on Venue screens; no "loaded header + unavailable" |
+| W2.6 | **Venue search and Door entry** per **O13**: search finds events at the venue; Door CTA works or is absent | 2 | PARTNER-038, 037 | partner search service; door authorization | Search returns venue events; no broken CTA |
+| W2.7 | **Price truth:** one definition of "current/starting price" (active phase) in Host list, workspaces, public summary, discovery; base price shown only as base | 2 | PARTNER-012 | event summary computation, public DTO | Early Bird shows the active price everywhere |
 
-**M2 exit:** Claude re-runs Phases 3, 5, 13, 15, 23, 33, 35 hosted; the Venue acceptance table in the audit (§E) must have no "Fail" rows other than items intentionally deferred.
+**M2 exit:** Claude re-runs Phases 3, 5, 13, 15, 23, 33, 35 hosted and a **negative financial-visibility test**: Venue API/UI/search/exports contain no Host revenue, payable, fee, commission, settlement or profit.
 
 ---
 
-## 6. Milestone 3 — Notifications, email, lifecycle and honest error states (20 units)
-
-**Why third:** once the loop and Venue views are correct, every state change must reach the right person, email must be safe, and the UI must never lie about failures.
+## 6. Milestone 3 — Change management, communications and honest states (20 units)
 
 | WU | Work item | Pts | Findings | Layer / where to look | Acceptance |
 |---|---|---:|---|---|---|
-| W3.1 | **Notification producers + inbox for Host/Venue** (decide P4): request submitted/accepted/rejected/cancelled, event published/edited, postponed/cancelled, Guest refund request, purchases (digest), with preferences and email where mandatory | 4 | PARTNER-013, 035, 040, 049, 057 | notification events + consumers (producers currently absent), `partner-inbox` BFF | Every transition in the M1 matrix yields the right in-app notice for the right org; none duplicated on replay |
-| W3.2 | **Lifecycle + Edit Event baseline:** postpone/cancel flows notify Host, Venue and ticket holders; Guest still reaches tickets; liability/refund messaging; Edit Event adds poster, material-change warning (venue change or >12 h) with refund-right preview, and reflects changes to Venue | 4 | PARTNER-040 (lifecycle), 017, Phases 21/26/27 | event lifecycle service, edit screen, public availability rules | Postpone/cancel on an event with tickets produces correct tickets state, notices and Venue calendar state; Edit shows impact before save |
-| W3.3 | **Staff-invitation and auth-email hardening:** no plaintext temporary sign-in credential in email (accept-link flow); revoke deprovisions any account created for the invite; email/provisioning failures surfaced to the inviter; idempotency key + bounded retry for auth emails | 4 | PARTNER-055, 056 | `organization-service.createInvitation`, credential provisioner, `ResendEmailSender` auth path | Invite → accept works with no credential in the message; revoke leaves no account; a forced mail failure shows "not delivered" to the Host |
-| W3.4 | **Email/outbox operations:** decide and enable workers in staging (outbox drain/retry), remove the hard-coded personal test-recipient from config, define provider environment per stage, delivery verification procedure (inbox + Admin delivery view), alerting on permanent failures | 3 | PARTNER-058, FIN-013, Resend §| config validation, `render.yaml`/environment docs, communications admin route | A synthetic receipt, invitation and cancellation email are delivered and visible in the delivery record; failures retry and alert |
-| W3.5 | **One honest state system:** distinct not-found / forbidden / signed-out / server-failure / feature-unavailable components; revoked-session event routes redirect to sign-in; waitlist UI removed/disabled per P5; internal jargon and dead routes removed; money/number formatting and plural grammar; "LIVE"-style status copy | 3 | PARTNER-009, 010, 011, 022, 019 (copy), 047 | Partner `error.tsx`/route guards, waitlist screens, copy | Every previously-observed dead-end renders the correct state; no "endpoint", "tenant-scoped", "Partner V3 foundation", "HTTP status" text in UI |
-| W3.6 | **Marketing composer** (P6): hide or ship one real channel; no screen advertises an unavailable channel | 1 | PARTNER-044 | marketing screen | Composer matches reality |
-| W3.7 | **Onboarding/KYC path:** fix `onboarding/me?requestedType` 500 (verify index deployment); prove "no operational access before KYC approval" with pending/rejected fixtures; **Guest-side:** stop sending phone-incomplete users to Explore or make the gate visible earlier | 1 | PARTNER-005, PARTNER-043 (Guest), Phase 1 gap | onboarding service + Firestore indexes; Guest onboarding step logic | Wizard resume works; pending/rejected Partner is confined; Guest cannot reach a late hard 403 unexpectedly |
+| W3.1 | **Host/Venue operational notifications** (inbox + email where decided in O16): request submitted/accepted/rejected/withdrawn, event published/edited, change-request pending/approved/rejected, postponed/cancelled, Guest refund request, purchase digest; preferences; idempotent on replay | 3 | PARTNER-013, 035, 049, 057 | notification events + consumers; `partner-inbox` BFF | Every transition in the M1/M3 matrices yields the right notice for the right org, once |
+| W3.2 | **Material-change request lifecycle (R4/R5):** `pending → approved/rejected` entity separate from the event; public/Guest/Venue-visible event stays unchanged until approval; Venue approve/reject UI with diff; Host sees status; on approval apply atomically; **ticket validity carried to the replacement event**; affected Guests notified; **refund-request right created/exposed** per O11 rule; **Postpone flow** when no replacement schedule; ordinary Edit limited to non-material fields (title, description, poster, tier price/capacity with existing floors); cancellation flow tied to slot release (M2) | 6 | PARTNER-017, 040 (lifecycle), Phases 14/21/26/27 | event lifecycle service, new change-request model/routes, Host Edit screen, Venue approval screen, ticket/QR state, public availability | Matrix proven hosted: no-ticket change; change with tickets; reject; duplicate request; concurrent change vs accept; postpone; cancel. Public event identical until approval; tickets remain valid; refund right visible |
+| W3.3 | **Staff invitation hardening (R6):** no plaintext temporary credential — accept-link flow; revoke removes any account provisioned for the invite; credential/email failure surfaced to the inviter; invitation emails idempotent and retried | 3 | PARTNER-055, 056 | `createInvitation`, credential provisioner, auth-email path | Invite → accept works with no credential in the message; revoke leaves no account; forced failure shows "not delivered" |
+| W3.4 | **Resend/outbox operations (R6):** reliable ticket-holder emails for material change, postponement, cancellation (and Host/Venue notices) via outbox with idempotency keys, bounded retry, permanent-vs-transient handling, **delivery evidence** (provider id + delivery record visible to Admin/ops), **safe environment configuration** (explicit allow-list per stage, remove the hard-coded personal test recipient), decide/enable workers in staging, alerts on permanent failure | 3 | PARTNER-058, FIN-013 | `ResendEmailSender`, transactional consumer, config validation, `render.yaml` | Synthetic change/postpone/cancel emails arrive and are recorded; failures retry and alert; no unintended recipients in staging |
+| W3.5 | **One honest state system:** distinct not-found / forbidden / signed-out / server-failure / feature-unavailable; revoked-session event routes redirect to sign-in; waitlist per **O14**; remove jargon, dead routes, formatting glitches; status copy | 3 | PARTNER-009, 010, 011, 022, 047, 019 (copy) | `error.tsx`/guards, waitlist screens, copy | Every previously observed dead end renders the right state; banned strings absent |
+| W3.6 | **Marketing composer** per **O15** | 1 | PARTNER-044 | marketing screen | Composer matches reality |
+| W3.7 | **Onboarding/KYC and Guest gate:** fix the `onboarding/me?requestedType` 500 (verify index deployment); prove no operational access before KYC approval; Guest phone/onboarding gate before purchase | 1 | PARTNER-005, 043, Phase 1 gap | onboarding service + indexes; Guest onboarding logic | Wizard resume works; pending/rejected confined; no late surprise 403 |
 
-**M3 exit:** Claude re-runs Phases 3, 27, 28, 34, 42 hosted plus an email delivery check by a human (inbox) — the report's open HUMAN CHECK is closed.
+**M3 exit:** Claude re-runs Phases 3, 14, 21, 26, 27, 28, 34, 42 hosted **plus a human inbox check** of synthetic change/postpone/cancel/invitation emails (closes the open HUMAN CHECK).
 
 ---
 
-## 7. Milestone 4 — Financial truth and Host transparency (20 units)
+## 7. Milestone 4 — Financial truth under Model A (20 units)
 
-**Prerequisite:** D1–D14 answered. **Why here:** the engine is arithmetically sound but inconsistent in what it exposes and what is configurable; real money is structurally blocked until a production policy exists.
+**Prerequisite:** O1–O3 answered (buyer-side policy, processing-cost treatment, buyer-fee tax). *The plan does not choose the production Guest-side percentages.* **Goal (R1/R2):** one authoritative buyer-side commercial policy; retire misleading legacy Host-fee machinery for new orders; keep historical snapshots immutable; correct journal/finance/analytics semantics. This is **not** a project to build a better configurable Host-fee system.
 
 | WU | Work item | Pts | Findings | Layer / where to look | Acceptance |
 |---|---|---:|---|---|---|
-| W4.1 | **Written commercial policy spec** from D1–D14 (rates, stacking, plan model, tax, settlement, reserve, refund/cancellation, payout mode) with an owner sign-off record | 2 | FIN decisions 1–14 | docs; policy version string | Signed policy v1 referenced by code |
-| W4.2 | **Single source of truth for fees and policy:** one Host-fee source; delete dead fee tables/constants; Admin controls either drive the live calculation or are removed (platform fee rate, commission adjust, accounting policy); fix naming collisions; **versioned production booking-fee policy** replacing the test-only type; migrate onboarding/org fields; frozen-snapshot guarantees retained | 4 | FIN-001, 003, 006, 007, 016 | `onboarding.ts` plan table, `ledger.ts` tier table, `platform-settings`, `admin-ops-service.adjustCommissionFromProposal`, `booking-fee-policy`, config validation | Changing the Admin fee demonstrably changes a *new* order and no existing order; one table remains; production-eligible policy exists behind approval |
-| W4.3 | **Journal v2 becomes the read model, verified on staging:** run backfill → compare → cut-over with rehearsed rollback; decide workers; align accounting-policy metadata with the real settlement schedule; confirm staged settlement against time-travel tests | 4 | FIN-002, 014, 007 | `journal-transition-service`, `finance-service.getBalances`, settlement tests | Staging reads v2 with zero discrepancies; 24 h/72 h behaviour proven with controlled event dates; rollback rehearsed |
-| W4.4 | **Host/Venue finance surfaces with defined metrics:** gross, buyer fees, GST, platform fee, Venue share, promoter share, Host proceeds, payable, reserve, paid; correct labels ("Money made", "Net revenue"); show GST (DTO field); fix org-overview staleness and RSVP counting; Venue share view per D6; explanatory tooltips; order-level breakdown | 5 | PARTNER-004, 041(accounting), 042, FIN-008, 009 | finance/analytics services + DTOs (`financeOrderToDto`), Finance/Analytics screens | For the canonical Test order every Host/Venue number reconciles to the journal and carries a label equal to its meaning; no false ₹0 |
-| W4.5 | **Tax and provider cost representation:** tax on fees per policy and on the Host fee per D12, journaled as liabilities; provider fee/tax recognised for every capture with a reconciliation report of the buyer payment fee vs actual cost; Razorpay settlement modelled to clearing | 3 | FIN-010, 011 | posting service, provider payment service, reconciliation | Journal shows tax liability for every taxable component; monthly margin report (fee revenue − provider cost) |
-| W4.6 | **Arithmetic hardening:** replace floating-point split/rate math with integer basis points; property-based tests for conservation incl. odd paise and multi-party splits; clarify legacy ledger statuses | 1 | FIN-012, 017 | `computeSettlementSplit`, refund apportionment, ledger status semantics | Randomised tests prove split sums to gross and refunds never exceed paid |
-| W4.7 | **Finance re-acceptance harness:** automated reconciliation of one order across Guest, provider, legacy, journal and UI | 1 | Phase 18/34 gap | scenarios + report | Re-runnable ₹-map check in CI |
+| W4.1 | **Commercial policy spec v1 (Model A):** buyer-side fees (structure/rates as supplied in **O1**), payment-fee treatment (**O2**), tax on buyer fees (**O3**), Host proceeds = 100 % of face less agreed Venue share/Promoter commission (base/rounding documented), staged settlement unchanged (R7), historical-immutability rules, owner sign-off record | 2 | FIN decisions | docs + policy version identifier | Signed spec referenced by code |
+| W4.2 | **One authoritative buyer-side policy; retire legacy Host-fee machinery:** replace the test-only policy type with a versioned production-eligible buyer policy; set Host platform allocation to **zero for new orders** (allocation = face − Venue share − Promoter commission; platform allocation line absent); **remove or retire** the plan fee table, the duplicate plan-tier table, the dead pricing constants, the organisation `platformFeePercent` fee semantics (and its `?? 15` default), the Admin `platformFeeRate`, the dual-control `COMMISSION_ADJUST` for Host fees, and the misleading accounting-policy metadata; **preserve readers for historical snapshots**; migration with dry-run/rollback | 4 | FIN-001, 003, 006, 007, 016 | `onboarding.ts` plan table, `ledger.ts` tier table, `pricing.ts` constants, `platform-settings`, `admin-ops-service`, `snapshotSaleAllocation`, config validation | A new order has no Host platform deduction on any surface; Admin has no control that appears to change Host fees; **old orders replay byte-for-byte** (golden tests); exactly one buyer-policy source remains |
+| W4.3 | **Journal v2 as the verified read model + staged settlement (R7):** backfill → compare → cut-over on staging with rehearsed rollback; handle historical orders that carry a legacy Host allocation; time-travel tests for 0 %/75 %/100 % and boundaries; the delayed 25 % shown as Host reserve (never revenue); decide workers; legacy ledger no longer writes a Host `platform_fee` for new orders | 4 | FIN-002, 007, 014 | `journal-transition-service`, `finance-service.getBalances`, `settlement-policy`, `recordSettlement` dual write | Staging reads v2 with zero discrepancies; settlement behaviour proven with controlled dates; rollback rehearsed |
+| W4.4 | **Host and Venue finance surfaces with defined metrics:** **Host** — gross ticket value, buyer fees (informational, not Host money), tax (buyer-fee), Venue share/Promoter commission deductions, **Host proceeds**, payable, staged reserve, paid; correct labels ("Money made", "Net revenue" replaced by defined terms); show GST from the DTO; fix org-overview staleness and RSVP counting. **Venue** — only amounts actually attributable/payable to the Venue (Venue share), nothing about the Host's economics. Explanatory tooltips | 5 | PARTNER-004, 041 (accounting), 042, FIN-008, 009 | finance/analytics services + DTOs (`financeOrderToDto`), Finance/Analytics screens | For the canonical test order every Host number reconciles to the journal and carries a label equal to its meaning; **Venue finance tests prove no Host-money fields**; no false ₹0 |
+| W4.5 | **Tax and provider cost under Model A:** tax on buyer fees per **O3** journaled as a liability; provider fee/tax recognised on every capture with a margin report (buyer payment fee vs actual cost); provider settlement modelled to clearing | 3 | FIN-010 (buyer fees only), 011 | posting service, provider payment service, reconciliation | Journal shows tax liability for every taxable component; margin report available |
+| W4.6 | **Arithmetic hardening:** integer basis-point math for Venue/Promoter allocation and refunds; property tests (conservation incl. odd paise, Venue + Promoter together); legacy ledger status clarification | 1 | FIN-012, 017 | allocation split, refund apportionment | Randomised tests prove splits sum to face and refunds never exceed paid |
+| W4.7 | **Finance acceptance harness:** reconcile one new-model order and one **historical** order across Guest, provider, legacy ledger, journal and UI | 1 | Phase 18/34 gap | scenarios + report | Re-runnable ₹-map check in CI; historical snapshot unchanged |
 
-**M4 exit:** Claude re-runs the financial forensic audit Phases 6, 8, 10, 11, 19, 25, 26, 34 and re-scores; the "₹979.65 money map" must have no unexplained rows.
+**M4 exit:** Claude re-runs the financial forensic audit (Phases 6, 8, 10, 11, 19, 25, 26, 34) and re-scores. The money map for a new order must have **no Host platform fee**, every paisa explained, and **no Venue-visible Host financial field**.
 
 ---
 
@@ -138,38 +172,39 @@ Engineering must not choose these. Most can be answered in one working session; 
 
 | WU | Work item | Pts | Findings | Layer / where to look | Acceptance |
 |---|---|---:|---|---|---|
-| W5.1 | **Refund, cancellation and payout safety:** payable-balance awareness for refunds, negative-balance handling and recovery (receivable/clawback per D11), Host-caused cancellation economics per D10/D11, provider-cost absorption rules, payout-mode decision D14 implemented (manual flow hardened or automation) | 4 | FIN-004, 015 | `refund-service`, `postRefund`, `payout-service`, admin payout service | Refund after payout is detected, recorded as a receivable and blocked/handled per policy; cancellation economics match the signed policy |
-| W5.2 | **Disputes and reconciliation automation:** provider dispute events place automatic holds on Host proceeds (D13); scheduled reconciliation with alerts; payout gating on unreconciled state in every read model; worker enablement for these jobs | 3 | FIN-005, 018, 013 | webhook ingestion, dispute/chargeback postings, reconciliation service | A simulated dispute holds funds within one event cycle; unreconciled orders block payout |
-| W5.3 | **Door Mode MVP:** attendee list and search, manual check-in, live counts, admission source, invalid/duplicate/cancelled states, Host and Venue access per P3, scanner launch, QR window and clear deny reasons (correct `not opened yet` vs `closed`) | 4 | PARTNER-006, 037, 048 | `door/*` services and routes, Partner Door screens | A synthetic night is operated end-to-end from a phone: scan, search, manual admit, duplicate, cancelled ticket, counts update for Host and Venue |
-| W5.4 | **Performance:** remove the repeated bootstrap waterfall and duplicate `access` call, cache org/session safely, cut LCP on Create/Partners/Calendar/Settings, remove 1,000-order scans for counts, accept latency | 3 | PARTNER-015 | auth/bootstrap hooks, SSR loaders, read models | Targets agreed from baseline (e.g. LCP ≤ 3 s on key routes at the audit's baseline conditions); one `access` call per navigation |
-| W5.5 | **Mobile + accessibility:** tap targets ≥ 44 px on header and calendar controls, visible focus on nav, single `main`, skip link on Create, keyboard paths for Accept/Door; real-device pass | 2 | PARTNER-016, 025 | shell components, CSS, calendar | Axe/keyboard checks clean; real-device test plan signed |
-| W5.6 | **Security hardening:** stop returning the access credential in login JSON (or document and mitigate), authorization-before-validation ordering, partner-type-aware permissions, minimise Host-visible buyer names per policy | 1 | PARTNER-023, 024, 026, 027 | auth BFF, permission mapping | Re-run tenant-isolation matrix with zero regressions |
-| W5.7 | **Retire dead code:** legacy `/venue`, `/host`, `/promoter` trees and `components/venue` superseded modules after import analysis; fixture data source; swallowed-error review | 1 | PARTNER-028, Phase 35 | frontend tree | Dead code removed with no route regressions |
-| W5.8 | **Launch readiness:** deploy provenance (exposed build id behind auth or deploy record), synthetic QA data cleanup, monitoring/alerts, runbooks (refund, cancel, payout, journal rollback), data hygiene (021), final independent re-acceptance of Phases 0–47 and the financial audit, go/no-go | 2 | PARTNER-021, Phase 0/36/45, provenance limitation | ops + docs | Written go/no-go with all P0/P1 closed |
+| W5.1 | **Refund, cancellation and payout safety:** refunds aware of the Host's payable position; negative-balance detection and recovery (receivable/clawback per **O5**); refund economics for fees per **O4**; cancellation interaction with staged settlement; payout mode per **O7** (harden the manual flow or implement automation) | 4 | FIN-004, 015 | `refund-service`, `postRefund`, payout services | Refund after payout is detected, recorded and handled per the signed policy; cancellation economics match policy |
+| W5.2 | **Disputes and reconciliation automation:** provider dispute events place holds (**O6**, **O9**); scheduled reconciliation with alerts; payout gating on unreconciled state in every read model; enable the workers these need | 3 | FIN-005, 018, 013 | webhook ingestion, dispute/chargeback postings, reconciliation | A simulated dispute holds funds within one event cycle; unreconciled orders block payout |
+| W5.3 | **Door Mode MVP:** attendee list and search, manual check-in, live counts, admission source, invalid/duplicate/cancelled states, Host and Venue access per **O13**, scanner launch, QR window, and correct deny semantics ("not opened yet" ≠ "closed") | 4 | PARTNER-006, 037, 048 | `door/*` services/routes, Partner Door screens | A synthetic night is operated from a phone: scan, search, manual admit, duplicate, cancelled ticket, live counts for Host and Venue |
+| W5.4 | **Performance:** remove the repeated bootstrap waterfall and duplicate `access` call, cut LCP on Create/Partners/Calendar/Settings, remove 1,000-order scans for counts, accept latency | 3 | PARTNER-015 | auth/bootstrap hooks, SSR loaders, read models | Targets agreed from the audit baseline; one `access` call per navigation |
+| W5.5 | **Mobile + accessibility:** tap targets ≥ 44 px, visible focus, single `main`, skip link on Create, keyboard paths for Accept/Door; real-device pass | 2 | PARTNER-016, 025 | shell, CSS, calendar | Automated + keyboard checks clean; real-device plan signed |
+| W5.6 | **Security hardening:** access credential not returned in login JSON (or mitigated), authorization-before-validation ordering, partner-type-aware permissions, minimise Host-visible buyer names per policy; **re-run the tenant-isolation matrix incl. the R3 negative financial-visibility test** | 1 | PARTNER-023, 024, 026, 027 | auth BFF, permission mapping | Zero regressions; zero Venue financial leakage |
+| W5.7 | **Retire dead code:** legacy `/venue`, `/host`, `/promoter` trees and superseded `components/venue` after import analysis; fixture data source; swallowed-error review | 1 | PARTNER-028 | frontend tree | Removed with no route regressions |
+| W5.8 | **Launch readiness:** deploy provenance, synthetic QA data cleanup (incl. the localhost posters and QA records), monitoring/alerts, runbooks (refund, cancel, change request, payout, journal rollback), final independent re-acceptance of Phases 0–47 and the financial audit, go/no-go | 2 | PARTNER-008 (data), 021, Phases 0/36/45 | ops + docs | Written go/no-go with all P0/P1 closed |
 
-**M5 exit:** both launch questions answered: *safe to accept real customer money* and *safe to enable Host payouts* (these may land on different dates).
+**M5 exit:** two separate answers — *safe to accept real customer money* and *safe to enable Host payouts* (they may land on different dates).
 
 ---
 
 ## 9. Coverage matrix (every finding → where it is fixed)
 
-**Partner/Host-Venue findings**
+**Partner / Host-Venue findings**
 
 | IDs | Milestone / item |
 |---|---|
 | 001, 002, 019 | M2 W2.2 (019 copy also M3 W3.5) |
-| 003 | M2 W2.4, W2.5 |
+| 003 | M2 W2.4, W2.5 (operational only, per R3) |
 | 004, 041, 042 | M4 W4.4 |
 | 005 | M3 W3.7 |
 | 006, 037 | M2 W2.6, M5 W5.3 |
 | 007 | M2 W2.1 |
-| 008 | M5 W5.8 (data cleanup of localhost posters) + M1 W1.6 (policy) |
+| 008 | M1 W1.6 (policy) + M5 W5.8 (data cleanup) |
 | 009, 010, 011, 018, 022 | M3 W3.5 (018 also M2 W2.5) |
 | 012 | M2 W2.7 |
-| 013, 035 (notify part), 040, 049, 057 | M3 W3.1, W3.2 |
+| 013, 035 (notify part), 049, 057 | M3 W3.1 |
+| 040 | M3 W3.2 (lifecycle), W3.1/W3.4 (notices) |
 | 015 | M5 W5.4 |
 | 016, 025 | M5 W5.5 |
-| 017 | M3 W3.2 |
+| 017 | M3 W3.2 (replaced by the change-request lifecycle + limited Edit) |
 | 020, 046, 050, 051, 053 | M1 W1.6 |
 | 021 | M5 W5.8 |
 | 023, 024, 026, 027 | M5 W5.6 |
@@ -181,88 +216,91 @@ Engineering must not choose these. Most can be answered in one working session; 
 | 036 | M1 W1.5 |
 | 038 | M2 W2.6 |
 | 039 | M2 W2.3 |
-| 043 (Guest) | M3 W3.7 |
+| 043 (Guest gate) | M3 W3.7 |
 | 044 | M3 W3.6 |
 | 047 | M3 W3.5 |
 | 048 | M5 W5.3 |
-| 052 (Guest home never idle) | Guest backlog (see §10); not a Host/Venue item |
+| 052 (Guest home never idle) | Guest backlog (§10) |
 | 055, 056 | M3 W3.3 |
 | 058 | M3 W3.4 |
-| 014 (Promoter Settings) | **Out of scope by instruction** |
+| 014 (Promoter Settings) | **Out of scope** |
 
-**Financial findings**
+**Financial findings (re-framed under Model A)**
 
 | IDs | Milestone / item |
 |---|---|
-| FIN-001, 003, 006, 007, 016 | M4 W4.2 |
-| FIN-002, 014 | M4 W4.3 |
-| FIN-008, 009 | M4 W4.4 |
-| FIN-010, 011 | M4 W4.5 |
-| FIN-012, 017 | M4 W4.6 |
-| FIN-013 | M3 W3.4 / M5 W5.2 |
-| FIN-004, 015 | M5 W5.1 |
-| FIN-005, 018 | M5 W5.2 |
+| FIN-001 (Admin commission control is a placebo), FIN-006 (duplicate fee tables), FIN-016 (Diamond naming collision) | M4 W4.2 — **retire** the Host-fee controls/tables rather than fix them |
+| FIN-003 (no production policy; test-only type) | M4 W4.1/W4.2 (buyer-side production policy; rates from O1) |
+| FIN-007 (accounting metadata contradicts staged logic) | M4 W4.2/W4.3 |
+| FIN-002, FIN-014 (v2 verification, dual write) | M4 W4.3 |
+| FIN-008, FIN-009 (finance visibility, false GST ₹0) | M4 W4.4 |
+| FIN-010 (tax) | M4 W4.5 — **buyer fees only**; Host-fee tax is moot |
+| FIN-011 (provider cost) | M4 W4.5 |
+| FIN-012, FIN-017 | M4 W4.6 |
+| FIN-013 (workers) | M3 W3.4 / M5 W5.2 |
+| FIN-004, FIN-015 | M5 W5.1 |
+| FIN-005, FIN-018 | M5 W5.2 |
 
-**Acceptance-audit gaps that were not executable and are scheduled**
+**Audit gaps that were not executable and are scheduled**
 
 | Gap | Where closed |
 |---|---|
-| Cross-Host collision (needed a second Host account) | M1 W1.7 |
+| Cross-Host collision (second Host account) | M1 W1.7 |
 | KYC pending/rejected gating | M3 W3.7 |
-| Real email delivery verification | M3 W3.4 (+ human inbox check) |
+| Real email delivery verification | M3 W3.4 + human inbox check |
 | Refund completion / Admin finance views | M5 W5.1, W5.8 (Admin access required) |
-| Real-device mobile, screen-reader | M5 W5.5 |
+| Real-device mobile, screen reader | M5 W5.5 |
 | Database/Firestore verification, outbox traces | M4 W4.3, M5 W5.8 (DB access required) |
 | Deployed-SHA provenance | M5 W5.8 |
 | Door/Scanner exact duplicate, couple confirm, cancelled-ticket scan, offline | M5 W5.3 |
 
-## 10. Deferred (post-launch) and out-of-scope items — explicit
+## 10. Deferred (post-launch) and out-of-scope
 
-- **Promoter Studio redesign, guestlists, curated approval, controlled/private inventory, code-gated tiers and events, invite → signup → claim flow** (register §11 of the acceptance audit): product expansion, depends on D-decisions and a data-model design pass; not needed for first Host/Venue launch.
-- **Polished Edit Event and polished Door UI:** M3 W3.2 and M5 W5.3 deliver the *functional baseline*; visual/interaction polish belongs to the Partner Experience Quality Pass.
-- **Experience Quality backlog** (skeletons, animation, microinteractions, empty-state polish, chart transitions): unchanged, after M5.
-- **Guest-side items surfaced here** and owned by the Guest team: PARTNER-043 (onboarding order — included in M3 W3.7 as the Host/Venue-blocking part), PARTNER-052 (home page never idle), Guest currency formatting (₹1,088.5 / ₹22.5), "Google sign-in unavailable".
-- **Promoter finance:** only the shared financial engine paths (allocation, refunds) are in scope.
+- **Promoter Studio redesign, guestlists, profiling/nominations, curated approval, controlled/private inventory, code-gated tiers and events, invite → signup → claim** (R8): a later dedicated project; M4 keeps only the shared allocation compatibility (Promoter commission as a deduction from face value).
+- **Polished Edit Event and polished Door UI:** M3 W3.2 and M5 W5.3 deliver the functional baseline; polish belongs to the Partner Experience Quality Pass.
+- **Experience Quality backlog** (skeletons, animation, microinteractions, empty-state polish): after M5.
+- **Guest-owned items surfaced here:** onboarding order (Host/Venue-blocking part in M3 W3.7), home page never reaching network idle, currency formatting ("₹1,088.5"), "Google sign-in unavailable".
 
-## 11. Cross-cutting engineering requirements (apply to every milestone)
+## 11. Engineering process (revised: R9, R10)
 
-1. **Repo rules (from the repos' own CLAUDE.md):** pnpm lockfile discipline (`--frozen-lockfile` in CI; re-add the lockfile after any install); Expo/native versions pinned by the SDK (not relevant to Partner, but do not drift); use the code-review graph for impact analysis, then read the source.
-2. **Branching/PRs:** one PR per work item (≤ ~1 week), behind feature flags where behaviour changes for live data; no financial change without its own migration/rollback note.
-3. **Tests per item:** unit (domain), contract (API), Partner e2e (Playwright), and a hosted acceptance script that reproduces the audit's original failure and shows it fixed. Finance items add property tests (conservation) and ledger-vs-journal reconciliation.
-4. **Data migrations:** every item that changes stored shapes ships a dry-run, a reversible plan and a verification query; **no mutation of existing finance records except through the journal-transition tooling.**
-5. **Observability:** surface request ids in UI errors; add trace ids to order → journal → notification; dashboards for accept failures, orphan drafts, email failures, unreconciled orders.
-6. **Environment/access needed by the team:** second Host test account; Admin test account with read paths; database/Firestore read access for verification; an inbox for the synthetic addresses; Razorpay Test Mode only until D1–D14 are signed and the production policy exists.
-7. **Per-milestone gate:** Claude independent re-acceptance (hosted) → issues fixed → next milestone. A P0/P1 found at gate blocks the milestone.
+1. **Implementation packets, not per-item PRs.** Each milestone is delivered as a small number of **bounded packets** (typically 2–4 PRs per milestone) cut along technical seams, e.g. M1: (a) request/slot/accept backend integrity W1.1–W1.3, (b) Host/Venue request UX and wizard hygiene W1.4–W1.6, (c) harness W1.7; M3: (a) change-request model + lifecycle W3.2, (b) notifications/outbox/Resend W3.1/W3.3/W3.4, (c) honest states W3.5–W3.7; M4: (a) buyer policy + Host-fee retirement W4.1–W4.2, (b) journal v2 + settlement W4.3, (c) finance surfaces/tax/arithmetic W4.4–W4.7. Packets keep a coherent diff and may span backend and frontend where a contract changes. **Do not create dozens of administrative PRs.**
+2. **Testing cadence while building:** run focused tests/lint/typecheck for the area being changed; batch related fixes; **do not rerun the full monorepo suite after every correction.**
+3. **Milestone packaging gate:** on the *final intended diff* run the CI-equivalent comprehensive validation once (lint, types, unit, contract, build, Partner e2e, scenarios), then rely on GitHub CI, then Claude's independent hosted re-acceptance against the milestone's exit gate. A P0/P1 found at the gate blocks the milestone.
+4. **Repo rules (repos' own CLAUDE.md):** pnpm lockfile discipline (frozen lockfile in CI; re-add the lockfile after any install or conflict resolution); native/Expo versions stay SDK-pinned; use the code-review graph for impact analysis and read the source before changing behaviour.
+5. **Feature flags and migrations:** behaviour that changes live data (availability model, change requests, Host-fee retirement, journal cut-over) ships behind a flag with a dry-run, a reversible plan and a verification query. **Historical order snapshots and journals are never rewritten** (golden replay tests in M4).
+6. **Observability:** request ids visible in UI errors; trace ids across request → accept → publish and order → journal → notification; dashboards for accept failures, orphans, change-request ageing, email failures, unreconciled orders.
+7. **Access needed by the team:** second Host test account; Admin read access; database read access for verification; inboxes for synthetic addresses; Razorpay Test Mode only until the signed policy and production approval exist.
 
 ## 12. Risk register
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| Decisions D1–D14 arrive late | M4/M5 slip | collect during M1–M2; M4 starts only with answers |
-| Availability-model change (W1.1) breaks existing windows/requests | regressions in live data | feature flag, migration for open windows, keep accepted history intact |
-| Atomic accept (W1.2) is hard on the current store | partial failures persist | saga with compensation + replay + repair tool; failure-injection tests |
-| Journal cut-over (W4.3) discrepancies | wrong balances | comparison gate, staged rollback rehearsal, never add models |
-| Enabling workers surfaces latent retry bugs | duplicate emails/effects | idempotency audit first; enable in staging with synthetic data |
-| Venue visibility becomes a privacy leak | trust/legal | P1 decision, read-only, minimum fields, tenant-isolation re-test every milestone |
+| Open decisions O1–O3 arrive late | M4 slips | collect during M1–M3; M4 starts when answered; O10 gates W1.1, O11 gates W3.2 |
+| Change-request lifecycle (W3.2) is the largest new model | schedule/complexity | build as a separate entity, public event untouched until approval; staged rollout behind a flag |
+| Retiring Host-fee code breaks historical replay | wrong balances | keep snapshot readers; golden tests on real historical orders |
+| Atomic accept (W1.2) is hard on the current store | partial failures persist | saga with compensation, replay, repair tool, failure-injection tests |
+| Journal cut-over discrepancies | wrong balances | comparison gate, rollback rehearsal, never add models |
+| Venue read model leaks Host financials | trust/legal | DTO contract tests, negative visibility test every milestone |
+| Enabling workers surfaces retry bugs | duplicate emails/effects | idempotency audit first; synthetic data in staging |
 | Scope growth into Promoter/guestlist | schedule | §10 firewall |
 
-## 13. Definition of done per milestone (re-acceptance checklist)
+## 13. Definition of done per milestone
 
-- **M1:** hosted loop matrix (accept, reject-with-reason, withdraw, resubmit, forced failure, cross-Host collision) clean; zero orphan drafts and zero `accepted` requests without events in a full sweep.
-- **M2:** Venue acceptance table has no Fail; Venue analytics reconcile to Host events; drafts never visible; no Host actions on Venue screens; calendar and search show venue events; early-bird price consistent on all surfaces.
-- **M3:** all state changes notify the right org (and email where mandatory); invitation flow safe; no dead-end/jargon states; waitlist/marketing honest; KYC gating and onboarding resume verified.
-- **M4:** signed policy; one source of truth per fee; journal v2 live on staging; every Host/Venue money number defined and reconciled; tax and provider cost represented.
-- **M5:** refund/dispute/payout safeguards proven by simulation; Door operates a full synthetic night on a phone; performance and a11y targets met; final audit passes; go/no-go recorded.
+- **M1:** hosted loop matrix clean (accept, reject-with-reason, withdraw, resubmit, forced failure, cross-Host collision); no orphan drafts; no `accepted` request without an event.
+- **M2:** Venue sees and can operate every Host event at its venue; no Host financial field reachable by a Venue (API, UI, search, export); drafts never visible; price truth consistent.
+- **M3:** change requests work end-to-end (pending/approved/rejected; public event unchanged until approval; tickets valid for the replacement; refund right exposed; Postpone path); lifecycle emails delivered with evidence; invitation flow safe; honest states everywhere; KYC gating verified.
+- **M4:** signed Model A policy; one buyer-side policy source; no Host platform fee on new orders and no misleading Host-fee controls; historical orders unchanged; journal v2 live on staging; settlement 0/75/100 proven; every Host/Venue money number defined, reconciled and role-appropriate.
+- **M5:** refund/dispute/payout safeguards proven by simulation; Door runs a full synthetic night on a phone; performance and accessibility targets met; final audit passes; go/no-go recorded.
 
 ## 14. Effort summary
 
 | Milestone | Units | Items |
 |---|---:|---|
-| M1 Request/publish loop | 20 | W1.1 4 · W1.2 4 · W1.3 3 · W1.4 3 · W1.5 2 · W1.6 3 · W1.7 1 |
-| M2 Venue-centric Studio | 20 | W2.1 3 · W2.2 4 · W2.3 3 · W2.4 4 · W2.5 2 · W2.6 2 · W2.7 2 |
-| M3 Notifications, email, errors | 20 | W3.1 4 · W3.2 4 · W3.3 4 · W3.4 3 · W3.5 3 · W3.6 1 · W3.7 1 |
-| M4 Financial truth | 20 | W4.1 2 · W4.2 4 · W4.3 4 · W4.4 5 · W4.5 3 · W4.6 1 · W4.7 1 |
-| M5 Safety, Door, launch | 20 | W5.1 4 · W5.2 3 · W5.3 4 · W5.4 3 · W5.5 2 · W5.6 1 · W5.7 1 · W5.8 2 |
+| M1 Request/publish loop integrity | 20 | W1.1 4 · W1.2 4 · W1.3 3 · W1.4 3 · W1.5 2 · W1.6 3 · W1.7 1 |
+| M2 Venue-centric Studio (operational) | 20 | W2.1 3 · W2.2 4 · W2.3 3 · W2.4 4 · W2.5 2 · W2.6 2 · W2.7 2 |
+| M3 Change management, communications, honest states | 20 | W3.1 3 · W3.2 6 · W3.3 3 · W3.4 3 · W3.5 3 · W3.6 1 · W3.7 1 |
+| M4 Financial truth under Model A | 20 | W4.1 2 · W4.2 4 · W4.3 4 · W4.4 5 · W4.5 3 · W4.6 1 · W4.7 1 |
+| M5 Safety, Door, performance, launch | 20 | W5.1 4 · W5.2 3 · W5.3 4 · W5.4 3 · W5.5 2 · W5.6 1 · W5.7 1 · W5.8 2 |
 | **Total** | **100** | |
 
-The estimates are planning figures from audit evidence, not commitments; the first week of each milestone should re-baseline them against the real code, and the M1 estimate in particular depends on how hard atomic accept (W1.2) is on the current store.
+Estimates are planning figures from audit evidence, not commitments; re-baseline in the first days of each milestone. M1 depends on how hard atomic accept (W1.2) is on the current store; M3 depends on the final shape of the change-request model.
