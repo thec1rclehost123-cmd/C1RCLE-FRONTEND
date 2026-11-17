@@ -1,5 +1,5 @@
 import type { EventAccentTone } from '@/features/event-detail/types/event-detail.types';
-import type { OrderDto } from '@c1rcle/contracts';
+import type { EventDto, OrderDto } from '@c1rcle/contracts';
 
 export interface BookingMoney {
   amountPaise: number;
@@ -11,6 +11,21 @@ export interface BookingTicketTier {
   name: string;
   description: string;
   price: BookingMoney;
+  basePrice?: BookingMoney;
+  pricingPhase?: {
+    name: string;
+    startsAt: string;
+    endsAt: string;
+    availableQuantity: number | null;
+  } | null;
+  availabilityStatus?:
+    | 'available'
+    | 'sold_out'
+    | 'temporarily_held'
+    | 'not_yet_available'
+    | 'sales_ended'
+    | 'sales_paused'
+    | 'pricing_unavailable';
   coverAmountPaise?: number;
   maximumQuantity: number;
   maxPerOrder?: number | null;
@@ -43,11 +58,20 @@ export interface BookingEventFixture {
   address: string;
   city: string;
   doorNote: string;
+  refundPolicy?: EventDto['refundPolicy'];
   ticketTiers: readonly BookingTicketTier[];
   ticketAddons?: readonly BookingTicketAddon[];
   /** False when a cancelled private event can only be rendered from order evidence. */
   detailsAvailable?: boolean;
-  salesStatus?: 'on_sale' | 'sold_out' | 'sales_paused' | 'ended' | 'cancelled' | 'postponed';
+  salesStatus?:
+    | 'on_sale'
+    | 'sold_out'
+    | 'sales_paused'
+    | 'ended'
+    | 'cancelled'
+    | 'postponed'
+    | 'not_yet_available'
+    | 'temporarily_held';
   /**
    * True only for a published event whose real ticket tiers loaded, so a hold
    * and payment can reference them. Fixtures and the price-derived fallback tier

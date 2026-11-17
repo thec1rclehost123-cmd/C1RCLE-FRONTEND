@@ -142,6 +142,7 @@ describe('toBookingEventFixture', () => {
         name: 'RSVP Entry',
         description: 'Free entry',
         price: { amountPaise: 0, currency: 'INR' },
+        basePrice: { amountPaise: 0, currency: 'INR' },
         maximumQuantity: 1,
       },
       {
@@ -149,6 +150,7 @@ describe('toBookingEventFixture', () => {
         name: 'VIP',
         description: 'Priority entry',
         price: { amountPaise: 200000, currency: 'INR' },
+        basePrice: { amountPaise: 200000, currency: 'INR' },
         coverAmountPaise: 1500,
         maximumQuantity: 3,
         guestCount: 3,
@@ -186,6 +188,62 @@ describe('toBookingEventFixture', () => {
       },
     ]);
     expect(mapped.ticketTiers[0]).toMatchObject({ maximumQuantity: 4, maxPerOrder: 4 });
+  });
+
+  it('uses the contract maximum when no smaller per-order limit is configured', () => {
+    const mapped = toBookingEventFixture(EVENT, VENUE, [
+      {
+        id: 'tier_unlimited',
+        eventId: EVENT.id,
+        name: 'General',
+        description: '',
+        priceInPaise: 80_000,
+        currency: 'INR',
+        availableQuantity: 120,
+      },
+    ]);
+    expect(mapped.ticketTiers[0]?.maximumQuantity).toBe(100);
+  });
+
+  it('maps early bird base/current prices and prevents unavailable tiers from selection', () => {
+    const mapped = toBookingEventFixture(EVENT, VENUE, [
+      {
+        id: 'tier_early',
+        eventId: EVENT.id,
+        name: 'General',
+        description: '',
+        priceInPaise: 65_000,
+        basePriceInPaise: 80_000,
+        availabilityStatus: 'available',
+        pricingPhase: {
+          name: 'Early Bird',
+          startsAt: '2026-11-16T00:00:00.000Z',
+          endsAt: '2026-11-22T00:00:00.000Z',
+          availableQuantity: 20,
+        },
+        currency: 'INR',
+        availableQuantity: 20,
+      },
+      {
+        id: 'tier_future',
+        eventId: EVENT.id,
+        name: 'VIP',
+        description: '',
+        priceInPaise: 180_000,
+        basePriceInPaise: 180_000,
+        availabilityStatus: 'not_yet_available',
+        pricingPhase: null,
+        currency: 'INR',
+        availableQuantity: 15,
+      },
+    ]);
+    expect(mapped.ticketTiers[0]).toMatchObject({
+      price: { amountPaise: 65_000 },
+      basePrice: { amountPaise: 80_000 },
+      pricingPhase: { name: 'Early Bird' },
+      maximumQuantity: 20,
+    });
+    expect(mapped.ticketTiers[1]?.maximumQuantity).toBe(0);
   });
 });
 

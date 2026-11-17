@@ -129,20 +129,25 @@ export function EventTicketSelectorClient({
         ) : null}
         {visibleTiers.map((tier) => {
           const selected = selectedTier === tier.id;
-          const soldOut = tier.availableQuantity === 0;
+          const unavailable =
+            (tier.availabilityStatus !== undefined && tier.availabilityStatus !== 'available') ||
+            tier.availableQuantity === 0;
           const price = tier.price ? moneyFormatter.format(tier.price.amountPaise / 100) : 'Free';
+          const regularPrice = tier.basePrice
+            ? moneyFormatter.format(tier.basePrice.amountPaise / 100)
+            : null;
 
           return (
             <div key={tier.id}>
               <button
                 type="button"
                 aria-pressed={selected}
-                disabled={soldOut}
+                disabled={unavailable}
                 onClick={() => {
-                  if (!soldOut) setSelectedTier(tier.id);
+                  if (!unavailable) setSelectedTier(tier.id);
                 }}
                 className={`flex min-h-16 w-full items-center justify-between gap-4 rounded-2xl border px-4 py-3 text-left transition-colors motion-reduce:transition-none ${
-                  soldOut
+                  unavailable
                     ? 'cursor-not-allowed border-white/5 bg-white/[0.025] opacity-55'
                     : selected
                       ? accent.selected
@@ -159,11 +164,25 @@ export function EventTicketSelectorClient({
                       Group of {String(tier.guestCount)} · separate pass for each attendee
                     </span>
                   ) : null}
+                  {tier.audienceType === 'COUPLE' ? (
+                    <span className="mt-1 block text-[10px] font-medium normal-case tracking-normal text-white/55">
+                      One ticket admits two people: one male + one female.
+                    </span>
+                  ) : null}
                 </span>
                 <span className="text-right">
                   <span className="block text-sm font-black text-white">{price}</span>
+                  {tier.pricingPhase &&
+                  regularPrice &&
+                  tier.basePrice?.amountPaise !== tier.price?.amountPaise ? (
+                    <span className="mt-1 block text-[9px] text-white/45">
+                      {tier.pricingPhase.name} · regular {regularPrice}
+                    </span>
+                  ) : null}
                   <span className="mt-1 block text-[9px] uppercase tracking-[0.14em] text-white/30">
-                    {soldOut ? 'Sold Out' : tier.availabilityLabel}
+                    {tier.availabilityStatus === undefined && tier.availableQuantity === 0
+                      ? 'Sold Out'
+                      : tier.availabilityLabel}
                   </span>
                 </span>
               </button>
@@ -200,7 +219,7 @@ export function EventTicketSelectorClient({
           disabled
           className="mt-5 min-h-11 w-full cursor-not-allowed rounded-full border border-white/10 bg-white/[0.06] px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white/40"
         >
-          {tiers.length === 0 ? 'Checkout unavailable' : 'Select a ticket tier'}
+          {tiers.length === 0 ? 'Checkout unavailable' : 'Select an available ticket tier'}
         </button>
       )}
     </section>

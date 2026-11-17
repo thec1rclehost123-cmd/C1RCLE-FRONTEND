@@ -11,6 +11,7 @@ import {
   publicTicketAddonListResponseSchema,
   publicTicketTierListResponseSchema,
   rsvpResponseSchema,
+  MAX_CHECKOUT_TICKETS_PER_LINE,
 } from '@c1rcle/contracts';
 
 import { GoogleButton } from '@/features/auth/components/GoogleButton';
@@ -36,6 +37,7 @@ import {
 import { PAYMENT_SUPPORT_MESSAGE, runPaidCheckout } from '../payment/paid-checkout';
 
 import { BookingFeeDisclosure } from './BookingFeeDisclosure';
+import { RefundPolicyDisclosure } from './RefundPolicyDisclosure';
 
 import type { BookingEventFixture } from '../types/booking.types';
 import type { CheckoutQuoteResponse } from '@c1rcle/contracts';
@@ -138,11 +140,11 @@ function CheckoutFlowClientState({
     const query = params.toString();
     return guestDestination(query ? `${path}?${query}` : path);
   }, [eventSlug, pathname, searchParams]);
-  const initialTier = ticketTiers.some((tier) => tier.id === requestedTier)
+  const initialTier = ticketTiers.some(
+    (tier) => tier.id === requestedTier && tier.maximumQuantity > 0,
+  )
     ? requestedTier
-    : accessGrantId && requestedTier
-      ? undefined
-      : ticketTiers[0]?.id;
+    : ticketTiers.find((tier) => tier.maximumQuantity > 0)?.id;
   const [step, setStep] = useState<CheckoutStep>(1);
   const [authPromptOpen, setAuthPromptOpen] = useState(false);
   const [intentRestored, setIntentRestored] = useState(false);
@@ -256,10 +258,24 @@ function CheckoutFlowClientState({
             ? {}
             : { coverAmountPaise: tier.coverAmountPaise }),
           maximumQuantity:
-            tier.priceInPaise === 0
-              ? Math.min(1, tier.availableQuantity)
-              : Math.min(tier.maxPerOrder ?? 10, 10, tier.availableQuantity),
+            tier.availabilityStatus && tier.availabilityStatus !== 'available'
+              ? 0
+              : tier.priceInPaise === 0
+                ? Math.min(1, tier.availableQuantity)
+                : Math.min(
+                    tier.maxPerOrder ?? MAX_CHECKOUT_TICKETS_PER_LINE,
+                    MAX_CHECKOUT_TICKETS_PER_LINE,
+                    tier.availableQuantity,
+                  ),
           ...(tier.maxPerOrder === undefined ? {} : { maxPerOrder: tier.maxPerOrder }),
+          basePrice: {
+            amountPaise: tier.basePriceInPaise ?? tier.priceInPaise,
+            currency: 'INR' as const,
+          },
+          ...(tier.pricingPhase === undefined ? {} : { pricingPhase: tier.pricingPhase }),
+          ...(tier.availabilityStatus === undefined
+            ? {}
+            : { availabilityStatus: tier.availabilityStatus }),
           ...(tier.guestCount === undefined ? {} : { guestCount: tier.guestCount }),
           ...(tier.admissionMode === undefined ? {} : { admissionMode: tier.admissionMode }),
           ...(tier.audienceType === undefined ? {} : { audienceType: tier.audienceType }),
@@ -363,6 +379,7 @@ function CheckoutFlowClientState({
     .join('|');
   const eligibilityAttested = eligibilityAttestedFor === eligibilitySignature;
   const eligibilityReady = !eligibilityRequired || eligibilityAttested;
+  const coupleTicketSelected = restrictedTickets.some((ticket) => ticket.audienceType === 'COUPLE');
 
   const canPay = (event.purchasable === true || unlockedTiers.length > 0) && !isFreeBooking;
   const lines = useMemo(
@@ -986,6 +1003,18 @@ function CheckoutFlowClientState({
                                 : ''}
                             </span>
                           ) : null}
+                          {quotedLine?.pricingPhaseName &&
+                          quotedLine.baseAdmissionUnitPricePaise !== undefined &&
+                          quotedLine.admissionUnitPricePaise !== undefined &&
+                          quotedLine.baseAdmissionUnitPricePaise >
+                            quotedLine.admissionUnitPricePaise ? (
+                            <span className="mt-1 block text-[11px] text-white/45">
+                              {quotedLine.pricingPhaseName}:{' '}
+                              {moneyFormatter.format(quotedLine.admissionUnitPricePaise / 100)} per
+                              ticket (regular{' '}
+                              {moneyFormatter.format(quotedLine.baseAdmissionUnitPricePaise / 100)})
+                            </span>
+                          ) : null}
                         </span>
                         <span className="shrink-0 font-bold text-white">
                           <AnimatedValue value={lineDisplay} />
@@ -1001,11 +1030,13 @@ function CheckoutFlowClientState({
                       {restrictedTickets.map((ticket) => (
                         <li key={ticket.id}>
                           {ticket.name}:{' '}
-                          {ticket.audienceType &&
-                          ticket.audienceType !== 'GENERAL' &&
-                          ticket.audienceType !== 'GROUP'
-                            ? `${ticket.audienceType.toLowerCase()} attendees`
-                            : 'eligible attendees'}
+                          {ticket.audienceType === 'COUPLE'
+                            ? 'one male + one female attendee per Couple ticket'
+                            : ticket.audienceType &&
+                                ticket.audienceType !== 'GENERAL' &&
+                                ticket.audienceType !== 'GROUP'
+                              ? `${ticket.audienceType.toLowerCase()} attendees`
+                              : 'eligible attendees'}
                           {ticket.minAge != null || ticket.maxAge != null
                             ? `, ages ${String(ticket.minAge ?? 'any')}–${String(ticket.maxAge ?? 'any')}`
                             : ''}
@@ -1023,7 +1054,11 @@ function CheckoutFlowClientState({
                         }}
                         className="mt-1 size-4 accent-white"
                       />
-                      <span>I confirm that all attendees meet the eligibility shown above.</span>
+                      <span>
+                        {coupleTicketSelected
+                          ? 'I confirm all attendees meet the eligibility shown above, including one male + one female attendee per Couple ticket.'
+                          : 'I confirm that all attendees meet the eligibility shown above.'}
+                      </span>
                     </label>
                   </div>
                 )}
@@ -1081,7 +1116,7 @@ function CheckoutFlowClientState({
                         </dd>
                       </div>
                       <div className="flex justify-between gap-4">
-                        <dt>Payment fee</dt>
+                        <dt>Additional C1RCLE fee</dt>
                         <dd>
                           <AnimatedValue
                             value={quote ? moneyFormatter.format(quote.paymentFeePaise / 100) : '—'}
@@ -1090,7 +1125,7 @@ function CheckoutFlowClientState({
                       </div>
                       {gstPaise > 0 && (
                         <div className="flex justify-between gap-4">
-                          <dt>GST on fees</dt>
+                          <dt>Tax on fees</dt>
                           <dd>
                             <AnimatedValue value={moneyFormatter.format(gstPaise / 100)} />
                           </dd>
@@ -1116,6 +1151,7 @@ function CheckoutFlowClientState({
                   </div>
                 </dl>
                 {quote ? <BookingFeeDisclosure policy={quote.feePolicy} /> : null}
+                <RefundPolicyDisclosure policy={event.refundPolicy} />
               </div>
 
               {isFreeBooking ? (

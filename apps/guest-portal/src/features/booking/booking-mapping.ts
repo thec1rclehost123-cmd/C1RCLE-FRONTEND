@@ -1,3 +1,5 @@
+import { MAX_CHECKOUT_TICKETS_PER_LINE } from '@c1rcle/contracts';
+
 import type {
   BookingEventFixture,
   BookingTicketAddon,
@@ -30,8 +32,6 @@ import type {
 const FALLBACK_VENUE = 'Venue TBA';
 const FALLBACK_CITY = 'India';
 const FALLBACK_CATEGORY = 'Events';
-const PREVIEW_MAX_QUANTITY = 10;
-
 const ACCENT_TONES: readonly EventAccentTone[] = ['pink', 'purple', 'red', 'orange'];
 
 export function toBookingEventFixture(
@@ -55,11 +55,12 @@ export function toBookingEventFixture(
     city,
     doorNote: 'Entry rules are set by the host and shown at checkout.',
     ...(event.salesStatus ? { salesStatus: event.salesStatus } : {}),
+    ...(event.refundPolicy ? { refundPolicy: event.refundPolicy } : {}),
     ticketTiers: toRealTiers(tiers),
     ticketAddons: toRealAddons(addons),
     purchasable:
       (event.salesStatus === undefined || event.salesStatus === 'on_sale') &&
-      tiers.some((tier) => tier.availableQuantity > 0),
+      toRealTiers(tiers).some((tier) => tier.maximumQuantity > 0),
   };
 }
 
@@ -82,10 +83,11 @@ export function toBookingEventFromPublicDetail(
     city,
     doorNote: 'Entry rules are set by the host and shown at checkout.',
     ...(event.salesStatus ? { salesStatus: event.salesStatus } : {}),
+    ...(event.refundPolicy ? { refundPolicy: event.refundPolicy } : {}),
     ticketTiers: toRealTiers(tiers),
     purchasable:
       (event.salesStatus === undefined || event.salesStatus === 'on_sale') &&
-      tiers.some((tier) => tier.availableQuantity > 0),
+      toRealTiers(tiers).some((tier) => tier.maximumQuantity > 0),
   };
 }
 
@@ -113,14 +115,21 @@ function toRealTiers(tiers: readonly PublicTicketTierDto[]): BookingTicketTier[]
     // RSVP fulfills exactly one ticket per account — the stepper must not
     // offer more. Paid tiers cap at live availability (bounded by the UI cap).
     maximumQuantity:
-      tier.priceInPaise === 0
-        ? Math.min(1, tier.availableQuantity)
-        : Math.min(
-            tier.availableQuantity,
-            tier.maxPerOrder ?? PREVIEW_MAX_QUANTITY,
-            PREVIEW_MAX_QUANTITY,
-          ),
+      tier.availabilityStatus && tier.availabilityStatus !== 'available'
+        ? 0
+        : tier.priceInPaise === 0
+          ? Math.min(1, tier.availableQuantity)
+          : Math.min(
+              tier.availableQuantity,
+              tier.maxPerOrder ?? MAX_CHECKOUT_TICKETS_PER_LINE,
+              MAX_CHECKOUT_TICKETS_PER_LINE,
+            ),
     ...(tier.maxPerOrder === undefined ? {} : { maxPerOrder: tier.maxPerOrder }),
+    basePrice: { amountPaise: tier.basePriceInPaise ?? tier.priceInPaise, currency: 'INR' },
+    ...(tier.pricingPhase === undefined ? {} : { pricingPhase: tier.pricingPhase }),
+    ...(tier.availabilityStatus === undefined
+      ? {}
+      : { availabilityStatus: tier.availabilityStatus }),
     ...(tier.guestCount === undefined ? {} : { guestCount: tier.guestCount }),
     ...(tier.admissionMode === undefined ? {} : { admissionMode: tier.admissionMode }),
     ...(tier.audienceType === undefined ? {} : { audienceType: tier.audienceType }),
