@@ -1,4 +1,8 @@
-import { type PRODUCT_TIME_ZONE, type ReferralLinkDto } from '@c1rcle/contracts';
+import {
+  type OrganizationRoleDto,
+  type PRODUCT_TIME_ZONE,
+  type ReferralLinkDto,
+} from '@c1rcle/contracts';
 
 import type { StudioRole } from '@/studios/studio-config';
 
@@ -591,7 +595,7 @@ export interface StaffMember {
   /** Live backend identity (absent on fixture rows). */
   readonly userId?: string | undefined;
   readonly email?: string | null | undefined;
-  readonly backendRole?: 'owner' | 'admin' | 'manager' | 'member' | undefined;
+  readonly backendRole?: OrganizationRoleDto | undefined;
   readonly capabilities?: readonly string[] | undefined;
   readonly joinedAt?: string | undefined;
 }
@@ -601,7 +605,7 @@ export type StaffInviteStatus = 'pending' | 'accepted' | 'revoked' | 'expired';
 export interface StaffInvite {
   readonly id: string;
   readonly email: string;
-  readonly role: 'owner' | 'admin' | 'manager' | 'member';
+  readonly role: OrganizationRoleDto;
   readonly capabilities: readonly string[];
   readonly status: StaffInviteStatus;
   readonly expiresAt: string;

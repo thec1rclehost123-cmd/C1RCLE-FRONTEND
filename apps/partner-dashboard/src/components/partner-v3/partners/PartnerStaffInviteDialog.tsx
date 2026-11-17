@@ -5,22 +5,14 @@ import { useEffect, useState } from 'react';
 import { Button, IconButton } from '@/components/partner-v3';
 import { staffApi } from '@/lib/api/staff-api';
 import { getActiveOrgId } from '@/lib/org/active-org';
+import { useActorRole } from '@/lib/org/use-actor-role';
 
 import styles from './partners.module.css';
+import { roleOptionsFor } from './staff-roles';
 
 import type { CreateInvitationRequest } from '@/lib/api/staff-api';
 
 type InviteRole = CreateInvitationRequest['role'];
-
-const ROLES: readonly {
-  readonly value: InviteRole;
-  readonly label: string;
-  readonly hint: string;
-}[] = [
-  { value: 'member', label: 'Staff', hint: 'Roster access' },
-  { value: 'manager', label: 'Manager', hint: 'Runs events & door' },
-  { value: 'admin', label: 'Admin', hint: 'Can manage staff' },
-];
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -43,11 +35,15 @@ export function PartnerStaffInviteDialog({
   readonly initialRole?: InviteRole | undefined;
 }) {
   const [email, setEmail] = useState(initialEmail ?? '');
-  const [role, setRole] = useState<InviteRole>(
-    initialRole === 'admin' || initialRole === 'manager' || initialRole === 'member'
-      ? initialRole
-      : 'member',
-  );
+  // Only the roles this person may hand out are offered; the server enforces
+  // the same ladder, this just avoids offering choices it would refuse.
+  const actorRole = useActorRole(organizationId ?? getActiveOrgId());
+  const roleOptions = roleOptionsFor(actorRole);
+  const [chosenRole, setRole] = useState<InviteRole | null>(initialRole ?? null);
+  const role: InviteRole | null =
+    chosenRole !== null && roleOptions.some((option) => option.value === chosenRole)
+      ? chosenRole
+      : (roleOptions[roleOptions.length - 1]?.value ?? null);
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState('');
@@ -62,12 +58,16 @@ export function PartnerStaffInviteDialog({
     };
   }, [onClose]);
 
-  const canSubmit = email.trim().length > 0 && confirmed && !submitting;
+  const canSubmit = email.trim().length > 0 && confirmed && !submitting && role !== null;
 
   const handleProceed = () => {
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
       setNotice('Enter an email address to invite.');
+      return;
+    }
+    if (role === null) {
+      setNotice('Pick a role first.');
       return;
     }
     setSubmitting(true);
@@ -152,7 +152,14 @@ export function PartnerStaffInviteDialog({
         <fieldset className={styles['permissionFieldset']}>
           <legend>Role</legend>
           <div className={styles['permissionOptions']}>
-            {ROLES.map((option) => (
+            {roleOptions.length === 0 ? (
+              <p className={styles['dialogNotice']}>
+                {actorRole === null
+                  ? 'Checking what you can assign…'
+                  : 'Your role cannot invite team members.'}
+              </p>
+            ) : null}
+            {roleOptions.map((option) => (
               <button
                 key={option.value}
                 type="button"
@@ -184,7 +191,8 @@ export function PartnerStaffInviteDialog({
             }}
           />{' '}
           <span>
-            I confirm this person should have {role === 'member' ? 'staff' : role} access
+            I confirm this person should have{' '}
+            {roleOptions.find((o) => o.value === role)?.label ?? 'this'} access
             {defaultCapability ? ` on this ${defaultCapability} organisation` : ''}.
           </span>
         </label>
