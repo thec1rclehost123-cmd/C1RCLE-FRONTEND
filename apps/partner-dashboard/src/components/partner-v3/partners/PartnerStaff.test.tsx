@@ -11,6 +11,7 @@ import type { VenuePartnersData } from '@/data/partner-data-source';
 vi.mock('@/lib/api/staff-api', () => ({
   staffApi: {
     updateMemberRole: vi.fn(),
+    resendInvitation: vi.fn(),
   },
 }));
 
@@ -87,6 +88,46 @@ describe('Partner staff section', () => {
     const revoke = screen.getByRole('button', { name: 'Revoke' });
     fireEvent.click(revoke);
     expect(onRevokeInvite).toHaveBeenCalledTimes(1);
+  });
+
+  it('resends a pending invite and says the old temporary password no longer works', async () => {
+    vi.mocked(staffApi.resendInvitation).mockResolvedValueOnce({
+      id: 'inv-1',
+      status: 'pending',
+    } as Awaited<ReturnType<typeof staffApi.resendInvitation>>);
+    render(
+      <VenuePartnersScreen
+        data={makeData()}
+        segment="staff"
+        staffInvites={makeData().staffInvites ?? []}
+        staffCanManage
+        onRevokeInvite={vi.fn()}
+        studioCapability="venue"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Resend' }));
+    await waitFor(() => {
+      expect(staffApi.resendInvitation).toHaveBeenCalledWith('inv-1');
+    });
+    expect(await screen.findByRole('status')).toHaveTextContent(/no longer works/i);
+  });
+
+  it('shows the gateway message when a resend is refused', async () => {
+    vi.mocked(staffApi.resendInvitation).mockRejectedValueOnce(
+      new Error('A Venue manager cannot manage a Venue manager'),
+    );
+    render(
+      <VenuePartnersScreen
+        data={makeData()}
+        segment="staff"
+        staffInvites={makeData().staffInvites ?? []}
+        staffCanManage
+        onRevokeInvite={vi.fn()}
+        studioCapability="venue"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Resend' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/cannot manage/i);
   });
 
   it('disables inviting without staff-management access', () => {
