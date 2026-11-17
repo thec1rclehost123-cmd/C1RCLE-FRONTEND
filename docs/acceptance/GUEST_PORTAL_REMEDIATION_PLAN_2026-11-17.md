@@ -1,6 +1,6 @@
 # C1RCLE Guest Portal — Comprehensive Remediation Plan
 
-Status: **PLANNING ONLY. Nothing in this document has been implemented.**
+Status: **PLANNING ONLY. Nothing in this document has been implemented.** Revision 2 (2026-11-17): owner decisions H2–H7 recorded (see *Decision log*).
 Source of truth: `docs/acceptance/GUEST_PORTAL_LAUNCH_AUDIT_2026-11-16.md` @ `802d9a4` (frozen).
 Audit state carried forward: readiness **62/100**, launch ready **NO**.
 
@@ -16,6 +16,21 @@ Reconciliation notes (what this plan treats as authoritative):
 - Unused IDs (036, 037, 047, 055) do not exist. GUEST-047 was merged into GUEST-038.
 - Deployed SHAs were never exposed. Where the audit records **deployment drift** (GUEST-001, end time on event page) the plan uses the *latest live* observation.
 - Evidence kinds are kept separate below: **[H]** = observed on hosted staging, **[S]** = source/tests only, **[H+S]**.
+
+---
+
+## Decision log (owner decisions, authoritative — supersede earlier "needs decision" wording)
+
+| Ref | Decision (owner, 2026-11-17) | Effect on the plan |
+|---|---|---|
+| **H4** | Online sales remain allowed after event start and **close at the event's effective end time**. `started` events remain sellable. At `now >= effectiveEndAt`, **no new quote / hold / payment-attempt / RSVP / waitlist / access-code entitlement** may be created. A **valid hold created before cutoff may complete within its existing TTL**. Events without `endAt` use the existing fallback **start + 6 hours**. | M1 rule is now fully specified (see M1 L1–L3). **Unblocks M1.** |
+| **H5** | Approved to **prepare** a staging cleanup candidate list + migration. **Do not execute without the owner's explicit record-level approval.** | M4 delivers a reviewable candidate list and a dry-run-default migration script only; execution is a separate owner-gated step. |
+| **H6** | Support-mediated account-deletion request is acceptable for V1. | M6 builds that entry (no automated erasure). No further decision gate. |
+| **H7** | Firebase test-phone bypass approved for **staging only, never production**. | M2: staging env setting (human) + code/config guard so the bypass can never activate in production. |
+| **H2** | Final production fee percentages remain a **human business decision**; **do not invent them**. | M2/M3 may not choose rates. **GUEST-004 (P1) stays OPEN / STILL EXTERNALLY BLOCKED until the owner supplies the approved policy**; code work is policy-driven and fail-closed only. |
+| **H3** | `guest.thec1rcle.com` is the **authoritative Guest application domain for this remediation**; final production root-domain cutover is a **later release decision**. | M2 configures trusted origins/CORS/Google redirect for `guest.thec1rcle.com` only. GUEST-005 (conditional) moves to the **launch-cutover gate** (§F/§J), not M1–M6. |
+
+Still open for the owner: **H2** (approved fee policy), **H1/H1b** (Google console + Render env values), **H7 setting** (apply env var on the staging build), **H8** (rotate Vercel bypass token), **H9** (observability tool/DSN, needed only for M4 hosted error capture). None of these block M1.
 
 ---
 
@@ -110,12 +125,12 @@ Class totals (primary class per finding, sums to 50): **A 4** (003, 007, 030, 04
 ```
  H (parallel human/config track, starts immediately)
    H1 Google + trusted origins ─────────────────────────────► M2 hosted check
-   H2 fee-policy decision ───────────────────────────────────► M2 / M3
-   H3 launch-domain / SSO / CORS decision ───────────────────► M2
-   H4 sales-cutoff policy decision ──────────────────────────► M1 (blocks start of M1 core change)
-   H5 staging data cleanup approval ─────────────────────────► M4
-   H6 account-deletion / notification policy decision ───────► M6
-   H7 Firebase test-phone bypass (staging) ──────────────────► M2 hosted OTP check
+   H2 approved fee values (owner business decision; not Codex) ───► closes GUEST-004 (M2 code can merge earlier)
+   H3 DECIDED: guest.thec1rcle.com authoritative; root cutover = later release gate ──► M2
+   H4 DECIDED (end-of-event cutoff, started sells) ─────────────► M1 READY
+   H5 DECIDED: prepare only; record-level approval before execution ──► M4
+   H6 DECIDED: support-mediated deletion request ──────────────► M6
+   H7 APPROVED staging-only (owner applies env var) ───────────► M2 hosted OTP check
    H8 rotate Vercel bypass token (now)
 
  M1  Sale integrity & session security       (backend core + gateway + BFF)   ← START HERE
@@ -141,6 +156,9 @@ Rules: milestones are **sequential, one in flight**. M2's *configuration* work c
 
 ### M1 — Sale integrity & session security
 
+> **M1 READINESS: READY FOR CODEX IMPLEMENTATION — YES.** The sale rule is fully specified by H4; no human action blocks M1. Codex resolves file locations by reading code (areas below are marked verified/inferred). One interpretation is fixed here so Codex does not guess — see L3 ("pre-cutoff hold, post-cutoff Pay"). H8 (token rotation) is owner hygiene, not an M1 dependency.
+
+
 **Goal.** A finished (or otherwise not-on-sale) event can never produce a valid new order/RSVP/hold, even from a stale client or direct API call; `/profile/saved` works; the session/cookie/privacy posture meets a launch baseline.
 
 **Findings covered.** 040, 003, 007, 008 (PII part only), and the read-side rule from 011 ("ended events are not in the default public feed").
@@ -151,9 +169,9 @@ Rules: milestones are **sequential, one in flight**. M2's *configuration* work c
 3. *Session posture.* BFF rescopes the cookie to host-only, `Secure=false`; no CSP header; `/api/auth/session` is `Cache-Control: public`; `/api/auth/refresh` returns `accessToken` to JS; `/api/onboarding` returns full phone + DOB on every page. *[H]*
 
 **Authoritative design for 040 (all enforcement layers).**
-- **L1 Domain rule (single source).** Add `eventSalesUnavailableReason(event, now)` beside the existing event-policy helpers: returns a reason when `status !== 'published'` (existing semantics), when `now >= salesCloseAt`, or when `status` ∈ {started?, ended, cancelled, postponed}. `salesCloseAt` default = **event effective end**; a per-event earlier cutoff may be added later but is **not** part of M1 unless H4 says so. *Uncertainty:* whether `started` should still sell (door-adjacent) — H4 decision.
+- **L1 Domain rule (single source) — FINAL (H4).** Add `eventSalesUnavailableReason(event, now)` beside the existing event-policy helpers (`packages/core/src/domain/models/event-policy.ts`, which already exports `eventEffectiveEndAt`). Online sales are available **iff** `event.status ∈ {published, started}` **and** `now < salesCloseAt`, where `salesCloseAt = eventEffectiveEndAt(event)` (`endAt` when present, else `startAt + 6h` — use the existing helper as-is; do **not** re-implement it). `now >= salesCloseAt` is unavailable (the end instant itself is **closed**). Not sellable regardless of time: `draft`, `sales_paused`, `postponed`, `cancelled`, `ended`. **Behaviour change to note:** today `assertOnSale` and `createRsvp` accept `published` only, so `started` events currently do **not** sell; H4 makes them sellable — Codex must confirm no downstream code (inventory, pricing phases, door/admission, analytics, Partner dashboard) assumes sales stop at `started`. Anomalous data (`endAt <= startAt`) follows the existing helper; add a test that pins the behaviour but do not invent a new rule.
 - **L2 Enforcement at every money/entitlement-creating step**, all using the injected clock (`deps.config.clock.now()`), never `Date.now()`: quote, hold creation, payment-attempt creation, RSVP creation, waitlist-offer accept, ticket-access-code redemption, add-on selection. *Likely area:* `checkout-service.ts` (`assertOnSale` call sites; `createRsvp` ~L1043 has its own `published` check; hold path ~L894–943; confirmation/conversion ~L1378–1700), plus waitlist/ticket-access services (**confirm by grep**).
-- **L3 In-flight money rule.** A hold created *before* the cutoff and still within its 10-minute TTL may complete payment after the cutoff (money already in flight); an expired hold or a post-cutoff *new* attempt is rejected and, if a payment was captured without a valid hold, flows into the existing compensation/refund path (`capacity_unavailable` compensation exists). Explicitly specified so Codex does not invent behaviour. *Verified at Payment Acceptance (E).*
+- **L3 In-flight money rule — FINAL (H4).** (a) A **hold created before cutoff and still within its existing TTL (10 min) may complete** — payment confirmation/webhook/verify for an attempt created before cutoff **may finish after cutoff** if the hold is valid. (b) **No new payment attempt may be created at/after cutoff**, including for a hold created before cutoff (conservative reading, stated explicitly: a Guest with a pre-cutoff hold who has not yet started the attempt when the cutoff passes is blocked and the hold lapses by TTL/release). (c) An expired or released hold, or a payment captured without a valid hold, flows into the **existing compensation/refund path**. Codex implements (a)–(c) as written; if the owner wants a pre-cutoff hold to be allowed to *start* an attempt after cutoff, that is a one-line owner override recorded **before** the payment-attempt change is coded. *Verified at Payment Acceptance (E).*
 - **L4 Lifecycle.** Correctness must **not** depend on a cron. Primary mechanism = derived/effective status computed from time. Secondary (optional, same milestone only if trivial): a scheduled sweeper that advances `published → ended` after `effectiveEnd + grace` for analytics/Partner dashboards. *Uncertainty:* Partner dashboard and door app semantics for `started/ended` — **read before touching**; do not change stored statuses used by Partner without verifying consumers.
 - **L5 Public read contract.** Public event/tier DTOs gain an explicit **`salesStatus`** (`on_sale | sold_out | sales_paused | ended | cancelled | postponed`) computed server-side; `/api/v2/public/events` default excludes ended events (discovery already filters; the unfiltered list returned 39 past events). Tier endpoint returns not-on-sale reason rather than silently empty. Contract lives in the shared `contracts` package (backend and frontend copies exist — **keep them in sync**, see Risk R6).
 - **L6 Client state.** Event page, home/explore cards, drawer and checkout page render from `salesStatus` (Ended / Sales paused / Sold out / Cancelled); no CTA when not `on_sale`; drawer refuses to open; direct `/checkout/<slug>` for an ended event shows the not-on-sale state and cannot reach Pay. Stable server error code (e.g. `event_not_on_sale`) is mapped by the checkout client (feeds M3's error mapping).
@@ -167,15 +185,15 @@ Rules: milestones are **sequential, one in flight**. M2's *configuration* work c
 
 **Required behaviour after remediation.**
 - Quote/hold/attempt/RSVP/waitlist/access-code against an ended event → rejected with stable code; no order/hold/entitlement/inventory change.
-- Boundary table verified: before end ✔, exactly at cutoff ✖, after ✖, `endAt` null → start+6h, cancelled/postponed ✖, future paid/free events unaffected.
+- Boundary table verified: before end ✔ (including after start while `started`), exactly at cutoff ✖, after ✖; `endAt` null → start+6h; `cancelled`/`postponed`/`sales_paused`/`draft`/`ended` ✖; future paid/free events unaffected.
 - `/profile/saved` loads for a signed-in Guest (empty state or list); signed-out → login redirect; a transient failure shows retry, not a generic dead-end.
 - `better-auth.session_token` carries `Secure` on HTTPS; auth JSON is `no-store`; CSP present (Report-Only or enforced per gate); onboarding guard payloads contain no raw phone/DOB.
 
 **Explicit non-goals.** Payment execution; fee policy; redesigning event cards; Partner dashboard changes; new cron infrastructure unless required by H4; account deletion; Google config (M2).
 
-**Dependencies.** H4 (sales-cutoff decision) **before** L1 is coded; H8 token rotation; none from other milestones.
+**Dependencies.** None blocking. H4 is **decided** (Decision log). H8 token rotation recommended before hosted re-acceptance.
 
-**Human/provider actions.** H4 (decision: online sales close at event end vs start; whether `started` sells). H8. Approval to read Render logs if needed.
+**Human/provider actions.** None required to start. Owner may later override the L3(b) reading (see L3). H8.
 
 **Tests (focused).**
 - Backend unit: `eventSalesUnavailableReason` matrix with injected clock (boundaries, null `endAt`, statuses, timezone ISO strings).
@@ -193,6 +211,9 @@ Rules: milestones are **sequential, one in flight**. M2's *configuration* work c
 
 ### M2 — Authentication & commercial configuration
 
+> **Decision impact (H2/H3/H7).** (H2) Codex must **not** choose fee percentages; M2 delivers policy-driven disclosure copy and a fail-closed production guard only, so **GUEST-004 remains OPEN until the owner provides the approved production policy**; M2 can merge without closing it. (H3) Scope is `guest.thec1rcle.com` only (trusted origins, CORS, Google redirect `https://guest.thec1rcle.com/api/auth/google/callback`); root-domain cutover and deployment-protection policy are **not** M2 work. (H7) Staging-only test-phone bypass: owner sets `NEXT_PUBLIC_FIREBASE_TEST_PHONE` on the staging build; **Codex adds a guard + test so the variable is ignored (and a production build fails or warns) when the environment is production.**
+
+
 **Goal.** Google sign-in initiates and completes on staging; the Guest-visible commercial policy is production-grade; launch-domain protection/CORS/trusted origins are correct; phone entry works for Indian users; QA can exercise OTP.
 
 **Findings covered.** 002, 004, 005 (cond.), 045, 032, 053.
@@ -207,15 +228,15 @@ Rules: milestones are **sequential, one in flight**. M2's *configuration* work c
 
 **Non-goals.** Real SMS delivery; reCAPTCHA replacement; changing fee *amounts* (decision is H2's); account linking policy changes.
 
-**Dependencies.** H1, H2, H3, H7 (all human) for hosted acceptance; M1 cookie change merged (callback sets session cookies).
+**Dependencies.** H1/H1b (Google console + Render env values) and H7 (staging env var) for hosted acceptance; **H2 approved policy only for closing GUEST-004** (not for merging M2 code); M1 cookie change merged (callback sets session cookies).
 
-**Human/provider actions.** See §E (H1–H3, H7). **Codex must not guess secrets or env values.**
+**Human/provider actions.** See §E (H1/H1b, H7 setting, H2 policy values). **Codex must not guess secrets, env values or fee rates.**
 
 **Tests.** Frontend: fee-disclosure renders policy-driven copy for production/test policies; phone component normalisation table (India default, `+91`, spaces, leading 0, other countries, invalid) ; login error focus/ARIA. Backend: fee-policy production guard (non-production policy + `environment=production` ⇒ refusal); trusted-origin parsing/Google config validation (existing `getGoogleAuthConfig` tests extended); callback origin must be trusted (already enforced at boot).
 
 **Hosted acceptance.** Origin probes: trusted origin ⇒ Google URL (not 403/404). **Human gate:** READY FOR GOOGLE LOGIN — user selects account; verify callback → session → onboarding decision (existing user not re-onboarded) → return intent; no loops/duplicates. Checkout review shows no test language (while the policy is production-approved). Phone step end-to-end with the Firebase test number on staging (Claude can drive once bypass exists; otherwise human solves reCAPTCHA). Vercel/CORS checks per H3.
 
-**Definition of done.** Google login completed by a human on staging successfully once and recorded; fee guard + copy tests green; phone normalisation tests green; hosted checks above pass; production-origin CORS/trusted verified by header probes.
+**Definition of done.** Google login completed by a human on staging once and recorded; fee guard + policy-driven copy + production-bypass-guard + phone-normalisation tests green; hosted checks pass; `guest.thec1rcle.com` CORS/trusted origin verified by header probes. **GUEST-004 closes only when the owner-approved production fee policy is deployed and the review screen shows approved wording with no test language; until then it is reported STILL EXTERNALLY BLOCKED, not FIXED.**
 
 ---
 
@@ -237,7 +258,7 @@ Rules: milestones are **sequential, one in flight**. M2's *configuration* work c
 
 **Non-goals.** Pay/hold/expiry behaviour (Payment Acceptance), promo engine changes, new checkout steps, URL-addressable checkout (C), pre-selection dark-pattern decision (C), redesign.
 
-**Dependencies.** M1 (`salesStatus` + error code), H2 (final fee wording if not done in M2).
+**Dependencies.** M1 (`salesStatus` + error code). Fee wording is policy-driven (H2 values owner-supplied; Codex must not invent rates).
 
 **Tests.** Backend: public mapper returns phase-aware "from" price across phase boundaries (before/at/after phase switch), free/multi-tier cases. Frontend: formatter table; error-mapping table (every code → message, promo vs non-promo); quantity clamp from `maxPerOrder`; refund-policy renderer for the 3 kinds + null; drawer Back control; totals remain visible on promo failure. Contract test that frontend error codes ⊆ backend codes.
 
@@ -263,9 +284,11 @@ Rules: milestones are **sequential, one in flight**. M2's *configuration* work c
 - *Recovery 404:* return `200 {status:'none'}` (or 204) and update the one consumer; keep 404 semantics only for unknown holds.
 - *Observability:* expose `x-request-id` on gateway/BFF responses and include it in user-visible error states for support; add frontend error capture (Sentry DSN wiring is already schema-supported but unset — **needs H-decision on tool/DSN**) with PII scrubbing; log hold/payment ids in structured logs; document the "paid but no ticket" trace runbook (execution proof = Payment Acceptance).
 
+**Cleanup candidate workflow (H5 — prepare only).** Codex produces (1) a **candidate list** (markdown/CSV in the PR) with, per record: collection/id, slug, title, status, start/end, org/host, why it is a candidate (QA/test naming, past-but-published, duplicate, bad poster host), proposed action (**unpublish/retire, not delete**; poster → null), reversibility note, and an empty `OWNER_APPROVED (Y/N)` column; (2) a **migration script that defaults to dry-run**, takes the approved ID list as an explicit input file, refuses any ID not on it, logs before/after, and is reversible. **No record is changed without the owner's explicit record-level approval**, and the migration is **never run by Codex or Claude** unless the owner names an approved list. Public-feed behaviour for ended events is handled by M1 (read-side), so cleanup is hygiene, not correctness.
+
 **Non-goals.** Redesigning directory pages; new search; pagination redesign; deleting production data; inventing a content-quality ruleset; Firestore schema migrations beyond the approved cleanup.
 
-**Dependencies.** M1 (`salesStatus`, effective status), H5 (cleanup approval), observability tooling decision.
+**Dependencies.** M1 (`salesStatus`, effective status). H5 is decided: Codex prepares; **the owner approves per record before any execution** (see *Cleanup candidate workflow*). Observability tool/DSN (H9) still open for hosted error capture.
 
 **Tests.** Frontend: directory/event pages for 404 vs timeout vs ok (mock fetch rejecting/timeouts/404), asserting status semantics and Retry; sold-out rendering; recovery consumer. Backend: poster-host validation (preview domains), public mapper normalisation, recovery endpoint contract, request-id header present on success and error responses; tickets aggregate (if added) partial-failure behaviour.
 
@@ -315,11 +338,11 @@ Rules: milestones are **sequential, one in flight**. M2's *configuration* work c
 - *Landmarks:* remove nested `<main>` on `/hosts`; confirm single `main` everywhere.
 - *Contrast (browser-testable minimum):* inactive nav links (2.87:1), primary CTA text on orange (3.65:1), "Unlock" (3.98:1), 9–10px date pills on home (1.4–1.7:1) must meet AA via token adjustments localised to those components; **no global palette redesign** (C).
 - *Mobile layout (034):* make 320px drawer Review CTA reachable without scroll (sticky within drawer) — minimal.
-- *Account/Settings:* decision-gated (H6). Default minimum: an **"Account deletion request"** entry in Account & security that creates a support request via the existing help-desk (category Account) with clear copy and expected timeline — **not** automated deletion. Notification-preference UI is **not built** (no Guest marketing/in-app notifications exist). Rename "My Orders" heading to match the "Tickets" nav only if H6 agrees (trivial). New Wallet/Orders/Notifications routes are **explicitly not built**.
+- *Account/Settings (H6 decided):* a **support-mediated account-deletion request** is the V1 deliverable: an "Account deletion request" entry in Account & security that creates a support request through the existing help-desk (category Account), with clear copy (what is deleted, expected timeline, confirmation by email) — **no automated erasure pipeline**. Notification-preference UI is **not built** (no Guest marketing/in-app notifications exist). Wallet/Orders/Notifications routes are **explicitly not built**. Renaming the "My Orders" heading stays Class C unless trivial.
 
 **Non-goals.** Visual hierarchy/spacing/motion redesign, skeleton philosophy, flagship aesthetics, full colour-system overhaul, new pages, automated account erasure pipeline, screen-reader acceptance.
 
-**Dependencies.** M3 (drawer), M5 (nav behaviour stable), H6.
+**Dependencies.** M3 (drawer), M5 (nav behaviour stable). H6 is decided.
 
 **Tests.** Component tests: sign-out dialog focus trap/restore; no nested `main`; programmatic checks of input font-size classes (≥16px at mobile breakpoint); contrast unit checks for the changed tokens; target-size assertions for listed controls; deletion-request form posts the right support payload. Optional Playwright e2e at 320/390 for drawer CTA reachability.
 
@@ -335,12 +358,12 @@ Rules: milestones are **sequential, one in flight**. M2's *configuration* work c
 |---|---|---|---|
 | H1 | **Google Cloud console:** create/confirm OAuth client; authorised JS origin + redirect URI `https://guest.thec1rcle.com/api/auth/google/callback` (and production origin later) | M2 | Gateway requires HTTPS callback path exactly `/api/auth/google/callback`. |
 | H1b | **Render env (api gateway):** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`; add `https://guest.thec1rcle.com` (and production origin) to `BETTER_AUTH_TRUSTED_ORIGINS` and `ALLOWED_ORIGINS` | M2 | **Do not paste secrets in chat/commits**; set in Render. |
-| H2 | **Fee-policy decision:** production rates (platform %, payment %, GST handling, who pays), refund treatment of fees, wording approval | M2/M3 | Current staging policy is explicitly non-production. |
-| H3 | **Launch-domain decision:** `thec1rcle.com` vs `guest.…`; Vercel Deployment Protection off for the public launch domain (staging may stay protected); add launch origin to CORS + trusted origins; Razorpay/Firebase authorised domains | M2 | Gateway CORS currently lacks `https://thec1rcle.com`. |
-| H4 | **Sales-cutoff policy:** online sales close at event **end** (recommended) or start; may `started` events sell? | **before M1 L1** | Blocks M1 core change. |
-| H5 | **Staging data cleanup approval:** list of QA/test/stale events to unpublish/retire; the 2 bad poster URLs | M4 | Codex proposes the list; you approve. |
-| H6 | **Account-deletion / notification policy:** support-mediated deletion request acceptable for launch? Any marketing/notification prefs planned? | M6 | Compliance (DPDP/app-store) — your call. |
-| H7 | **Firebase test-phone bypass:** set `NEXT_PUBLIC_FIREBASE_TEST_PHONE` on the staging Vercel build + redeploy; confirm authorised domains | M2 | Staging only; never production. |
+| H2 | **Fee-policy values:** supply the approved production rates / who-pays / GST handling and wording. **Not invented by Codex.** | closes GUEST-004 | Until supplied, GUEST-004 stays OPEN (staging policy remains non-production). |
+| H3 | **DECIDED:** `guest.thec1rcle.com` is the authoritative Guest domain for remediation. **Still yours:** add it to Render `BETTER_AUTH_TRUSTED_ORIGINS`/`ALLOWED_ORIGINS` (with H1b); keep or lift Vercel Deployment Protection as you choose for QA access. **Later release decision:** root-domain (`thec1rcle.com`) cutover and its CORS/trusted/Google/Razorpay/Firebase domains. | M2 / launch cutover | GUEST-005 becomes a launch-cutover gate. |
+| H4 | **DECIDED** (Decision log). No action. Optional override of L3(b) only. | — | M1 ready. |
+| H5 | **DECIDED:** Codex prepares candidate list + dry-run migration. **You approve each record** before any execution. | M4 | Nothing runs without your named list. |
+| H6 | **DECIDED:** support-mediated deletion request for V1. No further action. | M6 | — |
+| H7 | **APPROVED (staging only).** You apply `NEXT_PUBLIC_FIREBASE_TEST_PHONE` on the **staging** Vercel build + redeploy and confirm Firebase authorised domains; never set in production. Codex adds the production guard. | M2 | — |
 | H8 | **Rotate the Vercel bypass token** issued in the audit | now | Token was shared in chat. |
 | H9 | **Observability tool/DSN decision** (e.g. Sentry) and PII-scrubbing expectations | M4 | Needed only if you want hosted error capture. |
 | H10 | Provide/approve QA accounts for re-acceptance and a mailbox/phone for Google/OTP human gates | re-acceptance | Real SMS stays a separate final gate. |
@@ -361,7 +384,7 @@ Rules: milestones are **sequential, one in flight**. M2's *configuration* work c
 | Real iOS/Safari (zoom, 100vh, blur, keyboard, safe areas) | needs device | After M6, before launch | 024, 034 |
 | **Screen reader acceptance** | needs real AT | After M6 (manual) | Phase 27 remainder |
 | DB-layer integrity (Firestore) | no DB access | When access is granted, after M4 | Phase 22/31, 011 |
-| Production-domain/provider verification | prod not live | At cutover | 005, Google/CORS/Razorpay/Firebase |
+| Production-domain/provider verification (**GUEST-005 root-domain cutover — owner release decision, H3**) | prod not live; cutover is a later release decision | At cutover | 005 (cutover part), Google/CORS/Razorpay/Firebase on root domain |
 | Retest `/terms` TTFB | single sample | M5 re-measure | 021 |
 | Load/concurrency | no tooling approved | Pre-launch, after Payment Acceptance | reliability |
 
@@ -388,10 +411,10 @@ RULES
 3. Backend stays authoritative. Never weaken a server-side check because the UI changed.
 4. Do not guess secrets, env values, Google/Render/Vercel/Firebase settings. Anything in
    plan section E is a HUMAN action: list what you need, do not fabricate.
-5. Do not change staging data. Data cleanup (M4) = produce a proposed list + migration script; the
+5. Do not change staging data. Data cleanup (M4, H5) = candidate list + dry-run-default migration script only; the owner approves per record and NOTHING is executed without that. Do not invent fee percentages (H2): fee work is policy-driven + fail-closed only.
    owner approves before anything runs.
 6. Keep contracts in sync: backend and frontend copies of shared contracts must both change.
-7. Before coding M1: confirm H4 (sales-cutoff policy) is answered in the plan/PR; if not, STOP.
+7. H4 is DECIDED (see Decision log): online sales stay open for `published` and `started` events and close when `now >= eventEffectiveEndAt(event)` (`endAt`, else start+6h); no new quote/hold/payment-attempt/RSVP/waitlist/access-code entitlement at/after cutoff; a valid pre-cutoff hold/attempt may complete within its 10-min TTL; no new attempt after cutoff (plan M1 L3). M1 is READY. Before coding M2, confirm the H1/H1b/H7 owner actions are done or listed as pending in the PR.
 
 TESTING CADENCE
 - While iterating: focused tests for affected behaviour + relevant package typecheck/lint only.
@@ -442,10 +465,10 @@ Claude re-enters **after all six milestones are merged and deployed to staging**
 |---|---|---|---|---|---|
 | 002 | Google 403 (origin) / 404 (provider) | Google URL returned; human login completes; no loop/duplicate | config validation tests | origin probes + human Google gate | — |
 | 003 | `/profile/saved` always errors | list/empty/login/retry states | helper + page tests | QA Guest: empty, save, list, unsave | — |
-| 004 | Test-fee copy visible | no test wording; prod guard | disclosure + guard tests | review screen + policy probe | — |
+| 004 | Test-fee copy visible | no test wording once the owner-approved policy is deployed; production guard fail-closed | disclosure + guard tests | review screen + policy probe | **STILL EXTERNALLY BLOCKED until H2 values supplied** |
 | 040 | Ended event quotable | all sale paths reject ended | boundary + service + gateway tests | `halloween` page/quote/RSVP/public feed | — (hold/Pay in PA) |
-| 005 | SSO/CORS/trusted gaps | launch-domain correct | — | header/origin probes on launch domain | — |
-| 006 | Missing surfaces | scope-limited per H6 | form test | `/help` deletion request | — |
+| 005 | SSO/CORS/trusted gaps | `guest.thec1rcle.com` trusted/CORS correct (H3); root-domain cutover verified at release | — | guest-domain header/origin probes now; root-domain probes at cutover | — (cutover part EXTERNALLY BLOCKED) |
+| 006 | Missing surfaces | support-mediated deletion request entry (H6 decided); no new routes | form test | `/help` deletion request visible | — |
 | 007 | `Secure=false`, no CSP, `public` session | Secure cookie, `no-store`, CSP | header tests | header probes | — |
 | 008 | waterfall + PII | PII minimised (M1); ≤N auth calls (M5) | payload + call-count tests | network capture | — |
 | 009 | promo failure blanks totals | totals stay; honest promo copy | error-map tests | invalid promo run | — |
@@ -499,8 +522,8 @@ Parked rows are verified only as "unchanged/no regression"; they carry into the 
 
 | # | Risk | Area | Mitigation / watch |
 |---|---|---|---|
-| R1 | **Sale cutoff blocks legitimate sales** (wrong end-time/timezone, `endAt` null → start+6h, events running past midnight, door sales) | Checkout, RSVP, door | Boundary matrix with injected clock; H4 decision recorded; door-sales path untouched; hosted smoke on future events |
-| R2 | **In-flight payments rejected after cutoff** (money taken, no ticket) | Checkout/payments | L3 rule: honour valid holds; compensation path tested; verify in Payment Acceptance |
+| R1 | **Sale cutoff blocks legitimate sales, or `started` events now sell unexpectedly** (end-time/timezone mistakes, events running past midnight, `endAt` missing → start+6h, door/admission/analytics code assuming sales stop at start) | Checkout, RSVP, door, Partner | Boundary matrix with injected clock incl. `started`; read door/inventory/pricing/analytics code for such assumptions before enabling `started` sales; door-sales path untouched; hosted smoke on future events (and a started-state event only with owner-approved test data) |
+| R2 | **In-flight payments rejected after cutoff** (money taken, no ticket) — specifically attempt creation after cutoff for a pre-cutoff hold (L3(b)) | Checkout/payments | Pre-cutoff attempts finish within TTL; compensation path tested; owner may override L3(b); verify at Payment Acceptance |
 | R3 | `salesStatus` changes public DTOs → **Partner/scanner/other consumers break** | Public APIs, Partner | Additive fields only; keep old fields; grep consumers; contract tests |
 | R4 | **Cookie `Secure`/rescoping change logs everyone out or breaks callback** | Auth | Env-aware flag; test both cookie names; hosted login/logout/2nd-tab/old-cookie run; do before Google go-live |
 | R5 | **CSP enforcement breaks Razorpay/Firebase/reCAPTCHA/images** | Checkout, Auth, Media | Report-Only first; source inventory; enforce only after clean window |
@@ -523,7 +546,7 @@ Highest regression exposure: **R1/R2 (checkout), R4 (auth), R3/R8 (public APIs/d
 
 `GUEST PORTAL FUNCTIONALLY CLEAN — READY FOR EXPERIENCE QUALITY PASS` may be stated only when **all** are true:
 
-1. **P0 = 0 and P1 = 0**, and GUEST-005 resolved (launch domain/protection/CORS decided and verified) — verified by Claude on staging.
+1. **P0 = 0 and P1 = 0** — including **GUEST-004 closed with the owner-approved fee policy deployed (H2)**, and GUEST-002/003/040 FIXED. GUEST-005 is verified for `guest.thec1rcle.com`; its **root-domain cutover part is carried to the launch-cutover gate (§F), not this gate** (H3). 
 2. Every **A and B** finding scheduled in M1–M6 is **FIXED** in Claude's re-acceptance (no PARTIALLY FIXED/REGRESSED); every **D** item is done or an explicit owner-accepted exception is recorded.
 3. No **NEW DEFECT** ≥ P2 open from the re-acceptance sweep; regression anchors hold (₹650 / `STAGE001` / ₹636.78; RSVP create→duplicate→cancel with capacity restored; login/logout/old-cookie 401).
 4. Google login **completed by a human on staging**; new-signup + email verification + onboarding + phone step (test number) passes; existing users are not re-onboarded.
