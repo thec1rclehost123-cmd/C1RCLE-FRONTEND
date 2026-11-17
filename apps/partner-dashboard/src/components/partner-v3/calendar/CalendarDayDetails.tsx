@@ -163,8 +163,13 @@ function EventDetail({
   }[event.status];
   const content = (
     <>
-      <span className={[styles['eventState'], stateClass].join(' ')}>{event.status}</span>
+      <span className={[styles['eventState'], stateClass].join(' ')}>
+        {event.statusLabel ?? event.status}
+      </span>
       <strong>{event.name}</strong>
+      {event.hostName ? (
+        <span className={styles['eventDetailMeta']}>Hosted by {event.hostName}</span>
+      ) : null}
       <span className={styles['eventDetailMeta']}>
         <TimeIcon size={13} aria-hidden="true" />
         {event.time}

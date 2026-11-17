@@ -187,12 +187,25 @@ export function ConnectedPartnerEventScreen({
                 <dd>{event.capacity?.toLocaleString('en-IN') ?? 'Not set'}</dd>
               </div>
               <div>
-                <dt className="text-stone-400">Starting price</dt>
+                <dt className="text-stone-400">Current starting price</dt>
+                <dd>
+                  {event.isFree
+                    ? 'Free'
+                    : event.currentStartingPricePaise == null
+                      ? 'No active price'
+                      : new Intl.NumberFormat('en-IN', {
+                          style: 'currency',
+                          currency: 'INR',
+                        }).format(event.currentStartingPricePaise / 100)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-stone-400">Base price</dt>
                 <dd>
                   {event.isFree
                     ? 'Free'
                     : event.startingPricePaise === null
-                      ? 'Not available'
+                      ? 'Not set'
                       : new Intl.NumberFormat('en-IN', {
                           style: 'currency',
                           currency: 'INR',

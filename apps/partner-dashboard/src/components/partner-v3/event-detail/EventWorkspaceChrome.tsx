@@ -24,6 +24,7 @@ export interface EventWorkspaceTab {
 
 export interface EventWorkspaceModel {
   readonly id: string;
+  readonly ownerType?: 'host' | 'venue';
   readonly title: string;
   readonly venue: string;
   readonly dateTime: string;
@@ -91,6 +92,12 @@ export function EventWorkspaceChrome({
                     </Link>
                     <Link className={styles['primaryAction']} href={`${baseHref}/door`}>
                       <DoorModeIcon size={14} aria-hidden="true" /> Door Mode
+                    </Link>
+                  </div>
+                ) : studio === 'venue' && event.ownerType === 'venue' ? (
+                  <div className={styles['actions']}>
+                    <Link href={`${baseHref}/edit`}>
+                      <EditIcon size={14} aria-hidden="true" /> Edit
                     </Link>
                   </div>
                 ) : null}

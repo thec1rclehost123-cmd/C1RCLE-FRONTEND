@@ -6,11 +6,12 @@ const venueEventsConfig = {
   accent: 'orange',
   analyticsHref: '/partner/venue/analytics',
   createEventHref: '/partner/venue/events/create',
-  defaultParty: 'venue',
+  defaultParty: 'all',
   eventsBaseHref: '/partner/venue/events',
   eventSectionLabel: 'Venue',
   partyFilterLabel: 'Event ownership',
   showViewToggle: true,
+  showAllPartyFilter: true,
   slotRequestsHref: '/partner/venue/slot-requests',
   hideDraftsForHostParty: true,
 } as const;

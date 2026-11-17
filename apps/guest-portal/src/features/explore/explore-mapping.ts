@@ -55,13 +55,17 @@ export function toExploreEvent(
               )
             ? 'sold-out'
             : 'unavailable';
+  const discoveryPrice =
+    event.activeStartingPricePaise !== undefined
+      ? event.activeStartingPricePaise
+      : event.currentStartingPricePaise;
   const minimumPrice =
     purchasableTiers && purchasableTiers.length > 0
       ? Math.min(...purchasableTiers.map((tier) => tier.priceInPaise))
       : tiers !== null
-        ? (event.activeStartingPricePaise ?? null)
-        : event.activeStartingPricePaise !== undefined
-          ? event.activeStartingPricePaise
+        ? (discoveryPrice ?? null)
+        : discoveryPrice !== undefined
+          ? discoveryPrice
           : event.startingPricePaise;
   return {
     id: event.id,
