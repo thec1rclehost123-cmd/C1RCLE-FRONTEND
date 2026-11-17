@@ -95,15 +95,27 @@ const inputClass =
 
 const labelClass = 'text-sm font-medium text-white/60';
 
-export function HelpClient() {
+export function HelpClient({
+  requestType = null,
+}: {
+  readonly requestType?: 'account-deletion' | null;
+} = {}) {
   const [tickets, setTickets] = useState<SupportTicketDto[]>([]);
   const [loadingList, setLoadingList] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
 
-  const [subject, setSubject] = useState('');
-  const [category, setCategory] = useState<SupportTicketCategory>('other');
+  const [subject, setSubject] = useState(
+    requestType === 'account-deletion' ? 'Account deletion request' : '',
+  );
+  const [category, setCategory] = useState<SupportTicketCategory>(
+    requestType === 'account-deletion' ? 'account' : 'other',
+  );
   const [priority, setPriority] = useState<SupportTicketPriority>('medium');
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState(
+    requestType === 'account-deletion'
+      ? 'I would like to request deletion of my C1RCLE account. Please verify my identity and let me know the next steps.'
+      : '',
+  );
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
@@ -189,6 +201,13 @@ export function HelpClient() {
           Raise a support ticket and track it to resolution. Replies land here and on the admin
           desk.
         </p>
+        {requestType === 'account-deletion' && (
+          <p className="mt-3 text-sm text-white/70">
+            Account deletion is support-mediated. Review and submit this request; support will
+            verify your identity before explaining the next steps. Your account is not deleted by
+            submitting this ticket.
+          </p>
+        )}
       </div>
 
       <section className="border-t border-white/10 pt-6">

@@ -51,13 +51,17 @@ describe('authoritative direct-visit resume', () => {
     expect(readOnboardingStatus).not.toHaveBeenCalled();
   });
   it.each(['/', '/explore', '/search', '/event/public-event', '/hosts', '/venues/public-venue'])(
-    'allows anonymous and incomplete authenticated browsing at %s',
-    (pathname) => {
+    'routes incomplete authenticated Guests to onboarding but keeps anonymous browsing public at %s',
+    async (pathname) => {
       route.pathname = pathname;
+      vi.mocked(readOnboardingStatus).mockResolvedValue({ complete: false } as never);
       const view = render(<OnboardingGuard />);
-      expect(readOnboardingStatus).not.toHaveBeenCalled();
-      expect(replace).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(readOnboardingStatus).toHaveBeenCalled();
+        expect(replace).toHaveBeenCalledWith(`/onboarding?next=${encodeURIComponent(pathname)}`);
+      });
       view.unmount();
+      vi.clearAllMocks();
       session.status = 'anonymous';
       render(<OnboardingGuard />);
       expect(readOnboardingStatus).not.toHaveBeenCalled();
@@ -91,14 +95,15 @@ describe('authoritative direct-visit resume', () => {
     resolve?.({ complete: true } as never);
     expect(await screen.findByRole('button', { name: 'Protected action' })).toBeInTheDocument();
   });
-  it('renders public discovery immediately without checking onboarding', () => {
+  it('withholds authenticated public discovery until onboarding is confirmed', async () => {
     route.pathname = '/explore';
+    vi.mocked(readOnboardingStatus).mockResolvedValue({ complete: true } as never);
     render(
       <OnboardingGuard>
         <button>Browse events</button>
       </OnboardingGuard>,
     );
-    expect(screen.getByRole('button', { name: 'Browse events' })).toBeInTheDocument();
-    expect(readOnboardingStatus).not.toHaveBeenCalled();
+    expect(await screen.findByRole('button', { name: 'Browse events' })).toBeInTheDocument();
+    expect(readOnboardingStatus).toHaveBeenCalledOnce();
   });
 });

@@ -19,4 +19,17 @@ describe('HelpPage intake', () => {
     expect(screen.getByLabelText('Subject')).toBeInTheDocument();
     expect(screen.getByLabelText('Description')).toBeInTheDocument();
   });
+
+  it('opens a support-mediated account deletion request with the correct category and guidance', async () => {
+    render(await HelpPage({ searchParams: Promise.resolve({ request: 'account-deletion' }) }));
+
+    expect(screen.getByLabelText('Subject')).toHaveValue('Account deletion request');
+    expect(screen.getByLabelText('Category')).toHaveValue('account');
+    expect(screen.getByLabelText('Description')).toHaveValue(
+      'I would like to request deletion of my C1RCLE account. Please verify my identity and let me know the next steps.',
+    );
+    expect(
+      screen.getByText(/your account is not deleted by submitting this ticket/i),
+    ).toBeInTheDocument();
+  });
 });

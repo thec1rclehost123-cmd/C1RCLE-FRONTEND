@@ -44,11 +44,11 @@ describe('post-auth onboarding continuation', () => {
     ).rejects.toThrow('REDIRECT:/verify-email');
     expect(forwardToGateway).not.toHaveBeenCalled();
   });
-  it('does not follow external destinations or bypass progress on gateway failure', async () => {
+  it('sanitizes external destinations and sends Guests to retry onboarding when status is unavailable', async () => {
     vi.mocked(forwardToGateway).mockRejectedValue(new Error('offline'));
     await expect(
       ContinueGuest({ searchParams: Promise.resolve({ next: 'https://attacker.example' }) }),
-    ).rejects.toThrow('REDIRECT:/explore');
+    ).rejects.toThrow('REDIRECT:/onboarding?next=%2Fexplore');
   });
   it('returns completed Guests to the original checkout query without repeating onboarding', async () => {
     vi.mocked(forwardToGateway).mockResolvedValue(new Response(JSON.stringify(state)));
@@ -61,13 +61,29 @@ describe('post-auth onboarding continuation', () => {
     ).rejects.toThrow('REDIRECT:/checkout?eventId=fixture-event&tierId=fixture-tier');
   });
 
-  it('lets an incomplete unverified Guest return to public discovery without an onboarding wall', async () => {
+  it('requires email verification before returning to public discovery', async () => {
     vi.mocked(requireGuestSession).mockResolvedValue({ user: { emailVerified: false } } as never);
     await expect(
       ContinueGuest({ searchParams: Promise.resolve({ next: '/explore?genre=house' }) }),
-    ).rejects.toThrow('REDIRECT:/explore?genre=house');
+    ).rejects.toThrow('REDIRECT:/verify-email?next=%2Fexplore%3Fgenre%3Dhouse');
     expect(forwardToGateway).not.toHaveBeenCalled();
   });
+
+  it.each([true, false])(
+    'checks onboarding for public destination when complete=%s',
+    async (complete) => {
+      vi.mocked(forwardToGateway).mockResolvedValue(
+        new Response(JSON.stringify({ ...state, complete })),
+      );
+      await expect(
+        ContinueGuest({ searchParams: Promise.resolve({ next: '/explore?genre=house' }) }),
+      ).rejects.toThrow(
+        complete
+          ? 'REDIRECT:/explore?genre=house'
+          : 'REDIRECT:/onboarding?next=%2Fexplore%3Fgenre%3Dhouse',
+      );
+    },
+  );
 
   it('does not bypass required protected onboarding when its state is unavailable', async () => {
     vi.mocked(forwardToGateway).mockRejectedValue(new Error('offline'));

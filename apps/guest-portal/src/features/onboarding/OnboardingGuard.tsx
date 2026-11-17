@@ -6,7 +6,6 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useSessionStore } from '@c1rcle/auth';
 
 import { guestDestination } from '@/lib/auth/continue-path';
-import { isGuestProtectedPath } from '@/lib/auth/protected-path';
 import { captureGuestReturnFragment, restoreGuestReturnFragment } from '@/lib/auth/return-fragment';
 
 import { readOnboardingStatus } from './client';
@@ -16,9 +15,25 @@ export function OnboardingGuard({ children }: { readonly children?: ReactNode })
   const pathname = usePathname();
   const router = useRouter();
   const [checked, setChecked] = useState<string | null>(null);
-  const key = `${session.session?.user.id ?? ''}:${pathname}`;
+  const userId = session.session?.user.id ?? '';
+  const key = userId;
+  const onboardingExempt = [
+    '/onboarding',
+    '/verify-email',
+    '/login',
+    '/signup',
+    '/forgot-password',
+    '/reset-password',
+    '/auth',
+  ].some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
   useEffect(() => {
-    if (!session.hydrated || session.status !== 'authenticated' || !isGuestProtectedPath(pathname))
+    if (
+      !session.hydrated ||
+      session.status !== 'authenticated' ||
+      !userId ||
+      onboardingExempt ||
+      checked === key
+    )
       return;
     let active = true;
     const intent = pathname + window.location.search;
@@ -50,9 +65,12 @@ export function OnboardingGuard({ children }: { readonly children?: ReactNode })
     session.status,
     session.session?.user.id,
     session.session?.user.emailVerified,
+    userId,
+    onboardingExempt,
+    checked,
     key,
   ]);
-  if (!isGuestProtectedPath(pathname) || session.status === 'anonymous') return <>{children}</>;
+  if (onboardingExempt || session.status === 'anonymous') return <>{children}</>;
   if (
     session.status === 'authenticated' &&
     session.session?.user.emailVerified !== false &&

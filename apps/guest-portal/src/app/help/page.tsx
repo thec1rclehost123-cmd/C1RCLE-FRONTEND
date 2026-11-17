@@ -1,7 +1,5 @@
-import { PrivateDataUnavailable } from '@/components/private/PrivateDataUnavailable';
 import { requireGuestSession } from '@/lib/auth/require-session';
 import { buildPrivateMetadata } from '@/lib/seo/metadata';
-import { isProductionSeo } from '@/lib/seo/site';
 
 import { HelpClient } from './help-client';
 
@@ -15,8 +13,12 @@ export const metadata: Metadata = buildPrivateMetadata(
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export default async function HelpPage() {
+export default async function HelpPage({
+  searchParams,
+}: {
+  readonly searchParams?: Promise<{ request?: string }>;
+} = {}) {
   await requireGuestSession('/help');
-  if (isProductionSeo()) return <PrivateDataUnavailable title="Help unavailable" />;
-  return <HelpClient />;
+  const request = (await searchParams)?.request === 'account-deletion' ? 'account-deletion' : null;
+  return <HelpClient requestType={request} />;
 }

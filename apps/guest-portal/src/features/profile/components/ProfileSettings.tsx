@@ -159,6 +159,22 @@ function AccountSecurityPanel({ identity }: { identity: ProfileIdentity }) {
         </Link>
       </div>
 
+      <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-6 sm:p-8">
+        <h3 className="text-xl font-black uppercase tracking-[-0.03em] text-white">
+          Account deletion
+        </h3>
+        <p className="mt-2 text-sm leading-6 text-white/50">
+          Account deletion is handled by C1RCLE support. Send a request and support will verify your
+          identity and explain the next steps. This does not delete your account immediately.
+        </p>
+        <Link
+          href="/help?request=account-deletion"
+          className="mt-5 inline-flex min-h-11 items-center rounded-full border border-white/20 px-5 text-xs font-bold text-white hover:bg-white/10"
+        >
+          Request account deletion
+        </Link>
+      </div>
+
       <div className="rounded-[1.75rem] border border-white/10 bg-black/55 p-6 sm:p-8">
         <h3 className="text-xl font-black uppercase tracking-[-0.03em] text-white">Legal</h3>
         <div className="mt-5 flex flex-wrap gap-3">

@@ -127,6 +127,10 @@ describe('ProfilePage', () => {
     );
     expect(screen.getByText('+919000000041')).toBeInTheDocument();
     expect(screen.getByText('C1RCLE account')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Request account deletion' })).toHaveAttribute(
+      'href',
+      '/help?request=account-deletion',
+    );
   });
 
   it('renders the authenticated profile identity without fixture data', async () => {
