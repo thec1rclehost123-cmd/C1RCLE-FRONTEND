@@ -109,6 +109,28 @@ describe('toExploreEvent', () => {
     });
   });
 
+  it('uses the active discovery price and preserves a null active price', () => {
+    expect(
+      toExploreEvent({ ...EVENT, activeStartingPricePaise: 65_000 }, VENUE, null).price,
+    ).toEqual({ amountPaise: 65_000, currency: 'INR' });
+    expect(
+      toExploreEvent({ ...EVENT, activeStartingPricePaise: null }, VENUE, null).price,
+    ).toBeNull();
+  });
+
+  it('does not call a future tier available or display its price as purchasable', () => {
+    const futureTier = {
+      ...TIERS[0]!,
+      availabilityStatus: 'not_yet_available' as const,
+      availableQuantity: 20,
+    };
+    const mapped = toExploreEvent({ ...EVENT, activeStartingPricePaise: null }, VENUE, [
+      futureTier,
+    ]);
+    expect(mapped.availability).toBe('unavailable');
+    expect(mapped.price).toBeNull();
+  });
+
   it('distinguishes sold out from unavailable inventory', () => {
     expect(
       toExploreEvent(EVENT, VENUE, [{ ...TIERS[0]!, availableQuantity: 0 }]).availability,

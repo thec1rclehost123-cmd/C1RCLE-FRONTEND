@@ -2,6 +2,7 @@ import {
   type OrganizationRoleDto,
   type PRODUCT_TIME_ZONE,
   type ReferralLinkDto,
+  type SlotRequestEventDraft,
 } from '@c1rcle/contracts';
 
 import type { StudioRole } from '@/studios/studio-config';
@@ -982,6 +983,8 @@ export interface SlotRequest {
   readonly id: string;
   readonly eventId?: string | undefined;
   readonly hasEventDraft?: boolean | undefined;
+  /** Host-owned proposal snapshot; supplied only on the Host outgoing surface. */
+  readonly eventDraft?: SlotRequestEventDraft | undefined;
   readonly linkedEventStatus?: string | undefined;
   readonly status: SlotRequestStatus;
   readonly direction: SlotRequestDirection;
@@ -993,6 +996,7 @@ export interface SlotRequest {
   readonly slotStartTime?: string | undefined;
   readonly slotEndTime?: string | undefined;
   readonly timezone?: string | undefined;
+  readonly rejectionReason?: string | null | undefined;
   readonly event: SlotRequestEvent;
 }
 
@@ -1036,6 +1040,11 @@ export interface AvailabilitySlot {
   readonly startTime?: string;
   readonly endTime?: string;
   readonly timezone?: string | null;
+  /** Anonymous intervals inside a published window that cannot be requested. */
+  readonly blockedIntervals?: readonly {
+    readonly startTime: string;
+    readonly endTime: string;
+  }[];
 }
 
 export interface CalendarDay {

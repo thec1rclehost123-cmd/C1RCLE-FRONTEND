@@ -28,22 +28,41 @@ export function toExploreEvent(
 ): ExploreEvent {
   const venueName = event.externalLocation?.name ?? venue?.name ?? FALLBACK_VENUE;
   const city = event.externalLocation?.city ?? venue?.city ?? FALLBACK_CITY;
-  const availableQuantity = tiers?.reduce((sum, tier) => sum + tier.availableQuantity, 0) ?? null;
+  const purchasableTiers =
+    tiers?.filter(
+      (tier) =>
+        tier.availabilityStatus === 'available' ||
+        (tier.availabilityStatus === undefined && tier.availableQuantity > 0),
+    ) ?? null;
+  const availableQuantity =
+    purchasableTiers?.reduce((sum, tier) => sum + tier.availableQuantity, 0) ?? null;
   const availability =
     event.salesStatus === 'ended' ||
     event.salesStatus === 'sales_paused' ||
+    event.salesStatus === 'not_yet_available' ||
+    event.salesStatus === 'temporarily_held' ||
     event.salesStatus === 'cancelled' ||
     event.salesStatus === 'postponed'
       ? 'unavailable'
       : tiers === null || tiers.length === 0
         ? 'unavailable'
-        : availableQuantity === 0
-          ? 'sold-out'
-          : 'available';
+        : purchasableTiers !== null && purchasableTiers.length > 0
+          ? 'available'
+          : tiers.every(
+                (tier) =>
+                  tier.availabilityStatus === 'sold_out' ||
+                  (tier.availabilityStatus === undefined && tier.availableQuantity === 0),
+              )
+            ? 'sold-out'
+            : 'unavailable';
   const minimumPrice =
-    tiers && tiers.length > 0
-      ? Math.min(...tiers.map((tier) => tier.priceInPaise))
-      : event.startingPricePaise;
+    purchasableTiers && purchasableTiers.length > 0
+      ? Math.min(...purchasableTiers.map((tier) => tier.priceInPaise))
+      : tiers !== null
+        ? (event.activeStartingPricePaise ?? null)
+        : event.activeStartingPricePaise !== undefined
+          ? event.activeStartingPricePaise
+          : event.startingPricePaise;
   return {
     id: event.id,
     slug: event.slug,

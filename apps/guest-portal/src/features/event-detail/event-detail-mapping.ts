@@ -57,6 +57,35 @@ function formatAddress(event: EventPublicDetailDto): string {
   );
 }
 
+function tierAvailabilityLabel(tier: PublicTicketTierDto): string {
+  switch (tier.availabilityStatus) {
+    case 'sold_out':
+      return 'Sold out';
+    case 'temporarily_held':
+      return 'Temporarily reserved';
+    case 'not_yet_available':
+      return 'Not on sale yet';
+    case 'sales_ended':
+      return 'Sales ended';
+    case 'sales_paused':
+      return 'Sales paused';
+    case 'pricing_unavailable':
+      return 'Price unavailable';
+    case 'available':
+      return tier.availableQuantity === 0
+        ? 'Sold out'
+        : `${String(tier.availableQuantity)} available`;
+    case undefined:
+      return tier.availableQuantity === 0
+        ? 'Sold out'
+        : `${String(tier.availableQuantity)} available`;
+    default:
+      return tier.availableQuantity === 0
+        ? 'Sold out'
+        : `${String(tier.availableQuantity)} available`;
+  }
+}
+
 export function toEventDetailFixture(
   event: EventPublicDetailDto,
   tiers: readonly PublicTicketTierDto[],
@@ -108,9 +137,22 @@ export function toEventDetailFixture(
         tier.priceInPaise === 0
           ? null
           : { amountPaise: tier.priceInPaise, currency: 'INR' as const },
-      availabilityLabel:
-        tier.availableQuantity === 0 ? 'Sold out' : `${String(tier.availableQuantity)} available`,
+      basePrice:
+        (tier.basePriceInPaise ?? tier.priceInPaise) === 0
+          ? null
+          : {
+              amountPaise: tier.basePriceInPaise ?? tier.priceInPaise,
+              currency: 'INR' as const,
+            },
+      ...(tier.pricingPhase === undefined ? {} : { pricingPhase: tier.pricingPhase }),
+      ...(tier.availabilityStatus === undefined
+        ? {}
+        : { availabilityStatus: tier.availabilityStatus }),
+      availabilityLabel: tierAvailabilityLabel(tier),
       availableQuantity: tier.availableQuantity,
+      ...(tier.audienceType === undefined ? {} : { audienceType: tier.audienceType }),
+      ...(tier.minAge === undefined ? {} : { minAge: tier.minAge }),
+      ...(tier.maxAge === undefined ? {} : { maxAge: tier.maxAge }),
       ...(tier.guestCount === undefined ? {} : { guestCount: tier.guestCount }),
       ...(tier.admissionMode === undefined ? {} : { admissionMode: tier.admissionMode }),
     })),

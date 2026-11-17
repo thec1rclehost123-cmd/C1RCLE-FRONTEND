@@ -22,6 +22,7 @@ export default async function StudioCreateEventPage({
   const date = value(query['date']);
   const slot = value(query['slot']);
   const request = value(query['request']);
+  const resubmit = value(query['resubmit']);
   if (studio === 'venue') {
     const organizationId = getActiveOrgIdFromCookieHeader((await cookies()).toString());
     const data = createEmptyEventEditorData('venue');
@@ -47,6 +48,7 @@ export default async function StudioCreateEventPage({
       {...(date ? { initialDate: date } : {})}
       {...(slot ? { initialSlotId: slot } : {})}
       {...(request ? { acceptedRequestId: request } : {})}
+      {...(resubmit ? { resubmitRequestId: resubmit } : {})}
     />
   );
 }

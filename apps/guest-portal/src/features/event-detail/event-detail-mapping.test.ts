@@ -100,6 +100,7 @@ describe('toEventDetailFixture', () => {
         name: 'Early Entry',
         description: 'Entry before 9pm',
         price: { amountPaise: 99_900, currency: 'INR' },
+        basePrice: { amountPaise: 99_900, currency: 'INR' },
         availabilityLabel: '8 available',
         availableQuantity: 8,
       },
@@ -114,6 +115,38 @@ describe('toEventDetailFixture', () => {
       price: null,
       availabilityLabel: 'Sold out',
       availableQuantity: 0,
+    });
+  });
+
+  it('maps phase, base price, and distinct unavailable reasons', () => {
+    const mapped = toEventDetailFixture(EVENT, [
+      {
+        ...TIERS[0]!,
+        priceInPaise: 65_000,
+        basePriceInPaise: 80_000,
+        availabilityStatus: 'available',
+        pricingPhase: {
+          name: 'Early Bird',
+          startsAt: '2026-11-16T00:00:00.000Z',
+          endsAt: '2026-11-22T00:00:00.000Z',
+          availableQuantity: 20,
+        },
+      },
+      {
+        ...TIERS[0]!,
+        id: 'tier_future',
+        availabilityStatus: 'not_yet_available',
+        availableQuantity: 20,
+      },
+    ]);
+    expect(mapped.ticketTiers[0]).toMatchObject({
+      price: { amountPaise: 65_000 },
+      basePrice: { amountPaise: 80_000 },
+      pricingPhase: { name: 'Early Bird' },
+    });
+    expect(mapped.ticketTiers[1]).toMatchObject({
+      availabilityLabel: 'Not on sale yet',
+      availabilityStatus: 'not_yet_available',
     });
   });
 

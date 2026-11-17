@@ -17,7 +17,6 @@ import { apiClient } from '@/lib/api/client';
 import {
   eventDatePartInIndia,
   formatEventTimeRange,
-  isoDatePart,
   parseMonthKey,
   rangeForMonthKeys,
 } from './venue-calendar-repository';
@@ -146,7 +145,7 @@ function buildHostMonths(
   const slotsByDate = new Map<string, VenueAvailabilityDto['slots']>();
   for (const slot of availability.slots) {
     if (slot.status === 'cancelled') continue;
-    const date = isoDatePart(slot.startTime);
+    const date = eventDatePartInIndia(slot.startTime);
     if (!date) continue;
     slotsByDate.set(date, [...(slotsByDate.get(date) ?? []), slot]);
   }
@@ -219,44 +218,48 @@ export function freeTimeSlots(
   slots: VenueAvailabilityDto['slots'],
   events: readonly EventDto[] = [],
 ): readonly AvailabilitySlot[] {
-  const start = Date.parse(`${date}T00:00:00+05:30`);
-  const dayEnd = start + 24 * 60 * 60 * 1000;
-  const end = dayEnd + 24 * 60 * 60 * 1000;
-  const occupied = [
-    ...slots
-      .filter((slot) => slot.status !== 'open' && slot.status !== 'cancelled')
-      .map((slot) => [Date.parse(slot.startTime), Date.parse(slot.endTime)]),
-    ...events
-      .filter((event) => !inactiveEventStatuses.has(event.status))
-      .map((event) => [Date.parse(event.startAt), Date.parse(event.endAt ?? event.startAt)]),
-  ]
-    .filter((range) => (range[0] ?? end) < end && (range[1] ?? start) > start)
-    .sort((a, b) => (a[0] ?? 0) - (b[0] ?? 0));
-  let cursor = Math.max(start, Math.ceil((Date.now() + 60_000) / 60_000) * 60_000);
-  const gaps: [number, number][] = [];
-  for (const range of occupied) {
-    const from = Math.max(start, range[0] ?? start);
-    const to = Math.min(end, range[1] ?? end);
-    if (from > cursor && cursor < end) gaps.push([cursor, from]);
-    cursor = Math.max(cursor, to);
-  }
-  if (cursor < end) gaps.push([cursor, end]);
   const format = (value: number) =>
     new Intl.DateTimeFormat('en-IN', {
       timeZone: PRODUCT_TIME_ZONE,
       hour: 'numeric',
       minute: '2-digit',
     }).format(new Date(value));
-  return gaps
-    .filter(([from]) => from < dayEnd)
-    .map(([from, to], index) => ({
-      id: `free-${date}-${String(index)}`,
-      label: `${format(from)} – ${format(to)}${to >= end ? ' (+2 days)' : to >= dayEnd ? ' (next day)' : ''} IST`,
-      status: 'available' as const,
-      startTime: new Date(from).toISOString(),
-      endTime: new Date(to).toISOString(),
-      timezone: PRODUCT_TIME_ZONE,
-    }));
+  return slots
+    .filter((slot) => {
+      const from = Date.parse(slot.startTime);
+      return (
+        slot.status === 'open' && from > Date.now() && eventDatePartInIndia(slot.startTime) === date
+      );
+    })
+    .map((slot) => {
+      const from = Date.parse(slot.startTime);
+      const to = Date.parse(slot.endTime);
+      const blockedIntervals = [
+        ...slots
+          .filter(
+            (other) =>
+              other.id !== slot.id && other.status !== 'open' && other.status !== 'cancelled',
+          )
+          .map((other) => ({ startTime: other.startTime, endTime: other.endTime })),
+        ...events
+          .filter((event) => !inactiveEventStatuses.has(event.status))
+          .map((event) => ({ startTime: event.startAt, endTime: event.endAt ?? event.startAt })),
+      ]
+        .map(({ startTime, endTime }) => ({
+          startTime: new Date(Math.max(from, Date.parse(startTime))).toISOString(),
+          endTime: new Date(Math.min(to, Date.parse(endTime))).toISOString(),
+        }))
+        .filter(({ startTime, endTime }) => Date.parse(startTime) < Date.parse(endTime));
+      return {
+        id: slot.id,
+        label: `${format(from)} – ${format(to)} IST`,
+        status: 'available' as const,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        timezone: slot.timezone ?? PRODUCT_TIME_ZONE,
+        blockedIntervals,
+      };
+    });
 }
 
 export async function requestHostAvailabilitySlot({
@@ -265,8 +268,6 @@ export async function requestHostAvailabilitySlot({
   slotId,
   idempotencyKey,
   eventId,
-  startTime,
-  endTime,
   eventDraft,
 }: {
   readonly organizationId: string;
@@ -274,14 +275,12 @@ export async function requestHostAvailabilitySlot({
   readonly slotId: string;
   readonly idempotencyKey: string;
   readonly eventId?: string;
-  readonly startTime?: string;
-  readonly endTime?: string;
   readonly eventDraft?: SlotRequestEventDraft;
 }) {
   return apiClient.post({
     path: `/api/v2/venues/${encodeURIComponent(venueId)}/slot-requests`,
     body: {
-      ...(slotId.startsWith('free-') ? { startTime, endTime } : { slotId }),
+      slotId,
       ...(eventId ? { eventId } : {}),
       ...(eventDraft ? { eventDraft } : {}),
       message: eventId

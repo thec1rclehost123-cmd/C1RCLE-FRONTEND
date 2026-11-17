@@ -41,6 +41,7 @@ export type {
   SlotRequestListResponse,
   SlotRequestActor,
   SlotRequestDetailDto,
+  RejectSlotRequestInput,
 } from './contracts/organization.js';
 
 export {
@@ -64,6 +65,7 @@ export {
   publishVenueAvailabilitySchema,
   slotRequestDtoSchema,
   createSlotRequestSchema,
+  rejectSlotRequestSchema,
   slotRequestListResponseSchema,
   slotRequestActorSchema,
   slotRequestDetailDtoSchema,
@@ -341,6 +343,7 @@ export type {
 } from './contracts/checkout.js';
 
 export {
+  MAX_CHECKOUT_TICKETS_PER_LINE,
   pricingLineDtoSchema,
   pricingBreakdownDtoSchema,
   checkoutQuoteRequestSchema,

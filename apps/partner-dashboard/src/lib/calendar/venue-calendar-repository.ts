@@ -172,6 +172,27 @@ export async function unblockVenueDate({
   });
 }
 
+export async function unpublishVenueAvailability({
+  organizationId,
+  venueId,
+  availabilityId,
+  idempotencyKey,
+}: {
+  readonly organizationId: string;
+  readonly venueId: string;
+  readonly availabilityId: string;
+  readonly idempotencyKey: string;
+}): Promise<VenueSlotDto> {
+  return apiClient.delete({
+    path: `/api/v2/venues/${encodeURIComponent(venueId)}/calendar/availability/${encodeURIComponent(availabilityId)}`,
+    headers: {
+      'x-organization-id': organizationId,
+      'Idempotency-Key': idempotencyKey,
+    },
+    schema: venueSlotDtoSchema,
+  });
+}
+
 export function venueBlockTimeRange(
   input: Pick<CreateVenueBlockInput, 'date' | 'from' | 'to'>,
 ): { readonly startTime: string; readonly endTime: string } | null {
@@ -412,6 +433,8 @@ function availabilityForSlots(slots: readonly VenueSlotDto[]): readonly Availabi
         id: slot.id,
         label: `${slot.label} · ${formatTimeRange(slot.startTime, slot.endTime)}`,
         status: 'available' as const,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
         timezone: PRODUCT_TIME_ZONE,
         notes: slot.notes ?? null,
       };

@@ -10,6 +10,7 @@ import {
   currentMonthKey,
   publishVenueAvailability,
   unblockVenueDate,
+  unpublishVenueAvailability,
   type CreateVenueBlockInput,
   type PublishVenueAvailabilityInput,
 } from '@/lib/calendar/venue-calendar-repository';
@@ -30,6 +31,7 @@ export function VenueCalendarRoute({
   readonly initialAvailabilityDialog?: boolean;
 }) {
   const unblockIdempotencyKeys = useRef(new Map<string, string>());
+  const unpublishIdempotencyKeys = useRef(new Map<string, string>());
   const availabilityIdempotencyKeys = useRef(new Map<string, string>());
   const state = useVenueCalendar({
     organizationId,
@@ -92,6 +94,21 @@ export function VenueCalendarRoute({
           unblockIdempotencyKeys.current.set(blockId, idempotencyKey);
         }
         await unblockVenueDate({ organizationId, venueId, blockId, idempotencyKey });
+        state.retry();
+      }}
+      onUnpublishAvailability={async (availabilityId) => {
+        let idempotencyKey = unpublishIdempotencyKeys.current.get(availabilityId);
+        if (!idempotencyKey) {
+          idempotencyKey = crypto.randomUUID();
+          unpublishIdempotencyKeys.current.set(availabilityId, idempotencyKey);
+        }
+        await unpublishVenueAvailability({
+          organizationId,
+          venueId,
+          availabilityId,
+          idempotencyKey,
+        });
+        unpublishIdempotencyKeys.current.delete(availabilityId);
         state.retry();
       }}
       onPublishAvailability={async (input: PublishVenueAvailabilityInput) => {

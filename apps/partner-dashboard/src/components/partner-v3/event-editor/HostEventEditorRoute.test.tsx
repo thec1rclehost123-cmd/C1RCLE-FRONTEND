@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { fixturePartnerDataSource } from '@/data/fixture-partner-data-source';
@@ -95,5 +96,81 @@ describe('HostEventEditorRoute', () => {
     expect(await screen.findByRole('heading', { name: 'Accepted slot unavailable' })).toBeVisible();
     expect(screen.getByText(/Venue for this approved slot is no longer available/i)).toBeVisible();
     expect(screen.queryByLabelText('Event name')).not.toBeInTheDocument();
+  });
+
+  it('loads a rejected proposal into the editor while keeping its rejection reason visible', async () => {
+    const availability = mocks.availability as {
+      venues: {
+        venue: { id: string };
+        months: {
+          days: {
+            date: string;
+            slots: { id: string; status: string; startTime?: string; endTime?: string }[];
+          }[];
+        }[];
+      }[];
+    };
+    const venue = availability.venues[0];
+    const availableDay = venue?.months
+      .flatMap((month) => month.days)
+      .find((day) => day.slots.some((slot) => slot.status === 'available'));
+    const openSlot = availableDay?.slots.find((slot) => slot.status === 'available');
+    if (!venue || !availableDay || !openSlot) throw new Error('Expected an open fixture slot');
+    const venueId = venue.venue.id;
+    mocks.requests = [
+      {
+        id: 'rejected-request-editable',
+        status: 'rejected',
+        direction: 'outgoing',
+        partnerName: 'Test Venue',
+        partnerRoleLabel: 'Venue',
+        partnerInitials: 'TV',
+        venueId,
+        slotId: openSlot.id,
+        rejectionReason: 'Please adjust the event title.',
+        eventDraft: {
+          event: {
+            venueId,
+            title: 'Original proposal title',
+            summary: 'Original summary',
+            description: 'Original description',
+            startAt: `${availableDay.date}T12:00:00.000Z`,
+            endAt: `${availableDay.date}T15:00:00.000Z`,
+            tags: ['Electronic'],
+          },
+          tiers: [
+            {
+              localId: 'safe-tier-id',
+              command: { name: 'General', quantity: 80, priceInPaise: 5000 },
+            },
+          ],
+          promotions: [],
+          promoters: [],
+        },
+        event: {
+          name: 'Original proposal title',
+          description: 'Original description',
+          date: '',
+          time: '',
+          venue: 'Test Venue',
+        },
+      },
+    ];
+
+    render(
+      <HostEventEditorRoute
+        organizationId="host-test-org"
+        data={createEmptyEventEditorData('host')}
+        resubmitRequestId="rejected-request-editable"
+      />,
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Continue' }));
+    expect(await screen.findByLabelText('Event name')).toHaveValue('Original proposal title');
+    expect(screen.getByText(/Please adjust the event title/)).toBeVisible();
+    expect(screen.getByRole('button', { name: /Event details/ })).toHaveAttribute(
+      'aria-current',
+      'step',
+    );
   });
 });
