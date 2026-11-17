@@ -37,11 +37,14 @@ export function EventWorkspaceChrome({
   studio,
   event,
   tabs,
+  actions,
   children,
 }: {
   readonly studio: 'venue' | 'host' | 'promoter';
   readonly event: EventWorkspaceModel;
   readonly tabs: readonly EventWorkspaceTab[];
+  /** Override role actions when a studio has a different permission model. */
+  readonly actions?: ReactNode;
   readonly children: ReactNode;
 }) {
   const baseHref = `/partner/${studio}/events/${encodeURIComponent(event.id)}`;
@@ -79,7 +82,9 @@ export function EventWorkspaceChrome({
                   <h1>{event.title}</h1>
                   {event.contextLabel ? <p>{event.contextLabel}</p> : null}
                 </div>
-                {studio !== 'promoter' ? (
+                {actions !== undefined ? (
+                  actions
+                ) : studio === 'host' ? (
                   <div className={styles['actions']}>
                     <Link href={`${baseHref}/edit`}>
                       <EditIcon size={14} aria-hidden="true" /> Edit
@@ -100,7 +105,9 @@ export function EventWorkspaceChrome({
               </dl>
             </div>
           </header>
-          <EventWorkspaceTabs tabs={tabs} baseHref={baseHref} level="secondary" />
+          {tabs.length > 1 ? (
+            <EventWorkspaceTabs tabs={tabs} baseHref={baseHref} level="secondary" />
+          ) : null}
           <div className={styles['workspaceContent']}>{children}</div>
         </div>
       </PageContainer>

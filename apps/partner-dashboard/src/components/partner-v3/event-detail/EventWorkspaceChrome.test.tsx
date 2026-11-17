@@ -40,3 +40,31 @@ it('places primary pills above the event info card and active sales pills below 
   expect(screen.getByRole('link', { name: 'Analytics' })).toHaveAttribute('aria-current', 'page');
   expect(screen.getByRole('heading', { name: 'Neon Nights: Afrobeats' })).toBeInTheDocument();
 });
+
+it('uses shared event chrome without showing Host-only actions in Venue Studio', () => {
+  render(
+    <EventWorkspaceChrome
+      studio="venue"
+      event={{
+        id: 'event-a',
+        title: 'C1RCLE STAGING ACCEPTANCE 001',
+        venue: 'Test Venue',
+        dateTime: 'Sun, Nov 29 · 6:00 PM IST',
+        statusLabel: 'published',
+        artwork: { type: 'gradient', value: 'placeholder' },
+        metrics: [{ label: 'Ticket tiers', value: '2' }],
+      }}
+      tabs={[{ label: 'Overview', href: '/partner/venue/events/event-a' }]}
+    >
+      <p>Venue event data</p>
+    </EventWorkspaceChrome>,
+  );
+
+  expect(
+    screen.getByRole('heading', { name: 'C1RCLE STAGING ACCEPTANCE 001' }),
+  ).toBeInTheDocument();
+  expect(screen.getByText('Venue event data')).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'Door Mode' })).not.toBeInTheDocument();
+  expect(screen.getAllByRole('navigation')).toHaveLength(1);
+});
