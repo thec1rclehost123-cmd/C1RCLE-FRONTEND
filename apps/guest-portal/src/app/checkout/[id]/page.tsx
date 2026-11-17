@@ -51,6 +51,10 @@ async function getCheckoutEvent(id: string): Promise<CheckoutEventResult> {
         .catch(() => null)
     : null;
 
+  if (event.salesStatus && event.salesStatus !== 'on_sale' && event.salesStatus !== 'sold_out') {
+    return { kind: 'ready', event: toBookingEventFixture(event, venue, [], []) };
+  }
+
   let tiers;
   try {
     tiers = await client.get({

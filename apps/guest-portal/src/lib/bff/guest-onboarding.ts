@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import {
   guestOnboardingPatchSchema,
+  guestOnboardingStatusSchema,
   guestOnboardingStateSchema,
   guestPhoneProofSchema,
 } from '@c1rcle/contracts/guest-onboarding';
@@ -17,7 +18,10 @@ import {
 
 import type { NextRequest } from 'next/server';
 
-export async function proxyGuestOnboarding(req: NextRequest, operation: 'read' | 'save' | 'phone') {
+export async function proxyGuestOnboarding(
+  req: NextRequest,
+  operation: 'read' | 'status' | 'save' | 'phone',
+) {
   const origin = assertSameOrigin(req);
   if (origin) return origin;
   if (
@@ -25,13 +29,13 @@ export async function proxyGuestOnboarding(req: NextRequest, operation: 'read' |
     !req.cookies.get('__Secure-better-auth.session_token')?.value
   )
     return errorEnvelope('unauthorized', 'Sign in to continue.', 401);
-  if (operation !== 'read') {
+  if (operation !== 'read' && operation !== 'status') {
     const csrf = assertCsrf(req);
     if (csrf) return csrf;
   }
   try {
     let body: unknown;
-    if (operation !== 'read') {
+    if (operation !== 'read' && operation !== 'status') {
       const parsed = (
         operation === 'phone' ? guestPhoneProofSchema : guestOnboardingPatchSchema
       ).safeParse(await req.json());
@@ -40,9 +44,14 @@ export async function proxyGuestOnboarding(req: NextRequest, operation: 'read' |
       body = parsed.data;
     }
     const response = await forwardToGateway(
-      `/api/v2/profile/onboarding${operation === 'phone' ? '/phone' : ''}`,
+      `/api/v2/profile/onboarding${operation === 'phone' ? '/phone' : operation === 'status' ? '/status' : ''}`,
       {
-        method: operation === 'read' ? 'GET' : operation === 'save' ? 'PUT' : 'POST',
+        method:
+          operation === 'read' || operation === 'status'
+            ? 'GET'
+            : operation === 'save'
+              ? 'PUT'
+              : 'POST',
         ...(body !== undefined ? { body } : {}),
         cookie: req.headers.get('cookie'),
       },
@@ -53,12 +62,15 @@ export async function proxyGuestOnboarding(req: NextRequest, operation: 'read' |
         await response.text(),
         response.headers.get('retry-after'),
       );
-    if (operation !== 'read')
+    if (operation !== 'read' && operation !== 'status')
       return new NextResponse(null, {
         status: 204,
         headers: { 'cache-control': 'private, no-store' },
       });
-    const parsed = guestOnboardingStateSchema.safeParse(await response.json());
+    const parsed =
+      operation === 'status'
+        ? guestOnboardingStatusSchema.safeParse(await response.json())
+        : guestOnboardingStateSchema.safeParse(await response.json());
     if (!parsed.success) return gatewayUnreachable();
     return NextResponse.json(parsed.data, { headers: { 'cache-control': 'private, no-store' } });
   } catch {

@@ -20,7 +20,7 @@ import {
 } from '@/features/event-detail/components/PromoterClickTracker';
 import { getEventAccentClasses } from '@/features/event-detail/eventDetailPalette';
 import { EventArtworkFallback } from '@/features/explore/components/EventArtworkFallback';
-import { readOnboarding } from '@/features/onboarding/client';
+import { readOnboardingStatus } from '@/features/onboarding/client';
 import { useTicketAccessGrantId } from '@/lib/access/use-ticket-access-grant-id';
 import { guestDestination } from '@/lib/auth/continue-path';
 import { captureGuestReturnFragment } from '@/lib/auth/return-fragment';
@@ -640,7 +640,7 @@ function CheckoutFlowClientState({
       return;
     }
     try {
-      const onboarding = await readOnboarding();
+      const onboarding = await readOnboardingStatus();
       if (!onboarding.phoneVerified) {
         router.push(`/onboarding?next=${encodeURIComponent(checkoutReturnPath)}`);
         return;
@@ -919,7 +919,15 @@ function CheckoutFlowClientState({
               })}
               {event.ticketTiers.length === 0 && (
                 <p className="rounded-xl border border-white/10 bg-white/[0.025] p-4 text-sm leading-6 text-white/55">
-                  Tickets are not available for this event right now.
+                  {event.salesStatus === 'ended'
+                    ? 'Sales have ended for this event.'
+                    : event.salesStatus === 'sales_paused'
+                      ? 'Ticket sales are paused for this event.'
+                      : event.salesStatus === 'cancelled'
+                        ? 'This event has been cancelled.'
+                        : event.salesStatus === 'postponed'
+                          ? 'This event has been postponed.'
+                          : 'Tickets are not available for this event right now.'}
                 </p>
               )}
               <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-4">

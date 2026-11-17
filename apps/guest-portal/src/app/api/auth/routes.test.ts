@@ -70,7 +70,9 @@ describe('POST /api/auth/signup', () => {
     const response = await signup(req('POST', '/api/auth/signup', {}, body));
     expect(response.status).toBe(201);
     expect(mockForward).toHaveBeenCalledWith('/api/v2/auth/signup', { method: 'POST', body });
-    await expect(response.json()).resolves.toMatchObject({ user: { role: 'guest' } });
+    const responseBody: unknown = await response.json();
+    expect(responseBody).toMatchObject({ user: { role: 'guest' } });
+    expect(responseBody).not.toHaveProperty('accessToken');
     expect(response.headers.get('set-cookie')).toContain('better-auth.session_token=sess_abc');
     expect(response.headers.get('set-cookie')).toContain('guest.c1rcle.csrf=');
   });
@@ -104,6 +106,7 @@ describe('POST /api/auth/change-password', () => {
     );
 
     expect(response.status).toBe(200);
+    expect(await response.clone().json()).not.toHaveProperty('accessToken');
     expect(mockForward).toHaveBeenCalledWith('/api/v2/auth/change-password', {
       method: 'POST',
       body: passwordBody,
@@ -144,7 +147,7 @@ describe('POST /api/auth/login', () => {
     );
 
     expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toMatchObject({ accessToken: 'tok_abc' });
+    expect(await res.clone().json()).not.toHaveProperty('accessToken');
     const cookies = res.headers.get('set-cookie') ?? '';
     expect(cookies).toContain('better-auth.session_token=sess_abc');
     expect(cookies).toContain(`${CSRF}=`);
@@ -301,7 +304,24 @@ describe('POST /api/auth/refresh', () => {
     mockForward.mockResolvedValue(gw(AUTH_BODY, { headers: { 'set-cookie': SESSION_SET_COOKIE } }));
     const res = await refresh(req('POST', '/api/auth/refresh', csrfHeaders));
     expect(res.status).toBe(200);
+    expect(await res.clone().json()).not.toHaveProperty('accessToken');
     expect(res.headers.get('set-cookie') ?? '').toContain('sess_abc');
+  });
+
+  it('marks the refreshed session Secure on HTTPS and prevents caching', async () => {
+    mockForward.mockResolvedValue(gw(AUTH_BODY, { headers: { 'set-cookie': SESSION_SET_COOKIE } }));
+    const secureRequest = new NextRequest('https://guest.example/api/auth/refresh', {
+      method: 'POST',
+      headers: {
+        origin: 'https://guest.example',
+        cookie: `${CSRF}=tok; better-auth.session_token=sess`,
+        'x-csrf-token': 'tok',
+      },
+    });
+
+    const res = await refresh(secureRequest);
+    expect(res.headers.get('cache-control')).toBe('private, no-store');
+    expect(res.headers.get('set-cookie') ?? '').toContain('Secure');
   });
 
   it('clears the dead cookies on a 401', async () => {

@@ -92,9 +92,19 @@ function isNonPublicPosterHostname(hostname: string): boolean {
 /** Poster URLs are consumed by Guests and must not point at a local/private host. */
 export const eventPosterUrlSchema = z
   .url({ protocol: /^https$/, error: 'Use a public HTTPS poster URL.' })
-  .refine((value) => !isNonPublicPosterHostname(new URL(value).hostname), {
-    message: 'Use a public HTTPS poster URL; local and private addresses are not allowed.',
-  });
+  .refine(
+    (value) => {
+      const authority = /^https:\/\/([^/?#]*)/i.exec(value)?.[1] ?? '';
+      const host = authority.slice(authority.lastIndexOf('@') + 1);
+      const hostname = host.startsWith('[')
+        ? host.slice(0, host.indexOf(']') + 1)
+        : (host.split(':')[0] ?? '');
+      return !isNonPublicPosterHostname(hostname);
+    },
+    {
+      message: 'Use a public HTTPS poster URL; local and private addresses are not allowed.',
+    },
+  );
 
 export const eventMediaSchema = z
   .object({
@@ -182,6 +192,10 @@ export const eventDtoSchema = z.object({
   startAt: z.iso.datetime(),
   endAt: z.iso.datetime().nullable(),
   status: eventStatusSchema,
+  /** Present on public Guest event reads; omitted by unrelated partner projections. */
+  salesStatus: z
+    .enum(['on_sale', 'sold_out', 'sales_paused', 'ended', 'cancelled', 'postponed'])
+    .optional(),
   visibilityMode: eventVisibilityModeSchema,
   addressDisclosure: eventAddressDisclosureSchema.default('public'),
   isPublic: z.boolean(),
@@ -486,6 +500,12 @@ export const ticketTierDtoSchema = z.object({
   updatedAt: z.iso.datetime(),
 });
 export type TicketTierDto = z.infer<typeof ticketTierDtoSchema>;
+
+/** Authorized Venue read model for one Host-owned event at its Venue. */
+export const venueEventDetailResponseSchema = z
+  .object({ event: eventDtoSchema, tiers: z.array(ticketTierDtoSchema) })
+  .strict();
+export type VenueEventDetailResponse = z.infer<typeof venueEventDetailResponseSchema>;
 
 const createTicketTierBaseSchema = z
   .object({
@@ -792,6 +812,7 @@ export const publicTicketTierDtoSchema = z.object({
   coverAmountPaise: z.number().int().nonnegative().optional(),
   currency: z.string().length(3),
   availableQuantity: z.number().int().nonnegative(),
+  /** Public purchase limit used to keep Guest quantity controls within the server rule. */
   maxPerOrder: z.number().int().positive().nullable().optional(),
   guestCount: z.number().int().positive().optional(),
   admissionMode: z.enum(['bundle', 'per_person']).optional(),
@@ -806,12 +827,6 @@ export const publicTicketTierListResponseSchema = z.object({
   items: z.array(publicTicketTierDtoSchema),
 });
 export type PublicTicketTierListResponse = z.infer<typeof publicTicketTierListResponseSchema>;
-
-/** Authorized Venue read model for one Host-owned event at its Venue. */
-export const venueEventDetailResponseSchema = z
-  .object({ event: eventDtoSchema, tiers: z.array(ticketTierDtoSchema) })
-  .strict();
-export type VenueEventDetailResponse = z.infer<typeof venueEventDetailResponseSchema>;
 
 export const publicTicketAddonDtoSchema = z.object({
   id: opaqueIdSchema,

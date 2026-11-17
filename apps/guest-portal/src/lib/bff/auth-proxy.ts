@@ -145,11 +145,11 @@ export function mintCsrfToken(): string {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-export function setCsrfCookie(res: NextResponse, token: string): void {
+export function setCsrfCookie(res: NextResponse, token: string, secure = isProduction()): void {
   res.cookies.set(csrfCookieName(), token, {
     httpOnly: false,
     sameSite: 'strict',
-    secure: isProduction(),
+    secure,
     path: '/',
   });
 }
@@ -159,15 +159,15 @@ export function setCsrfCookie(res: NextResponse, token: string): void {
  * on the gateway: if its revoke call fails (or its response carries no
  * `Set-Cookie`), the browser would otherwise keep a live session cookie.
  */
-export function clearSessionCookie(res: NextResponse): void {
+export function clearSessionCookie(res: NextResponse, secure = isProduction()): void {
   res.cookies.set(SESSION_COOKIE_NAME, '', {
     httpOnly: true,
     sameSite: 'lax',
-    secure: isProduction(),
+    secure,
     path: '/',
     maxAge: 0,
   });
-  if (isProduction()) {
+  if (secure) {
     res.cookies.set(`__Secure-${SESSION_COOKIE_NAME}`, '', {
       httpOnly: true,
       sameSite: 'lax',
@@ -178,8 +178,14 @@ export function clearSessionCookie(res: NextResponse): void {
   }
 }
 
-export function clearCsrfCookie(res: NextResponse): void {
-  res.cookies.set(csrfCookieName(), '', { path: '/', maxAge: 0 });
+export function clearCsrfCookie(res: NextResponse, secure = isProduction()): void {
+  res.cookies.set(csrfCookieName(), '', {
+    httpOnly: false,
+    sameSite: 'strict',
+    secure,
+    path: '/',
+    maxAge: 0,
+  });
 }
 
 export interface ForwardInit {
@@ -279,7 +285,12 @@ function parseSetCookie(raw: string): ParsedSetCookie | null {
  * `Secure` (prod) re-imposed regardless of what the gateway sent. Returns the
  * cookie names, so logout can also actively expire them.
  */
-export function rescopeSessionCookies(gatewayResponse: Response, res: NextResponse): string[] {
+export function rescopeSessionCookies(
+  gatewayResponse: Response,
+  res: NextResponse,
+  secure = isProduction(),
+): string[] {
+  res.headers.set('Cache-Control', 'private, no-store');
   const names: string[] = [];
   for (const raw of gatewayResponse.headers.getSetCookie()) {
     const parsed = parseSetCookie(raw);
@@ -302,7 +313,7 @@ export function rescopeSessionCookies(gatewayResponse: Response, res: NextRespon
     res.cookies.set(name, parsed.value, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: isProduction(),
+      secure,
       path: parsed.path ?? '/',
       ...(parsed.maxAge !== undefined ? { maxAge: parsed.maxAge } : {}),
       ...(parsed.expires !== undefined ? { expires: parsed.expires } : {}),
@@ -358,6 +369,7 @@ export function passThroughGatewayError(
   if (effective === 429 && retryAfter !== undefined && retryAfter !== null) {
     res.headers.set('Retry-After', retryAfter);
   }
+  res.headers.set('Cache-Control', 'private, no-store');
   return res;
 }
 
@@ -373,4 +385,12 @@ export function parseJson(bodyText: string): unknown {
   } catch {
     return undefined;
   }
+}
+
+/** Remove the Gateway bearer credential before returning Guest auth data to browser JavaScript. */
+export function guestSessionResponse(payload: unknown): unknown {
+  if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) return payload;
+  const browserPayload = { ...payload } as Record<string, unknown>;
+  delete browserPayload['accessToken'];
+  return browserPayload;
 }

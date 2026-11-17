@@ -44,7 +44,12 @@ export function assertSameOrigin(req: NextRequest): NextResponse | null {
 
 /** Flat error envelope, matching the gateway's shape (`{ code, message, status, requestId }`). */
 export function errorEnvelope(code: string, message: string, status: number): NextResponse {
-  return NextResponse.json({ code, message, status, requestId: newRequestId() }, { status });
+  const response = NextResponse.json(
+    { code, message, status, requestId: newRequestId() },
+    { status },
+  );
+  response.headers.set('Cache-Control', 'private, no-store');
+  return response;
 }
 
 interface ForwardInit {

@@ -21,7 +21,7 @@ vi.mock('next/navigation', () => ({
 vi.mock('@c1rcle/auth', () => ({
   useSessionStore: Object.assign(() => mocks.session, { getState: () => mocks.session }),
 }));
-vi.mock('@/features/onboarding/client', () => ({ readOnboarding: mocks.read }));
+vi.mock('@/features/onboarding/client', () => ({ readOnboardingStatus: mocks.read }));
 beforeEach(() => {
   mocks.router.replace.mockReset();
   mocks.read.mockReset();

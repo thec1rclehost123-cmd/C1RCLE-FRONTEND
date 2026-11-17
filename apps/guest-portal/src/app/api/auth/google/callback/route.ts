@@ -32,8 +32,8 @@ export async function GET(req: NextRequest) {
     const response = NextResponse.redirect(
       new URL(guestContinuePath(target.pathname + target.search + target.hash), req.url),
     );
-    rescopeSessionCookies(upstream, response);
-    setCsrfCookie(response, mintCsrfToken());
+    rescopeSessionCookies(upstream, response, req.nextUrl.protocol === 'https:');
+    setCsrfCookie(response, mintCsrfToken(), req.nextUrl.protocol === 'https:');
     response.headers.set('cache-control', 'no-store');
     return response;
   } catch {

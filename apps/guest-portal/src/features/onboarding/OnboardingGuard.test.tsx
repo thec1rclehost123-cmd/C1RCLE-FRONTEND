@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { readOnboarding } from './client';
+import { readOnboardingStatus } from './client';
 import { OnboardingGuard } from './OnboardingGuard';
 
 const { replace, session, route } = vi.hoisted(() => ({
@@ -20,7 +20,7 @@ vi.mock('next/navigation', () => ({
 vi.mock('@c1rcle/auth', () => ({
   useSessionStore: Object.assign(() => session, { getState: () => session }),
 }));
-vi.mock('./client', () => ({ readOnboarding: vi.fn() }));
+vi.mock('./client', () => ({ readOnboarding: vi.fn(), readOnboardingStatus: vi.fn() }));
 beforeEach(() => {
   vi.clearAllMocks();
   session.session.user.emailVerified = true;
@@ -30,17 +30,17 @@ beforeEach(() => {
 });
 describe('authoritative direct-visit resume', () => {
   it('redirects incomplete Guests on a normal authenticated visit', async () => {
-    vi.mocked(readOnboarding).mockResolvedValue({ complete: false } as never);
+    vi.mocked(readOnboardingStatus).mockResolvedValue({ complete: false } as never);
     render(<OnboardingGuard />);
     await waitFor(() => {
       expect(replace).toHaveBeenCalledWith('/onboarding?next=%2Fcheckout');
     });
   });
   it('leaves completed Guests at their destination', async () => {
-    vi.mocked(readOnboarding).mockResolvedValue({ complete: true } as never);
+    vi.mocked(readOnboardingStatus).mockResolvedValue({ complete: true } as never);
     render(<OnboardingGuard />);
     await waitFor(() => {
-      expect(readOnboarding).toHaveBeenCalled();
+      expect(readOnboardingStatus).toHaveBeenCalled();
     });
     expect(replace).not.toHaveBeenCalled();
   });
@@ -48,25 +48,25 @@ describe('authoritative direct-visit resume', () => {
     session.session.user.emailVerified = false;
     render(<OnboardingGuard />);
     expect(replace).toHaveBeenCalledWith('/verify-email?next=%2Fcheckout');
-    expect(readOnboarding).not.toHaveBeenCalled();
+    expect(readOnboardingStatus).not.toHaveBeenCalled();
   });
   it.each(['/', '/explore', '/search', '/event/public-event', '/hosts', '/venues/public-venue'])(
     'allows anonymous and incomplete authenticated browsing at %s',
     (pathname) => {
       route.pathname = pathname;
       const view = render(<OnboardingGuard />);
-      expect(readOnboarding).not.toHaveBeenCalled();
+      expect(readOnboardingStatus).not.toHaveBeenCalled();
       expect(replace).not.toHaveBeenCalled();
       view.unmount();
       session.status = 'anonymous';
       render(<OnboardingGuard />);
-      expect(readOnboarding).not.toHaveBeenCalled();
+      expect(readOnboardingStatus).not.toHaveBeenCalled();
       expect(replace).not.toHaveBeenCalled();
     },
   );
   it('preserves the protected checkout query when resuming onboarding', async () => {
     window.history.replaceState({}, '', '/checkout?eventId=fixture-event&tierId=fixture-tier');
-    vi.mocked(readOnboarding).mockResolvedValue({ complete: false } as never);
+    vi.mocked(readOnboardingStatus).mockResolvedValue({ complete: false } as never);
     render(<OnboardingGuard />);
     await waitFor(() => {
       expect(replace).toHaveBeenCalledWith(
@@ -77,7 +77,7 @@ describe('authoritative direct-visit resume', () => {
 
   it('withholds protected controls until completion is confirmed', async () => {
     let resolve: ((value: never) => void) | undefined;
-    vi.mocked(readOnboarding).mockReturnValue(
+    vi.mocked(readOnboardingStatus).mockReturnValue(
       new Promise((done) => {
         resolve = done;
       }),
@@ -99,6 +99,6 @@ describe('authoritative direct-visit resume', () => {
       </OnboardingGuard>,
     );
     expect(screen.getByRole('button', { name: 'Browse events' })).toBeInTheDocument();
-    expect(readOnboarding).not.toHaveBeenCalled();
+    expect(readOnboardingStatus).not.toHaveBeenCalled();
   });
 });

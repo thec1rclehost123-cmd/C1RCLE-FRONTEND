@@ -20,6 +20,7 @@ export interface ExploreEvent {
   isFree?: boolean;
   summary?: string;
   availability: 'available' | 'sold-out' | 'unavailable';
+  salesStatus?: 'on_sale' | 'sold_out' | 'sales_paused' | 'ended' | 'cancelled' | 'postponed';
   availableQuantity: number | null;
   badge?: 'Trending' | 'Live';
 }

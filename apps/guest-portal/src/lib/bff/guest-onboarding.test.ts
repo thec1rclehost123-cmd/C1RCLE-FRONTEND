@@ -26,6 +26,35 @@ function request(body: unknown, extra: Record<string, string> = {}) {
 }
 beforeEach(() => vi.clearAllMocks());
 describe('private onboarding BFF', () => {
+  it('returns only the minimized status projection to navigation guards', async () => {
+    const statusRequest = new NextRequest(`${origin}/api/onboarding/status`, {
+      headers: { origin, cookie: headers.cookie },
+    });
+    forward.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          displayName: 'Guest',
+          phoneVerified: true,
+          maskedPhone: '••••3210',
+          complete: true,
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      ),
+    );
+    const response = await proxyGuestOnboarding(statusRequest, 'status');
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+    await expect(response.json()).resolves.toEqual({
+      displayName: 'Guest',
+      phoneVerified: true,
+      maskedPhone: '••••3210',
+      complete: true,
+    });
+    expect(forward).toHaveBeenCalledWith('/api/v2/profile/onboarding/status', {
+      method: 'GET',
+      cookie: headers.cookie,
+    });
+  });
   it('requires session, same origin and CSRF before writing', async () => {
     expect(
       (await proxyGuestOnboarding(request({ displayName: 'Guest' }, { cookie: '' }), 'save'))

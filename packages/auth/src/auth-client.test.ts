@@ -120,6 +120,16 @@ describe('auth-client', () => {
       expect(useSessionStore.getState().status).toBe('authenticated');
     });
 
+    it('supports cookie-only Guest sessions without storing a browser access token', async () => {
+      stubFetch().mockResolvedValue(jsonResponse(authBody({ accessToken: undefined })));
+
+      await login({ email: 'guest@example.test', password: 'password123' });
+
+      expect(useSessionStore.getState().status).toBe('authenticated');
+      expect(useSessionStore.getState().accessToken).toBeNull();
+      expect(useSessionStore.getState().session?.user.email).toBe('a@b.com');
+    });
+
     it('returns the server verification state to onboarding recovery flows', async () => {
       const userWithPendingEmail = { ...user, emailVerified: false };
       stubFetch().mockResolvedValue(jsonResponse(authBody({ user: userWithPendingEmail })));

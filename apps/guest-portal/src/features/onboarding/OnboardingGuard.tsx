@@ -9,7 +9,7 @@ import { guestDestination } from '@/lib/auth/continue-path';
 import { isGuestProtectedPath } from '@/lib/auth/protected-path';
 import { captureGuestReturnFragment, restoreGuestReturnFragment } from '@/lib/auth/return-fragment';
 
-import { readOnboarding } from './client';
+import { readOnboardingStatus } from './client';
 
 export function OnboardingGuard({ children }: { readonly children?: ReactNode }) {
   const session = useSessionStore();
@@ -28,7 +28,7 @@ export function OnboardingGuard({ children }: { readonly children?: ReactNode })
       router.replace(`/verify-email?next=${next}`);
       return;
     }
-    void readOnboarding()
+    void readOnboardingStatus()
       .then((state) => {
         if (!active) return;
         if (state.complete) {

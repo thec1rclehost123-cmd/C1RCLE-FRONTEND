@@ -22,6 +22,7 @@ export type ApiErrorCode =
   | 'forbidden'
   | 'not_found'
   | 'conflict'
+  | 'event_not_on_sale'
   | 'validation'
   | 'rate_limited'
   | 'server'

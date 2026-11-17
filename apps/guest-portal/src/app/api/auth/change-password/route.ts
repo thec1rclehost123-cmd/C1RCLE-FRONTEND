@@ -9,6 +9,7 @@ import {
   errorEnvelope,
   forwardToGateway,
   gatewayUnreachable,
+  guestSessionResponse,
   parseJson,
   passThroughGatewayError,
   rescopeSessionCookies,
@@ -60,8 +61,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const payload = parseJson(bodyText);
   if (payload === undefined) return gatewayUnreachable();
-  const res = NextResponse.json(payload, { status: 200 });
-  rescopeSessionCookies(gatewayResponse, res);
+  const res = NextResponse.json(guestSessionResponse(payload), { status: 200 });
+  rescopeSessionCookies(gatewayResponse, res, req.nextUrl.protocol === 'https:');
   res.headers.set('Cache-Control', 'private, no-store');
   return res;
 }

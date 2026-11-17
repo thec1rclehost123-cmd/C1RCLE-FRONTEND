@@ -35,8 +35,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   if (gatewayResponse.status === 401) {
     const res = errorEnvelope('unauthorized', 'Not authenticated.', 401);
-    clearSessionCookie(res);
-    clearCsrfCookie(res);
+    clearSessionCookie(res, req.nextUrl.protocol === 'https:');
+    clearCsrfCookie(res, req.nextUrl.protocol === 'https:');
     return res;
   }
   if (!gatewayResponse.ok) {
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const res = NextResponse.json(payload, { status: 200 });
   res.headers.set('Cache-Control', 'private, no-store');
   if (!req.cookies.has(csrfCookieName()) && !req.cookies.has('c1rcle.csrf')) {
-    setCsrfCookie(res, mintCsrfToken());
+    setCsrfCookie(res, mintCsrfToken(), req.nextUrl.protocol === 'https:');
   }
   return res;
 }
