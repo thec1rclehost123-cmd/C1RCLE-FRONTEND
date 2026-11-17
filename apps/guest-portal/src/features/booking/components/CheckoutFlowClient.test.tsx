@@ -301,6 +301,18 @@ describe('paid checkout step', () => {
     expect(screen.getByRole('button', { name: /^General/ })).toBeInTheDocument();
   });
 
+  it('does not let a paid tier quantity exceed its per-order limit', () => {
+    render(<CheckoutView event={LIVE_EVENT} />);
+    const generalTier = screen.getByRole('button', { name: /^General/ });
+    if (generalTier.getAttribute('aria-expanded') !== 'true') fireEvent.click(generalTier);
+    const increase = screen.getByRole('button', { name: 'Increase General count' });
+
+    for (let quantity = 1; quantity < 4; quantity += 1) fireEvent.click(increase);
+
+    expect(screen.getByText('4 selected')).toBeInTheDocument();
+    expect(increase).toBeDisabled();
+  });
+
   it('caps an unlocked free tier at one RSVP', async () => {
     window.location.hash = '#accessGrantId=grant_test';
     mocks.searchParams = 'tier=private_free';
@@ -514,8 +526,85 @@ describe('paid checkout step', () => {
       lines: [{ tierId: 'tier_1', quantity: 1 }],
     });
     expect(screen.getByText('Fees and taxes')).toBeInTheDocument();
-    expect(screen.getByText('GST on fees')).toBeInTheDocument();
+    expect(screen.getByText('Tax on fees')).toBeInTheDocument();
     expect(screen.queryByText('Fees (estimate)')).not.toBeInTheDocument();
+  });
+
+  it('shows the authoritative active phase and base price on Review Order', async () => {
+    mocks.fetchQuote.mockResolvedValue({
+      ...quote(),
+      lines: [
+        {
+          tierId: 'tier_1',
+          tierName: 'General',
+          quantity: 1,
+          unitPricePaise: 65_000,
+          admissionUnitPricePaise: 65_000,
+          baseAdmissionUnitPricePaise: 80_000,
+          pricingPhaseName: 'Early Bird',
+          subtotalPaise: 65_000,
+          admissionSubtotalPaise: 65_000,
+        },
+      ],
+    });
+    await toPaymentStep();
+
+    expect(
+      await screen.findByText(/Early Bird: ₹650 per ticket \(regular ₹800\)/),
+    ).toBeInTheDocument();
+  });
+
+  it('flags an event with no supplied refund policy before payment', async () => {
+    await toPaymentStep();
+    expect(screen.getByRole('region', { name: 'Event refund policy' })).toHaveTextContent(
+      'Refund policy not provided for this event',
+    );
+  });
+
+  it('shows the stored refund cutoff before payment', async () => {
+    render(
+      <CheckoutView
+        event={{
+          ...LIVE_EVENT,
+          refundPolicy: { kind: 'until_cutoff', cutoffAt: '2026-11-30T10:30:00.000Z' },
+        }}
+        initialTierId="tier_1"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Review order →' }));
+    expect(await screen.findByRole('region', { name: 'Event refund policy' })).toHaveTextContent(
+      'refund request cutoff of 30 Nov 2026',
+    );
+  });
+
+  it('requires the Couple ticket acknowledgment with its one-male, one-female semantics', async () => {
+    render(
+      <CheckoutView
+        event={{
+          ...LIVE_EVENT,
+          ticketTiers: [
+            {
+              ...LIVE_EVENT.ticketTiers[0]!,
+              id: 'couple',
+              name: 'Couple Entry',
+              audienceType: 'COUPLE',
+              admissionMode: 'bundle',
+              guestCount: 2,
+            },
+          ],
+        }}
+        initialTierId="couple"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Review order →' }));
+
+    const acknowledgement = await screen.findByLabelText(
+      /one male \+ one female attendee per Couple ticket/i,
+    );
+    expect(acknowledgement).not.toBeChecked();
+    expect(screen.getByRole('button', { name: 'Pay securely' })).toBeDisabled();
+    fireEvent.click(acknowledgement);
+    expect(screen.getByRole('button', { name: 'Pay ₹1,180' })).toBeEnabled();
   });
 
   it('quotes and holds one target admission against the wallet source entitlement', async () => {
@@ -671,17 +760,18 @@ describe('paid checkout step', () => {
     });
     await toPaymentStep();
     await screen.findByRole('button', { name: 'Pay ₹1,180.03' });
-    const policy = screen.getByRole('region', { name: 'Booking fee and refund policy' });
+    const policy = screen.getByRole('region', { name: 'Test fee policy' });
     expect(policy).toHaveTextContent('Test pricing policy: Synthetic quote policy');
     expect(policy).toHaveTextContent('non-production testing; production rates are not approved');
-    expect(policy).toHaveTextContent('You pay the C1RCLE booking and payment fees');
+    expect(policy).toHaveTextContent('You pay the C1RCLE booking fee and additional C1RCLE fee');
     expect(policy).toHaveTextContent('selected tickets’ admission value');
     expect(policy).toHaveTextContent(
       'full affected amount originally paid, including applicable fees and taxes',
     );
     expect(policy).toHaveTextContent('Policy version: synthetic-quote-policy-one');
     expect(screen.getByText('C1RCLE booking fee').parentElement).toHaveTextContent('₹100.01');
-    expect(screen.getByText('Payment fee').parentElement).toHaveTextContent('₹20.01');
+    expect(screen.getByText('Additional C1RCLE fee').parentElement).toHaveTextContent('₹20.01');
+    expect(screen.getByText('Tax on fees').parentElement).toHaveTextContent('₹60.01');
     expect(mocks.deps.createHold).not.toHaveBeenCalled();
   });
 
@@ -705,7 +795,7 @@ describe('paid checkout step', () => {
     await waitFor(() => {
       expect(mocks.fetchQuote).toHaveBeenCalledTimes(2);
     });
-    expect(screen.getByRole('region', { name: 'Booking fee and refund policy' })).toHaveTextContent(
+    expect(screen.getByRole('region', { name: 'Test fee policy' })).toHaveTextContent(
       'synthetic-quote-policy-two',
     );
     expect(mocks.deps.createAttempt).not.toHaveBeenCalled();

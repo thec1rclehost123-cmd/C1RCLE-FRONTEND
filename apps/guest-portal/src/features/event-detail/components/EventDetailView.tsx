@@ -71,7 +71,9 @@ export function EventDetailView({
   const lifecycle = lifecycleCopy[event.lifecycle];
   const accent = getEventAccentClasses(event.accentTone);
   const availableTiers = event.ticketTiers.filter(
-    (tier) => tier.availableQuantity === undefined || tier.availableQuantity > 0,
+    (tier) =>
+      (tier.availabilityStatus === undefined || tier.availabilityStatus === 'available') &&
+      (tier.availableQuantity === undefined || tier.availableQuantity > 0),
   );
   const hasAvailableTiers =
     event.salesStatus !== 'ended' &&
