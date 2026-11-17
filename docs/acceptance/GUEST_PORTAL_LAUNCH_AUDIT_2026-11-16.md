@@ -207,7 +207,7 @@ event→ticket→review: CTA(1)+Review(2)+Pay(3), +1 eligibility checkbox when t
 | 12 Transfers | SOURCE + TESTS ONLY | execution blocked until controlled ticket |
 | 13 Refund surfaces | SOURCE + TESTS ONLY | execution blocked until payment; refund dialog form reached |
 | 14 Notifications | SOURCE + TESTS ONLY | API empty, no Guest UI, no Guest in-app notifications emitted; email consumer read |
-| 15 Navigation audit | NOT DONE | links + key controls only; exhaustive every-control sweep NOT performed |
+| 15 Navigation audit | FULLY EXECUTED (safe scope) | ADDENDUM 4: 838 controls enumerated across 22 routes x 2 viewports, 178 clicked (repeated cards sampled 2 per pattern), plus mobile menu, checkout drawer, forms; payment/destructive controls deliberately NOT exercised |
 | 16 Mobile | REQUIRES EXTERNAL DEVICE | Chromium emulation complete at 4 widths; keyboard/safe-area need a device |
 | 17 Visual/product design | NOT DONE | deliberately deferred to the Guest Experience Quality Pass; only incidental observations recorded |
 | 18 Workflow efficiency | FULLY EXECUTED | measured table above |
@@ -219,7 +219,7 @@ event→ticket→review: CTA(1)+Review(2)+Pay(3), +1 eligibility checkbox when t
 | 24 Security/privacy | FULLY EXECUTED | |
 | 25 Error/failure | BLOCKED UNTIL PAYMENT | all injection cases executed; hold-expiry/stale-hold need payment |
 | 26 Loading/empty/skeleton | FULLY EXECUTED | |
-| 27 Accessibility | NOT DONE | structure + keyboard order done; contrast measurement, all-dialog focus traps, screen reader NOT done |
+| 27 Accessibility | FULLY EXECUTED (automated/keyboard scope); screen reader REQUIRES EXTERNAL/MANUAL | ADDENDUM 4: computed contrast, keyboard order + focus-visibility, 5 dialogs, forms, headings/landmarks, touch targets. NO screen reader was run; 163 home text elements on image/gradient backgrounds could not be contrast-measured |
 | 28 Browser robustness | REQUIRES EXTERNAL DEVICE | Safari/iOS never tested; source risks only |
 | 29 Duplication/stale code | SOURCE + TESTS ONLY | |
 | 30 Observability | BLOCKED UNTIL PAYMENT | paid-but-no-ticket trace needs a payment |
@@ -241,3 +241,33 @@ Phone OTP success path (captcha solved by a human or staging test-phone bypass) 
 - Suggested remediation order: M1 GUEST-003 (use BFF/`withGatewayCookieName` in `/profile/saved` SSR), 040 (reject ended events in `assertOnSale`/hold + auto-advance status), 002 (trusted origins + Google env + console redirect URI), 004 (approved production fee policy); M2 025/031 (quote error mapping + max-per-order UI), 030 (price denormalization), 038/039, 007/008 (cookie Secure, CSP, auth waterfall, PII over-fetch), 010/011/023/032; M3 perf (profile LCP, homepage weight), mobile input sizes, polish P3s; then Payment Acceptance; then Quality Pass.
 - Test-state left on staging: account created for QA (email-verified, onboarding stuck at phone step); existing test Guest gained a cancelled RSVP order (`RSVP-…acfd98…`, event capacity back to 75) and its city/privacy edits were restored. The test Guest also holds a ticket for C1RCLE STAGING ACCEPTANCE 001 that this audit did not create.
 - Harness lessons: never inject the Vercel bypass header on cross-origin requests (false CORS errors); clearing cookies mid-script makes private routes bounce to login (invalid data); loose "unavailable" text matching causes false soft-404s.
+
+
+---
+# ADDENDUM 4 — Phase 15 (control sweep) and Phase 27 (accessibility) — evidence
+Phases 17 and 33 remain reserved for the Guest Experience Quality Pass. No remediation done. Raw sweep output contained instrumentation artifacts; every anomaly below was re-verified by hand and artifacts are listed as retractions.
+
+## Phase 15 — coverage
+22 routes x desktop 1440 + mobile 390; 838 interactive controls enumerated, 178 exercised (links: destination, soft-404 by H1, Back, Forward; buttons: effect detection; form controls: labelling). Also exercised separately: mobile hamburger menu (all 5 links navigate, menu closes, Back works), checkout drawer (x closes, reopen keeps selection, backdrop closes, Edit tickets returns, Review, `<details>` fees row works and is keyboard-focusable), `/app` jump dots (scroll 971px / 2382px), Help Refresh (fires `GET /api/help/tickets`), Settings back link, Profile View all, logged-out auth pages. Not exercised on purpose: Pay, Confirm RSVP/cancellation, Sign out confirm, Save/Update password, Send code/Resend, Create account, Submit request.
+
+## New / revised findings
+- **GUEST-038 REVISED (P2): intermittent "unavailable" pages, not wrong routes.** `/host/aayush-host-92501a` failed once then loaded ("AAYUSH HOST"); `/venue/keshvi-agarwal-cabe12` failed twice then loaded; `/venue/test-venue-7f8349` failed once then loaded; sweep also hit "EVENT TEMPORARILY UNAVAILABLE" on `/event/qa-host-slot-01-paid-entry` and a venue page (2 of ~178 navigations; 0 of 10 repeat loads). Cold/slow backend responses (event SSR client uses a 5s timeout) render as "THIS ROOM/HOST IS OFF THE CIRCUIT" / "EVENT TEMPORARILY UNAVAILABLE" with HTTP 200, misrepresenting a timeout as a missing entity. Page loads were 2.7-4.0s at the time and one request got `ERR_CONNECTION_RESET` (sandbox attribution unproven). The earlier claim that the event page's Host link uses a wrong route is **retracted** (route works once data loads).
+- **GUEST-048 (P3):** checkout "<- Back to event" link does not dismiss the drawer (URL unchanged, Review step stays open) on desktop and mobile; only x, backdrop or Escape close it.
+- **GUEST-049 (P2, a11y):** Sign-out confirm dialog is `aria-modal` but has no focus trap (Tab leaves it on the first press; Shift+Tab also escapes) and focus is not restored on Escape (lands on a header link, not the Sign out button). The other four dialogs pass (below).
+- **GUEST-050 (P3):** `/hosts` renders a `<main>` nested inside `<main id="main">`.
+- **GUEST-051 (P2, a11y): contrast failures (computed WCAG AA).** Inactive nav links (EXPLORE/TICKETS) 2.87:1 at 12px; primary CTA white-on-orange ("Get tickets") 3.65:1; "Unlock" 3.98:1; home date pills at 9px measure ~1.4-1.7:1 (10 elements below 3:1 on `/`). `/profile`, `/help`, `/login` had no failures among measurable text. Limitation: 163 home / ~50 other text elements sit on gradients or images and were not measurable.
+- **GUEST-052 (P3, a11y): undersized targets (390px).** Carousel dots 6x6px, `/app` jump dots 10x10 (active 32x10), footer links 15px high, "View all events ->" 118x18, privacy checkboxes 18x18, search field 20px tall; 5-9 targets <24px and 8-17 <44px per page (login is clean: 0 <24px).
+- **GUEST-053 (P3, a11y):** failed login does announce via `role=alert`, but focus drops to `<body>` and the password field gets no `aria-invalid`/`aria-describedby`. Signup relies on native browser validation messages (no `role=alert`).
+- **GUEST-054 (P3):** non-prefetched client navigations wait on a server render with no feedback: Profile "View all" took **3.8s** before the URL changed (prefetched links ~0.2s; Profile -> Saved 1.4s to content). Clicks in the first ~3-5s after load can be lost before hydration (extends GUEST-016).
+
+## Phase 27 — verified passes
+Landmarks: single `main`, header, labelled `nav`s, footer on every tested page (except the `/hosts` nested main); exactly one `h1` and **no heading-level skips** on all 12 pages; page titles unique and descriptive. Keyboard: no positive tabindex, no keyboard traps (the apparent trap on Settings was the native date input's three segments), visible focus change confirmed by pixel comparison on 7 pages (only the 1x1 "Return to Explore" link on `/search` showed no visible change). Dialogs: tickets-detail, mobile menu, checkout drawer and logged-out sign-in sheet all have `role=dialog`, move focus in, keep Tab/Shift+Tab inside, close on Escape and restore focus to the trigger. Form fields all have programmatic labels. Icon buttons have accessible names (earlier pass).
+**Screen-reader acceptance: NOT performed - REQUIRES EXTERNAL/MANUAL VERIFICATION.**
+
+## Retractions from this pass (instrumentation artifacts, not product defects)
+"Back to Profile" and "View all" "dead" (slow server render / pre-hydration click), `/app` jump buttons "inert" (they scroll), Help Refresh "inert" (it fetches), "Open in Maps" missing noopener (`rel=noreferrer` implies it), home card "click failed" (inert aria-hidden marquee duplicate), "no dialog role" on drawer/sheet (selector artifact), settings "keyboard trap" (date input), `/help` "no landmarks" (measured before it rendered).
+
+## Updated counts and score
+P0: 0 - **P1: 4** (GUEST-002, 003, 004, 040; GUEST-005 conditional) - **P2: 19** (previous 17 + GUEST-049, 051; GUEST-038 retained as P2, revised) - **P3: 26** (previous 21 + 048, 050, 052, 053, 054).
+Score unchanged: **62/100**. Accessibility evidence is mixed-to-good (headings, landmarks, labels, 4 of 5 dialogs, focus visibility) and does not offset the open P1s. **GUEST PORTAL LAUNCH READY: NO.**
+Phases still not fully executed: 3 (OTP success path), 10, 11, 25, 30 (payment), 12-14 (execution), 16/28 (real device), 22/31 (database), 17/33 (reserved). Screen-reader testing is the remaining part of 27.
