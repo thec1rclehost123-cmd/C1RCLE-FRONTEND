@@ -27,9 +27,13 @@ function roleLabel(role: OrganizationMemberDto['role']): string {
     case 'owner':
       return 'Owner';
     case 'admin':
-      return 'Admin';
+      return 'Ops lead';
     case 'manager':
-      return 'Manager';
+      return 'Venue manager';
+    case 'door_supervisor':
+      return 'Door supervisor';
+    case 'gate_staff':
+      return 'Gate staff';
     case 'member':
       return 'Staff';
   }

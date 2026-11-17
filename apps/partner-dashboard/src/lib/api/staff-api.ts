@@ -68,6 +68,12 @@ export interface StaffApi {
   removeMember(organizationId: string, userId: string): Promise<void>;
   revokeInvitation(invitationId: string): Promise<InvitationDto>;
   /**
+   * Re-sends a pending invitation. If the invitee never chose their own
+   * password, the gateway issues a fresh 2-day temporary password and the old
+   * one stops working; someone who already has a password just gets the link.
+   */
+  resendInvitation(invitationId: string): Promise<InvitationDto>;
+  /**
    * Accepts an invitation as the signed-in invitee. Deliberately org-unscoped:
    * membership is what this grants, so no `x-organization-id` is sent — the
    * gateway resolves the actor from the session alone.
@@ -145,6 +151,13 @@ export const staffApi: StaffApi = {
   revokeInvitation: (invitationId) =>
     apiClient.post({
       path: `/api/v2/invitations/${encodeURIComponent(invitationId)}/revoke`,
+      headers: buildHeaders(true),
+      schema: invitationDtoSchema,
+    }),
+
+  resendInvitation: (invitationId) =>
+    apiClient.post({
+      path: `/api/v2/invitations/${encodeURIComponent(invitationId)}/resend`,
       headers: buildHeaders(true),
       schema: invitationDtoSchema,
     }),

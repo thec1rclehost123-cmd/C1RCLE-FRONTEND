@@ -10,6 +10,7 @@ import { Button } from '@/components/partner-v3/Button';
 import { PageContainer } from '@/components/partner-v3/PagePrimitives';
 import { SearchInput } from '@/components/partner-v3/SearchInput';
 import { EmptyState } from '@/components/partner-v3/States';
+import { staffApi } from '@/lib/api/staff-api';
 
 import { PartnerCard } from './PartnerCard';
 import { PartnerProfilePanel } from './PartnerProfilePanel';
@@ -243,6 +244,36 @@ function StaffList({
   const [editingMember, setEditingMember] = useState<StaffMember | null>(null);
   const [revokingMemberCandidate, setRevokingMemberCandidate] = useState<StaffMember | null>(null);
   const [reinvitingCandidate, setReinvitingCandidate] = useState<StaffInvite | null>(null);
+  // Resend is self-contained here: one call, one short notice per invite.
+  const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
+  const [resendNotice, setResendNotice] = useState<{
+    readonly id: string;
+    readonly message: string;
+    readonly failed: boolean;
+  } | null>(null);
+  const handleResendInvite = (invite: StaffInvite) => {
+    setResendingInviteId(invite.id);
+    setResendNotice(null);
+    staffApi
+      .resendInvitation(invite.id)
+      .then(() => {
+        setResendNotice({
+          id: invite.id,
+          failed: false,
+          message: 'Invite sent again. Any earlier temporary password no longer works.',
+        });
+      })
+      .catch((error: unknown) => {
+        setResendNotice({
+          id: invite.id,
+          failed: true,
+          message: error instanceof Error ? error.message : 'Could not resend the invite.',
+        });
+      })
+      .finally(() => {
+        setResendingInviteId(null);
+      });
+  };
   const normalized = search.trim().toLowerCase();
   const members = filterBySearch(staff, search);
   const pendingInvites = invites.filter(
@@ -318,10 +349,23 @@ function StaffList({
                     {revokeErrorId === invite.id && revokeError ? (
                       <p role="alert">{revokeError}</p>
                     ) : null}
+                    {resendNotice?.id === invite.id ? (
+                      <p role={resendNotice.failed ? 'alert' : 'status'}>{resendNotice.message}</p>
+                    ) : null}
                   </div>
                 </div>
                 {canManage && onRevokeInvite ? (
                   <div className={styles['requestActions']}>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={resendingInviteId === invite.id || revokingInviteId === invite.id}
+                      onClick={() => {
+                        handleResendInvite(invite);
+                      }}
+                    >
+                      {resendingInviteId === invite.id ? 'Resending…' : 'Resend'}
+                    </Button>
                     <Button
                       type="button"
                       variant="secondary"

@@ -2,36 +2,30 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { canManageRoleDto, assignableRoleSchema, organizationRoleSchema } from '@c1rcle/contracts';
+
 import { Avatar, Button, IconButton } from '@/components/partner-v3';
 import { staffApi } from '@/lib/api/staff-api';
 import { getActiveOrgId } from '@/lib/org/active-org';
+import { useActorRole } from '@/lib/org/use-actor-role';
 
 import styles from './partners.module.css';
+import { roleOptionsFor } from './staff-roles';
 
 import type { StaffMember } from '@/data/partner-data-source';
 import type { UpdateMemberRoleRequest } from '@/lib/api/staff-api';
 
 type EditableRole = UpdateMemberRoleRequest['role'];
 
-const ROLES: readonly {
-  readonly value: EditableRole;
-  readonly label: string;
-  readonly hint: string;
-}[] = [
-  { value: 'member', label: 'Staff', hint: 'Roster access' },
-  { value: 'manager', label: 'Manager', hint: 'Runs events & door' },
-  { value: 'admin', label: 'Admin', hint: 'Can manage staff' },
-];
-
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return String(error);
 }
 
-function getInitialRole(backendRole?: string): EditableRole {
-  if (backendRole === 'admin') return 'admin';
-  if (backendRole === 'manager') return 'manager';
-  return 'member';
+/** The member's current role if it is one the picker can show, else null. */
+function getInitialRole(backendRole?: string): EditableRole | null {
+  const parsed = assignableRoleSchema.safeParse(backendRole);
+  return parsed.success ? parsed.data : null;
 }
 
 export function PartnerStaffEditRoleDialog({
@@ -47,7 +41,14 @@ export function PartnerStaffEditRoleDialog({
 }) {
   const dialogRef = useRef<HTMLElement>(null);
   const initialRole = getInitialRole(member.backendRole);
-  const [role, setRole] = useState<EditableRole>(initialRole);
+  // The ladder: only roles below your own can be assigned, and only to people
+  // below you. The server enforces it too; this avoids offering refused choices.
+  const actorRole = useActorRole(organizationId ?? getActiveOrgId());
+  const roleOptions = roleOptionsFor(actorRole);
+  const targetRole = organizationRoleSchema.safeParse(member.backendRole);
+  const canManageTarget =
+    actorRole !== null && targetRole.success && canManageRoleDto(actorRole, targetRole.data);
+  const [role, setRole] = useState<EditableRole | null>(initialRole);
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState('');
 
@@ -82,11 +83,12 @@ export function PartnerStaffEditRoleDialog({
     };
   }, [onClose]);
 
-  const canSubmit = role !== initialRole && !submitting;
+  const canSubmit = role !== null && role !== initialRole && canManageTarget && !submitting;
   const accessDetails =
     member.permissions.length > 0 ? member.permissions : (member.capabilities ?? []);
 
   const handleProceed = () => {
+    if (role === null) return;
     setSubmitting(true);
     setNotice('');
 
@@ -169,7 +171,12 @@ export function PartnerStaffEditRoleDialog({
         <fieldset className={styles['permissionFieldset']}>
           <legend>New Role</legend>
           <div className={styles['permissionOptions']}>
-            {ROLES.map((option) => (
+            {actorRole !== null && !canManageTarget ? (
+              <p className={styles['dialogNotice']}>
+                Your role cannot change this person’s access.
+              </p>
+            ) : null}
+            {roleOptions.map((option) => (
               <button
                 key={option.value}
                 type="button"
