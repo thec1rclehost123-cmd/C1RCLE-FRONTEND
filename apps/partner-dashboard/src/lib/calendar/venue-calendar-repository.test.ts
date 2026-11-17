@@ -136,6 +136,8 @@ describe('venue calendar repository mapping', () => {
         id: 'slot-venue-m15',
         label: 'open night · 7:00 PM IST – 11:00 PM IST',
         status: 'available',
+        startTime: '2026-11-16T13:30:00.000Z',
+        endTime: '2026-11-16T17:30:00.000Z',
         timezone: 'Asia/Kolkata',
         notes: 'M15-VENUE-E2E-20261030',
       },

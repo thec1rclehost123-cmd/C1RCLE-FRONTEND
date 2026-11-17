@@ -104,6 +104,39 @@ describe('Event time timeline', () => {
     expect(screen.getByLabelText('Event end time')).toHaveValue('19:00');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
+  it('renders only the available portions of a real window and keeps the conflict red', () => {
+    const onSelect = vi.fn();
+    const window: AvailabilitySlot = {
+      id: 'venue-window',
+      label: '8 PM – 11 PM IST',
+      status: 'available',
+      startTime: '2030-11-16T14:30:00.000Z',
+      endTime: '2030-11-16T17:30:00.000Z',
+      timezone: 'Asia/Kolkata',
+      blockedIntervals: [
+        { startTime: '2030-11-16T15:30:00.000Z', endTime: '2030-11-16T16:30:00.000Z' },
+      ],
+    };
+    const { container } = render(
+      <EventTimeTimeline
+        date="2030-11-16"
+        slots={[window]}
+        time="20:00"
+        endTime="23:00"
+        selectedSlotId={window.id}
+        onSelect={onSelect}
+      />,
+    );
+    const track = container.querySelector('svg[aria-label="Availability timeline"]');
+    const availableRects = Array.from(track?.children ?? []).filter(
+      (element) => element.localName === 'rect',
+    );
+    expect(availableRects).toHaveLength(2);
+    fireEvent.change(screen.getByLabelText('Event end time'), { target: { value: '21:00' } });
+    expect(onSelect).toHaveBeenLastCalledWith(window, '20:00', '21:00');
+    fireEvent.change(screen.getByLabelText('Event end time'), { target: { value: '22:00' } });
+    expect(screen.getByRole('alert')).toHaveTextContent('available interval');
+  });
   it('keeps exact time inputs without redundant sliders or duration', () => {
     const onSelect = vi.fn();
     render(

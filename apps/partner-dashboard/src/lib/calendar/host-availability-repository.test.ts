@@ -42,8 +42,8 @@ function availabilitySlot(
   return {
     id,
     label: `${status} slot`,
-    startTime: `${date}T20:00:00.000Z`,
-    endTime: `${date}T23:00:00.000Z`,
+    startTime: `${date}T14:30:00.000Z`,
+    endTime: `${date}T17:30:00.000Z`,
     status,
     capacityFor: null,
   };
@@ -118,18 +118,18 @@ describe('host availability repository mapping', () => {
       state: 'available',
       slots: [
         {
-          id: 'free-2026-09-03-0',
+          id: 'open-slot',
           status: 'available',
-          startTime: '2026-09-02T18:30:00.000Z',
-          endTime: '2026-09-04T18:30:00.000Z',
+          startTime: '2026-09-03T14:30:00.000Z',
+          endTime: '2026-09-03T17:30:00.000Z',
         },
       ],
     });
-    expect(days[3]?.state).toBe('available');
-    expect(days[4]?.state).toBe('available');
-    expect(days[5]).toMatchObject({ state: 'available', events: [{ id: 'pending' }] });
+    expect(days[3]?.state).toBe('confirmed');
+    expect(days[4]?.state).toBe('unavailable');
+    expect(days[5]).toMatchObject({ state: 'pending', events: [{ id: 'pending' }] });
     expect(days[6]).toMatchObject({
-      state: 'available',
+      state: 'confirmed',
       events: [
         {
           id: 'published',
@@ -138,7 +138,7 @@ describe('host availability repository mapping', () => {
         },
       ],
     });
-    expect(days[7]).toMatchObject({ state: 'available', events: [] });
+    expect(days[7]).toMatchObject({ state: 'unavailable', events: [] });
   });
 
   it('binds a reschedule slot request to the selected event', async () => {
@@ -161,15 +161,86 @@ describe('host availability repository mapping', () => {
       }),
     );
   });
+
+  it('keeps the real open window and exposes only clipped anonymous booking intervals', () => {
+    const occupied = {
+      ...event('private-event-id', 3, 'published'),
+      startAt: '2026-09-03T15:30:00.000Z',
+      endAt: '2026-09-03T16:30:00.000Z',
+      title: 'Private other-host event name',
+    };
+    const slots = freeTimeSlots(
+      '2026-09-03',
+      [availabilitySlot('venue-open-window', 3, 'open')],
+      [occupied],
+    );
+
+    expect(slots).toEqual([
+      expect.objectContaining({
+        id: 'venue-open-window',
+        startTime: '2026-09-03T14:30:00.000Z',
+        endTime: '2026-09-03T17:30:00.000Z',
+        blockedIntervals: [
+          {
+            startTime: '2026-09-03T15:30:00.000Z',
+            endTime: '2026-09-03T16:30:00.000Z',
+          },
+        ],
+      }),
+    ]);
+    expect(JSON.stringify(slots)).not.toContain('private-event-id');
+    expect(JSON.stringify(slots)).not.toContain('Private other-host event name');
+  });
 });
 
-describe('automatic free time windows', () => {
-  it('offers the entire empty day in IST', () => {
-    expect(freeTimeSlots('2026-09-10', [])).toMatchObject([
-      { startTime: '2026-09-09T18:30:00.000Z', endTime: '2026-09-11T18:30:00.000Z' },
+describe('published Host availability windows', () => {
+  it('offers only Venue-published open windows with their real identifiers', () => {
+    const open = {
+      ...availabilitySlot('venue-offer-1', 10, 'open'),
+      startTime: '2026-09-10T20:00:00.000Z',
+      endTime: '2026-09-11T02:00:00.000Z',
+    };
+    expect(freeTimeSlots('2026-09-11', [open])).toMatchObject([
+      {
+        id: 'venue-offer-1',
+        status: 'available',
+        startTime: open.startTime,
+        endTime: open.endTime,
+      },
     ]);
+    expect(freeTimeSlots('2026-09-11', [])).toEqual([]);
   });
-  it('subtracts overlapping booked, blocked, and pending intervals, including overnight carryover', () => {
+  it('does not offer another Venue slot that overlaps a live event', () => {
+    const open = {
+      ...availabilitySlot('venue-offer-1', 10, 'open'),
+      startTime: '2026-09-10T20:00:00.000Z',
+      endTime: '2026-09-11T02:00:00.000Z',
+    };
+    expect(
+      freeTimeSlots(
+        '2026-09-10',
+        [open],
+        [
+          {
+            ...event('venue-event', 10, 'published'),
+            startAt: '2026-09-10T21:00:00.000Z',
+            endAt: '2026-09-10T22:00:00.000Z',
+          },
+        ],
+      ),
+    ).toEqual([]);
+  });
+  it('does not offer past dates or non-open slot states', () => {
+    expect(freeTimeSlots('2026-08-01', [availabilitySlot('past', 1, 'open')])).toEqual([]);
+    expect(
+      freeTimeSlots('2026-09-10', [
+        availabilitySlot('blocked', 10, 'blocked'),
+        availabilitySlot('pending', 10, 'pending'),
+        availabilitySlot('booked', 10, 'booked'),
+      ]),
+    ).toEqual([]);
+  });
+  it('does not treat availability outside a published window as requestable', () => {
     const slots = [
       {
         ...availabilitySlot('overnight', 9, 'booked'),
@@ -187,35 +258,6 @@ describe('automatic free time windows', () => {
         endTime: '2026-09-10T11:30:00.000Z',
       },
     ];
-    expect(freeTimeSlots('2026-09-10', slots)).toMatchObject([
-      { startTime: '2026-09-09T20:30:00.000Z', endTime: '2026-09-10T08:30:00.000Z' },
-      { startTime: '2026-09-10T11:30:00.000Z', endTime: '2026-09-11T18:30:00.000Z' },
-    ]);
-  });
-  it('does not offer past dates or a fully occupied day', () => {
-    expect(freeTimeSlots('2026-08-01', [])).toEqual([]);
-    expect(
-      freeTimeSlots('2026-09-10', [
-        {
-          ...availabilitySlot('full', 10, 'blocked'),
-          startTime: '2026-09-09T18:30:00.000Z',
-          endTime: '2026-09-10T18:30:00.000Z',
-        },
-      ]),
-    ).toEqual([]);
-  });
-});
-
-describe('overnight free-window boundaries', () => {
-  it('keeps late-night availability open through midnight, stopping at a next-day booking', () => {
-    const nextDayBooking = {
-      ...availabilitySlot('next-day', 11, 'booked'),
-      startTime: '2026-09-10T19:30:00.000Z',
-      endTime: '2026-09-10T21:30:00.000Z',
-    };
-    const windows = freeTimeSlots('2026-09-10', [nextDayBooking]);
-    expect(windows).toMatchObject([
-      { startTime: '2026-09-09T18:30:00.000Z', endTime: '2026-09-10T19:30:00.000Z' },
-    ]);
+    expect(freeTimeSlots('2026-09-10', slots)).toEqual([]);
   });
 });

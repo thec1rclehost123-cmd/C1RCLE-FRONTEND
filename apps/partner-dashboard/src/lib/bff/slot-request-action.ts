@@ -46,10 +46,39 @@ export async function applySlotRequestAction(
 
   const { cookie, headers: authHeaders } = gatewayAuthInit(req);
   try {
-    const dto = await actions[action](slotRequestId, organizationId, {
+    const context = {
       cookie,
       headers: authHeaders ?? {},
-    });
+    };
+    let dto;
+    if (action === 'reject') {
+      let payload: unknown;
+      try {
+        payload = await req.json();
+      } catch {
+        return NextResponse.json(
+          { code: 'validation', message: 'A decline reason is required.', status: 400 },
+          { status: 400 },
+        );
+      }
+      const reason =
+        typeof payload === 'object' && payload !== null && 'reason' in payload
+          ? (payload as { reason?: unknown }).reason
+          : null;
+      if (typeof reason !== 'string' || !reason.trim() || reason.trim().length > 1000) {
+        return NextResponse.json(
+          {
+            code: 'validation',
+            message: 'Enter a decline reason of 1 to 1000 characters.',
+            status: 400,
+          },
+          { status: 400 },
+        );
+      }
+      dto = await rejectSlotRequest(slotRequestId, organizationId, context, reason.trim());
+    } else {
+      dto = await actions[action](slotRequestId, organizationId, context);
+    }
     return NextResponse.json(dto, { status: 200 });
   } catch (error) {
     if (error instanceof GatewayError) {

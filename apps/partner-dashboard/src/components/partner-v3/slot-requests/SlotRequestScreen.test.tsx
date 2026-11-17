@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -86,6 +86,40 @@ describe('SlotRequestScreen', () => {
 
     await user.click(screen.getByRole('button', { name: /Bassline Nights/ }));
     expect(push).toHaveBeenCalledWith('/partner/venue/slot-requests?request=venue-slot-bassline');
+  });
+
+  it('requires a Venue rejection reason before submitting the decline action', async () => {
+    const user = userEvent.setup();
+    const initial = await fixturePartnerDataSource.getVenueSlotRequests();
+    const declined = {
+      ...initial,
+      requests: initial.requests.map((request) =>
+        request.id === 'venue-slot-bassline'
+          ? {
+              ...request,
+              status: 'rejected' as const,
+              rejectionReason: 'The Venue is no longer available on this date.',
+            }
+          : request,
+      ),
+    };
+    loadSlotRequestsData.mockResolvedValueOnce(initial).mockResolvedValueOnce(declined);
+    render(<SlotRequestScreen direction="incoming" initialRequestId="venue-slot-bassline" />);
+
+    expect(await screen.findByRole('dialog', { name: 'Bassline Nights' })).toBeInTheDocument();
+    const review = within(screen.getByRole('dialog'));
+    await user.click(review.getByRole('button', { name: 'Decline' }));
+    const reason = review.getByRole('textbox', { name: 'Reason for declining' });
+    expect(review.getByRole('button', { name: 'Confirm decline' })).toBeDisabled();
+    await user.type(reason, 'The Venue is no longer available on this date.');
+    await user.click(review.getByRole('button', { name: 'Confirm decline' }));
+
+    expect(applySlotRequestAction).toHaveBeenCalledWith(
+      'venue-slot-bassline',
+      'reject',
+      'The Venue is no longer available on this date.',
+    );
+    expect(await screen.findByText(/Request declined with a reason/)).toBeInTheDocument();
   });
 
   it('copies the connected Venue public profile link from the empty state', async () => {

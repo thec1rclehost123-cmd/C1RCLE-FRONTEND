@@ -40,6 +40,7 @@ export type {
   SlotRequestListResponse,
   SlotRequestActor,
   SlotRequestDetailDto,
+  RejectSlotRequestInput,
 } from './contracts/organization.js';
 
 export {
@@ -59,6 +60,7 @@ export {
   publishVenueAvailabilitySchema,
   slotRequestDtoSchema,
   createSlotRequestSchema,
+  rejectSlotRequestSchema,
   slotRequestListResponseSchema,
   slotRequestActorSchema,
   slotRequestDetailDtoSchema,

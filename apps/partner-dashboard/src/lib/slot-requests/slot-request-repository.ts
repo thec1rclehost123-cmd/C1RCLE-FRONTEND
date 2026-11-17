@@ -12,6 +12,7 @@ import type {
   SlotRequestDirection,
   SlotRequestsData,
 } from '@/data/partner-data-source';
+import type { SlotRequestEventDraft } from '@c1rcle/contracts';
 
 export type { SlotRequestActionKind };
 
@@ -33,8 +34,14 @@ export const slotRequestsDataSchema = z.object({
     z.object({
       id: z.string(),
       eventId: z.string().optional(),
+      hasEventDraft: z.boolean().optional(),
+      eventDraft: z
+        .unknown()
+        .transform((value) => value as SlotRequestEventDraft)
+        .optional(),
       linkedEventStatus: z.string().optional(),
       status: z.enum(['pending', 'approved', 'rejected', 'cancelled']),
+      rejectionReason: z.string().nullable().optional(),
       direction: z.enum(['incoming', 'outgoing']),
       partnerName: z.string(),
       partnerRoleLabel: z.enum(['Host', 'Venue']),
@@ -153,10 +160,12 @@ export async function loadSlotRequestNotifications(
 export async function applySlotRequestAction(
   slotRequestId: string,
   kind: SlotRequestActionKind,
+  reason?: string,
 ): Promise<void> {
   const organizationId = currentOrganizationId();
   await bffClient.post({
     path: `/api/bff/slot-requests/${slotRequestId}/${kind}`,
+    body: kind === 'reject' ? { reason: reason ?? '' } : {},
     query: { organizationId },
     schema: slotRequestDtoSchema,
     headers: csrfHeaders(),

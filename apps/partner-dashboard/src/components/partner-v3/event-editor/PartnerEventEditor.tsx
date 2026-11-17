@@ -55,6 +55,7 @@ export interface PartnerEventEditorProps {
   readonly initialDate?: string;
   readonly initialSlotId?: string;
   readonly acceptedSlotMode?: boolean;
+  readonly restoreHostDraft?: boolean;
   readonly initialEvent?: PartnerEventDetailData;
   readonly organizationId?: string;
   readonly onSubmit?: (draft: EventEditorDraft, selectedSlotId: string) => Promise<void>;
@@ -96,6 +97,7 @@ export function PartnerEventEditor({
   initialDate,
   initialSlotId,
   acceptedSlotMode = false,
+  restoreHostDraft = true,
   initialEvent,
   organizationId,
   onSubmit,
@@ -122,7 +124,9 @@ export function PartnerEventEditor({
   );
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [draftReady, setDraftReady] = useState(mode !== 'create' || !isHost || !organizationId);
+  const [draftReady, setDraftReady] = useState(
+    mode !== 'create' || !isHost || !organizationId || !restoreHostDraft,
+  );
   const [draftDiscarded, setDraftDiscarded] = useState(false);
   const [draftTouched, setDraftTouched] = useState(false);
   const [draftSaveError, setDraftSaveError] = useState(false);
@@ -158,7 +162,7 @@ export function PartnerEventEditor({
   );
 
   useEffect(() => {
-    if (mode !== 'create' || !isHost || !organizationId) return;
+    if (mode !== 'create' || !isHost || !organizationId || !restoreHostDraft) return;
     if (restoredHostDraftOrganization.current === organizationId) return;
     restoredHostDraftOrganization.current = organizationId;
     const generation = ++hostDraftRestoreGeneration.current;
@@ -228,6 +232,7 @@ export function PartnerEventEditor({
     isHost,
     mode,
     organizationId,
+    restoreHostDraft,
     steps,
   ]);
 
@@ -306,12 +311,7 @@ export function PartnerEventEditor({
     );
   }, [draft.time, isHost, mode, selectedSlotId, selectedWindow]);
   const timeErrors = useMemo(() => {
-    if (
-      !selectedSlotId.startsWith('free-') ||
-      !selectedWindow?.startTime ||
-      !selectedWindow.endTime
-    )
-      return [];
+    if (!selectedWindow?.startTime || !selectedWindow.endTime) return [];
     const start = eventStartAtFromDraft(draft);
     const end = draft.endTime?.trim()
       ? eventEndAtFromDraft(draft)
@@ -327,7 +327,7 @@ export function PartnerEventEditor({
       Date.parse(end) - Date.parse(start) > 24 * 60 * 60 * 1000
       ? ['Choose start and end times inside the selected available window.']
       : [];
-  }, [draft, selectedSlotId, selectedWindow]);
+  }, [draft, selectedWindow]);
   // A URL is a navigation request, never evidence that earlier steps were completed.
   const firstIncompleteIndex = steps.findIndex(
     (step) =>
@@ -586,6 +586,12 @@ export function PartnerEventEditor({
               ),
             );
           await draftSaveQueue.current;
+        }
+        if (isHost && mode === 'create') {
+          // Let any debounced autosave already in flight settle before the
+          // submit handler deletes the draft. Otherwise its late PUT can
+          // recreate the submitted draft after the successful submission.
+          await draftSaveQueue.current.catch(() => undefined);
         }
         if (isHost && organizationId) await posterSaveQueue.current;
         await onSubmit(submissionDraft, selectedSlotId);
@@ -1093,7 +1099,9 @@ function draftFromInput(
                 id: 'edit-tier-1',
                 name: 'General Admission',
                 price: firstPrice,
-                quantity: event.event.capacity ?? base.ticketTiers[0]?.quantity ?? 0,
+                // Event capacity is the room/fire-safety limit, not ticket
+                // inventory. Keep the fallback from the editor's ticket tier.
+                quantity: base.ticketTiers[0]?.quantity ?? 0,
               },
             ],
       ),

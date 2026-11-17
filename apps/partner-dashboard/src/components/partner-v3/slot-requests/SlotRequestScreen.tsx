@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { BackIcon, RefreshIcon } from '@c1rcle/icons';
 
@@ -74,11 +74,17 @@ export function SlotRequestScreen({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [busyRequestId, setBusyRequestId] = useState<string | null>(null);
+  const [busyAction, setBusyAction] = useState<SlotRequestActionKind | null>(null);
   const [actionError, setActionError] = useState<{
     readonly id: string;
     readonly message: string;
   } | null>(null);
+  const [actionNotice, setActionNotice] = useState<{
+    readonly id: string;
+    readonly message: string;
+  } | null>(null);
   const [venueLinkState, setVenueLinkState] = useState<'idle' | 'copied' | 'unavailable'>('idle');
+  const actionLockRef = useRef<string | null>(null);
 
   // The initial read runs directly inside the effect with `.then`/`.finally`
   // callbacks — no synchronous setState in the effect body.
@@ -155,12 +161,55 @@ export function SlotRequestScreen({
   };
 
   const runAction = useCallback(
-    async (slotRequestId: string, kind: SlotRequestActionKind) => {
+    async (slotRequestId: string, kind: SlotRequestActionKind, reason?: string) => {
+      if (actionLockRef.current !== null) return;
+      actionLockRef.current = slotRequestId;
+      const actionStartedAt = performance.now();
       setBusyRequestId(slotRequestId);
+      setBusyAction(kind);
       setActionError(null);
+      setActionNotice({
+        id: slotRequestId,
+        message:
+          kind === 'accept'
+            ? 'Accepting and publishing the approved event…'
+            : kind === 'reject'
+              ? 'Declining request…'
+              : 'Cancelling request…',
+      });
       try {
-        await applySlotRequestAction(slotRequestId, kind);
-        refresh();
+        await applySlotRequestAction(slotRequestId, kind, reason);
+        const authoritative = await loadSlotRequestsData(direction);
+        setData(authoritative);
+        const reconciled = authoritative.requests.find((item) => item.id === slotRequestId);
+        const expectedStatus =
+          kind === 'accept' ? 'approved' : kind === 'reject' ? 'rejected' : 'cancelled';
+        const acceptedEventReady =
+          kind !== 'accept' ||
+          !reconciled?.hasEventDraft ||
+          (reconciled.eventId !== undefined && reconciled.linkedEventStatus === 'published');
+        if (reconciled?.status !== expectedStatus || !acceptedEventReady) {
+          setActionError({
+            id: slotRequestId,
+            message:
+              'The command returned, but the latest request and event status do not confirm completion. Refresh before trying again.',
+          });
+          setActionNotice({
+            id: slotRequestId,
+            message: `Status reconciled in ${((performance.now() - actionStartedAt) / 1000).toFixed(1)}s.`,
+          });
+          return;
+        }
+        setActionNotice({
+          id: slotRequestId,
+          message: `${
+            kind === 'accept'
+              ? 'Request accepted and the published event is confirmed.'
+              : kind === 'reject'
+                ? 'Request declined with a reason.'
+                : 'Request cancelled.'
+          } Reconciled in ${((performance.now() - actionStartedAt) / 1000).toFixed(1)}s.`,
+        });
       } catch (error) {
         const message = errorMessage(error);
         if (message === 'The venue service did not respond in time.') {
@@ -168,7 +217,29 @@ export function SlotRequestScreen({
             const latest = await loadSlotRequestsData(direction);
             setData(latest);
             const request = latest.requests.find((item) => item.id === slotRequestId);
-            if (request?.status === 'approved' && request.hasEventDraft) {
+            const expectedStatus =
+              kind === 'accept' ? 'approved' : kind === 'reject' ? 'rejected' : 'cancelled';
+            const acceptedEventReady =
+              kind !== 'accept' ||
+              !request?.hasEventDraft ||
+              (request.eventId !== undefined && request.linkedEventStatus === 'published');
+            if (request?.status === expectedStatus && acceptedEventReady) {
+              setActionError(null);
+              setActionNotice({
+                id: slotRequestId,
+                message: `${kind === 'accept' ? 'Acceptance and publication confirmed' : kind === 'reject' ? 'Decline confirmed' : 'Cancellation confirmed'} after ${((performance.now() - actionStartedAt) / 1000).toFixed(1)}s.`,
+              });
+              return;
+            }
+            setActionNotice({
+              id: slotRequestId,
+              message: `Latest status checked in ${((performance.now() - actionStartedAt) / 1000).toFixed(1)}s.`,
+            });
+            if (
+              request?.status === 'approved' &&
+              request.hasEventDraft &&
+              request.linkedEventStatus !== 'published'
+            ) {
               setActionError({
                 id: slotRequestId,
                 message:
@@ -192,15 +263,17 @@ export function SlotRequestScreen({
           setActionError({ id: slotRequestId, message });
         }
       } finally {
+        actionLockRef.current = null;
         setBusyRequestId(null);
+        setBusyAction(null);
       }
     },
-    [direction, refresh],
+    [direction],
   );
 
   const handleAction = useCallback(
-    (id: string, kind: SlotRequestActionKind) => {
-      void runAction(id, kind);
+    (id: string, kind: SlotRequestActionKind, reason?: string) => {
+      void runAction(id, kind, reason);
     },
     [runAction],
   );
@@ -234,6 +307,11 @@ export function SlotRequestScreen({
             Refresh
           </Button>
         </div>
+        {actionNotice && !selectedRequest ? (
+          <p className={styles['actionNotice']} role="status" aria-live="polite">
+            {actionNotice.message}
+          </p>
+        ) : null}
         <header className={styles['pageHeader']}>
           <div>
             <span className={styles['eyebrow']}>Requests</span>
@@ -301,6 +379,7 @@ export function SlotRequestScreen({
                 key={request.id}
                 request={request}
                 busy={busyRequestId === request.id}
+                busyAction={busyRequestId === request.id ? busyAction : null}
                 actionError={actionError?.id === request.id ? actionError.message : null}
                 onOpen={() => {
                   openRequest(request);
@@ -363,18 +442,31 @@ export function SlotRequestScreen({
           </section>
         )}
         {selectedRequest ? (
-          <SlotRequestReview
-            request={selectedRequest}
-            panel={initialPanel}
-            previewMode={initialPreviewMode}
-            onPanelChange={selectPanel}
-            onPreviewModeChange={selectPreview}
-            onClose={closeReview}
-            busy={busyRequestId === selectedRequest.id}
-            actionError={actionError?.id === selectedRequest.id ? actionError.message : null}
-            onAction={handleAction}
-            onBookingCancelled={refresh}
-          />
+          <>
+            {busyRequestId === selectedRequest.id ? (
+              <p className={styles['actionNotice']} role="status" aria-live="polite">
+                Updating request…
+              </p>
+            ) : null}
+            {actionNotice?.id === selectedRequest.id ? (
+              <p className={styles['actionNotice']} role="status" aria-live="polite">
+                {actionNotice.message}
+              </p>
+            ) : null}
+            <SlotRequestReview
+              request={selectedRequest}
+              panel={initialPanel}
+              previewMode={initialPreviewMode}
+              onPanelChange={selectPanel}
+              onPreviewModeChange={selectPreview}
+              onClose={closeReview}
+              busy={busyRequestId === selectedRequest.id}
+              busyAction={busyRequestId === selectedRequest.id ? busyAction : null}
+              actionError={actionError?.id === selectedRequest.id ? actionError.message : null}
+              onAction={handleAction}
+              onBookingCancelled={refresh}
+            />
+          </>
         ) : null}
       </div>
     </PageContainer>

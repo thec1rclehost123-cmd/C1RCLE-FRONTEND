@@ -28,6 +28,7 @@ export function VenueCalendarScreen({
   initialAvailabilityDialog,
   onBlockDate,
   onUnblockDate,
+  onUnpublishAvailability,
   onPublishAvailability,
 }: {
   readonly data: VenueCalendarData;
@@ -37,6 +38,7 @@ export function VenueCalendarScreen({
   readonly initialAvailabilityDialog?: boolean;
   readonly onBlockDate?: (input: CreateVenueBlockInput) => Promise<void>;
   readonly onUnblockDate?: (blockId: string) => Promise<void>;
+  readonly onUnpublishAvailability?: (availabilityId: string) => Promise<void>;
   readonly onPublishAvailability?: (input: PublishVenueAvailabilityInput) => Promise<void>;
 }) {
   const router = useRouter();
@@ -125,6 +127,7 @@ export function VenueCalendarScreen({
           mode="venue"
           eventHref={(event) => event.href}
           onUnblock={block && onUnblockDate ? async () => onUnblockDate(block.id) : undefined}
+          onUnpublishAvailability={onUnpublishAvailability}
           onPublishAvailability={() => {
             update({ availabilityDialog: true });
           }}
