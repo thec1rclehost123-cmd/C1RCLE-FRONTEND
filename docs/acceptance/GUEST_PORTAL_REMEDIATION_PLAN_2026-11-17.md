@@ -4,6 +4,8 @@ Status: **PLANNING ONLY. Nothing in this document has been implemented.** Revisi
 Source of truth: `docs/acceptance/GUEST_PORTAL_LAUNCH_AUDIT_2026-11-16.md` @ `802d9a4` (frozen).
 Audit state carried forward: readiness **62/100**, launch ready **NO**.
 
+> **Milestone structure superseded:** the six-milestone layout in §C/§D is replaced by the five equally scoped milestones in `GUEST_PORTAL_LAUNCH_PLAN_5_MILESTONES_2026-11-17.md`. Classification, Decision log, registers, Codex contract and risks in this document remain authoritative.
+
 ```
 AUDIT LOADED — YES
 FINDINGS RECONCILED — YES
