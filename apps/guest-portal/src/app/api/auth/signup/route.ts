@@ -4,6 +4,7 @@ import {
   assertSameOrigin,
   errorEnvelope,
   forwardToGateway,
+  guestSessionResponse,
   mintCsrfToken,
   parseJson,
   passThroughGatewayError,
@@ -34,8 +35,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return passThroughGatewayError(gatewayResponse.status, bodyText);
   }
 
-  const res = NextResponse.json(parseJson(bodyText), { status: 201 });
-  rescopeSessionCookies(gatewayResponse, res);
-  setCsrfCookie(res, mintCsrfToken());
+  const res = NextResponse.json(guestSessionResponse(parseJson(bodyText)), { status: 201 });
+  rescopeSessionCookies(gatewayResponse, res, req.nextUrl.protocol === 'https:');
+  setCsrfCookie(res, mintCsrfToken(), req.nextUrl.protocol === 'https:');
   return res;
 }

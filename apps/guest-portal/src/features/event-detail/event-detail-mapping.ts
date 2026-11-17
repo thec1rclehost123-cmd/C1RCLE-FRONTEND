@@ -15,6 +15,7 @@ const FALLBACK_CATEGORY = 'Events';
 const STATUS_LIFECYCLE: Record<string, EventLifecycle> = {
   published: 'scheduled',
   sales_paused: 'paused',
+  postponed: 'postponed',
   started: 'scheduled',
   ended: 'completed',
   cancelled: 'cancelled',
@@ -83,7 +84,19 @@ export function toEventDetailFixture(
     description: description.length > 0 ? [description] : [],
     ...(event.media ? { media: event.media } : {}),
     doorNote: 'Ticket and entry terms are shown during checkout when available.',
-    lifecycle: STATUS_LIFECYCLE[event.status] ?? 'scheduled',
+    lifecycle:
+      event.salesStatus === 'ended'
+        ? 'completed'
+        : event.salesStatus === 'cancelled'
+          ? 'cancelled'
+          : event.salesStatus === 'postponed'
+            ? 'postponed'
+            : event.salesStatus === 'sold_out'
+              ? 'sold_out'
+              : event.salesStatus === 'sales_paused'
+                ? 'paused'
+                : (STATUS_LIFECYCLE[event.status] ?? 'scheduled'),
+    ...(event.salesStatus ? { salesStatus: event.salesStatus } : {}),
     guests: [],
     interestedCount: 0,
     ticketNote: 'Live availability',

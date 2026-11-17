@@ -1,5 +1,45 @@
 import type { NextConfig } from 'next';
 
+function reportOnlyCsp(): string {
+  const apiBaseUrl = process.env['NEXT_PUBLIC_API_BASE_URL'];
+  const firebaseAuthDomain = process.env['NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN'];
+  let apiOrigin = "'self'";
+  let firebaseAuthOrigin: string | null = null;
+  if (apiBaseUrl) {
+    try {
+      apiOrigin = new URL(apiBaseUrl).origin;
+    } catch {
+      // Keep the same-origin fallback for an absent/invalid optional build env.
+    }
+  }
+  if (firebaseAuthDomain) {
+    try {
+      firebaseAuthOrigin = new URL(`https://${firebaseAuthDomain}`).origin;
+    } catch {
+      // Ignore malformed optional build configuration in the report-only policy.
+    }
+  }
+
+  // Source inventory from current Guest code: Razorpay's checkout script/frame,
+  // Firebase Phone Auth's reCAPTCHA (Google script/frame/connect), configured
+  // Gateway API, Firebase public poster storage, Google account avatars, and
+  // object URLs used for ticket downloads. OAuth is a top-level redirect.
+  return [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self' https://api.razorpay.com",
+    "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://www.google.com https://www.gstatic.com",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https://storage.googleapis.com https://firebasestorage.googleapis.com https://lh3.googleusercontent.com",
+    "font-src 'self' data:",
+    `connect-src 'self' ${apiOrigin} https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.google.com https://www.gstatic.com https://api.razorpay.com`,
+    `frame-src https://checkout.razorpay.com https://www.google.com https://recaptcha.google.com${firebaseAuthOrigin ? ` ${firebaseAuthOrigin}` : ''}`,
+    "media-src 'self' https://storage.googleapis.com https://firebasestorage.googleapis.com",
+  ].join('; ');
+}
+
 /**
  * C1RCLE Guest Portal — application-local build configuration.
  *
@@ -42,6 +82,19 @@ const nextConfig: NextConfig = {
 
   headers() {
     return Promise.resolve([
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Content-Security-Policy-Report-Only',
+            value: reportOnlyCsp(),
+          },
+        ],
+      },
+      {
+        source: '/api/auth/:path*',
+        headers: [{ key: 'Cache-Control', value: 'private, no-store' }],
+      },
       {
         source: '/:path*',
         headers: [

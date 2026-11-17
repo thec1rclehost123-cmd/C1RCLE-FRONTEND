@@ -1,6 +1,9 @@
 import type { EventMediaDto } from '@c1rcle/contracts';
 
-export type EventLifecycle = 'scheduled' | 'paused' | 'cancelled' | 'completed';
+export type EventLifecycle =
+  'scheduled' | 'paused' | 'cancelled' | 'postponed' | 'completed' | 'sold_out';
+export type EventSalesStatus =
+  'on_sale' | 'sold_out' | 'sales_paused' | 'ended' | 'cancelled' | 'postponed';
 export type EventAccentTone = 'pink' | 'purple' | 'red' | 'orange';
 export type EventGuestTone = 'yellow' | 'red' | 'purple';
 
@@ -48,6 +51,7 @@ export interface EventDetailFixture {
   media?: EventMediaDto;
   doorNote: string;
   lifecycle: EventLifecycle;
+  salesStatus?: EventSalesStatus;
   guests: readonly EventDetailGuest[];
   interestedCount: number;
   ticketTiers: readonly EventDetailTicketTier[];

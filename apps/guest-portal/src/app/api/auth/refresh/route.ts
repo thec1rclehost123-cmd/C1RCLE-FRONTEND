@@ -7,6 +7,7 @@ import {
   clearSessionCookie,
   forwardToGateway,
   gatewayUnreachable,
+  guestSessionResponse,
   parseJson,
   passThroughGatewayError,
   rescopeSessionCookies,
@@ -40,8 +41,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (gatewayResponse.status === 401) {
       // Expired/revoked session: drop the dead cookies so the edge gate stops
       // treating the browser as signed in.
-      clearSessionCookie(res);
-      clearCsrfCookie(res);
+      clearSessionCookie(res, req.nextUrl.protocol === 'https:');
+      clearCsrfCookie(res, req.nextUrl.protocol === 'https:');
     }
     return res;
   }
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (payload === undefined) {
     return gatewayUnreachable();
   }
-  const res = NextResponse.json(payload, { status: 200 });
-  rescopeSessionCookies(gatewayResponse, res);
+  const res = NextResponse.json(guestSessionResponse(payload), { status: 200 });
+  rescopeSessionCookies(gatewayResponse, res, req.nextUrl.protocol === 'https:');
   return res;
 }

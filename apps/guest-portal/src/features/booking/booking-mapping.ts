@@ -54,9 +54,12 @@ export function toBookingEventFixture(
     address: event.externalLocation?.address ?? city,
     city,
     doorNote: 'Entry rules are set by the host and shown at checkout.',
+    ...(event.salesStatus ? { salesStatus: event.salesStatus } : {}),
     ticketTiers: toRealTiers(tiers),
     ticketAddons: toRealAddons(addons),
-    purchasable: tiers.some((tier) => tier.availableQuantity > 0),
+    purchasable:
+      (event.salesStatus === undefined || event.salesStatus === 'on_sale') &&
+      tiers.some((tier) => tier.availableQuantity > 0),
   };
 }
 
@@ -78,8 +81,11 @@ export function toBookingEventFromPublicDetail(
     address: event.externalLocation?.address ?? city,
     city,
     doorNote: 'Entry rules are set by the host and shown at checkout.',
+    ...(event.salesStatus ? { salesStatus: event.salesStatus } : {}),
     ticketTiers: toRealTiers(tiers),
-    purchasable: tiers.some((tier) => tier.availableQuantity > 0),
+    purchasable:
+      (event.salesStatus === undefined || event.salesStatus === 'on_sale') &&
+      tiers.some((tier) => tier.availableQuantity > 0),
   };
 }
 

@@ -30,11 +30,16 @@ export function toExploreEvent(
   const city = event.externalLocation?.city ?? venue?.city ?? FALLBACK_CITY;
   const availableQuantity = tiers?.reduce((sum, tier) => sum + tier.availableQuantity, 0) ?? null;
   const availability =
-    tiers === null || tiers.length === 0
+    event.salesStatus === 'ended' ||
+    event.salesStatus === 'sales_paused' ||
+    event.salesStatus === 'cancelled' ||
+    event.salesStatus === 'postponed'
       ? 'unavailable'
-      : availableQuantity === 0
-        ? 'sold-out'
-        : 'available';
+      : tiers === null || tiers.length === 0
+        ? 'unavailable'
+        : availableQuantity === 0
+          ? 'sold-out'
+          : 'available';
   const minimumPrice =
     tiers && tiers.length > 0
       ? Math.min(...tiers.map((tier) => tier.priceInPaise))
@@ -58,6 +63,7 @@ export function toExploreEvent(
     isFree: event.isFree,
     summary: event.summary,
     availability,
+    ...(event.salesStatus ? { salesStatus: event.salesStatus } : {}),
     availableQuantity,
   };
 }

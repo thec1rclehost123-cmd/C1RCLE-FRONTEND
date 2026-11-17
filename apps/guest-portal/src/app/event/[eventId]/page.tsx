@@ -16,6 +16,7 @@ import { buildPublicMetadata } from '@/lib/seo/metadata';
 
 import type { BookingEventFixture } from '@/features/booking/types/booking.types';
 import type { EventDetailFixture } from '@/features/event-detail/types/event-detail.types';
+import type { EventPublicDetailDto, PublicTicketTierListResponse } from '@c1rcle/contracts';
 import type { Metadata } from 'next';
 
 export const revalidate = 0;
@@ -35,28 +36,34 @@ type EventDetailResult =
 const getEventDetail = cache(async (eventId: string): Promise<EventDetailResult> => {
   const client = createApiClient({ maxRetries: 0, timeoutMs: 5_000 });
   const encoded = encodeURIComponent(eventId);
-  const [eventResult, tiersResult] = await Promise.allSettled([
-    client.get({
+  let event: EventPublicDetailDto;
+  try {
+    event = await client.get({
       path: `/api/v2/public/events/${encoded}`,
       schema: eventPublicDetailDtoSchema,
-    }),
-    client.get({
-      path: `/api/v2/public/events/${encoded}/tiers`,
-      schema: publicTicketTierListResponseSchema,
-    }),
-  ]);
-
-  if (eventResult.status === 'rejected') {
-    return isApiClientError(eventResult.reason) && eventResult.reason.status === 404
+    });
+  } catch (error) {
+    return isApiClientError(error) && error.status === 404
       ? { kind: 'private' }
       : { kind: 'unavailable' };
   }
-  if (tiersResult.status === 'rejected') return { kind: 'unavailable' };
+
+  let tiers: PublicTicketTierListResponse;
+  try {
+    tiers = await client.get({
+      path: `/api/v2/public/events/${encoded}/tiers`,
+      schema: publicTicketTierListResponseSchema,
+    });
+  } catch (error) {
+    if (!(isApiClientError(error) && error.code === 'event_not_on_sale'))
+      return { kind: 'unavailable' };
+    tiers = { items: [] };
+  }
 
   return {
     kind: 'ready',
-    event: toEventDetailFixture(eventResult.value, tiersResult.value.items),
-    checkoutEvent: toBookingEventFromPublicDetail(eventResult.value, tiersResult.value.items),
+    event: toEventDetailFixture(event, tiers.items),
+    checkoutEvent: toBookingEventFromPublicDetail(event, tiers.items),
   };
 });
 

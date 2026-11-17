@@ -22,9 +22,9 @@ export interface SessionProviderProps {
 }
 
 /**
- * Thin session bootstrap provider. Hydrates the in-memory session store from
- * the server bootstrap, obtains a fresh access token, and runs the idle
- * timeout + focus-refresh. Everything else reads `useSession()` directly.
+ * Thin session bootstrap provider. Hydrates the in-memory user/expiry state
+ * from the server bootstrap, confirms the cookie session through the BFF, and
+ * runs the idle timeout + focus-refresh. Everything else reads `useSession()`.
  */
 export function SessionProvider({ initialUser, children }: SessionProviderProps) {
   const router = useRouter();
@@ -32,10 +32,9 @@ export function SessionProvider({ initialUser, children }: SessionProviderProps)
   useEffect(() => {
     if (initialUser !== null) {
       /*
-       * The server bootstrap only proves an httpOnly session exists — the
-       * access token is not readable server-side, so it starts null. The BFF
-       * first establishes this app's namespaced CSRF cookie, then exchanges
-       * the refresh cookie for an in-memory access token.
+       * The server bootstrap only proves an httpOnly session exists. The BFF
+       * establishes this app's namespaced CSRF cookie and confirms the cookie
+       * session; the Gateway bearer token stays server-side.
        */
       setSession(initialUser, null, 0);
       void hydrateSession().then((recovered) => {

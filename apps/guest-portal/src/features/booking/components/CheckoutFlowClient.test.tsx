@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiClientError } from '@c1rcle/api-client';
 
-import { readOnboarding } from '@/features/onboarding/client';
+import { readOnboardingStatus } from '@/features/onboarding/client';
 import { bffClient } from '@/lib/bff/bff-client';
 
 import { CheckoutView } from './CheckoutView';
@@ -30,7 +30,7 @@ vi.mock('@c1rcle/auth', () => ({
 }));
 
 vi.mock('@/features/onboarding/client', () => ({
-  readOnboarding: vi.fn().mockResolvedValue({ phoneVerified: true }),
+  readOnboardingStatus: vi.fn().mockResolvedValue({ phoneVerified: true }),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -142,7 +142,7 @@ async function toPaymentStep(event: BookingEventFixture = LIVE_EVENT) {
 
 beforeEach(() => {
   mocks.user = { displayName: 'A Buyer', email: 'b@example.com' };
-  vi.mocked(readOnboarding).mockResolvedValue({
+  vi.mocked(readOnboardingStatus).mockResolvedValue({
     displayName: 'A Buyer',
     dateOfBirth: '',
     tastes: [],
@@ -186,7 +186,7 @@ describe('checkout authentication entry', () => {
   });
 
   it('requires phone verification before opening the order review', async () => {
-    vi.mocked(readOnboarding).mockResolvedValue({
+    vi.mocked(readOnboardingStatus).mockResolvedValue({
       displayName: 'A Buyer',
       dateOfBirth: '',
       tastes: [],

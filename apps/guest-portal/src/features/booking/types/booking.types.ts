@@ -47,6 +47,7 @@ export interface BookingEventFixture {
   ticketAddons?: readonly BookingTicketAddon[];
   /** False when a cancelled private event can only be rendered from order evidence. */
   detailsAvailable?: boolean;
+  salesStatus?: 'on_sale' | 'sold_out' | 'sales_paused' | 'ended' | 'cancelled' | 'postponed';
   /**
    * True only for a published event whose real ticket tiers loaded, so a hold
    * and payment can reference them. Fixtures and the price-derived fallback tier

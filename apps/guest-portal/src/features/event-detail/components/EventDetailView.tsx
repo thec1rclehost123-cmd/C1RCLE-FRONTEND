@@ -41,6 +41,14 @@ const lifecycleCopy: Partial<Record<EventLifecycle, { title: string; detail: str
     title: 'Event completed',
     detail: 'This event has ended. Explore current experiences instead.',
   },
+  postponed: {
+    title: 'Event postponed',
+    detail: 'The organizer has postponed this event. Check back for the updated date.',
+  },
+  sold_out: {
+    title: 'Tickets sold out',
+    detail: 'All currently available tickets for this event have been claimed.',
+  },
 };
 
 export function EventDetailView({
@@ -65,7 +73,13 @@ export function EventDetailView({
   const availableTiers = event.ticketTiers.filter(
     (tier) => tier.availableQuantity === undefined || tier.availableQuantity > 0,
   );
-  const hasAvailableTiers = availableTiers.length > 0;
+  const hasAvailableTiers =
+    event.salesStatus !== 'ended' &&
+    event.salesStatus !== 'sold_out' &&
+    event.salesStatus !== 'sales_paused' &&
+    event.salesStatus !== 'cancelled' &&
+    event.salesStatus !== 'postponed' &&
+    availableTiers.length > 0;
   const startingPricePaise = hasAvailableTiers
     ? Math.min(...availableTiers.map((tier) => tier.price?.amountPaise ?? 0))
     : null;
@@ -406,11 +420,13 @@ export function EventDetailView({
                 </div>
               </details>
             ) : null}
-            <PrivateTierUnlockClient
-              eventId={event.slug}
-              accentTone={event.accentTone}
-              {...(referralCode ? { referralCode } : {})}
-            />
+            {(!event.salesStatus || event.salesStatus === 'on_sale') && (
+              <PrivateTierUnlockClient
+                eventId={event.slug}
+                accentTone={event.accentTone}
+                {...(referralCode ? { referralCode } : {})}
+              />
+            )}
           </div>
         </section>
       </div>

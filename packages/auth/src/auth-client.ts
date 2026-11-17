@@ -117,7 +117,7 @@ export async function signup(input: SignupInput): Promise<void> {
   });
 
   clearActiveOrgHint();
-  setSession({ user: response.user }, response.accessToken, response.expiresAt);
+  setSession({ user: response.user }, response.accessToken ?? null, response.expiresAt);
 }
 
 /**
@@ -139,7 +139,7 @@ export async function login(input: LoginInput): Promise<User> {
     });
 
     clearActiveOrgHint();
-    setSession({ user: response.user }, response.accessToken, response.expiresAt);
+    setSession({ user: response.user }, response.accessToken ?? null, response.expiresAt);
     return response.user;
   } catch (error) {
     if (isApiClientError(error) && (error.status === 400 || error.status === 401)) {
@@ -150,7 +150,7 @@ export async function login(input: LoginInput): Promise<User> {
 }
 
 /**
- * Exchange the httpOnly refresh cookie for a fresh in-memory access token.
+ * Exchange the httpOnly refresh cookie for a refreshed cookie session.
  * Concurrent callers share one in-flight request (stampede guard). Resolves
  * `true` on success; on any failure the session is cleared and it resolves
  * `false`.
@@ -169,7 +169,7 @@ export async function refresh(): Promise<boolean> {
         headers: csrfHeaders(),
       });
 
-      setSession({ user: response.user }, response.accessToken, response.expiresAt);
+      setSession({ user: response.user }, response.accessToken ?? null, response.expiresAt);
       return true;
     } catch {
       clearSession();
@@ -224,7 +224,7 @@ export async function changePassword(input: ChangePasswordInput): Promise<void> 
     headers: csrfHeaders(),
   });
 
-  setSession({ user: response.user }, response.accessToken, response.expiresAt);
+  setSession({ user: response.user }, response.accessToken ?? null, response.expiresAt);
 }
 
 /**
@@ -246,8 +246,8 @@ export async function fetchSession(): Promise<void> {
 }
 
 /**
- * Hydrate a session that was discovered by a Server Component and then obtain
- * a browser access token. The read is deliberate: when a user arrives from a
+ * Hydrate a session that was discovered by a Server Component. The read is
+ * deliberate: when a user arrives from a
  * different C1RCLE app on the same localhost host, the httpOnly session cookie
  * can exist while this app's namespaced CSRF cookie does not. The BFF session
  * route mints that app-scoped token before the CSRF-protected refresh runs.

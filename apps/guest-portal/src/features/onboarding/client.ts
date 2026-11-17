@@ -2,6 +2,7 @@ import { createApiClient } from '@c1rcle/api-client';
 import { noContentSchema } from '@c1rcle/contracts';
 import {
   guestOnboardingPatchSchema,
+  guestOnboardingStatusSchema,
   guestOnboardingStateSchema,
   guestPhoneProofSchema,
 } from '@c1rcle/contracts/guest-onboarding';
@@ -13,6 +14,9 @@ function client() {
 }
 export function readOnboarding() {
   return client().get({ path: '/api/onboarding', schema: guestOnboardingStateSchema });
+}
+export function readOnboardingStatus() {
+  return client().get({ path: '/api/onboarding/status', schema: guestOnboardingStatusSchema });
 }
 export async function saveOnboarding(patch: unknown) {
   await client().put({

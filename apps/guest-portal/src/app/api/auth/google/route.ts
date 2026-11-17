@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     )
       return gatewayUnreachable();
     const response = NextResponse.json({ url: payload.url });
-    rescopeSessionCookies(upstream, response);
+    rescopeSessionCookies(upstream, response, req.nextUrl.protocol === 'https:');
     response.headers.set('cache-control', 'no-store');
     return response;
   } catch {

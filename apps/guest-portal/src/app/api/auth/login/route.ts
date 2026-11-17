@@ -5,6 +5,7 @@ import {
   errorEnvelope,
   forwardToGateway,
   gatewayUnreachable,
+  guestSessionResponse,
   mintCsrfToken,
   parseJson,
   passThroughGatewayError,
@@ -50,8 +51,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (payload === undefined) {
     return gatewayUnreachable();
   }
-  const res = NextResponse.json(payload, { status: 200 });
-  rescopeSessionCookies(gatewayResponse, res);
-  setCsrfCookie(res, mintCsrfToken());
+  const res = NextResponse.json(guestSessionResponse(payload), { status: 200 });
+  rescopeSessionCookies(gatewayResponse, res, req.nextUrl.protocol === 'https:');
+  setCsrfCookie(res, mintCsrfToken(), req.nextUrl.protocol === 'https:');
   return res;
 }

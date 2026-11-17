@@ -195,7 +195,9 @@ export function ExploreHeroCarouselClient({ events }: { events: readonly Explore
                 href={`/event/${event.slug}`}
                 className="inline-flex min-h-13 items-center justify-center rounded-full bg-white px-6 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-black shadow-[0_12px_35px_rgba(255,255,255,0.14)] transition-transform hover:scale-[1.03] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white motion-reduce:transition-none sm:min-h-14 sm:px-8 sm:text-xs"
               >
-                Get tickets
+                {event.salesStatus && event.salesStatus !== 'on_sale'
+                  ? 'View event'
+                  : 'Get tickets'}
               </Link>
             </div>
           </div>

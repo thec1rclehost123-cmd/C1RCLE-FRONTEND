@@ -30,10 +30,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const res = new NextResponse(null, { status: 204 });
   if (gatewayResponse !== null) {
-    rescopeSessionCookies(gatewayResponse, res);
+    rescopeSessionCookies(gatewayResponse, res, req.nextUrl.protocol === 'https:');
   }
   // Unconditional: overrides anything the gateway (or its failure) left behind.
-  clearSessionCookie(res);
-  clearCsrfCookie(res);
+  clearSessionCookie(res, req.nextUrl.protocol === 'https:');
+  clearCsrfCookie(res, req.nextUrl.protocol === 'https:');
   return res;
 }
