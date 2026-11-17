@@ -1,6 +1,6 @@
 import styles from './VenueLiveEventSummaryScreen.module.css';
 
-import type { VenueEventDetailResponse } from '@c1rcle/contracts';
+import type { VenueEventDetailViewModel } from '@/lib/events/load-venue-event-detail';
 
 const dateTime = new Intl.DateTimeFormat('en-IN', {
   dateStyle: 'medium',
@@ -18,9 +18,9 @@ const currency = (amountInPaise: number, code: string) =>
 export function VenueLiveEventSummaryScreen({
   record,
 }: {
-  readonly record: VenueEventDetailResponse;
+  readonly record: VenueEventDetailViewModel;
 }) {
-  const { event, tiers } = record;
+  const { event, tiers, hostName, venueName } = record;
   return (
     <main className={styles['page']}>
       <section className={styles['panel']} aria-labelledby="venue-event-overview">
@@ -37,11 +37,11 @@ export function VenueLiveEventSummaryScreen({
         <dl className={styles['details']}>
           <div>
             <dt>Event owner</dt>
-            <dd>Host organization · {event.organizationId}</dd>
+            <dd>Host organization · {hostName ?? 'Host name unavailable'}</dd>
           </div>
           <div>
             <dt>Venue</dt>
-            <dd>{event.venueId ?? event.externalLocation?.name ?? 'Venue not specified'}</dd>
+            <dd>{venueName ?? event.externalLocation?.name ?? 'Venue name unavailable'}</dd>
           </div>
           <div>
             <dt>Starts</dt>
