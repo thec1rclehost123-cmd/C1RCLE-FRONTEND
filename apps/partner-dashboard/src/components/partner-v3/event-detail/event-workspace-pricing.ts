@@ -1,21 +1,20 @@
-import type { EventOperationsDto, TicketTierDto } from '@c1rcle/contracts';
+import type { EventOperationsDto } from '@c1rcle/contracts';
 
 const money = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
-export function formatEventStartingPrice(
-  event: Pick<EventOperationsDto, 'isFree' | 'startingPricePaise'>,
-  tiers?: readonly TicketTierDto[],
-): string {
-  if (tiers?.length) {
-    const pricedTiers = tiers.filter((tier) => tier.accessType !== 'RSVP');
-    if (pricedTiers.length === 0) return 'Free';
-    const startingPricePaise = Math.min(...pricedTiers.map((tier) => tier.priceInPaise));
-    const isFree = event.isFree && pricedTiers.every((tier) => tier.priceInPaise === 0);
-    return isFree ? 'Free' : money.format(startingPricePaise / 100);
-  }
+type PriceFields = Pick<
+  EventOperationsDto,
+  'isFree' | 'startingPricePaise' | 'currentStartingPricePaise'
+>;
 
+export function formatEventStartingPrice(event: PriceFields): string {
   if (event.isFree) return 'Free';
-  return event.startingPricePaise === null
-    ? 'Unavailable'
-    : money.format(event.startingPricePaise / 100);
+  if (event.currentStartingPricePaise == null) return 'No active price';
+  return money.format(event.currentStartingPricePaise / 100);
+}
+
+export function formatEventBasePrice(event: PriceFields): string {
+  if (event.isFree) return 'Free';
+  if (event.startingPricePaise === null) return 'Not set';
+  return money.format(event.startingPricePaise / 100);
 }

@@ -1,0 +1,161 @@
+.page {
+  display: grid;
+  gap: 22px;
+  color: #fff;
+}
+
+.header,
+.nav {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.header p {
+  margin: 0 0 5px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 26px;
+}
+
+.header form {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+}
+
+.header label {
+  display: grid;
+  gap: 5px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 11px;
+}
+
+.header select,
+.header button {
+  min-height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: #171717;
+  color: #fff;
+  padding: 0 10px;
+}
+
+.nav {
+  justify-content: flex-start;
+  gap: 16px;
+}
+
+.nav a {
+  color: #ffb35a;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.metrics article,
+.section {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.metrics article {
+  display: grid;
+  gap: 10px;
+  padding: 15px;
+}
+
+.metrics span {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 12px;
+}
+
+.metrics strong {
+  font-size: 20px;
+}
+
+.incomplete {
+  margin: -10px 0 0;
+  color: #ffc36e;
+  font-size: 13px;
+}
+
+.section {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.section h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.tableScroll {
+  overflow-x: auto;
+}
+
+.section table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.section th,
+.section td {
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: right;
+}
+
+.section thead th,
+.section tbody th {
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+  text-align: left;
+}
+
+.eventList {
+  display: grid;
+}
+
+.eventList a {
+  display: grid;
+  gap: 5px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: inherit;
+  text-decoration: none;
+}
+
+.eventList span,
+.eventList small,
+.section p {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 12px;
+}
+
+@media (max-width: 700px) {
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .header form {
+    width: 100%;
+  }
+}

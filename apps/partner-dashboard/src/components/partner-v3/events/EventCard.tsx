@@ -37,6 +37,7 @@ export function EventCard({
         <Link className={styles['namePlate']} href={href}>
           <strong>{event.name}</strong>
           <span>{event.venue}</span>
+          {event.hostLabel ? <small>{event.hostLabel}</small> : null}
         </Link>
         <div className={styles['cardDetails']}>
           <span className={styles['dateTimeBlock']}>
@@ -47,8 +48,9 @@ export function EventCard({
             <time>{event.timeLabel}</time>
           </span>
           <span className={styles['priceBlock']}>
-            <small>From</small>
+            <small>Current from</small>
             <strong>{event.priceLabel}</strong>
+            {event.basePriceLabel ? <small>Base: {event.basePriceLabel}</small> : null}
           </span>
         </div>
         <div className={styles['exploreWrap']}>

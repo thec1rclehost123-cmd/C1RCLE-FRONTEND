@@ -1,9 +1,11 @@
 import Link from 'next/link';
 
 import { ConnectedPartnerAnalyticsScreen } from '@/components/partner-v3/event-detail/ConnectedPartnerAnalyticsScreen';
+import { VenueOperationalAnalyticsScreen } from '@/components/partner-v3/event-detail/VenueOperationalAnalyticsScreen';
 import { PromoterAnalyticsConnected } from '@/components/partner-v3/promoter/PromoterAnalyticsConnected';
 import { loadPartnerOrganizationAnalytics } from '@/lib/events/load-partner-organization-analytics';
 import { loadPromoterCampaignSummary } from '@/lib/events/load-promoter-campaign-summary';
+import { loadVenueOperationalAnalytics } from '@/lib/events/load-venue-operational-analytics';
 
 import { renderStudioSkeleton } from '../route-helpers';
 
@@ -62,6 +64,10 @@ export default async function StudioAnalyticsPage({
   const breakdown = breakdowns.has(breakdownValue as PartnerAnalyticsBreakdown)
     ? (breakdownValue as PartnerAnalyticsBreakdown)
     : 'month';
+  if (studio === 'venue') {
+    const analytics = await loadVenueOperationalAnalytics(range);
+    return <VenueOperationalAnalyticsScreen analytics={analytics} range={range} />;
+  }
   const analytics = await loadPartnerOrganizationAnalytics({ range, breakdown });
   return (
     <ConnectedPartnerAnalyticsScreen

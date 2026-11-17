@@ -78,7 +78,7 @@ describe('Partner V3 global interactions', () => {
     await waitFor(() => {
       expect(api.get).toHaveBeenCalledWith(
         expect.objectContaining({
-          path: '/api/v2/organizations/org_2/search?q=Private',
+          path: '/api/v2/organizations/org_2/search?q=Private&studio=venue',
           headers: { 'x-organization-id': 'org_2' },
         }),
       );

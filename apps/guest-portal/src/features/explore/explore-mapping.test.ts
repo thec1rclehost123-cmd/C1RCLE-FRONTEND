@@ -21,6 +21,7 @@ const EVENT: EventDto = {
   isPublic: true,
   tags: ['Music', 'Live'],
   startingPricePaise: 99900,
+  currentStartingPricePaise: 65_000,
   isFree: false,
   cancellationReason: null,
   version: 1,
@@ -97,14 +98,18 @@ describe('toExploreEvent', () => {
   });
 
   it('keeps a missing price distinct from an explicitly free event', () => {
-    const event = toExploreEvent({ ...EVENT, startingPricePaise: null }, VENUE, null);
+    const event = toExploreEvent(
+      { ...EVENT, startingPricePaise: null, currentStartingPricePaise: null },
+      VENUE,
+      null,
+    );
     expect(event.price).toBeNull();
     expect(event.isFree).toBe(false);
   });
 
   it('uses the discovery aggregate price without loading ticket tiers', () => {
     expect(toExploreEvent(EVENT, VENUE, null).price).toEqual({
-      amountPaise: 99900,
+      amountPaise: 65_000,
       currency: 'INR',
     });
   });
@@ -129,6 +134,12 @@ describe('toExploreEvent', () => {
     ]);
     expect(mapped.availability).toBe('unavailable');
     expect(mapped.price).toBeNull();
+  });
+
+  it('does not fall back to the base price when no current price is available', () => {
+    expect(
+      toExploreEvent({ ...EVENT, currentStartingPricePaise: null }, VENUE, null).price,
+    ).toBeNull();
   });
 
   it('distinguishes sold out from unavailable inventory', () => {

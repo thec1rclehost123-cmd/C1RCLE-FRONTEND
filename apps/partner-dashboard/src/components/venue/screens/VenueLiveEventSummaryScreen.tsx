@@ -8,138 +8,110 @@ const dateTime = new Intl.DateTimeFormat('en-IN', {
   timeZone: 'Asia/Kolkata',
 });
 
-const currency = (amountInPaise: number, code: string) =>
-  new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: code,
-    maximumFractionDigits: 2,
-  }).format(amountInPaise / 100);
+const count = (value: number) => value.toLocaleString('en-IN');
 
 export function VenueLiveEventSummaryScreen({
   record,
 }: {
   readonly record: VenueEventDetailViewModel;
 }) {
-  const { event, tiers, hostName, venueName } = record;
+  const { event, tiers } = record;
+  const dateRange = `${dateTime.format(new Date(event.startAt))}${event.endAt ? ` – ${dateTime.format(new Date(event.endAt))}` : ''} IST`;
   return (
     <main className={styles['page']}>
       <section className={styles['panel']} aria-labelledby="venue-event-overview">
         <div className={styles['sectionHeading']}>
           <div>
-            <p className={styles['eyebrow']}>Event workspace</p>
+            <p className={styles['eyebrow']}>Venue operational view · View only</p>
             <h2 id="venue-event-overview">Overview</h2>
           </div>
           <span className={styles['status']}>{event.status.replaceAll('_', ' ')}</span>
         </div>
-        <p className={styles['description']}>
-          {event.summary || event.description || 'No event description provided.'}
-        </p>
         <dl className={styles['details']}>
           <div>
-            <dt>Event owner</dt>
-            <dd>Host organization · {hostName ?? 'Host name unavailable'}</dd>
+            <dt>Hosted by</dt>
+            <dd>
+              {event.ownerType === 'host' ? (event.hostName ?? 'Host name unavailable') : 'Venue'}
+            </dd>
           </div>
           <div>
             <dt>Venue</dt>
-            <dd>{venueName ?? event.externalLocation?.name ?? 'Venue name unavailable'}</dd>
+            <dd>{event.venueName}</dd>
           </div>
           <div>
-            <dt>Starts</dt>
-            <dd>{dateTime.format(new Date(event.startAt))} IST</dd>
+            <dt>Schedule</dt>
+            <dd>{dateRange}</dd>
           </div>
           <div>
-            <dt>Ends</dt>
+            <dt>Expected guests</dt>
             <dd>
-              {event.endAt ? `${dateTime.format(new Date(event.endAt))} IST` : 'Not specified'}
+              {event.operationalCountsComplete ? '' : 'At least '}
+              {count(event.expectedGuests)}
             </dd>
           </div>
+          <div>
+            <dt>Checked in</dt>
+            <dd>{count(event.checkedInGuests)}</dd>
+          </div>
+          <div>
+            <dt>Admission units</dt>
+            <dd>
+              {count(event.ticketUnitsIssued)} ticket · {count(event.rsvpUnitsIssued)} RSVP
+            </dd>
+          </div>
+          <div>
+            <dt>Physical Venue capacity</dt>
+            <dd>{event.venueCapacity === null ? 'Not configured' : count(event.venueCapacity)}</dd>
+          </div>
+          <div>
+            <dt>Event capacity</dt>
+            <dd>{event.eventCapacity === null ? 'Not configured' : count(event.eventCapacity)}</dd>
+          </div>
         </dl>
+        {!event.operationalCountsComplete ? (
+          <p className={styles['salesWindow']} role="status">
+            Operational counts are incomplete; attendance figures are lower bounds.
+          </p>
+        ) : null}
       </section>
 
       <section className={styles['panel']} aria-labelledby="venue-event-tiers">
         <div className={styles['sectionHeading']}>
           <div>
             <p className={styles['eyebrow']}>Admission</p>
-            <h2 id="venue-event-tiers">Ticket tiers</h2>
+            <h2 id="venue-event-tiers">Ticket and RSVP categories</h2>
           </div>
-          <span className={styles['tierCount']}>{tiers.length} tiers</span>
+          <span className={styles['tierCount']}>{tiers.length} categories</span>
         </div>
         {tiers.length ? (
           <div className={styles['tierList']}>
             {tiers.map((tier) => (
-              <article className={styles['tier']} key={tier.id}>
+              <article className={styles['tier']} key={tier.tierId}>
                 <div className={styles['tierTop']}>
                   <h3>{tier.name}</h3>
-                  <strong>{currency(tier.priceInPaise, tier.currency)}</strong>
+                  <strong>{tier.unitKind === 'rsvp' ? 'RSVP' : 'Ticket'}</strong>
                 </div>
                 <dl className={styles['tierFacts']}>
                   <div>
-                    <dt>Capacity</dt>
-                    <dd>{tier.quantity.toLocaleString('en-IN')}</dd>
+                    <dt>Units issued</dt>
+                    <dd>{count(tier.unitsIssued)}</dd>
                   </div>
-                  {tier.maxPerOrder !== null ? (
-                    <div>
-                      <dt>Order limit</dt>
-                      <dd>{tier.maxPerOrder} per order</dd>
-                    </div>
-                  ) : null}
+                  <div>
+                    <dt>Expected guests</dt>
+                    <dd>{count(tier.expectedGuests)}</dd>
+                  </div>
+                  <div>
+                    <dt>Checked in</dt>
+                    <dd>{count(tier.checkedInGuests)}</dd>
+                  </div>
                 </dl>
-                {tier.pricingPhases?.length ? (
-                  <div className={styles['phases']}>
-                    {tier.pricingPhases.map((phase) => (
-                      <div className={styles['phase']} key={phase.id}>
-                        <span>{phase.name}</span>
-                        <strong>{currency(phase.priceInPaise, tier.currency)}</strong>
-                        <small>
-                          {dateTime.format(new Date(phase.startsAt))} –{' '}
-                          {dateTime.format(new Date(phase.endsAt))} IST
-                        </small>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-                {tier.salesStartAt || tier.salesEndAt ? (
-                  <p className={styles['salesWindow']}>
-                    Sales window:{' '}
-                    {tier.salesStartAt ? dateTime.format(new Date(tier.salesStartAt)) : 'Open'}
-                    {' – '}
-                    {tier.salesEndAt ? dateTime.format(new Date(tier.salesEndAt)) : 'No end'} IST
-                  </p>
-                ) : null}
               </article>
             ))}
           </div>
         ) : (
-          <p className={styles['empty']}>No ticket tiers are configured.</p>
+          <p className={styles['empty']}>No operational ticket categories are available.</p>
         )}
       </section>
-
-      {event.media ? (
-        <section className={styles['panel']} aria-labelledby="venue-event-media">
-          <div className={styles['sectionHeading']}>
-            <div>
-              <p className={styles['eyebrow']}>Gallery</p>
-              <h2 id="venue-event-media">Event media</h2>
-            </div>
-          </div>
-          {event.media.youtubeUrl ? (
-            <p className={styles['mediaLink']}>
-              Video: <a href={event.media.youtubeUrl}>{event.media.youtubeUrl}</a>
-            </p>
-          ) : null}
-          {event.media.gallery.length ? (
-            <div className={styles['gallery']}>
-              {event.media.gallery.map((image) => (
-                <figure key={image.url}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={image.url} alt={image.alt} />
-                  <figcaption>{image.alt}</figcaption>
-                </figure>
-              ))}
-            </div>
-          ) : null}
-        </section>
-      ) : null}
     </main>
   );
 }

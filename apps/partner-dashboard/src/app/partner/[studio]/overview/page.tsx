@@ -4,10 +4,16 @@ import { notFound } from 'next/navigation';
 
 import { OverviewLoadFailureState } from '@/components/partner-v3/overview/OverviewLoadFailureState';
 import { OverviewScreen } from '@/components/partner-v3/overview/OverviewScreen';
+import { VenueOperationalOverviewScreen } from '@/components/partner-v3/overview/VenueOperationalOverviewScreen';
 import { PromoterOverviewConnected } from '@/components/partner-v3/promoter/PromoterOverviewConnected';
 import { loadPromoterOverview } from '@/lib/events/load-promoter-overview';
 import { getActiveOrgIdFromCookieHeader } from '@/lib/org/active-org-cookie';
-import { loadOverviewData, OverviewLoadError } from '@/lib/overview/load-overview-data';
+import {
+  classifyOverviewFailure,
+  loadOverviewData,
+  OverviewLoadError,
+} from '@/lib/overview/load-overview-data';
+import { loadVenueOperationalOverview } from '@/lib/overview/load-venue-operational-overview';
 import { isStudioRole } from '@/studios/studio-config';
 
 export default async function StudioOverviewPage({
@@ -43,6 +49,23 @@ export default async function StudioOverviewPage({
   const isHost = studio === 'host';
   const prefix = `/partner/${studio}`;
   const organizationId = getActiveOrgIdFromCookieHeader((await cookies()).toString());
+
+  if (studio === 'venue') {
+    if (!organizationId) return <OverviewLoadFailureState reason="no-organization" />;
+    let result:
+      | { readonly data: Awaited<ReturnType<typeof loadVenueOperationalOverview>> }
+      | {
+          readonly error: unknown;
+        };
+    try {
+      result = { data: await loadVenueOperationalOverview(organizationId) };
+    } catch (error) {
+      result = { error };
+    }
+    if ('error' in result)
+      return <OverviewLoadFailureState reason={classifyOverviewFailure(result.error)} />;
+    return <VenueOperationalOverviewScreen data={result.data} />;
+  }
 
   // Real reads. The accent is a role tint, nothing more — the gateway decides
   // whether this viewer may read this org's numbers.
