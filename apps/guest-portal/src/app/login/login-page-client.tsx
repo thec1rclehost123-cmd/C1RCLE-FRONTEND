@@ -9,7 +9,6 @@ import { login, useSessionStore } from '@c1rcle/auth';
 
 import { GoogleButton } from '@/features/auth/components/GoogleButton';
 import { guestContinuePath } from '@/lib/auth/continue-path';
-import { isGuestProtectedPath } from '@/lib/auth/protected-path';
 import { captureGuestReturnFragment } from '@/lib/auth/return-fragment';
 import { safeNextPath } from '@/lib/auth/safe-next-path';
 
@@ -28,6 +27,9 @@ function describeLoginError(error: unknown): string {
   }
   if (isApiClientError(error) && error.status !== undefined && error.status >= 500) {
     return 'Sign-in is temporarily unavailable. Please try again shortly.';
+  }
+  if (error instanceof TypeError || (isApiClientError(error) && error.status === undefined)) {
+    return 'We could not reach sign-in. Check your connection and try again.';
   }
   return 'We could not sign you in. Check your details and try again.';
 }
@@ -56,7 +58,7 @@ export function LoginPageClient({
       // Read the new session in a fresh document while preserving the trusted
       // verification/onboarding continuation and any ticket return fragment.
       globalThis.location.assign(
-        user?.emailVerified === false && isGuestProtectedPath(nextPath)
+        user?.emailVerified === false
           ? `/verify-email?next=${encodeURIComponent(nextPath)}`
           : guestContinuePath(nextPath),
       );

@@ -6,7 +6,7 @@ import { AuthoritativeEventView } from './AuthoritativeEventView';
 import type { EventDto, EventPublicDetailDto } from '@c1rcle/contracts';
 
 vi.mock('@/lib/seo/client-site', () => ({
-  absoluteClientUrl: (path: string) => `https://thec1rcle.com${path}`,
+  absoluteClientUrl: (path: string) => `https://guest.thec1rcle.com${path}`,
 }));
 
 const event: EventDto = {
@@ -79,11 +79,11 @@ describe('AuthoritativeEventView structured data', () => {
       name: 'Public Event',
       image: ['https://images.example.test/event.webp'],
       startDate: '2030-01-01T18:00:00.000Z',
-      url: 'https://thec1rcle.com/event/public-event',
+      url: 'https://guest.thec1rcle.com/event/public-event',
       location: {
         '@type': 'Place',
         name: 'Public Venue',
-        url: 'https://thec1rcle.com/venue/public-venue',
+        url: 'https://guest.thec1rcle.com/venue/public-venue',
         address: {
           '@type': 'PostalAddress',
           streetAddress: '1 Test Street',

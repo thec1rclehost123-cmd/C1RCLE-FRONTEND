@@ -1,6 +1,6 @@
 import { getClientEnv } from '@c1rcle/config';
 
-const PRODUCTION_ORIGIN = 'https://thec1rcle.com';
+const PRODUCTION_ORIGIN = 'https://guest.thec1rcle.com';
 
 /** Build absolute URLs in Client Component trees without importing server env. */
 export function absoluteClientUrl(pathname: string): string {

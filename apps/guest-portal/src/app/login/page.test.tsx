@@ -117,6 +117,18 @@ describe('LoginPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/too many attempts/i);
   });
 
+  it('gives a connection recovery action when sign-in cannot reach the server', async () => {
+    mockLogin.mockRejectedValue(new TypeError('Failed to fetch'));
+    render(<LoginPageClient />);
+
+    fill('g@x.com', 'password123');
+    fireEvent.click(screen.getByRole('button', { name: /^sign in$/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /could not reach sign-in.*check your connection and try again/i,
+    );
+  });
+
   it('keeps submission pending until authentication succeeds, then performs one document navigation', async () => {
     let complete: (() => void) | undefined;
     mockLogin.mockImplementation(

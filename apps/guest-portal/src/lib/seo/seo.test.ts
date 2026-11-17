@@ -51,9 +51,9 @@ afterEach(() => {
 describe('SEO environment and metadata', () => {
   it('uses the preferred production origin and clean canonical paths', () => {
     expect(getSeoEnvironment()).toBe('production');
-    expect(getSiteUrl().toString()).toBe('https://thec1rcle.com/');
+    expect(getSiteUrl().toString()).toBe('https://guest.thec1rcle.com/');
     expect(absoluteUrl('/explore?ignored=not-added')).toBe(
-      'https://thec1rcle.com/explore?ignored=not-added',
+      'https://guest.thec1rcle.com/explore?ignored=not-added',
     );
   });
 
@@ -65,10 +65,10 @@ describe('SEO environment and metadata', () => {
     });
 
     expect(metadata.title).toEqual({ absolute: 'Discover Events | THE C1RCLE' });
-    expect(metadata.alternates).toEqual({ canonical: 'https://thec1rcle.com/explore' });
+    expect(metadata.alternates).toEqual({ canonical: 'https://guest.thec1rcle.com/explore' });
     expect(metadata.robots).toMatchObject({ index: true, follow: true });
     expect(metadata.openGraph).toMatchObject({
-      url: 'https://thec1rcle.com/explore',
+      url: 'https://guest.thec1rcle.com/explore',
       siteName: 'THE C1RCLE',
     });
     expect(metadata.twitter).toMatchObject({ card: 'summary_large_image' });
@@ -81,8 +81,8 @@ describe('SEO environment and metadata', () => {
       description: 'Discover public events.',
     });
 
-    expect(metadata.alternates).toEqual({ canonical: 'https://thec1rcle.com/explore' });
-    expect(metadata.openGraph).toMatchObject({ url: 'https://thec1rcle.com/explore' });
+    expect(metadata.alternates).toEqual({ canonical: 'https://guest.thec1rcle.com/explore' });
+    expect(metadata.openGraph).toMatchObject({ url: 'https://guest.thec1rcle.com/explore' });
   });
 
   it('globally suppresses preview indexing and uses the preview origin', () => {

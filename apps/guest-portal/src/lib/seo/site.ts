@@ -4,7 +4,7 @@ import { getClientEnv, getServerEnv } from '@c1rcle/config';
 
 export type SeoEnvironment = 'production' | 'non-production';
 
-const PRODUCTION_ORIGIN = 'https://thec1rcle.com';
+const PRODUCTION_ORIGIN = 'https://guest.thec1rcle.com';
 
 function normalizeOrigin(value: string): URL {
   const url = new URL(value);
@@ -38,8 +38,8 @@ export function getSiteUrl(): URL {
   }
   const server = getServerEnv();
 
-  if (server.SITE_URL !== undefined) return normalizeOrigin(server.SITE_URL);
   if (isProductionSeo()) return new URL(PRODUCTION_ORIGIN);
+  if (server.SITE_URL !== undefined) return normalizeOrigin(server.SITE_URL);
   if (server.VERCEL_URL !== undefined) return normalizeOrigin(`https://${server.VERCEL_URL}`);
 
   return new URL('http://localhost:3000');

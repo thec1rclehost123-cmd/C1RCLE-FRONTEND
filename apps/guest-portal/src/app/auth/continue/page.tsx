@@ -4,7 +4,6 @@ import { redirect } from 'next/navigation';
 import { guestOnboardingStateSchema } from '@c1rcle/contracts/guest-onboarding';
 
 import { guestDestination } from '@/lib/auth/continue-path';
-import { isGuestProtectedPath } from '@/lib/auth/protected-path';
 import { requireGuestSession } from '@/lib/auth/require-session';
 import { forwardToGateway } from '@/lib/bff/auth-proxy';
 
@@ -16,7 +15,6 @@ export default async function ContinueGuest({
   const params = await searchParams;
   const next = guestDestination(params.next);
   const session = await requireGuestSession(`/auth/continue?next=${encodeURIComponent(next)}`);
-  if (!isGuestProtectedPath(next)) redirect(next);
   if (!session.user.emailVerified) redirect(`/verify-email?next=${encodeURIComponent(next)}`);
   let complete = false;
   try {
