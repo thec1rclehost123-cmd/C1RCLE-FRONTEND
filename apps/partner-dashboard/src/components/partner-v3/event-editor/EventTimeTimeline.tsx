@@ -33,17 +33,26 @@ export function EventTimeTimeline({
   readonly onSelect: (slot: AvailabilitySlot, start: string, end: string) => void;
 }) {
   const midnight = Date.parse(`${date}T00:00:00+05:30`);
-  const ranges = slots.flatMap((slot) =>
-    slot.startTime && slot.endTime
-      ? [
-          {
-            slot,
-            start: (Date.parse(slot.startTime) - midnight) / MINUTE,
-            end: (Date.parse(slot.endTime) - midnight) / MINUTE,
-          },
-        ]
-      : [],
-  );
+  const ranges = slots.flatMap((slot) => {
+    if (!slot.startTime || !slot.endTime) return [];
+    const start = (Date.parse(slot.startTime) - midnight) / MINUTE;
+    const end = (Date.parse(slot.endTime) - midnight) / MINUTE;
+    const blocked = (slot.blockedIntervals ?? [])
+      .map((interval) => ({
+        start: (Date.parse(interval.startTime) - midnight) / MINUTE,
+        end: (Date.parse(interval.endTime) - midnight) / MINUTE,
+      }))
+      .filter((interval) => interval.start < interval.end)
+      .sort((left, right) => left.start - right.start);
+    let cursor = start;
+    const available: { slot: AvailabilitySlot; start: number; end: number }[] = [];
+    for (const interval of blocked) {
+      if (interval.start > cursor) available.push({ slot, start: cursor, end: interval.start });
+      cursor = Math.max(cursor, interval.end);
+    }
+    if (cursor < end) available.push({ slot, start: cursor, end });
+    return available;
+  });
   const startIso = eventStartAtFromDraft({ date, time });
   const endIso = eventEndAtFromDraft({ date, time, endTime });
   const start = startIso ? (Date.parse(startIso) - midnight) / MINUTE : 18 * 60;
@@ -159,7 +168,7 @@ export function EventTimeTimeline({
           >
             {ranges.map((range) => (
               <rect
-                key={range.slot.id}
+                key={`${range.slot.id}:${String(range.start)}`}
                 className={styles['timeFree']}
                 x={range.start}
                 y={0}

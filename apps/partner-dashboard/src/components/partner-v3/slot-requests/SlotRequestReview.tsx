@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import {
   CalendarIcon,
   CloseIcon,
@@ -25,12 +27,13 @@ export interface SlotRequestReviewProps {
   readonly panel: ReviewPanel;
   readonly previewMode: PreviewMode;
   readonly busy?: boolean;
+  readonly busyAction?: SlotRequestActionKind | null;
   readonly actionError?: string | null;
   readonly onPanelChange: (panel: ReviewPanel) => void;
   readonly onPreviewModeChange: (mode: PreviewMode) => void;
   readonly onClose: () => void;
   readonly onBookingCancelled?: () => void;
-  readonly onAction?: (id: string, kind: SlotRequestActionKind) => void;
+  readonly onAction?: (id: string, kind: SlotRequestActionKind, reason?: string) => void;
 }
 
 export function SlotRequestReview({
@@ -38,6 +41,7 @@ export function SlotRequestReview({
   panel,
   previewMode,
   busy,
+  busyAction,
   actionError,
   onPanelChange,
   onPreviewModeChange,
@@ -45,6 +49,8 @@ export function SlotRequestReview({
   onAction,
   onBookingCancelled,
 }: SlotRequestReviewProps) {
+  const [rejectionOpen, setRejectionOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
   const isIncoming = request.direction === 'incoming';
   const canDecide = isIncoming && request.status === 'pending';
   const canRetryPublish =
@@ -120,6 +126,9 @@ export function SlotRequestReview({
             />
           )}
         </div>
+        {!isIncoming && request.status === 'rejected' && request.rejectionReason ? (
+          <p className={styles['actionError']}>Venue response: {request.rejectionReason}</p>
+        ) : null}
         {isIncoming && request.status === 'approved' ? (
           <VenueBookingCancellation
             requestId={request.id}
@@ -137,7 +146,9 @@ export function SlotRequestReview({
                   type="button"
                   variant="secondary"
                   disabled={busy}
-                  onClick={() => onAction?.(request.id, 'reject')}
+                  onClick={() => {
+                    setRejectionOpen(true);
+                  }}
                 >
                   Decline
                 </Button>
@@ -146,9 +157,17 @@ export function SlotRequestReview({
                 type="button"
                 variant="primary"
                 disabled={busy}
-                onClick={() => onAction?.(request.id, 'accept')}
+                onClick={() => {
+                  onAction?.(request.id, 'accept');
+                }}
               >
-                {canRetryPublish ? 'Retry publish' : 'Accept'}
+                {busy && busyAction === 'accept'
+                  ? canRetryPublish
+                    ? 'Publishing…'
+                    : 'Accepting…'
+                  : canRetryPublish
+                    ? 'Retry publish'
+                    : 'Accept'}
               </Button>
             </>
           ) : null}
@@ -157,12 +176,45 @@ export function SlotRequestReview({
               type="button"
               variant="secondary"
               disabled={busy}
-              onClick={() => onAction?.(request.id, 'cancel')}
+              onClick={() => {
+                onAction?.(request.id, 'cancel');
+              }}
             >
               Cancel request
             </Button>
           ) : null}
         </footer>
+        {rejectionOpen && canDecide ? (
+          <form
+            className={styles['rejectionForm']}
+            onSubmit={(event) => {
+              event.preventDefault();
+              const reason = rejectionReason.trim();
+              if (reason.length > 0 && reason.length <= 1000) {
+                onAction?.(request.id, 'reject', reason);
+              }
+            }}
+          >
+            <label htmlFor="slot-request-rejection-reason">Reason for declining</label>
+            <textarea
+              id="slot-request-rejection-reason"
+              value={rejectionReason}
+              maxLength={1000}
+              required
+              disabled={busy}
+              onChange={(event) => {
+                setRejectionReason(event.target.value);
+              }}
+            />
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={busy ? true : rejectionReason.trim().length === 0}
+            >
+              {busy && busyAction === 'reject' ? 'Declining…' : 'Confirm decline'}
+            </Button>
+          </form>
+        ) : null}
         {actionError ? (
           <p className={styles['actionError']} role="alert">
             {actionError}

@@ -24,6 +24,7 @@ export function CalendarDayDetails({
   onSlotSelect,
   onRequestSlot,
   onUnblock,
+  onUnpublishAvailability,
   onPublishAvailability,
   createHref,
 }: {
@@ -36,6 +37,7 @@ export function CalendarDayDetails({
   readonly onSlotSelect?: ((slot: AvailabilitySlot) => void) | undefined;
   readonly onRequestSlot?: (() => Promise<void>) | undefined;
   readonly onUnblock?: (() => Promise<void>) | undefined;
+  readonly onUnpublishAvailability?: ((availabilityId: string) => Promise<void>) | undefined;
   readonly onPublishAvailability?: (() => void) | undefined;
   readonly createHref?: string | undefined;
 }) {
@@ -60,10 +62,12 @@ export function CalendarDayDetails({
               <EventDetail event={event} href={eventHref?.(event)} key={event.id} />
             ))}
           </div>
-          {!host && day.slots.length > 0 ? <VenueAvailabilityDetail day={day} /> : null}
+          {!host && day.slots.length > 0 ? (
+            <VenueAvailabilityDetail day={day} onUnpublishAvailability={onUnpublishAvailability} />
+          ) : null}
         </>
       ) : !host && day.slots.length > 0 ? (
-        <VenueAvailabilityDetail day={day} />
+        <VenueAvailabilityDetail day={day} onUnpublishAvailability={onUnpublishAvailability} />
       ) : isBlocked ? (
         <BlockedDetail block={block} onUnblock={onUnblock} />
       ) : host ? (
@@ -98,7 +102,27 @@ export function CalendarDayDetails({
   );
 }
 
-function VenueAvailabilityDetail({ day }: { readonly day: CalendarDay }) {
+function VenueAvailabilityDetail({
+  day,
+  onUnpublishAvailability,
+}: {
+  readonly day: CalendarDay;
+  readonly onUnpublishAvailability?: ((availabilityId: string) => Promise<void>) | undefined;
+}) {
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const unpublish = async (id: string) => {
+    if (!onUnpublishAvailability || pendingId) return;
+    setPendingId(id);
+    setFailed(false);
+    try {
+      await onUnpublishAvailability(id);
+    } catch {
+      setFailed(true);
+    } finally {
+      setPendingId(null);
+    }
+  };
   return (
     <section className={styles['eventDetailsList']} aria-label="Published availability">
       <strong>Open for Host requests</strong>
@@ -109,8 +133,18 @@ function VenueAvailabilityDetail({ day }: { readonly day: CalendarDay }) {
           </span>
           <strong>{slot.label}</strong>
           {slot.notes ? <span className={styles['eventDetailMeta']}>{slot.notes}</span> : null}
+          {onUnpublishAvailability ? (
+            <button
+              type="button"
+              disabled={pendingId !== null}
+              onClick={() => void unpublish(slot.id)}
+            >
+              {pendingId === slot.id ? 'Removing…' : 'Unpublish availability'}
+            </button>
+          ) : null}
         </article>
       ))}
+      {failed ? <p role="alert">Unable to unpublish availability. Please try again.</p> : null}
     </section>
   );
 }

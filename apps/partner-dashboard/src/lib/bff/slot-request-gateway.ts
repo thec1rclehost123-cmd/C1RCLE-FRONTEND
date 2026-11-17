@@ -247,6 +247,7 @@ function toUiRequest(
     id: dto.id,
     ...(dto.eventId ? { eventId: dto.eventId } : {}),
     ...(dto.eventDraft ? { hasEventDraft: true } : {}),
+    ...(direction === 'outgoing' && dto.eventDraft ? { eventDraft: dto.eventDraft } : {}),
     ...(event ? { linkedEventStatus: event.status } : {}),
     status: mapStatus(dto.status),
     direction,
@@ -257,6 +258,7 @@ function toUiRequest(
     ...(dto.slotId ? { slotId: dto.slotId } : {}),
     ...(dto.slotStartTime ? { slotStartTime: dto.slotStartTime } : {}),
     ...(dto.slotEndTime ? { slotEndTime: dto.slotEndTime } : {}),
+    ...(dto.rejectionReason ? { rejectionReason: dto.rejectionReason } : {}),
     timezone: PRODUCT_TIME_ZONE,
     event: event
       ? toUiEvent(event, dto.message, venueName, titleFallback)
@@ -634,11 +636,12 @@ export async function rejectSlotRequest(
   slotRequestId: string,
   organizationId: string,
   ctx: GatewayContext,
+  reason: string,
 ): Promise<SlotRequestDto> {
   return gatewayPost<SlotRequestDto>(
     `/api/v2/venues/slot-requests/${encodeURIComponent(slotRequestId)}/reject`,
     organizationId,
-    {},
+    { reason },
     withIdempotency(ctx),
   );
 }
