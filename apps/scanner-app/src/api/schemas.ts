@@ -29,6 +29,12 @@ export const loginResponseSchema = z.object({
     displayName: z.string().nullable(),
     role: z.string(),
     avatarUrl: z.string().nullable(),
+    /**
+     * True while the account is still on its emailed temporary password. The
+     * gateway refuses every call except changing the password until it is
+     * rotated, so login must stop here and ask for a new one.
+     */
+    mustChangePassword: z.boolean().optional(),
   }),
   accessToken: z.string(),
   expiresAt: z.number(),

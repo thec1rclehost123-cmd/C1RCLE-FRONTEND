@@ -8,7 +8,11 @@ import {
   type LayoutChangeEvent,
 } from 'react-native';
 
-import { fetchMyOrganizations, login as loginRequest } from '@/api/scannerApiClient';
+import {
+  changePassword as changePasswordRequest,
+  fetchMyOrganizations,
+  login as loginRequest,
+} from '@/api/scannerApiClient';
 import { notifyAuthStateChanged } from '@/auth/authState';
 import { setStaffSession } from '@/auth/staffAuth';
 import {
@@ -24,6 +28,7 @@ import { RadialGlow } from '@/components/decor/RadialGlow';
 import { ScatterAccents } from '@/components/decor/ScatterAccents';
 import { GalaTextInput } from '@/components/GalaTextInput';
 import { SplitButton } from '@/components/SplitButton';
+import { SetPasswordPanel } from '@/features/auth/SetPasswordPanel';
 import { colors, typography } from '@/theme/tokens';
 
 /**
@@ -61,6 +66,13 @@ export default function LoginScreen(): React.JSX.Element {
   const [pendingSession, setPendingSession] = useState<Awaited<
     ReturnType<typeof loginRequest>
   > | null>(null);
+  // Set when the account signed in on its emailed temporary password. The
+  // gateway refuses everything else until a new password is saved, so the
+  // screen holds here (in memory only) and asks for one.
+  const [rotation, setRotation] = useState<{
+    readonly response: Awaited<ReturnType<typeof loginRequest>>;
+    readonly temporaryPassword: string;
+  } | null>(null);
 
   useEffect(() => {
     void getBoundOrganizationId()
@@ -102,6 +114,62 @@ export default function LoginScreen(): React.JSX.Element {
     notifyAuthStateChanged();
   };
 
+  /**
+   * Everything after a fully valid sign-in: discover the venue, bind it, open
+   * the staff session. Shared by the normal login and by "password saved".
+   */
+  const continueSignIn = async (
+    response: Awaited<ReturnType<typeof loginRequest>>,
+  ): Promise<void> => {
+    // Always ask the backend which venues this account belongs to, even
+    // when a venue is already known. It is one cheap GET, and it is the
+    // only way to tell a valid binding from a stale one: a handset bound
+    // for a previous account would otherwise pin every call to a venue
+    // this user cannot see, and the backend answers that with an empty
+    // list rather than an error — the exact silent failure this
+    // discovery exists to remove.
+    const memberships = await fetchMyOrganizations(response.accessToken);
+    const memberIds = new Set(memberships.map((organization) => organization.id));
+    const configured = getConfiguredOrganizationId();
+
+    // An operator pin is never silently overridden. A build pointed at a
+    // venue the signed-in account cannot access is a deployment mistake,
+    // and quietly pointing the scanner somewhere else would hide it.
+    if (configured !== null && !memberIds.has(configured)) {
+      setError(
+        'This build is pinned to a venue your account cannot access. Check EXPO_PUBLIC_ORGANIZATION_ID.',
+      );
+      return;
+    }
+
+    const known = configured ?? boundOrganizationId ?? organizationIdDraft.trim();
+    // Config, binding and a typed id are all only honoured when this
+    // account is genuinely a member; anything else falls through to
+    // discovery below.
+    if (known.length > 0 && memberIds.has(known)) {
+      await completeSignIn(response, known, needsVenueSetup);
+      return;
+    }
+
+    const choice = chooseOrganization(memberships);
+    if (choice.kind === 'ambiguous') {
+      // Hold the credentials so tapping a venue finishes the sign-in
+      // without a second round trip. Not persisted: a dead app must
+      // not leave a usable access token lying in memory.
+      setPendingSession(response);
+      setChoices(choice);
+      setError('This account works for more than one venue. Pick the one this handset is at.');
+      return;
+    }
+    if (choice.kind === 'none') {
+      setError(
+        'This account is not a member of any venue yet. Ask a venue owner to invite you, or type a venue ID below.',
+      );
+      return;
+    }
+    await completeSignIn(response, choice.organizationId, true);
+  };
+
   const handleLogin = (): void => {
     if (email.length === 0 || password.length === 0) {
       setError('Enter your staff ID and password.');
@@ -111,53 +179,13 @@ export default function LoginScreen(): React.JSX.Element {
     setLoading(true);
     void loginRequest(email.trim(), password)
       .then(async (response) => {
-        // Always ask the backend which venues this account belongs to, even
-        // when a venue is already known. It is one cheap GET, and it is the
-        // only way to tell a valid binding from a stale one: a handset bound
-        // for a previous account would otherwise pin every call to a venue
-        // this user cannot see, and the backend answers that with an empty
-        // list rather than an error — the exact silent failure this
-        // discovery exists to remove.
-        const memberships = await fetchMyOrganizations(response.accessToken);
-        const memberIds = new Set(memberships.map((organization) => organization.id));
-        const configured = getConfiguredOrganizationId();
-
-        // An operator pin is never silently overridden. A build pointed at a
-        // venue the signed-in account cannot access is a deployment mistake,
-        // and quietly pointing the scanner somewhere else would hide it.
-        if (configured !== null && !memberIds.has(configured)) {
-          setError(
-            'This build is pinned to a venue your account cannot access. Check EXPO_PUBLIC_ORGANIZATION_ID.',
-          );
+        if (response.user.mustChangePassword === true) {
+          // Hold at the password step; nothing is stored or bound yet.
+          setRotation({ response, temporaryPassword: password });
+          setPassword('');
           return;
         }
-
-        const known = configured ?? boundOrganizationId ?? organizationIdDraft.trim();
-        // Config, binding and a typed id are all only honoured when this
-        // account is genuinely a member; anything else falls through to
-        // discovery below.
-        if (known.length > 0 && memberIds.has(known)) {
-          await completeSignIn(response, known, needsVenueSetup);
-          return;
-        }
-
-        const choice = chooseOrganization(memberships);
-        if (choice.kind === 'ambiguous') {
-          // Hold the credentials so tapping a venue finishes the sign-in
-          // without a second round trip. Not persisted: a dead app must
-          // not leave a usable access token lying in memory.
-          setPendingSession(response);
-          setChoices(choice);
-          setError('This account works for more than one venue. Pick the one this handset is at.');
-          return;
-        }
-        if (choice.kind === 'none') {
-          setError(
-            'This account is not a member of any venue yet. Ask a venue owner to invite you, or type a venue ID below.',
-          );
-          return;
-        }
-        await completeSignIn(response, choice.organizationId, true);
+        await continueSignIn(response);
       })
       .catch((cause: unknown) => {
         setError(cause instanceof Error ? cause.message : 'Sign-in failed.');
@@ -165,6 +193,33 @@ export default function LoginScreen(): React.JSX.Element {
       .finally(() => {
         setLoading(false);
       });
+  };
+
+  /** Saves the new password, then carries on exactly as a normal sign-in would. */
+  const handleSetPassword = async (newPassword: string): Promise<void> => {
+    const current = rotation;
+    if (current === null) return;
+    const fresh = await changePasswordRequest(
+      current.response.accessToken,
+      current.temporaryPassword,
+      newPassword,
+    );
+    setRotation(null);
+    setError(null);
+    setLoading(true);
+    void continueSignIn(fresh)
+      .catch((cause: unknown) => {
+        setError(cause instanceof Error ? cause.message : 'Sign-in failed.');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
+
+  const handleCancelSetPassword = (): void => {
+    setRotation(null);
+    setPassword('');
+    setError(null);
   };
 
   const handleSelectOrganization = (organizationId: string): void => {
@@ -218,121 +273,130 @@ export default function LoginScreen(): React.JSX.Element {
         </Text>
       </View>
 
-      <View style={styles.form}>
-        <Text style={styles.intro}>
-          Sign in with your staff account to scan tickets and run the door.
-        </Text>
-
-        <GalaTextInput
-          label="STAFF ID OR PHONE"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          placeholder="e.g. 98200 11223"
-          surface
+      {rotation !== null ? (
+        <SetPasswordPanel
+          email={rotation.response.user.email}
+          temporaryPassword={rotation.temporaryPassword}
+          onSubmit={handleSetPassword}
+          onCancel={handleCancelSetPassword}
         />
+      ) : (
+        <View style={styles.form}>
+          <Text style={styles.intro}>
+            Sign in with your staff account to scan tickets and run the door.
+          </Text>
 
-        <GalaTextInput
-          label="PASSWORD"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!showPassword}
-          placeholder="••••••••"
-          surface
-          style={styles.passwordInput}
-          accessory={
-            <Pressable
-              onPress={() => {
-                setShowPassword((show) => !show);
-              }}
-              style={styles.showButton}
-            >
-              <Text style={styles.showButtonLabel}>{showPassword ? 'HIDE' : 'SHOW'}</Text>
-            </Pressable>
-          }
-        />
-
-        {choices?.kind === 'ambiguous' ? (
-          <View style={styles.venueChoices}>
-            <Text style={styles.venueChoicesLabel}>WHICH VENUE IS THIS HANDSET AT?</Text>
-            {choices.organizations.map((organization) => (
-              <Pressable
-                key={organization.id}
-                style={styles.venueChoice}
-                onPress={() => {
-                  handleSelectOrganization(organization.id);
-                }}
-              >
-                <Text style={styles.venueChoiceName}>{organization.name}</Text>
-                <Text style={styles.venueChoiceMeta}>{organization.role.toUpperCase()}</Text>
-              </Pressable>
-            ))}
-          </View>
-        ) : null}
-
-        {needsVenueSetup ? (
           <GalaTextInput
-            label="VENUE ID · ONE-TIME SETUP"
-            value={organizationIdDraft}
-            onChangeText={setOrganizationIdDraft}
+            label="STAFF ID OR PHONE"
+            value={email}
+            onChangeText={setEmail}
             autoCapitalize="none"
-            placeholder="Ask your manager"
+            keyboardType="email-address"
+            placeholder="e.g. 98200 11223"
             surface
           />
-        ) : null}
 
-        <View style={styles.rememberRow}>
-          <Pressable
-            onPress={() => {
-              setRemember((value) => !value);
-            }}
-            style={styles.rememberLeft}
-          >
-            <View style={[styles.checkbox, remember && styles.checkboxChecked]}>
-              {remember ? <Text style={styles.checkboxTick}>✓</Text> : null}
+          <GalaTextInput
+            label="PASSWORD"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+            placeholder="••••••••"
+            surface
+            style={styles.passwordInput}
+            accessory={
+              <Pressable
+                onPress={() => {
+                  setShowPassword((show) => !show);
+                }}
+                style={styles.showButton}
+              >
+                <Text style={styles.showButtonLabel}>{showPassword ? 'HIDE' : 'SHOW'}</Text>
+              </Pressable>
+            }
+          />
+
+          {choices?.kind === 'ambiguous' ? (
+            <View style={styles.venueChoices}>
+              <Text style={styles.venueChoicesLabel}>WHICH VENUE IS THIS HANDSET AT?</Text>
+              {choices.organizations.map((organization) => (
+                <Pressable
+                  key={organization.id}
+                  style={styles.venueChoice}
+                  onPress={() => {
+                    handleSelectOrganization(organization.id);
+                  }}
+                >
+                  <Text style={styles.venueChoiceName}>{organization.name}</Text>
+                  <Text style={styles.venueChoiceMeta}>{organization.role.toUpperCase()}</Text>
+                </Pressable>
+              ))}
             </View>
-            <Text style={styles.rememberLabel}>Remember this device</Text>
-          </Pressable>
+          ) : null}
+
+          {needsVenueSetup ? (
+            <GalaTextInput
+              label="VENUE ID · ONE-TIME SETUP"
+              value={organizationIdDraft}
+              onChangeText={setOrganizationIdDraft}
+              autoCapitalize="none"
+              placeholder="Ask your manager"
+              surface
+            />
+          ) : null}
+
+          <View style={styles.rememberRow}>
+            <Pressable
+              onPress={() => {
+                setRemember((value) => !value);
+              }}
+              style={styles.rememberLeft}
+            >
+              <View style={[styles.checkbox, remember && styles.checkboxChecked]}>
+                {remember ? <Text style={styles.checkboxTick}>✓</Text> : null}
+              </View>
+              <Text style={styles.rememberLabel}>Remember this device</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setError(null);
+              }}
+            >
+              <Text style={styles.forgotLabel}>Forgot?</Text>
+            </Pressable>
+          </View>
+
+          {error !== null ? <Text style={styles.error}>{error}</Text> : null}
+
+          <SplitButton label="LOG IN" onPress={handleLogin} loading={loading} />
+
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerLabel}>OR</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
           <Pressable
+            style={styles.gateCodeButton}
             onPress={() => {
-              setError(null);
+              // The contract has no gate-access-code auth endpoint — a door
+              // code exists, but it's redeemed AFTER staff login (the
+              // /redeem screen), not an alternative to it. This button used
+              // to call `handleLogin`, which silently required the exact
+              // same staff-ID+password fields — a dead affordance identical
+              // to the primary button. Say so honestly instead of faking a
+              // path that doesn't exist yet.
+              setError(
+                'Gate access codes aren’t available yet — sign in with your staff account above.',
+              );
             }}
           >
-            <Text style={styles.forgotLabel}>Forgot?</Text>
+            <Text style={styles.gateCodeLabel}>Use a gate access code</Text>
           </Pressable>
+
+          <Text style={styles.footNote}>STAFF ACCESS ONLY · v2.4</Text>
         </View>
-
-        {error !== null ? <Text style={styles.error}>{error}</Text> : null}
-
-        <SplitButton label="LOG IN" onPress={handleLogin} loading={loading} />
-
-        <View style={styles.dividerRow}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerLabel}>OR</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <Pressable
-          style={styles.gateCodeButton}
-          onPress={() => {
-            // The contract has no gate-access-code auth endpoint — a door
-            // code exists, but it's redeemed AFTER staff login (the
-            // /redeem screen), not an alternative to it. This button used
-            // to call `handleLogin`, which silently required the exact
-            // same staff-ID+password fields — a dead affordance identical
-            // to the primary button. Say so honestly instead of faking a
-            // path that doesn't exist yet.
-            setError(
-              'Gate access codes aren’t available yet — sign in with your staff account above.',
-            );
-          }}
-        >
-          <Text style={styles.gateCodeLabel}>Use a gate access code</Text>
-        </Pressable>
-
-        <Text style={styles.footNote}>STAFF ACCESS ONLY · v2.4</Text>
-      </View>
+      )}
     </ScrollView>
   );
 }
