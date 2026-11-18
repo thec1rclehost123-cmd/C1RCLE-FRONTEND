@@ -8,7 +8,7 @@ import {
   venueBlockTimeRange,
 } from './venue-calendar-repository';
 
-import type { EventDto, VenueDto, VenueSlotDto } from '@c1rcle/contracts';
+import type { VenueDto, VenueOperationalEventDto, VenueSlotDto } from '@c1rcle/contracts';
 
 const timestamp = '2026-09-01T00:00:00.000Z';
 const venue: VenueDto = {
@@ -42,31 +42,33 @@ function slot(id: string, day: number, status: VenueSlotDto['status']): VenueSlo
   };
 }
 
-function event(id: string, day: number, status: EventDto['status']): EventDto {
+function event(
+  id: string,
+  day: number,
+  status: VenueOperationalEventDto['status'],
+): VenueOperationalEventDto {
   const date = `2026-09-${String(day).padStart(2, '0')}`;
   return {
     id,
-    organizationId: venue.organizationId,
-    venueId: venue.id,
-    slug: `event-${id}`,
+    ownerType: 'host',
     title: `Event ${id}`,
-    summary: '',
-    description: '',
     imageUrl: null,
+    hostName: 'Test Host',
+    venueId: venue.id,
+    venueName: venue.name,
+    status,
     startAt: `${date}T14:30:00.000Z`,
     endAt: `${date}T17:30:00.000Z`,
-    status,
-    visibilityMode: 'public',
-    addressDisclosure: 'public',
-    isPublic: true,
-    tags: [],
-    startingPricePaise: null,
+    eventCapacity: 100,
+    venueCapacity: venue.capacity,
+    ticketUnitsIssued: 10,
+    rsvpUnitsIssued: 2,
+    expectedGuests: 12,
+    checkedInGuests: 3,
+    operationalCountsComplete: true,
+    baseStartingPricePaise: 5000,
+    currentStartingPricePaise: 3000,
     isFree: false,
-    cancellationReason: null,
-    compensation: null,
-    version: 1,
-    createdAt: timestamp,
-    updatedAt: timestamp,
   };
 }
 
@@ -77,18 +79,20 @@ describe('venue calendar repository mapping', () => {
       venue,
       slots: [
         slot('slot-open', 3, 'open'),
+        slot('slot-pending', 7, 'pending'),
         slot('slot-booked', 4, 'booked'),
         slot('slot-blocked', 5, 'blocked'),
         slot('slot-cancelled', 6, 'cancelled'),
       ],
       events: [
-        event('pending', 7, 'review'),
         {
           ...event('published', 8, 'published'),
           startAt: '2026-09-08T14:30:00.000Z',
           endAt: '2026-09-08T17:30:00.000Z',
         },
-        event('cancelled', 9, 'cancelled'),
+        event('postponed', 9, 'postponed'),
+        event('cancelled', 10, 'cancelled'),
+        event('venue-draft', 11, 'draft'),
       ],
     });
 
@@ -103,13 +107,20 @@ describe('venue calendar repository mapping', () => {
     expect(days[5]?.state).toBe('unavailable');
     expect(days[6]).toMatchObject({
       state: 'pending',
-      events: [{ id: 'pending', status: 'pending' }],
+      events: [],
     });
     expect(days[7]).toMatchObject({
       state: 'confirmed',
       events: [{ id: 'published', status: 'confirmed', time: '8:00 PM – 11:00 PM IST' }],
     });
-    expect(days[8]).toMatchObject({ state: 'unavailable', events: [] });
+    expect(days[8]).toMatchObject({
+      state: 'pending',
+      events: [
+        { id: 'postponed', status: 'pending', statusLabel: 'Postponed · original slot released' },
+      ],
+    });
+    expect(days[9]).toMatchObject({ state: 'unavailable', events: [] });
+    expect(days[10]).toMatchObject({ state: 'unavailable', events: [] });
     expect(calendar.blocks).toEqual([
       expect.objectContaining({ id: 'slot-blocked', date: '2026-09-05', reason: 'blocked night' }),
     ]);
