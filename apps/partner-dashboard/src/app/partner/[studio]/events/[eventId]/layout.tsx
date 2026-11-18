@@ -10,6 +10,7 @@ import { VenueEventDetailLayout } from '@/components/venue/event-detail/VenueAss
 import { formatProductDateTime } from '@/lib/events/event-time';
 import { loadPartnerEvent } from '@/lib/events/load-partner-event';
 import { loadPromoterEvents } from '@/lib/events/load-promoter-events';
+import { isVenueOwnedEvent } from '@/lib/events/venue-event-ownership';
 
 import type {
   EventWorkspaceModel,
@@ -54,7 +55,7 @@ export default async function EventWorkspaceLayout({
 }) {
   const { studio, eventId } = await params;
 
-  if (studio === 'venue')
+  if (studio === 'venue' && !(await isVenueOwnedEvent(eventId)))
     return VenueEventDetailLayout({ children, params: Promise.resolve({ eventId }) });
 
   if (studio === 'promoter') {

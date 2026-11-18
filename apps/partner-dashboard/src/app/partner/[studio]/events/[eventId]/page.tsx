@@ -8,6 +8,7 @@ import { loadPartnerEvent } from '@/lib/events/load-partner-event';
 import { loadPartnerEventAnalytics } from '@/lib/events/load-partner-event-analytics';
 import { loadPartnerEventTiers } from '@/lib/events/load-partner-event-tiers';
 import { loadPromoterEventVenue, loadPromoterEvents } from '@/lib/events/load-promoter-events';
+import { isVenueOwnedEvent } from '@/lib/events/venue-event-ownership';
 
 import { renderStudioSkeleton } from '../../route-helpers';
 
@@ -17,7 +18,8 @@ export default async function StudioEventDetailPage({
   readonly params: Promise<{ studio: string; eventId: string }>;
 }) {
   const { studio, eventId } = await params;
-  if (studio === 'venue') return VenueEventSummaryPage({ params: Promise.resolve({ eventId }) });
+  if (studio === 'venue' && !(await isVenueOwnedEvent(eventId)))
+    return VenueEventSummaryPage({ params: Promise.resolve({ eventId }) });
 
   if (studio === 'promoter') {
     const data = await loadPromoterEvents();

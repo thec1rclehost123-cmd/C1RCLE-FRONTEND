@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 
 import { ConnectedEventSectionUnavailable } from '@/components/partner-v3/event-detail/ConnectedEventSectionUnavailable';
 import { VenueEventReadOnlySection } from '@/components/venue/event-detail/VenueEventReadOnlySection';
+import { isVenueOwnedEvent } from '@/lib/events/venue-event-ownership';
 
 export default async function StudioEventTonightPage({
   params,
@@ -9,14 +10,14 @@ export default async function StudioEventTonightPage({
   readonly params: Promise<{ studio: string; eventId: string }>;
 }) {
   const { studio, eventId } = await params;
-  if (studio === 'venue')
+  if (studio === 'venue' && !(await isVenueOwnedEvent(eventId)))
     return (
       <VenueEventReadOnlySection
         title="Event operations are view only"
         description="The Venue workspace shows event schedule, attendance totals, and check-ins without Host controls."
       />
     );
-  if (studio !== 'host') notFound();
+  if (studio !== 'venue' && studio !== 'host') notFound();
   return (
     <ConnectedEventSectionUnavailable
       studio={studio}
