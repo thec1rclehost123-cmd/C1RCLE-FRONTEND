@@ -659,6 +659,16 @@
   gap: 3px;
   flex: 1;
 }
+.venueUpcomingEvent > .upcomingPosterFallback {
+  position: absolute;
+  z-index: 0;
+}
+
+.upcomingEvent.venueUpcomingEvent strong {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 .upcomingEvent strong {
   overflow: hidden;
   font-size: 14px;

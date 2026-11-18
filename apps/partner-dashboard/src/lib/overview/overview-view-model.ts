@@ -425,7 +425,9 @@ function formatAmount(paise: number): string {
 // ─── Network ─────────────────────────────────────────────────────────────────
 
 /** Only backend-provided public-safe names may be shown; never expose an organization ID. */
-function buildNetwork(partners: readonly NetworkPartner[]): readonly OverviewNetworkMember[] {
+export function buildNetwork(
+  partners: readonly NetworkPartner[],
+): readonly OverviewNetworkMember[] {
   return partners.map((partner, index) => {
     const trimmedName = partner.name?.trim();
     const name = trimmedName && trimmedName.length > 0 ? trimmedName : undefined;
@@ -472,7 +474,7 @@ function toNetworkStatus(status: string): OverviewNetworkMember['status'] {
  *
  * All user-facing date and clock labels use the product's fixed timezone.
  */
-function formatTodayLabel(now: Date): string {
+export function formatTodayLabel(now: Date): string {
   const parts = new Intl.DateTimeFormat('en-IN', {
     weekday: 'long',
     day: 'numeric',
@@ -484,7 +486,7 @@ function formatTodayLabel(now: Date): string {
   return `${get('weekday')}, ${get('day')} ${get('month')} · ${formatClock(now)}`;
 }
 
-function formatGreeting(displayName: string | null, now: Date): string {
+export function formatGreeting(displayName: string | null, now: Date): string {
   const hour = Number(
     new Intl.DateTimeFormat('en-IN', {
       hour: 'numeric',
@@ -509,7 +511,7 @@ function formatClock(now: Date): string {
     .toUpperCase();
 }
 
-function formatDayLabel(iso: string): string {
+export function formatDayLabel(iso: string): string {
   const parsed = new Date(iso);
   if (Number.isNaN(parsed.getTime())) return '—';
   return new Intl.DateTimeFormat('en-IN', {
@@ -519,7 +521,7 @@ function formatDayLabel(iso: string): string {
   }).format(parsed);
 }
 
-function formatTimeLabel(iso: string): string {
+export function formatTimeLabel(iso: string): string {
   const parsed = new Date(iso);
   if (Number.isNaN(parsed.getTime())) return '—';
   return new Intl.DateTimeFormat('en-IN', {

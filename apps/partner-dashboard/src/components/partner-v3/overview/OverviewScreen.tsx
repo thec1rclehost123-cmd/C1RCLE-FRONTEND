@@ -11,7 +11,13 @@ import { OverviewCalendarCard } from './OverviewCalendarCard';
 import { OverviewEventPoster } from './OverviewEventPoster';
 import { OverviewTrendCard } from './OverviewTrendCard';
 
-import type { OverviewAccent, OverviewData, OverviewLinks } from '@/data/partner-data-source';
+import type {
+  OverviewAccent,
+  OverviewData,
+  OverviewEvent,
+  OverviewLinks,
+} from '@/data/partner-data-source';
+import type { ReactNode } from 'react';
 
 const upcomingBackgroundClasses = [
   styles['upcomingEvent-1'],
@@ -85,6 +91,22 @@ function SectionHeader({
   );
 }
 
+type VenueOverviewEvent = Omit<OverviewEvent, 'sold' | 'capacity'> & {
+  readonly expectedGuestsLabel?: string;
+  readonly doorsLabel?: string;
+};
+
+export type VenueOverviewPresentation = Pick<
+  OverviewData,
+  'dataStatus' | 'todayLabel' | 'greeting' | 'trends' | 'calendar'
+> & {
+  readonly nextEvent: VenueOverviewEvent;
+  readonly upcomingEvents: readonly VenueOverviewEvent[];
+  readonly network: OverviewData['network'] | null;
+  readonly venueOperations: ReactNode;
+  readonly calendarComplete: boolean;
+};
+
 export function OverviewScreen({
   data,
   links,
@@ -92,13 +114,15 @@ export function OverviewScreen({
   studio,
   organizationId,
 }: {
-  readonly data: OverviewData;
-  readonly links: OverviewLinks;
+  readonly data: OverviewData | VenueOverviewPresentation;
+  readonly links: Omit<OverviewLinks, 'finance'> & { readonly finance?: string };
   readonly accent?: OverviewAccent;
   readonly studio?: 'venue' | 'host';
   readonly organizationId?: string | null;
 }) {
-  const nextEventIsToday = isProductCalendarDay(data.nextEvent.startAt);
+  const { nextEvent } = data;
+  const venue = 'venueOperations' in data ? data : null;
+  const nextEventIsToday = isProductCalendarDay(nextEvent.startAt);
 
   return (
     <div
@@ -127,8 +151,8 @@ export function OverviewScreen({
         <div className={styles['primaryStack']}>
           <article className={styles['hero']} aria-labelledby="next-event-title">
             <OverviewEventPoster
-              src={data.nextEvent.imageSrc}
-              alt={data.nextEvent.imageAlt ?? ''}
+              src={nextEvent.imageSrc}
+              alt={nextEvent.imageAlt ?? ''}
               className={styles['heroPoster'] ?? ''}
               fallbackClassName={styles['heroPosterFallback'] ?? ''}
               sizes="(max-width: 900px) 100vw, 52vw"
@@ -136,46 +160,56 @@ export function OverviewScreen({
             <div className={styles['heroOverlay']} aria-hidden="true" />
             <div className={styles['heroContent']}>
               <div className={styles['heroTopline']}>
-                <span className={styles['livePill']}>
-                  <i aria-hidden="true" />
-                  {data.nextEvent.dateLabel} · {data.nextEvent.timeLabel}
-                </span>
+                {!venue || nextEvent.id ? (
+                  <span className={styles['livePill']}>
+                    <i aria-hidden="true" />
+                    {nextEvent.dateLabel} · {nextEvent.timeLabel}
+                  </span>
+                ) : null}
                 {/* The backend has no doors-time field, so the API-backed path
                     never supplies one. Rendering an empty span would leave a
                     stray gap in the topline; inventing one (e.g. an hour before
                     start) would print a time no partner ever set. */}
-                {data.nextEvent.doorsLabel ? <span>{data.nextEvent.doorsLabel}</span> : null}
+                {nextEvent.doorsLabel ? <span>{nextEvent.doorsLabel}</span> : null}
               </div>
               <div className={styles['heroDetails']}>
-                <p>{data.nextEvent.venue}</p>
-                <h2 id="next-event-title">{data.nextEvent.name}</h2>
+                <p>{nextEvent.venue}</p>
+                <h2 id="next-event-title">{nextEvent.name}</h2>
                 <div className={styles['heroSalesRow']}>
                   <div className={styles['capacityLabels']}>
                     {/* `null` capacity means the venue never declared one. Showing
                         "0 tickets" would be a different claim, and the percentage
                         has no denominator, so the sell-through is simply omitted. */}
-                    {data.nextEvent.capacity === null ? (
-                      <span>{data.nextEvent.sold.toLocaleString('en-IN')} tickets sold</span>
-                    ) : (
-                      <>
-                        <span>
-                          {data.nextEvent.sold.toLocaleString('en-IN')} of{' '}
-                          {data.nextEvent.capacity.toLocaleString('en-IN')} tickets sold
-                        </span>
-                        <strong>{soldPercentOf(data.nextEvent)}% full</strong>
-                      </>
-                    )}
+                    {'expectedGuestsLabel' in nextEvent ? (
+                      <span>{nextEvent.expectedGuestsLabel}</span>
+                    ) : 'sold' in nextEvent ? (
+                      nextEvent.capacity === null ? (
+                        <span>{nextEvent.sold.toLocaleString('en-IN')} tickets sold</span>
+                      ) : (
+                        <>
+                          <span>
+                            {nextEvent.sold.toLocaleString('en-IN')} of{' '}
+                            {nextEvent.capacity.toLocaleString('en-IN')} tickets sold
+                          </span>
+                          <strong>{soldPercentOf(nextEvent)}% full</strong>
+                        </>
+                      )
+                    ) : null}
                   </div>
-                  {data.nextEvent.id ? (
+                  {nextEvent.id ? (
                     <Link
                       className={styles['heroAction']}
                       href={
-                        nextEventIsToday
-                          ? `/partner/${studio ?? 'venue'}/events/${encodeURIComponent(data.nextEvent.id)}/door`
-                          : `/partner/${studio ?? 'venue'}/events/${encodeURIComponent(data.nextEvent.id)}/guests`
+                        venue
+                          ? nextEvent.href
+                          : nextEventIsToday
+                            ? `/partner/${studio ?? 'venue'}/events/${encodeURIComponent(nextEvent.id)}/door`
+                            : `/partner/${studio ?? 'venue'}/events/${encodeURIComponent(nextEvent.id)}/guests`
                       }
                     >
-                      {nextEventIsToday ? (
+                      {venue ? (
+                        'View event'
+                      ) : nextEventIsToday ? (
                         <>Door mode</>
                       ) : (
                         <>
@@ -186,71 +220,115 @@ export function OverviewScreen({
                     </Link>
                   ) : null}
                 </div>
-                {data.nextEvent.capacity === null ? null : (
+                {'sold' in nextEvent && nextEvent.capacity !== null ? (
                   <progress
                     className={styles['progressTrack']}
-                    aria-label={String(soldPercentOf(data.nextEvent)) + '% of tickets sold'}
-                    value={soldPercentOf(data.nextEvent)}
+                    aria-label={String(soldPercentOf(nextEvent)) + '% of tickets sold'}
+                    value={soldPercentOf(nextEvent)}
                     max={100}
                   />
-                )}
+                ) : null}
               </div>
             </div>
           </article>
-          <OverviewTrendCard series={data.trends} />
+          {venue && data.trends.length === 0 ? (
+            <section className={classNames(styles['card'], styles['trendCard'])}>
+              <h2 className={styles['trendTitle']}>Performance</h2>
+              <p className={styles['overviewEmpty']}>
+                Venue performance is temporarily unavailable.
+              </p>
+            </section>
+          ) : (
+            <OverviewTrendCard
+              series={data.trends}
+              {...(venue ? { metricOptions: [], rangeOptions: [] } : {})}
+            />
+          )}
         </div>
 
-        <section
-          className={classNames(styles['card'], styles['activityCard'])}
-          aria-labelledby="recent-orders-title"
-        >
-          <SectionHeader
-            id="recent-orders-title"
-            title="Recent orders"
-            description="Latest Guest orders across your events"
-            href={links.finance}
-            action="View all"
-          />
-          <div className={styles['activityList']}>
-            {data.recentOrders === null ? (
-              <p className={styles['overviewEmpty']}>
-                Order details are not available to this workspace role.
-              </p>
-            ) : null}
-            {data.recentOrders?.length === 0 ? (
-              <p className={styles['overviewEmpty']}>No orders have been recorded yet.</p>
-            ) : null}
-            {data.recentOrders?.map((order) => {
-              return (
-                <div className={styles['activityRow']} data-order-card="true" key={order.id}>
-                  <span
-                    className={classNames(styles['activityIcon'], styles['activityIcon-positive'])}
-                  >
-                    <TicketIcon size={17} aria-hidden="true" />
-                  </span>
-                  <div>
-                    <strong>{order.buyerName}</strong>
-                    <span className={styles['activityMeta']}>
-                      {order.ticketSummary} · {order.timeAgo}
+        {'recentOrders' in data ? (
+          <section
+            className={classNames(styles['card'], styles['activityCard'])}
+            aria-labelledby="recent-orders-title"
+          >
+            <SectionHeader
+              id="recent-orders-title"
+              title="Recent orders"
+              description="Latest Guest orders across your events"
+              {...(links.finance ? { href: links.finance } : {})}
+              action="View all"
+            />
+            <div className={styles['activityList']}>
+              {data.recentOrders === null ? (
+                <p className={styles['overviewEmpty']}>
+                  Order details are not available to this workspace role.
+                </p>
+              ) : null}
+              {data.recentOrders?.length === 0 ? (
+                <p className={styles['overviewEmpty']}>No orders have been recorded yet.</p>
+              ) : null}
+              {data.recentOrders?.map((order) => {
+                return (
+                  <div className={styles['activityRow']} data-order-card="true" key={order.id}>
+                    <span
+                      className={classNames(
+                        styles['activityIcon'],
+                        styles['activityIcon-positive'],
+                      )}
+                    >
+                      <TicketIcon size={17} aria-hidden="true" />
                     </span>
+                    <div>
+                      <strong>{order.buyerName}</strong>
+                      <span className={styles['activityMeta']}>
+                        {order.ticketSummary} · {order.timeAgo}
+                      </span>
+                    </div>
+                    <b
+                      className={styles[`amount-${order.amountTone}`]}
+                      data-tone={order.amountTone}
+                    >
+                      {order.amountLabel}
+                    </b>
                   </div>
-                  <b className={styles[`amount-${order.amountTone}`]} data-tone={order.amountTone}>
-                    {order.amountLabel}
-                  </b>
-                </div>
-              );
-            })}
-          </div>
-        </section>
+                );
+              })}
+            </div>
+          </section>
+        ) : (
+          <section
+            className={classNames(styles['card'], styles['activityCard'])}
+            aria-labelledby="venue-operations-title"
+          >
+            <SectionHeader
+              id="venue-operations-title"
+              title="Venue operations"
+              href="/partner/venue/analytics"
+              action="View analytics"
+            />
+            {data.venueOperations}
+          </section>
+        )}
       </div>
 
       <div className={styles['secondaryGrid']}>
-        <OverviewCalendarCard
-          fallback={data.calendar}
-          href={links.calendar}
-          {...(studio ? { studio } : {})}
-          {...(organizationId !== undefined ? { organizationId } : {})}
-        />
+        {venue ? (
+          <div>
+            <OverviewCalendarCard fallback={data.calendar} href={links.calendar} />
+            {!venue.calendarComplete ? (
+              <p className={styles['overviewEmpty']} role="status">
+                The calendar preview may be incomplete.
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <OverviewCalendarCard
+            fallback={data.calendar}
+            href={links.calendar}
+            {...(studio ? { studio } : {})}
+            {...(organizationId !== undefined ? { organizationId } : {})}
+          />
+        )}
 
         <section
           className={classNames(styles['card'], styles['upcomingCard'])}
@@ -263,11 +341,17 @@ export function OverviewScreen({
             action="See all"
           />
           <div className={styles['upcomingList']}>
+            {venue && data.upcomingEvents.length === 0 ? (
+              <p className={styles['overviewEmpty']}>No events to show.</p>
+            ) : null}
             {data.upcomingEvents.map((event, index) => {
-              const percent = soldPercentOf(event);
               return (
                 <Link
-                  className={classNames(styles['upcomingEvent'], upcomingBackgroundClasses[index])}
+                  className={classNames(
+                    styles['upcomingEvent'],
+                    upcomingBackgroundClasses[index],
+                    Boolean(venue) && styles['venueUpcomingEvent'],
+                  )}
                   href={event.href}
                   key={event.id}
                 >
@@ -286,10 +370,10 @@ export function OverviewScreen({
                   </div>
                   {/* Without a declared capacity, sell-through is unknown, so
                       don't imply that the event is sold or show a percentage. */}
-                  {event.capacity !== null ? (
+                  {'sold' in event && event.capacity !== null ? (
                     <b className={eventStatusClasses[event.status]}>
                       <>
-                        {percent}% <small>sold</small>
+                        {soldPercentOf(event)}% <small>sold</small>
                       </>
                     </b>
                   ) : null}
@@ -311,10 +395,15 @@ export function OverviewScreen({
             action="See all"
           />
           <div className={styles['networkList']}>
-            {data.network.length === 0 ? (
+            {data.network === null ? (
+              <p className={styles['overviewEmpty']}>
+                Partner relationships are temporarily unavailable.
+              </p>
+            ) : null}
+            {data.network?.length === 0 ? (
               <p className={styles['overviewEmpty']}>No partner relationships yet.</p>
             ) : null}
-            {data.network.slice(0, NETWORK_PREVIEW_LIMIT).map((member) => (
+            {data.network?.slice(0, NETWORK_PREVIEW_LIMIT).map((member) => (
               <div className={styles['networkRow']} key={member.id}>
                 <span
                   className={classNames(

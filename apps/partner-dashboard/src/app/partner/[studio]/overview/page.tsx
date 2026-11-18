@@ -7,10 +7,12 @@ import { OverviewScreen } from '@/components/partner-v3/overview/OverviewScreen'
 import { VenueOperationalOverviewScreen } from '@/components/partner-v3/overview/VenueOperationalOverviewScreen';
 import { PromoterOverviewConnected } from '@/components/partner-v3/promoter/PromoterOverviewConnected';
 import { loadPromoterOverview } from '@/lib/events/load-promoter-overview';
+import { loadVenueOverviewAnalytics } from '@/lib/events/load-venue-operational-analytics';
 import { getActiveOrgIdFromCookieHeader } from '@/lib/org/active-org-cookie';
 import {
   classifyOverviewFailure,
   loadOverviewData,
+  loadOverviewNetwork,
   OverviewLoadError,
 } from '@/lib/overview/load-overview-data';
 import { loadVenueOperationalOverview } from '@/lib/overview/load-venue-operational-overview';
@@ -52,19 +54,22 @@ export default async function StudioOverviewPage({
 
   if (studio === 'venue') {
     if (!organizationId) return <OverviewLoadFailureState reason="no-organization" />;
-    let result:
-      | { readonly data: Awaited<ReturnType<typeof loadVenueOperationalOverview>> }
-      | {
-          readonly error: unknown;
-        };
-    try {
-      result = { data: await loadVenueOperationalOverview(organizationId) };
-    } catch (error) {
-      result = { error };
-    }
-    if ('error' in result)
-      return <OverviewLoadFailureState reason={classifyOverviewFailure(result.error)} />;
-    return <VenueOperationalOverviewScreen data={result.data} />;
+    const now = new Date();
+    const [overview, analytics, network] = await Promise.allSettled([
+      loadVenueOperationalOverview(organizationId),
+      loadVenueOverviewAnalytics(organizationId, now),
+      loadOverviewNetwork(organizationId),
+    ]);
+    if (overview.status === 'rejected')
+      return <OverviewLoadFailureState reason={classifyOverviewFailure(overview.reason)} />;
+    return (
+      <VenueOperationalOverviewScreen
+        data={overview.value}
+        analytics={analytics.status === 'fulfilled' ? analytics.value : null}
+        network={network.status === 'fulfilled' ? network.value : null}
+        now={now}
+      />
+    );
   }
 
   // Real reads. The accent is a role tint, nothing more — the gateway decides

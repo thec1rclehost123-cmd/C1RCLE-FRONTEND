@@ -14,7 +14,7 @@ import {
   getOrganizationRecentOrders,
   getOrganizationTrends,
 } from '@/lib/overview/api-overview-repository';
-import { dayKeyOffset, toOverviewData } from '@/lib/overview/overview-view-model';
+import { buildNetwork, dayKeyOffset, toOverviewData } from '@/lib/overview/overview-view-model';
 // The PURE cookie module, not `@/lib/org/active-org`. The latter also exports
 // `setActiveOrg`, which imports the `@c1rcle/auth` barrel → `session-store` →
 // `useSyncExternalStore`; the RSC build rejects a client-only React API in a
@@ -197,6 +197,11 @@ async function loadRecentOrders(client: ServerApiClient, organizationId: string)
     if (cause instanceof ApiClientError && cause.status === 403) return null;
     throw cause;
   }
+}
+
+export async function loadOverviewNetwork(organizationId: string) {
+  const client = createServerApiClient((await cookies()).toString());
+  return buildNetwork(await loadOrganizationNetwork(client, organizationId));
 }
 
 async function loadOrganizationNetwork(

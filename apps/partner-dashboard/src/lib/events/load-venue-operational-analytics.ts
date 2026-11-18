@@ -42,6 +42,30 @@ export async function loadVenueOperationalAnalytics(range: PartnerAnalyticsRange
   if (!organizationId) redirect('/partner/select-organization');
   const to = productDayKey(new Date());
   const from = offsetDay(to, -(rangeDays[range] - 1));
+  return readVenueOperationalAnalytics(cookieHeader, organizationId, from, to);
+}
+
+export async function loadVenueOverviewAnalytics(organizationId: string, now: Date) {
+  const today = productDayKey(now);
+  const monthStart = today.slice(0, 8) + '01';
+  const [year, month] = monthStart.split('-').map(Number);
+  const monthEnd = new Date(Date.UTC(year ?? 0, month ?? 0, 0)).toISOString().slice(0, 10);
+  const weekStart = offsetDay(today, -6);
+  const from = monthStart < weekStart ? monthStart : weekStart;
+  return readVenueOperationalAnalytics(
+    (await cookies()).toString(),
+    organizationId,
+    from,
+    monthEnd,
+  );
+}
+
+function readVenueOperationalAnalytics(
+  cookieHeader: string,
+  organizationId: string,
+  from: string,
+  to: string,
+) {
   const query = new URLSearchParams({ from, to });
   return createServerApiClient(cookieHeader).get({
     path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/venue-analytics?${query.toString()}`,

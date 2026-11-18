@@ -76,6 +76,7 @@ export function OverviewTrendCard({
   readonly chartClassName?: string | undefined;
 }) {
   const gradientId = useId();
+  const showTopRanges = rangePlacement === 'top' && rangeOptions.length > 0;
   const [hovered, setHovered] = useState<number | null>(null);
   const [metric, setMetric] = useState<OverviewTrendMetric>(initialMetric);
   const [range, setRange] = useState<OverviewTrendRange>(initialRange);
@@ -125,10 +126,12 @@ export function OverviewTrendCard({
   return (
     <section
       className={[styles['card'], styles['trendCard'], className].filter(Boolean).join(' ')}
-      aria-labelledby="overview-performance-title"
+      aria-labelledby={`${gradientId}-title`}
     >
       <header className={styles['trendHeader']}>
-        <h2 className={styles['trendTitle']}>{title}</h2>
+        <h2 id={`${gradientId}-title`} className={styles['trendTitle']}>
+          {title}
+        </h2>
         {summaryLabel && summaryValue ? (
           <div className={styles['trendSummary']}>
             <span>{summaryLabel}</span>
@@ -136,44 +139,48 @@ export function OverviewTrendCard({
           </div>
         ) : null}
       </header>
-      <div className={styles['trendControls']}>
-        <div className={styles['segmentedControl']} aria-label="Performance metric">
-          {metricOptions.map((option) => (
-            <button
-              key={option}
-              type="button"
-              aria-pressed={metric === option}
-              onClick={() => {
-                setMetric(option);
-                setHovered(null);
-              }}
-            >
-              {metricLabels[option]}
-            </button>
-          ))}
+      {metricOptions.length > 0 || showTopRanges ? (
+        <div className={styles['trendControls']}>
+          {metricOptions.length > 0 ? (
+            <div className={styles['segmentedControl']} aria-label="Performance metric">
+              {metricOptions.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  aria-pressed={metric === option}
+                  onClick={() => {
+                    setMetric(option);
+                    setHovered(null);
+                  }}
+                >
+                  {metricLabels[option]}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {showTopRanges ? (
+            <div className={styles['segmentedControl']} aria-label="Performance range">
+              {rangeOptions.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  aria-pressed={range === option}
+                  onClick={() => {
+                    setRange(option);
+                    setHovered(null);
+                  }}
+                >
+                  {option === 'All' ? 'ALL' : option}
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
-        {rangePlacement === 'top' && rangeOptions.length > 0 ? (
-          <div className={styles['segmentedControl']} aria-label="Performance range">
-            {rangeOptions.map((option) => (
-              <button
-                key={option}
-                type="button"
-                aria-pressed={range === option}
-                onClick={() => {
-                  setRange(option);
-                  setHovered(null);
-                }}
-              >
-                {option === 'All' ? 'ALL' : option}
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </div>
+      ) : null}
       {showMetricSummary ? (
         <>
           <div className={styles['trendMetric']}>
-            <h2 id="overview-performance-title">{active.value}</h2>
+            <h2>{active.value}</h2>
             {active.delta ? (
               <span className={styles[`trendDelta-${trendTone}`]} data-trend={trendTone}>
                 {active.delta}
@@ -232,7 +239,7 @@ export function OverviewTrendCard({
               );
             }}
             aria-describedby={selectedIndex === null ? undefined : `${gradientId}-tooltip`}
-            aria-label={`${metric} ${range} trend: ${active.value}, ${active.delta}`}
+            aria-label={`${metric} ${range} trend: ${active.value}${active.delta ? `, ${active.delta}` : ''}`}
           >
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">

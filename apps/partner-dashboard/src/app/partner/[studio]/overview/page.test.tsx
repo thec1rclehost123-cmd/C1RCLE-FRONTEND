@@ -4,7 +4,9 @@ import StudioOverviewPage from './page';
 
 const mocks = vi.hoisted(() => ({
   loadVenueOperationalOverview: vi.fn(),
+  loadVenueOverviewAnalytics: vi.fn(),
   loadOverviewData: vi.fn(),
+  loadOverviewNetwork: vi.fn(),
 }));
 
 vi.mock('next/headers', () => ({
@@ -13,9 +15,13 @@ vi.mock('next/headers', () => ({
 vi.mock('@/lib/overview/load-venue-operational-overview', () => ({
   loadVenueOperationalOverview: mocks.loadVenueOperationalOverview,
 }));
+vi.mock('@/lib/events/load-venue-operational-analytics', () => ({
+  loadVenueOverviewAnalytics: mocks.loadVenueOverviewAnalytics,
+}));
 vi.mock('@/lib/overview/load-overview-data', () => ({
   classifyOverviewFailure: vi.fn(),
   loadOverviewData: mocks.loadOverviewData,
+  loadOverviewNetwork: mocks.loadOverviewNetwork,
   OverviewLoadError: class OverviewLoadError extends Error {},
 }));
 vi.mock('@/lib/events/load-promoter-overview', () => ({ loadPromoterOverview: vi.fn() }));
@@ -33,7 +39,7 @@ vi.mock('@/components/partner-v3/promoter/PromoterOverviewConnected', () => ({
 }));
 
 describe('Venue overview route', () => {
-  it('loads only the Venue operational read model', async () => {
+  it('uses Venue operational reads and the existing network loader', async () => {
     mocks.loadVenueOperationalOverview.mockResolvedValue({ summary: {}, upcomingEvents: [] });
 
     const page = await StudioOverviewPage({
@@ -42,6 +48,8 @@ describe('Venue overview route', () => {
 
     expect(page).toBeTruthy();
     expect(mocks.loadVenueOperationalOverview).toHaveBeenCalledWith('venue-org');
+    expect(mocks.loadVenueOverviewAnalytics).toHaveBeenCalledWith('venue-org', expect.any(Date));
+    expect(mocks.loadOverviewNetwork).toHaveBeenCalledWith('venue-org');
     expect(mocks.loadOverviewData).not.toHaveBeenCalled();
   });
 });
