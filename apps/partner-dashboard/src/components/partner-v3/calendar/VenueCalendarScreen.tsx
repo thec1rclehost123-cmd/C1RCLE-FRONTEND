@@ -44,10 +44,9 @@ export function VenueCalendarScreen({
   const router = useRouter();
   const pathname = usePathname();
   const month = data.months.find((item) => item.key === initialMonth) ?? data.months[0];
-  const today = productDateKey(new Date());
   const selectedDate = month?.days.some((day) => day.date === initialDate)
     ? (initialDate ?? '')
-    : (month?.days.find((day) => day.date === today)?.date ?? month?.days[0]?.date ?? '');
+    : (month?.days.find((day) => day.day === 16)?.date ?? month?.days[0]?.date ?? '');
   if (!month) return null;
   const selectedDay = month.days.find((day) => day.date === selectedDate) ?? month.days[0];
   if (!selectedDay) return null;
@@ -105,11 +104,6 @@ export function VenueCalendarScreen({
           </Button>
         }
       />
-      {data.complete === false ? (
-        <p className={styles['incompleteNotice']} role="status">
-          Some Venue event records could not be loaded. The event list may be incomplete.
-        </p>
-      ) : null}
       <div className={styles['calendarLayout']}>
         <section className={styles['calendarPanel']} aria-label="Venue booking calendar">
           <CalendarGrid
@@ -163,17 +157,6 @@ export function VenueCalendarScreen({
       ) : null}
     </div>
   );
-}
-
-function productDateKey(value: Date): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Kolkata',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(value);
-  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? '';
-  return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
 function Legend({

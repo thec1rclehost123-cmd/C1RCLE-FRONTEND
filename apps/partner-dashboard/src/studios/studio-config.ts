@@ -42,6 +42,7 @@ export const STUDIO_CONFIG: Readonly<Record<StudioRole, StudioConfig>> = {
       { label: 'Slot requests', href: studioPath('venue', 'slot-requests'), icon: 'requests' },
       { label: 'Partners', href: studioPath('venue', 'partners'), icon: 'partners' },
       { label: 'Marketing', href: studioPath('venue', 'marketing'), icon: 'marketing' },
+      { label: 'Door', href: studioPath('venue', 'door'), icon: 'presence' },
       { label: 'Finance', href: studioPath('venue', 'finance'), icon: 'finance' },
       { label: 'Support', href: studioPath('venue', 'support'), icon: 'support' },
       { label: 'Settings', href: studioPath('venue', 'settings'), icon: 'settings' },

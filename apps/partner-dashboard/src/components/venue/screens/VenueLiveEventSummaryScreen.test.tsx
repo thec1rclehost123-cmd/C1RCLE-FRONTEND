@@ -8,56 +8,74 @@ import type { VenueEventDetailViewModel } from '@/lib/events/load-venue-event-de
 const record: VenueEventDetailViewModel = {
   event: {
     id: 'event-1',
-    ownerType: 'host',
-    title: 'C1RCLE STAGING ACCEPTANCE 001',
-    imageUrl: null,
-    hostName: 'Test Host',
+    organizationId: 'host-org-1',
     venueId: 'venue-1',
-    venueName: 'Test Venue',
-    status: 'published',
+    slug: 'acceptance-event',
+    title: 'C1RCLE STAGING ACCEPTANCE 001',
+    summary: 'Staging event summary',
+    description: 'Staging event description',
+    imageUrl: 'https://storage.googleapis.com/example/poster.jpg',
     startAt: '2026-11-29T12:30:00.000Z',
     endAt: '2026-11-29T16:30:00.000Z',
-    eventCapacity: 80,
-    venueCapacity: 240,
-    ticketUnitsIssued: 30,
-    rsvpUnitsIssued: 5,
-    expectedGuests: 42,
-    checkedInGuests: 12,
-    operationalCountsComplete: true,
-    baseStartingPricePaise: 80_000,
-    currentStartingPricePaise: 65_000,
+    status: 'published',
+    visibilityMode: 'public',
+    addressDisclosure: 'public',
+    isPublic: true,
+    tags: [],
+    startingPricePaise: 80000,
     isFree: false,
+    cancellationReason: null,
+    version: 1,
+    createdAt: '2026-11-10T00:00:00.000Z',
+    updatedAt: '2026-11-10T00:00:00.000Z',
   },
-  tiers: [
-    {
-      tierId: 'tier-general',
-      name: 'General Entry',
-      unitKind: 'ticket',
-      unitsIssued: 30,
-      expectedGuests: 30,
-      checkedInGuests: 10,
-    },
-  ],
   hostName: 'Test Host',
   venueName: 'Test Venue',
+  tiers: [
+    {
+      id: 'tier-general',
+      eventId: 'event-1',
+      organizationId: 'host-org-1',
+      name: 'General Entry',
+      description: '',
+      entryType: 'standard',
+      currency: 'INR',
+      priceInPaise: 80000,
+      quantity: 80,
+      status: 'active',
+      salesStartAt: null,
+      salesEndAt: null,
+      maxPerOrder: 4,
+      version: 1,
+      createdAt: '2026-11-10T00:00:00.000Z',
+      updatedAt: '2026-11-10T00:00:00.000Z',
+      pricingPhases: [
+        {
+          id: 'early-bird',
+          name: 'Early Bird',
+          priceInPaise: 65000,
+          quantity: null,
+          startsAt: '2026-11-16T00:00:00.000Z',
+          endsAt: '2026-11-22T00:00:00.000Z',
+        },
+      ],
+    },
+  ],
 };
 
 describe('VenueLiveEventSummaryScreen', () => {
-  it('presents operational counts and separates physical Venue and event capacity', () => {
+  it('presents the Venue-authorized event data in overview and ticket-tier cards', () => {
     render(<VenueLiveEventSummaryScreen record={record} />);
 
     expect(screen.getByRole('heading', { name: 'Overview' })).toBeInTheDocument();
-    expect(screen.getByText('Test Host')).toBeInTheDocument();
+    expect(screen.getByText('Host organization · Test Host')).toBeInTheDocument();
     expect(screen.getByText('Test Venue')).toBeInTheDocument();
     expect(screen.queryByText(/host-org-1|venue-1/)).not.toBeInTheDocument();
-    expect(screen.getAllByText('Expected guests')).toHaveLength(2);
-    expect(screen.getByText('42')).toBeInTheDocument();
-    expect(screen.getByText('12')).toBeInTheDocument();
-    expect(screen.getByText(/30 ticket · 5 RSVP/)).toBeInTheDocument();
-    expect(screen.getByText('Physical Venue capacity')).toBeInTheDocument();
-    expect(screen.getByText('240')).toBeInTheDocument();
-    expect(screen.getByText('Event capacity')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'General Entry' })).toBeInTheDocument();
-    expect(screen.queryByText(/₹|revenue|payable|commission/i)).not.toBeInTheDocument();
+    expect(screen.getByText('₹800.00')).toBeInTheDocument();
+    expect(screen.getByText('80')).toBeInTheDocument();
+    expect(screen.getByText('4 per order')).toBeInTheDocument();
+    expect(screen.getByText('Early Bird')).toBeInTheDocument();
+    expect(screen.getByText('₹650.00')).toBeInTheDocument();
   });
 });

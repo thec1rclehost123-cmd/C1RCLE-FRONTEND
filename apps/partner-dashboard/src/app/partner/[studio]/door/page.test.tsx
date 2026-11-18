@@ -2,20 +2,26 @@ import { describe, expect, it, vi } from 'vitest';
 
 import StudioDoorPage from './page';
 
-const { notFound } = vi.hoisted(() => ({
+const { notFound, loadPartnerEvents } = vi.hoisted(() => ({
   notFound: vi.fn(),
+  loadPartnerEvents: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({ notFound }));
+vi.mock('@/lib/events/load-partner-events', () => ({ loadPartnerEvents }));
 vi.mock('@/components/partner-v3/door/PartnerDoorSelectionScreen', () => ({
-  PartnerDoorSelectionScreen: () => <div>Venue scanner unavailable</div>,
+  PartnerDoorSelectionScreen: () => <div>Venue event selector</div>,
 }));
 
 describe('Venue Door route', () => {
-  it('shows the truthful unavailable state without linking to an unauthorized scanner', async () => {
-    const page = await StudioDoorPage({ params: Promise.resolve({ studio: 'venue' }) });
+  it('loads live Venue events for the event selector', async () => {
+    loadPartnerEvents.mockResolvedValue({ events: [], nextCursor: null });
+    await StudioDoorPage({
+      params: Promise.resolve({ studio: 'venue' }),
+      searchParams: Promise.resolve({ cursor: 'next-page' }),
+    });
 
-    expect(page).toBeTruthy();
+    expect(loadPartnerEvents).toHaveBeenCalledWith({ studio: 'venue', cursor: 'next-page' });
     expect(notFound).not.toHaveBeenCalled();
   });
 
@@ -27,7 +33,18 @@ describe('Venue Door route', () => {
     await expect(
       StudioDoorPage({
         params: Promise.resolve({ studio: 'host' }),
+        searchParams: Promise.resolve({}),
       }),
     ).rejects.toThrow('not found');
+  });
+
+  it('shows a retryable operational error when events fail to load', async () => {
+    loadPartnerEvents.mockRejectedValueOnce(new Error('api unavailable'));
+    const page = await StudioDoorPage({
+      params: Promise.resolve({ studio: 'venue' }),
+      searchParams: Promise.resolve({}),
+    });
+
+    expect(page).toBeTruthy();
   });
 });

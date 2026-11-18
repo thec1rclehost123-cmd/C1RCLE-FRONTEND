@@ -13,7 +13,6 @@ it('places primary pills above the event info card and active sales pills below 
       studio="host"
       event={{
         id: 'event-a',
-        ownerType: 'host',
         title: 'Neon Nights: Afrobeats',
         venue: 'Skyline Rooftop',
         dateTime: 'Thu, Jul 16 · 9:00 PM IST',
@@ -48,7 +47,6 @@ it('uses shared event chrome without showing Host-only actions in Venue Studio',
       studio="venue"
       event={{
         id: 'event-a',
-        ownerType: 'host',
         title: 'C1RCLE STAGING ACCEPTANCE 001',
         venue: 'Test Venue',
         dateTime: 'Sun, Nov 29 · 6:00 PM IST',
@@ -69,31 +67,4 @@ it('uses shared event chrome without showing Host-only actions in Venue Studio',
   expect(screen.queryByRole('link', { name: 'Edit' })).not.toBeInTheDocument();
   expect(screen.queryByRole('link', { name: 'Door Mode' })).not.toBeInTheDocument();
   expect(screen.getAllByRole('navigation')).toHaveLength(1);
-});
-
-it('keeps the edit action for an event the Venue organization owns', () => {
-  render(
-    <EventWorkspaceChrome
-      studio="venue"
-      event={{
-        id: 'venue-event',
-        ownerType: 'venue',
-        title: 'Venue-owned event',
-        venue: 'Test Venue',
-        dateTime: 'Sun, Nov 29 · 6:00 PM IST',
-        statusLabel: 'Draft',
-        artwork: { type: 'gradient', value: 'placeholder' },
-        metrics: [],
-      }}
-      tabs={[{ label: 'Overview', href: '/partner/venue/events/venue-event' }]}
-    >
-      <p>Venue-owned event data</p>
-    </EventWorkspaceChrome>,
-  );
-
-  expect(screen.getByRole('link', { name: 'Edit' })).toHaveAttribute(
-    'href',
-    '/partner/venue/events/venue-event/edit',
-  );
-  expect(screen.queryByRole('link', { name: 'Door Mode' })).not.toBeInTheDocument();
 });

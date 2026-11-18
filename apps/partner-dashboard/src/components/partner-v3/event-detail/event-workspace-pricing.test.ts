@@ -1,47 +1,50 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatEventBasePrice, formatEventStartingPrice } from './event-workspace-pricing';
+import { formatEventStartingPrice } from './event-workspace-pricing';
 
-describe('event workspace prices', () => {
-  const event = {
-    isFree: false,
-    startingPricePaise: 99_900,
-    currentStartingPricePaise: 65_000,
+import type { TicketTierDto } from '@c1rcle/contracts';
+
+const event = { isFree: true, startingPricePaise: 0 };
+
+function ticketTier(accessType: 'ENTRY' | 'RSVP' | 'VIP', priceInPaise: number): TicketTierDto {
+  return {
+    id: `${accessType.toLowerCase()}-tier`,
+    eventId: 'event-a',
+    organizationId: 'org-a',
+    name: accessType,
+    description: '',
+    entryType: accessType,
+    currency: 'INR',
+    priceInPaise,
+    quantity: 20,
+    status: 'active',
+    salesStartAt: null,
+    salesEndAt: null,
+    maxPerOrder: 4,
+    accessType,
+    version: 1,
+    createdAt: '2026-11-11T00:00:00.000Z',
+    updatedAt: '2026-11-11T00:00:00.000Z',
   };
+}
 
-  it('shows the current sellable price separately from the base price', () => {
-    expect(formatEventStartingPrice(event)).toBe('₹650.00');
-    expect(formatEventBasePrice(event)).toBe('₹999.00');
+describe('formatEventStartingPrice', () => {
+  it('uses paid ticket tiers for a draft whose event summary still has the free default', () => {
+    expect(
+      formatEventStartingPrice(event, [ticketTier('VIP', 100_000), ticketTier('ENTRY', 50_000)]),
+    ).toBe('₹500.00');
   });
 
-  it('does not claim the base price is currently purchasable when no active price exists', () => {
-    expect(formatEventStartingPrice({ ...event, currentStartingPricePaise: null })).toBe(
-      'No active price',
+  it('does not treat a free RSVP tier as the starting price of paid entry', () => {
+    expect(
+      formatEventStartingPrice(event, [ticketTier('RSVP', 0), ticketTier('ENTRY', 50_000)]),
+    ).toBe('₹500.00');
+  });
+
+  it('keeps free-only and unavailable legacy summaries readable', () => {
+    expect(formatEventStartingPrice(event, [ticketTier('RSVP', 0)])).toBe('Free');
+    expect(formatEventStartingPrice({ isFree: false, startingPricePaise: null })).toBe(
+      'Unavailable',
     );
-    expect(formatEventBasePrice({ ...event, currentStartingPricePaise: null })).toBe('₹999.00');
-  });
-
-  it('keeps free events clear and legacy base prices distinct', () => {
-    expect(
-      formatEventStartingPrice({
-        isFree: true,
-        startingPricePaise: 0,
-        currentStartingPricePaise: 0,
-      }),
-    ).toBe('Free');
-    expect(
-      formatEventStartingPrice({
-        isFree: false,
-        startingPricePaise: null,
-        currentStartingPricePaise: null,
-      }),
-    ).toBe('No active price');
-    expect(
-      formatEventBasePrice({
-        isFree: false,
-        startingPricePaise: null,
-        currentStartingPricePaise: null,
-      }),
-    ).toBe('Not set');
   });
 });

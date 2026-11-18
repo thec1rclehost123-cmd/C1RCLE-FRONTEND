@@ -2,13 +2,12 @@ import { paginatedSchema } from '@c1rcle/api-client';
 import {
   PRODUCT_TIME_ZONE,
   PRODUCT_TIME_ZONE_OFFSET_MINUTES,
+  eventDtoSchema,
   organizationDtoSchema,
   venueDtoSchema,
-  venueOperationalEventListResponseSchema,
   venueSlotDtoSchema,
+  type EventDto,
   type VenueDto,
-  type VenueOperationalEventDto,
-  type VenueOperationalEventListResponse,
   type VenueSlotDto,
 } from '@c1rcle/contracts';
 
@@ -24,7 +23,8 @@ import type {
   VenueCalendarData,
 } from '@/data/partner-data-source';
 
-const MAX_OPERATIONAL_EVENT_PAGES = 100;
+const inactiveEventStatuses = new Set<EventDto['status']>(['archived', 'cancelled']);
+const pendingEventStatuses = new Set<EventDto['status']>(['draft', 'review']);
 
 export interface VenueCalendarWorkspace {
   readonly venues: readonly VenueDto[];
@@ -293,7 +293,7 @@ export async function loadVenueCalendarWorkspace({
   const range = rangeForMonthKeys(monthKeys);
   if (!range) return { venues, venue, calendar: null };
 
-  const [slots, operationalEvents] = await Promise.all([
+  const [slots, eventResponse] = await Promise.all([
     apiClient.get({
       path: `/api/v2/venues/${encodeURIComponent(venue.id)}/calendar`,
       query: range,
@@ -301,7 +301,13 @@ export async function loadVenueCalendarWorkspace({
       schema: venueSlotDtoSchema.array(),
       ...(signal ? { signal } : {}),
     }),
-    loadVenueOperationalEvents(organizationId, signal),
+    apiClient.get({
+      path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/events`,
+      query: { limit: 100 },
+      headers: { 'x-organization-id': organizationId },
+      schema: paginatedSchema(eventDtoSchema),
+      ...(signal ? { signal } : {}),
+    }),
   ]);
 
   return {
@@ -311,8 +317,7 @@ export async function loadVenueCalendarWorkspace({
       monthKeys,
       venue,
       slots,
-      events: operationalEvents.events.filter((event) => event.venueId === venue.id),
-      complete: operationalEvents.complete,
+      events: eventResponse.items.filter((event) => event.venueId === venue.id),
     }),
   };
 }
@@ -322,45 +327,25 @@ export function mapVenueCalendar({
   venue,
   slots,
   events,
-  complete = true,
 }: {
   readonly monthKeys: readonly string[];
   readonly venue: VenueDto;
   readonly slots: readonly VenueSlotDto[];
-  readonly events: readonly VenueOperationalEventDto[];
-  readonly complete?: boolean;
+  readonly events: readonly EventDto[];
 }): VenueCalendarData {
   const eventsByDate = new Map<string, CalendarEvent[]>();
   const slotsByDate = new Map<string, VenueSlotDto[]>();
 
   for (const event of events) {
-    if (
-      event.status === 'cancelled' ||
-      event.status === 'draft' ||
-      event.status === 'review' ||
-      event.status === 'scheduled'
-    ) {
-      continue;
-    }
+    if (inactiveEventStatuses.has(event.status)) continue;
     const date = eventDatePartInIndia(event.startAt);
     if (!date) continue;
     const calendarEvent: CalendarEvent = {
       id: event.id,
       date,
       name: event.title,
-      hostName: event.ownerType === 'host' ? event.hostName : null,
       time: formatEventTimeRange(event.startAt, event.endAt),
-      status: event.status === 'postponed' ? 'pending' : 'confirmed',
-      statusLabel:
-        event.status === 'postponed'
-          ? 'Postponed · original slot released'
-          : event.status === 'started'
-            ? 'Live'
-            : event.status === 'ended'
-              ? 'Completed'
-              : event.status === 'sales_paused'
-                ? 'Sales paused'
-                : 'Published',
+      status: pendingEventStatuses.has(event.status) ? 'pending' : 'confirmed',
       venue: venue.name,
       href: `/partner/venue/events/${event.id}`,
     };
@@ -425,30 +410,7 @@ export function mapVenueCalendar({
     ];
   });
 
-  return { dataStatus: 'live', accent: 'orange', months, blocks, complete };
-}
-
-async function loadVenueOperationalEvents(
-  organizationId: string,
-  signal?: AbortSignal,
-): Promise<{ readonly events: readonly VenueOperationalEventDto[]; readonly complete: boolean }> {
-  const events: VenueOperationalEventDto[] = [];
-  let cursor: string | null = null;
-  let complete = true;
-  for (let page = 0; page < MAX_OPERATIONAL_EVENT_PAGES; page += 1) {
-    const response: VenueOperationalEventListResponse = await apiClient.get({
-      path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/venue-events`,
-      query: { limit: 100, ...(cursor ? { cursor } : {}) },
-      headers: { 'x-organization-id': organizationId },
-      schema: venueOperationalEventListResponseSchema,
-      ...(signal ? { signal } : {}),
-    });
-    events.push(...response.items);
-    complete &&= response.complete;
-    cursor = response.pageInfo.nextCursor;
-    if (!cursor) return { events, complete };
-  }
-  return { events, complete: false };
+  return { dataStatus: 'live', accent: 'orange', months, blocks };
 }
 
 function stateForDay(

@@ -178,7 +178,7 @@ export type PartnerEventStatus =
   | 'Completed'
   | 'Archived'
   | 'Cancelled';
-export type PartnerEventParty = 'all' | 'venue' | 'hosts';
+export type PartnerEventParty = 'venue' | 'hosts';
 
 export interface PartnerEventArtwork {
   readonly type: 'image' | 'gradient';
@@ -196,7 +196,6 @@ export interface PartnerEventRecord {
   readonly venue: string;
   readonly host: string;
   readonly hostInitials: string;
-  readonly hostLabel?: string;
   readonly dateLabel: string;
   readonly timeLabel: string;
   readonly dayLabel: string;
@@ -205,16 +204,6 @@ export interface PartnerEventRecord {
   readonly sold: number | null;
   readonly capacity: number | null;
   readonly salesCountComplete?: boolean;
-  readonly operational?: {
-    readonly eventCapacity: number | null;
-    readonly venueCapacity: number | null;
-    readonly ticketUnitsIssued: number;
-    readonly rsvpUnitsIssued: number;
-    readonly expectedGuests: number;
-    readonly checkedInGuests: number;
-    readonly complete: boolean;
-  };
-  readonly basePriceLabel?: string;
   readonly revenueLabel: string;
   readonly artwork: PartnerEventArtwork;
 }
@@ -224,7 +213,6 @@ export interface PartnerEventsData {
   readonly pendingRequestCount: number | null;
   readonly total?: number;
   readonly nextCursor?: string | null;
-  readonly complete?: boolean;
   readonly events: readonly PartnerEventRecord[];
 }
 
@@ -1030,10 +1018,8 @@ export interface CalendarEvent {
   readonly id: string;
   readonly date: string;
   readonly name: string;
-  readonly hostName?: string | null;
   readonly time: string;
   readonly status: CalendarEventStatus;
-  readonly statusLabel?: string;
   readonly venue: string;
   readonly href?: string;
 }
@@ -1089,7 +1075,6 @@ export interface VenueCalendarData {
   readonly accent: 'orange';
   readonly months: readonly CalendarMonth[];
   readonly blocks: readonly CalendarBlock[];
-  readonly complete?: boolean;
 }
 
 export interface HostAvailabilityVenue {

@@ -133,9 +133,6 @@ export {
   posterUploadUrlDtoSchema,
   ticketTierStatusSchema,
   ticketTierDtoSchema,
-  venueOperationalTierSummarySchema,
-  venueOperationalEventDtoSchema,
-  venueOperationalEventListResponseSchema,
   venueEventDetailResponseSchema,
   createTicketTierSchema,
   updateTicketTierLimitsSchema,
@@ -154,12 +151,6 @@ export {
   promoterAssignedEventDtoSchema,
   promoterAssignmentCandidateDtoSchema,
   assignPromoterSchema,
-} from './contracts/event.js';
-export type {
-  VenueOperationalTierSummaryDto,
-  VenueOperationalEventDto,
-  VenueOperationalEventListResponse,
-  VenueEventDetailResponse,
 } from './contracts/event.js';
 
 export type { TicketAccessCodeDto, TicketAccessGrantDto } from './contracts/ticket-access.js';
@@ -239,8 +230,6 @@ export {
   organizationEventCardDtoSchema,
   organizationEventCardListResponseSchema,
   eventAnalyticsDtoSchema,
-  venueOperationalOverviewDtoSchema,
-  venueOperationalAnalyticsDtoSchema,
   eventBookingHeatmapDtoSchema,
   eventPromoterAnalyticsDtoSchema,
   promoterCampaignSummaryDtoSchema,
@@ -256,10 +245,6 @@ export {
   partnerGlobalSearchResponseSchema,
   eventComparisonItemSchema,
   eventComparisonResponseSchema,
-} from './contracts/partner.js';
-export type {
-  VenueOperationalOverviewDto,
-  VenueOperationalAnalyticsDto,
 } from './contracts/partner.js';
 
 // Onboarding / KYC / Admin Authority

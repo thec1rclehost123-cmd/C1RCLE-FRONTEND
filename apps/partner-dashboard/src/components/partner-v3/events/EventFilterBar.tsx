@@ -9,7 +9,6 @@ export function EventFilterBar({
   status,
   party,
   partyLabel = 'Event ownership',
-  showAllPartyFilter = false,
   showDrafts = true,
   showViewToggle = true,
   view,
@@ -23,7 +22,6 @@ export function EventFilterBar({
   readonly status: 'all' | 'Live' | 'Draft' | 'Completed';
   readonly party: PartnerEventParty;
   readonly partyLabel?: string;
-  readonly showAllPartyFilter?: boolean;
   readonly showDrafts?: boolean;
   readonly showViewToggle?: boolean;
   readonly view: 'list' | 'grid';
@@ -82,16 +80,11 @@ export function EventFilterBar({
             ))}
         </div>
         <div className={styles['controlGroup']} aria-label={partyLabel}>
-          {(showAllPartyFilter
-            ? ([
-                ['all', 'All'],
-                ['hosts', 'Hosts'],
-                ['venue', 'Venue'],
-              ] as const)
-            : ([
-                ['hosts', 'Hosts'],
-                ['venue', 'Venue'],
-              ] as const)
+          {(
+            [
+              ['hosts', 'Hosts'],
+              ['venue', 'Venue'],
+            ] as const
           ).map(([value, label]) => (
             <button
               key={value}

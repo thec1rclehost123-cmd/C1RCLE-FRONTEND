@@ -1,14 +1,12 @@
 import { notFound } from 'next/navigation';
 
 import { eventTabs } from '@/components/partner-v3/event-detail/event-workspace-navigation';
-import {
-  formatEventBasePrice,
-  formatEventStartingPrice,
-} from '@/components/partner-v3/event-detail/event-workspace-pricing';
+import { formatEventStartingPrice } from '@/components/partner-v3/event-detail/event-workspace-pricing';
 import { EventWorkspaceChrome } from '@/components/partner-v3/event-detail/EventWorkspaceChrome';
 import { VenueEventDetailLayout } from '@/components/venue/event-detail/VenueAssociatedEventLayout';
 import { formatProductDateTime } from '@/lib/events/event-time';
 import { loadPartnerEvent } from '@/lib/events/load-partner-event';
+import { loadPartnerEventTiers } from '@/lib/events/load-partner-event-tiers';
 import { loadPromoterEvents } from '@/lib/events/load-promoter-events';
 
 import type {
@@ -98,7 +96,10 @@ export default async function EventWorkspaceLayout({
   }
 
   if (studio !== 'host' && studio !== 'venue') notFound();
-  const event = await loadPartnerEvent(eventId);
+  const [event, tiers] = await Promise.all([
+    loadPartnerEvent(eventId),
+    studio === 'host' ? loadPartnerEventTiers(eventId) : Promise.resolve(undefined),
+  ]);
   const workspaceEvent: EventWorkspaceModel = {
     id: event.id,
     title: event.title,
@@ -137,10 +138,9 @@ export default async function EventWorkspaceLayout({
       },
       { label: 'Capacity', value: event.capacity?.toLocaleString('en-IN') ?? 'Not set' },
       {
-        label: 'Current starting price',
-        value: formatEventStartingPrice(event),
+        label: 'Starting price',
+        value: formatEventStartingPrice(event, tiers),
       },
-      { label: 'Base price', value: formatEventBasePrice(event) },
     ],
   };
 

@@ -48,15 +48,13 @@ export default async function StudioEventsPage({
               ? ('Completed' as const)
               : ('all' as const),
       initialParty:
-        party === 'all'
-          ? ('all' as const)
-          : party === 'hosts'
-            ? ('hosts' as const)
-            : party === 'venue'
-              ? ('venue' as const)
-              : studio === 'host'
-                ? ('hosts' as const)
-                : ('all' as const),
+        party === 'hosts'
+          ? ('hosts' as const)
+          : party === 'venue'
+            ? ('venue' as const)
+            : studio === 'host'
+              ? ('hosts' as const)
+              : ('venue' as const),
       initialView: view === 'list' ? ('list' as const) : ('grid' as const),
     };
     if (studio === 'host') {

@@ -32,9 +32,7 @@ export function PartnerGlobalSearch({
   const [loading, setLoading] = useState(false);
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
-  const activeSearchKey = organizationId
-    ? `${organizationId}\u0000${studio}\u0000${query.trim()}`
-    : null;
+  const activeSearchKey = organizationId ? `${organizationId}\u0000${query.trim()}` : null;
   const matchingResults = resultsKey === activeSearchKey ? results : [];
   const loadingCurrentSearch = loading && loadingKey === activeSearchKey;
   const failedCurrentSearch = failed && resultsKey === activeSearchKey;
@@ -42,16 +40,14 @@ export function PartnerGlobalSearch({
   useEffect(() => {
     const term = query.trim();
     if (!organizationId || term.length < 2) return;
-    const searchKey = `${organizationId}\u0000${studio}\u0000${term}`;
+    const searchKey = `${organizationId}\u0000${term}`;
     let cancelled = false;
     const timer = window.setTimeout(() => {
       setLoading(true);
       setLoadingKey(searchKey);
-      const search = new URLSearchParams({ q: term });
-      if (studio === 'host' || studio === 'venue') search.set('studio', studio);
       void apiClient
         .get({
-          path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/search?${search.toString()}`,
+          path: `/api/v2/organizations/${encodeURIComponent(organizationId)}/search?q=${encodeURIComponent(term)}`,
           schema: partnerGlobalSearchResponseSchema,
           headers: { 'x-organization-id': organizationId },
         })
@@ -77,7 +73,7 @@ export function PartnerGlobalSearch({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [organizationId, query, studio]);
+  }, [organizationId, query]);
 
   const closeSearch = () => {
     setOpen(false);
