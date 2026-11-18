@@ -5,7 +5,7 @@ description: Perform a structured code review using change detection and impact
 
 ## Review Changes
 
-Perform a thorough, risk-aware code review using the knowledge graph.
+Use the graph steps below only if an approved Code Review Graph installation is available. Otherwise review the diff and trace affected callers and tests with targeted repository search. Use Change Impact for acceptance scope. Use only the applicable steps.
 
 ### Steps
 

@@ -5,7 +5,7 @@ description: Navigate and understand codebase structure using the knowledge grap
 
 ## Explore Codebase
 
-Use the code-review-graph MCP tools to explore and understand the codebase.
+Start with the relevant Agent Harness context. When source navigation is needed, use the graph steps below only if an approved Code Review Graph installation is available. Otherwise narrow with targeted repository search and source reads. Use only the applicable steps.
 
 ### Steps
 
@@ -18,7 +18,7 @@ Use the code-review-graph MCP tools to explore and understand the codebase.
 
 ### Tips
 
-- Start broad (stats, architecture) then narrow down to specific areas.
+- Start with the affected behavior and its entry point. Use wider graph views only for a genuine boundary question.
 - Use `children_of` on a file to see all its functions and classes.
 - Use `find_large_functions_tool` to identify complex code.
 
