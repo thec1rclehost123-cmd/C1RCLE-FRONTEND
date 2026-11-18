@@ -13,8 +13,10 @@ describe('Promoter navigation scope', () => {
 });
 
 describe('Venue operational navigation', () => {
-  it('does not expose Door Mode without Venue scan authorization', () => {
-    expect(STUDIO_CONFIG.venue.navigation.some((item) => item.label === 'Door')).toBe(false);
+  it('routes the Venue Door menu to the event selector', () => {
+    const door = STUDIO_CONFIG.venue.navigation.find((item) => item.label === 'Door');
+
+    expect(door?.href).toBe('/partner/venue/door');
     expect(STUDIO_CONFIG.venue.navigation.some((item) => item.label === 'Presence')).toBe(false);
   });
 });

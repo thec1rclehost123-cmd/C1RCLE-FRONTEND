@@ -29,7 +29,6 @@ export interface PartnerEventsScreenConfig {
   readonly eventSectionLabel: string;
   readonly emptyDescription?: string;
   readonly partyFilterLabel: string;
-  readonly showAllPartyFilter?: boolean;
   readonly showViewToggle: boolean;
   readonly slotRequestsHref: string;
   readonly hideDraftsForHostParty?: boolean;
@@ -43,7 +42,6 @@ export function parseEventStatus(value: string | undefined): PartnerEventStatusF
 }
 
 export function parseEventParty(value: string | undefined): PartnerEventParty {
-  if (value === 'all') return 'all';
   return value === 'hosts' ? 'hosts' : 'venue';
 }
 
@@ -85,7 +83,7 @@ export function PartnerEventsScreen({
       if (config.hideDraftsForHostParty && party === 'hosts' && event.status === 'Draft')
         return false;
       if (status !== 'all' && event.status !== status) return false;
-      if (party !== 'all' && party !== event.party) return false;
+      if (party !== event.party) return false;
       if (!search) return true;
       return `${event.name} ${event.tag} ${event.venue} ${event.host}`
         .toLowerCase()
@@ -134,7 +132,7 @@ export function PartnerEventsScreen({
 
   const partyEvents = data.events.filter(
     (event) =>
-      (party === 'all' || event.party === party) &&
+      event.party === party &&
       !(config.hideDraftsForHostParty && party === 'hosts' && event.status === 'Draft'),
   );
   const liveCount = partyEvents.filter((event) => event.status === 'Live').length;
@@ -166,9 +164,6 @@ export function PartnerEventsScreen({
         </header>
 
         <FixtureBadge dataStatus={data.dataStatus} />
-        {data.complete === false ? (
-          <p role="status">Some event records could not be loaded. Counts may be incomplete.</p>
-        ) : null}
 
         <div className={styles['subTabs']} role="tablist" aria-label="Event views">
           <Link className={styles['subTab']} href={pathname} role="tab" aria-selected="true">
@@ -189,7 +184,6 @@ export function PartnerEventsScreen({
           status={status}
           party={party}
           partyLabel={config.partyFilterLabel}
-          showAllPartyFilter={config.showAllPartyFilter ?? false}
           showDrafts={!(config.hideDraftsForHostParty && party === 'hosts')}
           showViewToggle={config.showViewToggle}
           view={view}
@@ -208,7 +202,7 @@ export function PartnerEventsScreen({
         {visibleEvents.length === 0 ? (
           <EventEmptyState
             description={config.emptyDescription}
-            filtered={Boolean(query.trim()) || status !== 'all' || party !== config.defaultParty}
+            filtered={Boolean(query.trim()) || status !== 'all' || party !== 'venue'}
           />
         ) : view === 'list' ? (
           <section

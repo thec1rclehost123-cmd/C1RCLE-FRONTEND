@@ -10,11 +10,6 @@
   --calendar-accent-soft: #ff8a55;
   --calendar-accent-bg: rgb(255 90 31 / 13%);
 }
-.incompleteNotice {
-  margin: 0 0 16px;
-  color: #ffb020;
-  font-size: 13px;
-}
 .hostTheme {
   --calendar-accent: #a78bfa;
   --calendar-accent-soft: #ded1f5;
