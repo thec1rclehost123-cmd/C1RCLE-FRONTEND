@@ -7,6 +7,7 @@ import { loadPartnerEventAnalytics } from '@/lib/events/load-partner-event-analy
 import { loadPartnerEventBookingHeatmap } from '@/lib/events/load-partner-event-booking-heatmap';
 import { loadPartnerEventPromos } from '@/lib/events/load-partner-event-promos';
 import { loadPromoterEvents } from '@/lib/events/load-promoter-events';
+import { isVenueOwnedEvent } from '@/lib/events/venue-event-ownership';
 
 import { renderStudioSkeleton } from '../../../route-helpers';
 
@@ -16,7 +17,7 @@ export default async function StudioEventAnalyticsPage({
   readonly params: Promise<{ studio: string; eventId: string }>;
 }) {
   const { studio, eventId } = await params;
-  if (studio === 'venue')
+  if (studio === 'venue' && !(await isVenueOwnedEvent(eventId)))
     return (
       <VenueEventReadOnlySection
         title="Venue operational analytics"
@@ -35,7 +36,7 @@ export default async function StudioEventAnalyticsPage({
       />
     );
   }
-  if (studio !== 'host') {
+  if (studio !== 'venue' && studio !== 'host') {
     return renderStudioSkeleton(
       Promise.resolve({ studio }),
       'Event analytics',
@@ -53,7 +54,7 @@ export default async function StudioEventAnalyticsPage({
       analytics={analytics}
       bookingHeatmap={bookingHeatmap}
       promoCodes={promoCodes}
-      studio="host"
+      studio={studio}
     />
   );
 }

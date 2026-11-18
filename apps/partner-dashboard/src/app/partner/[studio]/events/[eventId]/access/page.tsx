@@ -4,6 +4,7 @@ import { ConnectedEventAccessScreen } from '@/components/partner-v3/event-detail
 import { VenueEventReadOnlySection } from '@/components/venue/event-detail/VenueEventReadOnlySection';
 import { loadPartnerEvent } from '@/lib/events/load-partner-event';
 import { loadPartnerEventAccess } from '@/lib/events/load-partner-event-access';
+import { isVenueOwnedEvent } from '@/lib/events/venue-event-ownership';
 
 export default async function StudioEventAccessPage({
   params,
@@ -11,14 +12,14 @@ export default async function StudioEventAccessPage({
   readonly params: Promise<{ studio: string; eventId: string }>;
 }) {
   const { studio, eventId } = await params;
-  if (studio === 'venue')
+  if (studio === 'venue' && !(await isVenueOwnedEvent(eventId)))
     return (
       <VenueEventReadOnlySection
         title="Access settings are Host managed"
         description="The Venue workspace does not expose Host ticket codes, invitations, or access controls."
       />
     );
-  if (studio !== 'host') notFound();
+  if (studio !== 'venue' && studio !== 'host') notFound();
   const [event, access] = await Promise.all([
     loadPartnerEvent(eventId),
     loadPartnerEventAccess(eventId),
