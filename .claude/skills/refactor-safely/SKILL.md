@@ -5,7 +5,7 @@ description: Plan and execute safe refactoring using dependency analysis
 
 ## Refactor Safely
 
-Use the knowledge graph to plan and execute refactoring with confidence.
+Use the graph steps below only if an approved Code Review Graph installation is available. Otherwise inspect the relevant callers and contracts, preview affected locations and verify the focused diff and tests. Use only the applicable steps.
 
 ### Steps
 

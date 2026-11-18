@@ -5,7 +5,7 @@ description: Systematically debug issues using graph-powered code navigation
 
 ## Debug Issue
 
-Use the knowledge graph to systematically trace and debug issues.
+If an approved Code Review Graph installation is available and targeted source investigation is warranted, use the graph steps below. Otherwise start with the observed evidence and trace the responsible boundary with targeted repository search and reads. Use only the applicable steps.
 
 ### Steps
 

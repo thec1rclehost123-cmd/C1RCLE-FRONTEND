@@ -1,0 +1,11 @@
+# C1RCLE Frontend Codex instructions
+
+## Find the canonical guidance
+
+For substantial work, use the operating guide and Agent Harness in `thec1rclehost123-cmd/C1RCLE-BACKEND`. Read its root `AGENTS.md` and only the task-relevant sections or records under `docs/ai/`. The guide routes architecture, remediation, milestone and hosted acceptance tasks to the right records. The five harness files are maintained in the backend repository.
+
+1. Prefer the backend checkout or worktree identified for the task. If none is named, check the active workspace and any nearby backend clone. Confirm repository identity by its Git remote and select the approved ref. Use that clone's `git worktree list` to locate an approved linked worktree when needed.
+2. If no appropriate local checkout is available, read `AGENTS.md` and the relevant `docs/ai/` files from the approved ref in the [canonical backend repository](https://github.com/thec1rclehost123-cmd/C1RCLE-BACKEND) using authenticated GitHub access. For paired frontend/backend implementation, remediation, contract work or acceptance, use the exact approved backend baseline or head associated with the task, including for local lookup. If revision-specific evidence is needed and the task provides no backend baseline, establish it from the active worktrees or PR context. If it remains unresolved, report the ambiguity and withhold revision-specific acceptance claims. Use current backend `staging` only when the task explicitly establishes it as the intended baseline or when reading stable project guidance that does not depend on revision-specific evidence.
+3. If the approved ref or a needed record is unavailable, report the specific gap. Continue independent work within scope and withhold any acceptance or fixture claim that depends on missing evidence.
+
+Keep applicable nested app guidance, including the local Next.js documentation requirement. Verify checkout and baseline before edits, use an isolated clean worktree and stay in the approved milestone scope. Use focused checks during edits and derive broader validation from change impact. If the backend supplies a changed wire contract, coordinate backend first and check parity on exact paired heads. Staging or provider mutations, merges and deployments require explicit authorization.
