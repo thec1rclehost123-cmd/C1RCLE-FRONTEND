@@ -30,11 +30,24 @@ export function ExploreEventCard({
   event: ExploreEvent;
   landscape?: boolean;
 }) {
-  const priceLabel = event.price
-    ? `From ${moneyFormatter.format(event.price.amountPaise / 100)}`
-    : event.isFree
-      ? 'Free'
-      : 'Price unavailable';
+  const priceLabel =
+    event.salesStatus === 'ended'
+      ? event.eventStatus === 'ended'
+        ? 'Event ended'
+        : 'Online sales ended'
+      : event.salesStatus === 'sales_paused'
+        ? 'Sales paused'
+        : event.salesStatus === 'not_yet_available'
+          ? 'Sales not started'
+          : event.salesStatus === 'temporarily_held'
+            ? 'Temporarily reserved'
+            : event.salesStatus === 'sold_out'
+              ? 'Tickets sold out'
+              : event.price
+                ? event.price.amountPaise === 0
+                  ? 'From Free'
+                  : `From ${moneyFormatter.format(event.price.amountPaise / 100)}`
+                : 'Price unavailable';
   const eventDate = new Date(event.startsAt);
   const eventDateLabel = dateFormatter.format(eventDate);
   const eventTimeLabel = timeFormatter.format(eventDate);

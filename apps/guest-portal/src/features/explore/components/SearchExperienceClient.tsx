@@ -4,11 +4,19 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
+import { createApiClient } from '@c1rcle/api-client';
+import { eventDtoSchema, paginatedSchema, venueDtoSchema } from '@c1rcle/contracts';
+
 import { deriveCategories, filterExploreEvents } from '../explore-filtering';
+import { deriveCities, toExploreEvent } from '../explore-mapping';
 
 import { ExploreEventCard } from './ExploreEventCard';
 
 import type { ExploreCity, ExploreEvent } from '../types/explore.types';
+import type { VenueDto } from '@c1rcle/contracts';
+
+const searchClient = createApiClient({ maxRetries: 0, timeoutMs: 10_000 });
+const searchResponseSchema = paginatedSchema(eventDtoSchema);
 
 export function SearchExperienceClient({
   events,
@@ -29,6 +37,101 @@ export function SearchExperienceClient({
   const [city, setCity] = useState(initialCity);
   const [category, setCategory] = useState(initialCategory);
   const [weekend, setWeekend] = useState(initialWeekend);
+  const [searchState, setSearchState] = useState<{
+    query: string;
+    status: 'idle' | 'loading' | 'ready' | 'error';
+    events: ExploreEvent[];
+  }>({ query: '', status: 'idle', events: [] });
+
+  useEffect(() => {
+    const normalizedQuery = query.trim();
+    if (!normalizedQuery) {
+      return;
+    }
+
+    let active = true;
+    const timer = window.setTimeout(() => {
+      setSearchState({ query: normalizedQuery, status: 'loading', events: [] });
+      void (async () => {
+        try {
+          const page = await searchClient.get({
+            path: '/api/v2/public/search',
+            query: { q: normalizedQuery, limit: 100 },
+            schema: searchResponseSchema,
+          });
+          const venueIds = [
+            ...new Set(
+              page.items.map((event) => event.venueId).filter((id): id is string => id !== null),
+            ),
+          ];
+          const venueEntries = await Promise.all(
+            venueIds.map(async (venueId) => {
+              try {
+                const venue = await searchClient.get({
+                  path: `/api/v2/public/venues/by-id/${encodeURIComponent(venueId)}`,
+                  schema: venueDtoSchema,
+                });
+                return [venueId, venue] as const;
+              } catch {
+                return [venueId, null] as const;
+              }
+            }),
+          );
+          const venues = new Map<string, VenueDto | null>(venueEntries);
+          if (active) {
+            setSearchState({
+              query: normalizedQuery,
+              status: 'ready',
+              events: page.items.map((event) =>
+                toExploreEvent(
+                  event,
+                  event.venueId ? (venues.get(event.venueId) ?? null) : null,
+                  null,
+                ),
+              ),
+            });
+          }
+        } catch {
+          if (active) setSearchState({ query: normalizedQuery, status: 'error', events: [] });
+        }
+      })();
+    }, 250);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [query]);
+
+  const normalizedQuery = query.trim();
+  const searchReady =
+    normalizedQuery && searchState.query === normalizedQuery && searchState.status === 'ready';
+  const searchLoading =
+    normalizedQuery && (searchState.query !== normalizedQuery || searchState.status === 'loading');
+  const searchFailed =
+    normalizedQuery && searchState.query === normalizedQuery && searchState.status === 'error';
+  const resultEvents = useMemo(() => {
+    if (!normalizedQuery) return events;
+    const byId = new Map(
+      filterExploreEvents(events, {
+        search: query,
+        city: '',
+        category: '',
+        date: 'any',
+        sort: 'soonest',
+      }).map((event) => [event.id, event]),
+    );
+    if (searchReady) for (const event of searchState.events) byId.set(event.id, event);
+    return [...byId.values()];
+  }, [events, normalizedQuery, query, searchReady, searchState.events]);
+  const resultCities = normalizedQuery
+    ? [
+        ...new Map(
+          [...cities, ...deriveCities(resultEvents)].map((option) => [option.value, option]),
+        ).values(),
+      ]
+    : cities;
+
   function updateQuery(value: string) {
     setQuery(value);
   }
@@ -45,17 +148,17 @@ export function SearchExperienceClient({
     }
     window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
   }, [query, city, category, weekend]);
-  const categories = useMemo(() => deriveCategories(events), [events]);
+  const categories = useMemo(() => deriveCategories(resultEvents), [resultEvents]);
   const matches = useMemo(
     () =>
-      filterExploreEvents(events, {
-        search: query,
+      filterExploreEvents(resultEvents, {
+        search: '',
         city,
         category,
         date: weekend ? 'weekend' : 'any',
         sort: 'soonest',
       }),
-    [category, city, events, query, weekend],
+    [category, city, resultEvents, weekend],
   );
 
   return (
@@ -136,7 +239,7 @@ export function SearchExperienceClient({
               {item}
             </button>
           ))}
-          {cities
+          {resultCities
             .filter((option) => option.value)
             .map((option) => (
               <button
@@ -165,7 +268,15 @@ export function SearchExperienceClient({
         >
           {query || category || weekend || city ? 'Search Results' : 'Upcoming Events'}
         </h2>
-        {matches.length ? (
+        {searchLoading ? (
+          <p role="status" className="text-center text-sm text-white/55">
+            Searching public events…
+          </p>
+        ) : searchFailed ? (
+          <p role="alert" className="text-center text-sm text-white/55">
+            Search is temporarily unavailable. Try again in a moment.
+          </p>
+        ) : matches.length ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 xl:grid-cols-5">
             {matches.map((event) => (
               <ExploreEventCard key={event.id} event={event} />

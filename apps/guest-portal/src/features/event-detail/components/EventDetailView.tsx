@@ -38,8 +38,8 @@ const lifecycleCopy: Partial<Record<EventLifecycle, { title: string; detail: str
     detail: 'The organizer has cancelled this event. No fixture action is available.',
   },
   completed: {
-    title: 'Event completed',
-    detail: 'This event has ended. Explore current experiences instead.',
+    title: 'Event ended',
+    detail: 'This event has ended. Its event details remain available for reference.',
   },
   postponed: {
     title: 'Event postponed',
@@ -69,6 +69,20 @@ export function EventDetailView({
   const grantFromUrl = useTicketAccessGrantId();
   const effectiveGrantId = accessGrantId ?? grantFromUrl;
   const lifecycle = lifecycleCopy[event.lifecycle];
+  const purchaseNotice =
+    event.lifecycle === 'completed'
+      ? lifecycleCopy.completed
+      : event.salesStatus === 'ended'
+        ? { title: 'Online sales have ended', detail: 'Tickets and RSVPs are no longer available.' }
+        : (lifecycle ??
+          (event.salesStatus === 'not_yet_available'
+            ? { title: 'Sales have not started', detail: 'Ticket sales are not open yet.' }
+            : event.salesStatus === 'temporarily_held'
+              ? {
+                  title: 'Tickets temporarily reserved',
+                  detail: 'Check back shortly for availability.',
+                }
+              : null));
   const accent = getEventAccentClasses(event.accentTone);
   const availableTiers = event.ticketTiers.filter(
     (tier) =>
@@ -76,18 +90,18 @@ export function EventDetailView({
       (tier.availableQuantity === undefined || tier.availableQuantity > 0),
   );
   const hasAvailableTiers =
-    event.salesStatus !== 'ended' &&
-    event.salesStatus !== 'sold_out' &&
-    event.salesStatus !== 'sales_paused' &&
-    event.salesStatus !== 'cancelled' &&
-    event.salesStatus !== 'postponed' &&
+    !purchaseNotice &&
+    (!event.salesStatus || event.salesStatus === 'on_sale') &&
     availableTiers.length > 0;
   const startingPricePaise = hasAvailableTiers
     ? Math.min(...availableTiers.map((tier) => tier.price?.amountPaise ?? 0))
     : null;
+  const hasPaidAvailableTier = availableTiers.some((tier) => (tier.price?.amountPaise ?? 0) > 0);
   const stickyCtaLabel =
     startingPricePaise === 0
-      ? 'RSVP for free'
+      ? hasPaidAvailableTier
+        ? 'Choose tickets · From Free'
+        : 'RSVP for free'
       : startingPricePaise === null
         ? null
         : `Get tickets · From ${moneyFormatter.format(startingPricePaise / 100)}`;
@@ -145,28 +159,6 @@ export function EventDetailView({
     `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
       `${event.venue}, ${event.address}`,
     )}`;
-
-  if (lifecycle) {
-    return (
-      <div className="relative z-10 flex min-h-[75vh] items-center justify-center overflow-hidden px-6 pb-24 pt-32 text-center text-white">
-        <div
-          className={`relative max-w-xl rounded-[2rem] border bg-black/70 p-10 backdrop-blur-xl ${accent.border} ${accent.posterShadow}`}
-        >
-          <p className={`text-[10px] font-black uppercase tracking-[0.3em] ${accent.text}`}>
-            {event.title}
-          </p>
-          <h1 className="mt-4 text-4xl font-black uppercase tracking-tight">{lifecycle.title}</h1>
-          <p className="mt-4 text-sm leading-6 text-white/55">{lifecycle.detail}</p>
-          <Link
-            href="/explore"
-            className="mt-8 inline-flex min-h-11 items-center rounded-full bg-white px-7 py-3 text-xs font-black uppercase tracking-[0.2em] text-black"
-          >
-            Explore events
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="relative z-10 min-h-screen overflow-x-clip bg-[#050505] pb-44 pt-24 text-white sm:pb-40 sm:pt-28">
@@ -394,6 +386,15 @@ export function EventDetailView({
 
           <div className="sticky top-20 z-0 order-0 mx-auto w-full max-w-[300px] self-start md:top-24 md:order-2 md:max-w-[320px] lg:max-w-[340px]">
             <EventPosterPanel event={event} />
+            {purchaseNotice ? (
+              <div
+                role="status"
+                className="mt-4 rounded-2xl border border-white/10 bg-black/70 p-4 text-white backdrop-blur-xl"
+              >
+                <p className="text-sm font-bold">{purchaseNotice.title}</p>
+                <p className="mt-1 text-xs leading-5 text-white/60">{purchaseNotice.detail}</p>
+              </div>
+            ) : null}
             {effectiveGrantId && hasAvailableTiers ? (
               <div className="mt-4">
                 <EventTicketSelectorClient
@@ -405,7 +406,8 @@ export function EventDetailView({
                   {...(referralCode ? { referralCode } : {})}
                 />
               </div>
-            ) : event.ticketTiers.some((tier) => tier.availableQuantity === 0) ? (
+            ) : !purchaseNotice &&
+              event.ticketTiers.some((tier) => tier.availableQuantity === 0) ? (
               <details className="mt-4 rounded-2xl border border-white/10 bg-black/55 p-3">
                 <summary className="cursor-pointer px-2 py-2 text-xs font-bold text-white/75">
                   Ticket availability and options
@@ -422,7 +424,7 @@ export function EventDetailView({
                 </div>
               </details>
             ) : null}
-            {(!event.salesStatus || event.salesStatus === 'on_sale') && (
+            {!purchaseNotice && (!event.salesStatus || event.salesStatus === 'on_sale') && (
               <PrivateTierUnlockClient
                 eventId={event.slug}
                 accentTone={event.accentTone}

@@ -193,8 +193,8 @@ describe('EventDetailView', () => {
   it.each([
     ['paused', 'Ticket sales paused'],
     ['cancelled', 'Event cancelled'],
-    ['completed', 'Event completed'],
-  ] as const)('renders the %s lifecycle without purchase controls', (lifecycle, heading) => {
+    ['completed', 'Event ended'],
+  ] as const)('renders the %s lifecycle without purchase controls', (lifecycle, notice) => {
     const baseEvent = eventDetailFixtures[0];
     expect(baseEvent).toBeDefined();
     if (!baseEvent) return;
@@ -205,8 +205,28 @@ describe('EventDetailView', () => {
         checkoutEvent={bookingEventFor(baseEvent)}
       />,
     );
-    expect(screen.getByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: baseEvent.title })).toBeInTheDocument();
+    expect(screen.getByText(notice, { exact: true })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Get on the list' })).not.toBeInTheDocument();
+  });
+
+  it('keeps an ended event page and poster available while removing every purchase action', () => {
+    const event = eventDetailFixtures[0];
+    expect(event).toBeDefined();
+    if (!event) return;
+
+    render(
+      <EventDetailView
+        event={{ ...event, lifecycle: 'completed', salesStatus: 'ended' }}
+        checkoutEvent={bookingEventFor(event)}
+      />,
+    );
+
+    expect(screen.getByRole('heading', { level: 1, name: event.title })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Event poster' })).toBeInTheDocument();
+    expect(screen.getByText('About the event')).toBeInTheDocument();
+    expect(screen.getByText('Event ended', { exact: true })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /get tickets|choose tickets|rsvp/i })).toBeNull();
   });
 
   it('keeps presentation accents precomputed and excludes backend authority', () => {
@@ -293,6 +313,41 @@ describe('EventDetailPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Get tickets · From ₹999' }));
     expect(screen.getByRole('dialog', { name: 'Checkout for Real Night' })).toBeInTheDocument();
     expect(screen.getByText('Early Entry')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['ended', 'Event ended'],
+    ['published', 'Online sales have ended'],
+  ] as const)(
+    'renders a %s direct link when the tiers endpoint rejects new sales',
+    async (status, notice) => {
+      mockGet.mockImplementation(({ path }: { path: string }) =>
+        path.endsWith('/tiers')
+          ? Promise.reject(
+              Object.assign(new Error('Tickets are closed'), {
+                status: 409,
+                code: 'event_not_on_sale',
+              }),
+            )
+          : Promise.resolve({ ...REAL_EVENT, status, salesStatus: 'ended' }),
+      );
+      render(await EventDetailPage({ params: Promise.resolve({ eventId: 'real-night' }) }));
+
+      expect(screen.getByText('Real Night', { selector: 'h1' })).toBeInTheDocument();
+      expect(screen.getByAltText('Real Night event poster')).toHaveAttribute(
+        'src',
+        REAL_EVENT.imageUrl,
+      );
+      expect(screen.getByText('Doors at 7pm.')).toBeInTheDocument();
+      expect(screen.getByText(notice)).toBeInTheDocument();
+      expect(screen.queryByText(/Get tickets|RSVP for free|Choose tickets/)).toBeNull();
+    },
+  );
+
+  it('keeps an actual event fetch failure distinct from closed sales', async () => {
+    mockGet.mockRejectedValue(new Error('Gateway unavailable'));
+    render(await EventDetailPage({ params: Promise.resolve({ eventId: 'real-night' }) }));
+    expect(screen.getByText('Event temporarily unavailable')).toBeInTheDocument();
   });
 
   it('falls back honestly when venue and host lookups miss', async () => {
